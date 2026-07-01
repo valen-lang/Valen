@@ -8,7 +8,7 @@ use crate::parsing::ast::{BuiltinCallPR, ComponentsPR, EqualsPR, IntPT, IRulexPR
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, CoordTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
-  LocationTemplataType, SharednessTemplataType, OwnershipTemplataType, PackTemplataType,
+  LocationTemplataType, OwnershipTemplataType, PackTemplataType,
   PrototypeTemplataType, RegionTemplataType,
 };
 use crate::postparsing::names::{CodeRuneS, IImpreciseNameS, IRuneS, IRuneValS, ImplicitRuneValS};

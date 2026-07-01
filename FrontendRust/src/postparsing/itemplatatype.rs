@@ -23,9 +23,6 @@ pub struct IntegerTemplataType {}
 pub struct BooleanTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct SharednessTemplataType {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PrototypeTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -57,7 +54,6 @@ pub enum ITemplataType<'s> {
   FunctionTemplataType(FunctionTemplataType),
   IntegerTemplataType(IntegerTemplataType),
   BooleanTemplataType(BooleanTemplataType),
-  SharednessTemplataType(SharednessTemplataType),
   PrototypeTemplataType(PrototypeTemplataType),
   StringTemplataType(StringTemplataType),
   LocationTemplataType(LocationTemplataType),

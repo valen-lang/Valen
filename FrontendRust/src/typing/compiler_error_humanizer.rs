@@ -584,10 +584,6 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
     ITemplataT::InterfaceDefinition(interface_def) => interface_def.origin_interface.name.name.0.to_string(),
     ITemplataT::StructDefinition(struct_def) => humanize_name_for_struct_declaration(struct_def.origin_struct.name),
     ITemplataT::Integer(value) => value.to_string(),
-    ITemplataT::Mutability(mutability) => match mutability.sharedness {
-      SharednessT::Single => "mut".to_string(),
-      SharednessT::Shared => "imm".to_string(),
-    },
     ITemplataT::Ownership(ownership) => match ownership.ownership {
       OwnershipT::Own => "own".to_string(),
       OwnershipT::Borrow => "borrow".to_string(),

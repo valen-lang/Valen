@@ -9,7 +9,7 @@ use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT};
 use crate::typing::names::names::{CodeVarNameT, FunctionNameValT, FunctionTemplateNameT, IdT, IdValT, INameT, IStructTemplateNameT, IVarNameT, RawArrayNameT, StaticSizedArrayNameT, StructNameValT, StructTemplateNameT};
-use crate::typing::templata::templata::{ITemplataT, KindTemplataT, SharednessTemplataT};
+use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::test::humanize_helper::{humanize_compile_error, assert_humanized_eq};
 use crate::typing::types::types::{CoordT, IntT, IRegionT, KindT, SharednessT, OwnershipT, RegionT, StaticSizedArrayTT, StructTTValT};

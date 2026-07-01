@@ -8,7 +8,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::ast::ast::*;
 use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, VoidT};
 use crate::typing::types::types::IntT;
-use crate::typing::templata::templata::{ITemplataT, SharednessTemplataT};
+use crate::typing::templata::templata::ITemplataT;
 use crate::typing::types::types::SharednessT;
 use crate::typing::types::types::RegionT;
 use crate::typing::types::types::BoolT;

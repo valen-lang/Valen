@@ -2,7 +2,7 @@ use crate::utils::fx::HashMap;
 use bumpalo::Bump;
 use crate::postparsing::ast::ProgramS;
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, IntegerTemplataType, ITemplataType, KindTemplataType, SharednessTemplataType,
+  CoordTemplataType, IntegerTemplataType, ITemplataType, KindTemplataType,
   OwnershipTemplataType,
 };
 use crate::postparsing::names::{CodeRuneS, IRuneValS};

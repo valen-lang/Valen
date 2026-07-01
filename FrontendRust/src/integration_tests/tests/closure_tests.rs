@@ -37,7 +37,6 @@ use crate::typing::names::names::LambdaCallFunctionNameT;
 use crate::typing::names::names::LambdaCitizenNameT;
 use crate::typing::names::names::LambdaCitizenTemplateNameT;
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::templata::templata::SharednessTemplataT;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::CoordT;
 use crate::typing::types::types::IRegionT;

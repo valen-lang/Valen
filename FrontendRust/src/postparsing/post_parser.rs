@@ -28,7 +28,7 @@ use crate::postparsing::ast::{
 use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
 use crate::postparsing::function_scout::IFunctionParent;
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, ITemplataType, KindTemplataType, SharednessTemplataType, PackTemplataType,
+  CoordTemplataType, ITemplataType, KindTemplataType, PackTemplataType,
   RegionTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
@@ -38,7 +38,6 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::rules::rule_scout::{translate_rulexes, translate_type};
 use crate::postparsing::rules::templex_scout::{translate_templex, add_literal_rule};
-use crate::postparsing::rules::rules::SharednessLiteralSL;
 use crate::postparsing::rules::rules::{
   EqualsSR, IRulexSR, RuneUsage,
 };

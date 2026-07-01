@@ -2385,7 +2385,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 // case StringTemplataT(value) => StringTemplataI(value)
             }
             ITemplataT::Coord(c) => ITemplataI::Coord(self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &c.coord)),
-            ITemplataT::Mutability(_) => panic!("Mutability templata reached instantiator — sharedness should not be a template arg post-cut"),
             ITemplataT::Kind(_) => {
                 panic!("Unimplemented: translate_templata Kind");
                 // case KindTemplataT(kind) => KindTemplataI(translateKind(...))

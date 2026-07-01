@@ -27,7 +27,7 @@ use crate::typing::names::names::{
     IStructTemplateNameT, IInterfaceTemplateNameT, IImplTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
 };
 use crate::typing::templata::templata::{
-    CoordTemplataT, FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, SharednessTemplataT, PlaceholderTemplataT,
+    CoordTemplataT, FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, PlaceholderTemplataT,
     PrototypeTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
 };
 use crate::typing::types::types::CoordT;
@@ -149,7 +149,6 @@ where 's: 't,
             ITemplataT::RuntimeSizedArrayTemplate(_) => {}
             ITemplataT::StaticSizedArrayTemplate(_) => {}
             ITemplataT::Ownership(_) => {}
-            ITemplataT::Mutability(_) => {}
             ITemplataT::InterfaceDefinition(_) => {}
             ITemplataT::StructDefinition(_) => {}
             ITemplataT::ImplDefinition(_) => {}

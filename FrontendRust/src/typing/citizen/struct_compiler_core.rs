@@ -38,7 +38,6 @@ use crate::postparsing::names::FunctionNameS;
 use crate::postparsing::names::INameS;
 use crate::typing::ast::citizens::AddressMemberTypeT;
 use crate::postparsing::ast::MacroCallS;
-use crate::typing::templata::templata::SharednessTemplataT;
 use crate::postparsing::names::IStructDeclarationNameS;
 use crate::typing::ast::ast::PrototypeT;
 use std::iter::once;

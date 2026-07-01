@@ -22,7 +22,7 @@ use crate::postparsing::ast::{
 };
 use crate::postparsing::itemplatatype::{
   CoordTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
-  SharednessTemplataType, TemplateTemplataType,
+  TemplateTemplataType,
 };
 use crate::postparsing::names::{IImpreciseNameS, IImplDeclarationNameS, INameS, IRuneS, IStructDeclarationNameS};
 use crate::postparsing::rune_type_solver::{

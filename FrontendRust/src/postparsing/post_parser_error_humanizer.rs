@@ -302,7 +302,6 @@ pub fn humanize_templata_type(
     ITemplataType::IntegerTemplataType(_) => "Int".to_string(),
     ITemplataType::RegionTemplataType(_) => "Region".to_string(),
     ITemplataType::BooleanTemplataType(_) => "Bool".to_string(),
-    ITemplataType::SharednessTemplataType(_) => "Mut".to_string(),
     ITemplataType::PrototypeTemplataType(_) => "Prot".to_string(),
     ITemplataType::StringTemplataType(_) => "Str".to_string(),
     ITemplataType::LocationTemplataType(_) => "Loc".to_string(),
@@ -358,22 +357,12 @@ fn humanize_literal(
       panic!("Unimplemented: humanize_literal OwnershipLiteral");
       // humanizeOwnership(ownership)
     }
-    ILiteralSL::MutabilityLiteral(x) => humanize_mutability(x.mutability),
     ILiteralSL::IntLiteral(x) => x.value.to_string(),
     ILiteralSL::StringLiteral(_) => {
       panic!("Unimplemented: humanize_literal StringLiteral");
       // "\"" + value + "\""
     }
     other => panic!("vimpl humanize_literal: {:?}", other),
-  }
-}
-
-fn humanize_mutability(
-  p: SharednessP,
-) -> String {
-  match p {
-    SharednessP::Single => "mut".to_string(),
-    SharednessP::Shared => "imm".to_string(),
   }
 }
 

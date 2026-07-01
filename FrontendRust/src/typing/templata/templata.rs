@@ -3,7 +3,7 @@ use crate::higher_typing::ast::*;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, CoordTemplataType, ITemplataType, ImplTemplataType,
   IntegerTemplataType, KindTemplataType, LocationTemplataType,
-  SharednessTemplataType, OwnershipTemplataType, PrototypeTemplataType,
+  OwnershipTemplataType, PrototypeTemplataType,
   StringTemplataType, TemplateTemplataType,
 };
 use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
@@ -21,15 +21,6 @@ use std::hash::Hasher;
 use std::marker::PhantomData;
 
 
-
-pub fn expect_sharedness<'s, 't>(templata: ITemplataT<'s, 't>) -> SharednessT {
-  match templata {
-    // VCOORD: there shouldnt be an ITemplataT::Mutability
-    ITemplataT::Mutability(SharednessTemplataT { sharedness }) => sharedness,
-    ITemplataT::Placeholder(_) => panic!("expect_sharedness: placeholder — sharedness must be known at parse time"),
-    _ => panic!("expect_sharedness: not a mutability"),
-  }
-}
 
 pub fn expect_integer<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   match templata {
@@ -90,7 +81,6 @@ pub enum ITemplataT<'s, 't> {
   Coord(&'t CoordTemplataT<'s, 't>),
   Kind(&'t KindTemplataT<'s, 't>),
   Placeholder(&'t PlaceholderTemplataT<'s, 't>),
-  Mutability(SharednessTemplataT),
   Ownership(OwnershipTemplataT),
   Integer(i64),
   Boolean(bool),
@@ -113,7 +103,6 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
       ITemplataT::Coord(_) => ITemplataType::CoordTemplataType(CoordTemplataType {}),
       ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
       ITemplataT::Placeholder(p) => p.tyype,
-      ITemplataT::Mutability(_) => ITemplataType::SharednessTemplataType(SharednessTemplataType {}),
       ITemplataT::Ownership(_) => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
       ITemplataT::Integer(_) => ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
       ITemplataT::Boolean(_) => ITemplataType::BooleanTemplataType(BooleanTemplataType {}),
@@ -306,12 +295,6 @@ pub struct ImplDefinitionTemplataT<'s, 't> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OwnershipTemplataT {
     pub ownership: OwnershipT,
-}
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct SharednessTemplataT {
-    pub sharedness: SharednessT,
 }
 
 /// Value-type (see @TFITCX)

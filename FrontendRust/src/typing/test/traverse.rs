@@ -1208,7 +1208,6 @@ where
         ITemplataT::Coord(x) => visit_coord_templata(pred, out, x),
         ITemplataT::Kind(x) => visit_kind_templata(pred, out, x),
         ITemplataT::Placeholder(x) => visit_placeholder_templata(pred, out, x),
-        ITemplataT::Mutability(_) => {}
         ITemplataT::Ownership(_) => {}
         ITemplataT::Integer(_) => {}
         ITemplataT::Boolean(_) => {}

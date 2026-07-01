@@ -1,61 +1,75 @@
-# Bare-Use Clone, Postfix `x&` Borrow, Postfix `x^` Move
+# Bare-Use Borrow, Postfix `x^` Move (with target-side auto-coercions)
 
-**Status:** design (not yet implemented). Captures the long-term semantic direction for
-local-variable / field use. Authored after the kind-mutability cut as the principled
-destination that resolves the cut's remaining band-aids (Q1/Q5/Q6/Q7 in the cut review).
+**Status:** design (partial implementation in progress). Captures the long-term semantic direction for local-variable / field use. Reflects the refined model landed after the CHECKPOINT-22 Mission redesign (see `vcoord-handoff.md` § "Overload resolution & dispatch model redesign"). The original framing was "bare-use → Clone"; that has been refined to "bare-use → Borrow, with target-side auto-coercions" — same outcomes for most cases, but stricter for Own non-primitive → Own (compile error rather than silent clone) and cleaner when the target only wants a borrow.
 
 ## The model
 
-At source level, three syntactic forms govern how a value is referenced:
+At source level, two syntactic forms govern how a value is referenced (plus `x&` as an optional explicit spelling for the bare-use borrow):
 
 | Source | Meaning | Desugars to |
 |---|---|---|
-| `x` (bare) | **Clone** the value | `clone(&x)` |
-| `x&` | **Borrow** — produce a `&T` reference | `LocalLoadTE(target=Borrow)` |
+| `x` (bare) | **Borrow** — produce a `Borrow`-flavored coord | `LocalLoadTE(target=Borrow)` |
+| `x&` | **Borrow** (explicit spelling; identical to bare) | `LocalLoadTE(target=Borrow)` |
 | `x^` | **Move** — transfer ownership; `x` is dead afterward | `LocalLoadTE(target=Own)` (Unstackify) |
 
-Both `&` and `^` are **postfix** — they sit after the expression they modify. This generalizes
-naturally to chained access: `x.field&` borrows the field; `x.field^` moves it out.
+`&` and `^` are **postfix** — they sit after the expression they modify. This generalizes naturally to chained access: `x.field&` and `x.field^` borrow / move the field.
 
 The same rule applies to field access:
 
 | Source | Meaning |
 |---|---|
-| `s.x` | Clone the field via `&s.x` |
-| `s.x&` | Borrow the field |
+| `s.x` | Borrow the field (Borrow-flavored coord over `s.x`) |
+| `s.x&` | Borrow the field (explicit spelling; identical) |
 | `s.x^` | Move the field out (partial move; `s` is in a destructured state) |
+
+### Target-side auto-coercions
+
+The bare-use borrow is materialized at the source; the target position decides whether a coercion fires. Two auto-coercions exist:
+
+| Source shape | Target wants | Action |
+|---|---|---|
+| `Borrow + primitive` | `Own + primitive` | Auto `implicit_clone(&p)` → fresh Own primitive (scalar copy) |
+| `Borrow + share-kind` | `Share T` | Auto-alias via `__rc_alias` (refcount bump) |
+| `Borrow + primitive` | `Borrow + primitive` | pass-through |
+| `Borrow + share-kind` | `Borrow + share-kind` | pass-through |
+| `Borrow + kind` | `Borrow + kind` | pass-through |
+| `Borrow + non-primitive kind` | `Own + non-primitive kind` | **error** — user must write `x^` (move) or `clone(&x)` (explicit) |
+| `Borrow + *` | `Own + *` (other than primitive) | **error** |
+| `Own + *` (from `x^`) | matching Own | pass-through |
+| `Share + *` (already Share) | `Share + *` | pass-through |
+
+Only the two auto-coercions listed on lines 1–2 fire silently. Everything else is either pass-through (same shape) or a compile error requiring explicit user action (`x^`, `clone(&x)`, etc.).
 
 ### Method-call receivers
 
-Until overloading is removed and proper auto-borrow lands, method receivers use **postfix `&`
-in dot-call position**:
+**Dot is pure sugar over the free-function call form.** `x.foo()` and `foo(x)` use the identical mechanism — the receiver `x` bare-uses as a Borrow-flavored coord, and the target-side rules gate any coercion. There is no separate method-dispatch path.
 
 | Source | Meaning |
 |---|---|
-| `x&.foo()` | Borrow-call: receiver is `&T`. Equivalent to `foo(x&)`. |
-| `x^.foo()` | Move-call: receiver is `T` (owning). Equivalent to `foo(x^)`. |
-| `x.foo()` | Clone-call: receiver is `T` (cloned). Equivalent to `foo(clone(&x))`. |
+| `x.foo()` | Bare-use x, dispatch to `foo`. Identical to `foo(x)`. |
+| `x&.foo()` | Same (explicit spelling of bare-use as borrow). |
+| `x^.foo()` | Move-call: `x` moves into `foo`. Identical to `foo(x^)`. |
 
-Once overloading is removed, the `x.foo()` shorthand will auto-borrow at the receiver — that's
-the **one** auto-coerce the language permits in this model. Until then, callers write `x&.foo()`
-explicitly.
+The `x.foo()` and `foo(x)` equivalence generalizes to multi-arg dispatch: `foo(ship, rocket)` looks in both Ship's and Rocket's namespaces (see `vcoord-handoff.md` § Dispatch model). No parameter is "special."
 
 ### Cloneability
 
-A type `T` is cloneable iff there is a `func clone(&T) T` in scope at the use site. There are
-three kind-classes, each with a different runtime `clone` implementation:
+Two distinct notions of "clone" exist under the refined model, and it's important not to conflate them:
 
-| Kind | `clone(&T) T` source | Runtime cost |
-|---|---|---|
-| Primitive (`int`, `bool`, `float`, `void`, `never`) | Compiler-provided builtin via `__copy_prim` | Scalar copy (free) |
-| `class` type (formerly `share`) | **Compiler-auto-derived** via `__rc_alias` | Refcount bump (cheap) |
-| `struct` type (owned/unique) | User-provided | Whatever the author wrote |
+- **`implicit_clone(&T) T`** — the auto-firing intrinsic. Built-in only for **primitives** (Int/Bool/Float/Void/Never), backed by `__copy_prim`. Fires *only* at target-side coercion sites where source shape is `Borrow + primitive` and the target wants `Own + primitive`. Not user-overridable, not user-callable for non-primitives.
+- **User-space `clone(&T) T`** — a regular function the user can define for any type and call directly (`clone(&x)`). Never auto-fires from bare-use. Ships built-in for class types (via `__rc_alias`), optionally hand-written for struct types.
+
+| Kind | `implicit_clone(&T) T` (auto) | User-callable `clone(&T) T` | Notes |
+|---|---|---|---|
+| Primitive | Compiler-provided via `__copy_prim` (scalar copy) | Same function; delegates to `__copy_prim` | Auto-fires at Own-primitive target. |
+| `class` type (formerly `share`) | None | Compiler-auto-derived via `__rc_alias` (refcount bump) | Bare-use of class-type at Share-typed target auto-aliases via the target-side rule; direct `clone(&x)` also works. |
+| `struct` type (owned/unique) | None | User-provided if the author wants a clone semantic | No auto-firing. Bare-use of struct at Own-non-primitive target = compile error. |
 
 ```vale
-// Primitive built-ins (in builtins/clone.vale):
-func clone(x &int) int { return __copy_prim(x); }
-func clone(x &bool) bool { return __copy_prim(x); }
-// etc.
+// Primitive built-ins (in builtins/implicit_clone.vale):
+func implicit_clone(x &int) int { return __copy_prim(x); }
+func implicit_clone(x &bool) bool { return __copy_prim(x); }
+// etc. — also exposed as `clone(&int) int` for direct user calls.
 
 // Class auto-derived (synthesized at typing-pass time per `class` decl):
 class Ship { fuel int; }
@@ -63,48 +77,43 @@ class Ship { fuel int; }
 //   func clone(x &Ship) Ship { return __rc_alias(x); }
 // User cannot override this — it's load-bearing for the kind-class invariant.
 
-// Struct user-provided:
+// Struct user-provided (optional):
 struct Vec3 { x int; y int; z int; }
 func clone(v &Vec3) Vec3 { return Vec3(v.x, v.y, v.z); }
 ```
 
-For generic functions that need to bare-use a `T`, a `where func clone(&T) T` bound is required.
-**Class instantiations satisfy this bound for free** (auto-derived `clone` is always in scope);
-struct instantiations require the struct to have a user-provided clone.
+**Generic functions do not need a `where func clone(&T) T` bound to bare-use `T`.** Bare-use produces Borrow regardless of `T`. A clone bound is only required when the function body wants to *own* a fresh `T` (e.g., store it in a returned struct) and the target-side auto-coercions don't cover the case.
 
-If bare-use of `x: T` is attempted and `clone(&T) T` is not in scope, the typing pass produces
-a typed compile error:
+If a bare-use ends up at an `Own + non-primitive` target — a struct/interface/array target — the typing pass produces a typed compile error:
 
-> Cannot use bare reference to `x` of type `T` because `T` is not cloneable here.
-> Try `x^` to move, `x&` to borrow, or add `where func clone(&T) T` to the surrounding function.
+> `MustExplicitlyMove`: bare-use of `x` produces a borrow, but the target expects owning `T`. Write `x^` to move, or call `clone(&x)` explicitly.
 
-### Class types: RC-aliasing bare-use
+### Class types: target-side RC-aliasing
 
 For `class Ship { fuel int; }`:
 
 ```vale
-let f = Ship(42);   // creates Ship, refcount = 1
-let g = f;          // bare-use → clone → __rc_alias → refcount = 2; f and g point at same Ship
+let f = Ship(42);   // creates Ship, refcount = 1 (f is Share Ship)
+let g = f;          // bare-use produces Borrow+share-kind; target `g` (Share Ship) auto-aliases via __rc_alias → refcount = 2
 let h = f^;         // move; f dead; refcount unchanged (h owns f's slot)
-let i = f&;         // borrow; refcount unchanged
+let i = f&;         // bare-use spelled explicitly; i is Borrow+share-kind
 ```
 
-Bare-use of a class type is always cheap (refcount increment, no copy of the body). This is the
-runtime semantics of the old "share" types, surfaced cleanly via the bare-use rule.
+Bare-use of a class-typed local is always cheap when landing at a Share target: refcount bump, no body copy. The RC-alias fires at the *target* boundary via the target-side coercion, not at the source. Runtime semantics are equivalent to the old "share" types; the desugar path is cleaner.
 
-### Struct types: explicit-clone bare-use
+### Struct types: bare-use borrows; owning requires `^` or explicit `clone`
 
-For `struct Vec3 { x int; y int; z int; }` with user-defined `clone`:
+For `struct Vec3 { x int; y int; z int; }`:
 
 ```vale
-let a = Vec3(1, 2, 3);
-let b = a;          // bare-use → clone → calls user's clone fn → b is independent Vec3
-let c = a^;         // move; a dead; c owns
-let d = a&;         // borrow
+let a = Vec3(1, 2, 3);      // a is Own Vec3
+let b = a;                  // bare-use produces Borrow Vec3; target `b` is Own Vec3 → MustExplicitlyMove ERROR
+let b = a^;                 // move; a dead; b owns
+let b = clone(&a);          // explicit clone (requires user-provided clone(&Vec3) Vec3)
+let d = a&;                 // bare-use as borrow (identical to bare `a` — d is Borrow Vec3)
 ```
 
-If `Vec3` has no `clone` defined, bare-use is a compile error. Author must add `clone`, or use
-explicit `^` / `&`.
+Bare-use of a struct at an Own-non-primitive target never silently clones — the user must write `^` (move) or an explicit `clone(&a)` call. This is a stricter semantic than the earlier "bare = clone" framing: it forces move-vs-clone intent to be visible at every non-primitive owning binding.
 
 ### Lambda captures (C++-style explicit list)
 
@@ -152,8 +161,7 @@ Parallel to `__copy_prim`:
 
 Today: bare-use of `x` consumes `x` (move semantics). Subsequent uses error.
 
-New: bare-use clones (requires clone bound for struct types; free for class/primitive). Only
-`x^` consumes.
+New: bare-use produces a Borrow (never consumes). Only `x^` consumes. Whether the borrow's ultimate materialization involves a runtime clone, an RC-alias, or nothing at all depends on the target-side coercion table above.
 
 ```vale
 // Today:
@@ -161,13 +169,21 @@ let y = x;       // moves x; x is dead.
 foo(x);          // moves x into foo; x is dead.
 return x;        // moves x out as return value.
 
-// New (T = class or struct-with-clone):
-let y = x;       // clones x; x and y both valid.
+// New (T = primitive):
+let y = x;       // bare-use produces Borrow; target `y` is Own primitive → implicit_clone; x still valid.
 let y = x^;      // moves x; x dead, y owns.
-foo(x);          // clones x to pass; x still valid.
-foo(x^);         // moves x; x dead afterward.
-return x;        // clones x; x lives until scope end (then dropped).
+foo(x);          // bare-use produces Borrow; foo's param decides (auto-clone if Own+primitive, alias if Share, pass-through if Borrow).
+return x;        // bare-use produces Borrow; return-type-side coercion (or ERROR if Own non-primitive).
 return x^;       // moves x out; x dead.
+
+// New (T = class):
+let y = x;       // bare-use → Borrow+share-kind; target `y` (Share T) → auto-alias via __rc_alias; refcount bump.
+let y = x^;      // moves x; x dead, y owns the share ref.
+
+// New (T = struct, non-primitive owned):
+let y = x;       // ERROR: MustExplicitlyMove — bare-use produces Borrow, but target `y` is Own struct.
+let y = x^;      // moves x; x dead, y owns.
+let y = clone(&x); // explicit clone (requires user-provided clone).
 ```
 
 ### `share` keyword becomes `class`
@@ -185,24 +201,27 @@ Pre-cut `@T` meant Share-augmented T. With the cut + this model, kind-class is d
 type's definition site (`class Foo` vs `struct Foo`) and reference ownership is declared at the
 use site via bare/`&`/`^`. No remaining need for `@T` syntax.
 
-### Generic function bounds proliferate honestly — but less than feared
+### Generic function bounds don't proliferate for bare-use
 
-Generic code that uses `T` bare-style declares the requirement:
+Because bare-use produces a Borrow uniformly (regardless of `T`'s kind class), generic code that only *uses* `T` — reading fields, passing to another function that takes `&T`, storing in a Borrow-typed slot — does **not** need a `where func clone(&T) T` bound.
 
 ```vale
-// Today (relies on Share=auto-copy, which the cut removed):
-func swap<T>(a &T, b &T) (T, T) { return (a, b); }  // errors today
-
-// New:
-func swap<T>(a &T, b &T) (T, T) where func clone(&T) T {
-  return (clone(a), clone(b));  // or just `(a, b)` if auto-insert handles the bare-use rule
+// Reads a field on a borrow → no clone bound needed:
+func print_fuel<T>(s &T) where func fuel_of(&T) int {
+  print(fuel_of(s));   // bare-use of s produces Borrow (identity); fuel_of takes &T; pass-through.
 }
 ```
 
-But because class instantiations satisfy `where func clone(&T) T` for free (auto-derived clone),
-**generic code over T parameters that are usually class types** (containers, callbacks holding
-state) won't see bound-proliferation pain at use sites. Only generic code over struct types
-forces the user-provided clone in scope.
+A `where func clone(&T) T` bound *is* needed only when the body wants to *own* a fresh `T` and the source can't provide one via `^`:
+
+```vale
+// Needs to return a fresh owning T → user must supply clone (or callers must pass owning):
+func first_two<T>(a &T, b &T) (T, T) where func clone(&T) T {
+  return (clone(a), clone(b));   // explicit clone calls
+}
+```
+
+Class instantiations satisfy `where func clone(&T) T` for free (auto-derived clone). Struct instantiations require the struct to have a user-provided clone. But the vast majority of generic code — collections that only borrow their elements, callbacks, dispatch — is bound-free under the refined model.
 
 ### TSUGAR markers split into two classes
 
@@ -217,34 +236,24 @@ Roughly half the markers go away; the other half become natural Vale syntax.
 
 ## What this resolves from the cut's review
 
-The kind-mutability cut left several band-aids tracked as Q1–Q11 in the post-cut review. This
-model resolves these as follows:
+The kind-mutability cut left several band-aids tracked as Q1–Q11 in the post-cut review. This model resolves these as follows (many have since landed):
 
-| Question | Resolution under this model |
-|---|---|
-| Q1: LocalLoadH absorbs borrow→value | Required to invert. LocalLoadH(target=Borrow) on primitive produces `MutableBorrowH+InlineH+prim`. CopyPrimH does the borrow→value conversion. |
-| Q5: 11 `inline_primitive_uniform_coord_h` call sites | Density collapses to ~1–2 sites (canonical primitive-literal shape rule). Load sites use `target_ownership` directly. |
-| Q6/Q7: "OwnH-only-for-primitive" testvm asserts | Disappear. LocalLoadH/MemberLoadH never produce OwnH for primitives; CopyPrim does. |
-| Q9: `__copy_prim` panic for non-primitive | Stays meaningful but trigger sites move from user source to typing-pass auto-insertion at `convert_helper.rs`. Replace panic with typed `ICompileErrorT::CopyPrimNonPrimitive`. |
-| Q2/Q3/Q10/Q11 | Orthogonal — these are pre-cut leftovers (Share+primitive producers, dead consumer arms, missing constructor assert). Fix surgically in **Phase 0** below; not dependent on this model. |
-| Q4 | Folded in: `share` keyword retires in favor of `class`. Parser disambiguation hack removable. |
+| Question | Resolution under this model | Status |
+|---|---|---|
+| Q1: LocalLoadH absorbs borrow→value | Inverted. LocalLoadH(target=Borrow) on primitive produces `MutableBorrowH+InlineH+prim`. CopyPrimH does the borrow→value conversion. | **LANDED** (Q1 borrow-shape arc, see vcoord-handoff.md § "Mission — Q1 LocalLoadH / borrow-shape honest-mode arc" — DONE) |
+| Q5: 11 `inline_primitive_uniform_coord_h` call sites | Density collapses to ~1–2 sites (canonical primitive-literal shape rule). Load sites use `target_ownership` directly. | LANDED alongside Q1. |
+| Q6/Q7: "OwnH-only-for-primitive" testvm asserts | Disappear. LocalLoadH/MemberLoadH never produce OwnH for primitives; CopyPrim does. | LANDED alongside Q1. |
+| Q9: `__copy_prim` panic for non-primitive | Retitled `implicit_clone` internally. Trigger sites move from user source to typing-pass auto-insertion at `convert_helper.rs` / target-side coercion table. | Partially landed via `implicit_clone(&T) T` intrinsic wiring in CHECKPOINT 19. |
+| Q2/Q3/Q10/Q11 | Orthogonal pre-cut leftovers (Share+primitive producers, dead consumer arms, missing constructor assert). | Mostly LANDED via CHECKPOINT 19 sharedness cleanup + CoordT::new / CoordI::new / CoordH::new invariants. |
+| Q4 | `share` keyword retires in favor of `class`. Parser disambiguation hack removable. | DEFERRED — see Phase H. |
 
 ## Out of scope (deliberately)
 
-- **Auto-borrow at call sites (general).** This model does NOT auto-insert `&` when a function
-  param is `&T` and the caller passed bare `T`. Bare-use clones to `T`; if the param is `&T`,
-  that's a type error. The single exception is method-receiver auto-borrow, deferred until
-  post-overloading-removal.
-- **`Copy` marker trait (Rust-style).** This model treats *every* type as cloneable iff
-  `clone(&T) T` is in scope. There is no distinct "trivially copyable" trait. Primitives just
-  happen to have a free `clone` impl via `__copy_prim`; classes via `__rc_alias`. If we want a
-  perf distinction later, it lives as a separate concern, not a type-system feature.
-- **`Clone` trait shorthand** (e.g. `<T: Clone>` desugaring to `where func clone(&T) T`). Not
-  in this arc; bare `where func clone(&T) T` is fine.
-- **Drop semantics.** Unchanged. `clone(&T) T` does not interact with `drop(T) void`. A type
-  may be cloneable but not droppable, or vice versa.
-- **Last-use auto-move (NLL-style).** Bare-use always clones. The author writes `^` to move.
-  Future arc could promote last-use bare to move, but not in this design.
+- **Auto-firing `clone` for non-primitives at call sites.** The refined model does NOT auto-insert `clone(&x)` when a function param is `Own T` and the caller passed bare `x` for a non-primitive `T`. That's a `MustExplicitlyMove` compile error; the user writes `x^` or `clone(&x)`. The two exceptions — `Borrow + primitive` → Own via `implicit_clone`, `Borrow + share-kind` → Share via `__rc_alias` — are the ONLY auto-fired coercions. Everything else requires explicit user action.
+- **`Copy` marker trait (Rust-style).** This model treats primitives specially via `implicit_clone` and class types specially via `__rc_alias`; struct types have no auto-clone. There is no distinct "trivially copyable" trait, and no way for a user-defined struct to opt into auto-firing.
+- **`Clone` trait shorthand** (e.g. `<T: Clone>` desugaring to `where func clone(&T) T`). Not in this arc; bare `where func clone(&T) T` is fine.
+- **Drop semantics.** Unchanged. `clone(&T) T` does not interact with `drop(T) void`. A type may be cloneable but not droppable, or vice versa.
+- **Last-use auto-move (NLL-style).** Bare-use always borrows. The author writes `^` to move. Future arc could promote a bare-use that would otherwise land at an Own non-primitive target and IS the syntactically last use into an implicit move, eliminating the `MustExplicitlyMove` error for the common "return x" case. Not in this design.
 
 ### vivem caveat: mutating-through-borrow on primitives
 
@@ -262,9 +271,10 @@ borrow would require either (a) interior-mutability on the IntV cell, breaking t
 "plain HashMap + &mut self" discipline, or (b) re-allocating the IntV in place with the new
 value, which would change observable behavior under cycle-of-references inspection.
 
-For *this* design we don't depend on `*ref = value` for primitives — bare-use clones, `&x`
-borrows for reading, `^x` moves. Mutating a remote primitive through a borrow isn't part of
-the surface semantics described above. If we later add `*x = ...` as a language feature for
+For *this* design we don't depend on `*ref = value` for primitives — bare-use borrows (with
+`implicit_clone` firing at Own-primitive targets), `&x` is the explicit spelling of the same
+borrow, `^x` moves. Mutating a remote primitive through a borrow isn't part of the surface
+semantics described above. If we later add `*x = ...` as a language feature for
 primitives, the vivem will need a non-trivial rework (probably adopting `Cell<KindV>` for
 primitive allocations, or a different storage model for primitives specifically).
 
@@ -282,41 +292,30 @@ through that borrow, the asserts come back (and the allocation model needs the r
 
 Phased so the suite stays green throughout. Each phase verifiable.
 
-### Phase 0 (lands first, independent of the rest)
+### Phase 0 (LANDED)
 
-Orthogonal surgical fixes from the cut's Q2/Q3/Q4/Q9/Q10/Q11 review. These remove the
-Share+primitive band-aids that would otherwise interact weirdly with the bare-use desugar:
+Orthogonal surgical fixes from the cut's Q2/Q3/Q4/Q9/Q10/Q11 review. All landed via the CHECKPOINT 16 → CHECKPOINT 22 arc plus incremental follow-ups. The `CoordT::new()`/`CoordI::new()`/`CoordH::new()` primitive-invariant asserts are in place, the four Share+primitive producer sites have been fixed, and the `Sharedness` naming is unified. `share`-keyword disambiguation (Q4) landed as part of the sharedness cleanup — the templex parser reads `share` in struct/interface header position directly as `SharednessP`. Only Q4's canonical `class`-keyword rename remains (Phase H).
 
-| Step | What | Files |
-|---|---|---|
-| 0.1 | Fix 4 typing-pass producers of `Share+primitive`: `DestroyMutRuntimeSizedArrayTE`, `RuntimeSizedArrayCapacityTE`, `PushRuntimeSizedArrayTE`, `DestroyTE` — emit `Own+Void` / `Own+Int`. (Q11) | `typing/ast/expressions.rs` |
-| 0.2 | Delete dead `(Share, Bool)` consumer arm. (Q11) | `typing/expression/expression_compiler.rs:977` |
-| 0.3 | Delete `SoftLoad (Share, Own) → Own` band-aid. (Q2) | `instantiating/instantiator.rs` |
-| 0.4 | Delete `compose_ownerships` primitive short-circuit (regular `(Borrow, Own) → MutableBorrow` arm becomes correct). (Q3) | `instantiating/instantiator.rs:2081` |
-| 0.5 | Add `CoordT::new()` / `CoordI::new()` / `CoordH::new()` ctor asserts: kind is primitive ⇒ ownership ∈ {Own, Borrow, Weak}. Locks Share+primitive out forever. (Q10) | `typing/types/types.rs`, `instantiating/ast/types.rs`, `final_ast/types.rs` |
-| 0.6 | Replace `__copy_prim` panic at expression_compiler.rs:768 with typed `ICompileErrorT::CopyPrimNonPrimitive`. (Q9) | `typing/expression/expression_compiler.rs`, `typing/compiler_error_humanizer.rs` |
-| 0.7 | Disambiguate `share` keyword in templex parser by context (struct/interface header position → Sharedness; otherwise → Ownership). Removes the post-parse alias-rewrite. (Q4) | `parsing/templex_parser.rs`, `parsing/parser.rs` |
-| 0.8 | Decide tup0.vale Share-vs-Own question (likely flip to Own); rename `Sharedness → Sharedness` to match Backend's terminology (cosmetic; defer if not now). | `builtins/resources/tup0.vale`, `final_ast/ast.rs:208`, various |
+### The current mission's Phase 2 supersedes Phases A/B/C below
 
-After Phase 0 the suite holds at green and the 7 DO NOT SUBMIT markers in the cut's diff shrink
-to ≤2 (the `tup0.vale` design note and the optional `Sharedness → Sharedness` rename).
+The vcoord-handoff.md active Mission (§ "Overload resolution & dispatch model redesign") absorbs Phases A, B, and C of this doc into a single combined arc: the uniform bare-use → Borrow materialization, the target-side auto-coercion table, and the `Borrow + share-kind` vs `Share T` type-system distinction all land together. See vcoord-handoff.md § "Practical scope of work" for the current landing plan. Phases D onward (postfix syntax parser, method-receiver `&./^.`, lambda capture lists, `class`-keyword rename, `@T` retirement, TSUGAR sweep) are still ahead and independent of Phase 2.
 
-### Phases A–I (the actual semantic shift)
+### Phases A / B / C (SUPERSEDED — covered by vcoord-handoff.md Phase 2)
+
+The original Phases A (target-side coercion in `convert_helper.rs`), A.5 (class-clone auto-derivation), B (bare-use desugar), and C (move-tracker change) are absorbed into the active Mission's Phase 2 arc — landing together with the type-system `Borrow + share-kind` vs `Share T` distinction, uniform bare-use materialization, and target-side `convert()` rewrites. See vcoord-handoff.md § "Practical scope of work" for the concrete landing plan.
+
+### Phases D–J (still ahead, mostly independent of Phase 2)
 
 | Phase | What | Key files |
 |---|---|---|
-| A | `convert_helper.rs`: when coercing `&T → T`, look up `clone(&T) T` in scope. For primitive: emit CopyPrim. For class (auto-derived clone): emit `__rc_alias`. For struct: emit user's `clone()` call. Error if no clone available. | `typing/convert_helper.rs` |
-| A.5 | Auto-derive `clone(&T) T` for every `class` declaration; lower body to `__rc_alias` intrinsic. Mirrors `drop` auto-derivation. User-defined `clone` for a class is a compile error. | `typing/macros/citizen/`, `typing/macros/class_clone_macro.rs` (new) |
-| B | Typing-pass bare-use desugar: `IExpressionSE::LocalLookup` / `MemberLookup` without postfix `&`/`^` wraps source in implicit `clone(...)` resolution. | `typing/expression/expression_compiler.rs` |
-| C | Move-tracker change: bare-use no longer counts as move; only `x^` does. Update `determine_if_local_is_addressible` / move-tracking analysis. | `typing/expression/local_helper.rs`, `typing/expression/expression_compiler.rs` |
-| D | Postfix `^` / `&` syntax: parser changes. Add `x^` and `x&` as expression suffixes; preserve prefix-`&` short-term during transition if needed, then retire. | `parsing/expression_parser.rs`, `postparsing/expression_scout.rs` |
+| D | Postfix `^` / `&` syntax: parser changes. Add `x^` and `x&` as expression suffixes; preserve prefix-`&` short-term during transition, then retire. | `parsing/expression_parser.rs`, `postparsing/expression_scout.rs` |
 | D.5 | `x&.foo()` / `x^.foo()` method-call receiver syntax. Lex/parse `&.` and `^.` as combined receiver-borrow / receiver-move tokens. | `parsing/expression_parser.rs` |
-| E | Q1 H-IR alternative: `LocalLoadH(target=Borrow)` on primitive produces `MutableBorrowH+InlineH+prim`. CopyPrimH does real conversion. Delete primitive carve-out in `LocalLoadH::result_type()`. | `final_ast/instructions.rs`, `simplifying/load_hammer.rs`, `testvm/expression_vivem.rs` |
-| F | Backend: widen `primitives.h` asserts to accept primitive borrows; **construct primitive borrow Refs ad-hoc at `metal_lowerer`** (no new singletons in `metalcache.h`). | `Backend/src/region/common/primitives.h`, `FrontendRust/src/backend_ffi/metal_lowerer.rs` |
-| G | Lambda capture list parser + typing-pass capture-mode handling for `[x]` / `[x&]` / `[x^]`. | `parsing/expression_parser.rs`, `postparsing/expression_scout.rs`, `typing/expression/expression_compiler.rs` (closure path) |
+| E | (LANDED) Q1 H-IR arc — `LocalLoadH(target=Borrow)` on primitive honestly produces `MutableBorrowH+YonderH+prim`, CopyPrimH does the borrow→value conversion. | — |
+| F | Backend: widen `primitives.h` asserts to accept primitive borrows; construct primitive borrow Refs ad-hoc at `metal_lowerer`. | `Backend/src/region/common/primitives.h`, `FrontendRust/src/backend_ffi/metal_lowerer.rs` |
+| G | Lambda capture list parser + typing-pass capture-mode handling for `[x]` / `[x&]` / `[x^]`. Also depends on the share-lambda / own-lambda syntactic split (see vcoord-handoff.md § "Future direction: split lambdas"). | `parsing/expression_parser.rs`, `postparsing/expression_scout.rs`, `typing/expression/expression_compiler.rs` (closure path) |
 | H | `share` → `class` keyword rename: lexer/parser. Intermediate accepts both `struct Foo share` and `struct Foo class`; eventually only the standalone `class Foo { ... }` form. Test-program sweep. | `parsing/parser.rs`, all `*.vale` files using `share` |
 | I | `@T` syntax retires. Remove from parser; sweep test programs that still use it. | `parsing/templex_parser.rs`, test programs |
-| J | TSUGAR sweep: remove `__copy_prim(...)` wraps in builtin Vale + test programs. Verify by running suite (bare-use auto-insertion replaces them). Also delete source-level `__copy_prim` syntax (CopyPrimSE, IRulexSR::CopyPrim, scout handler, typing-pass syntax branch). Keep CopyPrimTE/IE/H/Backend::CopyPrim for the operation. | `FrontendRust/src/builtins/`, `FrontendRust/src/tests/`, `FrontendRust/src/integration_tests/`, postparsing/ |
+| J | TSUGAR sweep: remove `__copy_prim(...)` wraps in builtin Vale + test programs. Verify by running suite. Also delete source-level `__copy_prim` syntax (CopyPrimSE, IRulexSR::CopyPrim, scout handler, typing-pass syntax branch). Keep CopyPrimTE/IE/H/Backend::CopyPrim for the operation. | `FrontendRust/src/builtins/`, `FrontendRust/src/tests/`, `FrontendRust/src/integration_tests/`, postparsing/ |
 
 **Estimated total scope:** ~3–5 days of focused work, plus the migration sweep (~250–350 site
 touches across builtins + test programs, net line-count reduction of ~100 lines). Each phase has
@@ -378,4 +377,4 @@ annotation of move-vs-clone intent.
    end-state form (probably standalone `class Ship`) and the deprecation timeline for the
    `struct Ship class` intermediate.
 
-These should be resolved before Phase B lands (the bare-use desugar phase).
+These should be resolved before the active Mission's Phase 2 lands (the uniform bare-use materialization + target-side coercion arc that supersedes the original Phase A/B/C).

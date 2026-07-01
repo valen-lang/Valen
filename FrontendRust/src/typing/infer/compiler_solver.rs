@@ -31,9 +31,7 @@ use crate::parsing::ast::ast::OwnershipP;
 use crate::typing::templata::templata::KindTemplataT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::templata::templata::CoordTemplataT;
-use crate::typing::templata::conversions::evaluate_mutability;
 use crate::typing::typing_interner::TypingInterner;
-use crate::typing::templata::templata::SharednessTemplataT;
 use crate::typing::templata::templata::OwnershipTemplataT;
 use crate::postparsing::rules::rule_scout::get_kind_equivalent_runes_iter;
 use crate::solver::solver::make_solver_state;
@@ -1476,7 +1474,6 @@ where 's: 't,
 
     fn literal_to_templata(&self, literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
         match literal {
-            ILiteralSL::MutabilityLiteral(m) => ITemplataT::Mutability(SharednessTemplataT { sharedness: evaluate_mutability(m.mutability) }),
             ILiteralSL::OwnershipLiteral(o) => ITemplataT::Ownership(OwnershipTemplataT { ownership: evaluate_ownership(o.ownership) }),
             ILiteralSL::StringLiteral(s) => ITemplataT::String(s.value),
             ILiteralSL::IntLiteral(i) => ITemplataT::Integer(i.value),

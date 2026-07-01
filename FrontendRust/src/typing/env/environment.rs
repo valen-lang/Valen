@@ -391,7 +391,6 @@ pub fn entry_matches_filter<'s, 't>(
         ITemplataT::Integer(_) => true,
         ITemplataT::String(_) => true,
         ITemplataT::Location(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::Mutability(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
         ITemplataT::Ownership(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
         ITemplataT::ExternFunction(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
       }

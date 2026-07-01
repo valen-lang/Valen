@@ -38,8 +38,3 @@ pub fn unevaluate_ownership(ownership: OwnershipT) -> OwnershipP {
   }
 }
 
-pub fn unevaluate_mutability(mutability: SharednessT) -> SharednessP {
-  panic!("Unimplemented: unevaluate_mutability");
-  // mutability match { case MutableT => MutableP; case ImmutableT => ImmutableP }
-}
-

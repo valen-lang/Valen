@@ -18,7 +18,7 @@ use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
 use crate::postparsing::rules::rules::IRulexSR::{Lookup, MaybeCoercingCall, MaybeCoercingLookup};
 use crate::postparsing::rules::rules::{
   AugmentSR, BoolLiteralSL, ILiteralSL, IntLiteralSL, IRulexSR, LiteralSR, LocationLiteralSL,
-  LookupSR, MaybeCoercingCallSR, MaybeCoercingLookupSR, SharednessLiteralSL, OwnershipLiteralSL,
+  LookupSR, MaybeCoercingCallSR, MaybeCoercingLookupSR, OwnershipLiteralSL,
   RuneParentEnvLookupSR, RuneUsage, StringLiteralSL,
 };
 use crate::utils::range::RangeS;

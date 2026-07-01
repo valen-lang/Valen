@@ -759,7 +759,6 @@ where 's: 't,
                     templata
                 }
             }
-            ITemplataT::Mutability(_) => templata,
             ITemplataT::Integer(_) => templata,
             ITemplataT::Boolean(_) => templata,
             ITemplataT::Prototype(p) => {

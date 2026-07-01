@@ -19,7 +19,7 @@ use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
   AugmentSR, BoolLiteralSL, CoerceToCoordSR, CoordComponentsSR, EqualsSR, ILiteralSL, IntLiteralSL,
   IRulexSR, IsInterfaceSR, LiteralSR, LocationLiteralSL, LookupSR, MaybeCoercingCallSR,
-  MaybeCoercingLookupSR, SharednessLiteralSL, OneOfSR, OwnershipLiteralSL, StringLiteralSL,
+  MaybeCoercingLookupSR, OneOfSR, OwnershipLiteralSL, StringLiteralSL,
 };
 use crate::postparsing::rules::RuneUsage;
 
@@ -95,7 +95,6 @@ pub enum NodeRefS<'s> {
   IntLiteral(&'s IntLiteralSL),
   StringLiteral(&'s StringLiteralSL<'s>),
   BoolLiteral(&'s BoolLiteralSL),
-  MutabilityLiteral(&'s SharednessLiteralSL),
   LocationLiteral(&'s LocationLiteralSL),
   OwnershipLiteral(&'s OwnershipLiteralSL),
 
@@ -874,7 +873,6 @@ where
     ILiteralSL::IntLiteral(x) => collect_if(pred, out, NodeRefS::IntLiteral(x)),
     ILiteralSL::StringLiteral(x) => collect_if(pred, out, NodeRefS::StringLiteral(x)),
     ILiteralSL::BoolLiteral(x) => collect_if(pred, out, NodeRefS::BoolLiteral(x)),
-    ILiteralSL::MutabilityLiteral(x) => collect_if(pred, out, NodeRefS::MutabilityLiteral(x)),
     ILiteralSL::LocationLiteral(x) => collect_if(pred, out, NodeRefS::LocationLiteral(x)),
     ILiteralSL::OwnershipLiteral(x) => collect_if(pred, out, NodeRefS::OwnershipLiteral(x)),
   }

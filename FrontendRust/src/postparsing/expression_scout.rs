@@ -14,7 +14,7 @@ use crate::postparsing::expressions::{
 };
 use crate::postparsing::names::ImplicitRuneValS;
 use crate::postparsing::rules::rules::{
-  ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, SharednessLiteralSL, RuneUsage,
+  ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, RuneUsage,
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS,

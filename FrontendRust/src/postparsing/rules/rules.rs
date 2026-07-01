@@ -3,9 +3,9 @@ use crate::postparsing::names::IRuneS;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, ITemplataType, IntegerTemplataType, LocationTemplataType,
-  SharednessTemplataType, OwnershipTemplataType, StringTemplataType,
+  OwnershipTemplataType, StringTemplataType,
 };
-use crate::parsing::ast::{LocationP, SharednessP, OwnershipP};
+use crate::parsing::ast::{LocationP, OwnershipP};
 use crate::utils::range::RangeS;
 
 
@@ -335,7 +335,6 @@ pub enum ILiteralSL<'s> {
   IntLiteral(IntLiteralSL),
   StringLiteral(StringLiteralSL<'s>),
   BoolLiteral(BoolLiteralSL),
-  MutabilityLiteral(SharednessLiteralSL),
   LocationLiteral(LocationLiteralSL),
   OwnershipLiteral(OwnershipLiteralSL),
 }
@@ -346,12 +345,11 @@ impl<'s> ILiteralSL<'s> {
       ILiteralSL::IntLiteral(x) => x.get_type(),
       ILiteralSL::StringLiteral(x) => x.get_type(),
       ILiteralSL::BoolLiteral(x) => x.get_type(),
-      ILiteralSL::MutabilityLiteral(x) => x.get_type(),
       ILiteralSL::LocationLiteral(x) => x.get_type(),
       ILiteralSL::OwnershipLiteral(x) => x.get_type(),
     }
   }
-  
+
 }
 
 
@@ -392,20 +390,6 @@ pub struct BoolLiteralSL {
 impl BoolLiteralSL {
   pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::BooleanTemplataType(BooleanTemplataType {})
-  }
-  
-}
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct SharednessLiteralSL {
-  pub mutability: SharednessP,
-}
-
-
-impl SharednessLiteralSL {
-  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
-    ITemplataType::SharednessTemplataType(SharednessTemplataType {})
   }
   
 }

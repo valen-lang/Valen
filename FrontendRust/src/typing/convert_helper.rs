@@ -81,9 +81,20 @@ target:
             } else {
                 match (ISubKindTT::try_from(source_kind), ISuperKindTT::try_from(target_kind)) {
                     (Ok(source_sub_kind), Ok(target_super_kind)) => {
-                        self.convert_with_subkind(
-                            IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)),
-                            coutputs, range, call_location, source_expr, source_sub_kind, target_super_kind)
+                        let calling_env = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
+                        match self.is_parent(coutputs, calling_env, range, call_location, source_sub_kind, target_super_kind) {
+                            IsParentResult::IsParent(is_parent) => {
+                                assert!(coutputs.get_instantiation_bounds(self.typing_interner, is_parent.impl_id).is_some());
+                                ReferenceExpressionTE::Upcast(self.typing_interner.alloc(UpcastTE {
+                                    inner_expr: source_expr,
+                                    target_super_kind,
+                                    impl_name: is_parent.impl_id,
+                                }))
+                            }
+                            IsParentResult::IsntParent(_candidates) => {
+                                panic!("Can't upcast a {:?} to a {:?}", source_sub_kind, target_super_kind)
+                            }
+                        }
                     }
                     _ => panic!("vfail: cannot convert {:?} to {:?}", source_kind, target_kind),
                 }
@@ -101,31 +112,6 @@ target:
             };
 
         converted_expr
-    }
-
-    pub fn convert_with_subkind(
-        &self,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        source_expr: ReferenceExpressionTE<'s, 't>,
-        source_sub_kind: ISubKindTT<'s, 't>,
-        target_super_kind: ISuperKindTT<'s, 't>,
-    ) -> ReferenceExpressionTE<'s, 't> {
-        match self.is_parent(coutputs, calling_env, range, call_location, source_sub_kind, target_super_kind) {
-            IsParentResult::IsParent(is_parent) => {
-                assert!(coutputs.get_instantiation_bounds(self.typing_interner, is_parent.impl_id).is_some());
-                ReferenceExpressionTE::Upcast(self.typing_interner.alloc(UpcastTE {
-                    inner_expr: source_expr,
-                    target_super_kind,
-                    impl_name: is_parent.impl_id,
-                }))
-            }
-            IsParentResult::IsntParent(_candidates) => {
-                panic!("Can't upcast a {:?} to a {:?}", source_sub_kind, target_super_kind)
-            }
-        }
     }
 
 }

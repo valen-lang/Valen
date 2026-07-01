@@ -17,7 +17,6 @@ use crate::typing::env::function_environment_t::ReferenceLocalVariableT;
 use crate::typing::names::names::CodeVarNameT;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::templata::templata::SharednessTemplataT;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::CoordT;
 use crate::typing::types::types::KindT;

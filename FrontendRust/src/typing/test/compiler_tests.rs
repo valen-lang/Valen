@@ -12,7 +12,7 @@ use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
 use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT};
 use crate::typing::names::names::{INameT, IVarNameT};
 use crate::typing::types::types::{SharednessT, NeverT};
-use crate::typing::templata::templata::{ITemplataT, KindTemplataT, SharednessTemplataT};
+use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
 use crate::interner::StrI;
 use crate::parsing::tests::utils::expect_1;
 use crate::postparsing::names::{CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, INameS, IRuneValS, TopLevelStructDeclarationNameS};

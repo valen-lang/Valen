@@ -33,7 +33,6 @@ use crate::typing::types::types::InterfaceTTValT;
 use crate::typing::infer_compiler::include_rule_in_definition_solve;
 use crate::postparsing::ast::GenericParameterS;
 use crate::typing::names::names::IdValT;
-use crate::typing::templata::templata::expect_sharedness;
 use crate::utils::fx::HashSet;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>

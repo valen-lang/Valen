@@ -14,7 +14,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::postparsing::ast::{LocationInDenizen, IRegionMutabilityS};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::postparsing::itemplatatype::{IntegerTemplataType, SharednessTemplataType, ITemplataType};
+use crate::postparsing::itemplatatype::{IntegerTemplataType, ITemplataType};
 use crate::postparsing::rules::rules::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::names::names::*;
@@ -38,8 +38,6 @@ use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::names::names::RuneNameT;
 use crate::typing::templata::templata::CoordTemplataT;
-use crate::typing::templata::templata::SharednessTemplataT;
-use crate::typing::types::types::SharednessT;
 use std::marker::PhantomData;
 
 
