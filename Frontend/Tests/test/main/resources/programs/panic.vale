@@ -1,5 +1,0 @@
-
-exported func main() int {
-  __vbi_panic();
-  return 73;
-}

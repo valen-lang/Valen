@@ -1,8 +1,6 @@
-# Typing Pass Design — v3
+# Typing Pass Design
 
 Architecture and design decisions for the typing pass. This is the authoritative design reference.
-
-The historical design docs (`docs/historical/typing-pass-design-v1.md`, `docs/historical/typing-pass-design-v2.md`, `docs/historical/typing-pass-migration-setup.md`) are obsolete — they each carry "DO NOT FOLLOW" banners.
 
 ---
 

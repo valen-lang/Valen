@@ -454,7 +454,6 @@ This subsection is preserved for archaeological context only — functor1.vale i
   - `BoundReturnResolution-BRRZ.md` — directly relevant precedent.
   - `ByDefaultPullFromWhereDeclared-BDPFWDZ.md` — design principle.
   - `EachCallSiteIsItsOwnSolve-ECSIIOSZ.md` — per-call-site solve model.
-- **`docs/historical/`** — past handoffs and post-mortems. `BRRZ-postmortem.md` is the most directly relevant; CFWG's substrate work will rhyme.
 - **`investigations/family1_handoff.md`** — the original Family 1 handoff. 1.1 and 1.2 (impl bounds) are resolved; the doc still has lots of structural context.
 - **`investigations/`** — per-test investigation docs. `family3_map_function.md` is a model for thorough investigation writing.
 

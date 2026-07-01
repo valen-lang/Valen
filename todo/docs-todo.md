@@ -47,7 +47,7 @@ All `.claude/skills/*/SKILL.md` are now symlinks to `docs/skills/` sources. Fixe
 
 ### Sylvan project-level docs (lower priority — Vale language docs, not migration)
 
-- [ ] Triage the loose Vale design docs in `docs/` (`Architecture.md`, `Environments.md`, `Generics.md`, `Catalyst.md`, `Allocators.md`, etc.) and the `docs/old/`, `docs/notes/`, `docs/refactor-thoughts/`, `docs/historical/` directories.
+- [ ] Triage the loose Vale design docs in `docs/` (`Architecture.md`, `Environments.md`, `Generics.md`, `Catalyst.md`, `Allocators.md`, etc.) and the `docs/old/`, `docs/notes/`, `docs/refactor-thoughts/` directories.
 - [ ] Top-level: `README.md` (stays), `architectural-direction.md`, `build-compiler.md`, `compiler-overview.md`.
 
 ### Luz shields triage (mostly settled)

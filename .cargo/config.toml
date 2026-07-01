@@ -7,6 +7,6 @@ RUST_BACKTRACE = "1"
 # stack slot in debug, producing ~21KB frames. ~96 frames of mutual recursion
 # through scout_expression/scout_function/scout_lambda exhausts the default.
 # Release-mode mem2reg+inlining collapses the locals and the test passes
-# with 2MB. TODO post-migration (per TL.md residual): remove once
-# scout_expression is split per-arm or its locals are Boxed.
+# with 2MB. Remove once scout_expression is split per-arm or its locals
+# are Boxed.
 RUST_MIN_STACK = "16777216"

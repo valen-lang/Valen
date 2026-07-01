@@ -1,8 +1,0 @@
-
-func do<F>(callable &F) int where func(&F)int {
-  callable()
-}
-
-exported func main() int {
-  do(&{ 42 })
-}

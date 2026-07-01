@@ -1,3 +1,0 @@
-
-extern func numMainArgs() int;
-extern func getMainArg(i int) str;

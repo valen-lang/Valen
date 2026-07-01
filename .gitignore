@@ -2,14 +2,8 @@ release-ubuntu
 release-mac
 release-windows
 release-unix
-Driver.jar
 .DS_Store
 __MACOSX
-Frontend/lib/lift-json_2.12-3.3.0-RC1.jar
-Frontend/lib/scala-library-2.12.8.jar
-Frontend/lib/scala-reflect-2.12.8.jar
-Frontend/lib/scala-xml_2.12-1.0.6.jar
-Frontend/Frontend.jar
 Catalyst/catalyst/.*
 Catalyst/.*
 Catalyst/catalyst/target/
@@ -18,9 +12,6 @@ removeextra.sh
 target
 project
 .metals
-Frontend/.idea/librariesadoptopenjdk.tar.gz
-jdk-11.0.10+9-jre
-adoptopenjdk.tar.gz
 auditor-history/
 .idea/
 .opencode/
@@ -33,7 +24,6 @@ loopdetection.md
 regions-release-mac/
 rust_defs.txt
 rust_externs.h
-scala_defs.txt
 stdout.txt
 test_integration.sh
 test_output/
@@ -44,8 +34,6 @@ test_output/
 .DS_Store
 guardian-cache
 target
-Frontend/lib/scala-reflect-2.12.8.jar
-Frontend/lib/scala-xml_2.12-2.2.0.jar
 tmp
 for-tl.md
 for-jr.md

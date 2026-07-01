@@ -1,3 +1,0 @@
-exported func main() int {
-   3 + 4
-}

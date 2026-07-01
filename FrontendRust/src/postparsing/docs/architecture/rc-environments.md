@@ -101,7 +101,7 @@ Key changes:
 - `StackFrame.parent_env`: owned `FunctionEnvironmentS` → `Rc<FunctionEnvironmentS>`
 - `StackFrame.maybe_parent`: `Option<Box<StackFrame>>` → `Option<Rc<StackFrame>>`
 
-Note: `StackFrame` loses `PartialEq` since `Rc` compares by value (which is fine — Scala's `StackFrame` had `equals` returning `vcurious()` anyway, meaning equality was never used).
+Note: `StackFrame` loses `PartialEq` since `Rc` compares by value (which is fine — equality was never used).
 
 ### Step 2: Change construction sites
 

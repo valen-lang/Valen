@@ -1,1 +1,0 @@
-../../../docs/skills/repro-reduce-tdd-drive.md

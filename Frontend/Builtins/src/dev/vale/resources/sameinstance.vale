@@ -1,3 +1,0 @@
-
-extern("vale_same_instance")
-func ===<T>(left &T, right &T) bool;

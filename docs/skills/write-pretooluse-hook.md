@@ -2,10 +2,6 @@
 
 How to build a Rust binary that runs as a Claude Code PreToolUse hook, capable of blocking tool calls (Edit, Write, Bash, etc.) before they execute.
 
-## Reference implementation
-
-`.claude/hooks/check-scala-comments/` — blocks Edit/Write calls that would break Scala comment parity. Read this as a working example.
-
 ## Step 1: Scaffold the project
 
 Create the hook directory under `.claude/hooks/<hook-name>/`:

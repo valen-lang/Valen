@@ -7,7 +7,7 @@ use std::process;
 use clap::Args;
 
 use crate::midas;
-use crate::valestrom::{ProjectDirectoryDeclaration, ProjectNonValeInputDeclaration, ProjectValeInputDeclaration};
+use crate::frontend::{ProjectDirectoryDeclaration, ProjectNonValeInputDeclaration, ProjectValeInputDeclaration};
 
 /// Flags accepted by `valec build`.
 #[derive(Args, Debug)]
@@ -270,7 +270,7 @@ pub fn build_stuff(compiler_dir: &Path, args: BuildArgs) {
     }
 
     println!("Running frontend + backend + clang in-process...");
-    let bp = match crate::valestrom::compile_in_process(
+    let bp = match crate::frontend::compile_in_process(
         &project_directory_declarations,
         &project_vale_input_declarations,
         &project_non_vale_input_declarations,

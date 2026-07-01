@@ -48,7 +48,7 @@ override:
 - Move case to `cases/need-implementor-changes/`
 
 After routing a case, remove its `Guardian: temp-disable: ...` comment
-from the source file. These live inside `/* ... */` Scala comment blocks.
+from the source file. These live inside `/* ... */` comment blocks.
 Use `grep -rn "Guardian: temp-disable:"` to find them. It mentions a log
 filename that should match the one we're currently processing.
 
@@ -153,11 +153,10 @@ For each shield with cases in `cases/need-implementor-changes/`:
 
 Run `grep -rn "temp-disable:" FrontendRust/src/` to find any `Guardian:
 temp-disable:` annotations left in source files from previous sessions
-that didn't finish cleanup. These live inside `/* ... */` Scala comment
-blocks.
+that didn't finish cleanup. These live inside `/* ... */` comment blocks.
 
 For each annotation found, present it to the human with the surrounding
-code and Scala reference. Process it the same way as Steps 1–6: evaluate
+code. Process it the same way as Steps 1–6: evaluate
 whether the override was correct, strip the annotation if so, flag for
 code changes if not. If the annotation references a pattern now covered
 by a shield exception, just strip it.

@@ -25,12 +25,11 @@ The categories are:
 2. **Usage** — How to interact with this feature correctly when writing code.
 3. **Arcana** — Cross-cutting concerns with non-obvious effects elsewhere. Has a unique ID (initialism + Z suffix) and `@ID` references at affected code sites.
 4. **Shields** — Enforceable rules/constraints. Has a unique ID (initialism + X suffix).
-5. **Migration** — Ephemeral migration status, known Scala/Rust differences, workarounds.
-6. **Architecture** — Internal design, data flow, invariants for modifying the feature itself. Architecture docs should also surface *where the feature is heading* — architecture is about evolution, not just the current snapshot. If there's a planned refactor or a target design the code is converging toward, mention it here with a link to the Reasoning doc that holds the details.
-7. **Reasoning** — Why the current approach was chosen over alternatives, **and future plans** the code is not yet implementing. If a design has a known target shape that's deferred (post-migration, post-benchmarking, pending a decision), it belongs here. Sub-category of architecture. Always cross-referenced from the relevant Architecture doc so readers discover the future plan while reading about the current design.
-8. **Skills** — Step-by-step AI workflow methodology.
-9. **Bugs** — Known bugs go as `#[ignore]`'d tests, not documents.
-10. **Requirements** — Tests are requirements, not documents.
+5. **Architecture** — Internal design, data flow, invariants for modifying the feature itself. Architecture docs should also surface *where the feature is heading* — architecture is about evolution, not just the current snapshot. If there's a planned refactor or a target design the code is converging toward, mention it here with a link to the Reasoning doc that holds the details.
+6. **Reasoning** — Why the current approach was chosen over alternatives, **and future plans** the code is not yet implementing. If a design has a known target shape that's deferred (pending benchmarking, pending a decision), it belongs here. Sub-category of architecture. Always cross-referenced from the relevant Architecture doc so readers discover the future plan while reading about the current design.
+7. **Skills** — Step-by-step AI workflow methodology.
+8. **Bugs** — Known bugs go as `#[ignore]`'d tests, not documents.
+9. **Requirements** — Tests are requirements, not documents.
 
 For each piece of information, identify:
 - Which category it belongs to
@@ -80,7 +79,7 @@ If any piece of information is an arcana (cross-cutting concern):
    * It should be one markdown section, it should not have subsections headers. If it must be long enough that subsections are needed, feel free to use bold lines like, `**Interactions with IDKWTHI:**`.
    * Instead of having a section starting with `**Cross-cutting effect:**`, start it with something else, like `**How this affects call-sites**:` etc.
    * **Focus on *why*, not *what*.** The arcana's job is to explain the strategic reason the code behaves this way — the design invariant, the trade-off, the concern that drives this behavior. It's fine to anchor the reader with a function or type name, but don't narrate tactical implementation: specific call chains, control-flow sequences, "which branch runs when," step-by-step mechanics. Readers come to the arcana for the *why*; they can read the code for the *what*. Tactical narration also dates fast — which is the stronger form of the no-line-numbers rule below.
-   * Do NOT reference file/line numbers (e.g. `FunctionCompiler.scala:194`). Code moves around constantly and line-anchored references go stale fast. Refer to code by concepts, function names, type names, or module/file names only — readers can find the current location by searching for those. The `@ID` markers added to code sites in step 5 are the reverse pointer; the arcana doc doesn't need to point back at specific lines.
+   * Do NOT reference file/line numbers (e.g. `function_compiler.rs:194`). Code moves around constantly and line-anchored references go stale fast. Refer to code by concepts, function names, type names, or module/file names only — readers can find the current location by searching for those. The `@ID` markers added to code sites in step 5 are the reverse pointer; the arcana doc doesn't need to point back at specific lines.
 
 4. **Find all relevant code sites.** Search the codebase for every place this arcana manifests: struct fields, code blocks, function signatures, comments. Use Grep, Glob, and Read. Be thorough — missing a site defeats the purpose.
 

@@ -1,3 +1,0 @@
-exported func moo() {
-   42
-}

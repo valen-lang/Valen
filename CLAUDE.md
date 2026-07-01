@@ -28,7 +28,7 @@ See the `scripting` skill (`docs/skills/scripting.md`) for the full bulk-edit / 
 
 ## Build & Run Convention
 
-Always pipe `cargo run`, `cargo test`, `cargo build`, `cargo check`, and all `sbt` output into a fixed file in `./tmp/` (use the same file for the entire session/project, e.g. `./tmp/refactor-project.txt`). Come up with a name instead of refactor-project.txt, and then use the same file for the rest of the session.
+Always pipe `cargo run`, `cargo test`, `cargo build`, `cargo check` output into a fixed file in `./tmp/` (use the same file for the entire session/project, e.g. `./tmp/refactor-project.txt`). Come up with a name instead of refactor-project.txt, and then use the same file for the rest of the session.
 
 **Never chain a heavy command with `| tail`, `| head`, `| grep`.** Run the build/test with `>` as one command (redirecting fully to the file) and the inspection as a separate follow-up command. Chaining defeats the purpose: you lose the ability to re-analyze a different part of the output without re-running the expensive build.
 
@@ -43,13 +43,13 @@ grep "error" ./tmp/fixing-bug-1047-quest.txt
 ```
 
 ```bash
-sbt 'testOnly dev.vale.AfterRegionsIntegrationTests' > ./tmp/fixing-borrowing-test.txt 2>&1
-grep "SUCCESS" ./tmp/fixing-borrowing-test.txt
+cargo test --manifest-path ./FrontendRust/Cargo.toml --lib > ./tmp/fixing-borrowing-test.txt 2>&1
+grep "test result" ./tmp/fixing-borrowing-test.txt
 # Later, to see a different part:
 tail -30 ./tmp/fixing-borrowing-test.txt
 # Later, do some changes to the code, and then same command into same file:
-sbt 'testOnly dev.vale.AfterRegionsIntegrationTests' > ./tmp/fixing-borrowing-test.txt 2>&1
-grep "SUCCESS" ./tmp/fixing-borrowing-test.txt
+cargo test --manifest-path ./FrontendRust/Cargo.toml --lib > ./tmp/fixing-borrowing-test.txt 2>&1
+grep "test result" ./tmp/fixing-borrowing-test.txt
 ```
 
 DON'T chain them together like this:
@@ -64,11 +64,11 @@ Instead, they must be separate entire commands.
 DON'T use a different file for each build like this:
 
 ```bash
-sbt 'testOnly dev.vale.AfterRegionsIntegrationTests' > ./tmp/borrowing-build1.txt 2>&1
-grep "SUCCESS" ./tmp/borrowing-build1.txt
+cargo test --manifest-path ./FrontendRust/Cargo.toml --lib > ./tmp/borrowing-build1.txt 2>&1
+grep "test result" ./tmp/borrowing-build1.txt
 # BAD: Don't use a different file
-sbt 'testOnly dev.vale.AfterRegionsIntegrationTests' > ./tmp/borrowing-build2.txt 2>&1
-grep "SUCCESS" ./tmp/borrowing-build2.txt
+cargo test --manifest-path ./FrontendRust/Cargo.toml --lib > ./tmp/borrowing-build2.txt 2>&1
+grep "test result" ./tmp/borrowing-build2.txt
 ```
 
 Instead, use the same file.

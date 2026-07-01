@@ -485,8 +485,6 @@ Don't forget the test design bug in 4.4. After Family 1 lands, that test still w
   - `BoundReturnResolution-BRRZ.md` — directly relevant.
   - `LambdasAreGenericTemplatesNotGenerics-LAGTNGZ.md` — relevant for 4.4.
   - `EachCallSiteIsItsOwnSolve-ECSIIOSZ.md` — substrate concept.
-- **`docs/historical/`** — past handoffs (`family2_handoff.md`, etc.) and post-mortems. Read `family2_handoff.md` for an example of how the previous handoff was structured.
-- **`docs/historical/BRRZ-postmortem.md`** — what the BRRZ implementation involved. Your CFWG implementation will rhyme.
 - **`investigations/`** — per-test investigations. `family3_map_function.md` is a good model for a thorough investigation doc. Several other docs there are relevant context for individual error patterns you'll hit.
 - **`investigations/deferred-solving-across-def-callsite.md`** — adjacent design exploration. Don't try to solve deferred-solving as part of Family 1, but be aware of it.
 

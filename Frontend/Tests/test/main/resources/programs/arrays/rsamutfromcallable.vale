@@ -1,7 +1,0 @@
-
-import array.make.*;
-exported func main() int {
-  i = 3;
-  a = []int(5, x => x * 42);
-  return a[1];
-}

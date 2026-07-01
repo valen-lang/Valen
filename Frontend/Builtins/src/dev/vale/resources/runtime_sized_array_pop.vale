@@ -1,2 +1,0 @@
-extern("vale_runtime_sized_array_pop")
-func pop<E>(arr &[]<mut>E) E;

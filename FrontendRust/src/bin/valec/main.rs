@@ -1,6 +1,6 @@
 mod build;
 mod midas;
-mod valestrom;
+mod frontend;
 
 use std::env;
 use std::path::PathBuf;
