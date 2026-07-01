@@ -1,140 +1,172 @@
 import v.builtins.implicit_clone.*;
 
 // TSUGAR: func float(x int) float { return castI32Float(x); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func float(x &int) float { return castI32Float(__copy_prim(x)); }
 extern func castI32Float(x int) float;
 
 // TSUGAR: func int(x float) int { return castFloatI32(x); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func int(x &float) int { return castFloatI32(__copy_prim(x)); }
 extern func castFloatI32(x float) int;
 
 extern func TruncateI64ToI32(x i64) int;
 
 // TSUGAR: func i64(x int) i64 { __vbi_ExtendI32ToI64(x) }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func i64(x &int) i64 { __vbi_ExtendI32ToI64(__copy_prim(x)) }
 extern func __vbi_ExtendI32ToI64(x int) i64;
 
 // TSUGAR: func -(x int) int { return __vbi_negateI32(x); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func -(x &int) int { return __vbi_negateI32(__copy_prim(x)); }
 extern func __vbi_negateI32(x int) int;
 
 // TSUGAR: func -(x float) float { return __vbi_negateFloat(x); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func -(x &float) float { return __vbi_negateFloat(__copy_prim(x)); }
 extern func __vbi_negateFloat(x float) float;
 
 func +(left int, right int) int { return __vbi_addI32(left, right); }
 // TSUGAR: func +(left int, right int) int { return __vbi_addI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func +(left &int, right &int) int { return __vbi_addI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_addI32(left int, right int) int;
 
 // TSUGAR: func +(left i64, right i64) i64 { return __vbi_addI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func +(left &i64, right &i64) i64 { return __vbi_addI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_addI64(left i64, right i64) i64;
 
 // TSUGAR: func +(left float, right float) float { return __vbi_addFloatFloat(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func +(left &float, right &float) float { return __vbi_addFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_addFloatFloat(left float, right float) float;
 
 func *(left int, right int) int { return __vbi_multiplyI32(left, right); }
 // TSUGAR: func *(left int, right int) int { return __vbi_multiplyI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func *(left &int, right &int) int { return __vbi_multiplyI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_multiplyI32(left int, right int) int;
 
 // TSUGAR: func *(left i64, right i64) i64 { return __vbi_multiplyI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func *(left &i64, right &i64) i64 { return __vbi_multiplyI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_multiplyI64(left i64, right i64) i64;
 
 // TSUGAR: func *(left float, right float) float { return __vbi_multiplyFloatFloat(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func *(left &float, right &float) float { return __vbi_multiplyFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_multiplyFloatFloat(left float, right float) float;
 
 func -(left int, right int) int { return __vbi_subtractI32(left, right); }
 // TSUGAR: func -(left int, right int) int { return __vbi_subtractI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func -(left &int, right &int) int { return __vbi_subtractI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_subtractI32(left int, right int) int;
 
 // TSUGAR: func -(left i64, right i64) i64 { return __vbi_subtractI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func -(left &i64, right &i64) i64 { return __vbi_subtractI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_subtractI64(left i64, right i64) i64;
 
 // TSUGAR: func -(left float, right float) float { return __vbi_subtractFloatFloat(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func -(left &float, right &float) float { return __vbi_subtractFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_subtractFloatFloat(left float, right float) float;
 
 // TSUGAR: func /(left int, right int) int { return __vbi_divideI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func /(left &int, right &int) int { return __vbi_divideI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_divideI32(left int, right int) int;
 
 // TSUGAR: func /(left i64, right i64) i64 { return __vbi_divideI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func /(left &i64, right &i64) i64 { return __vbi_divideI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_divideI64(left i64, right i64) i64;
 
 // TSUGAR: func /(left float, right float) float { return __vbi_divideFloatFloat(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func /(left &float, right &float) float { return __vbi_divideFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_divideFloatFloat(left float, right float) float;
 
 // TSUGAR: func <(left float, right float) bool { return __vbi_lessThanFloat(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func <(left &float, right &float) bool { return __vbi_lessThanFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanFloat(left float, right float) bool;
 
 // TSUGAR: func <(left i64, right i64) bool { return __vbi_lessThanI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func <(left &i64, right &i64) bool { return __vbi_lessThanI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanI64(left i64, right i64) bool;
 
 func <(left int, right int) bool { return __vbi_lessThanI32(left, right); }
 // TSUGAR: func <(left int, right int) bool { return __vbi_lessThanI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func <(left &int, right &int) bool { return __vbi_lessThanI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanI32(left int, right int) bool;
 
 // TSUGAR: func >(left float, right float) bool { return __vbi_greaterThanFloat(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func >(left &float, right &float) bool { return __vbi_greaterThanFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanFloat(left float, right float) bool;
 
 // TSUGAR: func >(left i64, right i64) bool { return __vbi_greaterThanI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func >(left &i64, right &i64) bool { return __vbi_greaterThanI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanI64(left i64, right i64) bool;
 
 func >(left int, right int) bool { return __vbi_greaterThanI32(left, right); }
 // TSUGAR: func >(left int, right int) bool { return __vbi_greaterThanI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func >(left &int, right &int) bool { return __vbi_greaterThanI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanI32(left int, right int) bool;
 
 func <=(left int, right int) bool { return __vbi_lessThanOrEqI32(left, right); }
 // TSUGAR: func <=(left int, right int) bool { return __vbi_lessThanOrEqI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func <=(left &int, right &int) bool { return __vbi_lessThanOrEqI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanOrEqI32(left int, right int) bool;
 
 // TSUGAR: func <=(left i64, right i64) bool { return __vbi_lessThanOrEqI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func <=(left &i64, right &i64) bool { return __vbi_lessThanOrEqI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanOrEqI64(left i64, right i64) bool;
 
 func >=(left int, right int) bool { return __vbi_greaterThanOrEqI32(left, right); }
 // TSUGAR: func >=(left int, right int) bool { return __vbi_greaterThanOrEqI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func >=(left &int, right &int) bool { return __vbi_greaterThanOrEqI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanOrEqI32(left int, right int) bool;
 
 // TSUGAR: func >=(left i64, right i64) bool { return __vbi_greaterThanOrEqI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func >=(left &i64, right &i64) bool { return __vbi_greaterThanOrEqI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanOrEqI64(left i64, right i64) bool;
 
 func ==(left int, right int) bool { return __vbi_eqI32(left, right); }
 // TSUGAR: func ==(left int, right int) bool { return __vbi_eqI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func ==(left &int, right &int) bool { return __vbi_eqI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_eqI32(left int, right int) bool;
 
 // TSUGAR: func ==(left i64, right i64) bool { return __vbi_eqI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func ==(left &i64, right &i64) bool { return __vbi_eqI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_eqI64(left i64, right i64) bool;
 
 // TSUGAR: func ==(left float, right float) bool { return __vbi_eqFloatFloat(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func ==(left &float, right &float) bool { return __vbi_eqFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_eqFloatFloat(left float, right float) bool;
 
 func mod(left int, right int) int { return __vbi_modI32(left, right); }
 // TSUGAR: func mod(left int, right int) int { return __vbi_modI32(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func mod(left &int, right &int) int { return __vbi_modI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_modI32(left int, right int) int;
 
 // TSUGAR: func mod(left i64, right i64) i64 { return __vbi_modI64(left, right); }
+// VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func mod(left &i64, right &i64) i64 { return __vbi_modI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_modI64(left i64, right i64) i64;
