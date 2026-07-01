@@ -1,12 +1,12 @@
 ---
-name: bug-investigation
+name: bug-repro
 description: External real-world report → minimal in-tree regression test asserting correct output → fix. Use when a real-world program surfaces a compiler bug.
 g_read_when: Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.
 g_mention_in:
   - CLAUDE.md
 ---
 
-# Bug Investigation
+# Bug Repro
 
 This is for going from a real-world report or failure to an in-tree regression test that has a *failing* assertion that asserts correct output.
 
@@ -21,7 +21,7 @@ The deliverable is a *failing* test. We want a failing minimal test that illustr
 
 ## Rules
 
-- **No fixing.** This bug-investigation skill is about investigating, not fixing.
+- **No fixing.** This bug-repro skill is about producing a failing test, not fixing.
 - **Tests assert correct behavior, not symptoms.** Don't pin current panic messages or buggy output.
 - **No bug-class commentary in test bodies.** The "what went wrong" lives in the commit message. Tests are self-evident from name + code.
 - **Tight assertions only.** `assert_eq!` or `ends_with(<deterministic suffix>)`. Never `contains() && contains()`.

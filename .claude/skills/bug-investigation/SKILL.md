@@ -1,1 +1,0 @@
-../../../docs/skills/bug-investigation.md
