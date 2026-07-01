@@ -666,6 +666,41 @@ where F Prot = func(Lam, int)int {
 }
 
 #[test]
+fn array_map_with_single_lambda() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        // Variant of array_map_with_lambda where Lam is Single (owned) instead of share.
+        r"
+struct Lam {}
+func __call(lam &Lam, i int) int { return __copy_prim(&i); }
+
+exported func main() int {
+  a = []int(10, Lam());
+  return __copy_prim(&a.3);
+}
+",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        IVonData::Int(VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
+
+#[test]
 #[ignore = "deferred at experimental-2 squash baseline"]
 fn make_array_map_with_struct() {
     let compilation_bump = bumpalo::Bump::new();

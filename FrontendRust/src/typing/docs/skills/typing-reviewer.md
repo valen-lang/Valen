@@ -21,3 +21,22 @@ match err {
     other => panic!("got {:?}", other),
 }
 ```
+
+## Inspect the AST, don't just compile
+
+`expect_compiler_outputs` alone only proves the code compiled. Add a match or `collect_` that inspects the AST for the specific shape the test's spirit is about.
+
+BEFORE:
+```rust
+compile.expect_compiler_outputs();
+```
+
+AFTER:
+```rust
+let coutputs = compile.expect_compiler_outputs();
+let main = coutputs.lookup_function_by_str("main");
+match main.header.return_type {
+    CoordT { ownership: OwnershipT::Own, .. } => {}
+    other => panic!("got {:?}", other),
+}
+```

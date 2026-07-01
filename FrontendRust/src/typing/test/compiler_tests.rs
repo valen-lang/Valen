@@ -2777,6 +2777,62 @@ Couldn't find anything with the name 'NoSuchType'
 }
 
 #[test]
+fn array_map_with_single_lambda_types_cleanly() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // Same Vale fixture as integration_tests::tests::array_tests::array_map_with_single_lambda,
+    // but typing-pass only — verifies the resolver matches user's __call(&Lam, ...) against
+    // Array's func(&G, int)E bound when Lam is Single, without running the full pipeline.
+    let code = r"
+import v.builtins.arrays.*;
+import v.builtins.arith.*;
+import v.builtins.drop.*;
+
+struct Lam {}
+func __call(lam &Lam, i int) int { return __copy_prim(&i); }
+
+func main() int {
+  a = []int(10, Lam());
+  return __copy_prim(&a.3);
+}";
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    // Spirit: __call must resolve with a Borrow first param (not Own), which is
+    // what lets it satisfy Array's `func(&G, int)E` bound when G = Lam.
+    let call = coutputs.lookup_function_by_str("__call");
+    match call.header.params[0].tyype {
+        CoordT {
+            ownership: OwnershipT::Borrow,
+            kind: KindT::Struct(StructTT {
+                id: IdT {
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(
+                            StructTemplateNameT { human_name: StrI("Lam"), .. }
+                        ),
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        } => {}
+        other => panic!("expected __call's first param to be Borrow Lam, got {:?}", other),
+    }
+}
+
+#[test]
 #[ignore = "deferred at experimental-2 squash baseline"]
 fn reports_when_rsa_callable_returns_wrong_element_type() {
     let parse_bump = Bump::new();

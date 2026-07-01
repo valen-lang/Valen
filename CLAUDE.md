@@ -90,6 +90,7 @@ Instead, use the same file.
 - **Read when acting as or setting up the architect, TL, or JR in a Guardian-gated loop.** → docs/skills/guardian-tl.md
 - **Read when adding a new skill to docs/skills/ or Luz/skills/.** → docs/skills/luz-add-skill.md
 - **Read when the architect asks what `experimental` has that `master` might want, or asks to pull specific commits from `experimental`.** → docs/skills/merging-from-experimental.md
+- **Read when the architect asks what `master` has that `experimental` might want, or asks to pull specific commits from `master`.** → docs/skills/merging-from-master.md
 - **Read when authoring or running any bulk-edit script (`./tmp/scripts/*.py`, shell loops over many files, or any per-file transform across more than a handful of files).** → docs/skills/scripting.md
 - **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → docs/skills/tdd.md
 - **Read when reviewing or writing typing-pass tests (or other tests that walk the AST with collect_ macros).** → docs/skills/test-review.md
