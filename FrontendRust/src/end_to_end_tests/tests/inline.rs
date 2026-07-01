@@ -21,3 +21,19 @@ fn pass_manager_main_builds_program_using_builtin_some() {
         0,
     );
 }
+
+#[test]
+fn basic_function_call() {
+    assert_inline_compile_and_run(
+        "func helper() int { return 42; }\nexported func main() int { return helper(); }",
+        42,
+    );
+}
+
+#[test]
+fn string_len() {
+    assert_inline_compile_and_run(
+        "exported func main() int { return (&\"hello\").len(); }",
+        5,
+    );
+}
