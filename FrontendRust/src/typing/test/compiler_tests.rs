@@ -1864,6 +1864,80 @@ fn tests_a_linked_list() {
 }
 
 #[test]
+fn tup0_returned_and_assigned() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = r"
+import v.builtins.tup0.*;
+func make_tup0() () { return (); }
+func main() () {
+  x = make_tup0();
+  return ();
+}";
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let make_tup0 = coutputs.lookup_function_by_str("make_tup0");
+    match make_tup0.header.return_type {
+        CoordT {
+            ownership: OwnershipT::Own,
+            kind: KindT::Struct(StructTT {
+                id: IdT {
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(
+                            StructTemplateNameT { human_name: StrI("Tup0"), .. }
+                        ),
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        } => {}
+        other => panic!("Expected make_tup0's return to be Own Tup0, got {:?}", other),
+    }
+
+    let main = coutputs.lookup_function_by_str("main");
+    collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::LetNormal(LetNormalTE {
+            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
+                coord: CoordT {
+                    ownership: OwnershipT::Own,
+                    kind: KindT::Struct(StructTT {
+                        id: IdT {
+                            local_name: INameT::Struct(StructNameT {
+                                template: IStructTemplateNameT::StructTemplate(
+                                    StructTemplateNameT { human_name: StrI("Tup0"), .. }
+                                ),
+                                ..
+                            }),
+                            ..
+                        },
+                        ..
+                    }),
+                    ..
+                },
+            }),
+            ..
+        }) => Some(())
+    );
+}
+
+#[test]
 fn test_borrow_ref() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

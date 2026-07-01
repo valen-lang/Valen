@@ -1,2 +1,1 @@
-struct Tup0 share { }
-// DO NOT SUBMIT im not sure Tup0 should be share. should probably be owned/inline always.
+struct Tup0 { }
