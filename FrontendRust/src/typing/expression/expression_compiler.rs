@@ -92,7 +92,11 @@ where 's: 't,
     ) -> Result<Option<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         match self.evaluate_addressible_lookup(coutputs, nenv, range, region, name)? {
             Some(x) => {
-                // VCOORD: this is likely at the wrong layer
+                // VCOORD: retire when Phase 2 lands — this fires source-side for every Own
+                // bare-use regardless of target. Per the refined model (vcoord-handoff.md
+                // § Coercions), bare-use should uniformly produce Borrow at the source and
+                // let convert() decide target-side whether to implicit_clone (primitives),
+                // alias (share-kind), or MustExplicitlyMove-error (Own non-primitive).
                 // Bare-use (LoadAsP::Use) of an Own local: auto-clone via implicit_clone
                 // instead of moving (Unlet). For Move/LoadAsBorrow/LoadAsWeak or non-Own
                 // ownerships, defer to soft_load's existing dispatch.
@@ -408,7 +412,10 @@ where 's: 't,
                 match a.result().coord.ownership {
                     OwnershipT::Own => {
                         let _ = life;
-                        // VCOORD: this is likely at the wrong layer
+                        // VCOORD: retire when Phase 2 lands — same problem as evaluate_lookup_for_load's
+                        // Own arm: forces a clone at the source instead of borrowing and letting
+                        // convert() coerce target-side (only Own+primitive should implicit_clone;
+                        // Own non-primitive → Own is MustExplicitlyMove).
                         self.wrap_in_implicit_clone(coutputs, nenv, &range_with_parent, call_location, region, a)
                     }
                     _ => Ok(self.soft_load(nenv, &range_with_parent, a, LoadAsP::Use, region)),
@@ -420,7 +427,14 @@ where 's: 't,
     /// Compiler-inserted `Call(implicit_clone, &addr)`. Looks up `implicit_clone` in the
     /// callsite env via resolve_function; constructs the call IR directly. Failure to find
     /// surfaces as the standard `CouldntFindFunctionToCallT`.
-    // VCOORD: this is likely wrong and a hack
+    // VCOORD: retire when Phase 2 lands — three problems:
+    //   (a) fires source-side (both call sites are on the source coord); the coercion decision
+    //       belongs at the target in convert().
+    //   (b) fires for ALL Own kinds; the refined model auto-clones only Own+primitive at Own
+    //       target — Own non-primitive → Own is MustExplicitlyMove, Own → Borrow is just borrow.
+    //   (c) runs full resolve_function() on every bare-use of an Own local; a primitive-clone
+    //       builtin dispatch shouldn't go through overload resolution, and lookup-failure surfaces
+    //       as CouldntFindFunctionToCallT — the wrong error class.
     pub fn wrap_in_implicit_clone(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
