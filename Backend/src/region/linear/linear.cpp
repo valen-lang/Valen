@@ -166,6 +166,7 @@ Ref Linear::asSubtype(
   exit(1);
 }
 
+// VCOORD: 3 Own asserts below are pre-Q1 — primitives can now flow non-Own. Per vcoord-handoff.md line 311, Phase 1: drop these.
 LLVMTypeRef Linear::translateType(Reference* referenceM) {
   if (auto innt = dynamic_cast<Int*>(referenceM->kind)) {
     assert(referenceM->ownership == Ownership::OWN);
@@ -2523,6 +2524,7 @@ LiveRef Linear::checkRefLive(
     Ref ref,
     bool refKnownLive) {
   // I think this is all we really need?
+  // VCOORD: Share-to-linear codepath — being retired under new FFI model (Share is by-pointer now).
   assert(refMT->ownership == Ownership::MUTABLE_SHARE || refMT->ownership == Ownership::OWN);
   auto refLE = checkValidReference(FL(), functionState, builder, true, refMT, ref);
   return wrapToLiveRef(FL(), functionState, builder, regionInstanceRef, refMT, refLE);

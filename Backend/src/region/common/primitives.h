@@ -22,6 +22,8 @@ public:
         dynamic_cast<Float *>(referenceM->kind) != nullptr;
   }
 
+  // VCOORD: All 4 Own asserts below are pre-Q1 — primitives can now flow non-Own (borrow-flavor).
+  // Per vcoord-handoff.md line 310, Phase 1 of Option A2 is: drop these asserts, always return scalar.
   LLVMTypeRef translatePrimitive(GlobalState* globalState, Reference* referenceM) {
     if (auto innt = dynamic_cast<Int*>(referenceM->kind)) {
       assert(referenceM->ownership == Ownership::OWN);

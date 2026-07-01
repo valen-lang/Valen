@@ -372,12 +372,15 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
           AddressHasher<PackageCoordinate*>>(
           0, globalState->addressNumberer->makeHasher<PackageCoordinate*>());
 
+  // VCOORD: Every `sharedness == Sharedness::SHARED` gate in this exported-header block is backwards under the new FFI model.
+  // Share is by-pointer now; OwnInline+exported is the new linear-region case. See vcoord-handoff.md §Replay/FFI mission.
   for (auto[packageCoord, package] : program->packages) {
     for (auto[exportName, kind] : package->exportNameToKind) {
       auto& resultC = packageCoordToHeaderNameToC[packageCoord].emplace(exportName, std::stringstream()).first->second;
 
       if (auto structMT = dynamic_cast<StructKind*>(kind)) {
         auto structDefM = program->getStruct(structMT);
+        // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
         if (structDefM->sharedness == Sharedness::SHARED) {
           for (auto member : structDefM->members) {
             auto kind = member->type->kind;
@@ -398,17 +401,20 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
 
         // can we think of this in terms of regions? it's kind of like we're
         // generating some stuff for the outside to point inside.
+        // VCOORD: ternary backwards — Share→pointer (no linear); OwnInline+exported→linear.
         auto region = (structDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
         auto defString = region->generateStructDefsC(package, structDefM);
         resultC << defString;
       } else if (auto interfaceMT = dynamic_cast<InterfaceKind*>(kind)) {
         auto interfaceDefM = globalState->program->getInterface(interfaceMT);
+        // VCOORD: ternary backwards — Share→pointer (no linear); OwnInline+exported→linear.
         auto region = (interfaceDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
         auto defString = region->generateInterfaceDefsC(package, interfaceDefM);
         resultC << defString;
       } else if (auto ssaMT = dynamic_cast<StaticSizedArrayT*>(kind)) {
         auto ssaDefM = globalState->program->getStaticSizedArray(ssaMT);
 
+        // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
         if (ssaDefM->sharedness == Sharedness::SHARED) {
           auto kind = ssaDefM->elementType->kind;
           if (dynamic_cast<Int *>(kind) ||
@@ -427,12 +433,14 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
 
         // can we think of this in terms of regions? it's kind of like we're
         // generating some stuff for the outside to point inside.
+        // VCOORD: ternary backwards — Share→pointer (no linear); OwnInline+exported→linear.
         auto region = (ssaDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
         auto defString = region->generateStaticSizedArrayDefsC(package, ssaDefM);
         resultC << defString;
       } else if (auto rsaMT = dynamic_cast<RuntimeSizedArrayT*>(kind)) {
         auto rsaDefM = globalState->program->getRuntimeSizedArray(rsaMT);
 
+        // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
         if (rsaDefM->sharedness == Sharedness::SHARED) {
           auto kind = rsaDefM->elementType->kind;
           if (dynamic_cast<Int *>(kind) ||
@@ -451,6 +459,7 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
 
         // can we think of this in terms of regions? it's kind of like we're
         // generating some stuff for the outside to point inside.
+        // VCOORD: ternary backwards — Share→pointer (no linear); OwnInline+exported→linear.
         auto region = (rsaDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
         auto defString = region->generateRuntimeSizedArrayDefsC(package, rsaDefM);
         resultC << defString;
@@ -755,6 +764,8 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   globalState->rcImm = &rcImm;
   globalState->regions.emplace(globalState->rcImm->getRegionId(), globalState->rcImm);
 
+  // VCOORD: Every `if (sharedness == Sharedness::SHARED)` gate that mirrors types into linearRegion below is backwards under the new FFI model.
+  // Share is by-pointer now (no linearization); OwnInline+exported is the new bytes-linearized case. See vcoord-handoff.md §Replay/FFI mission.
   globalState->linearRegion = new Linear(globalState);
   globalState->regions.emplace(globalState->linearRegion->getRegionId(), globalState->linearRegion);
 
@@ -795,6 +806,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       // std::cout << "." << name;
       // std::cout << std::endl;
 
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (structM->sharedness == Sharedness::SHARED) {
         // TODO: https://github.com/ValeLang/Vale/issues/479
         globalState->linearRegion->declareStruct(structM);
@@ -808,6 +820,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->declareInterface(interfaceM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (interfaceM->sharedness == Sharedness::SHARED) {
         // TODO: https://github.com/ValeLang/Vale/issues/479
         globalState->linearRegion->declareInterface(interfaceM);
@@ -821,6 +834,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareStaticSizedArray(arrayM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareStaticSizedArray(arrayM);
       }
@@ -833,6 +847,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareRuntimeSizedArray(arrayM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareRuntimeSizedArray(arrayM);
       }
@@ -845,6 +860,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto structM = p.second;
       globalState->getRegion(structM->regionId)->declareStructExtraFunctions(structM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (structM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareStructExtraFunctions(structM);
       }
@@ -856,6 +872,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->declareInterfaceExtraFunctions(interfaceM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (interfaceM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareInterfaceExtraFunctions(interfaceM);
       }
@@ -867,6 +884,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareStaticSizedArrayExtraFunctions(arrayM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareStaticSizedArrayExtraFunctions(arrayM);
       }
@@ -878,6 +896,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareRuntimeSizedArrayExtraFunctions(arrayM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareRuntimeSizedArrayExtraFunctions(arrayM);
       }
@@ -895,6 +914,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       for (auto e : structM->edges) {
         globalState->getRegion(structM->regionId)->declareEdge(e);
+        // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
         if (structM->sharedness == Sharedness::SHARED) {
           globalState->linearRegion->declareEdge(e);
         }
@@ -908,6 +928,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       assert(name == structM->name->name);
       globalState->getRegion(structM->regionId)->defineStruct(structM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (structM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineStruct(structM);
       }
@@ -921,6 +942,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->defineInterface(interfaceM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (interfaceM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineInterface(interfaceM);
       }
@@ -932,6 +954,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineStaticSizedArray(arrayM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineStaticSizedArray(arrayM);
       }
@@ -943,6 +966,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineRuntimeSizedArray(arrayM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineRuntimeSizedArray(arrayM);
       }
@@ -963,6 +987,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       assert(name == structM->name->name);
       globalState->getRegion(structM->regionId)->defineStructExtraFunctions(structM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (structM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineStructExtraFunctions(structM);
       }
@@ -974,6 +999,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineStaticSizedArrayExtraFunctions(arrayM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineStaticSizedArrayExtraFunctions(arrayM);
       }
@@ -985,6 +1011,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineRuntimeSizedArrayExtraFunctions(arrayM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineRuntimeSizedArrayExtraFunctions(arrayM);
       }
@@ -1000,6 +1027,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->defineInterfaceExtraFunctions(interfaceM);
+      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
       if (interfaceM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineInterfaceExtraFunctions(interfaceM);
       }
@@ -1056,6 +1084,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       for (auto e : structM->edges) {
 
+        // VCOORD: gate backwards — Share→pointer (no linear); OwnInline+exported→linear.
         if (structM->sharedness == Sharedness::SHARED) {
           globalState->rcImm->defineEdge(e);
           globalState->linearRegion->defineEdge(e);

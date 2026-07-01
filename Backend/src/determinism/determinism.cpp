@@ -828,6 +828,7 @@ void Determinism::buildWriteValueToFile(
   auto int8LT = LLVMInt8TypeInContext(globalState->context);
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
 
+  // VCOORD: Own accepted here but receiveUnencryptedAlienReference was designed for Share; drop accounting may misbehave on Own. See vcoord-handoff.md line 314.
   assert(sourceRefMT->ownership == Ownership::IMMUTABLE_SHARE || sourceRefMT->ownership == Ownership::MUTABLE_SHARE || sourceRefMT->ownership == Ownership::OWN);
   auto hostRefMT = globalState->linearRegion->linearizeReference(sourceRefMT, true);
 
@@ -952,6 +953,7 @@ Ref Determinism::buildReadValueFromFile(
   auto int8LT = LLVMInt8TypeInContext(globalState->context);
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
 
+  // VCOORD: Own accepted here but codepath designed for Share; will need re-examination under new FFI model. See vcoord-handoff.md line 314.
   assert(targetRefMT->ownership == Ownership::MUTABLE_SHARE || targetRefMT->ownership == Ownership::OWN);
   auto hostRefMT = globalState->linearRegion->linearizeReference(targetRefMT, true);
 

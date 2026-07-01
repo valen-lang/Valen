@@ -952,6 +952,7 @@ std::string RCImm::generateInterfaceDefsC(
 std::string RCImm::generateRuntimeSizedArrayDefsC(
     Package* currentPackage,
     RuntimeSizedArrayDefinitionT* rsaDefM) {
+  // VCOORD: sharedness classifier is obsolete under new model — Share doesn't linearize anymore.
   if (rsaDefM->sharedness == Sharedness::SHARED) {
     { assert(false); throw 1337; }
   } else {
@@ -963,6 +964,7 @@ std::string RCImm::generateRuntimeSizedArrayDefsC(
 std::string RCImm::generateStaticSizedArrayDefsC(
     Package* currentPackage,
     StaticSizedArrayDefinitionT* ssaDefM) {
+  // VCOORD: sharedness classifier is obsolete under new model — Share doesn't linearize anymore.
   if (ssaDefM->sharedness == Sharedness::SHARED) {
     { assert(false); throw 1337; }
   } else {
