@@ -647,9 +647,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
     if (globalState->opt->census) {
       std::cout << "Warning: using census outside of assist mode, will slow things down!" << std::endl;
     }
-    if (!globalState->opt->fastCrash) {
-      std::cout << "Warning: not using fastCrash, will slow things down!" << std::endl;
-    }
 //  }
 
   RawFuncPtrLE stringSetupFunctionL;
@@ -1059,22 +1056,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
 
 void createModule(MetalCache* metalCache, Program* program, GlobalState *globalState) {
   globalState->mod = LLVMModuleCreateWithNameInContext("build", globalState->context);
-  if (globalState->opt->debug) {
-    globalState->dibuilder = LLVMCreateDIBuilder(globalState->mod);
-    globalState->difile = LLVMDIBuilderCreateFile(globalState->dibuilder, "main.vale", 9, ".", 1);
-    // If theres a compile error on this line, its some sort of LLVM version issue, try commenting or uncommenting the last four args.
-    globalState->compileUnit =
-        LLVMDIBuilderCreateCompileUnit(
-            globalState->dibuilder, LLVMDWARFSourceLanguageC, globalState->difile, "Vale compiler",
-            13, 0, "", 0, 0, "", 0, LLVMDWARFEmissionFull, 0, 0, 0,
-            "isysroothere", strlen("isysroothere"), "sdkhere", strlen("sdkhere"));
-  }
-
   compileValeCode(globalState, metalCache, program);
-
-  if (globalState->opt->debug) {
-    LLVMDIBuilderFinalize(globalState->dibuilder);
-  }
 }
 
 // Use provided options (triple, etc.) to creation a machine
@@ -1136,14 +1118,12 @@ LLVMTargetMachineRef createMachine(ValeOptions *opt) {
     default: { assert(false); throw 1337; } break;
   }
 
-  LLVMRelocMode reloc = (opt->pic || opt->library)? LLVMRelocPIC : LLVMRelocDefault;
+  LLVMRelocMode reloc = opt->pic ? LLVMRelocPIC : LLVMRelocDefault;
   if (opt->cpu.empty())
     opt->cpu = "generic";
-  if (opt->features.empty())
-    opt->features = "";
 
   LLVMTargetMachineRef machine;
-  if (!(machine = LLVMCreateTargetMachine(target, opt->triple.c_str(), opt->cpu.c_str(), opt->features.c_str(), opt_level, reloc, LLVMCodeModelDefault))) {
+  if (!(machine = LLVMCreateTargetMachine(target, opt->triple.c_str(), opt->cpu.c_str(), "", opt_level, reloc, LLVMCodeModelDefault))) {
     errorExit(ExitCode::LlvmSetupFailed, "Could not create target machine");
     return NULL;
   }
@@ -1244,12 +1224,9 @@ void generateModule(MetalCache* metalCache, Program* program, GlobalState* globa
 
   if (globalState->machine) {
     auto objpath =
-        fileMakePath(globalState->opt->outputDir.c_str(), "build",
-            globalState->opt->wasm ? "wasm" : objext);
+        fileMakePath(globalState->opt->outputDir.c_str(), "build", objext);
     auto asmpath =
-        fileMakePath(globalState->opt->outputDir.c_str(),
-            "build",
-            globalState->opt->wasm ? "wat" : asmext);
+        fileMakePath(globalState->opt->outputDir.c_str(), "build", asmext);
     generateOutput(
         objpath.c_str(), globalState->opt->print_asm ? asmpath : "",
         globalState->mod, globalState->opt->triple.c_str(), globalState->machine);
@@ -1346,13 +1323,14 @@ void closeGlobalState(GlobalState *globalState) {
   LLVMDisposeTargetMachine(globalState->machine);
 }
 
-// Full per-compile pipeline: parse argv into ValeOptions, set up GlobalState,
-// run codegen against the caller-populated MetalCache/Program, dispose. The
-// FFI entry in ffi.cpp is a one-line `extern "C"` wrapper around this.
+// Full per-compile pipeline: copy the FFI options into ValeOptions, set up
+// GlobalState, run codegen against the caller-populated MetalCache/Program,
+// dispose. The FFI entry in ffi.cpp is a one-line `extern "C"` wrapper.
 int32_t runBackendCompile(
-    MetalCache* metalCache, Program* program, int argc, char** argv) {
+    MetalCache* metalCache, Program* program,
+    const BackendCompileOptionsFFI* ffi_opts) {
   ValeOptions valeOptions;
-  int ok = valeOptSet(&valeOptions, &argc, argv);
+  int ok = loadFromFfi(&valeOptions, ffi_opts);
   if (ok <= 0) {
     return ok == 0 ? 0 : (int32_t)ExitCode::BadOpts;
   }

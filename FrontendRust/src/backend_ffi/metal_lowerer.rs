@@ -725,13 +725,9 @@ mod tests {
         std::fs::create_dir_all(&out_dir).unwrap();
         std::fs::create_dir_all(out_dir.join("include")).unwrap();
 
-        let argv = vec![
-            "backend".to_string(),
-            "--output_dir".to_string(),
-            out_dir.display().to_string(),
-        ];
-        let argv_refs: Vec<&str> = argv.iter().map(|s| s.as_str()).collect();
-        let rc = crate::backend_ffi::backend_compile_program_safe(&cache, &program, &argv_refs);
+        let mut backend_opts = crate::backend_ffi::BackendCompileOptions::default();
+        backend_opts.output_dir = out_dir.display().to_string();
+        let rc = crate::backend_ffi::backend_compile_program_safe(&cache, &program, &backend_opts);
         assert_eq!(rc, 0, "backend_compile_program returned {}", rc);
 
         let obj = out_dir.join("build.o");

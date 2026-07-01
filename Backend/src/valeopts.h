@@ -5,9 +5,10 @@
 #include <string>
 #include <stdint.h>
 #include <stddef.h>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
+
+#include "backend_options_ffi.h"
 
 enum class ValeOptimizationLevel {
     O0,
@@ -18,39 +19,31 @@ enum class ValeOptimizationLevel {
 };
 
 
-// Compiler options
+// Compiler options. Populated from BackendCompileOptionsFFI via loadFromFfi.
 struct ValeOptions {
     std::string outputDir;
 
     std::string triple;
     std::string cpu;
-    std::string features;
 
-    void* data = nullptr; // User-defined data for unit test callbacks
-
-    // Boolean flags
-    bool wasm = false;        // 1=WebAssembly
-    ValeOptimizationLevel optLevel = ValeOptimizationLevel::O2i;   // O0-O3
-    bool library = false;    // 1=generate a C-API compatible static library
-    bool pic = false;        // Compile using position independent code
-    bool verify = false;        // Verify LLVM IR
-    bool debug = false;
-    bool print_asm = false;        // Print out assembly file
-    bool print_llvmir = false;    // Print out LLVM IR
-    bool docs = false;            // Generate code documentation
-    bool census = false;    // Enable census checking
-    bool flares = false;    // Enable flare output
-    bool fastCrash = false;    // Enable single-instruction crash, a bit faster
-    bool elideChecksForKnownLive = true;    // Elide checks for static-analysis-known live
-    bool elideChecksForRegions = true;    // Elide checks for immutable regions
+    ValeOptimizationLevel optLevel = ValeOptimizationLevel::O2i;
+    bool pic = false;
+    bool verify = false;
+    bool print_asm = false;
+    bool print_llvmir = false;
+    bool census = false;
+    bool flares = false;
     bool includeBoundsChecks = true;
     bool useAtomicRc = false;
-    bool forceAllKnownLive = false;    // Enables generational heap
-    bool printMemOverhead = false;    // Enables generational heap
-    bool enableReplaying = false;    // Enables deterministic replaying
+    bool forceAllKnownLive = false;
+    bool printMemOverhead = false;
+    bool enableReplaying = false;
     std::unordered_map<std::string, std::unordered_set<std::string>> projectNameToReplayWhitelistedExterns;
 };
 
-int valeOptSet(ValeOptions *opt, int *argc, char **argv);
+// Copy fields out of the FFI POD into a ValeOptions. Returns 1 on success,
+// 0 or negative on malformed input (only opt_level is validated; all other
+// fields are trusted).
+int loadFromFfi(ValeOptions *opt, const BackendCompileOptionsFFI *ffi);
 
 #endif

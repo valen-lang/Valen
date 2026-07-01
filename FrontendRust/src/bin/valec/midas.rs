@@ -1,14 +1,20 @@
-// Backend (Midas) argv assembly. The actual backend call happens inside
+// Backend (Midas) options assembly. The actual backend call happens inside
 // pass_manager::build (which feeds the in-process MetalCache
 // populated by MetalLowerer straight into backend_compile_program).
 
 use std::path::Path;
 
-/// Build the argv that pass_manager::build will feed to
-/// backend_compile_program. argv[0] is the conventional program-name
-/// placeholder; the rest are valeOptSet-style flags.
+use frontend_rust::backend_ffi::{
+    BackendCompileOptions,
+    BACKEND_OPT_LEVEL_O0, BACKEND_OPT_LEVEL_O1, BACKEND_OPT_LEVEL_O2,
+    BACKEND_OPT_LEVEL_O2I, BACKEND_OPT_LEVEL_O3,
+};
+
+/// Assemble the options struct that pass_manager::build hands to
+/// backend_compile_program. `--triple` is left blank here; pass_manager
+/// injects it from ClangConfig.
 #[allow(clippy::too_many_arguments)]
-pub fn build_backend_argv(
+pub fn build_backend_options(
     output_dir: &Path,
     maybe_opt_level: Option<&str>,
     maybe_cpu: Option<&str>,
@@ -16,7 +22,6 @@ pub fn build_backend_argv(
     // the backend writes a fixed `build.o` regardless of this name.
     _executable_name: &str,
     flares: bool,
-    gen_heap: bool,
     census: bool,
     verify: bool,
     opt_level: &str,
@@ -24,83 +29,48 @@ pub fn build_backend_argv(
     asm: bool,
     enable_replaying: bool,
     replay_whitelist_extern: &str,
-    enable_side_calling: bool,
     pic: bool,
     print_mem_overhead: bool,
-    elide_checks_for_known_live: bool,
-    elide_checks_for_regions: bool,
     use_atomic_rc: bool,
     force_all_known_live: bool,
     include_bounds_checks: bool,
-) -> Vec<String> {
-    let mut command_line_args = Vec::new();
-    command_line_args.push("backend".to_string()); // argv[0] placeholder
-    command_line_args.push("--verify".to_string());
-    command_line_args.push("--output_dir".to_string());
-    command_line_args.push(output_dir.display().to_string());
+) -> BackendCompileOptions {
+    let mut opts = BackendCompileOptions::default();
+    opts.output_dir = output_dir.display().to_string();
+    opts.verify = verify;
+    opts.flares = flares;
+    opts.census = census;
+    opts.print_llvmir = llvm_ir;
+    opts.print_asm = asm;
+    opts.enable_replaying = enable_replaying;
+    opts.pic = pic;
+    opts.print_mem_overhead = print_mem_overhead;
+    opts.use_atomic_rc = use_atomic_rc;
+    opts.force_all_known_live = force_all_known_live;
+    opts.include_bounds_checks = include_bounds_checks;
 
-    if let Some(opt_level_val) = maybe_opt_level {
-        command_line_args.push("--opt_level".to_string());
-        command_line_args.push(opt_level_val.to_string());
-    }
     if let Some(cpu) = maybe_cpu {
-        command_line_args.push("--cpu".to_string());
-        command_line_args.push(cpu.to_string());
+        opts.cpu = cpu.to_string();
     }
-    if flares {
-        command_line_args.push("--flares".to_string());
-    }
-    if gen_heap {
-        command_line_args.push("--gen_heap".to_string());
-    }
-    if census {
-        command_line_args.push("--census".to_string());
-    }
-    if verify {
-        command_line_args.push("--verify".to_string());
-    }
-    if opt_level != "O0" {
-        command_line_args.push("--opt_level".to_string());
-        command_line_args.push(opt_level.to_string());
-    }
-    if llvm_ir {
-        command_line_args.push("--llvm_ir".to_string());
-    }
-    if asm {
-        command_line_args.push("--asm".to_string());
-    }
-    if enable_replaying {
-        command_line_args.push("--enable_replaying=true".to_string());
-    }
+
+    // Prefer maybe_opt_level when set; otherwise honor the opt_level string
+    // (still matches the pre-refactor midas argv behavior, where an explicit
+    // maybe_opt_level was appended first and opt_level=="O0" was skipped).
+    let level_str = maybe_opt_level.unwrap_or(opt_level);
+    opts.opt_level = match level_str {
+        "O0" => BACKEND_OPT_LEVEL_O0,
+        "O1" => BACKEND_OPT_LEVEL_O1,
+        "O2" => BACKEND_OPT_LEVEL_O2,
+        "O2i" => BACKEND_OPT_LEVEL_O2I,
+        "O3" => BACKEND_OPT_LEVEL_O3,
+        other => panic!("Unknown opt_level: {}", other),
+    };
+
     if !replay_whitelist_extern.is_empty() {
-        command_line_args.push(format!("--replay_whitelist_extern={}", replay_whitelist_extern));
-    }
-    if enable_side_calling {
-        command_line_args.push("--enable_side_calling=true".to_string());
-    }
-    if pic {
-        command_line_args.push("--pic".to_string());
-    }
-    if print_mem_overhead {
-        command_line_args.push("--print_mem_overhead=true".to_string());
-    }
-    if !elide_checks_for_known_live {
-        command_line_args.push("--elide_checks_for_known_live=false".to_string());
-    }
-    if !elide_checks_for_regions {
-        command_line_args.push("--elide_checks_for_regions=false".to_string());
-    }
-    if force_all_known_live {
-        command_line_args.push("--force_all_known_live".to_string());
-    }
-    if !include_bounds_checks {
-        command_line_args.push("--include_bounds_checks=false".to_string());
-    }
-    if use_atomic_rc {
-        command_line_args.push("--use_atomic_rc=true".to_string());
+        let (module, function) = replay_whitelist_extern.split_once('.')
+            .expect("replay_whitelist_extern must be in the form module.function");
+        opts.replay_whitelist.push((module.to_string(), function.to_string()));
     }
 
-    // No vast file paths — MetalLowerer feeds the program directly in-process.
-    command_line_args
+    opts
 }
-

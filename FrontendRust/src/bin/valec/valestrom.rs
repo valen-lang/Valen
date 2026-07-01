@@ -34,7 +34,7 @@ pub fn compile_in_process(
     debug_output: bool,
     include_builtins: bool,
     output_dir: &Path,
-    backend_argv: Vec<String>,
+    backend_opts: frontend_rust::backend_ffi::BackendCompileOptions,
     clang_cfg: frontend_rust::pass_manager::pass_manager::ClangConfig,
 ) -> Result<frontend_rust::pass_manager::pass_manager::BuiltProgram, String> {
     // Build the same arg list pass_manager::main consumes, then route it
@@ -89,9 +89,8 @@ pub fn compile_in_process(
         frontend_args,
     );
 
-    let argv_refs: Vec<&str> = backend_argv.iter().map(|s| s.as_str()).collect();
     frontend_rust::pass_manager::pass_manager::build(
-        &parse_arena, &keywords, &opts, &argv_refs, &clang_cfg,
+        &parse_arena, &keywords, &opts, backend_opts, &clang_cfg,
     )
 }
 

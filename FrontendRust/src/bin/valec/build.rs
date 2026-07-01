@@ -79,18 +79,12 @@ pub struct BuildArgs {
     #[arg(long, default_value_t = false)]
     enable_replaying: bool,
 
-    #[arg(long, default_value_t = false)]
-    enable_side_calling: bool,
-
     /// Skip linking the standard library.
     #[arg(long, default_value_t = false)]
     no_std: bool,
 
     #[arg(long, default_value_t = false)]
     flares: bool,
-
-    #[arg(long, default_value_t = false)]
-    gen_heap: bool,
 
     #[arg(long, default_value_t = false)]
     census: bool,
@@ -135,12 +129,6 @@ pub struct BuildArgs {
 
     #[arg(long, default_value_t = false)]
     print_mem_overhead: bool,
-
-    #[arg(long, default_value_t = true)]
-    elide_checks_for_known_live: bool,
-
-    #[arg(long, default_value_t = true)]
-    elide_checks_for_regions: bool,
 
     #[arg(long, default_value_t = false)]
     use_atomic_rc: bool,
@@ -242,17 +230,16 @@ pub fn build_stuff(compiler_dir: &Path, args: BuildArgs) {
         process::exit(1);
     }
 
-    let backend_argv = midas::build_backend_argv(
+    let backend_opts = midas::build_backend_options(
         &args.output_dir,
         Some(args.opt_level.as_str()),
         args.cpu.as_deref(),
         &args.executable_name,
-        args.flares, args.gen_heap, args.census, args.verify,
+        args.flares, args.census, args.verify,
         &args.opt_level,
         args.llvm_ir, args.asm,
         args.enable_replaying, &args.replay_whitelist_extern,
-        args.enable_side_calling, args.pic, args.print_mem_overhead,
-        args.elide_checks_for_known_live, args.elide_checks_for_regions,
+        args.pic, args.print_mem_overhead,
         args.use_atomic_rc,
         args.force_all_known_live, args.include_bounds_checks,
     );
@@ -290,7 +277,7 @@ pub fn build_stuff(compiler_dir: &Path, args: BuildArgs) {
         args.benchmark, args.sanity_check, args.verbose, args.debug_output,
         args.include_builtins,
         &args.output_dir,
-        backend_argv,
+        backend_opts,
         clang_cfg,
     ) {
         Ok(result) => result,

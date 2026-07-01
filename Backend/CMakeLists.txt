@@ -101,7 +101,6 @@ set(BACKEND_LIB_SRCS
 		src/region/regions.cpp
 
 		src/fileio.cpp
-		src/options.cpp
 		src/determinism/determinism.cpp
 		src/determinism/determinism.h
 		src/utils/definefunction.cpp

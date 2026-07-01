@@ -114,17 +114,17 @@ pub struct ExecResult {
 ///   top level get walked).
 /// - `extra_c` lists additional C sources to link with clang (e.g. extern
 ///   tests' `native/test.c`).
-/// - `extra_backend_flags` is appended verbatim to the backend argv (e.g.
-///   `&["--enable_replaying", "true"]` for replay tests).
+/// - `configure_backend` may mutate the default backend options (e.g. set
+///   `enable_replaying = true` for replay tests).
 pub fn compile_program(
     primary_vale: &Path,
     extra_c: &[&Path],
-    extra_backend_flags: &[&str],
+    configure_backend: impl FnOnce(&mut crate::backend_ffi::BackendCompileOptions),
 ) -> CompiledProgram {
     compile_inputs(
         vec![primary_vale.to_path_buf()],
         extra_c,
-        extra_backend_flags,
+        configure_backend,
         Vec::new(),
     )
 }
@@ -137,7 +137,7 @@ pub fn compile_program(
 /// life of the returned `CompiledProgram`.
 pub fn compile_inline(
     code: &str,
-    extra_backend_flags: &[&str],
+    configure_backend: impl FnOnce(&mut crate::backend_ffi::BackendCompileOptions),
 ) -> CompiledProgram {
     let src_dir = tempfile::tempdir().unwrap();
     let src_file = src_dir.path().join("test.vale");
@@ -145,7 +145,7 @@ pub fn compile_inline(
     compile_inputs(
         vec![src_dir.path().to_path_buf()],
         &[],
-        extra_backend_flags,
+        configure_backend,
         vec![src_dir],
     )
 }
@@ -153,7 +153,7 @@ pub fn compile_inline(
 fn compile_inputs(
     vale_inputs: Vec<PathBuf>,
     extra_c: &[&Path],
-    extra_backend_flags: &[&str],
+    configure_backend: impl FnOnce(&mut crate::backend_ffi::BackendCompileOptions),
     keepalive: Vec<tempfile::TempDir>,
 ) -> CompiledProgram {
     let parse_bump = bumpalo::Bump::new();
@@ -196,15 +196,9 @@ fn compile_inputs(
         cli_args,
     );
 
-    let mut backend_argv: Vec<String> = vec![
-        "backend".to_string(),
-        "--output_dir".to_string(),
-        out_dir.display().to_string(),
-    ];
-    for f in extra_backend_flags {
-        backend_argv.push((*f).to_string());
-    }
-    let backend_argv_refs: Vec<&str> = backend_argv.iter().map(|s| s.as_str()).collect();
+    let mut backend_opts = crate::backend_ffi::BackendCompileOptions::default();
+    backend_opts.output_dir = out_dir.display().to_string();
+    configure_backend(&mut backend_opts);
 
     let builtins_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -240,7 +234,7 @@ fn compile_inputs(
         &parse_arena,
         &keywords,
         &opts,
-        &backend_argv_refs,
+        backend_opts,
         &clang_cfg,
     )
     .unwrap_or_else(|e| panic!("pass_manager::build failed:\n{}", e));
@@ -293,7 +287,7 @@ pub fn programs_dir() -> PathBuf {
 }
 
 pub fn assert_compile_and_run(vale_path: &Path, expected: i32) {
-    let cp = compile_program(vale_path, &[], &[]);
+    let cp = compile_program(vale_path, &[], |_| {});
     let r = cp.run(&[]);
     assert_eq!(
         r.exit_code, expected,
@@ -307,7 +301,7 @@ pub fn assert_compile_and_run_with_c(
     extra_c: &[&Path],
     expected: i32,
 ) {
-    let cp = compile_program(vale_dir, extra_c, &[]);
+    let cp = compile_program(vale_dir, extra_c, |_| {});
     let r = cp.run(&[]);
     assert_eq!(
         r.exit_code, expected,
@@ -317,7 +311,7 @@ pub fn assert_compile_and_run_with_c(
 }
 
 pub fn assert_inline_compile_and_run(code: &str, expected: i32) {
-    let cp = compile_inline(code, &[]);
+    let cp = compile_inline(code, |_| {});
     let r = cp.run(&[]);
     assert_eq!(
         r.exit_code, expected,
@@ -335,7 +329,7 @@ pub fn assert_replay_test(
     let cp = compile_program(
         vale_dir,
         extra_c,
-        &["--enable_replaying", "true"],
+        |opts| { opts.enable_replaying = true; },
     );
     let r0 = cp.run(&[]);
     assert_eq!(

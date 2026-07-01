@@ -1763,19 +1763,12 @@ std::string generateUniversalRefStructDefC(Package* currentPackage, const std::s
 
 
 void fastPanic(GlobalState* globalState, AreaAndFileAndLine from, LLVMBuilderRef builder) {
-  if (globalState->opt->fastCrash) {
-    auto ptrToWriteToLE =
-        LLVMBuildLoad2(
-            builder, LLVMPointerType(LLVMInt64TypeInContext(globalState->context), 0), globalState->crashGlobalLE, "crashGlobal");
-    LLVMBuildStore(builder, constI64LE(globalState, 0), ptrToWriteToLE);
-  } else {
-    buildPrintAreaAndFileAndLineToStderr(globalState, builder, from);
-    buildPrintToStderr(globalState, builder, "Tried dereferencing dangling reference! ");
-    buildPrintToStderr(globalState, builder, "Exiting!\n");
-    // See MPESC for status codes
-    auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 14, false);
-    buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {exitCodeIntLE});
-  }
+  buildPrintAreaAndFileAndLineToStderr(globalState, builder, from);
+  buildPrintToStderr(globalState, builder, "Tried dereferencing dangling reference! ");
+  buildPrintToStderr(globalState, builder, "Exiting!\n");
+  // See MPESC for status codes
+  auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 14, false);
+  buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {exitCodeIntLE});
 }
 
 
