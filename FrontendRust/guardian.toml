@@ -26,39 +26,11 @@ exclude_shields = [
     "OutputAndLoggingZenDiscipline-OALZDX.md",
 ]
 
-[migrate_mode]
-include_shields = [
-    { name = "ScalaCommentParity-SCPX.md" },
-    { name = "ImmediateInterningDiscipline-IIDX.md" }, # do we need this anymore?
-    { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
-
-    { name = "NoChangesWithoutScalaReference-NCWSRX.md" }, # do we need this anymore? enforced, right? or do other shields assume this one ran?
-    { name = "NoGlobalStateAnywhere-NGSAX.md" }, # lets rustify this
-    { name = "NoNewDefinitions-NNDX.md" }, # lets rustify this
-    { name = "NoAddingGuardianDirectives-NAGDX.md" }, # lets rustify this
-    { name = "NoRenamedDefinitions-NRDX.md" }, # lets rustify this
-    { name = "NoMovedDefinitions-NMDX.md" }, # lets rustify this
-    { name = "TypesFitIntoTheseCategories-TFITCX.md" },
-    { name = "NeverDowncastTraits-NEDCX.md" },
-
-    { name = "KeepInlineComparisonsInline-KICIX.md" }, # gate this on test-only
-    { name = "NeverHaveConditionalsInTests-NHCITX.md" }, # gate this on test-only
-    { name = "NoModificationsToShieldFiles-NMSFX.md" },
-
-    { name = "PythonScriptMutation-PSMX.md" },
-    { name = "ValidateReadonlyBash-VRBX.md" },
-    { name = "BulkEditScriptWorkflow-BESWX.md" },
-    { name = "MailboxWorkflow-MBXX.md" },
-    { name = "NeverUseStaticLifetime-NUSLX.md" },
-]
-
 [guard_mode]
 include_shields = [
-    { name = "ScalaCommentParity-SCPX.md" },
-    { name = "ImmediateInterningDiscipline-IIDX.md" }, # do we need this anymore?
+    { name = "ImmediateInterningDiscipline-IIDX.md" },
     { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
 
-    { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
     { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "NoNewDefinitions-NNDX.md" },
     { name = "NoAddingGuardianDirectives-NAGDX.md" },
@@ -77,7 +49,6 @@ include_shields = [
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
     { name = "MailboxWorkflow-MBXX.md" },
-    { name = "NoAddingScalaComments-NASCX.md" },
 ]
 
 [review_mode]
