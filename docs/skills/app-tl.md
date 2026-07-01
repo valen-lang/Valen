@@ -99,4 +99,3 @@ Not exhaustive; use judgement.
 
 - `guardian-tl.md` — the timeless TL/JR loop (mailbox, ordination, commit, escalation discipline).
 - `app-jr.md` — your JR's side of this loop.
-- `migrate-tl.md` — the sibling workflow for the Scala→Rust migration (now mostly retired but kept for reference).

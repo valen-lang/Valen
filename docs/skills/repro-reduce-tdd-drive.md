@@ -10,12 +10,7 @@ This loop is for when the typing pass is mostly migrated but you want to **find 
 ## The pattern
 
 1. First, look at these files in full. Do not skip any. You will need to adhere to all of these.
-    * `./docs/skills/migration-drive.md` — base TDD/escalation rules; this skill is a specialization, not a replacement.
-    * `FrontendRust/docs/migration/migration-policy.md` — DCCR, RCSBASC, architect-level escape hatch.
     * `FrontendRust/docs/usage/test-helpers.md` — test conventions.
-    * `./Luz/shields/ScalaParityDuringMigration-SPDMX.md`
-    * `./Luz/shields/NoChangesWithoutScalaReference-NCWSRX.md`
-    * `./Luz/shields/NoNewDefinitions-NNDX.md`
 
 2. **Run the probe.** The probe is currently `typing_pass_on_roguelike` in `FrontendRust/src/typing/test/compiler_project_tests.rs`. Run it:
 
@@ -67,7 +62,7 @@ This loop is for when the typing pass is mostly migrated but you want to **find 
     - **Test passes (green):** good — go to step 8.
     - **Test fails on a NEW `Unimplemented`/`implement:` panic at a different file:line:** that's the next layer down (a function your just-ported body called). Go back to step 6 for that new panic. **Don't write a new reproducer test** — the same reproducer is exercising the chain. One reproducer covers the whole chain it triggers.
     - **Test fails on the SAME panic at the same file:line:** your port didn't reach the panic site or something went wrong. Inspect.
-    - **Test fails on a real compile error (no `Unimplemented`/`implement:` in message):** that's a logic bug, NOT a migration gap. Stop and escalate to TL per `migration-drive.md`'s rule.
+    - **Test fails on a real compile error (no `Unimplemented`/`implement:` in message):** that's a logic bug, NOT a migration gap. Stop and escalate to TL.
     - **Build error (lifetime, type, signature mismatch):** if it's a small adaptation (param ownership, scoped lifetime), fix it. If it's a signature change that propagates across multiple files, **stop and escalate** — those are TL territory.
 
 8. **Reproducer green — confirm no regressions.** Run the full active test suite:
@@ -96,14 +91,14 @@ This loop is for when the typing pass is mostly migrated but you want to **find 
 
 ## Notes
 
-* **Use the Scala counterpart as the source of truth for each body.** The Rust port translates 1:1 from the `/* ... */` block below the stub. No novel logic, no Rust-idiomatic "improvements" beyond what Rust strictly requires to compile (per `migration-drive.md`).
+* **Use the Scala counterpart as the source of truth for each body.** The Rust port translates 1:1 from the `/* ... */` block below the stub. No novel logic, no Rust-idiomatic "improvements" beyond what Rust strictly requires to compile.
 
 * **Adjacent helper calls.** Many Scala bodies call helpers like `localHelper.makeTemporaryLocal(...)`, `destructorCompiler.drop(...)`, `templataCompiler.getPlaceholderSubstituter(...)`. In Rust, these flatten onto `Compiler` (per design v3 §2.1 god struct). Call them as `self.make_temporary_local(...)`, `self.drop(...)`, `self.get_placeholder_substituter(...)`. If the helper is itself a stub, that's fine — the next iteration of step 6 (or 7's continuation) will hit it.
 
 * **Adding `interner` / `scout_arena` / `keywords` parameters is fine.** Scala uses GC; Rust often needs an arena handle to allocate. SPDMX Exception B covers it.
 
-* **Stop when you escalate, don't keep driving in parallel.** When you escalate (lifetime puzzle, NNDX-blocked test add, structural change, ambiguous Scala source, anything in `migration-drive.md`'s "stop and escalate" bullets), stop and wait for the TL response in `for-jr.md`. Never defer or skip the current probe iteration to move on.
+* **Stop when you escalate, don't keep driving in parallel.** When you escalate (lifetime puzzle, NNDX-blocked test add, structural change, ambiguous Scala source), stop and wait for the TL response in `for-jr.md`. Never defer or skip the current probe iteration to move on.
 
-* **`for-jr.md` / `for-tl.md` escalation files.** Same as `migration-drive.md`: escalations to TL go in `for-tl.md`; TL responses to JR go in `for-jr.md`. Check `for-jr.md` when the architect says just "z".
+* **`for-jr.md` / `for-tl.md` escalation files.** Escalations to TL go in `for-tl.md`; TL responses to JR go in `for-jr.md`. Check `for-jr.md` when the architect says just "z".
 
 * **Update the probe over time.** As the typing pass approaches end-to-end compilation of roguelike, this skill's probe will graduate to the next real-world program (e.g. one of the stdlib's own tests, or an integration-test sample). When that happens, update step 2's test name and step 3's Scala counterpart. The pattern stays; only the probe target changes.

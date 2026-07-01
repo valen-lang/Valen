@@ -1,8 +1,8 @@
 # Instantiating Pass Design
 
-Architecture and design decisions for the Scala-to-Rust **instantiating pass** migration. Sister doc to `typing-pass-design-v3.md`. This pass was transplanted from Sylvan and drift-reconciled against Vale's canonical `Frontend/InstantiatingPass/`; **some design decisions here are recovered-from-code rather than architect-deliberated** — flagged inline where that's the case. The Scala source of truth is `Frontend/InstantiatingPass/src/dev/vale/instantiating/`.
+Architecture and design decisions for the **instantiating pass**. Sister doc to `typing-pass-design-v3.md`. **Some design decisions here are recovered-from-code rather than architect-deliberated** — flagged inline where that's the case.
 
-For body-migration TL/JR process, see `Luz/skills/guardian-tl.md`. For the operational status of the instantiator, see `migrate-tl.md` and `FrontendRust/src/typing/typing-pass-todo.md`.
+For the operational status of the instantiator, see `FrontendRust/src/typing/typing-pass-todo.md`.
 
 ---
 
@@ -421,7 +421,7 @@ As of session at experimental tip `18e3e4bda`:
 
 **Total `panic!()` count: ~260 across the pass.** Top files: `instantiator.rs` (85), `region_counter.rs` (27), `region_collapser_consistent.rs` (25), `region_collapser_individual.rs` (23), `names.rs` (17), `hinputs.rs` (17), `templata.rs`/`types.rs` (11 each).
 
-Body migration follows the test-driven loop in `docs/skills/migration-drive.md`. Many of the CL bucket's Phase 2 tests landed instantiator body fills (`migrate_rsa`, `migrate_ssa`, `each_on_ssa`, etc. drove 3-5 `translate_*` methods each).
+Many of the CL bucket's Phase 2 tests landed instantiator body fills (`migrate_rsa`, `migrate_ssa`, `each_on_ssa`, etc. drove 3-5 `translate_*` methods each).
 
 ---
 

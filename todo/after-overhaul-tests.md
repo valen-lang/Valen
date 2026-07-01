@@ -14,7 +14,7 @@ Buckets parked there:
   - `cant_make_weak_ref_to_non_weakable` — Rust typing pass returns `Ok` where Scala throws `TookWeakRefOfNonWeakableError` for `&&m` on a non-weakable struct.
   - `reports_when_ownership_doesnt_match` — unmigrated; typing-pass body still needs porting.
 
-- **2 Phase 4e parser bugs** (`migration-drive-todo.md`):
+- **2 Phase 4e parser bugs:**
   - `func_with_func_bound_with_missing_where` — Rust parser produces `TopLevelFunction` instead of `ParseError::FuncBoundWithoutWhere` for `func sum<T>() func moo(&T)void {3}`.
   - `report_leaving_out_semicolon_or_ending_body_after_expression_for_paren` — Rust parser produces `Consecutor(...)` instead of `ParseError::BadStartOfStatementError` for `set x = 7 )`.
 

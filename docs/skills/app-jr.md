@@ -77,4 +77,3 @@ You hit something that looks like a compiler bug (panic, wrong runtime output, a
 
 - `guardian-jr.md` — the timeless JR loop (mailbox, watcher, `z`, git rule, escalation hygiene, temp-disable mechanism).
 - `app-tl.md` — your TL's side of this loop.
-- `migration-drive.md` — the sibling workflow for the Scala→Rust migration (now mostly retired but kept for reference).

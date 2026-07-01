@@ -1,1 +1,0 @@
-../../../docs/skills/migration-drive.md

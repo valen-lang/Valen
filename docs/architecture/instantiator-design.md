@@ -1,6 +1,6 @@
 # Instantiating Pass Design
 
-Architecture and design decisions for the Scala-to-Rust instantiating-pass migration. Companion to `docs/architecture/typing-pass-design-v3.md` and `docs/architecture/simplifying_pass_design.md`. Operational handoff in `docs/skills/migrate-tl.md`.
+Architecture and design decisions for the instantiating pass. Companion to `docs/architecture/typing-pass-design-v3.md` and `docs/architecture/simplifier-design.md`.
 
 This pass takes typing-pass output (`HinputsT<'s, 't>`) and produces monomorphized output (`HinputsI<'s, 'i>`) for the simplifying pass. It is the pass that resolves generics into concrete instantiations: every templated function/struct/interface gets one concrete instance per reachable use-site, generic placeholders become concrete types, bound arguments get threaded into v-tables, and region modes get collapsed from `sI` (still-placeholdered) through `nI` (per-denizen renumbered) to `cI` (concrete output-ready). Tree-shaking falls out of reachability — uncalled overloads never appear in `HinputsI`.
 
@@ -779,7 +779,6 @@ The hammer pass receives `&HinputsI<'s, 'i>` plus the instantiating interner ref
 - **Region collapsers / counter**: substantial real code. Each has ~25 `panic!`s in less-common branches (e.g. `AnonymousSubstructConstructor`, `ForwarderFunction` arms in `collapse_function_name`).
 - **`HinputsI` lookup methods**: ~20 methods on `hinputs.rs`. About half live, about half `panic!` stubs.
 
-Body migration follows the test-driven loop in `docs/skills/migration-drive.md`.
 
 ---
 
@@ -830,7 +829,6 @@ Cross-references for acronyms used in this doc:
 | `docs/architecture/simplifying_pass_design.md` | downstream pass design (consumes `HinputsI`) |
 | `docs/InstantiatorRegions.md` | CCFCTS canonical definition + region semantics |
 | `docs/Generics.md` | TIBANFC, MKRFA, etc. |
-| `FrontendRust/docs/migration/migration-policy.md` | per-pass policy values |
 | `FrontendRust/src/instantiating/mod.rs` | module declarations |
 | `FrontendRust/src/instantiating/instantiating_arena.rs` | `InstantiatingArena<'i>` newtype |
 | `FrontendRust/src/instantiating/instantiating_interner.rs` | 12-family interner, ~216 macro-generated wrappers, `paste!`-based codegen |

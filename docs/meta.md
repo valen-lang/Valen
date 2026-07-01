@@ -105,17 +105,7 @@ The Z suffix is also used for **standalone advisory docs** — reference or patt
 
 A shield that satisfies none of these is invisible — neither humans nor Guardian will ever find it.
 
-### 5. Migration
-
-**Audience:** Anyone working on the Scala-to-Rust migration.
-
-**Purpose:** Living documents tracking migration status, known differences between Scala and Rust, stubbed functions, and temporary workarounds. These are inherently ephemeral and shrink as migration completes.
-
-**Discovery:** Lives in the relevant pass's `docs/` directory. Not auto-loaded (read on demand).
-
-**Location:** `docs/migration.md` or `docs/migration/<topic>.md`
-
-### 6. Architecture
+### 5. Architecture
 
 **Audience:** Anyone modifying the feature's own implementation.
 
@@ -127,7 +117,7 @@ A shield that satisfies none of these is invisible — neither humans nor Guardi
 
 **Location:** `docs/architecture.md` or `docs/architecture/<topic>.md`
 
-### 7. Reasoning (sub-category of Architecture)
+### 6. Reasoning (sub-category of Architecture)
 
 **Audience:** Anyone wondering "why is it done this way?" or "where is this heading?"
 
@@ -135,7 +125,7 @@ A shield that satisfies none of these is invisible — neither humans nor Guardi
 
 **Location:** `docs/reasoning.md` or `docs/reasoning/<topic>.md`
 
-### 8. Skills
+### 7. Skills
 
 **Audience:** AI agents executing specific processes.
 
@@ -145,7 +135,7 @@ A shield that satisfies none of these is invisible — neither humans nor Guardi
 
 **Location:** `docs/skills/<skill-name>.md`
 
-### 9. Bugs
+### 8. Bugs
 
 **Audience:** Anyone investigating known issues.
 
@@ -153,7 +143,7 @@ A shield that satisfies none of these is invisible — neither humans nor Guardi
 
 **Location:** `#[ignore]`'d tests in code, not standalone documents.
 
-### 10. Requirements
+### 9. Requirements
 
 **Audience:** Anyone wondering what the system should do.
 

@@ -4,8 +4,6 @@
 
 This is the Vale compiler. The `FrontendRust/` tree is a Rust compiler frontend.
 
-> Scala→Rust migration content is archived at `docs/migration/migrate-tl.md` for historical reference. The migration is done; consult it only when investigating something tied to that era.
-
 ## Build & Test
 
 Always run **`cargo build --lib`** after making changes. The project builds as a library. Use **`cargo check`** for faster iteration.

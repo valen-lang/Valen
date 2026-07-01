@@ -26,19 +26,6 @@ exclude_shields = [
     "OutputAndLoggingZenDiscipline-OALZDX.md",
 ]
 
-[slice_mode]
-include_shields = [
-    { name = "ScalaCommentParity-SCPX.md" },
-    { name = "SliceInTheRightPlaces-SITRPX.md" },
-    { name = "MigImplsMustBeEmpty-MIMBEX.md" },
-    { name = "NoModificationsToShieldFiles-NMSFX.md" },
-
-    { name = "PythonScriptMutation-PSMX.md" },
-    { name = "ValidateReadonlyBash-VRBX.md" },
-    { name = "BulkEditScriptWorkflow-BESWX.md" },
-    { name = "MailboxWorkflow-MBXX.md" },
-]
-
 [migrate_mode]
 include_shields = [
     { name = "ScalaCommentParity-SCPX.md" },

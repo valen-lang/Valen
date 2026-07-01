@@ -1,1 +1,0 @@
-../../../docs/skills/migrate-diagnoser.md

@@ -8,7 +8,7 @@ use crate::parsing::tests::utils::compile_denizen;
 
 #[test]
 // V: unignore this
-#[ignore = "blocked - Rust parser produces TopLevelFunction for `func sum<T>() func moo(&T)void {3}` instead of ParseError::FuncBoundWithoutWhere. Tracked in migration-drive-todo.md Phase 4e."]
+#[ignore = "blocked - Rust parser produces TopLevelFunction for `func sum<T>() func moo(&T)void {3}` instead of ParseError::FuncBoundWithoutWhere."]
 fn func_with_func_bound_with_missing_where() {
   // This test does not pass yet, use #[ignore].
   let parse_bump = Bump::new();

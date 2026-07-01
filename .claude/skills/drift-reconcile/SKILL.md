@@ -1,1 +1,0 @@
-../../../docs/skills/drift-reconcile.md

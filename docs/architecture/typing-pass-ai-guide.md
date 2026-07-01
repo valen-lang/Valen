@@ -31,7 +31,7 @@ Before a large change, read these in full:
 
 ## The Prime Directive: 1:1 Scala Parity
 
-**Matching Scala's structure, naming, and behavior is the highest priority — above Rust idiom, above cleverness, above brevity.** No novel logic, no reorganization, no "improvements" beyond what Rust strictly requires to compile. Translate every line literally; don't simplify, merge, or "fix" Scala as you port it (DCCR + `migration-drive.md`). A verbose translation anyone can verify against the Scala beats a clever one nobody can.
+**Matching the Scala source's structure, naming, and behavior remains the priority for any body still being ported — above Rust idiom, above cleverness, above brevity.** No novel logic, no reorganization, no "improvements" beyond what Rust strictly requires to compile.
 
 **Every Rust definition is immediately followed, on the next line, by a `/* ... */` block holding its Scala equivalent.** That block is the audit trail (SCPX checks it line-for-line, order-sensitive). Pre-existing defs lacking an adjacent block are tech debt, not precedent.
 
@@ -65,7 +65,7 @@ These have each bitten at least once. Scan this list before a large change.
 
 - **Hand-rolled `ptr::eq(self, other)` on a Polyvalue's outer `&self`.** Works while the enum is always behind `&'t Outer` (outer address coincides with arena address); silently breaks the moment it's held by value — `self` becomes a stack address, two by-value copies of the same logical wrapper compare unequal, and any `HashMap`/`HashSet` keyed on them corrupts. Polyvalue enums (`IEnvironmentT` family, `INameT`, `KindT`, `ITemplataT`) must `#[derive(PartialEq, Eq, Hash)]` and let the derive delegate into each variant's inner identity. See @PVECFPZ / design-doc §3.1, §1.5.
 
-- **Parallel Builder/Frozen APIs diverging asymmetrically from one Scala source.** When one Scala API (e.g. `TemplatasStore.addEntries`) splits into a Rust Builder + Frozen pair (`TemplatasStoreBuilder::add_entries` vs `TemplatasStoreT::add_entries`), *both* must mirror Scala's full logic including special-case branches. Review them side-by-side against the single Scala def. (This is the recurring bug class the migration-policy "Builder/Frozen" note refers to.)
+- **Parallel Builder/Frozen APIs diverging asymmetrically.** When one API (e.g. `TemplatasStore.addEntries`) is split into a Builder + Frozen pair (`TemplatasStoreBuilder::add_entries` vs `TemplatasStoreT::add_entries`), *both* must mirror the same logic including special-case branches. Review them side-by-side.
 
 - **Two-channel errors collapsed into one.** When a Scala fn both `throw`s `CompileErrorExceptionT` *and* returns `Result[_, SomeLocalError]`, the Rust mirror is nested `Result<Result<_, SomeLocalError>, ICompileErrorT>` — outer is the exception channel (every caller `?`-propagates), inner is the business channel (callers inspect and react). Merging them loses the "always propagate" vs "caller decides" distinction.
 
@@ -135,16 +135,6 @@ The slice pipeline only stubs methods defined directly on a Scala trait body. Sc
 **Run structural solutions by the architect first** — lifetime-parameter additions, signature changes that propagate across files, new abstractions, any choice between alternatives. Don't start editing, even for "mechanical" fixes, until sign-off. The cost of a quick check is small; unwinding a wrong-direction change across ~20 call sites is large.
 
 **Never add `// AFTERM:` or `// TODO:` comments** — yours or JR's. These are the architect's deferred-cleanup markers, added only when the architect asks. This holds even when the deferral seems obviously correct. Raise it to the architect; don't park it inline. If JR proposes one, tell them to drop it and escalate.
-
-### Cleaning Up After The Slice Pipeline
-
-The slice pipeline (`slice-start` → `slice-rustify` → `slice-placehold` → reconcile → `slice-impl-wrap`) brings a raw-`/* scala */` file to SCPX parity but is incomplete in known ways; plan a manual cleanup pass before `cargo check` is clean.
-
-- **`slice-placehold` doesn't infer struct context.** It emits each `// mig: fn foo` as a module-scope `pub fn foo<'s,'t>(&self, …) { panic!() }`, causing cross-variant name collisions (a trait method overridden by N case classes → N colliding module-level fns) and invalid `&self` outside an impl. **Cleanup:** wrap each stub in `impl<'s,'t> SomeT<'s,'t> where 's: 't { … }`, **drop the per-fn `<'s,'t>` generics** (the impl provides them — duplicating them shadows and warns), and indent the Scala `/* */` to live inside the impl. One impl per stub matches the file's style.
-- **Bogus `eq`/`hash_code` stubs.** Scala's `override def equals/hashCode` is realized by `impl PartialEq`/`impl Hash`, not methods named `eq`/`hash_code`. Replace the bogus `pub fn hash_code` body with a `// (Realized by impl Hash for FooT below.)` marker; keep the `// mig:` marker and the Scala block.
-- **NRDX blocks multi-fn diffs** — wrap one stub per Edit (see audit-trail rules).
-- **Verify after:** `cargo check --manifest-path FrontendRust/Cargo.toml --lib` (0 errors; pre-existing warnings OK) and SCPX `--check-all`.
-- **Don't dispatch the orchestrator on a hand-edited file** — reconcile-mark only catches matching-name old defs; the rest need the manual impl-wrap above.
 
 ### Writing Scala-Parity Tests
 

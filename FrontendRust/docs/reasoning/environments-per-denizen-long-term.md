@@ -243,9 +243,8 @@ The following are left to the future designer who actually implements LSP mode:
 
 ## See also
 
-- `docs/architecture/typing-pass-design-v3.md` Part 1 — current (migration-phase) typing-pass arena architecture.
-- `FrontendRust/docs/migration/handoff-slab-4.md` — Slab 4 handoff implementing the migration-phase arena design.
+- `docs/architecture/typing-pass-design-v3.md` Part 1 — current typing-pass arena architecture.
 - `FrontendRust/docs/reasoning/arena-deterministic-maps.md` — why arena-backed maps don't exist for us; part of why envs-in-arena forces slice-based `TemplatasStoreT`.
-- `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` — sister doc recording a similar "chosen for migration, alternatives deferred post-migration" decision for `IdT`.
+- `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` — sister doc recording a similar deferred-alternatives decision for `IdT`.
 - `Luz/shields/ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md` — the shield forcing slice-based `TemplatasStoreT` today; lifts when envs move off arena.
 - `FrontendRust/docs/shields/ArenaTypesDontClone-ATDCX.md` — the shield that already carves out "working state (envs, solver types) may have `Clone`-without-`Copy`," anticipating the move to heap-storage working state.

@@ -1844,7 +1844,6 @@ fn tests_making_a_variable_with_a_pattern() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn tests_a_linked_list() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

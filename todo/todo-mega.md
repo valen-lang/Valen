@@ -69,7 +69,6 @@ FrontendRust/docs/background/
 FrontendRust/docs/usage/
 FrontendRust/docs/arcana/
 FrontendRust/docs/shields/
-FrontendRust/docs/migration/
 FrontendRust/docs/architecture/
 FrontendRust/docs/reasoning/
 FrontendRust/docs/skills/
@@ -83,7 +82,6 @@ FrontendRust/src/<pass>/docs/background/
 FrontendRust/src/<pass>/docs/usage/
 FrontendRust/src/<pass>/docs/arcana/
 FrontendRust/src/<pass>/docs/shields/
-FrontendRust/src/<pass>/docs/migration/
 FrontendRust/src/<pass>/docs/architecture/
 FrontendRust/src/<pass>/docs/reasoning/
 ```
@@ -123,7 +121,6 @@ FrontendRust/docs/background/arenas.md          — (#1) What the arenas are, li
 FrontendRust/docs/usage/arenas.md                — (#2) How to allocate, build-then-freeze, conversions
 FrontendRust/docs/architecture/arenas.md         — (#6) Internal design, interning machinery, two-phase lifecycle details
 FrontendRust/docs/shields/ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md  — (#4) from zen/ArenaAndMallocSeparation.md
-FrontendRust/docs/migration/per-pass-arenas.md   — (#5) the per-pass arena plan (ephemeral)
 FrontendRust/docs/reasoning/arena-deterministic-maps.md  — (#7) why we need deterministic arena maps, 5 approaches considered
 ```
 
@@ -133,8 +130,7 @@ FrontendRust/docs/reasoning/arena-deterministic-maps.md  — (#7) why we need de
 3. Extract usage patterns → `usage/arenas.md`
 4. Extract implementation details → `architecture/arenas.md`
 5. Move ArenaAndMallocSeparation to shields (add frontmatter `description:`)
-6. Trim per-pass-arenas-migration to just the still-relevant plan → `migration/per-pass-arenas.md`
-7. Convert arena-deterministic-map-problem to reasoning doc
+6. Convert arena-deterministic-map-problem to reasoning doc
 8. Move location-in-denizen.md — likely `architecture/location-in-denizen.md` or an arcana if it's cross-cutting enough
 9. Delete the 5 original files
 10. Update `early-lifetimes.mdc` and `interning-patterns.mdc` to reference the new docs instead of restating content
@@ -158,15 +154,6 @@ FrontendRust/docs/reasoning/arena-deterministic-maps.md  — (#7) why we need de
 ### Arcana (move to feature docs/arcana/)
 - `zen/PostParserSynthesizesParserASTNodes-PPSPASTNZ.md` → `FrontendRust/src/postparsing/docs/arcana/PostParserSynthesizesParserASTNodes-PPSPASTNZ.md`
 
-### Migration docs
-- `zen/migration_principles.md` → `FrontendRust/docs/migration/principles.md`
-- `zen/migration_differences.md` → `FrontendRust/docs/migration/differences.md`
-- `zen/migration_prompt.md` → `FrontendRust/docs/skills/migration-prompt.md` (#8, AI workflow)
-- `zen/migration_report_prompt.md` → `FrontendRust/docs/skills/migration-report.md` (#8)
-- `zen/migration_report_instructions.md` → fold into `skills/migration-report.md`
-- `zen/migration-strategies.md` → `FrontendRust/docs/migration/strategies.md`
-- `zen/testing.md` → `FrontendRust/docs/migration/testing.md` (migration-era testing principles)
-
 ### Architecture
 - `zen/typing-pass-design.md` → `FrontendRust/src/higher_typing/docs/architecture/typing-pass.md`
 
@@ -176,23 +163,18 @@ FrontendRust/docs/reasoning/arena-deterministic-maps.md  — (#7) why we need de
 
 ## Phase 4: Sort Remaining FrontendRust Docs (Day 2-3, ~2 hours)
 
-### FrontendRust/docs/ (non-arena, already partially addressed in Phase 2)
-- `migration-audit-report.md` → Check if the 26 NEEDS_WORK items were fixed. If yes, archive/delete. If no, `FrontendRust/docs/migration/audit-report.md`
-
 ### FrontendRust/todo/
 - `arena-deterministic-map-problem.md` → handled in Phase 2 (reasoning doc)
 - `necx-clone-analysis.md` → flagged "lets get rid of this". Verify NECX shield in Luz covers it, then delete.
 
 ### FrontendRust/src/ in-tree docs
-- `src/postparsing/docs/rc-environments-plan.md` → `src/postparsing/docs/migration/rc-environments.md` (ephemeral plan)
-- `src/higher_typing/docs/exceptions/HigherTypingPass.md` → check if still a problem. If yes, `src/higher_typing/docs/migration/exceptions.md`. If no, delete.
+- `src/postparsing/docs/rc-environments-plan.md` → review; likely delete if stale.
+- `src/higher_typing/docs/exceptions/HigherTypingPass.md` → check if still a problem. If yes, keep. If no, delete.
 
 ### FrontendRust top-level loose files
-- `migrate-direction.md` → DELETE (flagged "delete this file", 3 lines pointing at a specific panic)
-- `todo.md` → review and fold into `docs/migration/` or delete
+- `todo.md` → review and delete if stale
 - `cursor_setup.md` → `FrontendRust/docs/usage/cursor-setup.md` or delete if stale
 - `thoughts.md` → review, likely delete or fold into reasoning
-- `src/gripes.md` → review, likely delete or fold into migration
 - `manual/building.md` → `FrontendRust/docs/usage/building.md`
 - `check-template.txt` → review, likely `docs/skills/` or delete
 
@@ -210,14 +192,8 @@ These `.mdc` files currently contain mixed content. Each needs to be categorized
 - `general/interning-patterns.mdc` → `FrontendRust/docs/usage/interning.md`, symlink back
 - `general/no-unsolicited-restructuring.mdc` → shield or keep as Claude-specific rule
 - `general/style-guide.mdc` → `FrontendRust/docs/usage/style.md`, symlink back
-- `migration/frontendrust-migration-context.mdc` → `FrontendRust/docs/migration/context.md`
-- `migration/solver-migration.mdc` → `FrontendRust/src/solver/docs/migration/solver.md`
-- `parser/parser_impl_scala_rust_mapping.mdc` → `src/parsing/docs/migration/scala-rust-mapping.md`
-- `postparser/postparser-migration-guidelines.mdc` → `src/postparsing/docs/migration/guidelines.md`
 - `postparser/postparser-organization-map.mdc` → `src/postparsing/docs/architecture/organization.md`
-- `postparser/postparser_impl_scala_rust_mapping.mdc` → `src/postparsing/docs/migration/scala-rust-mapping.md`
 - `postparser/IDEPFL-postparser-interning.md` → `src/postparsing/docs/usage/interning.md` or `architecture/interning.md`
-- `postparser/postparser-migration.md` → `src/postparsing/docs/migration/differences.md`
 
 After moving content, each `.mdc` file becomes either a symlink to the new location or is deleted.
 
@@ -229,9 +205,7 @@ Skills and agents are AI workflow definitions. They should be documented in `doc
 
 ### Skills
 - `arcana/SKILL.md` → incorporated into `docs/skills/document.md`. Delete after verifying.
-- Migration skills (`migration-drive`, `migration-test-fixer`, etc.) → each gets a brief entry in `FrontendRust/docs/skills/` explaining the workflow, with the SKILL.md staying in `.claude/skills/` as the executable entrypoint.
-- `guardian-teach/SKILL.md`, `guardian-post-review/SKILL.md` → same pattern
-- `slice-pipeline/` → consolidate SKILL.md + EXAMPLES.md + TROUBLESHOOTING.md into a single `docs/skills/slice-pipeline.md`
+- `guardian-teach/SKILL.md`, `guardian-post-review/SKILL.md` → gets a brief entry in `FrontendRust/docs/skills/` explaining the workflow, with the SKILL.md staying in `.claude/skills/` as the executable entrypoint.
 
 ### Agents
 Agent `.md` files in `.claude/agents/` are executable definitions. They stay where they are but should be referenced from `docs/skills/` docs that describe the overall workflows they participate in.

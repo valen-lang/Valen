@@ -1,6 +1,6 @@
 # Simplifying Pass (Hammer) Design
 
-Architecture and design decisions for the Scala-to-Rust simplifying-pass migration. The Scala code calls this pass "Hammer" — that's the verb (and the `H`-suffix convention) you'll see throughout. Sister doc to `typing-pass-design-v3.md` and `instantiator-design.md`. For operational handoff see `migrate-tl.md`; per-pass policy values (Val/Ref pairs, lifetime conventions, sealing) live in `FrontendRust/docs/migration/migration-policy.md`.
+Architecture and design decisions for the simplifying pass. The Scala code called this pass "Hammer" — that's the verb (and the `H`-suffix convention) you'll see throughout. Sister doc to `typing-pass-design-v3.md` and `instantiator-design.md`.
 
 The simplifying pass is **pass 6** in the Vale frontend pipeline (parse → postparse → higher-typing → typing → instantiate → **simplify** → emit). It consumes `HinputsI<'s, 'i>` (the monomorphic instantiated denizen graph from the instantiator) and produces `ProgramH<'s, 'h>` (the wire-format-ready "H-AST" in `src/final_ast/`). The Hammer reads `'i`-mode (`cI`-collapsed) instantiator IR and lowers everything — names, kinds, coords, prototypes, expressions, definitions — into backend-shaped equivalents.
 
@@ -546,7 +546,7 @@ pub enum ExpressionH<'s, 'h> where 's: 'h {
 
 **Derives `Copy, Clone, Debug` only.** Drops `PartialEq`/`Eq`/`Hash` uniformly because `ConstantF64H` holds `f64`. The whole expression-AST family drops them (no `f64::to_bits()` workaround); same philosophy as typing-pass §7.3.
 
-**The dispatcher.** `ExpressionH::result_type(&self) -> CoordH<'s, 'h>` is the type-of dispatcher — one big match arming all 50 variants. Per-arm bodies are field reads or simple computations (e.g. `BorrowToWeakH` builds `CoordH { ownership: WeakH, location: YonderH, kind: inner.result_type().kind }`). This is the abstract-def-dispatcher-on-enum pattern per `migration-policy.md`'s sealed-trait policy for simplifying.
+**The dispatcher.** `ExpressionH::result_type(&self) -> CoordH<'s, 'h>` is the type-of dispatcher — one big match arming all 50 variants. Per-arm bodies are field reads or simple computations (e.g. `BorrowToWeakH` builds `CoordH { ownership: WeakH, location: YonderH, kind: inner.result_type().kind }`). This is the abstract-def-dispatcher-on-enum pattern.
 
 `ExpressionH` also has `expect_struct_access`, `expect_int_access`, `expect_bool_access`, `expect_static_sized_array_access`, `expect_runtime_sized_array_access`, `expect_struct_coord`, `expect_static_sized_array_coord`, `expect_runtime_sized_array_coord`, `expect_interface_coord` — narrow-and-extract helpers used by the translators when the variant must be a specific shape.
 
@@ -783,7 +783,6 @@ The caller can run either or both. `'h` stays alive as long as either consumer h
 | `docs/architecture/simplifier-design.md` | this doc — architecture + design decisions |
 | `docs/architecture/typing-pass-design-v3.md` | two passes upstream — foundational sister doc |
 | `docs/architecture/instantiator-design.md` | direct upstream pass — sister doc |
-| `FrontendRust/docs/migration/migration-policy.md` | per-pass schema for slice-pipeline (simplifying + final_ast rows) |
 | `FrontendRust/src/simplifying/hammer.rs` | god struct `Hammer` + top-level `translate` + `Locals` + `flatten_and_filter_voids` / `consecutive` / `consecrash` + mangling stubs |
 | `FrontendRust/src/simplifying/hammer_interner.rs` | `HammerInterner` — 3 HashMap families, `MustIntern` seal, arena utilities |
 | `FrontendRust/src/simplifying/hammer_arena.rs` | `HammerArena<'h>` thin newtype around `&'h Bump` |

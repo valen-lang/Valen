@@ -1,8 +1,8 @@
 # Typing Pass Design — v3
 
-Architecture and design decisions for the Scala-to-Rust typing-pass migration. This is the authoritative design reference; operational handoff instructions are in `TL.md` at the repo root.
+Architecture and design decisions for the typing pass. This is the authoritative design reference.
 
-For historical slab-by-slab progress, see `docs/historical/slab-chronicle.md`. Per-slab handoff docs with translation tables and gotchas are in `FrontendRust/docs/migration/handoff-slab-*.md`. The historical design docs (`docs/historical/typing-pass-design-v1.md`, `docs/historical/typing-pass-design-v2.md`, `docs/historical/typing-pass-migration-setup.md`) are obsolete — they each carry "DO NOT FOLLOW" banners.
+The historical design docs (`docs/historical/typing-pass-design-v1.md`, `docs/historical/typing-pass-design-v2.md`, `docs/historical/typing-pass-migration-setup.md`) are obsolete — they each carry "DO NOT FOLLOW" banners.
 
 ---
 
@@ -609,10 +609,7 @@ For the rest (`'s` outlives `'t`, AASSNCMCX, copy-out-before-`&mut`, speculative
 
 | Path | Purpose |
 |---|---|
-| `TL.md` | operational handoff — process, principles, current work |
 | `docs/architecture/typing-pass-design-v3.md` | this doc — architecture + design decisions |
-| `docs/historical/slab-chronicle.md` | slab-by-slab history (Slabs 0–14b) |
-| `FrontendRust/docs/migration/handoff-slab-*.md` | per-slab handoff docs (translation tables, gotchas) |
 | `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md` | two-tier per-denizen target + LSP direction |
 | `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` | IdT monomorphic / typed-view decision |
 | `FrontendRust/docs/reasoning/` | other design-decision docs |

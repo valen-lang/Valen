@@ -11,19 +11,6 @@ Type these directly in Claude Code.
 |-------------|---|
 | `/good-doc` | Categorize information and write it to the correct `docs/` directories per `docs/meta.md`. Handles arcana (@ID references) and shields. |
 
-### Migration — Driving Work Forward
-| Command | What it does                                                                                                                   |
-|---|--------------------------------------------------------------------------------------------------------------------------------|
-| `/migration-drive` | Make minimal, iterative parity-only changes. Adds `panic!` placeholders liberally. No novel logic.                             |
-| `/migration-test-fixer` | Run a failing test, uses agents to diagnose and scope, migrate Scala code until it passes. Stops after 5 consecutive failures. |
-| `/slice-pipeline` | Run the full slice pipeline on a file: start → rustify → placehold → reconcile (mark/copy/delete).                             |
-
-### Migration — Reviewing & Checking
-| Command | What it does |
-|---|---|
-| `/migration-diff-review` | Review a migration diff for Scala parity, correctness, and principle compliance. Read-only audit. |
-| `/migration-check-correct-loop` | Loop: check a definition for Scala parity → fix violations → run tests → repeat until APPROVED. |
-
 ### Guardian Integration
 | Command | What it does |
 |---|---|
@@ -49,36 +36,6 @@ Type these directly in Claude Code.
 | Command | What it does |
 |---|---|
 | `/write-pretooluse-hook` | Step-by-step guide to build a Rust binary PreToolUse hook that can block Edit/Write/Bash calls. Covers JSON protocol, exit codes, settings.json config. |
-
-## Agents (Spawned Internally)
-
-These are invoked by skills or by Claude via the Agent tool. You don't call them directly, but it helps to know what they do.
-
-### Migration Pipeline
-| Agent | Role |
-|---|---|
-| `migrate-diagnoser` | Diagnose what missing migration causes a test failure. Writes `tmp/migrate-direction.md`. |
-| `migrate-scoper` | Generate implementation instructions from diagnoser findings. |
-| `migration-migrate` | Bring over minimum Scala code to make changes compile. Uses `panic!` heavily. |
-
-### Slice Pipeline
-| Agent | Role |
-|---|---|
-| `slice-orchestrator` | Run the full slice pipeline by invoking subagents in sequence. |
-| `slice-start` | Insert `// mig:` markers above every Scala definition in commented code. |
-| `slice-start-check` | Verify `// mig:` markers were inserted correctly. Read-only. |
-| `slice-rustify` | Convert Scala-style `// mig:` comments to Rust-style (def→fn, class→struct). |
-| `slice-placehold` | Generate `panic!("Unimplemented: ...")` stubs below `// mig:` comments. |
-| `slice-reconcile-mark` | Mark old Rust definitions as `// old, obsolete`. |
-| `slice-reconcile-copy` | Copy old Rust code into matching placeholder stubs. |
-| `slice-reconcile-delete` | Delete definitions marked `// old, obsolete`. |
-
-### Quality Gates
-| Agent | Role |
-|---|---|
-| `migration-check-specific` | Check a specific definition for Scala parity (32+ criteria). Read-only. Returns APPROVED/NEEDS_WORK. |
-| `migration-gate` | Check a git diff for novel logic or structure mismatches. Read-only. Returns APPROVED/NEEDS_WORK. |
-| `agent-check-correct-loop` | Loop: check → fix → test → repeat. The engine behind `/migration-check-correct-loop`. |
 
 ## Guardian
 
@@ -113,20 +70,7 @@ See `/guardian-add` skill. Summary:
 - **Shields**: uppercase initialism + **X** suffix (e.g., `NECX`, `AASSNCMCX`)
 - **Arcana**: uppercase initialism + **Z** suffix (e.g., `PPSPASTNZ`)
 
-## Migration Workflows
-
-### "I want to migrate a whole file" (slice pipeline)
-1. `/slice-pipeline` on the file
-2. Review the result
-3. `/migration-check-correct-loop` on specific definitions that need fixing
-
-### "I want to get a test passing"
-1. `/migration-test-fixer` with the test name
-2. It will diagnose, migrate, and iterate until the test passes
-
-### "I want to check if my migration is correct"
-1. `/migration-diff-review` to audit the current diff
-2. Or `/migration-check-correct-loop` on a specific definition for automated fix-and-verify
+## Workflows
 
 ### "Guardian just blocked my commit and it's wrong"
 1. `/guardian-diagnose` — it reads the hook logs, classifies each failure, and walks you through fixing the shields
