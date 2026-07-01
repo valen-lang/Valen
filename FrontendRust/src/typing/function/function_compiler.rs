@@ -124,7 +124,7 @@ where 's: 't,
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // Profiler.frame(() => {
         //   val FunctionTemplataT(declaringEnv, function) = functionTemplata
         //   closureOrLightLayer.evaluateTemplatedLightBannerFromCall(
@@ -193,7 +193,7 @@ where 's: 't,
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // Profiler.frame(() => {
         //   val FunctionTemplataT(env, function) = functionTemplata
         //   if (function.isLight()) {

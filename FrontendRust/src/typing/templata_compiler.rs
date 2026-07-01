@@ -303,7 +303,7 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
         // val IdT(packageCoord, initSteps, last) = id
         // IdT(packageCoord, initSteps, last.template)
     }
@@ -312,7 +312,7 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
         // val IdT(packageCoord, initSteps, last) = id
         // IdT(packageCoord, initSteps, last.template)
     }
@@ -649,7 +649,7 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         impl_id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
         // val IdT(packageCoord, initSteps, last) = implId
         // val substitutedImplId = IdT(packageCoord, initSteps, last match {
         //   case ImplNameT(template, templateArgs, subCitizen) => interner.intern(ImplNameT(template,
@@ -835,7 +835,7 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         original: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
         // val IdT(packageCoord, initSteps, funcName) = original
         // val substitutedTemplateArgs =
         //   funcName.templateArgs.map((templata: ITemplataT[ITemplataType]) => substituteTemplatasInTemplata(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, templata))
@@ -886,7 +886,7 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
         coutputs: &mut CompilerOutputs<'s, 't>,
         interface_tt: InterfaceTT<'s, 't>,
     ) -> InterfaceTT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // Compiler.substituteTemplatasInInterface(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, interfaceTT)
     }
     
@@ -931,7 +931,7 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
         coutputs: &mut CompilerOutputs<'s, 't>,
         impl_id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // Compiler.substituteTemplatasInImplId(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, implId)
     }
 }
@@ -1223,7 +1223,7 @@ where 's: 't,
             KindT::Float(_) => CoordT::new(ownership, region, kind),
             KindT::Bool(_) => CoordT::new(ownership, region, kind),
             KindT::Str(_) => CoordT::new(ownership, region, kind),
-            _ => unreachable!("Scala's pointify_kind is exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str — Never/OverloadSet/KindPlaceholder not in Scala"),
+            _ => unreachable!("pointify_kind is exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str — Never/OverloadSet/KindPlaceholder not accepted"),
         }
     }
 
@@ -1234,7 +1234,7 @@ where 's: 't,
         range: &[RangeS<'s>],
         name: INameT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
     }
 
     pub fn lookup_templata_by_rune(
@@ -1325,7 +1325,7 @@ where 's: 't,
         &self,
         citizen_templata: &'t CitizenDefinitionTemplataT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
     }
 
     pub fn citizen_is_from_template(
@@ -1464,7 +1464,7 @@ where 's: 't,
             let sharedness = match kind_ownership {
                 OwnershipT::Own => SharednessT::Single,
                 OwnershipT::Share => SharednessT::Shared,
-                _ => unreachable!("Scala's create_kind_placeholder_inner is exhaustive over Own/Share — Borrow/Weak not valid kind ownerships"),
+                _ => unreachable!("create_kind_placeholder_inner is exhaustive over Own/Share — Borrow/Weak not valid kind ownerships"),
             };
             coutputs.declare_type_mutability(kind_placeholder_template_id, sharedness);
 

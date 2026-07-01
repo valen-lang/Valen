@@ -141,7 +141,7 @@ where 's: 't,
     }
     
     pub fn count_denizens(&self) -> i32 {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
         // signatureToFunction.size + structTemplateNameToDefinition.size + interfaceTemplateNameToDefinition.size
     }
     
@@ -442,7 +442,7 @@ where 's: 't,
         &self,
         sub_citizen_template: IdT<'s, 't>,
     ) -> Vec<&'t ImplT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
     }
     
     pub fn get_child_impls_for_super_interface_template(
@@ -486,7 +486,7 @@ where 's: 't,
         package_coord: PackageCoordinate<'s>,
         exported_name: StrI<'s>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
     }
     
     pub fn add_function_extern(
@@ -528,7 +528,7 @@ where 's: 't,
         &self,
         template_name: IdT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
     }
     
     pub fn lookup_mutability(
@@ -555,7 +555,7 @@ where 's: 't,
         &self,
         template_name: IdT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
     }
     
     pub fn lookup_struct(
@@ -630,14 +630,14 @@ where 's: 't,
     }
     
     pub fn get_all_impls(&self) -> Vec<&'t ImplT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
     }
     
     pub fn get_env_for_function_signature(
         &self,
         sig: &'t SignatureT<'s, 't>,
     ) -> &'t FunctionEnvironmentT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
     }
     
     pub fn get_outer_env_for_type(
@@ -664,7 +664,7 @@ where 's: 't,
         &self,
         name: IdT<'s, 't>,
     ) -> IInDenizenEnvironmentT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
     }
     
     pub fn get_outer_env_for_function(
@@ -679,7 +679,7 @@ where 's: 't,
         &self,
         sig: &'t SignatureT<'s, 't>,
     ) -> Option<CoordT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        panic!("Unimplemented: Slab 10");
     }
     
     pub fn get_kind_exports(&self) -> Vec<&'t KindExportT<'s, 't>> {

@@ -4,7 +4,7 @@ Complex solve infers conclusions (e.g., receiver types from sender patterns) by 
 
 ## Where
 
-- `CompilerSolver.complexSolveInner` / `CompilerRuleSolver.complexSolve` (Scala and Rust)
+- `CompilerRuleSolver.complexSolve`
 - `SimpleSolverState.commitStep` — called with empty `solvedRuleIndices` from complex solve
 - `advanceInfer` / `advance` loop — the stage 1 (simple) -> stage 2 (complex) -> back to stage 1 cycle
 - `TestRuleSolver.complexSolveInner` in solver tests — same pattern

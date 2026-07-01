@@ -19,5 +19,5 @@ channel = "nightly-2025-12-09"
 #     toolchain, rustup looks for rust-analyzer in nightly-2025-12-09 (which lacks
 #     it by default), prints "Unknown binary", and the LSP client hangs until
 #     opencode's 45 s initialize timeout fires — making every Edit on a Rust
-#     migration file fail-closed.
+#     file fail-closed.
 components = ["rust-src", "rust-docs-json", "rust-analyzer"]

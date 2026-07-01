@@ -1,7 +1,6 @@
 
 
 /// Von data types - intermediate representation for JSON serialization
-/// Matches Scala's IVonData
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IVonData {

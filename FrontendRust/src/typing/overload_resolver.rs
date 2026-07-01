@@ -175,7 +175,7 @@ where 's: 't,
         // to a no-op shape and running the full suite — 1064/1064 still passed). Only
         // EdgeCompiler's override resolution passes non-empty here, and both envs it
         // passes are redundantly reached via the param-environments / calling-env paths.
-        // Kept for 1:1 Scala parity with `extraEnvsToLookIn.foreach(e => …)`.
+        // Kept as a no-op safeguard against a future callsite passing non-redundant envs.
         for e in extra_envs_to_look_in {
             self.get_candidate_banners_inner(*e, coutputs, range, function_name, searched_envs, results);
         }

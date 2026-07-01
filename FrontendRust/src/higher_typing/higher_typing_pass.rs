@@ -156,7 +156,7 @@ pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena
                 assert!(!ttt.param_types.is_empty());
                 rule_builder.push(IRulexSR::Lookup(LookupSR { range, rune: result_rune, name }));
               }
-              _ => panic!("FoundPrimitiveDidntMatchExpectedType not yet migrated as IRuneTypingLookupFailedError variant")
+              _ => panic!("FoundPrimitiveDidntMatchExpectedType not yet implemented as IRuneTypingLookupFailedError variant")
             }
           }
           IRuneTypeSolverLookupResult::Citizen(citizen) => {
@@ -175,7 +175,7 @@ pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena
                 assert!(!ttt.param_types.is_empty());
                 rule_builder.push(IRulexSR::Lookup(LookupSR { range, rune: result_rune, name }));
               }
-              _ => panic!("FoundTemplataDidntMatchExpectedTypeA not yet migrated as IRuneTypingLookupFailedError variant")
+              _ => panic!("FoundTemplataDidntMatchExpectedTypeA not yet implemented as IRuneTypingLookupFailedError variant")
             }
           }
           IRuneTypeSolverLookupResult::Templata(t) => {

@@ -65,7 +65,6 @@ pros:
 - not sure yet, but i bet there are some
 - we get to specify the order of some of these things. e.g. Mutex<Arc<T>> is different than Arc<Mutex<T>>.
 cons:
-- means we cant compile to jvm.
 - owned things probably still need a region.
 
 # thought experiment: one reference owns, other references share?

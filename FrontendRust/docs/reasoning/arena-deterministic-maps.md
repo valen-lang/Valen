@@ -2,7 +2,7 @@
 
 ## Background
 
-We're migrating a Scala compiler frontend to Rust. The Rust version uses **arena allocation** (`bumpalo::Bump`) for output AST nodes — structs like `StructS`, `FunctionS`, `StructA`, `FunctionA` are allocated into bump arenas, and their fields hold references (`&'s [T]`) into those arenas rather than owning heap-allocated `Vec`s.
+The compiler frontend uses **arena allocation** (`bumpalo::Bump`) for output AST nodes — structs like `StructS`, `FunctionS`, `StructA`, `FunctionA` are allocated into bump arenas, and their fields hold references (`&'s [T]`) into those arenas rather than owning heap-allocated `Vec`s.
 
 We're partway through converting `Vec` fields to arena-allocated slices (`&'s [T]`), and this works well — build a Vec, then call `arena.alloc_slice_fill_iter(vec.into_iter())` to get a `&'s [T]`.
 
@@ -20,7 +20,7 @@ We need a map data structure that satisfies **both** of these properties:
 
 - **Arena allocation matters** because the compiler processes many compilation units, and arena-based bulk deallocation is faster and simpler than tracking individual allocations. Structs allocated in the arena shouldn't point to heap-allocated collections that outlive them or fragment memory.
 
-- **Deterministic iteration matters** because the Scala original iterates over maps in several places (filtering rune-to-type maps, splitting header vs member runes, flattening package contents). While most of these operations produce Maps or Sets where iteration order doesn't affect correctness, we want to guarantee determinism across the entire compiler to avoid hard-to-debug nondeterministic compilation failures. We *hate* nondeterminism.
+- **Deterministic iteration matters** because the compiler iterates over maps in several places (filtering rune-to-type maps, splitting header vs member runes, flattening package contents). While most of these operations produce Maps or Sets where iteration order doesn't affect correctness, we want to guarantee determinism across the entire compiler to avoid hard-to-debug nondeterministic compilation failures. We *hate* nondeterminism.
 
 ## What Exists Today
 

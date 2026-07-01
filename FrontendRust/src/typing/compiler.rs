@@ -103,7 +103,7 @@ where 's: 't,
         &self,
         x: (),
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // println("###: " + x)
     }
     
@@ -1604,7 +1604,7 @@ where 's: 't,
         &self,
         function_a: &'s FunctionA<'s>,
     ) -> bool {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // functionA.name match {
         //   case FunctionNameS(StrI("main"), _) => return true
         //   case _ =>
@@ -1620,7 +1620,7 @@ where 's: 't,
         &self,
         struct_a: &'s StructA<'s>,
     ) -> bool {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // structA.attributes.exists({ case ExportS(_) => true case _ => false })
     }
     
@@ -1628,7 +1628,7 @@ where 's: 't,
         &self,
         interface_a: &'s InterfaceA<'s>,
     ) -> bool {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // interfaceA.attributes.exists({ case ExportS(_) => true case _ => false })
     }
     
@@ -1690,7 +1690,7 @@ where 's: 't,
         coutputs: &CompilerOutputs<'s, 't>,
         concrete_values2: &[KindT<'s, 't>],
     ) -> Vec<ITemplataT<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // concreteValues2.map(concreteValue2 => getMutability(coutputs, concreteValue2))
     }
 

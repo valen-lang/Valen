@@ -17,7 +17,7 @@ pub struct Reachables<'s, 't> {
 impl<'s, 't> Reachables<'s, 't> {
 
 pub fn size(&self) -> usize {
-    panic!("Unimplemented: Slab 15 — body migration");
+    panic!("Unimplemented: Slab 15");
 }
 
 }
@@ -31,7 +31,7 @@ where 's: 't,
         edge_blueprints: &[&'t InterfaceEdgeBlueprintT<'s, 't>],
         edges: &HashMap<InterfaceTT<'s, 't>, HashMap<StructTT<'s, 't>, Vec<&'t PrototypeT<'s, 't>>>>,
     ) -> Reachables<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
     }
 
     pub fn visit_function(
@@ -42,7 +42,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         callee_signature: SignatureT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
     }
 
     pub fn visit_struct(
@@ -53,7 +53,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         struct_tt: StructTT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
     }
 
     pub fn visit_interface(
@@ -64,7 +64,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         interface_tt: InterfaceTT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
     }
 
     pub fn visit_impl(
@@ -77,7 +77,7 @@ where 's: 't,
         struct_tt: StructTT<'s, 't>,
         methods: &[&'t PrototypeT<'s, 't>],
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
     }
 
     pub fn visit_static_sized_array(
@@ -88,7 +88,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         ssa: StaticSizedArrayTT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
     }
 
     pub fn visit_runtime_sized_array(
@@ -99,7 +99,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         rsa: RuntimeSizedArrayTT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
     }
 
 }

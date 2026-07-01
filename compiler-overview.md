@@ -11,7 +11,7 @@ The compiler is separated into various parts:
 
 The frontend has most of the logic for the semantics of the Vale language. This is made of various stages, and produces the "Final AST".
 
-The frontend is written in a very simple, imperative kind of Scala, closer to Java or Kotlin than anything else.
+The frontend is written in Rust.
 
 It contains multiple passes:
 

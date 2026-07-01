@@ -281,7 +281,7 @@ where 's: 't,
         &self,
         member_types: &[CoordT<'s, 't>],
     ) -> SharednessT {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // val membersOwnerships = memberTypes2.map(_.ownership)
         // val allMembersImmutable = membersOwnerships.isEmpty || membersOwnerships.toSet == Set(ShareT)
         // if (allMembersImmutable) ImmutableT else MutableT

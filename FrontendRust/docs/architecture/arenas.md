@@ -37,7 +37,7 @@ The smell to watch for is **Clone-without-Copy** on output data. Copy types must
 
 Arenas don't support mutation, period. When a value's lifecycle requires mutation, pick one of three patterns:
 
-- **Box pattern** — Vec-backed mutation buffer that lives outside the arena, with `snapshot(interner)` to freeze the current state into the arena as a fresh `&'t T`. Each snapshot is a new arena allocation; the old one is unchanged. Used by `NodeEnvironmentBox`, `TemplatasStoreBuilder`, `FunctionEnvironmentBuilder`. Mirrors Scala's `*Box` case classes whose `var` field gets replaced on each mutation.
+- **Box pattern** — Vec-backed mutation buffer that lives outside the arena, with `snapshot(interner)` to freeze the current state into the arena as a fresh `&'t T`. Each snapshot is a new arena allocation; the old one is unchanged. Used by `NodeEnvironmentBox`, `TemplatasStoreBuilder`, `FunctionEnvironmentBuilder`.
 - **Non-arena container** — owns its own `Vec`/`HashMap` collections, lives entirely outside the arena, dies at pass end. Used by `CompilerOutputs` for accumulating per-pass results.
 - **By-value** — owned `T` on the stack, mutate freely, then move into final position. Used for short-lived values that get built up and consumed in one scope.
 
@@ -51,7 +51,7 @@ The choice is driven by who mutates and how long the value lives:
 
 ## Where To Put Data: Arena vs Inline vs Mutable Container
 
-For an immutable value (one that has passed the "needs mutation" filter), the next question is whether it lives in the arena (accessed via `&'t T`) or stored inline by value. The decision framework lives in @WVSBIZ — the seven principles (size, dynamic length, interned, identity, sharing, recursion, back-pointers) and the Scala-parity override.
+For an immutable value (one that has passed the "needs mutation" filter), the next question is whether it lives in the arena (accessed via `&'t T`) or stored inline by value. The decision framework lives in @WVSBIZ — the seven principles (size, dynamic length, interned, identity, sharing, recursion, back-pointers).
 
 ### Transient Data
 

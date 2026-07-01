@@ -61,24 +61,24 @@ fn get_puzzles<'s>(rule: &IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
     IRulexSR::DefinitionFunc(_) => vec![vec![]],
     IRulexSR::OneOf(_) => vec![vec![]],
     IRulexSR::IsConcrete(_) => {
-        panic!("IRulexSR::IsConcrete not yet migrated in identifiability get_puzzles");
+        panic!("IRulexSR::IsConcrete not yet implemented in identifiability get_puzzles");
         // Vector(Vector(rune.rune))
     }
     IRulexSR::IsInterface(_) => vec![vec![]],
     IRulexSR::IsStruct(_) => {
-        panic!("IRulexSR::IsStruct not yet migrated in identifiability get_puzzles");
+        panic!("IRulexSR::IsStruct not yet implemented in identifiability get_puzzles");
         // Vector(Vector())
     }
     IRulexSR::CoerceToCoord(_) => vec![vec![]],
     IRulexSR::Literal(_) => vec![vec![]],
     IRulexSR::Augment(_) => vec![vec![]],
-    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in identifiability get_puzzles"),
-    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in identifiability get_puzzles"),
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in identifiability get_puzzles"),
+    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in identifiability get_puzzles"),
     IRulexSR::RefListCompoundMutability(_) => {
-        panic!("IRulexSR::RefListCompoundMutability not yet migrated in identifiability get_puzzles");
+        panic!("IRulexSR::RefListCompoundMutability not yet implemented in identifiability get_puzzles");
         // Vector(Vector())
     }
-    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in identifiability get_puzzles"),
+    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in identifiability get_puzzles"),
   }
 }
 
@@ -131,18 +131,18 @@ fn solve_rule_impl<'s>(
       solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.left.rune.clone(), true), (x.right.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::default())
     }
     IRulexSR::IsConcrete(_) => {
-      panic!("IRulexSR::IsConcrete not yet migrated in identifiability solve_rule");
+      panic!("IRulexSR::IsConcrete not yet implemented in identifiability solve_rule");
       // solverState.commitStep(false, Vector(ruleIndex), Map(rune.rune -> true), Vector(), Set.empty)
     }
     IRulexSR::IsInterface(x) => {
       solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::default())
     }
     IRulexSR::IsStruct(_) => {
-      panic!("IRulexSR::IsStruct not yet migrated in identifiability solve_rule");
+      panic!("IRulexSR::IsStruct not yet implemented in identifiability solve_rule");
       // solverState.commitStep(false, Vector(ruleIndex), Map(rune.rune -> true), Vector(), Set.empty)
     }
     IRulexSR::RefListCompoundMutability(_) => {
-      panic!("IRulexSR::RefListCompoundMutability not yet migrated in identifiability solve_rule");
+      panic!("IRulexSR::RefListCompoundMutability not yet implemented in identifiability solve_rule");
       // solverState.commitStep(false, Vector(ruleIndex), Map(resultRune.rune -> true, coordListRune.rune -> true), Vector(), Set.empty)
     }
     IRulexSR::CoerceToCoord(x) => {
@@ -165,14 +165,14 @@ fn solve_rule_impl<'s>(
     IRulexSR::Augment(x) => {
       solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.inner_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::default())
     }
-    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in identifiability solve_rule"),
-    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in identifiability solve_rule"),
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in identifiability solve_rule"),
+    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in identifiability solve_rule"),
     IRulexSR::Pack(x) => {
       let mut conclusions: IndexMap<IRuneS<'s>, bool> = x.members.iter().map(|m| (m.rune.clone(), true)).collect();
       conclusions.insert(x.result_rune.rune.clone(), true);
       solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
     }
-    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in identifiability solve_rule"),
+    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in identifiability solve_rule"),
   }
 }
 

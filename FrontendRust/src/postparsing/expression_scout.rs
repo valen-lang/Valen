@@ -609,7 +609,7 @@ fn scout_expression(
       match subject_uncoerced_scout_result {
         IScoutResult::OutsideLookupResult(OutsideLookupResultS { range, name: container_name, template_args: container_maybe_template_args }) => {
           // VCOORD: revisit this
-          // TEMP: source-level `__copy_prim(x)` syntax. No Scala counterpart.
+          // TEMP: source-level `__copy_prim(x)` syntax.
           // Detected by name here before normal overload-set construction so we
           // can emit a dedicated CopyPrimSE. Removable when typing-pass
           // auto-insertion of CopyPrim replaces the source syntax — at that

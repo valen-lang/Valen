@@ -994,7 +994,7 @@ where
         error,
       }) => {
         panic!(
-          "Parse error: {:?} - need ParseErrorHumanizer.humanize - see Parser.scala lines 818-826",
+          "Parse error: {:?} - need ParseErrorHumanizer.humanize",
           error
         )
       }

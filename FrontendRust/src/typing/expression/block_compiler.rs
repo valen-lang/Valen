@@ -30,7 +30,7 @@ where 's: 't,
         region: RegionT,
         block_1: &'s BlockSE<'s>,
     ) -> (&'t BlockTE<'s, 't>, HashSet<IVarNameT<'s, 't>>, HashSet<IVarNameT<'s, 't>>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // evaluateBlockStatements with child fate, BlockTE wrap, return effect sets via getEffectsSince
     }
 

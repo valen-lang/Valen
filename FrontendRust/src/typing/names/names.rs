@@ -1363,7 +1363,7 @@ pub enum CitizenNameT<'s, 't> {
     Interface(&'t InterfaceNameT<'s, 't>),
 }
 
-fn citizen_name_unapply() { panic!("Unmigrated unapply"); }
+fn citizen_name_unapply() { panic!("Unimplemented unapply"); }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1409,7 +1409,7 @@ impl<'s, 't> CitizenTemplateNameT<'s, 't> where 's: 't {
   
 }
 
-fn citizen_template_name_unapply() { panic!("Unmigrated unapply"); }
+fn citizen_template_name_unapply() { panic!("Unimplemented unapply"); }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

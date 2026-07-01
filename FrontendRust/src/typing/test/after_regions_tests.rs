@@ -158,8 +158,8 @@ exported func main() { AFn(() => { }); }
 }
 
 #[test]
-#[ignore = "ignored upstream in Scala"]
-fn tuple_with_all_imm_fields_is_imm() { panic!("Unmigrated test: tuple_with_all_imm_fields_is_imm"); }
+#[ignore = "unimplemented"]
+fn tuple_with_all_imm_fields_is_imm() { panic!("Unimplemented test: tuple_with_all_imm_fields_is_imm"); }
 
 #[test]
 fn can_destructure_and_assemble_tuple() {
@@ -524,8 +524,8 @@ func main() { foo("hello"); }
 // Canonical minimal repro for @BRRZ. The generic function `callAndReturn` has a
 // bound `func(&G)E` where E is an identifying generic rune appearing only in the
 // bound's return position. The caller supplies a lambda for G but does not (and
-// syntactically cannot) write E. The relaxed ResolveSR (CompilerSolver.scala:636)
-// resolves `__call(&closure)` and takes its return type as E.
+// syntactically cannot) write E. The relaxed ResolveSR resolves
+// `__call(&closure)` and takes its return type as E.
 #[test]
 fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general() {
     let parse_bump = Bump::new();

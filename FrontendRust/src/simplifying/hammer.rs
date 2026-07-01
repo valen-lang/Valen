@@ -251,7 +251,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 
     pub fn mangle_name(&self, name: &INameI<'s, 'i>, stuff_after: bool) -> String {
         panic!("Unimplemented: mangle_name");
-        // ""  (Scala body is currently a stub returning empty string)
     }
 
 
@@ -264,21 +263,18 @@ where 's: 'h, 's: 'i, 'i: 'h,
 
     pub fn mangle_kind(&self, kind: &KindIT<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_kind");
-        // ""  (Scala body is a stub; commented-out arms would dispatch IntIT(bits) → "i" + bits, others vimpl)
     }
 
 
 
     pub fn mangle_coord(&self, coord: &CoordI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_coord");
-        // ""  (Scala body is a stub; commented-out form would prefix per ownership then mangleKind)
     }
 
 
 
     pub fn mangle_templata(&self, templata: &ITemplataI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_templata");
-        // ""  (Scala body is a stub; would dispatch CoordTemplataI → mangleCoord, others vimpl)
     }
 
 

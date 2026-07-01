@@ -179,7 +179,7 @@ exported func main() int {
     );
     {
         let coutputs = compile.expect_compiler_outputs();
-        // BUG: Scala uses `==` (a pure expression with discarded result) instead of `shouldEqual`; the assertion is dead.
+        // BUG: `==` here is a pure expression with a discarded result; the assertion is dead. Should be `assert_eq!`.
         let _ = coutputs.functions[0].header.return_type == CoordT::new(
             OwnershipT::Own,
             RegionT { region: IRegionT::Default },

@@ -1,14 +1,14 @@
 # Reasoning: Typing-Pass Arenas — Why Today's Design, and Where It's Heading
 
-The current typing-pass arena model (single `'t` interner for the whole pass, envs allocated into `'t` via builder/Box pattern, `TemplatasStoreT` using `ArenaIndexMap`) is described in `docs/architecture/typing-pass-design-v3.md` Part 1. This doc records *why* that's the migration choice, what's wrong with it long-term, the empirical audit that justifies the target design, the target itself, and further future direction toward LSP.
+The current typing-pass arena model (single `'t` interner for the whole pass, envs allocated into `'t` via builder/Box pattern, `TemplatasStoreT` using `ArenaIndexMap`) is described in `docs/architecture/typing-pass-design-v3.md` Part 1. This doc records what's wrong with the current design long-term, the empirical audit that justifies the target design, the target itself, and further future direction toward LSP.
 
 ## TL;DR
 
-- **Migration-phase (today's design):** envs in the `'t` typing arena alongside names, kinds, templatas. Single `TypingInterner<'t>` for the whole pass. Chosen for Scala parity and uniformity with Slabs 1-3; costs of the model (builder-freeze churn, slice-based lookup, no `HashMap`-in-env) are acceptable at migration scale.
+- **Today's design:** envs in the `'t` typing arena alongside names, kinds, templatas. Single `TypingInterner<'t>` for the whole pass. Costs of the model (builder-freeze churn, slice-based lookup, no `HashMap`-in-env) are acceptable for now.
 - **Long-term (post-Slab-8):** split typing-pass storage into **two tiers** — a program-wide `'out` outputs arena for declarations + resolved types + skeleton envs, and a **per-top-level-denizen scratchpad arena** (`'scratch`) for working envs + transient templatas + solver state. A side table of `&'scratch env` with `EnvIdx(u32)` indices covers the scratchpad-env handoff to arena-allocated types. The scratchpad drops at the end of each worklist item; the outputs arena survives the whole pass.
 - **Further out (LSP):** per-denizen arenas + `DefId`-indexed cross-denizen refs + shattered `GlobalEnvironment` + two-tier interner with single-writer cleanup promotion + periodic interner rebuild.
 
-Scala parity is why the migration picks arenas. Cross-denizen edge analysis + `bumpalo`'s no-destructor semantics + per-denizen memory bounds are why the long-term target is two-tier per-denizen. Incremental recompilation on source change is why LSP needs a further evolution on top of that.
+Cross-denizen edge analysis + `bumpalo`'s no-destructor semantics + per-denizen memory bounds are why the long-term target is two-tier per-denizen. Incremental recompilation on source change is why LSP needs a further evolution on top of that.
 
 ---
 
@@ -16,7 +16,7 @@ Scala parity is why the migration picks arenas. Cross-denizen edge analysis + `b
 
 ### Cross-denizen edges audit
 
-An empirical audit of the Scala source catalogued cross-denizen data flow. Summary:
+An empirical audit catalogued cross-denizen data flow. Summary:
 
 - **Resolved-definition lookups are pervasive and unavoidable.** Function body typing routinely does `coutputs.lookupStruct(id)` / `lookupInterface(id)` to resolve `.field` accesses and method calls. The target struct/interface was typed by a *different* top-level denizen. These lookups are real cross-denizen reads and force a tier of long-lived data.
 - **Function-call memoization is narrower than it looks.** `getOrEvaluateFunctionForHeader` appears to cross denizens but actually serves as a header cache. Only lambdas (intra-containing-function) hit the templated-banner path. For non-lambda calls, declared-return functions have headers computable from templates + scout `'s` data alone. *Only inferred-return functions would need cross-denizen body typing* — and only lambdas can have inferred returns, and lambdas can't be called cross-denizen (lambda `IdT`s bake in the containing function; `LambdaCallFunctionNameT` explicitly returns `None` from imprecise-name lookup). Category 2 collapses entirely.
@@ -33,7 +33,7 @@ An empirical audit of the Scala source catalogued cross-denizen data flow. Summa
 
 `bumpalo::Bump::alloc<T>(&self, val: T) -> &mut T` frees memory on arena drop but does not invoke `T::drop`. So arena-allocated structs must be plain data (no `Drop` impls that matter, no heap-owning fields).
 
-Implication for envs: as long as envs are arena-allocated, they can't hold `HashMap`, `Vec`, `Rc`, or anything with real drop semantics. That's why the migration-phase `TemplatasStoreT` is slice-based and builder-freeze. Moving envs off the arena (or to a drop-honoring container) unlocks `HashMap`-in-`TemplatasStoreT` and natural incremental mutation.
+Implication for envs: as long as envs are arena-allocated, they can't hold `HashMap`, `Vec`, `Rc`, or anything with real drop semantics. That's why today's `TemplatasStoreT` is slice-based and builder-freeze. Moving envs off the arena (or to a drop-honoring container) unlocks `HashMap`-in-`TemplatasStoreT` and natural incremental mutation.
 
 ### Per-denizen memory bounds
 
@@ -92,7 +92,7 @@ Caveat: `TemplatasStoreT` lookup performance — if we want `HashMap<INameT, IEn
 
 ### Typing order / worklist semantics
 
-Scala's typing pass runs in three phases (confirmed by audit of `Compiler.scala`):
+The typing pass runs in three phases:
 
 1. **Indexing phase.** All top-level structs and interfaces are declared; outer envs created. Allocates into `'out`.
 2. **Compiling phase.** Struct/interface bodies fully compiled (members resolved, inner envs created). Method headers deferred onto `CompilerOutputs.deferredFunctionCompiles`. Struct definitions land in `'out`.
@@ -126,7 +126,7 @@ Long-term target uses **Option A**. Per-denizen scratchpads bound the high-churn
 
 ---
 
-## Migration path: one post-Slab-8 slab
+## Rollout path: one post-Slab-8 slab
 
 Scope:
 
@@ -145,7 +145,7 @@ Each step is independently verifiable. Tests should stay green throughout if the
 ## What this gains
 
 - **Per-denizen memory bound.** Peak memory during function body typing bounded by the function's working set + skeleton envs, not the whole codebase.
-- **Clearer Scala parity.** Each worklist item is self-contained; Scala's implicit per-compile state maps onto a literal per-compile arena.
+- **Self-contained worklist items.** Each worklist item has an explicit per-compile arena — no implicit per-compile state hidden across the loop body.
 - **Clean `bumpalo`-compatible cleanup.** Scratchpad drops cleanly; outputs arena drops at pass end. No `Rc` gymnastics.
 - **`HashMap`-in-`TemplatasStoreT`** if we go the extra mile of pulling scratchpad envs off the arena into a drop-honoring container. Lookup cost drops from O(n) to O(1) for the scratchpad envs that typically see the most lookups.
 
@@ -227,7 +227,7 @@ Each top-level denizen has a stable `DefId` = its fully-qualified name (package 
 
 One `'out` slab and one `'scratch` arena per **top-level denizen** — top-level function, struct, interface, or impl. Nothing smaller. Specifically:
 
-- Lambdas share their containing top-level function's arenas (already decided in the migration-phase design).
+- Lambdas share their containing top-level function's arenas (already the case in today's design).
 - **Monomorphizations do not get their own denizen status.** LSP and monomorphization are orthogonal. Typing produces generic `FunctionDefinitionT` at top-level-function granularity; monomorphization happens post-typing in the instantiator and is not part of the LSP incrementality story. Whether and how the instantiator participates in LSP is a separate concern, out of scope here.
 
 ### Deferred decisions

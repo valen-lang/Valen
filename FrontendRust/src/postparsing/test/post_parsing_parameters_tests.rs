@@ -234,12 +234,12 @@ fn anonymous_typed_param() {
 
 // #[test]
 // fn regioned_pure_function() {
-//   panic!("Unmigrated test: regioned_pure_function");
+//   panic!("Unimplemented test: regioned_pure_function");
 // }
 
 // #[test]
 // fn regioned_additive_function() {
-//   panic!("Unmigrated test: regioned_additive_function");
+//   panic!("Unimplemented test: regioned_additive_function");
 // }
 
 #[test]

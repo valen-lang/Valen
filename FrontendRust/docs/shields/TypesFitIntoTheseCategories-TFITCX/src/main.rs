@@ -38,7 +38,7 @@ fn main() {
         };
         let trimmed = content.trim();
 
-        // Track block comments (Scala code in /* ... */)
+        // Track block comments in /* ... */
         if !in_block_comment && trimmed.starts_with("/*") {
             if !trimmed.contains("*/") || trimmed.ends_with("*/") && trimmed.starts_with("/*") {
                 // Single-line block comments like /* Guardian: disable-all */ are fine

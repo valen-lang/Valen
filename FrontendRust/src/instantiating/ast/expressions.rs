@@ -152,7 +152,7 @@ pub enum AddressExpressionIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct LetAndLendIE<'s, 'i> {
 	pub variable: ILocalVariableI<'s, 'i>,
@@ -163,7 +163,7 @@ pub struct LetAndLendIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct LockWeakIE<'s, 'i> {
 	pub inner_expr: ReferenceExpressionIE<'s, 'i>,
@@ -177,7 +177,7 @@ pub struct LockWeakIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct BorrowToWeakIE<'s, 'i> {
 	pub inner_expr: ReferenceExpressionIE<'s, 'i>,
@@ -186,7 +186,7 @@ pub struct BorrowToWeakIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct LetNormalIE<'s, 'i> {
 	pub variable: ILocalVariableI<'s, 'i>,
@@ -196,7 +196,7 @@ pub struct LetNormalIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct RestackifyIE<'s, 'i> {
 	pub variable: ILocalVariableI<'s, 'i>,
@@ -206,7 +206,7 @@ pub struct RestackifyIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct UnletIE<'s, 'i> {
 	pub variable: ILocalVariableI<'s, 'i>,
@@ -215,7 +215,7 @@ pub struct UnletIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DiscardIE<'s, 'i> {
 	pub expr: ReferenceExpressionIE<'s, 'i>,
@@ -231,7 +231,7 @@ impl<'s, 'i> DiscardIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DeferIE<'s, 'i> {
 	pub inner_expr: ReferenceExpressionIE<'s, 'i>,
@@ -241,7 +241,7 @@ pub struct DeferIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct IfIE<'s, 'i> {
 	pub condition: ReferenceExpressionIE<'s, 'i>,
@@ -252,7 +252,7 @@ pub struct IfIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct WhileIE<'s, 'i> {
 	pub block: BlockIE<'s, 'i>,
@@ -261,7 +261,7 @@ pub struct WhileIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct MutateIE<'s, 'i> {
 	pub destination_expr: AddressExpressionIE<'s, 'i>,
@@ -271,7 +271,7 @@ pub struct MutateIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ReturnIE<'s, 'i> {
 	pub source_expr: ReferenceExpressionIE<'s, 'i>,
@@ -287,7 +287,7 @@ impl<'s, 'i> ReturnIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct BreakIE;
 
@@ -301,7 +301,7 @@ impl BreakIE {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct BlockIE<'s, 'i> {
 	pub inner: ReferenceExpressionIE<'s, 'i>,
@@ -310,7 +310,7 @@ pub struct BlockIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct MutabilifyIE<'s, 'i> {
 	pub inner: ReferenceExpressionIE<'s, 'i>,
@@ -319,7 +319,7 @@ pub struct MutabilifyIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ImmutabilifyIE<'s, 'i> {
 	pub inner: ReferenceExpressionIE<'s, 'i>,
@@ -328,7 +328,7 @@ pub struct ImmutabilifyIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct PreCheckBorrowIE<'s, 'i> {
 	pub inner: ReferenceExpressionIE<'s, 'i>,
@@ -345,7 +345,7 @@ impl<'s, 'i> PreCheckBorrowIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ConsecutorIE<'s, 'i> {
 	pub exprs: &'i[ReferenceExpressionIE<'s, 'i>],
@@ -354,7 +354,7 @@ pub struct ConsecutorIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct TupleIE<'s, 'i> {
 	pub elements: &'i[ReferenceExpressionIE<'s, 'i>],
@@ -363,7 +363,7 @@ pub struct TupleIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct StaticArrayFromValuesIE<'s, 'i> {
 	pub elements: &'i[ReferenceExpressionIE<'s, 'i>],
@@ -381,7 +381,7 @@ impl<'s, 'i> StaticArrayFromValuesIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ArraySizeIE<'s, 'i> {
 	pub array: ReferenceExpressionIE<'s, 'i>,
@@ -390,7 +390,7 @@ pub struct ArraySizeIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct IsSameInstanceIE<'s, 'i> {
 	pub left: ReferenceExpressionIE<'s, 'i>,
@@ -406,7 +406,7 @@ impl<'s, 'i> IsSameInstanceIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct AsSubtypeIE<'s, 'i> {
 	pub source_expr: ReferenceExpressionIE<'s, 'i>,
@@ -422,7 +422,7 @@ pub struct AsSubtypeIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct VoidLiteralIE;
 
@@ -435,7 +435,7 @@ impl VoidLiteralIE {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantIntIE {
 	pub value: i64,
@@ -454,7 +454,7 @@ impl ConstantIntIE {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantBoolIE {
 	pub value: bool,
@@ -469,7 +469,7 @@ impl ConstantBoolIE {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantStrIE<'s> {
 	pub _marker: PhantomData<(&'s (),)>,
@@ -485,7 +485,7 @@ impl<'s> ConstantStrIE<'s> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantFloatIE {
 	pub value: f64,
@@ -500,7 +500,7 @@ impl ConstantFloatIE {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct LocalLookupIE<'s, 'i> {
 	pub local_variable: ILocalVariableI<'s, 'i>,
@@ -509,7 +509,7 @@ pub struct LocalLookupIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ArgLookupIE<'s, 'i> {
 	pub param_index: i32,
@@ -526,7 +526,7 @@ impl<'s, 'i> ArgLookupIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct StaticSizedArrayLookupIE<'s, 'i> {
 	pub range: RangeS<'s>,
@@ -545,7 +545,7 @@ impl<'s, 'i> StaticSizedArrayLookupIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct RuntimeSizedArrayLookupIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
@@ -563,7 +563,7 @@ impl<'s, 'i> RuntimeSizedArrayLookupIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ArrayLengthIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
@@ -581,7 +581,7 @@ impl<'s, 'i> ArrayLengthIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ReferenceMemberLookupIE<'s, 'i> {
 	pub range: RangeS<'s>,
@@ -600,7 +600,7 @@ impl<'s, 'i> ReferenceMemberLookupIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct AddressMemberLookupIE<'s, 'i> {
 	pub struct_expr: ReferenceExpressionIE<'s, 'i>,
@@ -618,7 +618,7 @@ impl<'s, 'i> AddressMemberLookupIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceFunctionCallIE<'s, 'i> {
 	pub super_function_prototype: &'i PrototypeI<'s, 'i>,
@@ -629,7 +629,7 @@ pub struct InterfaceFunctionCallIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ExternFunctionCallIE<'s, 'i> {
 	pub prototype2: PrototypeI<'s, 'i>,
@@ -639,7 +639,7 @@ pub struct ExternFunctionCallIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct FunctionCallIE<'s, 'i> {
 	pub callable: PrototypeI<'s, 'i>,
@@ -649,7 +649,7 @@ pub struct FunctionCallIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ReinterpretIE<'s, 'i> {
 	pub expr: ReferenceExpressionIE<'s, 'i>,
@@ -662,7 +662,7 @@ pub struct CopyPrimIE<'s, 'i> {
     pub result: CoordI<'s, 'i>,
 }
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstructIE<'s, 'i> {
 	pub struct_tt: StructIT<'s, 'i>,
@@ -672,7 +672,7 @@ pub struct ConstructIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct NewRuntimeSizedArrayIE<'s, 'i> {
 	pub array_type: RuntimeSizedArrayIT<'s, 'i>,
@@ -682,7 +682,7 @@ pub struct NewRuntimeSizedArrayIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct StaticArrayFromCallableIE<'s, 'i> {
 	pub array_type: StaticSizedArrayIT<'s, 'i>,
@@ -693,7 +693,7 @@ pub struct StaticArrayFromCallableIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyStaticSizedArrayIntoFunctionIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
@@ -711,7 +711,7 @@ impl<'s, 'i> DestroyStaticSizedArrayIntoFunctionIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyStaticSizedArrayIntoLocalsIE<'s, 'i> {
 	pub expr: ReferenceExpressionIE<'s, 'i>,
@@ -729,7 +729,7 @@ impl<'s, 'i> DestroyStaticSizedArrayIntoLocalsIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyRuntimeSizedArrayIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
@@ -743,7 +743,7 @@ impl<'s, 'i> DestroyRuntimeSizedArrayIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct RuntimeSizedArrayCapacityIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
@@ -758,7 +758,7 @@ impl<'s, 'i> RuntimeSizedArrayCapacityIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct PushRuntimeSizedArrayIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
@@ -775,7 +775,7 @@ impl<'s, 'i> PushRuntimeSizedArrayIE<'s, 'i> {
 }
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct PopRuntimeSizedArrayIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
@@ -784,7 +784,7 @@ pub struct PopRuntimeSizedArrayIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceToInterfaceUpcastIE<'s, 'i> {
 	pub inner_expr: ReferenceExpressionIE<'s, 'i>,
@@ -794,7 +794,7 @@ pub struct InterfaceToInterfaceUpcastIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct UpcastIE<'s, 'i> {
 	pub inner_expr: ReferenceExpressionIE<'s, 'i>,
@@ -805,7 +805,7 @@ pub struct UpcastIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct SoftLoadIE<'s, 'i> {
 	pub expr: AddressExpressionIE<'s, 'i>,
@@ -815,7 +815,7 @@ pub struct SoftLoadIE<'s, 'i> {
 
 
 
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+/// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyIE<'s, 'i> {
 	pub expr: ReferenceExpressionIE<'s, 'i>,

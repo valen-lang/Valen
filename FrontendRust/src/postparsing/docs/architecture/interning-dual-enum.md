@@ -6,7 +6,7 @@ g_auto_load_when_editing:
 
 # Postparser Interning: Dual-Enum Pattern For Lookups (IDEPFL)
 
-Scala's `Interner` used GC-backed `HashMap[T, T]` to canonicalize case classes. Rust replaces this with arena-backed interning on `ScoutArena<'s>` using two parallel enums per type hierarchy: a **reference enum** (permanent, holds `&'s` pointers to arena data) and a **value enum** (transient, used as HashMap lookup keys). The transient Val exists only to check "does this already exist?" — then it's either discarded (hit) or promoted into permanent arena storage (miss).
+Arena-backed interning on `ScoutArena<'s>` uses two parallel enums per type hierarchy: a **reference enum** (permanent, holds `&'s` pointers to arena data) and a **value enum** (transient, used as HashMap lookup keys). The transient Val exists only to check "does this already exist?" — then it's either discarded (hit) or promoted into permanent arena storage (miss).
 
 ---
 
@@ -163,16 +163,10 @@ impl<'s> IRuneS<'s> {
 }
 ```
 
-This mirrors Scala's `eq` (reference equality) after interning.
+This is reference equality after interning.
 
 ---
 
 ## Conversion: Ref → Val
 
 `IFunctionDeclarationNameS` provides `to_val()` for converting a canonical reference back to a value key. This is used when you have an existing canonical name and need to build a parent Val that wraps it.
-
----
-
-## What Scala Had
-
-In Scala, all of these were just `case class`es extending `sealed trait`s with `IInterning`. The `Interner` used `HashMap[T, T]` where the JVM's GC managed memory and `eq` gave reference identity. There was no transient/permanent distinction — the GC handled discarding duplicates silently. Rust splits each sealed trait into two enums to make the transient/permanent boundary explicit: transient Vals for lookup, permanent refs for storage.

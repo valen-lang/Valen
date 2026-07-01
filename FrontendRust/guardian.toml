@@ -55,16 +55,13 @@ include_shields = [
 [review_mode]
 include_shields = [
     { name = "ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md" },
-    { name = "ScalaSealedTraitsToRustEnums-SSTREX.md" },
     { name = "NoExpensiveClones-NECX.md" },
     { name = "SuffixWhenDealingWithMultipleStages-SWDWMSX.md" },
     { name = "EnumsShouldntContainComplexData-ESCCDX.md" },
     { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
-    { name = "MigrateAllCommentsToo-MACTX.md" },
     { name = "NeverRecoverAlwaysFail-NRAFX.md" },
     { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "FailFastFailLoud-FFFLX.md" },
-    { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
     { name = "ImmediateInterningDiscipline-IIDX.md" },
     { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
     { name = "NeverRepeatImplementationCodeInTests-NRICITX.md" },

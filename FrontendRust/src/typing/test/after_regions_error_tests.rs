@@ -500,7 +500,7 @@ Weakable mismatch in impl: struct is weakable, but interface is not.
 
 // This test does not pass yet, use #[ignore].
 #[test]
-#[ignore = "blocked - Rust typing pass produces Ok where Scala throws TookWeakRefOfNonWeakableError for `&&m` on non-weakable struct"]
+#[ignore = "blocked - typing pass produces Ok where TookWeakRefOfNonWeakableError is expected for `&&m` on non-weakable struct"]
 fn cant_make_weak_ref_to_non_weakable() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

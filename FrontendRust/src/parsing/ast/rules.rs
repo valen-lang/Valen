@@ -159,7 +159,7 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
       Vec::new()
     }
     ITemplexPT::RegionRune(_) => panic!(
-      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_REGION_RUNE_NOT_IN_SCALA_MATCH"
+      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_REGION_RUNE_UNIMPLEMENTED_MATCH_ARM"
     ),
     ITemplexPT::TypedRune(typed_rune) => vec![typed_rune.rune.clone()],
     ITemplexPT::Call(call) => {
@@ -204,13 +204,13 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
     }
     ITemplexPT::Tuple(tuple) => get_ordered_rune_declarations_from_templexes_with_duplicates(tuple.elements),
     ITemplexPT::Inline(_) => panic!(
-      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_INLINE_NOT_IN_SCALA_MATCH"
+      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_INLINE_UNIMPLEMENTED_MATCH_ARM"
     ),
     ITemplexPT::Point(_) => panic!(
-      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_POINT_NOT_IN_SCALA_MATCH"
+      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_POINT_UNIMPLEMENTED_MATCH_ARM"
     ),
     ITemplexPT::Share(_) => panic!(
-      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_SHARE_NOT_IN_SCALA_MATCH"
+      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_SHARE_UNIMPLEMENTED_MATCH_ARM"
     ),
   }
 }

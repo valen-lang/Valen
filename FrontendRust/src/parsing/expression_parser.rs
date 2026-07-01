@@ -1105,7 +1105,7 @@ where
     } else if str == self.keywords.and || str == self.keywords.or {
       1
     } else {
-      3 // Default precedence for custom operators like "mod", "florgle", etc. (Scala line 842)
+      3 // Default precedence for custom operators like "mod", "florgle", etc.
     }
   }
   
@@ -1973,7 +1973,7 @@ where
 
   /// Parse a braced body
   pub fn parse_braced_body(&self, _iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<BlockPE<'p>> {
-    panic!("parse_braced_body: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1545")
+    panic!("parse_braced_body: NOT IMPLEMENTED")
   }
   
 
@@ -1982,7 +1982,7 @@ where
     &self,
     _original_iter: &mut ScrambleIterator<'p, '_>,
   ) -> Option<ParamsP<'p>> {
-    panic!("parse_single_arg_lambda_begin: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1563")
+    panic!("parse_single_arg_lambda_begin: NOT IMPLEMENTED")
   }
   
 
@@ -1991,7 +1991,7 @@ where
     &self,
     _original_iter: &mut ScrambleIterator<'p, '_>,
   ) -> Option<ParamsP<'p>> {
-    panic!("parse_multi_arg_lambda_begin: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1587")
+    panic!("parse_multi_arg_lambda_begin: NOT IMPLEMENTED")
   }
   
 

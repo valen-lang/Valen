@@ -210,8 +210,8 @@ impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
 }
 
 // AFTERM: figure out why some templatas compare environment and some don't —
-// `FunctionTemplataT.equals` ignores `outerEnv` (Scala templata.scala:161-169)
-// but this type's derived equality includes `declaring_env`.
+// `FunctionTemplataT`'s equality ignores `outerEnv` but this type's derived
+// equality includes `declaring_env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
@@ -360,5 +360,5 @@ impl<'s, 't> Debug for ExternFunctionTemplataT<'s, 't> {
   
 }
 
-// (Templata payload interning family removed — types are TFITCX Value-type per
-// Scala parity. Construction goes via `bump.alloc(FooTemplataT { ... })`.)
+// (Templata payload interning family removed — types are TFITCX Value-type;
+// construction goes via `bump.alloc(FooTemplataT { ... })`.)

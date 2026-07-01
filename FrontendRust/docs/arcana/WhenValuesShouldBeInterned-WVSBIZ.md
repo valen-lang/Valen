@@ -36,9 +36,9 @@ Once a value is arena-allocated, the next question is whether to intern it (dedu
 
 If none apply, the arena-allocated type stays uninterned (each `arena.alloc` is a fresh distinct allocation). Identity types — definitions, environments, expression nodes — are arena-allocated and *never* interned, because their whole point is that each allocation is a distinct thing. Interning would erase identity.
 
-## Scala Parity Overrides The Heuristics
+## The Interned Set
 
-Rust's Interned set is anchored to Scala's `IInterning` trait — types that extend `IInterning` in Scala (sealed traits `INameT` and `ICitizenTT`, plus `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT`) are Interned in Rust. Types that don't (the Templata variants, `SignatureT`, `PrototypeT`, `KindPlaceholderT`) stay as Value-types or arena-allocated-non-interned per @TFITCX even when they superficially fit one of the heuristics above. The one deliberate divergence is `IdT` — Scala leaves it as a plain case class and gets correct equality from `Vector`'s structural compare; Rust interns it specifically for `&'t [INameT]` slice-pointer-equality performance, which Scala didn't need.
+Interned types: the `INameT` and `ICitizenTT` variants, plus `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT`, and `IdT`. `IdT` is interned specifically for `&'t [INameT]` slice-pointer-equality performance. Other types (Templata variants, `SignatureT`, `PrototypeT`, `KindPlaceholderT`) stay as Value-types or arena-allocated-non-interned per @TFITCX even when they superficially fit one of the heuristics above.
 
 Once a type is classified as Interned, construction must go through the interner — see @SICZ for the privacy enforcement.
 

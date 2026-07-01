@@ -12,7 +12,7 @@ Because the postparser constructs parser-typed nodes, it needs access to the `'p
 
 ## Why it exists
 
-The Scala code does the same thing. The postparser synthesizes a constructor call expression from the struct's member names, then scouts it like any other expression. This reuses the existing expression-scouting logic rather than duplicating it for the synthetic case. Under Scala's single `Interner` arena, this was invisible — everything shared one lifetime. With per-pass arenas, it surfaces as a cross-arena dependency.
+The postparser synthesizes a constructor call expression from the struct's member names, then scouts it like any other expression. This reuses the existing expression-scouting logic rather than duplicating it for the synthetic case. Under a single-arena model it would be invisible; with per-pass arenas, it surfaces as a cross-arena dependency between the parse arena and the scout arena.
 
 ## The synthetic nodes are temporary
 

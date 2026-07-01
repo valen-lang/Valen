@@ -253,9 +253,9 @@ fn get_puzzles_rune_type<'s>(
     IRulexSR::Literal(_) => vec![vec![]],
     IRulexSR::Augment(_) => vec![vec![]],
     IRulexSR::RefListCompoundMutability(_) => vec![vec![]],
-    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in rune_type get_puzzles"),
-    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in rune_type get_puzzles"),
-    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in rune_type get_puzzles"),
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in rune_type get_puzzles"),
+    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type get_puzzles"),
+    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in rune_type get_puzzles"),
   }
 }
 
@@ -366,18 +366,18 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       }
     }
     IRulexSR::IsConcrete(_) => {
-      panic!("IRulexSR::IsConcrete not yet migrated in rune_type solve_rule");
+      panic!("IRulexSR::IsConcrete not yet implemented in rune_type solve_rule");
       // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector(), Set.empty)
     }
     IRulexSR::IsInterface(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}))].into_iter().collect(), vec![], IndexSet::default())
     }
     IRulexSR::IsStruct(_) => {
-      panic!("IRulexSR::IsStruct not yet migrated in rune_type solve_rule");
+      panic!("IRulexSR::IsStruct not yet implemented in rune_type solve_rule");
       // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector(), Set.empty)
     }
     IRulexSR::RefListCompoundMutability(_) => {
-      panic!("IRulexSR::RefListCompoundMutability not yet migrated in rune_type solve_rule");
+      panic!("IRulexSR::RefListCompoundMutability not yet implemented in rune_type solve_rule");
       // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> MutabilityTemplataType(), coordListRune.rune -> PackTemplataType(CoordTemplataType())), Vector(), Set.empty)
     }
     IRulexSR::CoerceToCoord(x) => {
@@ -393,7 +393,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       let actual_lookup_result =
           match env.lookup(x.range.clone(), x.name.clone()) {
             Err(_e) => {
-              panic!("LookupSR solve error path not yet migrated");
+              panic!("LookupSR solve error path not yet implemented");
               // return Err(RuleError(e))
             }
             Ok(r) => r,
@@ -409,7 +409,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       let actual_lookup_result =
           match env.lookup(x.range.clone(), x.name.clone()) {
             Err(_e) => {
-              panic!("MaybeCoercingLookupSR solve error path not yet migrated");
+              panic!("MaybeCoercingLookupSR solve error path not yet implemented");
               // return Err(RuleError(e))
             }
             Ok(r) => r,
@@ -423,7 +423,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       let actual_lookup_result =
           match env.lookup(x.range.clone(), lookup_name) {
             Err(_e) => {
-              panic!("RuneParentEnvLookupSR solve error path not yet migrated");
+              panic!("RuneParentEnvLookupSR solve error path not yet implemented");
               // return Err(RuleError(e))
             }
             Ok(r) => r,
@@ -444,9 +444,9 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       conclusions.insert(x.result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) }));
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
     }
-    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in rune_type solve_rule"),
-    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in rune_type solve_rule"),
-    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in rune_type solve_rule"),
+    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type solve_rule"),
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in rune_type solve_rule"),
+    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in rune_type solve_rule"),
   }
 }
 
@@ -474,7 +474,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
         ITemplataType::CoordTemplataType(_) | ITemplataType::KindTemplataType(_) => {}
         x if *x == p.tyype => {}
         _ => {
-          panic!("lookup_rune_type Primitive error path not yet migrated");
+          panic!("lookup_rune_type Primitive error path not yet implemented");
           // return Err(RuleError(FoundPrimitiveDidntMatchExpectedType(List(range), expectedType, tyype)))
         }
       }
@@ -494,7 +494,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
           }
         }
         _ => {
-          panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet migrated");
+          panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet implemented");
           // return Err(RuleError(FoundTemplataDidntMatchExpectedType(List(range), expectedType, actualType)))
         }
       }
@@ -510,7 +510,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
         }
         x if *x == c.tyype => {}
         _ => {
-          panic!("lookup_rune_type Citizen error path not yet migrated");
+          panic!("lookup_rune_type Citizen error path not yet implemented");
           // return Err(RuleError(FoundCitizenDidntMatchExpectedType(List(range), expectedType, tyype)))
         }
       }
@@ -547,7 +547,7 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
         IRulexSR::Lookup(lookup) => {
           match env.lookup(lookup.range.clone(), lookup.name.clone()) {
             Err(_e) => {
-              panic!("LookupSR pre-computation error path not yet migrated");
+              panic!("LookupSR pre-computation error path not yet implemented");
               // return Err(RuleError(e))
             }
             Ok(result) => {

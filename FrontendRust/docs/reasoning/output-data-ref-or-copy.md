@@ -8,7 +8,7 @@ No output type may derive Clone. No output type may contain `Vec`, `HashMap`, `B
 
 ## Why
 
-The primary goal is **performance**: prevent any accidental expensive heap duplication. In Scala, the JVM's garbage collector handled sharing transparently — passing a `case class` around just copied a pointer. In Rust, `Clone` on a type with heap fields does a deep copy. A single `.clone()` on a struct containing a `Vec<IRulexSR>` copies every element. If that struct is passed around in a loop (as happens during type solving), the cost compounds.
+The primary goal is **performance**: prevent any accidental expensive heap duplication. `Clone` on a type with heap fields does a deep copy — a single `.clone()` on a struct containing a `Vec<IRulexSR>` copies every element. If that struct is passed around in a loop (as happens during type solving), the cost compounds.
 
 The ref-or-Copy rule eliminates this class of bug entirely:
 - **Arena refs** (`&'s StructS`) are pointer-sized and Copy. Passing them around is free.
@@ -25,6 +25,3 @@ Both are Copy. Both are free to pass around. The choice is about cache locality 
 
 Working state (scopes, environments, builders, solver state) is exempt. It lives on the stack/heap, may contain `Vec`/`HashMap`, and may derive Clone. These types are mutable during a pass and are not part of the output. Moving them off the heap (persistent data structures, Rc, arena-backed collections) is a future refactor goal, not a current requirement.
 
-## What Scala had
-
-Scala had no distinction. All data was heap-allocated, garbage-collected, and shared by reference. The JVM made Clone unnecessary — everything was implicitly shared. Rust forces us to be explicit about sharing vs copying, and the ref-or-Copy rule is how we get Scala's sharing semantics back without GC overhead.

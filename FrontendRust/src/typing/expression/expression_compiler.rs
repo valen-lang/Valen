@@ -796,7 +796,7 @@ where 's: 't,
             }
             IExpressionSE::CopyPrim(cp) => {
                 // TEMP: typing-pass handler for source-level `__copy_prim(x)` syntax.
-                // No Scala counterpart. Evaluates the inner expression (any ownership/
+                // Evaluates the inner expression (any ownership/
                 // kind), asserts result kind is Int/Bool/Float, and produces a fresh
                 // Own+primitive via CopyPrimTE. Removable when auto-insertion of
                 // CopyPrim replaces the source-level syntax; the CopyPrimTE emission
@@ -1860,7 +1860,7 @@ where 's: 't,
         generator_prototype: PrototypeT<'s, 't>,
         generator_type: CoordT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        panic!("Unimplemented: Slab 15");
         // if (generatorPrototype.returnType != elementCoord) {
         //   throw CompileErrorExceptionT(RangedInternalErrorT(range, "Generator return type doesn't agree with array element type!"))
         // }

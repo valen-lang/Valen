@@ -10,7 +10,6 @@ Note that the below instructions don't build LLVM from source, but we highly rec
 ```sh
 sudo apt install -y git
 git clone --single-branch --branch master https://github.com/ValeLang/Vale
-# Add the -j and -s flags to the below command to also install Java and SBT from external APT repositories
 Vale/scripts/ubuntu/install-compiler-prereqs.sh -l LLVMForVale -b BootstrappingValeCompiler
 cd Vale
 ./scripts/ubuntu/build-compiler.sh "$PWD/../LLVMForVale/clang+llvm-13.0.1-x86_64-linux-gnu-ubuntu-18.04" "$PWD/../BootstrappingValeCompiler" --test=all ./scripts/VERSION
@@ -39,8 +38,6 @@ One *must* build LLVM from source, because [the Windows LLVM release is broken](
  1. Install Visual Studio
  1. Install python 3, remember to check the box to add it to the path
  1. Install git: https://git-scm.com/download/win
- 1. Install sbt: https://github.com/sbt/sbt/releases (look for the .msi on that page)
- 1. Install java: https://adoptopenjdk.net/
  1. Install 7-zip: https://www.7-zip.org/download.html
  1. Install the previous version of the vale compiler: https://vale.dev/download
  1. Build LLVM, see next section.

@@ -131,7 +131,6 @@ where 's: 't,
             &mut solver_state,
         ).unwrap_or_else(|_e| {
             panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in resolve_impl")
-            // (Scala returns checkResolvingConclusionsAndResolve's result directly; no Err-handler arm)
         })
     }
 

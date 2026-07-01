@@ -133,8 +133,8 @@ pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
     let right_str = match memory.dereference(args[3]) { KindV::Str(StrV { value, .. }) => value, _ => panic!("eq_str_str: arg 3 not StrV") };
     let right_str_start = match memory.dereference(args[4]) { KindV::Int(IntV { value, bits: 32, .. }) => value, _ => panic!("eq_str_str: arg 4 not IntV(_, 32)") };
     let right_str_len = match memory.dereference(args[5]) { KindV::Int(IntV { value, bits: 32, .. }) => value, _ => panic!("eq_str_str: arg 5 not IntV(_, 32)") };
-    // BUG: Scala uses .slice(start, len) but Scala's slice takes (from, until), so the
-    // "len" arg is being misinterpreted as an end index. Mirroring Scala parity-faithfully.
+    // BUG: the "len" arg is misinterpreted as an end index; slicing here takes
+    // (start, len) as (from, until). Preserved parity-faithfully until fixed.
     let result_eq = &left_str.0[left_str_start as usize .. left_str_len as usize] == &right_str.0[right_str_start as usize .. right_str_len as usize];
     Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: result_eq, _phantom: PhantomData })))
 }

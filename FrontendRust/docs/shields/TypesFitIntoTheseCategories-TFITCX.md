@@ -74,9 +74,7 @@ pub struct StructTT<'s, 't> {
 
 ## Exceptions
 
-A. Structs inside `/* ... */` Scala block comments (commented-out Scala code, not active Rust).
-
-B. Test-only structs (inside `#[cfg(test)]` modules).
+A. Test-only structs (inside `#[cfg(test)]` modules).
 
 ## See also
 

@@ -2618,7 +2618,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     template_args: self.interner.bump().alloc_slice_fill_iter(template_args_si.into_iter()),
                 }))
             }
-            #[allow(unreachable_patterns)] // mirrors Scala's `case other => vimpl(other)` catch-all; unreachable until more IInterfaceNameT variants migrate
+            #[allow(unreachable_patterns)] // catch-all; unreachable until more IInterfaceNameT variants exist
             other => panic!("translate_interface_name: unimplemented variant {:?}", discriminant(other)),
         }
     }

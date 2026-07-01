@@ -202,8 +202,8 @@ where 's: 't,
     // filtering, CSSNCE env threading, DRSINI incremental defaults).
     // ⚠ CALLER CONTRACT: if `rules` come from an expression-level postparser output,
     // they must have had RuneParentEnvLookupSR rules stripped into `initial_knowns` before
-    // being passed here (the MKRFA contract — see OverloadResolver.scala:311-325 for the
-    // canonical fold). This is NOT enforced at the type level; violations produce silent
+    // being passed here (the MKRFA contract — see the canonical fold in overload_resolver).
+    // This is NOT enforced at the type level; violations produce silent
     // "couldn't solve" errors at dependent rules rather than faulting at the MKRFA rule.
     // See docs/refactor-thoughts/mkrfa-protocol-leak.md for the queued enforcement work
     // (extract shared helper + replace the no-op handler with vwat).

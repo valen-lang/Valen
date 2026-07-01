@@ -124,17 +124,15 @@ impl<'s, 't> ExpressionTE<'s, 't> where 's: 't {
 }
 /// Arena-allocated (see @TFITCX)
 //
-// No `PartialEq`/`Hash` derive or impl — opts out of equality entirely, mirroring
-// Scala's `override def equals(obj: Any): Boolean = vcurious()` on every expression
-// case class in `ast/expressions.scala` (52 occurrences). Scala's `vcurious` panics
-// at runtime; Rust's "no impl" gives a strictly stronger compile-time error.
+// No `PartialEq`/`Hash` derive or impl — opts out of equality entirely. Getting
+// a compile-time error on `==` is strictly stronger than a runtime panic.
 //
 // Per @TFITCX this is `Arena-allocated` (lifetime/storage in the typing arena), but
 // per @IEOIBZ such types normally implement identity equality via `std::ptr::eq`.
 // The expression hierarchy is the exception: it's stored in the arena for memory
 // reasons (large, deeply nested trees with `&'t` child pointers) but has no
-// identity semantics — two distinct allocations of `ConstantIntTE { value: 5 }` are
-// neither `==` (Scala vfails) nor distinguishable by identity (no callers care).
+// identity semantics — two distinct allocations of `ConstantIntTE { value: 5 }`
+// are neither `==` nor distinguishable by identity (no callers care).
 #[derive(Copy, Clone, Debug)]
 pub enum ReferenceExpressionTE<'s, 't> {
     LetAndLend(&'t LetAndLendTE<'s, 't>),
