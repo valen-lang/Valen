@@ -378,12 +378,12 @@ void metal_package_builder_add_runtime_sized_array(
 
 StaticSizedArrayDefHandle* metal_static_sized_array_def_new(
     NameHandle* name, KindHandle* array_kind, int32_t size,
-    RegionIdHandle* region_id, uint32_t mutability,
+    RegionIdHandle* region_id,
     ReferenceHandle* element_type);
 
 RuntimeSizedArrayDefHandle* metal_runtime_sized_array_def_new(
     NameHandle* name, KindHandle* array_kind,
-    RegionIdHandle* region_id, uint32_t mutability,
+    RegionIdHandle* region_id,
     ReferenceHandle* element_type);
 void metal_package_builder_add_export_function(
     PackageBuilderHandle*, const char* name_ptr, size_t name_len, PrototypeHandle*);

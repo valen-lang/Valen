@@ -380,12 +380,12 @@ extern "C" {
     fn metal_package_builder_add_runtime_sized_array(_: *mut c_void, name_ptr: *const c_char, name_len: usize, v: *mut c_void);
     fn metal_static_sized_array_def_new(
         name: *mut c_void, array_kind: *mut c_void, size: i32,
-        region_id: *mut c_void, mutability: u32,
+        region_id: *mut c_void,
         element_type: *mut c_void,
     ) -> *mut c_void;
     fn metal_runtime_sized_array_def_new(
         name: *mut c_void, array_kind: *mut c_void,
-        region_id: *mut c_void, mutability: u32,
+        region_id: *mut c_void,
         element_type: *mut c_void,
     ) -> *mut c_void;
     fn metal_package_builder_add_export_function(_: *mut c_void, name_ptr: *const c_char, name_len: usize, v: *mut c_void);
@@ -1274,14 +1274,14 @@ pub struct RuntimeSizedArrayDef<'cache>(NonNull<c_void>, PhantomData<&'cache ()>
 impl MetalCache {
     pub fn new_static_sized_array_def<'c>(
         &'c self, name: Name<'c>, kind: Kind<'c>, size: i32,
-        region_id: RegionId<'c>, mutability: Mutability,
+        region_id: RegionId<'c>,
         element_type: Reference<'c>,
     ) -> StaticSizedArrayDef<'c> {
         unsafe {
             StaticSizedArrayDef(
                 NonNull::new(metal_static_sized_array_def_new(
                     name.0.as_ptr(), kind.0.as_ptr(), size,
-                    region_id.0.as_ptr(), mutability as u32,
+                    region_id.0.as_ptr(),
                     element_type.0.as_ptr(),
                 )).unwrap(),
                 PhantomData,
@@ -1290,14 +1290,14 @@ impl MetalCache {
     }
     pub fn new_runtime_sized_array_def<'c>(
         &'c self, name: Name<'c>, kind: Kind<'c>,
-        region_id: RegionId<'c>, mutability: Mutability,
+        region_id: RegionId<'c>,
         element_type: Reference<'c>,
     ) -> RuntimeSizedArrayDef<'c> {
         unsafe {
             RuntimeSizedArrayDef(
                 NonNull::new(metal_runtime_sized_array_def_new(
                     name.0.as_ptr(), kind.0.as_ptr(),
-                    region_id.0.as_ptr(), mutability as u32,
+                    region_id.0.as_ptr(),
                     element_type.0.as_ptr(),
                 )).unwrap(),
                 PhantomData,

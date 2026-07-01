@@ -212,7 +212,6 @@ public:
   StaticSizedArrayT* kind;
   int size;
   RegionId* regionId;
-  Sharedness sharedness;
   Reference *elementType;
 
   StaticSizedArrayDefinitionT(
@@ -220,13 +219,11 @@ public:
       StaticSizedArrayT* kind_,
       int size_,
       RegionId* regionId_,
-      Sharedness sharedness_,
       Reference* elementType_) :
       name(name_),
       kind(kind_),
       size(size_),
       regionId(regionId_),
-      sharedness(sharedness_),
       elementType(elementType_) {}
 
 };
@@ -250,19 +247,16 @@ public:
   Name* name;
   RuntimeSizedArrayT* kind;
   RegionId* regionId;
-  Sharedness sharedness;
   Reference *elementType;
 
   RuntimeSizedArrayDefinitionT(
       Name* name_,
       RuntimeSizedArrayT* kind_,
       RegionId* regionId_,
-      Sharedness sharedness_,
       Reference* elementType_) :
       name(name_),
       kind(kind_),
       regionId(regionId_),
-      sharedness(sharedness_),
       elementType(elementType_) {}
 };
 

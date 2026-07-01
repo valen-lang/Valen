@@ -244,71 +244,38 @@ Ref Linear::upcastWeak(
   exit(1);
 }
 
-void Linear::declareStaticSizedArray(
-    StaticSizedArrayDefinitionT* ssaDefM) {
-
-  auto hostName =
-      globalState->metalCache->getName(
-          globalState->metalCache->builtinPackageCoord, namePrefix + "_" + ssaDefM->name->name);
-  auto hostKind = globalState->metalCache->getStaticSizedArray(hostName);
-  addMappedKind(ssaDefM->kind, hostKind);
-  globalState->regionIdByKind.emplace(hostKind, getRegionId());
-
-  structs.declareStaticSizedArray(hostKind);
+// VCOORD: The next 8 Linear::{declare,define}{Static,Runtime}SizedArray[ExtraFunctions] methods are unreachable —
+// arrays are always Single now, so nothing routes into linearRegion. Kept as stubs because IRegion requires them.
+void Linear::declareStaticSizedArray(StaticSizedArrayDefinitionT* ssaDefM) {
+  { assert(false); throw 1337; }
 }
 
-void Linear::defineStaticSizedArray(
-    StaticSizedArrayDefinitionT* staticSizedArrayMT) {
-  auto ssaDef = globalState->program->getStaticSizedArray(staticSizedArrayMT->kind);
-  auto elementLT =
-      translateType(
-          linearizeReference(
-              staticSizedArrayMT->elementType, true));
-  auto hostKind = hostKindByValeKind.find(staticSizedArrayMT->kind)->second;
-  auto hostSsaMT = dynamic_cast<StaticSizedArrayT*>(hostKind);
-  assert(hostSsaMT);
-
-  structs.defineStaticSizedArray(hostSsaMT, ssaDef->size, elementLT);
+void Linear::defineStaticSizedArray(StaticSizedArrayDefinitionT* staticSizedArrayMT) {
+  { assert(false); throw 1337; }
 }
 
 void Linear::declareStaticSizedArrayExtraFunctions(StaticSizedArrayDefinitionT* ssaDef) {
-  declareConcreteSerializeFunction(ssaDef->kind);
+  { assert(false); throw 1337; }
 }
 
 void Linear::defineStaticSizedArrayExtraFunctions(StaticSizedArrayDefinitionT* ssaDef) {
-  defineConcreteSerializeFunction(ssaDef->kind);
+  { assert(false); throw 1337; }
 }
 
-void Linear::declareRuntimeSizedArray(
-    RuntimeSizedArrayDefinitionT* rsaDefM) {
-  auto hostName =
-      globalState->metalCache->getName(
-          globalState->metalCache->builtinPackageCoord, namePrefix + "_" + rsaDefM->name->name);
-  auto hostKind = globalState->metalCache->getRuntimeSizedArray(hostName);
-  addMappedKind(rsaDefM->kind, hostKind);
-  globalState->regionIdByKind.emplace(hostKind, getRegionId());
-
-  structs.declareRuntimeSizedArray(hostKind);
+void Linear::declareRuntimeSizedArray(RuntimeSizedArrayDefinitionT* rsaDefM) {
+  { assert(false); throw 1337; }
 }
 
-void Linear::defineRuntimeSizedArray(
-    RuntimeSizedArrayDefinitionT* runtimeSizedArrayMT) {
-  auto elementLT =
-      translateType(
-          linearizeReference(
-              runtimeSizedArrayMT->elementType, true));
-  auto hostKind = hostKindByValeKind.find(runtimeSizedArrayMT->kind)->second;
-  auto hostRsaMT = dynamic_cast<RuntimeSizedArrayT*>(hostKind);
-  assert(hostRsaMT);
-  structs.defineRuntimeSizedArray(hostRsaMT, elementLT);
+void Linear::defineRuntimeSizedArray(RuntimeSizedArrayDefinitionT* runtimeSizedArrayMT) {
+  { assert(false); throw 1337; }
 }
 
 void Linear::declareRuntimeSizedArrayExtraFunctions(RuntimeSizedArrayDefinitionT* rsaDefM) {
-  declareConcreteSerializeFunction(rsaDefM->kind);
+  { assert(false); throw 1337; }
 }
 
 void Linear::defineRuntimeSizedArrayExtraFunctions(RuntimeSizedArrayDefinitionT* rsaDefM) {
-  defineConcreteSerializeFunction(rsaDefM->kind);
+  { assert(false); throw 1337; }
 }
 
 void Linear::declareStruct(
@@ -1263,37 +1230,17 @@ std::string Linear::generateInterfaceDefsC(
   return s.str();
 }
 
+// VCOORD: Linear no longer generates SSA/RSA C headers — arrays are always Single (mutRegion). Unreachable stubs.
 std::string Linear::generateRuntimeSizedArrayDefsC(
     Package* currentPackage,
     RuntimeSizedArrayDefinitionT* rsaDefM) {
-  auto rsaName = currentPackage->getKindExportName(rsaDefM->kind, true);
-
-  auto valeMemberRefMT = rsaDefM->elementType;
-  auto hostMemberRefMT = linearizeReference(valeMemberRefMT, true);
-
-  std::stringstream s;
-  s << "typedef struct " << rsaName << " {" << std::endl;
-  s << "  uint32_t length;" << std::endl;
-  s << "  " << getExportName(currentPackage, hostMemberRefMT, true) << " elements[0];" << std::endl;
-  s << "} " << rsaName << ";" << std::endl;
-  return s.str();
+  { assert(false); throw 1337; }
 }
 
 std::string Linear::generateStaticSizedArrayDefsC(
     Package* currentPackage,
     StaticSizedArrayDefinitionT* ssaDefM) {
-
-  auto rsaName = currentPackage->getKindExportName(ssaDefM->kind, true);
-
-  auto valeMemberRefMT = ssaDefM->elementType;
-  auto hostMemberRefMT = linearizeReference(valeMemberRefMT, true);
-
-  std::stringstream s;
-  s << "#define " << rsaName << "_SIZE " << ssaDefM->size << std::endl;
-  s << "typedef struct " << rsaName << " {" << std::endl;
-  s << "  " << getExportName(currentPackage, hostMemberRefMT, true) << " elements[" << ssaDefM->size << "];" << std::endl;
-  s << "} " << rsaName << ";" << std::endl;
-  return s.str();
+  { assert(false); throw 1337; }
 }
 
 LLVMTypeRef Linear::getExternalType(Reference* refMT) {

@@ -413,55 +413,11 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
         resultC << defString;
       } else if (auto ssaMT = dynamic_cast<StaticSizedArrayT*>(kind)) {
         auto ssaDefM = globalState->program->getStaticSizedArray(ssaMT);
-
-        // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-        if (ssaDefM->sharedness == Sharedness::SHARED) {
-          auto kind = ssaDefM->elementType->kind;
-          if (dynamic_cast<Int *>(kind) ||
-              dynamic_cast<Bool *>(kind) ||
-              dynamic_cast<Float *>(kind) ||
-              dynamic_cast<Str *>(kind)) {
-            // Do nothing, no need to include anything for these
-          } else {
-            auto paramTypeExportName = package->getKindExportName(kind, true);
-            if (ownershipToSharedness(ssaDefM->elementType->ownership) == Sharedness::SINGLE) {
-              paramTypeExportName += "Ref";
-            }
-            resultC << "typedef struct " << paramTypeExportName << " " << paramTypeExportName << ";" << std::endl;
-          }
-        }
-
-        // can we think of this in terms of regions? it's kind of like we're
-        // generating some stuff for the outside to point inside.
-        // VCOORD: ternary backwards — Share→pointer (no linear); OwnInline+exported→linear.
-        auto region = (ssaDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
-        auto defString = region->generateStaticSizedArrayDefsC(package, ssaDefM);
+        auto defString = globalState->mutRegion->generateStaticSizedArrayDefsC(package, ssaDefM);
         resultC << defString;
       } else if (auto rsaMT = dynamic_cast<RuntimeSizedArrayT*>(kind)) {
         auto rsaDefM = globalState->program->getRuntimeSizedArray(rsaMT);
-
-        // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-        if (rsaDefM->sharedness == Sharedness::SHARED) {
-          auto kind = rsaDefM->elementType->kind;
-          if (dynamic_cast<Int *>(kind) ||
-              dynamic_cast<Bool *>(kind) ||
-              dynamic_cast<Float *>(kind) ||
-              dynamic_cast<Str *>(kind)) {
-            // Do nothing, no need to include anything for these
-          } else {
-            auto paramTypeExportName = package->getKindExportName(kind, true);
-            if (ownershipToSharedness(rsaDefM->elementType->ownership) == Sharedness::SINGLE) {
-              paramTypeExportName += "Ref";
-            }
-            resultC << "typedef struct " << paramTypeExportName << " " << paramTypeExportName << ";" << std::endl;
-          }
-        }
-
-        // can we think of this in terms of regions? it's kind of like we're
-        // generating some stuff for the outside to point inside.
-        // VCOORD: ternary backwards — Share→pointer (no linear); OwnInline+exported→linear.
-        auto region = (rsaDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
-        auto defString = region->generateRuntimeSizedArrayDefsC(package, rsaDefM);
+        auto defString = globalState->mutRegion->generateRuntimeSizedArrayDefsC(package, rsaDefM);
         resultC << defString;
       } else {
         std::cerr << "Unknown exportee: " << typeid(*kind).name() << std::endl;
@@ -834,10 +790,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareStaticSizedArray(arrayM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (arrayM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->declareStaticSizedArray(arrayM);
-      }
     }
   }
 
@@ -847,10 +799,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareRuntimeSizedArray(arrayM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (arrayM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->declareRuntimeSizedArray(arrayM);
-      }
     }
   }
 
@@ -884,10 +832,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareStaticSizedArrayExtraFunctions(arrayM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (arrayM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->declareStaticSizedArrayExtraFunctions(arrayM);
-      }
     }
   }
 
@@ -896,10 +840,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareRuntimeSizedArrayExtraFunctions(arrayM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (arrayM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->declareRuntimeSizedArrayExtraFunctions(arrayM);
-      }
     }
   }
 
@@ -954,10 +894,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineStaticSizedArray(arrayM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (arrayM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->defineStaticSizedArray(arrayM);
-      }
     }
   }
 
@@ -966,10 +902,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineRuntimeSizedArray(arrayM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (arrayM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->defineRuntimeSizedArray(arrayM);
-      }
     }
   }
 
@@ -999,10 +931,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineStaticSizedArrayExtraFunctions(arrayM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (arrayM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->defineStaticSizedArrayExtraFunctions(arrayM);
-      }
     }
   }
 
@@ -1011,10 +939,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineRuntimeSizedArrayExtraFunctions(arrayM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (arrayM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->defineRuntimeSizedArrayExtraFunctions(arrayM);
-      }
     }
   }
 

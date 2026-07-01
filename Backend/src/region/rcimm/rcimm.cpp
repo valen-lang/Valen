@@ -952,25 +952,15 @@ std::string RCImm::generateInterfaceDefsC(
 std::string RCImm::generateRuntimeSizedArrayDefsC(
     Package* currentPackage,
     RuntimeSizedArrayDefinitionT* rsaDefM) {
-  // VCOORD: sharedness classifier is obsolete under new model — Share doesn't linearize anymore.
-  if (rsaDefM->sharedness == Sharedness::SHARED) {
-    { assert(false); throw 1337; }
-  } else {
-    auto name = currentPackage->getKindExportName(rsaDefM->kind, true);
-    return std::string() + "typedef struct " + name + " { void* unused; } " + name + ";\n";
-  }
+  auto name = currentPackage->getKindExportName(rsaDefM->kind, true);
+  return std::string() + "typedef struct " + name + " { void* unused; } " + name + ";\n";
 }
 
 std::string RCImm::generateStaticSizedArrayDefsC(
     Package* currentPackage,
     StaticSizedArrayDefinitionT* ssaDefM) {
-  // VCOORD: sharedness classifier is obsolete under new model — Share doesn't linearize anymore.
-  if (ssaDefM->sharedness == Sharedness::SHARED) {
-    { assert(false); throw 1337; }
-  } else {
-    auto name = currentPackage->getKindExportName(ssaDefM->kind, true);
-    return std::string() + "typedef struct " + name + " { void* unused; } " + name + ";\n";
-  }
+  auto name = currentPackage->getKindExportName(ssaDefM->kind, true);
+  return std::string() + "typedef struct " + name + " { void* unused; } " + name + ";\n";
 }
 
 LLVMTypeRef RCImm::getExternalType(Reference* refMT) {

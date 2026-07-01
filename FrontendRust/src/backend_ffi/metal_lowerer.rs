@@ -107,7 +107,7 @@ where
         let elem_ty = lower_coord_to_reference(cache, &ssa.element_type);
         let def = cache.new_static_sized_array_def(
             name, kind, ssa.size as i32, region_id,
-            lower_mutability(MutabilityH::Single), elem_ty,
+            elem_ty,
         );
         pb.add_static_sized_array(ssa.name.shortened_name.0, def);
     }
@@ -117,7 +117,7 @@ where
         let region_id = cache.mut_region_id();
         let elem_ty = lower_coord_to_reference(cache, &rsa.element_type);
         let def = cache.new_runtime_sized_array_def(
-            name, kind, region_id, lower_mutability(MutabilityH::Single), elem_ty,
+            name, kind, region_id, elem_ty,
         );
         pb.add_runtime_sized_array(rsa.name.shortened_name.0, def);
     }

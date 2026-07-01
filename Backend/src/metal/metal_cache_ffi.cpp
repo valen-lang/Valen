@@ -849,22 +849,21 @@ extern "C" VIS void metal_package_builder_add_runtime_sized_array(
 
 extern "C" VIS StaticSizedArrayDefHandle* metal_static_sized_array_def_new(
     NameHandle* name, KindHandle* array_kind, int32_t size,
-    RegionIdHandle* region_id, uint32_t mutability,
+    RegionIdHandle* region_id,
     ReferenceHandle* element_type) {
   return reinterpret_cast<StaticSizedArrayDefHandle*>(new StaticSizedArrayDefinitionT(
       nm(name), reinterpret_cast<StaticSizedArrayT*>(knd(array_kind)),
       size, rid(region_id),
-      static_cast<Sharedness>(mutability),
       ref(element_type)));
 }
 
 extern "C" VIS RuntimeSizedArrayDefHandle* metal_runtime_sized_array_def_new(
     NameHandle* name, KindHandle* array_kind,
-    RegionIdHandle* region_id, uint32_t mutability,
+    RegionIdHandle* region_id,
     ReferenceHandle* element_type) {
   return reinterpret_cast<RuntimeSizedArrayDefHandle*>(new RuntimeSizedArrayDefinitionT(
       nm(name), reinterpret_cast<RuntimeSizedArrayT*>(knd(array_kind)),
-      rid(region_id), static_cast<Sharedness>(mutability),
+      rid(region_id),
       ref(element_type)));
 }
 extern "C" VIS void metal_package_builder_add_export_function(
