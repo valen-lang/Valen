@@ -119,7 +119,7 @@ impl<'s> IRulexSR<'s> {
         usages.push(x.super_rune.clone());
         usages
       }
-      IRulexSR::KindComponents(x) => vec![x.kind_rune.clone(), x.mutability_rune.clone()],
+      IRulexSR::KindComponents(x) => vec![x.kind_rune.clone()],
       IRulexSR::PrototypeComponents(x) => vec![x.result_rune.clone(), x.params_rune.clone(), x.return_rune.clone()],
       IRulexSR::IsConcrete(x) => vec![x.rune.clone()],
       IRulexSR::IsStruct(x) => vec![x.rune.clone()],
@@ -176,7 +176,6 @@ pub struct CallSiteCoordIsaSR<'s> {
 pub struct KindComponentsSR<'s> {
   pub range: RangeS<'s>,
   pub kind_rune: RuneUsage<'s>,
-  pub mutability_rune: RuneUsage<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

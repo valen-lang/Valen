@@ -101,7 +101,7 @@ where 's: 't,
                         v
                     }
                     //     case KindComponentsSR(range, resultRune, mutabilityRune) => Vector(resultRune, mutabilityRune)
-                    IRulexSR::KindComponents(r) => vec![r.kind_rune, r.mutability_rune],
+                    IRulexSR::KindComponents(r) => vec![r.kind_rune],
                     //     case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => Vector(resultRune, ownershipRune, kindRune)
                     IRulexSR::CoordComponents(r) => vec![r.result_rune, r.ownership_rune, r.kind_rune],
                     //     case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => Vector(resultRune, paramsRune, returnRune)
@@ -603,15 +603,12 @@ where 's: 't,
             //     case KindComponentsSR(...) =>
             //     case KindComponentsSR(range, kindRune, mutabilityRune) => {
             IRulexSR::KindComponents(kc) => {
-                let kind = match solver_state.get_conclusion(&kc.kind_rune.rune).expect("kind rune not solved in KindComponentsSR") {
-                    ITemplataT::Kind(kt) => kt.kind,
+                // VCOORD: retire this
+                match solver_state.get_conclusion(&kc.kind_rune.rune).expect("kind rune not solved in KindComponentsSR") {
+                    ITemplataT::Kind(_) => {}
                     _ => panic!("Expected KindTemplataT in KindComponentsSR"),
                 };
-                let sharedness = self.get_sharedness(state, kind);
-                let mut conclusions = IndexMap::default();
-                // VCOORD: why is there mutability_rune, ever, in anything?
-                conclusions.insert(kc.mutability_rune.rune, ITemplataT::Mutability(SharednessTemplataT { sharedness }));
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], IndexMap::default(), vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
                     Err(e) => {
                         let ranges = once(kc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();

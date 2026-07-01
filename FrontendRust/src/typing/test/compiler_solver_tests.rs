@@ -477,7 +477,6 @@ fn humanize_errors() {
         IRulexSR::KindComponents(KindComponentsSR {
             range: make_range(33, 52),
             kind_rune: RuneUsage { range: make_range(33, 52), rune: implicit_rune },
-            mutability_rune: RuneUsage { range: make_range(43, 45), rune: rune_an },
         }),
     ];
 

@@ -267,19 +267,16 @@ where 's: 't,
         coutputs.declare_function_return_type(
             self.typing_interner.alloc(header.to_signature()), header.return_type);
 
+        let is_extern = struct_def.attributes.iter().any(|a| matches!(a, ICitizenAttributeT::Extern(_)));
         let body_expr: ReferenceExpressionTE<'s, 't> = match struct_def.sharedness {
             SharednessT::Shared => {
                 ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
                     expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type })),
                 }))
             }
-            SharednessT::Single if struct_def.members.is_empty() => {
-                // VCOORD: revisit this, this doesnt sound right... there shouldnt be a special case here
-                // Zero-member structs (e.g. extern struct Vec<T>) have no Vale-side state to destruct.
-                // Just discard the reference — at the H IR level this is a no-op for extern/opaque kinds.
-                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
-                    expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type })),
-                }))
+            SharednessT::Single if is_extern => {
+                // VCOORD: implement this per todo/opaque-extern-drop.md
+                panic!("auto-generated drop for extern struct is unsupported; supply an explicit `extern func drop(...)` for {:?}", struct_def.instantiated_citizen);
             }
             SharednessT::Single => {
                 let member_local_variables: Vec<ReferenceLocalVariableT<'s, 't>> =

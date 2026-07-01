@@ -305,7 +305,10 @@ fn translate_rulex<'s, 'p>(
             panic!("Kind rule should have one component! Found: {}", components.len())
           }
           let mut translate_child_lidb = lidb.child();
-          let component_usages = translate_rulexes(
+          // VCOORD: retire this
+          // Still walk the component to keep its sub-rules registered, even though
+          // KindComponentsSR no longer carries a mutability rune.
+          let _component_usages = translate_rulexes(
             scout_arena,
             keywords,
             env,
@@ -315,11 +318,9 @@ fn translate_rulex<'s, 'p>(
             context_region,
             components,
           );
-          let mutability_rune = component_usages[0].clone();
           builder.push(IRulexSR::KindComponents(KindComponentsSR {
             range: PostParser::eval_range(file, *range),
             kind_rune: rune.clone(),
-            mutability_rune,
           }));
         }
         ITypePR::PrototypeType => {

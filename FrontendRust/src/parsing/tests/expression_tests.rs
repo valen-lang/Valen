@@ -406,7 +406,7 @@ fn templated_function_call() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let expr =
-    compile_expression_expect(&parse_arena, &keywords, "toArray<int>( &result)");
+    compile_expression_expect(&parse_arena, &keywords, "toArray<T>( &result)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
       callable_expr:
@@ -418,7 +418,7 @@ fn templated_function_call() {
       ..
     }) => match (args, arg_exprs) {
       (
-        [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..],
+        [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }), ..],
         [IExpressionPE::Augment(AugmentPE {
           target_ownership: OwnershipP::Borrow,
           inner:
@@ -429,9 +429,9 @@ fn templated_function_call() {
           ..
         })],
       ) => {}
-      _ => panic!("expected toArray<int>( &result) structure"),
+      _ => panic!("expected toArray<T>( &result) structure"),
     },
-    _ => panic!("expected toArray<int>( &result) structure"),
+    _ => panic!("expected toArray<T>( &result) structure"),
   }
 }
 
@@ -441,7 +441,7 @@ fn templated_method_call() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let expr =
-    compile_expression_expect(&parse_arena, &keywords, "result.toArray <int> ()");
+    compile_expression_expect(&parse_arena, &keywords, "result.toArray <T> ()");
   match &expr {
     IExpressionPE::MethodCall(MethodCallPE {
       subject_expr:
@@ -457,10 +457,10 @@ fn templated_method_call() {
       arg_exprs,
       ..
     }) if arg_exprs.is_empty() => match args {
-      [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..] => {}
-      _ => panic!("expected result.toArray <int> () structure"),
+      [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }), ..] => {}
+      _ => panic!("expected result.toArray <T> () structure"),
     },
-    _ => panic!("expected result.toArray <int> () structure"),
+    _ => panic!("expected result.toArray <T> () structure"),
   }
 }
 

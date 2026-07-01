@@ -318,7 +318,7 @@ pub fn humanize_rule<'s>(
 ) -> String {
   match rule {
     IRulexSR::KindComponents(r) => {
-      humanize_rune(r.kind_rune.rune) + " = Kind[" + &humanize_rune(r.mutability_rune.rune) + "]"
+      humanize_rune(r.kind_rune.rune) + " = Kind"
     }
     IRulexSR::CoordComponents(r) => {
       humanize_rune(r.result_rune.rune) + " = Ref[" + &humanize_rune(r.ownership_rune.rune) + ", " + &humanize_rune(r.kind_rune.rune) + "]"

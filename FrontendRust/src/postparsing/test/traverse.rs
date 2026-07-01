@@ -842,7 +842,6 @@ where
     }
     IRulexSR::KindComponents(x) => {
       visit_rune_usage(pred, out, &x.kind_rune);
-      visit_rune_usage(pred, out, &x.mutability_rune);
     }
     IRulexSR::PrototypeComponents(x) => {
       visit_rune_usage(pred, out, &x.result_rune);

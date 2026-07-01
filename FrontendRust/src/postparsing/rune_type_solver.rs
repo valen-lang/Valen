@@ -282,7 +282,6 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     IRulexSR::KindComponents(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
-        (x.mutability_rune.rune.clone(), ITemplataType::SharednessTemplataType(SharednessTemplataType {})),
       ].into_iter().collect(), vec![], IndexSet::default())
     }
     IRulexSR::CoordComponents(x) => {

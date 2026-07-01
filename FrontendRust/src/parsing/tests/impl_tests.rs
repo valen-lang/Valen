@@ -57,7 +57,7 @@ fn impling_a_template_call() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let file = compile(&parse_arena, &keywords, "impl IFunction1<bool, int, int> for MyIntIdentity;");
+  let file = compile(&parse_arena, &keywords, "impl IFunction1<T, U, V> for MyIntIdentity;");
   let denizen = expect_1(&file.denizens);
   let impl_ = cast!(denizen, IDenizenP::TopLevelImpl);
 
@@ -67,9 +67,9 @@ fn impling_a_template_call() {
 
   let interface = cast!(&impl_.interface, ITemplexPT::Call);
   assert_templex_name(interface.template, "IFunction1");
-  let (bool_arg, int_arg1, int_arg2) = expect_3(&interface.args);
-  assert_templex_name(bool_arg, "bool");
-  assert_templex_name(int_arg1, "int");
-  assert_templex_name(int_arg2, "int");
+  let (t_arg, u_arg, v_arg) = expect_3(&interface.args);
+  assert_templex_name(t_arg, "T");
+  assert_templex_name(u_arg, "U");
+  assert_templex_name(v_arg, "V");
   assert_eq!(impl_.attributes.len(), 0);
 }
