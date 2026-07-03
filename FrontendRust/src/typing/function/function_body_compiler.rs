@@ -184,7 +184,7 @@ where 's: 't,
                         unconverted_body_without_return
                     } else {
                         self.convert(&mut env, life, coutputs, &range_list, call_location,
-                            region, unconverted_body_without_return, expected_result_type)
+                            region, unconverted_body_without_return, expected_result_type)?
                     }
                 } else {
                     return Ok(Err(ResultTypeMismatchError {

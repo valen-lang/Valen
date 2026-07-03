@@ -92,16 +92,20 @@ where 's: 't,
     ) -> Result<Option<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         match self.evaluate_addressible_lookup(coutputs, nenv, range, region, name)? {
             Some(x) => {
-                // VCOORD: retire when Phase 2 lands — this fires source-side for every Own
-                // bare-use regardless of target. Per the refined model (vcoord-handoff.md
-                // § Coercions), bare-use should uniformly produce Borrow at the source and
-                // let convert() decide target-side whether to implicit_clone (primitives),
-                // alias (share-kind), or MustExplicitlyMove-error (Own non-primitive).
-                // Bare-use (LoadAsP::Use) of an Own local: auto-clone via implicit_clone
-                // instead of moving (Unlet). For Move/LoadAsBorrow/LoadAsWeak or non-Own
-                // ownerships, defer to soft_load's existing dispatch.
+                // VCOORD: revisit
+                // Bare-use (LoadAsP::Use) of an Own non-primitive local produces a
+                // Borrow-flavored SoftLoad; auto-coercion (implicit_clone, alias,
+                // MustExplicitlyMove) lives target-side in convert(). Primitives still
+                // fire wrap_in_implicit_clone because get_borrow_ownership returns Share
+                // for Int/Bool/Float/Str/Void — borrow_soft_load would construct an
+                // illegal Share+primitive CoordT.
                 let thing = match (target_ownership, x.result().coord.ownership) {
+                    (LoadAsP::Use, OwnershipT::Own) if !self.is_primitive(x.result().coord.kind) => {
+                        self.borrow_soft_load(coutputs, x)
+                    }
                     (LoadAsP::Use, OwnershipT::Own) => {
+                        // VCOORD: retire — this is the primitive Own bare-use path still
+                        // going through wrap_in_implicit_clone.
                         self.wrap_in_implicit_clone(coutputs, nenv, range, call_location, region, x)?
                     }
                     _ => self.soft_load(nenv, range, x, target_ownership, region),
@@ -409,13 +413,17 @@ where 's: 't,
             ExpressionTE::Address(a) => {
                 let range_with_parent: Vec<RangeS<'s>> =
                     once(a.range()).chain(parent_ranges.iter().copied()).collect();
+                let _ = life;
+                // VCOORD: revisit all this
+                // Bare-use of an Own non-primitive Address produces a Borrow-flavored
+                // SoftLoad; auto-coercion lives target-side in convert(). Primitive gate
+                // same as evaluate_lookup_for_load above.
                 match a.result().coord.ownership {
+                    OwnershipT::Own if !self.is_primitive(a.result().coord.kind) => {
+                        Ok(self.borrow_soft_load(coutputs, a))
+                    }
                     OwnershipT::Own => {
-                        let _ = life;
-                        // VCOORD: retire when Phase 2 lands — same problem as evaluate_lookup_for_load's
-                        // Own arm: forces a clone at the source instead of borrowing and letting
-                        // convert() coerce target-side (only Own+primitive should implicit_clone;
-                        // Own non-primitive → Own is MustExplicitlyMove).
+                        // VCOORD: retire — primitive Own path still source-side.
                         self.wrap_in_implicit_clone(coutputs, nenv, &range_with_parent, call_location, region, a)
                     }
                     _ => Ok(self.soft_load(nenv, &range_with_parent, a, LoadAsP::Use, region)),
@@ -427,7 +435,7 @@ where 's: 't,
     /// Compiler-inserted `Call(implicit_clone, &addr)`. Looks up `implicit_clone` in the
     /// callsite env via resolve_function; constructs the call IR directly. Failure to find
     /// surfaces as the standard `CouldntFindFunctionToCallT`.
-    // VCOORD: retire when Phase 2 lands — three problems:
+    // VCOORD: retire — three problems:
     //   (a) fires source-side (both call sites are on the source coord); the coercion decision
     //       belongs at the target in convert().
     //   (b) fires for ALL Own kinds; the refined model auto-clones only Own+primitive at Own
@@ -543,7 +551,7 @@ where 's: 't,
                             true => {
                                 self.convert(
                                     nenv, life, coutputs, &range_list, outer_call_location,
-                                    region, uncasted_inner_expr_2, return_type)
+                                    region, uncasted_inner_expr_2, return_type)?
                             }
                         }
                     }
@@ -1174,10 +1182,10 @@ where 's: 't,
                     once(if_se.range).chain(parent_ranges.iter().copied()).collect();
                 let then_expr_2 = self.convert(nenv, life, coutputs, &range_with_parent, outer_call_location,
                                                region,
-                                               ReferenceExpressionTE::Block(self.typing_interner.alloc(uncoerced_then_block_2)), common_type);
+                                               ReferenceExpressionTE::Block(self.typing_interner.alloc(uncoerced_then_block_2)), common_type)?;
                 let else_expr_2 = self.convert(nenv, life, coutputs, &range_with_parent, outer_call_location,
                     region,
-                    ReferenceExpressionTE::Block(self.typing_interner.alloc(uncoerced_else_block_2)), common_type);
+                    ReferenceExpressionTE::Block(self.typing_interner.alloc(uncoerced_else_block_2)), common_type)?;
 
                 let if_expr_2 = ReferenceExpressionTE::If(self.typing_interner.alloc(IfTE::new(
                     condition_expr,
@@ -1479,7 +1487,7 @@ where 's: 't,
                 }
                 let converted_source_expr_2 =
                     self.convert(nenv, life, coutputs, &range_with_parent, outer_call_location,
-                        region, unconverted_source_expr_2, destination_expr_2.result().coord);
+                        region, unconverted_source_expr_2, destination_expr_2.result().coord)?;
                 let mutate_2 = ReferenceExpressionTE::Mutate(self.typing_interner.alloc(MutateTE {
                     destination_expr: destination_expr_2,
                     source_expr: converted_source_expr_2,
@@ -1513,7 +1521,7 @@ where 's: 't,
                 assert!(is_convertible);
                 let converted_source_expr_2 =
                     self.convert(nenv, life, coutputs, &range_with_parent, outer_call_location,
-                        region, unconverted_source_expr_2, destination_expr_2.result().coord);
+                        region, unconverted_source_expr_2, destination_expr_2.result().coord)?;
                 let expr_te = match destination_expr_2 {
                     AddressExpressionTE::LocalLookup(local_lookup) if nenv.unstackifieds().contains(&local_lookup.local_variable.name()) => {
                         nenv.mark_local_restackified(local_lookup.local_variable.name());

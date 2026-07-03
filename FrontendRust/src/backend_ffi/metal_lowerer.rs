@@ -660,6 +660,13 @@ where
             let result_ty = lower_coord_to_reference(cache, &c.result_type);
             cache.expr_copy_prim(inner, result_ty)
         }
+        ExpressionH::AliasH(a) => {
+            // VCOORD: revisit
+            // Backend refcount emission for AliasH is deferred; lower by delegating
+            // to the inner expression, matching the pre-split `&Share T = Share T`
+            // behavior at Backend level.
+            lower_expression(cache, &a.inner)
+        }
     }
 }
 

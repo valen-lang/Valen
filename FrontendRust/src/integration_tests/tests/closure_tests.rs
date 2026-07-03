@@ -219,7 +219,7 @@ fn test_closure_s_local_variables() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -486,7 +486,7 @@ pub fn mutates_from_inside_a_closure_inside_a_closure() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn read_from_inside_a_closure_inside_a_closure() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

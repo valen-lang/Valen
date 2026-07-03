@@ -11,7 +11,6 @@ use crate::von::ast::VonStr;
 pub struct ResultTests;
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn test_borrow_is_ok_and_expect_for_ok() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -50,7 +49,6 @@ exported func main() int {
 
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn test_is_err_and_borrow_expect_err_for_err() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -160,7 +158,6 @@ exported func main() str {
 
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn test_expect_panics_for_err() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -198,7 +195,6 @@ exported func main() int {
 
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn test_expect_err_panics_for_ok() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

@@ -540,7 +540,7 @@ exported func main() {
 // Loads the roguelike.vale source from disk, rewrites `stdlib.*` imports to use
 // the on-disk file layout, and feeds the program through compiler_test_compilation.
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn typing_pass_on_roguelike() {
     
 

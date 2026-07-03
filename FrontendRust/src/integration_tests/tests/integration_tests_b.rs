@@ -113,7 +113,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn test_int_generic() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -202,7 +202,7 @@ fn tests_upcasting_from_if() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn tests_lambda() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -287,7 +287,7 @@ where func print(&T)void {
   { print(a); }()
 }
 exported func main() {
-  genFunc("hello");
+  genFunc(&"hello");
 }
 "#,
     );
@@ -494,7 +494,6 @@ fn tests_making_a_variable_with_a_pattern() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn tests_a_linked_list() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -649,7 +648,7 @@ fn tests_recursion() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn tests_generic_recursion() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

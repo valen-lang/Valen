@@ -25,6 +25,7 @@ use crate::final_ast::instructions::ConstantIntH;
 use crate::final_ast::instructions::ConstantStrH;
 use crate::final_ast::instructions::ConstantVoidH;
 use crate::final_ast::instructions::CopyPrimH;
+use crate::final_ast::instructions::AliasH;
 use crate::final_ast::instructions::DestroyRuntimeSizedArrayH;
 use crate::final_ast::instructions::DestroyStaticSizedArrayIntoFunctionH;
 use crate::final_ast::instructions::DiscardH;
@@ -446,6 +447,17 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 RE::SoftLoad(load2) => {
                     let (loaded_access_h, deferreds) = self.translate_load(hinputs, hamuts, current_function_header, locals, load2);
                     (loaded_access_h, deferreds)
+                }
+                RE::Alias(a) => {
+                    // Wrap in AliasH to carry the reflavored coord; backend emits
+                    // the refcount bump for share-flavored kinds (deferred).
+                    let (inner_he, inner_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(a.source_expr));
+                    let result_type = self.translate_coord(hinputs, hamuts, a.result);
+                    let node = ExpressionH::AliasH(self.interner.alloc(AliasH {
+                        inner: inner_he,
+                        result_type,
+                    }));
+                    (node, inner_deferreds)
                 }
             },
             ExpressionIE::Address(a) => match a {

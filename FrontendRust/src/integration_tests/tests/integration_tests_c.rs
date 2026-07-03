@@ -703,7 +703,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn restackify() {
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();
@@ -732,7 +731,6 @@ fn restackify() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn destructure_restackify() {
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();
@@ -761,7 +759,6 @@ fn destructure_restackify() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn loop_restackify() {
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();

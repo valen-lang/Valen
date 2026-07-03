@@ -87,7 +87,7 @@ exported func main() {
     compile.get_monouts();
 }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn nested_anonymous_substruct_captures_outer() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

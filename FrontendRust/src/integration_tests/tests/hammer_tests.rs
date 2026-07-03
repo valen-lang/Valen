@@ -53,7 +53,6 @@ pub fn simple_main() {
 
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 pub fn two_templated_structs_make_it_into_hamuts() {
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();

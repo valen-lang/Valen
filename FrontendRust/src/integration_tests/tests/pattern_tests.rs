@@ -231,7 +231,6 @@ exported func main() int {
 
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn test_destructuring_a_shared() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

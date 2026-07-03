@@ -54,7 +54,7 @@ impl FunctionBodyMacro {
         match self {
             FunctionBodyMacro::LockWeak => compiler.generate_function_body_lock_weak(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
             FunctionBodyMacro::AsSubtype => compiler.generate_function_body_as_subtype(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::StructDrop => Ok(compiler.generate_function_body_struct_drop(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
+            FunctionBodyMacro::StructDrop => compiler.generate_function_body_struct_drop(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
             FunctionBodyMacro::StructConstructor => Ok(compiler.generate_function_body_struct_constructor(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
             FunctionBodyMacro::AbstractBody => compiler.generate_function_body_abstract_body(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
             FunctionBodyMacro::SameInstance => Ok(compiler.generate_function_body_same_instance(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),

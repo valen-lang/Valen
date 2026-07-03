@@ -438,7 +438,6 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn imm_interface() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

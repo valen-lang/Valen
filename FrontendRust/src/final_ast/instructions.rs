@@ -65,6 +65,11 @@ pub enum ExpressionH<'s, 'h> where 's: 'h {
     DiscardH(&'h DiscardH<'s, 'h>),
     PreCheckBorrowH(&'h PreCheckBorrowH<'s, 'h>),
     CopyPrimH(&'h CopyPrimH<'s, 'h>),
+    // VCOORD: revisit
+    // Wraps an inner expression and reflavors its ownership (typically
+    // Borrow+share-kind → Share). Runtime emits a refcount bump for share
+    // kinds; Backend implementation is deferred.
+    AliasH(&'h AliasH<'s, 'h>),
 }
 
 
@@ -159,6 +164,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::DiscardH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
         ExpressionH::PreCheckBorrowH(_) => panic!("Unimplemented: result_type for PreCheckBorrowH"),
         ExpressionH::CopyPrimH(c) => c.result_type,
+        ExpressionH::AliasH(a) => a.result_type,
     }
     }
 
@@ -833,6 +839,16 @@ pub struct DiscardH<'s, 'h> where 's: 'h {
 
 #[derive(Copy, Clone, Debug)]
 pub struct CopyPrimH<'s, 'h> where 's: 'h {
+    pub inner: ExpressionH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+}
+
+// VCOORD: revisit
+/// H-IR alias — reflavors an inner expression's ownership without changing
+/// its underlying value. Fires for Borrow+share-kind → Share auto-alias at
+/// convert boundaries. Backend emission (refcount bump) is deferred.
+#[derive(Copy, Clone, Debug)]
+pub struct AliasH<'s, 'h> where 's: 'h {
     pub inner: ExpressionH<'s, 'h>,
     pub result_type: CoordH<'s, 'h>,
 }

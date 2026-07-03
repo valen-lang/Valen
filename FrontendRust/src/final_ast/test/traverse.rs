@@ -459,6 +459,7 @@ where
         ExpressionH::DiscardH(x) => visit_discard(pred, out, x),
         ExpressionH::PreCheckBorrowH(x) => visit_pre_check_borrow(pred, out, x),
         ExpressionH::CopyPrimH(x) => visit_expression(pred, out, x.inner),
+        ExpressionH::AliasH(x) => visit_expression(pred, out, x.inner),
     }
 }
 

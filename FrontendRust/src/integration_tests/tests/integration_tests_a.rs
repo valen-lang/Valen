@@ -28,7 +28,7 @@ pub struct IntegrationTestsA;
 // which fails the `K Ref imm` bound now that int is Own (not Share). Blocks on the
 // same hash_map_tests::* root cause — revive in lockstep with hashmap solver work.
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "passes in isolation, fails in full-suite (test-interaction; suspected shared state)"]
 fn roguelike_typing_pass() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -768,7 +768,6 @@ fn lambda_with_a_type_specified_param() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn test_overloads() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

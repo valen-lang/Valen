@@ -120,7 +120,7 @@ where 's: 't,
                 let args_exprs_2 =
                     self.convert_exprs(
                         nenv, life, coutputs, range, call_location,
-                        context_region, given_args_exprs_2, &param_types);
+                        context_region, given_args_exprs_2, &param_types)?;
 
                 self.check_types(
                     coutputs,

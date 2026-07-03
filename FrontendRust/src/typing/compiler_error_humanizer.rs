@@ -132,6 +132,19 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
     ICompileErrorT::TookWeakRefOfNonWeakableError { range: _ } => {
       "Took a weak reference of something that isn't weakable. Did you mean to add the `weakable` keyword?".to_string()
     }
+    ICompileErrorT::NoImplicitCloneDefinedT { range: _, source_type, target_type } => {
+      let source = humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *source_type })));
+      let target = humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *target_type })));
+      format!("Cannot pass {} where an owning {} is expected. Options:\n  - `^local` to consume the local (move)\n  - `clone(&local)` for an explicit copy\n  - define `func implicit_clone({}) {}` to make this call site auto-copy",
+        source, target, source, target)
+    }
+    ICompileErrorT::ImplicitCloneRejectedT { range, source_type, target_type, fff } => {
+      let source = humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *source_type })));
+      let target = humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *target_type })));
+      let rejection_detail = humanize_find_function_failure(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, range.to_vec(), fff);
+      format!("Cannot pass {} where an owning {} is expected. The compiler tried to auto-copy via `implicit_clone`, but every candidate was rejected:\n{}\nFix your `implicit_clone` signature so it matches `implicit_clone({}) {}`, or fall back to `^local` (consume) or `clone(&local)` (explicit copy).",
+        source, target, rejection_detail, source, target)
+    }
     ICompileErrorT::NonReadonlyReferenceFoundInPureFunctionParameter { range: _, param_name } => {
       format!("Parameter `{:?}` should be readonly, because it's in a pure function.", param_name)
     }
@@ -609,7 +622,7 @@ fn humanize_coord<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &Typing
   let CoordT { ownership, region, kind, .. } = coord;
   let ownership_str = match ownership {
     OwnershipT::Own => "",
-    OwnershipT::Share => "",
+    OwnershipT::Share => "@", // VCOORD: revisit
     OwnershipT::Borrow => "&",
     OwnershipT::Weak => "&&",
   };

@@ -803,6 +803,19 @@ where 's: 't,
                     ITemplataT::Isa(self.typing_interner.alloc(self.assemble_impl(env, csia.range, sub_coord.kind, super_coord.kind)))
                 } else if matches!(sub_coord.kind, KindT::Never(_)) {
                     ITemplataT::Isa(self.typing_interner.alloc(self.assemble_impl(env, csia.range, sub_coord.kind, super_coord.kind)))
+                } else if // VCOORD: revisit
+                    sub_coord.kind == super_coord.kind
+                    && matches!(
+                        (sub_coord.ownership, super_coord.ownership),
+                        (OwnershipT::Borrow, OwnershipT::Share)
+                            | (OwnershipT::Own, OwnershipT::Borrow)
+                            | (OwnershipT::Borrow, OwnershipT::Own)
+                    )
+                {
+                    // Same kind + coercion-compatible ownership mismatch → treat as
+                    // equivalent isa; convert() emits an AliasTE at the call boundary.
+                    // Mirrors the CoordSendSR else-branch below.
+                    ITemplataT::Isa(self.typing_interner.alloc(self.assemble_impl(env, csia.range, sub_coord.kind, super_coord.kind)))
                 } else {
                     let sub_kind = match ISubKindTT::try_from(sub_coord.kind) {
                         Ok(k) => k,
@@ -962,15 +975,55 @@ where 's: 't,
                                 }
                             }
                         } else {
-                            let mut conclusions = IndexMap::default();
-                            conclusions.insert(coord_send.sender_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
-                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
-                                Ok(_) => Ok(()),
-                                Err(e) => {
-                                    let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
-                                    let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                                    let error = self.typing_interner.alloc(e);
-                                    Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            // VCOORD: revisit, this is a giant hack
+                            // If sender is already concluded with a different ownership but
+                            // same kind (e.g. sender=Borrow str, receiver=Share str), don't
+                            // force sender = receiver — the mismatch is a legal auto-coercion
+                            // that convert() will emit an AliasTE for. Only conclude when
+                            // sender is unset OR the coord already matches OR the mismatch
+                            // isn't a valid coercion pair.
+                            let sender_already = solver_state.get_conclusion(&coord_send.sender_rune.rune);
+                            let should_conclude = match sender_already {
+                                Some(ITemplataT::Coord(sender_ct)) => {
+                                    let sender_coord = sender_ct.coord;
+                                    if sender_coord == coord {
+                                        false
+                                    } else if sender_coord.kind == coord.kind
+                                        && matches!(
+                                            (sender_coord.ownership, coord.ownership),
+                                            (OwnershipT::Borrow, OwnershipT::Share)
+                                                | (OwnershipT::Own, OwnershipT::Borrow)
+                                                | (OwnershipT::Borrow, OwnershipT::Own)
+                                        )
+                                    {
+                                        false
+                                    } else {
+                                        true
+                                    }
+                                }
+                                _ => true,
+                            };
+                            if !should_conclude {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], IndexMap::default(), vec![], IndexSet::default()) {
+                                    Ok(_) => Ok(()),
+                                    Err(e) => {
+                                        let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                        let error = self.typing_interner.alloc(e);
+                                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                                    }
+                                }
+                            } else {
+                                let mut conclusions = IndexMap::default();
+                                conclusions.insert(coord_send.sender_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
+                                    Ok(_) => Ok(()),
+                                    Err(e) => {
+                                        let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                        let error = self.typing_interner.alloc(e);
+                                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                                    }
                                 }
                             }
                         }
@@ -1141,7 +1194,24 @@ where 's: 't,
                                         }
                                         OwnershipT::Own
                                     }
-                                    SharednessT::Shared => outer_coord.ownership,
+                                    // VCOORD: revisit, this is a giant hack
+                                    // Direction 1 (outer known, inner unknown). Inner (the `T`
+                                    // inside `&T`) has Share ownership when the augment `&` was
+                                    // applied to a shared kind.
+                                    //
+                                    // Consistency check mirrors the Single arm above: if the
+                                    // augment specifies `&T` (Borrow) but outer was concluded
+                                    // as Share via CoordSend's blind propagation from a Share
+                                    // arg, reject — the receiver's structural constraint (outer
+                                    // of an Augment with Borrow ownership) contradicts the
+                                    // propagated Share. This prevents the borrow-drop-blanket
+                                    // from spuriously matching Share args.
+                                    SharednessT::Shared => {
+                                        if outer_coord.ownership != evaluate_ownership(augment_ownership) {
+                                            return Err(ITypingPassSolverError::OwnershipDidntMatch { coord: outer_coord, expected_ownership: evaluate_ownership(augment_ownership) });
+                                        }
+                                        OwnershipT::Share
+                                    }
                                 }
                             }
                         };

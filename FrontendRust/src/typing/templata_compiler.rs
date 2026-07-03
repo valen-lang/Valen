@@ -402,9 +402,15 @@ where 's: 't,
         match Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, kind) {
             ITemplataT::Kind(k) => CoordT::new(ownership, result_region, k.kind),
             ITemplataT::Coord(c) => {
+                // VCOORD: revisit
+                // Composition of substituted ownership. `Borrow + share-kind` is distinct
+                // from `Share T` — Borrow-over-Share preserves the Borrow flavor (`&Share T`),
+                // Share-over-anything stays Share, Own-over-Share stays Share (no way to Own
+                // a shared kind).
                 let result_ownership = match (ownership, c.coord.ownership) {
                     (OwnershipT::Share, _) => OwnershipT::Share,
-                    (_, OwnershipT::Share) => OwnershipT::Share,
+                    (OwnershipT::Own, OwnershipT::Share) => OwnershipT::Share,
+                    (OwnershipT::Borrow, OwnershipT::Share) => OwnershipT::Borrow,
                     (OwnershipT::Own, OwnershipT::Own) => OwnershipT::Own,
                     (OwnershipT::Own, OwnershipT::Borrow) => OwnershipT::Borrow,
                     (OwnershipT::Borrow, OwnershipT::Own) => OwnershipT::Borrow,
@@ -1177,12 +1183,26 @@ where 's: 't,
 
         match (source_ownership, target_ownership) {
             (a, b) if a == b => {}
-            (OwnershipT::Own, OwnershipT::Borrow) => return false,
+            // VCOORD: revisit
+            // (Own, Borrow) and (Borrow, Own) permitted uniformly; convert() decides
+            // target-side:
+            //   (Own, Borrow) → materialize a hidden local + LetAndLend + deferred drop.
+            //   (Borrow, Own) → probe `implicit_clone(&kind) kind`. If it resolves → emit
+            //     the auto-clone call; if missing → emit NoImplicitCloneDefinedT.
+            // "Does implicit_clone exist for this kind" is what actually matters — no
+            // is_primitive check. Ambiguity between an exact-Own overload and an
+            // auto-coerce-permitting overload is resolved by narrow_down_callable_overloads'
+            // "prefer exact match" tiebreaker.
+            (OwnershipT::Own, OwnershipT::Borrow) => {}
             (OwnershipT::Own, OwnershipT::Weak) => return false,
             (OwnershipT::Own, OwnershipT::Share) => return false,
-            (OwnershipT::Borrow, OwnershipT::Own) => return false,
+            (OwnershipT::Borrow, OwnershipT::Own) => {}
             (OwnershipT::Borrow, OwnershipT::Weak) => return false,
-            (OwnershipT::Borrow, OwnershipT::Share) => return false,
+            // VCOORD: revisit
+            // `Borrow + share-kind` → Share is the auto-alias coercion; convert() emits
+            // AliasTE. Ambiguity with an exact-Share candidate is handled by
+            // narrow_down_callable_overloads' "prefer exact match" tiebreaker.
+            (OwnershipT::Borrow, OwnershipT::Share) => {}
             (OwnershipT::Weak, OwnershipT::Own) => return false,
             (OwnershipT::Weak, OwnershipT::Borrow) => return false,
             (OwnershipT::Weak, OwnershipT::Share) => return false,

@@ -282,7 +282,7 @@ fn strings_equal() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn string_interpolate() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -309,7 +309,6 @@ fn string_interpolate() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn slice_a_slice() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

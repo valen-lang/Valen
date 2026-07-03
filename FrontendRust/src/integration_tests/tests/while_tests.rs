@@ -461,7 +461,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn each_on_int_range() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -498,7 +497,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn parallel_foreach() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -537,7 +535,6 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn mutable_foreach() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -594,7 +591,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn each_on_int_range_with_conditional_break() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -636,7 +632,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn each_on_int_range_with_unconditional_break() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -673,7 +668,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn each_on_int_range_with_conditional_break_from_both_branches() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

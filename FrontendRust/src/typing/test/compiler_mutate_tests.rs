@@ -239,7 +239,7 @@ exported func main() {
 exported func main() {
 At test:0.vale:5:7:
   set a = "blah";
-Mutate couldn't convert str to expected destination type i32
+Mutate couldn't convert @str to expected destination type i32
 "##,
     );
 }

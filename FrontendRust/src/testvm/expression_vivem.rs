@@ -197,6 +197,7 @@ pub fn execute_node<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &Hamm
         ExpressionH::DiscardH(_) => "DiscardH",
         ExpressionH::PreCheckBorrowH(_) => "PreCheckBorrowH",
         ExpressionH::CopyPrimH(_) => "CopyPrimH",
+        ExpressionH::AliasH(_) => "AliasH",
     };
     {
         let handle = &mut *heap.vivem_dout;
@@ -1083,6 +1084,17 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
         }
         ExpressionH::CopyPrimH(cp) => {
             let inner_ref = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &cp.inner) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: inner_ref })
+        }
+        // VCOORD: revisit
+        // Source and target coord are the same MutableShare-flavored ref today (Borrow-of-share collapses at
+        // instantiator), so executing inner and passing through is correct. Once Backend supports
+        // Borrow-of-share, this arm gains RC-bump semantics for the reflavor.
+        ExpressionH::AliasH(a) => {
+            let inner_ref = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &a.inner) {
                 r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
                 INodeExecuteResultV::Continue(c) => c.result_ref,
             };

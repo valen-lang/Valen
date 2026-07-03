@@ -270,7 +270,6 @@ exported func main() int { return { 7 }(); }
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn tests_lambda_and_concept_function() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -345,7 +344,7 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn lambda_inside_template() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

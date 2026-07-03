@@ -594,6 +594,7 @@ fn visit_reference_expression<'s, 't, T, F>(
         ReferenceExpressionTE::SoftLoad(x) => visit_soft_load(pred, out, x),
         ReferenceExpressionTE::Destroy(x) => visit_destroy(pred, out, x),
         ReferenceExpressionTE::CopyPrim(x) => visit_reference_expression(pred, out, x.inner),
+        ReferenceExpressionTE::Alias(x) => visit_reference_expression(pred, out, x.source_expr),
     }
 }
 

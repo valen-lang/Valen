@@ -84,6 +84,7 @@ impl<'s, 'i> ReferenceExpressionIE<'s, 'i> {
             ReferenceExpressionIE::SoftLoad(s) => s.result,
             ReferenceExpressionIE::Destroy(_) => CoordI::new(OwnershipI::MutableShare, KindIT::VoidIT(VoidIT {  })),
             ReferenceExpressionIE::CopyPrim(c) => c.result,
+            ReferenceExpressionIE::Alias(a) => a.result,
         }
     }
 }
@@ -139,6 +140,7 @@ pub enum ReferenceExpressionIE<'s, 'i> {
     SoftLoad(&'i SoftLoadIE<'s, 'i>),
     Destroy(&'i DestroyIE<'s, 'i>),
     CopyPrim(&'i CopyPrimIE<'s, 'i>),
+    Alias(&'i AliasIE<'s, 'i>),
 }
 
 
@@ -809,6 +811,15 @@ pub struct UpcastIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct SoftLoadIE<'s, 'i> {
 	pub expr: AddressExpressionIE<'s, 'i>,
+	pub target_ownership: OwnershipI,
+	pub result: CoordI<'s, 'i>,
+}
+
+/// Arena-allocated (see @TFITCX) — no equality.
+/// Reflavors a reference expression's ownership without changing its underlying value.
+#[derive(Copy, Clone, Debug)]
+pub struct AliasIE<'s, 'i> {
+	pub source_expr: ReferenceExpressionIE<'s, 'i>,
 	pub target_ownership: OwnershipI,
 	pub result: CoordI<'s, 'i>,
 }

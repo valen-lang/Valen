@@ -112,7 +112,11 @@ where 's: 't,
         match a.result().coord.ownership {
             OwnershipT::Share => {
                 match load_as_p {
-                    LoadAsP::Use => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Share })),
+                    // VCOORD: revisit
+                    // Bare-use of a Share local produces `Borrow + share-kind`. The
+                    // (Borrow, Share) auto-alias in convert() reflavors via AliasTE at
+                    // target boundaries that want Share.
+                    LoadAsP::Use => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })),
                     LoadAsP::Move => {
                         match a {
                             AddressExpressionTE::LocalLookup(ref lv_lookup) => {

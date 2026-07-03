@@ -1011,7 +1011,6 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn pointer_becomes_share_if_kind_is_immutable() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1029,7 +1028,7 @@ func bork(x &SomeStruct) int {
 }
 
 exported func main() int {
-  return bork(SomeStruct(7));
+  return bork(&SomeStruct(7));
 }
 ";
     let code_source = CodeSource::new(vec![
@@ -1038,7 +1037,10 @@ exported func main() int {
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
     let coutputs = compile.expect_compiler_outputs();
-    assert_eq!(coutputs.lookup_function_by_str("bork").header.params[0].tyype.ownership, OwnershipT::Share);
+    // Ensures that `&T` on a share-flavored kind stays a distinct Borrow ownership
+    // rather than collapsing to `Share T`, e.g. `&SomeStruct` here where SomeStruct
+    // is share-flavored.
+    assert_eq!(coutputs.lookup_function_by_str("bork").header.params[0].tyype.ownership, OwnershipT::Borrow);
 }
 
 #[test]

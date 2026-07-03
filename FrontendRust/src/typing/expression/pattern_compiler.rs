@@ -238,6 +238,8 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 self.convert(
                     nenv, life, coutputs, &range_list, call_location,
                     region, unconverted_input_expr, expected_coord)
+                    // VCOORD: revisit
+                    .expect("convert() in pattern position returned NoImplicitCloneDefinedT — thread Result if this fires")
             }
         };
 

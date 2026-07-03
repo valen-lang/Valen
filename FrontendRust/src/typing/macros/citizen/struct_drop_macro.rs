@@ -11,6 +11,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT};
@@ -240,7 +241,7 @@ where 's: 't,
         origin_function1: Option<&'s FunctionA<'s>>,
         params2: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         let body_env = IInDenizenEnvironmentT::Function(env);
 
         let struct_tt = match params2[0].tyype.kind {
@@ -314,10 +315,8 @@ where 's: 't,
                     let unlet = ReferenceExpressionTE::Unlet(self.typing_interner.alloc(UnletTE {
                         variable: ILocalVariableT::Reference(*v),
                     }));
-                    // Until a test path forces Result conversion through struct_drop_macro.
                     self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT { region: IRegionT::Default }, unlet)
-                        .unwrap_or_else(|_| panic!("Unimplemented: Result propagation through struct_drop_macro"))
-                }).collect();
+                }).collect::<Result<Vec<_>, _>>()?;
                 let mut all_exprs: Vec<ReferenceExpressionTE<'s, 't>> = vec![destroy];
                 all_exprs.extend(drop_exprs.into_iter());
                 self.consecutive(&all_exprs)
@@ -332,7 +331,7 @@ where 's: 't,
             inner: self.consecutive(&[body_expr, return_expr]),
         }));
 
-        (header, body)
+        Ok((header, body))
     }
 
 }

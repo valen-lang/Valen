@@ -514,7 +514,7 @@ exported func main() int {
 // interface or whatever, its just passed straight through to the prototype
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn array_map_with_int() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -616,7 +616,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn array_map_with_lambda() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -637,11 +637,11 @@ fn array_map_with_lambda() {
         // TSUGAR: imm → share; i copy; a.3 is &int
         r"
 struct Lam share {}
-func __call(lam Lam, i int) int { return __copy_prim(&i); }
+func __call(lam &Lam, i int) int { return __copy_prim(&i); }
 
 exported func main() int
-where F Prot = func(Lam, int)int {
-  a = []int(10, Lam());
+where F Prot = func(&Lam, int)int {
+  a = []int(10, &Lam());
   return __copy_prim(&a.3);
 }
 ",
@@ -700,7 +700,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn make_array_map_with_struct() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -723,7 +722,7 @@ fn make_array_map_with_struct() {
 import array.make.*;
 
 struct Lam share {}
-func __call(lam Lam, i int) int { return __copy_prim(&i); }
+func __call(lam &Lam, i int) int { return __copy_prim(&i); }
 
 exported func main() int {
   a = MakeArray<int>(10, Lam());
@@ -818,7 +817,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn array_map_taking_a_closure_which_captures_something() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -916,7 +915,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "passes in isolation, fails in full-suite (test-interaction; suspected shared state)"]
 fn two_dimensional_array() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1278,7 +1277,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn array_has() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1311,7 +1310,6 @@ exported func main() bool {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn each_on_ssa() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

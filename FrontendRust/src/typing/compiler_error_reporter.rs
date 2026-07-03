@@ -107,6 +107,8 @@ pub enum ICompileErrorT<'s, 't> {
     RangedInternalErrorT { range: &'t [RangeS<'s>], message: &'s str },
     WeakableImplingMismatch { range: &'t [RangeS<'s>], struct_weakable: bool, interface_weakable: bool },
     TookWeakRefOfNonWeakableError { range: &'t [RangeS<'s>] },
+    NoImplicitCloneDefinedT { range: &'t [RangeS<'s>], source_type: CoordT<'s, 't>, target_type: CoordT<'s, 't> },
+    ImplicitCloneRejectedT { range: &'t [RangeS<'s>], source_type: CoordT<'s, 't>, target_type: CoordT<'s, 't>, fff: FindFunctionFailure<'s, 't> },
 }
 
 
@@ -167,6 +169,8 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
             Self::RangedInternalErrorT { range, .. } => *range,
             Self::WeakableImplingMismatch { range, .. } => *range,
             Self::TookWeakRefOfNonWeakableError { range, .. } => *range,
+            Self::NoImplicitCloneDefinedT { range, .. } => *range,
+            Self::ImplicitCloneRejectedT { range, .. } => *range,
         }
     }
 }

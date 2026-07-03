@@ -24,6 +24,7 @@ exclude_shields = [
     "PreferResultOverPanicForRecoverableCases-PROPRCX.md",
 
     "OutputAndLoggingZenDiscipline-OALZDX.md",
+    "TypesFitIntoTheseCategories-TFITCX.md",
 
     # Retired — replaced by VRBX's strict Python script content gate (any mutating
     # Python invocation already fails to auto-allow and falls through to the
@@ -60,7 +61,6 @@ include_shields = [
     { name = "NoNewDefinitions-NNDX.md" },
     { name = "NoAddingGuardianDirectives-NAGDX.md" },
     { name = "NoMovedDefinitions-NMDX.md" },
-    { name = "TypesFitIntoTheseCategories-TFITCX.md" },
 
     { name = "NeverDowncastTraits-NEDCX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },

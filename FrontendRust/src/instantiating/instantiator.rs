@@ -139,6 +139,8 @@ use crate::typing::ast::expressions::ReferenceMemberLookupTE;
 use crate::typing::ast::expressions::RuntimeSizedArrayCapacityTE;
 use crate::typing::ast::expressions::RuntimeSizedArrayLookupTE;
 use crate::typing::ast::expressions::SoftLoadTE;
+use crate::typing::ast::expressions::AliasTE;
+use crate::instantiating::ast::expressions::AliasIE;
 use crate::typing::ast::expressions::StaticArrayFromCallableTE;
 use crate::typing::ast::expressions::StaticArrayFromValuesTE;
 use crate::typing::ast::expressions::StaticSizedArrayLookupTE;
@@ -1905,6 +1907,26 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_it.coord, result_ce)
             }
+            ReferenceExpressionTE::Alias(a) => {
+                let AliasTE { source_expr, target_ownership: original_target_ownership } = **a;
+                let (source_it, source_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
+                // Share → MutableShare; Borrow → MutableBorrow; Own/Weak pass-through.
+                let _ = source_it;
+                let target_ownership_i = match original_target_ownership {
+                    OwnershipT::Share => OwnershipI::MutableShare,
+                    OwnershipT::Borrow => OwnershipI::MutableBorrow,
+                    OwnershipT::Own => OwnershipI::Own,
+                    OwnershipT::Weak => OwnershipI::Weak,
+                };
+                let result_it = CoordI::new(target_ownership_i, source_it.kind);
+                let result_ce = ReferenceExpressionIE::Alias(self.interner.bump().alloc(AliasIE {
+                    source_expr: source_ce,
+                    target_ownership: target_ownership_i,
+                    result: result_it,
+                }));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::SoftLoad(sl) => {
                 let SoftLoadTE { expr: original_inner, target_ownership: original_target_ownership } = **sl;
                 let (inner_it, inner_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &original_inner);
@@ -1998,8 +2020,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn compose_ownerships(outer_ownership: &OwnershipT, inner_ownership: &OwnershipI, _kind: &KindIT<'s, 'i>) -> OwnershipI {
         match (outer_ownership, inner_ownership) {
             (OwnershipT::Own, OwnershipI::Own) => OwnershipI::Own,
-            (OwnershipT::Own, OwnershipI::MutableShare)
-            | (OwnershipT::Borrow, OwnershipI::MutableShare) => {
+            // VCOORD: revisit
+            // T-IR preserves `Borrow + share-kind` for overload resolution / rune
+            // solving / error messages. At the T→I boundary all instantiator paths
+            // collapse Borrow-of-share → MutableShare, matching what Backend expects.
+            // AliasTE at convert() still emits AliasIE, which wraps a MutableShare
+            // source and produces MutableShare — a no-op at I-IR (both flavors point
+            // at the same refcounted object).
+            (OwnershipT::Own, OwnershipI::MutableShare) | (OwnershipT::Borrow, OwnershipI::MutableShare) => {
                 OwnershipI::MutableShare
             }
             (OwnershipT::Own, OwnershipI::MutableBorrow) => {
@@ -2034,6 +2062,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             (OwnershipT::Borrow, OwnershipI::Own) => OwnershipT::Borrow,
             (OwnershipT::Borrow, OwnershipI::MutableBorrow) => OwnershipT::Borrow,
             (OwnershipT::Borrow, OwnershipI::Weak) => OwnershipT::Weak,
+            // VCOORD: revisit
             (OwnershipT::Borrow, OwnershipI::MutableShare) => OwnershipT::Share,
             (OwnershipT::Weak, OwnershipI::Own) => OwnershipT::Weak,
             (OwnershipT::Weak, OwnershipI::MutableBorrow) => OwnershipT::Weak,

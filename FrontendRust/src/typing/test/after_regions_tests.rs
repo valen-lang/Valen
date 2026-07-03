@@ -353,7 +353,7 @@ exported func main() bool {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn test_two_instantiations_of_anonymous_param_lambda() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -481,7 +481,7 @@ exported func main() int {
 exported func main() int {
 At test:0.vale:4:3:
   moo(42, true, "hello", false)
-Couldn't find a suitable function moo(i32, bool, str, bool). Rejected candidates:
+Couldn't find a suitable function moo(i32, bool, @str, bool). Rejected candidates:
 
 Candidate 1 (of 1): test:0.vale:2:1:
 CodeLocationS { file: FileCoordinate { package_coord: PackageCoordinate { module: "test", packages: [] }, filepath: "0.vale" }, offset: 1 }
@@ -493,7 +493,6 @@ Number of params doesn't match! Supplied 4 but function takes 3
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn failure_to_resolve_a_prot_rules_function_doesnt_halt() {
     // In the below example, it should disqualify the first foo() because T = bool
     // and there exists no moo(bool). Instead, we saw the Prot rule throw and halt

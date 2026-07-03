@@ -180,6 +180,7 @@ pub enum ReferenceExpressionTE<'s, 't> {
     SoftLoad(&'t SoftLoadTE<'s, 't>),
     Destroy(&'t DestroyTE<'s, 't>),
     CopyPrim(&'t CopyPrimTE<'s, 't>),
+    Alias(&'t AliasTE<'s, 't>),
 }
 
 impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
@@ -230,6 +231,7 @@ impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
             ReferenceExpressionTE::SoftLoad(e) => e.result(),
             ReferenceExpressionTE::Destroy(e) => e.result(),
             ReferenceExpressionTE::CopyPrim(e) => e.result(),
+            ReferenceExpressionTE::Alias(e) => e.result(),
         }
     }
     
@@ -345,6 +347,26 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
     }
 
 }
+
+// VCOORD: revisit
+/// Arena-allocated (see @TFITCX)
+/// Reflavors a reference expression's ownership without changing its
+/// underlying value.
+#[derive(Debug)]
+pub struct AliasTE<'s, 't>
+where 's: 't,
+{
+    pub source_expr: ReferenceExpressionTE<'s, 't>,
+    pub target_ownership: OwnershipT,
+}
+
+impl<'s, 't> AliasTE<'s, 't> {
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        let CoordT { region, kind, .. } = self.source_expr.result().coord;
+        ReferenceResultT { coord: CoordT::new(self.target_ownership, region, kind) }
+    }
+}
+
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct LetNormalTE<'s, 't>
