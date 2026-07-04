@@ -8,7 +8,7 @@ use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::tests::tests::new_test_code_map;
-use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::builtins::builtins::{builtin_source_for_as, empty_v_builtins_stub};
 use crate::solver::solver::FailedSolve;
 use crate::solver::solver::ISolverError;
 use crate::solver::solver::RuleError;
@@ -48,11 +48,12 @@ exported func main() {
 }
 ";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_as(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "panicutils"),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(

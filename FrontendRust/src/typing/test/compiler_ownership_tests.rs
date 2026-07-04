@@ -18,7 +18,7 @@ use crate::utils::fx::HashMap;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::names::names::CodeVarNameT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::builtins::builtins::{builtin_source_for_arith, empty_v_builtins_stub};
 use crate::collect_only_tnode;
 use std::fs::read_to_string;
 use std::path::PathBuf;
@@ -304,8 +304,9 @@ exported func main() {
 }
 ";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -323,8 +324,9 @@ fn restackify() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = read_code_from_resource("programs/restackify.vale");
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arith(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -353,8 +355,9 @@ fn loop_restackify() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = read_code_from_resource("programs/loop_restackify.vale");
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arith(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -383,8 +386,9 @@ fn destructure_restackify() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = read_code_from_resource("programs/destructure_restackify.vale");
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arith(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);

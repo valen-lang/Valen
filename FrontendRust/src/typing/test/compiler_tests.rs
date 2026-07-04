@@ -59,7 +59,7 @@ use crate::typing::ast::expressions::AddressExpressionTE;
 use crate::typing::ast::expressions::LetAndLendTE;
 use crate::typing::ast::citizens::StructDefinitionT;
 use crate::typing::ast::ast::FunctionHeaderT;
-use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::builtins::builtins::{builtin_source_for_arith, builtin_source_for_arrays, builtin_source_for_as, builtin_source_for_opt, builtin_source_for_panicutils, builtin_source_for_weak, empty_v_builtins_stub};
 use crate::collect_only_tnode;
 use crate::collect_where_tnode;
 use crate::tests::tests::new_test_package_source;
@@ -167,8 +167,10 @@ exported func main() int {
   x = { __vbi_panic() }();
 }";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -241,8 +243,9 @@ fn tests_adding_two_numbers() {
     // TSUGAR: let code = "import v.builtins.arith.*;\nexported func main() int { return +(2, 3); }";
     let code = "import v.builtins.arith.*;\nexported func main() int { return +(&2, &3); }";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arith(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -970,8 +973,9 @@ fn stamps_an_interface_template_via_a_function_return() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -1332,8 +1336,10 @@ fn tests_calling_a_templated_struct_s_constructor() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -1884,10 +1890,15 @@ fn tests_a_linked_list() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = load_expected("programs/virtuals/ordinarylinkedlist.vale");
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "print"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "str"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -1913,8 +1924,10 @@ func main() () {
   return ();
 }";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "tup0"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -2143,10 +2156,13 @@ fn tests_a_templated_linked_list() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = load_expected("programs/genericvirtuals/templatedlinkedlist.vale");
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_opt(&parse_arena, &parser_keywords),
+        Source::builtin_module(&parse_arena, &parser_keywords, "logic"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -2166,10 +2182,13 @@ fn tests_a_foreach_for_a_linked_list() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = load_expected("programs/genericvirtuals/foreachlinkedlist.vale");
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_opt(&parse_arena, &parser_keywords),
+        Source::builtin_module(&parse_arena, &parser_keywords, "logic"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -2286,8 +2305,9 @@ fn recursive_struct_with_opt() {
         "func main(a ListNode) {}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_opt(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -2376,8 +2396,9 @@ fn test_vector_of_struct_templata() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arrays(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -2407,8 +2428,11 @@ fn if_branches_returns_never_and_struct() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_panicutils(&parse_arena, &parser_keywords),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -2462,8 +2486,10 @@ exported func main() int {
   __vbi_panic();
 }";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -2565,11 +2591,16 @@ fn reports_when_exported_function_depends_on_non_exported_return() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "import panicutils.*;\nstruct Firefly { }\nexported func moo() &Firefly { __pretend<&Firefly>() }";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_panicutils(&parse_arena, &parser_keywords),
+        Source::builtin_module(&parse_arena, &parser_keywords, "logic"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "panicutils"),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -2774,8 +2805,10 @@ fn reports_when_ssa_callable_returns_wrong_element_type() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arith(&parse_arena, &parser_keywords),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -2813,8 +2846,9 @@ fn reports_when_rsa_from_callable_has_unknown_element_type() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arrays(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -2860,8 +2894,9 @@ func main() int {
   return __copy_prim(&a.3);
 }";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arrays(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -3023,8 +3058,9 @@ fn reports_when_rsa_indexed_with_non_integer() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arrays(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -3101,8 +3137,9 @@ fn reports_when_rsa_dot_member_is_not_digit() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arrays(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -3658,8 +3695,10 @@ exported func main() {
   bork(__vbi_panic());
 }";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -3702,11 +3741,16 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
         "exported func main() { moo(__pretend<MySome<int>>()); }\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_panicutils(&parse_arena, &parser_keywords),
+        Source::builtin_module(&parse_arena, &parser_keywords, "logic"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "panicutils"),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -3865,11 +3909,14 @@ fn lock_weak_member() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_weak(&parse_arena, &parser_keywords),
+        Source::builtin_module(&parse_arena, &parser_keywords, "logic"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "panicutils"),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -4021,9 +4068,10 @@ exported func main() int {
 }
 "#;
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arrays(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "array.make"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -4056,8 +4104,9 @@ fn test_array_push_pop_len_capacity_drop() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arrays(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -4094,8 +4143,10 @@ fn upcast_generic() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -4327,8 +4378,9 @@ fn downcast_with_as() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_as(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -4627,8 +4679,9 @@ fn closure_using_parent_function_s_bound() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arith(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -4727,8 +4780,10 @@ fn structs_can_resolve_other_structs_instantiation_bound_arguments() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -4757,8 +4812,9 @@ fn copy_prim_arith_probe() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arith(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -4828,8 +4884,10 @@ fn user_defined_implicit_clone_allows_bare_use_of_struct() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -4925,8 +4983,10 @@ fn bare_member_access_auto_clones() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -4961,8 +5021,10 @@ fn copy_prim_probe() {
         "}\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(

@@ -10,7 +10,7 @@ use crate::tests::tests::new_test_code_map;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
 use crate::typing::typing_interner::TypingInterner;
-use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::builtins::builtins::{builtin_source_for_arrays, empty_v_builtins_stub};
 use crate::tests::tests::new_test_package_source;
 use crate::tests::tests::load_expected;
 
@@ -247,10 +247,15 @@ fn test_complex_interface() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = load_expected("programs/genericvirtuals/templatedinterface.vale");
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "print"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "str"),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -268,10 +273,15 @@ fn test_specializing_interface() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = load_expected("programs/genericvirtuals/specializeinterface.vale");
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "print"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "str"),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -494,8 +504,9 @@ exported func main() str {
 }
 "#;
     let code_source = CodeSource::new(vec![
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -523,8 +534,11 @@ exported func main() str {
 }
 ";
     let code_source = CodeSource::new(vec![
+        Source::builtin_module(&parse_arena, &parser_keywords, "str"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -588,8 +602,9 @@ exported func main() int {
 }
 ";
     let code_source = CodeSource::new(vec![
+        builtin_source_for_arrays(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);

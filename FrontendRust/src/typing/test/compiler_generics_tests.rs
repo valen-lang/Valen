@@ -6,7 +6,7 @@ use crate::pass_manager::{CodeSource, Source};
 use crate::tests::tests::new_test_code_map;
 use super::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::typing_interner::TypingInterner;
-use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::builtins::builtins::empty_v_builtins_stub;
 
 pub struct CompilerGenericsTests;
 impl CompilerGenericsTests {}
@@ -51,8 +51,10 @@ fn upcasting_with_generic_bounds() {
         "\n",
     );
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(

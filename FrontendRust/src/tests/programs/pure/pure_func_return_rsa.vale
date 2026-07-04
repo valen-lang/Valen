@@ -1,4 +1,4 @@
-import v.builtins.runtime_sized_array_new.*;
+import v.builtins.arrays.*;
 pure func makeArr() [][]int {
   return [][]int(0);
 }

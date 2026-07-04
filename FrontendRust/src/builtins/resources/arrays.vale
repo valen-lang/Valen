@@ -2,16 +2,46 @@ import v.builtins.implicit_clone.*;
 import v.builtins.arith.*;
 import v.builtins.drop.*;
 import v.builtins.panic.*;
-import v.builtins.runtime_sized_array_new.*;
-import v.builtins.runtime_sized_array_drop.*;
-import v.builtins.runtime_sized_array_push.*;
-import v.builtins.runtime_sized_array_pop.*;
-import v.builtins.runtime_sized_array_len.*;
-import v.builtins.runtime_sized_array_capacity.*;
-import v.builtins.static_sized_array_drop.*;
 
 extern("vale_static_sized_array_len")
 func len<S Int, E>(arr &[#S]E) int;
+
+extern("vale_runtime_sized_array_new")
+func Array<E Ref>(size int) []E;
+
+extern("vale_runtime_sized_array_push")
+func push<E>(arr &[]E, newElement E) void;
+
+extern("vale_runtime_sized_array_pop")
+func pop<E>(arr &[]E) E;
+
+extern("vale_runtime_sized_array_len")
+func len<E>(arr &[]E) int;
+
+extern("vale_runtime_sized_array_capacity")
+func capacity<E>(arr &[]E) int;
+
+func drop_into<E, F>(arr []E, consumer &F) void
+where func(&F, E)void
+{
+  while ((&arr).len() > 0) {
+    consumer((&arr).pop());
+  }
+  [] = ^arr;
+}
+func drop<E>(arr []E) void
+where func drop(E)void {
+  drop_into(^arr, &{ ^_; });
+}
+
+extern("vale_static_sized_array_drop_into")
+func drop_into<S Int, E, F>(arr [#S]E, consumer &F) void
+where func(&F, E)void;
+
+func drop<S Int, E>(arr [#S]E) void
+where func drop(E)void {
+  drop_into(^arr, &{ ^_; });
+}
 
 func Array<E, G>(n int, generator G) []E
 where

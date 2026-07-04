@@ -15,7 +15,7 @@ use crate::typing::test::traverse::NodeRefT;
 use crate::typing::names::names::CodeVarNameT;
 use crate::interner::StrI;
 use crate::typing::typing_interner::TypingInterner;
-use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::builtins::builtins::{builtin_source_for_arith, empty_v_builtins_stub};
 use crate::collect_only_tnode;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::names::names::{FunctionNameT, FunctionTemplateNameT, IdT, INameT};
@@ -193,8 +193,9 @@ exported func main() int {
 }
 ";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        builtin_source_for_arith(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -326,10 +327,15 @@ exported func main() {
 }
 "#;
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "print"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "str"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -395,8 +401,9 @@ exported func main() {
 }
 "#;
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -422,8 +429,9 @@ fn curried_lambda_inside_template_explicit_borrow_probe() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "import v.builtins.drop.*;\nfunc helper<T>(x &T) &T {\n  lam = a => b => x;\n  return lam(true)(7);\n}\nexported func main() {\n  helper(&4);\n  helper(&\"bork\");\n}\n";
     let code_source = CodeSource::new(vec![
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(

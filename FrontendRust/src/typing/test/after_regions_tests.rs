@@ -16,7 +16,7 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::tests::tests::new_test_code_map;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
-use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::builtins::builtins::{builtin_source_for_as, builtin_source_for_panicutils, empty_v_builtins_stub};
 use crate::collect_only_tnode;
 use crate::collect_where_tnode;
 use crate::postparsing::names::CodeRuneS;
@@ -70,8 +70,9 @@ exported func main() {
 }
 ";
     let code_source = CodeSource::new(vec![
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -188,8 +189,11 @@ exported func main() bool {
 }
 ";
     let code_source = CodeSource::new(vec![
+        Source::builtin_module(&parse_arena, &parser_keywords, "tup2"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -228,8 +232,11 @@ exported func main() {
 }
 "#;
     let code_source = CodeSource::new(vec![
+        builtin_source_for_panicutils(&parse_arena, &parser_keywords),
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -328,11 +335,12 @@ exported func main() bool {
 }
 ";
     let code_source = CodeSource::new(vec![
+        builtin_source_for_as(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
         new_test_package_source(&parse_arena, "panicutils"),
         new_test_package_source(&parse_arena, "printutils"),
         new_test_package_source(&parse_arena, "castutils"),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);

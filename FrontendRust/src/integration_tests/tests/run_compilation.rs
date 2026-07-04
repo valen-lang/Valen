@@ -1,5 +1,5 @@
 use crate::pass_manager::{CodeSource, Source};
-use crate::builtins::builtins::get_modulized_code_map;
+use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::compile_options::GlobalOptions;
 use crate::final_ast::ast::ProgramH;
 use crate::instantiating::ast::hinputs::HinputsI;
@@ -99,9 +99,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
         vec![
             PackageCoordinate::test_tld(parse_arena, parser_keywords),
         ];
-    let base_code_map =
-        get_modulized_code_map(parse_arena, parser_keywords)
-            .expect("Builtins code map failed to load");
+    let base_code_map = get_embedded_modulized_code_map(parse_arena, parser_keywords);
     let code_source: &'ctx CodeSource<'p> = compilation_bump.alloc(CodeSource::new(vec![
         Source::from_code_map(&base_code_map),
         new_test_code_map(parse_arena, code),

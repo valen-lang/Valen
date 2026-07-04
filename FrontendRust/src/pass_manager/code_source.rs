@@ -1,4 +1,4 @@
-use crate::builtins::builtins::get_code_map as get_builtins_code_map;
+use crate::builtins::builtins::{builtin_module_code_map, get_code_map as get_builtins_code_map};
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::pass_manager::pass_manager::{resolve_package_contents, IFrontendInput};
@@ -35,6 +35,22 @@ impl<'a> Source<'a> {
     'a: 'ctx,
   {
     let map = get_builtins_code_map(parse_arena, keywords);
+    Source::CodeMap(flatten_code_map(&map))
+  }
+
+  /// Build a `CodeMap` source holding one specific builtin module (keyed at
+  /// `("v", ["builtins", name])`). Tests use this to declare exactly which
+  /// builtin content their code actually reaches, paired with
+  /// `empty_v_builtins_stub` as a fallback for anything transitively walked.
+  pub fn builtin_module<'ctx>(
+    parse_arena: &'ctx ParseArena<'a>,
+    keywords: &'ctx Keywords<'a>,
+    name: &str,
+  ) -> Self
+  where
+    'a: 'ctx,
+  {
+    let map = builtin_module_code_map(parse_arena, keywords, name);
     Source::CodeMap(flatten_code_map(&map))
   }
 }

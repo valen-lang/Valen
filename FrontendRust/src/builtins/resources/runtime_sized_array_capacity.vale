@@ -1,2 +1,0 @@
-extern("vale_runtime_sized_array_capacity")
-func capacity<E>(arr &[]E) int;

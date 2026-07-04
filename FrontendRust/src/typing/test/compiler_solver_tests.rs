@@ -75,7 +75,7 @@ use crate::typing::names::names::FunctionNameT;
 use crate::typing::names::names::FunctionBoundNameT;
 use crate::typing::names::names::FunctionBoundTemplateNameT;
 use crate::typing::types::types::KindPlaceholderT;
-use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::builtins::builtins::{builtin_source_for_arrays, empty_v_builtins_stub};
 use crate::collect_only_tnode;
 use crate::collect_where_tnode;
 use crate::typing::templata::templata_utils::unapply_simple_name;
@@ -1001,8 +1001,9 @@ exported func main() {
 }
 ";
     let code_source = CodeSource::new(vec![
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
         new_test_code_map(&parse_arena, code),
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
@@ -1176,8 +1177,9 @@ exported func main() int {
 }
 ";
     let code_source = CodeSource::new(vec![
+        builtin_source_for_arrays(&parse_arena, &parser_keywords),
         new_test_code_map(&parse_arena, code),
-        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
