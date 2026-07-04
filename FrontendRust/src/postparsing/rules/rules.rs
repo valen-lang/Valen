@@ -5,7 +5,8 @@ use crate::postparsing::itemplatatype::{
   BooleanTemplataType, ITemplataType, IntegerTemplataType, LocationTemplataType,
   OwnershipTemplataType, StringTemplataType,
 };
-use crate::parsing::ast::{LocationP, OwnershipP};
+use crate::parsing::ast::LocationP;
+// STUB: onion typing — OwnershipP retired at parser layer.
 use crate::utils::range::RangeS;
 
 
@@ -315,11 +316,14 @@ pub struct RuneParentEnvLookupSR<'s> {
   pub rune: RuneUsage<'s>,
 }
 
+// STUB: onion typing — AugmentSR is being restructured into 4 per-ref-variant
+// rules (BorrowRefSR / HeapOwnRefSR / ShareRefSR / WeakRefSR). Ownership field
+// stubbed to () until the solver slice lands.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AugmentSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
-  pub ownership: Option<OwnershipP>,
+  pub ownership: Option<()>,
   pub inner_rune: RuneUsage<'s>,
 }
 
@@ -409,9 +413,10 @@ impl LocationLiteralSL {
 }
 
 
+// STUB: onion typing — OwnershipLiteralSL retires with the Ownership templata axis.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OwnershipLiteralSL {
-  pub ownership: OwnershipP,
+  pub ownership: (),
 }
 
 

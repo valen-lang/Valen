@@ -69,18 +69,6 @@ fn coord_with_rune_and_destructure() {
   assert!(matches!(cast!(first, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert!(matches!(cast!(second, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert!(matches!(cast!(third, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
-
-  let rule = compile(&parse_arena, &keywords, "T = Ref[own, _, _]");
-  let equals = cast!(rule, IRulexPR::Equals);
-  assert_templex_name(cast!(equals.left, IRulexPR::Templex), "T");
-  let components = cast!(equals.right, IRulexPR::Components);
-  assert_eq!(components.container, ITypePR::CoordType);
-  let (first, second, third) = expect_3(&components.components);
-  let first_templex = cast!(first, IRulexPR::Templex);
-  let ownership = cast!(first_templex, ITemplexPT::Ownership);
-  assert_eq!(ownership.1, OwnershipP::Own);
-  assert!(matches!(cast!(second, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
-  assert!(matches!(cast!(third, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
 }
 
 #[test]

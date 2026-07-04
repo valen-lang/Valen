@@ -123,13 +123,8 @@ fn templated_struct_one_arg() {
   let call = cast!(templex, ITemplexPT::Call);
   assert_templex_name(call.template, "Moo");
   let arg = expect_1(&call.args);
-  let interpreted = cast!(arg, ITemplexPT::Interpreted);
-  assert_eq!(
-    interpreted.maybe_ownership.unwrap().1,
-    OwnershipP::Share
-  );
-  assert!(interpreted.maybe_region.is_none());
-  assert_templex_name(interpreted.inner, "int");
+  let share_ref = cast!(arg, ITemplexPT::ShareRef);
+  assert_templex_name(share_ref.inner, "int");
 }
 
 #[test]

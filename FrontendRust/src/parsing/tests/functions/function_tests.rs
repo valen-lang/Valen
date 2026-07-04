@@ -199,63 +199,6 @@ fn abstract_function() {
 }
 
 #[test]
-fn pure_and_default_region() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(
-    &parse_arena,
-    &keywords,
-    "pure func findNearbyUnits() i'int i'{ }",
-  );
-  let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(
-    function.header.name.as_ref().unwrap().as_str(),
-    "findNearbyUnits"
-  );
-  assert!(matches!(
-    function.header.attributes,
-    [IAttributeP::PureAttribute(_)]
-  ));
-  assert!(function.header.params.as_ref().unwrap().params.is_empty());
-  let ret_type = cast!(
-    function.header.ret.ret_type.as_ref().unwrap(),
-    ITemplexPT::Interpreted
-  );
-  assert!(ret_type.maybe_ownership.is_none());
-  let ret_region = ret_type.maybe_region.as_ref().unwrap();
-  assert_eq!(ret_region.name.as_ref().unwrap().as_str(), "i");
-  assert_templex_name(ret_type.inner, "int");
-  let body = function.body.as_ref().unwrap();
-  let default_region = body.maybe_default_region.as_ref().unwrap();
-  assert_eq!(default_region.name.as_ref().unwrap().as_str(), "i");
-  assert!(matches!(body.inner, IExpressionPE::Void(_)));
-}
-
-#[test]
-fn return_isolate() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func findNearbyUnits() 'int { }");
-  let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(
-    function.header.name.as_ref().unwrap().as_str(),
-    "findNearbyUnits"
-  );
-  assert!(function.header.attributes.is_empty());
-  assert!(function.header.params.as_ref().unwrap().params.is_empty());
-  let ret_type = cast!(
-    function.header.ret.ret_type.as_ref().unwrap(),
-    ITemplexPT::Interpreted
-  );
-  assert!(ret_type.maybe_ownership.is_none());
-  assert!(ret_type.maybe_region.is_some());
-  assert!(ret_type.maybe_region.as_ref().unwrap().name.is_none());
-  assert_templex_name(ret_type.inner, "int");
-}
-
-#[test]
 fn coord_generic_with_associated_region() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -382,27 +325,6 @@ fn simple_function_with_region_typed_identifying_rune() {
 }
 
 #[test]
-fn readonly_region_rune() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func sum<r' ro>(){}");
-  let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.as_str(), "r");
-  assert_eq!(
-    generic_param.maybe_type.as_ref().unwrap().tyype,
-    ITypePR::RegionType
-  );
-  assert!(generic_param.coord_region.is_none());
-  assert!(matches!(
-    generic_param.attributes,
-    [IRuneAttributeP::ReadOnlyRegionRuneAttribute(_)]
-  ));
-  assert!(generic_param.maybe_default.is_none());
-}
-
-#[test]
 fn simple_function_with_apostrophe_region_typed_identifying_rune() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -442,30 +364,6 @@ fn pool_region() {
   assert_templex_name(generic_param.maybe_default.as_ref().unwrap(), "pool");
 }
 
-#[test]
-fn pool_readonly_region() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(
-    &parse_arena,
-    &keywords,
-    "func sum<r' ro = pool>(a &r'Marine){a}",
-  );
-  let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.as_str(), "r");
-  assert_eq!(
-    generic_param.maybe_type.as_ref().unwrap().tyype,
-    ITypePR::RegionType
-  );
-  assert!(generic_param.coord_region.is_none());
-  assert!(matches!(
-    generic_param.attributes,
-    [IRuneAttributeP::ReadOnlyRegionRuneAttribute(_)]
-  ));
-  assert_templex_name(generic_param.maybe_default.as_ref().unwrap(), "pool");
-}
 
 #[test]
 fn arena_region() {
@@ -654,13 +552,9 @@ fn func_with_func_bound() {
   let function_bound = cast!(first_rule_templex, ITemplexPT::Func);
   assert_eq!(function_bound.name.as_str(), "moo");
   let first_param = expect_1(&function_bound.parameters);
-  let interpreted = cast!(first_param, ITemplexPT::Interpreted);
-  assert_eq!(
-    interpreted.maybe_ownership.as_ref().unwrap().1,
-    OwnershipP::Borrow
-  );
-  assert!(interpreted.maybe_region.is_none());
-  assert_templex_name(interpreted.inner, "T");
+  let borrow_ref = cast!(first_param, ITemplexPT::BorrowRef);
+  assert!(borrow_ref.region.is_none());
+  assert_templex_name(borrow_ref.inner, "T");
   assert_templex_name(function_bound.return_type, "void");
 }
 

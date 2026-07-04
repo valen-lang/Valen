@@ -13,7 +13,6 @@ pub struct AbstractP {
 pub struct ParameterP<'p> {
   pub range: RangeL,
   pub virtuality: Option<AbstractP>,
-  pub maybe_pre_checked: Option<RangeL>,
   pub self_borrow: Option<RangeL>,
   pub pattern: Option<PatternPP<'p>>,
 }

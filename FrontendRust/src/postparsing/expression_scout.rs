@@ -1,7 +1,7 @@
 use crate::lexing::ast::RangeL;
 use crate::parsing::ast::{
   BlockPE, DotPE, FunctionCallPE, IArraySizeP, IExpressionPE, IImpreciseNameP, ITemplexPT, LoadAsP,
-  LookupPE, SharednessP, NameP, OwnershipP, StaticSizedArraySizeP,
+  LookupPE, SharednessP, NameP, StaticSizedArraySizeP,
 };
 use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizenBuilder;
@@ -401,41 +401,14 @@ fn scout_expression(
     }
         
         
-    IExpressionPE::Augment(augment) => {
-      let load_as = match augment.target_ownership {
-        OwnershipP::Borrow => LoadAsP::LoadAsBorrow,
-        OwnershipP::Weak => LoadAsP::LoadAsWeak,
-        // VCOORD: revisit this
-        // Prefix `^x` → force move (Unlet on local lookup; pass-through on already-owning expr).
-        OwnershipP::Own => LoadAsP::Move,
-        OwnershipP::Live => panic!("POSTPARSER_AUGMENT_LIVE_NOT_YET_IMPLEMENTED"),
-        OwnershipP::Share => panic!("POSTPARSER_AUGMENT_SHARE_NOT_YET_IMPLEMENTED"),
-      };
-      let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses): (StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>) = {
-        let mut inner_lidb = lidb.child();
-        let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) = self.scout_expression_and_coerce(
-          stack_frame,
-          &mut inner_lidb,
-          augment.inner,
-          load_as,
-        )?;
-        (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses)
-      };
-      match &inner_expr_s {
-        IExpressionSE::Ownershipped(ownershipped) => {
-          assert_eq!(ownershipped.target_ownership, load_as);
-        }
-        IExpressionSE::LocalLoad(local_load) => {
-          assert_eq!(local_load.target_ownership, load_as);
-        }
-        _ => panic!("POSTPARSER_SCOUT_AUGMENT_UNEXPECTED_RESULT"),
-      }
-      Ok((
-        stack_frame1,
-        IScoutResult::NormalResult(NormalResultS { expr: inner_expr_s }),
-        inner_self_uses,
-        inner_child_uses,
-      ))
+    // STUB: onion typing — IExpressionPE::Augment was retired. Replaced by 4
+    // distinct variants Move/Borrow/Weak/Share at the parser layer. This scout
+    // arm needs 4 new arms; deferred to a downstream slice.
+    IExpressionPE::Move(_)
+    | IExpressionPE::Borrow(_)
+    | IExpressionPE::Weak(_)
+    | IExpressionPE::Share(_) => {
+      panic!("STUB: onion typing — expression_scout Move/Borrow/Weak/Share arms not yet written");
     }
       
     IExpressionPE::Return(ret) => {

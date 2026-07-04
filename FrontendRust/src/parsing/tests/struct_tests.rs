@@ -44,9 +44,7 @@ fn struct_with_list_node() {
   match expect_1(&struct_.members.contents) {
     IStructContent::NormalStructMember(NormalStructMemberP {
       name: NameP(_, StrI("a")),
-      tyype: ITemplexPT::Interpreted(InterpretedPT {
-        maybe_ownership: Some(OwnershipPT(_, OwnershipP::Share)),
-        maybe_region: None,
+      tyype: ITemplexPT::ShareRef(ShareRefPT {
         inner: ITemplexPT::Call(CallPT {
           template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("ListNode")), .. }),
           args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. })],
@@ -134,7 +132,7 @@ fn variadic_struct() {
 }
 
 #[test]
-fn struct_with_weak() {
+fn struct_with_double_borrow() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
@@ -149,10 +147,13 @@ fn struct_with_weak() {
       members: StructMembersP {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("x")),
-              tyype: ITemplexPT::Interpreted(InterpretedPT {
-            maybe_ownership: Some(OwnershipPT(_, OwnershipP::Weak)),
-            maybe_region: None,
-            inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
+          tyype: ITemplexPT::BorrowRef(BorrowRefPT {
+            region: None,
+            inner: ITemplexPT::BorrowRef(BorrowRefPT {
+              region: None,
+              inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
+              ..
+            }),
             ..
           }),
           ..
@@ -166,11 +167,11 @@ fn struct_with_weak() {
 }
 
 #[test]
-fn struct_with_heap() {
+fn struct_with_weak() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(&parse_arena, &keywords, "struct Moo { x ^Marine; }");
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "struct Moo { x weak int; }");
   match denizen {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Moo")),
@@ -181,10 +182,8 @@ fn struct_with_heap() {
       members: StructMembersP {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("x")),
-              tyype: ITemplexPT::Interpreted(InterpretedPT {
-            maybe_ownership: Some(OwnershipPT(_, OwnershipP::Own)),
-            maybe_region: None,
-            inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("Marine")), .. }),
+          tyype: ITemplexPT::WeakRef(WeakRefPT {
+            inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
             ..
           }),
           ..
@@ -193,7 +192,7 @@ fn struct_with_heap() {
       },
       ..
     }) => {}
-    _ => panic!("expected struct Moo {{ x ^Marine; }} full structure"),
+    _ => panic!("expected struct Moo {{ x weak int; }} full structure"),
   }
 }
 
@@ -213,9 +212,8 @@ fn export_struct() {
       members: StructMembersP {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("x")),
-              tyype: ITemplexPT::Interpreted(InterpretedPT {
-            maybe_ownership: Some(OwnershipPT(_, OwnershipP::Borrow)),
-            maybe_region: None,
+          tyype: ITemplexPT::BorrowRef(BorrowRefPT {
+            region: None,
             inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
             ..
           }),

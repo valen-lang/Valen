@@ -111,12 +111,10 @@ pub enum IAttributeL<'p> {
   AbstractAttribute(RangeL),
   ExportAttribute(RangeL),
   PureAttribute(RangeL),
-  AdditiveAttribute(RangeL),
   ExternAttribute {
     range: RangeL,
     maybe_custom_name: Option<ParendLE<'p>>,
   },
-  LinearAttribute(RangeL),
   WeakableAttribute(RangeL),
   SealedAttribute(RangeL),
   MacroCall {

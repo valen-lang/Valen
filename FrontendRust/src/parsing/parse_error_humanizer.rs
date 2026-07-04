@@ -22,7 +22,7 @@ impl ParseErrorHumanizer {
   fn get_error_message(err: &ParseError) -> &str {
     match err {
       ParseError::RangedInternalError { .. } => "Internal error",
-      ParseError::UnrecognizableExpressionAfterAugment(_) => "Unrecognizable expression",
+      ParseError::UnrecognizableExpressionAfterRefPrefix(_) => "Unrecognizable expression",
       ParseError::BadMemberEnd(_) => "Bad member end.",
       ParseError::OnlyRegionRunesCanHaveMutability(_) => {
         "Only region runes, such as 'x, can have ro or rw or mut."

@@ -27,7 +27,6 @@ use crate::postparsing::rules::rules::DefinitionFuncSR;
 use crate::postparsing::rules::rules::CallSiteFuncSR;
 use crate::postparsing::rules::rules::ResolveSR;
 use crate::postparsing::itemplatatype::{PackTemplataType, PrototypeTemplataType};
-use crate::parsing::ast::ast::OwnershipP;
 use crate::postparsing::ast::ParameterS;
 use crate::postparsing::itemplatatype::OwnershipTemplataType;
 use crate::postparsing::itemplatatype::FunctionTemplataType;
@@ -439,7 +438,7 @@ where 's: 't,
                 rules_builder.push(IRulexSR::Augment(AugmentSR {
                     range: internal_method.range,
                     result_rune: RuneUsage { range: internal_method.range, rune: self_borrow_coord_rune_s },
-                    ownership: Some(OwnershipP::Borrow),
+                    ownership: Some(()), // STUB: onion typing — OwnershipP::Borrow retired
                     inner_rune: *member_rune,
                 }));
 
@@ -588,7 +587,7 @@ where 's: 't,
                 rules_builder.push(IRulexSR::Augment(AugmentSR {
                     range: internal_method.range,
                     result_rune: RuneUsage { range: internal_method.range, rune: self_own_coord_rune_s },
-                    ownership: Some(OwnershipP::Own),
+                    ownership: Some(()), // STUB: onion typing — OwnershipP::Own retired
                     inner_rune: *member_rune,
                 }));
 

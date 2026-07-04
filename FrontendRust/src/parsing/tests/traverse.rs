@@ -394,7 +394,6 @@ where
   let ParameterP {
     range: _range,
     virtuality,
-    maybe_pre_checked: _maybe_pre_checked,
     self_borrow: _self_borrow,
     pattern,
   } = parameter;
@@ -499,10 +498,7 @@ where
   match attribute {
     IRuneAttributeP::ImmutableRuneAttribute(_range) => {}
     IRuneAttributeP::MutableRuneAttribute(_range) => {}
-    IRuneAttributeP::ReadOnlyRegionRuneAttribute(_range) => {}
-    IRuneAttributeP::ReadWriteRegionRuneAttribute(_range) => {}
     IRuneAttributeP::ImmutableRegionRuneAttribute(_range) => {}
-    IRuneAttributeP::AdditiveRegionRuneAttribute(_range) => {}
     IRuneAttributeP::PoolRuneAttribute(_range) => {}
     IRuneAttributeP::ArenaRuneAttribute(_range) => {}
     IRuneAttributeP::BumpRuneAttribute(_range) => {}
@@ -621,10 +617,6 @@ where
       value: _value,
     }) => {}
     ITemplexPT::RegionRune(region_rune) => visit_region_rune(pred, out, region_rune),
-    ITemplexPT::Location(LocationPT {
-      range: _range,
-      location: _location,
-    }) => {}
     ITemplexPT::Tuple(TuplePT {
       range: _range,
       elements,
@@ -634,22 +626,28 @@ where
       }
     }
     ITemplexPT::NameOrRune(NameOrRunePT { name, .. }) => visit_name(pred, out, name),
-    ITemplexPT::Interpreted(InterpretedPT {
+    ITemplexPT::BorrowRef(BorrowRefPT {
       range: _range,
-      maybe_ownership,
-      maybe_region,
       inner,
-      ..
+      region,
     }) => {
-      if let Some(maybe_ownership) = maybe_ownership {
-        visit_ownership(pred, out, maybe_ownership);
-      }
-      if let Some(maybe_region) = maybe_region {
-        visit_region_rune(pred, out, maybe_region);
+      if let Some(region) = region {
+        visit_region_rune(pred, out, region);
       }
       visit_templex(pred, out, inner);
     }
-    ITemplexPT::Ownership(ownership) => visit_ownership(pred, out, ownership),
+    ITemplexPT::WeakRef(WeakRefPT {
+      range: _range,
+      inner,
+    }) => visit_templex(pred, out, inner),
+    ITemplexPT::ShareRef(ShareRefPT {
+      range: _range,
+      inner,
+    }) => visit_templex(pred, out, inner),
+    ITemplexPT::HeapOwnRef(HeapOwnRefPT {
+      range: _range,
+      inner,
+    }) => visit_templex(pred, out, inner),
     ITemplexPT::Pack(pack) => {
       visit_pack(pred, out, pack);
     }
@@ -680,10 +678,6 @@ where
     }) => {
       visit_templex(pred, out, element);
     }
-    ITemplexPT::Share(SharePT {
-      range: _range,
-      inner,
-    }) => visit_templex(pred, out, inner),
     ITemplexPT::String(StringPT {
       range: _range,
       str: _str,
@@ -980,12 +974,16 @@ where
       } = not_expr;
       visit_expression(pred, out, inner);
     }
-    IExpressionPE::Augment(augment_expr) => {
-      let AugmentPE {
-        range: _range,
-        target_ownership: _target_ownership,
-        inner,
-      } = augment_expr;
+    IExpressionPE::Move(MovePE { range: _range, inner }) => {
+      visit_expression(pred, out, inner);
+    }
+    IExpressionPE::Borrow(BorrowPE { range: _range, inner }) => {
+      visit_expression(pred, out, inner);
+    }
+    IExpressionPE::Weak(WeakPE { range: _range, inner }) => {
+      visit_expression(pred, out, inner);
+    }
+    IExpressionPE::Share(SharePE { range: _range, inner }) => {
       visit_expression(pred, out, inner);
     }
     IExpressionPE::Transmigrate(transmigrate_expr) => {
@@ -1124,13 +1122,6 @@ where
   }
 }
 
-fn visit_ownership<'p, T, F>(pred: &F, out: &mut Vec<T>, ownership: &'p OwnershipPT)
-where
-  F: Fn(NodeRefP<'p>) -> Option<T>,
-{
-  collect_if(pred, out, NodeRefP::Ownership(ownership));
-  let OwnershipPT(_range, _ownership) = ownership;
-}
 
 pub enum NodeRefP<'p> {
   Struct(&'p StructP<'p>),
@@ -1161,7 +1152,6 @@ pub enum NodeRefP<'p> {
   NameDeclaration(&'p INameDeclarationP<'p>),
   Templex(&'p ITemplexPT<'p>),
   Pack(&'p PackPT<'p>),
-  Ownership(&'p OwnershipPT),
   Rulex(&'p IRulexPR<'p>),
   Lookup(&'p LookupPE<'p>),
   TemplateArgs(&'p TemplateArgsP<'p>),

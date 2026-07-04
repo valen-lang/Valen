@@ -3,7 +3,7 @@ use bumpalo::Bump;
 use crate::cast;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
-use crate::parsing::ast::{INameDeclarationP, ITemplexPT, OwnershipP, PatternPP};
+use crate::parsing::ast::{INameDeclarationP, ITemplexPT, PatternPP};
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect,
 };
@@ -57,13 +57,9 @@ fn capture_with_borrow_tame() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "arr &R");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "arr");
-  let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
-  assert_eq!(
-    interpreted.maybe_ownership.as_ref().unwrap().1,
-    OwnershipP::Borrow
-  );
-  assert!(interpreted.maybe_region.is_none());
-  assert_templex_name(interpreted.inner, "R");
+  let borrow_ref = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::BorrowRef);
+  assert!(borrow_ref.region.is_none());
+  assert_templex_name(borrow_ref.inner, "R");
   assert!(pattern.destructure.is_none());
 }
 
@@ -80,13 +76,11 @@ fn capture_with_self_in_front() {
   );
   assert_eq!(member_name.as_str(), "arr");
   assert!(destination.mutate.is_none());
-  let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
-  assert_eq!(
-    interpreted.maybe_ownership.as_ref().unwrap().1,
-    OwnershipP::Weak
-  );
-  assert!(interpreted.maybe_region.is_none());
-  assert_templex_name(interpreted.inner, "R");
+  let outer = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::BorrowRef);
+  assert!(outer.region.is_none());
+  let inner = cast!(outer.inner, ITemplexPT::BorrowRef);
+  assert!(inner.region.is_none());
+  assert_templex_name(inner.inner, "R");
   assert!(pattern.destructure.is_none());
 }
 

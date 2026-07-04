@@ -74,13 +74,7 @@ where
       }
       Some(region) => {
         // Region parameter
-        let attributes = if let Some(range) = iter.try_skip_word(self.keywords.ro) {
-          vec![IRuneAttributeP::ReadOnlyRegionRuneAttribute(range)]
-        } else if let Some(range) = iter.try_skip_word(self.keywords.rw) {
-          vec![IRuneAttributeP::ReadWriteRegionRuneAttribute(range)]
-        } else if let Some(range) = iter.try_skip_word(self.keywords.additive) {
-          vec![IRuneAttributeP::AdditiveRegionRuneAttribute(range)]
-        } else if let Some(range) = iter.try_skip_word(self.keywords.imm) {
+        let attributes = if let Some(range) = iter.try_skip_word(self.keywords.imm) {
           vec![IRuneAttributeP::ImmutableRegionRuneAttribute(range)]
         } else {
           vec![]
@@ -615,12 +609,6 @@ where
         Ok(IAttributeP::ExportAttribute(ExportAttributeP { range }))
       }
       IAttributeL::PureAttribute(range) => Ok(IAttributeP::PureAttribute(PureAttributeP { range })),
-      IAttributeL::AdditiveAttribute(range) => {
-        Ok(IAttributeP::AdditiveAttribute(AdditiveAttributeP { range }))
-      }
-      IAttributeL::LinearAttribute(range) => {
-        Ok(IAttributeP::LinearAttribute(LinearAttributeP { range }))
-      }
     }
   }
   

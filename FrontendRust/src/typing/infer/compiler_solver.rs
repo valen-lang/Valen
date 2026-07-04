@@ -27,7 +27,6 @@ use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::citizen::impl_compiler::IsntParent;
 use crate::typing::citizen::struct_compiler::ResolveFailure;
 use crate::typing::templata::conversions::evaluate_ownership;
-use crate::parsing::ast::ast::OwnershipP;
 use crate::typing::templata::templata::KindTemplataT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::templata::templata::CoordTemplataT;
@@ -1186,7 +1185,7 @@ where 's: 't,
                             Some(augment_ownership) => {
                                 match self.get_sharedness(state, outer_coord.kind) {
                                     SharednessT::Single => {
-                                        if augment_ownership == OwnershipP::Share {
+                                        if false /* STUB: onion typing — OwnershipP retired; augment_ownership == Share check gone */ {
                                             return Err(ITypingPassSolverError::CantShareMutable { kind: outer_coord.kind });
                                         }
                                         if outer_coord.ownership != evaluate_ownership(augment_ownership) {
@@ -1242,7 +1241,7 @@ where 's: 't,
                                 match self.get_sharedness(state, inner_coord.kind) {
                                     SharednessT::Shared => evaluate_ownership(augment_ownership),
                                     SharednessT::Single => {
-                                        if augment_ownership == OwnershipP::Share {
+                                        if false /* STUB: onion typing — OwnershipP retired; augment_ownership == Share check gone */ {
                                             return Err(ITypingPassSolverError::CantShareMutable { kind: inner_coord.kind });
                                         }
                                         evaluate_ownership(augment_ownership)

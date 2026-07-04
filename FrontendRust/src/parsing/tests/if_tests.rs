@@ -24,8 +24,7 @@ fn ifs() {
   let then_call = cast!(if_.then_body.inner, IExpressionPE::FunctionCall);
   assert_lookup_name(then_call.callable_expr, "doBlarks");
   let first_arg = expect_1(&then_call.arg_exprs);
-  let borrow_x = cast!(first_arg, IExpressionPE::Augment);
-  assert_eq!(borrow_x.target_ownership, OwnershipP::Borrow);
+  let borrow_x = cast!(first_arg, IExpressionPE::Borrow);
   assert_lookup_name(borrow_x.inner, "x");
 
   assert!(if_.else_body.maybe_pure.is_none());

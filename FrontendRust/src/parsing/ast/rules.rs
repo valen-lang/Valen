@@ -90,7 +90,6 @@ pub enum ITypePR {
   IntType,
   BoolType,
   OwnershipType,
-  LocationType,
   CoordType,
   CoordListType,
   PrototypeType,
@@ -146,13 +145,20 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
   templex: &ITemplexPT<'p>,
 ) -> Vec<NameP<'p>> {
   match templex {
-    ITemplexPT::Interpreted(interpreted) => {
-      get_ordered_rune_declarations_from_templex_with_duplicates(interpreted.inner)
+    ITemplexPT::BorrowRef(borrow_ref) => {
+      get_ordered_rune_declarations_from_templex_with_duplicates(borrow_ref.inner)
+    }
+    ITemplexPT::WeakRef(weak_ref) => {
+      get_ordered_rune_declarations_from_templex_with_duplicates(weak_ref.inner)
+    }
+    ITemplexPT::ShareRef(share_ref) => {
+      get_ordered_rune_declarations_from_templex_with_duplicates(share_ref.inner)
+    }
+    ITemplexPT::HeapOwnRef(heap_own_ref) => {
+      get_ordered_rune_declarations_from_templex_with_duplicates(heap_own_ref.inner)
     }
     ITemplexPT::String(_)
     | ITemplexPT::Int(_)
-    | ITemplexPT::Location(_)
-    | ITemplexPT::Ownership(_)
     | ITemplexPT::Bool(_)
     | ITemplexPT::NameOrRune(_)
     | ITemplexPT::AnonymousRune(_) => {
@@ -208,9 +214,6 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
     ),
     ITemplexPT::Point(_) => panic!(
       "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_POINT_UNIMPLEMENTED_MATCH_ARM"
-    ),
-    ITemplexPT::Share(_) => panic!(
-      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_SHARE_UNIMPLEMENTED_MATCH_ARM"
     ),
   }
 }

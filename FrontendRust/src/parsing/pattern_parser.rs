@@ -75,7 +75,6 @@ where
       return Ok(ParameterP {
         range: pattern_range,
         virtuality: maybe_virtual,
-        maybe_pre_checked: None,
         self_borrow: maybe_self_borrow,
         pattern: None,
       });
@@ -99,9 +98,6 @@ where
       _ => return Err(ParseError::BadLocalName(iter.get_pos())),
     };
 
-    // Check for 'pre' keyword (line 64)
-    let maybe_pre_checked = iter.try_skip_word(self.keywords.pre);
-
     // Parse the pattern (lines 66-69)
     let pattern = self.parse_pattern(
       iter,
@@ -117,7 +113,6 @@ where
     Ok(ParameterP {
       range: pattern_range,
       virtuality: maybe_virtual,
-      maybe_pre_checked,
       self_borrow: maybe_self_borrow,
       pattern: Some(pattern),
     })

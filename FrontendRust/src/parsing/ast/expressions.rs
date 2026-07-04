@@ -1,4 +1,4 @@
-use super::ast::{FunctionP, NameP, OwnershipP, UnitP};
+use super::ast::{FunctionP, NameP, UnitP};
 use crate::interner::StrI;
 use super::pattern::PatternPP;
 use super::templex::{ITemplexPT, RegionRunePT};
@@ -34,7 +34,10 @@ pub enum IExpressionPE<'p> {
   FunctionCall(FunctionCallPE<'p>),
   BraceCall(BraceCallPE<'p>),
   Not(NotPE<'p>),
-  Augment(AugmentPE<'p>),
+  Move(MovePE<'p>),
+  Borrow(BorrowPE<'p>),
+  Weak(WeakPE<'p>),
+  Share(SharePE<'p>),
   Transmigrate(TransmigratePE<'p>),
   BinaryCall(BinaryCallPE<'p>),
   MethodCall(MethodCallPE<'p>),
@@ -75,7 +78,10 @@ impl IExpressionPE<'_> {
       IExpressionPE::FunctionCall(x) => x.range,
       IExpressionPE::BraceCall(x) => x.range,
       IExpressionPE::Not(x) => x.range,
-      IExpressionPE::Augment(x) => x.range,
+      IExpressionPE::Move(x) => x.range,
+      IExpressionPE::Borrow(x) => x.range,
+      IExpressionPE::Weak(x) => x.range,
+      IExpressionPE::Share(x) => x.range,
       IExpressionPE::Transmigrate(x) => x.range,
       IExpressionPE::BinaryCall(x) => x.range,
       IExpressionPE::MethodCall(x) => x.range,
@@ -122,7 +128,10 @@ impl IExpressionPE<'_> {
       IExpressionPE::FunctionCall(_) => true,
       IExpressionPE::BraceCall(_) => true,
       IExpressionPE::Not(_) => true,
-      IExpressionPE::Augment(_) => true,
+      IExpressionPE::Move(_) => true,
+      IExpressionPE::Borrow(_) => true,
+      IExpressionPE::Weak(_) => true,
+      IExpressionPE::Share(_) => true,
       IExpressionPE::Transmigrate(_) => true,
       IExpressionPE::BinaryCall(_) => true,
       IExpressionPE::MethodCall(_) => true,
@@ -168,7 +177,10 @@ impl IExpressionPE<'_> {
       IExpressionPE::FunctionCall(_) => true,
       IExpressionPE::BraceCall(_) => true,
       IExpressionPE::Not(_) => true,
-      IExpressionPE::Augment(_) => true,
+      IExpressionPE::Move(_) => true,
+      IExpressionPE::Borrow(_) => true,
+      IExpressionPE::Weak(_) => true,
+      IExpressionPE::Share(_) => true,
       IExpressionPE::Transmigrate(_) => true,
       IExpressionPE::BinaryCall(_) => true,
       IExpressionPE::MethodCall(_) => true,
@@ -408,9 +420,29 @@ pub struct NotPE<'p> {
 
 
 #[derive(Debug, PartialEq)]
-pub struct AugmentPE<'p> {
+pub struct MovePE<'p> {
   pub range: RangeL,
-  pub target_ownership: OwnershipP,
+  pub inner: &'p IExpressionPE<'p>,
+}
+
+
+#[derive(Debug, PartialEq)]
+pub struct BorrowPE<'p> {
+  pub range: RangeL,
+  pub inner: &'p IExpressionPE<'p>,
+}
+
+
+#[derive(Debug, PartialEq)]
+pub struct WeakPE<'p> {
+  pub range: RangeL,
+  pub inner: &'p IExpressionPE<'p>,
+}
+
+
+#[derive(Debug, PartialEq)]
+pub struct SharePE<'p> {
+  pub range: RangeL,
   pub inner: &'p IExpressionPE<'p>,
 }
 

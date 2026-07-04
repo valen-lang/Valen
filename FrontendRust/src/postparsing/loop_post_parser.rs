@@ -1,6 +1,6 @@
 use crate::parsing::ast::{
-  AugmentPE, BlockPE, ConsecutorPE, DestinationLocalP, FunctionCallPE, IExpressionPE,
-  IImpreciseNameP, INameDeclarationP, LetPE, LoadAsP, LookupPE, NameP, OwnershipP, PatternPP,
+  BlockPE, BorrowPE, ConsecutorPE, DestinationLocalP, FunctionCallPE, IExpressionPE,
+  IImpreciseNameP, INameDeclarationP, LetPE, LoadAsP, LookupPE, NameP, PatternPP,
 };
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::expressions::{
@@ -95,9 +95,8 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
           name: IImpreciseNameP::IterableName(in_keyword_range),
           template_args: None,
         })));
-        let iterable_borrow_expr_p = IExpressionPE::Augment(AugmentPE {
+        let iterable_borrow_expr_p = IExpressionPE::Borrow(BorrowPE {
           range: in_keyword_range,
-          target_ownership: OwnershipP::Borrow,
           inner: iterable_lookup_expr_p,
         });
         let begin_args: &'p [&'p IExpressionPE<'p>] = pa.alloc_slice_from_vec(vec![&*pa.alloc(iterable_borrow_expr_p)]);
@@ -221,9 +220,8 @@ fn scout_each_body<'s, 'p, 'ctx>(
         name: IImpreciseNameP::IteratorName(in_keyword_range),
         template_args: None,
       })));
-      let iterator_borrow_expr_p = IExpressionPE::Augment(AugmentPE {
+      let iterator_borrow_expr_p = IExpressionPE::Borrow(BorrowPE {
         range: in_keyword_range,
-        target_ownership: OwnershipP::Borrow,
         inner: iterator_lookup_expr_p,
       });
       let next_args: &'p [&'p IExpressionPE<'p>] = pa.alloc_slice_from_vec(vec![&*pa.alloc(iterator_borrow_expr_p)]);
@@ -254,9 +252,8 @@ fn scout_each_body<'s, 'p, 'ctx>(
         name: IImpreciseNameP::IterationOptionName(in_keyword_range),
         template_args: None,
       })));
-      let iteration_option_borrow_expr_p = IExpressionPE::Augment(AugmentPE {
+      let iteration_option_borrow_expr_p = IExpressionPE::Borrow(BorrowPE {
         range: in_keyword_range,
-        target_ownership: OwnershipP::Borrow,
         inner: iteration_option_lookup_expr_p,
       });
       let is_empty_args: &'p [&'p IExpressionPE<'p>] = pa.alloc_slice_from_vec(vec![&*pa.alloc(iteration_option_borrow_expr_p)]);

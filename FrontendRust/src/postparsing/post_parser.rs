@@ -714,23 +714,10 @@ fn scout_impl(
 ) -> Result<ImplS<'s>, ICompileErrorS<'s>> {
   let range_s = PostParser::eval_range(file, impl0.range);
 
-  match &impl0.interface {
-    ITemplexPT::Interpreted(interpreted) => {
-      return Err(ICompileErrorS::CantOwnershipInterfaceInImpl(CantOwnershipInterfaceInImpl {
-        range: PostParser::eval_range(file, interpreted.range),
-      }));
-    }
-    _ => {}
-  }
-
-  match &impl0.struct_ {
-    Some(ITemplexPT::Interpreted(interpreted)) => {
-      return Err(ICompileErrorS::CantOwnershipStructInImpl(CantOwnershipStructInImpl {
-        range: PostParser::eval_range(file, interpreted.range),
-      }));
-    }
-    _ => {}
-  }
+  // STUB: onion typing — ITemplexPT::Interpreted retired. The CantOwnership*
+  // guards fired when impl surface had an ownership prefix. Under onion typing
+  // the same guard fires per-ref-variant (BorrowRef/HeapOwnRef/ShareRef/WeakRef).
+  // Downstream slice will restore these guards.
 
   let template_rules_p: &[IRulexPR<'p>] = impl0
     .template_rules

@@ -261,44 +261,54 @@ where
   }
   
   
-  /// Parse interpreted type (with ownership/region prefixes)
-  pub fn parse_interpreted(
+  /// Parse a templex prefix (`&T`, `weak T`, `heap T`, `@T`) into the
+  /// corresponding structural ref variant. Returns None if no prefix.
+  pub fn parse_ref_prefix(
     &self,
     iter: &mut ScrambleIterator<'p, '_>,
   ) -> ParseResult<Option<ITemplexPT<'p>>> {
     let begin = iter.get_pos();
 
-    // Parse ownership prefix (^, @, &&, &)
-    let maybe_ownership = if iter.try_skip_symbol('^') {
-      Some(OwnershipPT(RangeL::new(begin, iter.get_pos()), OwnershipP::Own))
-    } else if iter.try_skip_symbol('@') {
-      Some(OwnershipPT(RangeL::new(begin, iter.get_pos()), OwnershipP::Share))
-    } else if iter.try_skip_symbols(&['&', '&']) {
-      Some(OwnershipPT(RangeL::new(begin, iter.get_pos()), OwnershipP::Weak))
-    } else if iter.try_skip_symbol('&') {
-      Some(OwnershipPT(RangeL::new(begin, iter.get_pos()), OwnershipP::Borrow))
-    } else {
-      None
-    };
-
-    // Parse region (e.g., a' in a'T)
-    let maybe_region = parse_region(iter)?;
-
-    // If we have neither ownership nor region, return None
-    match (&maybe_ownership, &maybe_region) {
-      (None, None) => return Ok(None),
-      _ => {}
+    // `weak T` → ITemplexPT::WeakRef
+    if iter.try_skip_word(self.keywords.weak).is_some() {
+      let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
+      return Ok(Some(ITemplexPT::WeakRef(WeakRefPT {
+        range: RangeL::new(begin, iter.get_prev_end_pos()),
+        inner: &*self.parse_arena.alloc(inner),
+      })));
     }
 
-    // Parse the inner templex
-    let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
+    // `heap T` → ITemplexPT::HeapOwnRef
+    if iter.try_skip_word(self.keywords.heap).is_some() {
+      let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
+      return Ok(Some(ITemplexPT::HeapOwnRef(HeapOwnRefPT {
+        range: RangeL::new(begin, iter.get_prev_end_pos()),
+        inner: &*self.parse_arena.alloc(inner),
+      })));
+    }
 
-    Ok(Some(ITemplexPT::Interpreted(InterpretedPT::new(
-      RangeL::new(begin, iter.get_prev_end_pos()),
-      maybe_ownership.map(|x| &*self.parse_arena.alloc(x)),
-      maybe_region.map(|x| &*self.parse_arena.alloc(x)),
-      &*self.parse_arena.alloc(inner),
-    ))))
+    // `@T` → ITemplexPT::ShareRef
+    if iter.try_skip_symbol('@') {
+      let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
+      return Ok(Some(ITemplexPT::ShareRef(ShareRefPT {
+        range: RangeL::new(begin, iter.get_prev_end_pos()),
+        inner: &*self.parse_arena.alloc(inner),
+      })));
+    }
+
+    // `&T` → ITemplexPT::BorrowRef. `&&T` parses as nested BorrowRef via the
+    // recursive parse_templex_atom_and_call_and_prefixes call — double-borrow.
+    if iter.try_skip_symbol('&') {
+      let maybe_region = parse_region(iter)?;
+      let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
+      return Ok(Some(ITemplexPT::BorrowRef(BorrowRefPT {
+        range: RangeL::new(begin, iter.get_prev_end_pos()),
+        inner: &*self.parse_arena.alloc(inner),
+        region: maybe_region.map(|x| &*self.parse_arena.alloc(x)),
+      })));
+    }
+
+    Ok(None)
   }
   
 
@@ -353,40 +363,6 @@ where
         value: false,
       }));
     }
-    if let Some(range) = iter.try_skip_word(self.keywords.own) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Own)));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.borrow) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Borrow)));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.weak) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Weak)));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.share) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Share)));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.inl) {
-      return Ok(ITemplexPT::Location(LocationPT {
-        range,
-        location: LocationP::Inline,
-      }));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.heap) {
-      return Ok(ITemplexPT::Location(LocationPT {
-        range,
-        location: LocationP::Yonder,
-      }));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.weak) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Weak)));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.own) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Own)));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.share) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Share)));
-    }
-
     // Try parsing prototype (lines 404-408)
     if let Some(proto) = self.parse_prototype(iter)? {
       return Ok(proto);
@@ -540,7 +516,7 @@ where
     }
 
     // Try parsing interpreted type with ownership/region prefixes (lines 531-535)
-    if let Some(x) = self.parse_interpreted(iter)? {
+    if let Some(x) = self.parse_ref_prefix(iter)? {
       return Ok(x);
     }
 
@@ -786,10 +762,6 @@ where
       Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.ownership => {
         iter.advance();
         Ok(Some(ITypePR::OwnershipType))
-      }
-      Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.location => {
-        iter.advance();
-        Ok(Some(ITypePR::LocationType))
       }
       _ => Err(ParseError::BadRuneTypeError(iter.get_pos())),
     }

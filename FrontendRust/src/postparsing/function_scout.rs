@@ -33,7 +33,8 @@ use crate::postparsing::post_parser::{
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::rules::rule_scout::translate_rulexes;
 use crate::postparsing::rules::templex_scout::translate_maybe_type_into_maybe_rune;
-use crate::parsing::ast::OwnershipP;
+// STUB: onion typing — OwnershipP retired at parser layer.
+// use crate::parsing::ast::OwnershipP;
 use crate::postparsing::rules::rules::{
   AugmentSR, CoerceToCoordSR, IRulexSR, LookupSR, MaybeCoercingLookupSR, RuneUsage,
 };
@@ -899,7 +900,8 @@ fn create_closure_param(
   rule_builder.push(IRulexSR::Augment(AugmentSR {
     range: closure_param_range.clone(),
     result_rune: closure_param_type_rune.clone(),
-    ownership: Some(OwnershipP::Borrow),
+    // STUB: onion typing — OwnershipP::Borrow retired.
+    ownership: Some(()),
     inner_rune: RuneUsage {
       range: closure_param_range.clone(),
       rune: closure_struct_coord_rune,

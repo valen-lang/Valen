@@ -240,8 +240,7 @@ fn borrowing_result_of_function_call() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let expr = compile_expression_expect(&parse_arena, &keywords, "&Muta()");
   match &expr {
-    IExpressionPE::Augment(AugmentPE {
-      target_ownership: OwnershipP::Borrow,
+    IExpressionPE::Borrow(BorrowPE {
       inner:
         IExpressionPE::FunctionCall(FunctionCallPE {
           callable_expr:
@@ -259,14 +258,13 @@ fn borrowing_result_of_function_call() {
 }
 
 #[test]
-fn specifying_heap() {
+fn move_call_via_caret() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let expr = compile_expression_expect(&parse_arena, &keywords, "^Muta()");
   match &expr {
-    IExpressionPE::Augment(AugmentPE {
-      target_ownership: OwnershipP::Own,
+    IExpressionPE::Move(MovePE {
       inner: IExpressionPE::FunctionCall(FunctionCallPE { .. }),
       ..
     }) => {}
@@ -275,29 +273,59 @@ fn specifying_heap() {
 }
 
 #[test]
-fn inline_call_ignored() {
-  // The inl keyword is just parsed as an Own augment. It's effectively a no-op.
-  // This is probably to better syntax-highlight the inl keyword even though we ignore it.
+fn double_borrow_expression() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let expr = compile_expression_expect(&parse_arena, &keywords, "inl Muta()");
+  let expr = compile_expression_expect(&parse_arena, &keywords, "&&x");
   match &expr {
-    IExpressionPE::Augment(AugmentPE {
-      target_ownership: OwnershipP::Own,
-      inner:
-        IExpressionPE::FunctionCall(FunctionCallPE {
-          callable_expr:
-            IExpressionPE::Lookup(LookupPE {
-              name: IImpreciseNameP::LookupName(NameP(_, StrI("Muta"))),
-              template_args: None,
-            }),
-          arg_exprs,
-          ..
+    IExpressionPE::Borrow(BorrowPE {
+      inner: IExpressionPE::Borrow(BorrowPE {
+        inner: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
         }),
+        ..
+      }),
       ..
-    }) if arg_exprs.is_empty() => {}
-    _ => panic!("expected inl Muta() structure"),
+    }) => {}
+    _ => panic!("expected &&x → nested Borrow(Borrow(x)) structure"),
+  }
+}
+
+#[test]
+fn weak_expression() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let expr = compile_expression_expect(&parse_arena, &keywords, "weak x");
+  match &expr {
+    IExpressionPE::Weak(WeakPE {
+      inner: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected weak x → Weak(x) structure"),
+  }
+}
+
+#[test]
+fn share_expression() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let expr = compile_expression_expect(&parse_arena, &keywords, "@x");
+  match &expr {
+    IExpressionPE::Share(SharePE {
+      inner: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected @x → Share(x) structure"),
   }
 }
 
@@ -419,8 +447,7 @@ fn templated_function_call() {
     }) => match (args, arg_exprs) {
       (
         [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }), ..],
-        [IExpressionPE::Augment(AugmentPE {
-          target_ownership: OwnershipP::Borrow,
+        [IExpressionPE::Borrow(BorrowPE {
           inner:
             IExpressionPE::Lookup(LookupPE {
               name: IImpreciseNameP::LookupName(NameP(_, StrI("result"))),

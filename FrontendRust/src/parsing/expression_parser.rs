@@ -1388,14 +1388,13 @@ where
   ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let operator_begin = iter.get_pos();
 
-    // Check for & (borrow augmentation)
+    // Trailing `&` on a spree — Borrow expression variant.
     if iter.try_skip_symbol('&') {
-      let range_pe = AugmentPE {
-      range: RangeL::new(spree_begin, iter.get_prev_end_pos()),
-      target_ownership: OwnershipP::Borrow,
+      let borrow_pe = BorrowPE {
+        range: RangeL::new(spree_begin, iter.get_prev_end_pos()),
         inner: expr_so_far,
       };
-      return Ok(Some(IExpressionPE::Augment(range_pe)));
+      return Ok(Some(IExpressionPE::Borrow(borrow_pe)));
     }
 
     // Try template lookup
@@ -1931,40 +1930,46 @@ where
       _ => {}
     }
 
-    let maybe_target_ownership = match iter.peek_cloned() {
+    // Value-level prefix operators — 4 structural variants. `^x` = Move,
+    // `&x` = Borrow (`&&x` = nested double-borrow), `@x` = Share, `weak x` = Weak.
+    enum Prefix { Move, Borrow, Weak, Share }
+    let maybe_prefix = match iter.peek_cloned() {
       Some(INodeLEEnum::Symbol(SymbolLE(_, '^'))) => {
         iter.advance();
-        Some(OwnershipP::Own)
+        Some(Prefix::Move)
       }
       Some(INodeLEEnum::Symbol(SymbolLE(_, '&'))) => {
         iter.advance();
-        match iter.peek_cloned() {
-          Some(INodeLEEnum::Symbol(SymbolLE(_, '&'))) => {
-            iter.advance();
-            Some(OwnershipP::Weak)
-          }
-          _ => Some(OwnershipP::Borrow),
-        }
+        Some(Prefix::Borrow)
       }
-      Some(INodeLEEnum::Word(WordLE { str, .. })) if str == self.keywords.r#inl => {
+      Some(INodeLEEnum::Symbol(SymbolLE(_, '@'))) => {
         iter.advance();
-        Some(OwnershipP::Own)
+        Some(Prefix::Share)
+      }
+      Some(INodeLEEnum::Word(WordLE { str, .. })) if str == self.keywords.weak => {
+        iter.advance();
+        Some(Prefix::Weak)
       }
       _ => None,
     };
 
-    if let Some(target_ownership) = maybe_target_ownership {
-      let inner_pe = self.parse_atom_and_tight_suffixes(
+    if let Some(prefix) = maybe_prefix {
+      // Recurse into parse_expression_data_element so nested prefixes stack (e.g. `&&x` →
+      // Borrow(Borrow(x)) rather than choking on the inner `&`).
+      let inner_pe = self.parse_expression_data_element(
         iter,
         stop_on_curlied,
         templex_parser,
         pattern_parser,
       )?;
-      return Ok(self.parse_arena.alloc(IExpressionPE::Augment(AugmentPE {
-        range: RangeL::new(begin, iter.get_prev_end_pos()),
-        target_ownership,
-        inner: inner_pe,
-      })));
+      let range = RangeL::new(begin, iter.get_prev_end_pos());
+      let result = match prefix {
+        Prefix::Move => IExpressionPE::Move(MovePE { range, inner: inner_pe }),
+        Prefix::Borrow => IExpressionPE::Borrow(BorrowPE { range, inner: inner_pe }),
+        Prefix::Weak => IExpressionPE::Weak(WeakPE { range, inner: inner_pe }),
+        Prefix::Share => IExpressionPE::Share(SharePE { range, inner: inner_pe }),
+      };
+      return Ok(self.parse_arena.alloc(result));
     }
 
     self.parse_atom_and_tight_suffixes(iter, stop_on_curlied, templex_parser, pattern_parser)
@@ -2041,7 +2046,6 @@ where
         let param = ParameterP {
           range: param_range,
           virtuality: None,
-          maybe_pre_checked: None,
           self_borrow: None,
           pattern: Some(PatternPP {
             range: param_range,

@@ -7,7 +7,7 @@ import printutils.*;
 
 struct MyList<T Ref> where func drop(T)void {
   value T;
-  next ^Opt<^MyList<T>>;
+  next heap Opt<heap MyList<T>>;
 }
 
 func forEach<F, T>(
@@ -33,7 +33,7 @@ where func drop(T)void, func(&F, &T)void, func drop(F)void
 }
 
 exported func main() int {
-  list = MyList<int>(10, Some<^MyList<int>>(MyList<int>(20, Some<^MyList<int>>(MyList<int>(30, None<^MyList<int>>())))));
+  list = MyList<int>(10, Some<heap MyList<int>>(MyList<int>(20, Some<heap MyList<int>>(MyList<int>(30, None<heap MyList<int>>())))));
   // TSUGAR:   forEach(&list, { print(_); });
   forEach(&list, { print(__copy_prim(_)); });
   return 0;

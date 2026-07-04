@@ -100,10 +100,7 @@ impl IRuneAttributeP {
     match self {
       IRuneAttributeP::ImmutableRuneAttribute(r) => *r,
       IRuneAttributeP::MutableRuneAttribute(r) => *r,
-      IRuneAttributeP::ReadOnlyRegionRuneAttribute(r) => *r,
-      IRuneAttributeP::ReadWriteRegionRuneAttribute(r) => *r,
       IRuneAttributeP::ImmutableRegionRuneAttribute(r) => *r,
-      IRuneAttributeP::AdditiveRegionRuneAttribute(r) => *r,
       IRuneAttributeP::PoolRuneAttribute(r) => *r,
       IRuneAttributeP::ArenaRuneAttribute(r) => *r,
       IRuneAttributeP::BumpRuneAttribute(r) => *r,
@@ -189,8 +186,6 @@ pub enum IAttributeP<'p> {
   BuiltinAttribute(BuiltinAttributeP<'p>),
   ExportAttribute(ExportAttributeP),
   PureAttribute(PureAttributeP),
-  AdditiveAttribute(AdditiveAttributeP),
-  LinearAttribute(LinearAttributeP),
 }
 
 
@@ -220,25 +215,12 @@ pub struct PureAttributeP {
   pub range: RangeL,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AdditiveAttributeP {
-  pub range: RangeL,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct LinearAttributeP {
-  pub range: RangeL,
-}
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IRuneAttributeP {
   ImmutableRuneAttribute(RangeL),
   MutableRuneAttribute(RangeL),
-  ReadOnlyRegionRuneAttribute(RangeL),
-  ReadWriteRegionRuneAttribute(RangeL),
   ImmutableRegionRuneAttribute(RangeL),
-  AdditiveRegionRuneAttribute(RangeL),
   PoolRuneAttribute(RangeL),
   ArenaRuneAttribute(RangeL),
   BumpRuneAttribute(RangeL),
@@ -319,37 +301,18 @@ pub enum SharednessP {
 }
 
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum OwnershipP {
-  Own,
-  Borrow,
-  Live,
-  Weak,
-  Share,
-}
-
-
-/// This represents how to load something.
-/// If something's a Share, then nothing will happen,
-/// so this only applies to mutables.
+/// The load intent for a value-level use — how the scout should interpret
+/// identifier occurrences. The prefix expression variants (Move / Borrow /
+/// Weak / Share on `IExpressionPE`) lower to the matching variant here;
+/// `Use` is the "no explicit prefix, use whatever ownership is there" default.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LoadAsP {
-  // This means we want to move it. Thisll become a OwnP or ShareP.
   Move,
-  // This means we want to use it, and want to make sure that it doesn't drop.
-  // If permission is None, then we're probably in a dot. For example, x.launch()
-  // should be mapped to launch(&!x) if x is mutable, or launch(&x) if it's readonly.
   LoadAsBorrow,
-  // This means we want to get a weak reference to it. Thisll become a WeakP.
   LoadAsWeak,
-  // This represents unspecified. It basically means, use whatever ownership already there.
+  LoadAsShare,
   Use,
 }
 
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum LocationP {
-  Inline,
-  Yonder,
-}
 

@@ -6,7 +6,8 @@ use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
   BoolPT, IntPT, ITemplexPT, ITemplexPT::NameOrRune, LocationPT, SharednessPT, NameOrRunePT,
-  NameP, OwnershipPT, RegionRunePT, StringPT,
+  NameP, RegionRunePT, StringPT,
+// STUB: onion typing — OwnershipPT retired at parser layer.
 };
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::ITemplataType;
@@ -109,11 +110,7 @@ pub fn translate_value_templex<'s, 'p>(
         location: *location,
       },
     )),
-    ITemplexPT::Ownership(OwnershipPT(_, ownership)) => Some(ILiteralSL::OwnershipLiteral(
-      OwnershipLiteralSL {
-        ownership: *ownership,
-      },
-    )),
+    // STUB: onion typing — ITemplexPT::Ownership atom retired.
     _ => None,
   }
 }
@@ -242,54 +239,10 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         }
       }
 
-      ITemplexPT::Interpreted(interpreted) => {
-        let range_s = PostParser::eval_range(file, interpreted.range);
-        let mut child_lidb = lidb.child();
-        let result_rune_s = RuneUsage {
-          range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
-        };
-
-        let maybe_region_rune = interpreted.maybe_region.as_ref().map(|region_rune| {
-          let region_name = region_rune
-            .name
-            .as_ref()
-            .unwrap_or_else(|| panic!("POSTPARSER_TRANSLATE_TEMPLEX_REGION_NAME_NOT_YET_IMPLEMENTED"))
-            .str();
-          let rune = scout_arena.intern_rune(CodeRune(CodeRuneS { name: scout_arena.intern_str(region_name.as_str()) }));
-          assert!(
-            env.all_declared_runes().contains(&rune),
-            "POSTPARSER_TRANSLATE_TEMPLEX_UNKNOWN_REGION_NOT_YET_IMPLEMENTED"
-          );
-          RuneUsage {
-            range: PostParser::eval_range(file, interpreted.range),
-            rune,
-          }
-        });
-        let new_region = match maybe_region_rune {
-          None => context_region.clone(),
-          Some(ref region_rune) => region_rune.rune.clone(),
-        };
-        let mut child_lidb = lidb.child();
-        let inner_rune_s = translate_templex(
-          scout_arena,
-          keywords,
-          env,
-          &mut child_lidb,
-          rule_builder,
-          new_region,
-          interpreted.inner,
-        );
-        let ownership =
-          interpreted.maybe_ownership.map(|OwnershipPT(_, ownership)| *ownership);
-        rule_builder.push(IRulexSR::Augment(AugmentSR {
-          range: range_s.clone(),
-          result_rune: result_rune_s.clone(),
-          ownership,
-          inner_rune: inner_rune_s,
-        }));
-        result_rune_s
-      }
+      // STUB: onion typing — ITemplexPT::Interpreted retired. Replaced by 4
+      // structural variants (BorrowRef / HeapOwnRef / ShareRef / WeakRef) which
+      // are not yet handled in the scout; each will emit its own SR rule in a
+      // downstream slice.
 
       ITemplexPT::Call(call) => {
         let range_s = PostParser::eval_range(file, call.range);

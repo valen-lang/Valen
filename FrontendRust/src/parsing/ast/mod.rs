@@ -9,23 +9,23 @@ pub mod templex;
 
 // Re-export everything from ast.rs
 pub use ast::{
-  AbstractAttributeP, AdditiveAttributeP, BuiltinAttributeP, ExportAsP, ExportAttributeP,
+  AbstractAttributeP, BuiltinAttributeP, ExportAsP, ExportAttributeP,
   ExternAttributeP, FileP, FunctionHeaderP, FunctionP, FunctionReturnP, GenericParameterP,
   GenericParameterTypeP, GenericParametersP, IAttributeP, IDenizenP, IMacroInclusionP,
-  IRuneAttributeP, IStructContent, ImplP, ImportP, InterfaceP, LinearAttributeP, LoadAsP,
-  LocationP, MacroCallP, SharednessP, NameP, NormalStructMemberP, OwnershipP, ParamsP,
+  IRuneAttributeP, IStructContent, ImplP, ImportP, InterfaceP, LoadAsP,
+  MacroCallP, SharednessP, NameP, NormalStructMemberP, ParamsP,
   PureAttributeP, SealedAttributeP, StructMembersP, StructP, TemplateRulesP, UnitP,
   VariadicStructMemberP, WeakableAttributeP,
 };
 
 // Re-export everything from expressions.rs
 pub use expressions::{
-  AndPE, AugmentPE, BinaryCallPE, BlockPE, BraceCallPE, BreakPE, ConsecutorPE, ConstantBoolPE,
-  ConstantFloatPE, ConstantIntPE, ConstantStrPE, ConstructArrayPE, DestructPE, DotPE, EachPE,
-  FunctionCallPE, IArraySizeP, IExpressionPE, IImpreciseNameP, IfPE, IndexPE, LambdaPE, LetPE,
-  LookupPE, MagicParamLookupPE, MethodCallPE, MutatePE, NotPE, OrPE, PackPE, RangePE, ReturnPE,
-  ShortcallPE, StaticSizedArraySizeP, StrInterpolatePE, SubExpressionPE, TemplateArgsP,
-  TransmigratePE, TuplePE, UnletPE, VoidPE, WhilePE,
+  AndPE, BinaryCallPE, BlockPE, BorrowPE, BraceCallPE, BreakPE, ConsecutorPE,
+  ConstantBoolPE, ConstantFloatPE, ConstantIntPE, ConstantStrPE, ConstructArrayPE, DestructPE,
+  DotPE, EachPE, FunctionCallPE, IArraySizeP, IExpressionPE, IImpreciseNameP, IfPE, IndexPE,
+  LambdaPE, LetPE, LookupPE, MagicParamLookupPE, MethodCallPE, MovePE, MutatePE, NotPE, OrPE,
+  PackPE, RangePE, ReturnPE, SharePE, ShortcallPE, StaticSizedArraySizeP, StrInterpolatePE,
+  SubExpressionPE, TemplateArgsP, TransmigratePE, TuplePE, UnletPE, VoidPE, WeakPE, WhilePE,
 };
 
 // Re-export everything from pattern.rs
@@ -40,7 +40,7 @@ pub use rules::{
 
 // Re-export everything from templex.rs
 pub use templex::{
-  AnonymousRunePT, BoolPT, CallPT, FuncPT, FunctionPT, ITemplexPT, InlinePT, IntPT, InterpretedPT,
-  LocationPT, SharednessPT, NameOrRunePT, OwnershipPT, PackPT, PointPT, RegionRunePT,
-  RuntimeSizedArrayPT, SharePT, StaticSizedArrayPT, StringPT, TuplePT, TypedRunePT,
+  AnonymousRunePT, BoolPT, BorrowRefPT, CallPT, FuncPT, FunctionPT, HeapOwnRefPT, ITemplexPT,
+  InlinePT, IntPT, SharednessPT, NameOrRunePT, PackPT, PointPT, RegionRunePT,
+  RuntimeSizedArrayPT, ShareRefPT, StaticSizedArrayPT, StringPT, TuplePT, TypedRunePT, WeakRefPT,
 };

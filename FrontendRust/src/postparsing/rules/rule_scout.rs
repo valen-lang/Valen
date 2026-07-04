@@ -4,7 +4,8 @@
 
 use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
-use crate::parsing::ast::{BuiltinCallPR, ComponentsPR, EqualsPR, IntPT, IRulexPR, ITypePR, ITemplexPT, OwnershipPT};
+use crate::parsing::ast::{BuiltinCallPR, ComponentsPR, EqualsPR, IntPT, IRulexPR, ITypePR, ITemplexPT};
+// STUB: onion typing — OwnershipPT retired at parser layer.
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, CoordTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
@@ -227,11 +228,7 @@ fn translate_rulex<'s, 'p>(
               ITemplexPT::Int(IntPT { value, .. }) => {
                 ILiteralSL::IntLiteral(IntLiteralSL { value: *value })
               }
-              ITemplexPT::Ownership(OwnershipPT(_, ownership)) => {
-                ILiteralSL::OwnershipLiteral(OwnershipLiteralSL {
-                  ownership: *ownership,
-                })
-              }
+              // STUB: onion typing — ITemplexPT::Ownership atom retired.
               _ => panic!("POSTPARSER_BUILTINCALL_ANY_ARG_NOT_INT_OR_OWNERSHIP"),
             },
             _ => panic!("POSTPARSER_BUILTINCALL_ANY_ARG_NOT_TEMPLEX"),

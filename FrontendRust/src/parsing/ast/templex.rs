@@ -1,4 +1,4 @@
-use super::ast::{LocationP, SharednessP, NameP, OwnershipP};
+use super::ast::{SharednessP, NameP};
 use super::rules::ITypePR;
 use crate::interner::StrI;
 use crate::lexing::RangeL;
@@ -14,16 +14,16 @@ pub enum ITemplexPT<'p> {
   Inline(InlinePT<'p>),
   Int(IntPT),
   RegionRune(RegionRunePT<'p>),
-  Location(LocationPT),
   Tuple(TuplePT<'p>),
   NameOrRune(NameOrRunePT<'p>),
-  Interpreted(InterpretedPT<'p>),
-  Ownership(OwnershipPT),
+  BorrowRef(BorrowRefPT<'p>),
+  WeakRef(WeakRefPT<'p>),
+  ShareRef(ShareRefPT<'p>),
+  HeapOwnRef(HeapOwnRefPT<'p>),
   Pack(PackPT<'p>),
   Func(FuncPT<'p>),
   StaticSizedArray(StaticSizedArrayPT<'p>),
   RuntimeSizedArray(RuntimeSizedArrayPT<'p>),
-  Share(SharePT<'p>),
   String(StringPT<'p>),
   TypedRune(TypedRunePT<'p>),
 }
@@ -38,16 +38,16 @@ impl ITemplexPT<'_> {
       ITemplexPT::Inline(r) => r.range,
       ITemplexPT::Int(r) => r.range,
       ITemplexPT::RegionRune(r) => r.range,
-      ITemplexPT::Location(r) => r.range,
       ITemplexPT::Tuple(r) => r.range,
       ITemplexPT::NameOrRune(n) => n.name.0,
-      ITemplexPT::Interpreted(r) => r.range,
-      ITemplexPT::Ownership(r) => r.0,
+      ITemplexPT::BorrowRef(r) => r.range,
+      ITemplexPT::WeakRef(r) => r.range,
+      ITemplexPT::ShareRef(r) => r.range,
+      ITemplexPT::HeapOwnRef(r) => r.range,
       ITemplexPT::Pack(p) => p.range,
       ITemplexPT::Func(r) => r.range,
       ITemplexPT::StaticSizedArray(r) => r.range,
       ITemplexPT::RuntimeSizedArray(r) => r.range,
-      ITemplexPT::Share(r) => r.range,
       ITemplexPT::String(r) => r.range,
       ITemplexPT::TypedRune(r) => r.range,
     }
@@ -114,13 +114,6 @@ pub struct RegionRunePT<'p> {
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct LocationPT {
-  pub range: RangeL,
-  pub location: LocationP,
-}
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TuplePT<'p> {
   pub range: RangeL,
   pub elements: &'p [&'p ITemplexPT<'p>],
@@ -145,23 +138,32 @@ impl<'p> NameOrRunePT<'p> {
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct InterpretedPT<'p> {
+pub struct BorrowRefPT<'p> {
   pub range: RangeL,
-  pub maybe_ownership: Option<&'p OwnershipPT>,
-  pub maybe_region: Option<&'p RegionRunePT<'p>>,
   pub inner: &'p ITemplexPT<'p>,
-  _sealed: (),
-}
-impl<'p> InterpretedPT<'p> {
-  pub fn new(range: RangeL, maybe_ownership: Option<&'p OwnershipPT>, maybe_region: Option<&'p RegionRunePT<'p>>, inner: &'p ITemplexPT<'p>) -> Self {
-    assert!(maybe_ownership.is_some() || maybe_region.is_some(), "vassert: InterpretedPT must have ownership or region");
-    Self { range, maybe_ownership, maybe_region, inner, _sealed: () }
-  }
+  pub region: Option<&'p RegionRunePT<'p>>,
 }
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct OwnershipPT(pub RangeL, pub OwnershipP);
+pub struct WeakRefPT<'p> {
+  pub range: RangeL,
+  pub inner: &'p ITemplexPT<'p>,
+}
+
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ShareRefPT<'p> {
+  pub range: RangeL,
+  pub inner: &'p ITemplexPT<'p>,
+}
+
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct HeapOwnRefPT<'p> {
+  pub range: RangeL,
+  pub inner: &'p ITemplexPT<'p>,
+}
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -194,13 +196,6 @@ pub struct StaticSizedArrayPT<'p> {
 pub struct RuntimeSizedArrayPT<'p> {
   pub range: RangeL,
   pub element: &'p ITemplexPT<'p>,
-}
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct SharePT<'p> {
-  pub range: RangeL,
-  pub inner: &'p ITemplexPT<'p>,
 }
 
 

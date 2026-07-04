@@ -607,8 +607,7 @@ fn foreach_with_borrow() {
         destructure: None,
         ..
       },
-      iterable_expr: IExpressionPE::Augment(AugmentPE {
-        target_ownership: OwnershipP::Borrow,
+      iterable_expr: IExpressionPE::Borrow(BorrowPE {
         inner: IExpressionPE::Lookup(LookupPE {
           name: IImpreciseNameP::LookupName(NameP(_, StrI("myList"))),
           template_args: None,

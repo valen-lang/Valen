@@ -7,7 +7,8 @@ use crate::postparsing::rules::rules::IRulexSR;
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::rules::rules::ILiteralSL;
 use crate::parsing::ast::SharednessP;
-use crate::parsing::ast::OwnershipP;
+// STUB: onion typing — OwnershipP retired at parser layer.
+// use crate::parsing::ast::OwnershipP;
 use crate::postparsing::rules::rules::RuneUsage;
 use crate::postparsing::rune_type_solver::IRuneTypeRuleError;
 
@@ -366,16 +367,10 @@ fn humanize_literal(
   }
 }
 
-pub fn humanize_ownership(
-  p: OwnershipP,
-) -> String {
-  match p {
-    OwnershipP::Own => "^".to_string(),
-    OwnershipP::Share => "@".to_string(),
-    OwnershipP::Borrow => "&".to_string(),
-    OwnershipP::Weak => "&&".to_string(),
-    OwnershipP::Live => panic!("Unimplemented: humanize_ownership Live"),
-  }
+// STUB: onion typing — OwnershipP retired. humanize_ownership rewritten to take
+// () pending the downstream slice that migrates callers to 4 structural variants.
+pub fn humanize_ownership(_p: ()) -> String {
+  panic!("STUB: onion typing — humanize_ownership retired with OwnershipP");
 }
 
 fn humanize_region<'s>(

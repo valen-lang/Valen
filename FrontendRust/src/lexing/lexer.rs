@@ -141,14 +141,6 @@ where
       ))));
     }
 
-    if iter.try_skip_complete_word("additive") {
-      let end = iter.get_pos();
-      return Ok(Some(IAttributeL::AdditiveAttribute(RangeL::new(
-        attribute_begin,
-        end,
-      ))));
-    }
-
     if iter.try_skip_complete_word("extern") {
       let maybe_custom_name = if iter.peek() == '(' {
         Some(self.lex_parend(iter)?.unwrap())
@@ -165,14 +157,6 @@ where
     if iter.try_skip_complete_word("exported") {
       let end = iter.get_pos();
       return Ok(Some(IAttributeL::ExportAttribute(RangeL::new(
-        attribute_begin,
-        end,
-      ))));
-    }
-
-    if iter.try_skip_complete_word("linear") {
-      let end = iter.get_pos();
-      return Ok(Some(IAttributeL::LinearAttribute(RangeL::new(
         attribute_begin,
         end,
       ))));

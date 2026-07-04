@@ -12,7 +12,7 @@ pub struct FailedParse<'p> {
 #[derive(Debug)]
 pub enum ParseError {
   RangedInternalError { pos: i32, msg: String },
-  UnrecognizableExpressionAfterAugment(i32),
+  UnrecognizableExpressionAfterRefPrefix(i32),
   OnlyRegionRunesCanHaveMutability(i32),
   BadMemberEnd(i32),
   BadLambdaBegin(i32),
@@ -119,7 +119,7 @@ impl ParseError {
   pub fn pos(&self) -> i32 {
     match self {
       ParseError::RangedInternalError { pos, .. } => *pos,
-      ParseError::UnrecognizableExpressionAfterAugment(p) => *p,
+      ParseError::UnrecognizableExpressionAfterRefPrefix(p) => *p,
       ParseError::OnlyRegionRunesCanHaveMutability(p) => *p,
       ParseError::BadMemberEnd(p) => *p,
       ParseError::BadLambdaBegin(p) => *p,

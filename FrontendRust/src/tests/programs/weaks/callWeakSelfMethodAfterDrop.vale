@@ -1,8 +1,8 @@
 
 weakable struct Muta { hp int; }
-sealed weakable interface IUnit { func getHp(virtual self &&IUnit) int; }
+sealed weakable interface IUnit { func getHp(virtual self weak IUnit) int; }
 impl IUnit for Muta;
-func getHp(self &&Muta) int {
+func getHp(self weak Muta) int {
   maybeBorrowSelf = lock(self);
   return if (maybeBorrowSelf.isEmpty()) {
       drop(^maybeBorrowSelf);
@@ -15,7 +15,7 @@ func getHp(self &&Muta) int {
 
 exported func main() int {
   ownMuta = Muta(73);
-  weakUnit &&IUnit = &&ownMuta;
+  weakUnit weak IUnit = weak ownMuta;
   drop(^ownMuta);
   return getHp(weakUnit);
 }
