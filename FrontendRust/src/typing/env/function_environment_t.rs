@@ -1,6 +1,6 @@
 use crate::utils::fx::HashSet;
 use crate::utils::fx::IndexSet;
-use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::FunctionS;
 use crate::scout_arena::ScoutArena;
 use crate::postparsing::expressions::IExpressionSE;
 use crate::postparsing::names::IImpreciseNameS;
@@ -30,7 +30,7 @@ where 's: 't,
   pub parent_env: IEnvironmentT<'s, 't>,
   pub id: IdT<'s, 't>,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
-  pub function: &'s FunctionA<'s>,
+  pub function: &'s FunctionS<'s>,
   pub variables: &'t [IVariableT<'s, 't>],
   pub is_root_compiling_denizen: bool,
 }
@@ -116,7 +116,7 @@ where 's: 't,
   pub id: IdT<'s, 't>,
   pub template_args: &'t [ITemplataT<'s, 't>],
   pub templatas: &'t TemplatasStoreT<'s, 't>,
-  pub function: &'s FunctionA<'s>,
+  pub function: &'s FunctionS<'s>,
   pub variables: &'t [IVariableT<'s, 't>],
   pub is_root_compiling_denizen: bool,
   pub default_region: RegionT,
@@ -237,7 +237,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   }
   
 
-  pub fn function(&self) -> &'s FunctionA<'s> {
+  pub fn function(&self) -> &'s FunctionS<'s> {
     panic!("Unimplemented: function");
     // parentFunctionEnv.function
   }
@@ -576,7 +576,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   }
 
 
-  pub fn function(&self) -> &'s FunctionA<'s> {
+  pub fn function(&self) -> &'s FunctionS<'s> {
     panic!("Unimplemented: function");
     // nodeEnvironment.function
   }
@@ -773,7 +773,7 @@ where 's: 't,
   pub template_id: IdT<'s, 't>,
   pub id: IdT<'s, 't>,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
-  pub function: &'s FunctionA<'s>,
+  pub function: &'s FunctionS<'s>,
   pub maybe_return_type: Option<CoordT<'s, 't>>,
   pub closured_locals: &'t [IVariableT<'s, 't>],
   pub is_root_compiling_denizen: bool,
@@ -1191,7 +1191,7 @@ where 's: 't,
   pub parent_env: IEnvironmentT<'s, 't>,
   pub id: IdT<'s, 't>,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
-  pub function: &'s FunctionA<'s>,
+  pub function: &'s FunctionS<'s>,
   pub variables: Vec<IVariableT<'s, 't>>,
   pub is_root_compiling_denizen: bool,
 }
@@ -1227,7 +1227,7 @@ where 's: 't,
   pub id: IdT<'s, 't>,
   pub template_args: Vec<ITemplataT<'s, 't>>,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
-  pub function: &'s FunctionA<'s>,
+  pub function: &'s FunctionS<'s>,
   pub variables: Vec<IVariableT<'s, 't>>,
   pub is_root_compiling_denizen: bool,
   pub default_region: RegionT,
@@ -1267,7 +1267,7 @@ where 's: 't,
   pub template_id: IdT<'s, 't>,
   pub id: IdT<'s, 't>,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
-  pub function: &'s FunctionA<'s>,
+  pub function: &'s FunctionS<'s>,
   pub maybe_return_type: Option<CoordT<'s, 't>>,
   pub closured_locals: Vec<IVariableT<'s, 't>>,
   pub is_root_compiling_denizen: bool,

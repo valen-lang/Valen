@@ -2,7 +2,6 @@
 
 use bumpalo::Bump;
 use crate::compile_options::GlobalOptions;
-use crate::higher_typing::HigherTypingCompilation;
 use crate::instantiating::InstantiatorCompilationOptions;
 use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;

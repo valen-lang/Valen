@@ -2,7 +2,7 @@ use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
@@ -21,7 +21,6 @@ use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::rules::rules::*;
 use std::marker::PhantomData;
 use crate::postparsing::ast::ICitizenAttributeS;
-use crate::typing::templata::conversions::evaluate_mutability;
 use crate::utils::fx::IndexMap;
 use crate::utils::fx::HashMap;
 pub struct UncheckedDefiningConclusions<'s, 't> {
@@ -269,7 +268,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         name: IFunctionDeclarationNameS<'s>,
-        function_s: &'s FunctionA<'s>,
+        function_s: &'s FunctionS<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
     ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
         self.make_closure_understruct_core(

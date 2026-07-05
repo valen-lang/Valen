@@ -1303,7 +1303,7 @@ fn visit_function_templata<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::FunctionTemplata(x));
-    // Stop at trait level for env / FunctionA — see TL.md "What This Plan Deliberately Does NOT Cover".
+    // Stop at trait level for env / FunctionS — see TL.md "What This Plan Deliberately Does NOT Cover".
 }
 
 fn visit_struct_definition_templata<'s, 't, T, F>(

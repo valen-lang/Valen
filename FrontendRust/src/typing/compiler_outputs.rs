@@ -1,4 +1,4 @@
-use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::FunctionS;
 use crate::interner::{Interner, StrI};
 use crate::utils::fx::{HashMap, HashSet};
 use crate::utils::fx::IndexMap;
@@ -43,7 +43,7 @@ where 's: 't,
     EvaluateFunction {
         name: &'t IdT<'s, 't>,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
-        origin: &'s FunctionA<'s>,
+        origin: &'s FunctionS<'s>,
         template_args: &'t [ITemplataT<'s, 't>],
     },
     

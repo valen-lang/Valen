@@ -1,7 +1,7 @@
 use crate::interner::StrI;
 use crate::utils::range::RangeS;
 
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 
 use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
@@ -23,7 +23,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'t>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionA<'s>>,
+        origin_function: Option<&FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {

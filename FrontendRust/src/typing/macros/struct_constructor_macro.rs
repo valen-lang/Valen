@@ -13,16 +13,16 @@ use crate::typing::compiler::Compiler;
 use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT};
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ImplicitCoercionKindRuneValS, ICitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
-use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
+use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
 use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
 use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS, IStructMemberS};
-use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
+use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::names::names::IdValT;
 use crate::utils::fx::HashMap;
-use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::FunctionS;
 use crate::postparsing::names::IFunctionDeclarationNameS;
 
 
@@ -32,7 +32,7 @@ where 's: 't,
     pub fn get_struct_sibling_entries_struct_constructor(
         &self,
         struct_name: IdT<'s, 't>,
-        struct_a: &'s StructA<'s>,
+        struct_a: &'s StructS<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
 
         if struct_a.members.iter().any(|m| matches!(m, IStructMemberS::VariadicStructMember(_))) {
@@ -123,7 +123,7 @@ where 's: 't,
         for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }
         let params_slice = self.scout_arena.alloc_slice_from_vec(params);
         let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
-        let function_a = self.scout_arena.alloc(FunctionA::new(
+        let function_a = self.scout_arena.alloc(FunctionS::new(
             struct_a.range,
             IFunctionDeclarationNameS::ConstructorName(
                 &*self.scout_arena.alloc(ConstructorNameS { tlcd: struct_name_as_citizen })
@@ -157,7 +157,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'t>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionA<'s>>,
+        origin_function: Option<&FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {

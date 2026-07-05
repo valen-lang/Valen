@@ -19,20 +19,17 @@ use crate::typing::infer_compiler::*;
 use crate::typing::overload_resolver::*;
 use crate::typing::compilation::TypingPassOptions;
 use crate::solver::solver::*;
-use crate::higher_typing::ast::*;
-use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::*;
+use crate::postparsing::ast::FunctionS;
 use crate::typing::citizen::struct_compiler::*;
 use crate::utils::code_hierarchy::FileCoordinate;
 use crate::typing::types::types::OwnershipT;
 use crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name;
 use crate::postparsing::post_parser_error_humanizer::humanize_name_for_struct_declaration;
-use crate::postparsing::post_parser_error_humanizer::humanize_ownership;
 use crate::postparsing::post_parser_error_humanizer::humanize_rule;
 use crate::postparsing::post_parser_error_humanizer::humanize_rune;
-use crate::postparsing::post_parser_error_humanizer::humanize_rune_type_error;
 use crate::postparsing::post_parser_error_humanizer::humanize_templata_type;
-use crate::postparsing::rune_type_solver::IRuneTypeRuleError;
-use crate::typing::templata::conversions::unevaluate_ownership;
+use crate::typing::rune_typing::rune_type_solver::IRuneTypeRuleError;
 use crate::solver::solver_error_humanizer::humanize_failed_solve as solver_humanize_failed_solve;
 use crate::utils::source_code_utils::humanize_package;
 use std::iter::once;
@@ -421,7 +418,7 @@ fn printable_var_name<'s, 't>(name: IVarNameT<'s, 't>) -> String {
   }
 }
 
-fn get_file(function_a: FunctionA) -> FileCoordinate {
+fn get_file(function_a: FunctionS) -> FileCoordinate {
   panic!("Unimplemented: get_file");
   // functionA.range.file
 }

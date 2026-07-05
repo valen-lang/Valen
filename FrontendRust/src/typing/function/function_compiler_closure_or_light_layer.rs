@@ -16,7 +16,7 @@ use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::infer_compiler::InitialKnown;
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
@@ -38,7 +38,7 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         closure_struct_ref: StructTT<'s, 't>,
-        function: &'s FunctionA<'s>,
+        function: &'s FunctionS<'s>,
         already_specified_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
@@ -73,7 +73,7 @@ where 's: 't,
         call_range: Vec<RangeS>,
         call_location: LocationInDenizen,
         closure_struct_ref: StructTT,
-        function: FunctionA,
+        function: FunctionS,
         already_specified_template_args: Vec<ITemplataT>,
         context_region: RegionT,
         arg_types: Vec<CoordT>,
@@ -92,7 +92,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT,
         call_range: Vec<RangeS>,
         call_location: LocationInDenizen,
-        function: FunctionA,
+        function: FunctionS,
         explicit_template_args: Vec<ITemplataT>,
         context_region: RegionT,
         arg_types: Vec<CoordT>,
@@ -111,7 +111,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        function: &'s FunctionA<'s>,
+        function: &'s FunctionS<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[Option<CoordT<'s, 't>>],
@@ -144,7 +144,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        function: &'s FunctionA<'s>,
+        function: &'s FunctionS<'s>,
         args: &[Option<CoordT<'s, 't>>],
     ) -> Result<IDefineFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         self.check_not_closure(function);
@@ -173,7 +173,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        function: &'s FunctionA<'s>,
+        function: &'s FunctionS<'s>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
         let function_template_name = self.translate_generic_function_name(function.name);
         let function_name_local: INameT<'s, 't> = match function_template_name {
@@ -200,7 +200,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        function: &'s FunctionA<'s>,
+        function: &'s FunctionS<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
@@ -221,7 +221,7 @@ where 's: 't,
         parent_env: IInDenizenEnvironmentT,
         coutputs: CompilerOutputs,
         calling_env: IInDenizenEnvironmentT,
-        function: FunctionA,
+        function: FunctionS,
         call_range: Vec<RangeS>,
         call_location: LocationInDenizen,
         already_specified_template_args: Vec<ITemplataT>,
@@ -238,7 +238,7 @@ where 's: 't,
     fn make_env_without_closure_stuff(
         &self,
         outer_env: IEnvironmentT<'s, 't>,
-        function: &'s FunctionA<'s>,
+        function: &'s FunctionS<'s>,
         template_id: &'t IdT<'s, 't>,
         is_root_compiling_denizen: bool,
     ) -> &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't> {
@@ -254,7 +254,7 @@ where 's: 't,
         })
     }
 
-    fn check_not_closure(&self, function: &'s FunctionA<'s>) {
+    fn check_not_closure(&self, function: &'s FunctionS<'s>) {
         match &function.body {
             IBodyS::CodeBody(body1) => assert!(body1.body.closured_names.is_empty()),
             IBodyS::ExternBody(_) => {}

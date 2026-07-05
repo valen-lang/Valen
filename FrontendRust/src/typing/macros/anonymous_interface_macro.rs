@@ -1,4 +1,4 @@
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 use crate::postparsing::ast::NormalStructMemberS;
 use crate::postparsing::names::{AnonymousSubstructTemplateNameS, IRuneS};
 use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
@@ -11,26 +11,20 @@ use crate::postparsing::rules::rules::LookupSR;
 use crate::postparsing::rules::rules::CallSR;
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType};
 use crate::typing::names::names::IdValT;
-use crate::higher_typing::ast::ImplA;
+use crate::postparsing::ast::ImplS;
 use crate::utils::arena_index_map::ArenaIndexMap;
-use crate::postparsing::rules::rules::CoerceToCoordSR;
-use crate::postparsing::rules::rules::AugmentSR;
 use crate::postparsing::names::{IRuneValS, AnonymousSubstructMethodInheritedRuneValS};
 use crate::postparsing::names::AnonymousSubstructVoidKindRuneS;
-use crate::postparsing::names::AnonymousSubstructVoidCoordRuneS;
 use crate::postparsing::names::CodeNameS;
 use crate::postparsing::names::IImpreciseNameValS;
-use crate::postparsing::itemplatatype::CoordTemplataType;
 use crate::utils::range::RangeS;
-use crate::postparsing::rules::rules::PackSR;
+use crate::postparsing::rules::rules::KindListSR;
 use crate::postparsing::rules::rules::DefinitionFuncSR;
 use crate::postparsing::rules::rules::CallSiteFuncSR;
 use crate::postparsing::rules::rules::ResolveSR;
-use crate::postparsing::itemplatatype::{PackTemplataType, PrototypeTemplataType};
+use crate::postparsing::itemplatatype::{PackTemplataType};
 use crate::postparsing::ast::ParameterS;
-use crate::postparsing::itemplatatype::OwnershipTemplataType;
 use crate::postparsing::itemplatatype::FunctionTemplataType;
-use crate::postparsing::rules::rules::CoordComponentsSR;
 use crate::postparsing::ast::{GenericParameterS, IBodyS, CodeBodyS, LocationInDenizen, AbstractSP};
 use crate::postparsing::expressions::{BodySE, BlockSE, IExpressionSE, FunctionCallSE, DotSE, LocalLoadSE, LocalS, IVariableUseCertainty, OwnershippedSE};
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
@@ -38,7 +32,7 @@ use crate::parsing::ast::ast::LoadAsP;
 use crate::postparsing::names::AnonymousSubstructMemberRuneS;
 use crate::postparsing::names::INameS;
 use crate::postparsing::ast::IGenericParameterTypeS;
-use crate::postparsing::ast::CoordGenericParameterTypeS;
+use crate::postparsing::ast::KindGenericParameterTypeS;
 use crate::postparsing::ast::IStructMemberS;
 use crate::postparsing::names::IStructDeclarationNameS;
 
@@ -49,14 +43,9 @@ where 's: 't,
     pub fn get_interface_sibling_entries_anonymous_interface(
         &self,
         interface_name: IdT<'s, 't>,
-        interface_a: &'s InterfaceA<'s>,
+        interface_a: &'s InterfaceS<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        use crate::postparsing::names::{
-            IRuneValS, AnonymousSubstructTemplateNameS, AnonymousSubstructImplDeclarationNameS,
-            AnonymousSubstructTemplateRuneS, AnonymousSubstructKindRuneS,
-            AnonymousSubstructParentInterfaceTemplateRuneS, AnonymousSubstructParentInterfaceKindRuneS,
-            IImplDeclarationNameS,
-        };
+        use crate::postparsing::names::{IRuneValS, AnonymousSubstructTemplateNameS, AnonymousSubstructImplDeclarationNameS, AnonymousSubstructTemplateRuneS, AnonymousSubstructKindRuneS, AnonymousSubstructParentInterfaceTemplateRuneS, AnonymousSubstructParentInterfaceKindRuneS, IImplDeclarationNameS};
 
         if interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Sealed(_))) {
             return vec![];
@@ -178,7 +167,7 @@ where 's: 't,
         );
 
         let rules_slice = self.scout_arena.alloc_slice_from_vec(rules);
-        let impl_a = self.scout_arena.alloc(ImplA::new(
+        let impl_a = self.scout_arena.alloc(ImplS::new(
             interface_a.range,
             impl_name_s,
             struct_a.generic_parameters,
@@ -324,8 +313,8 @@ where 's: 't,
 
     pub fn inherited_method_rune_anonymous_interface(
         &self,
-        interface_a: &'s InterfaceA<'s>,
-        method: &'s FunctionA<'s>,
+        interface_a: &'s InterfaceS<'s>,
+        method: &'s FunctionS<'s>,
         rune: IRuneS<'s>,
     ) -> IRuneS<'s> {
         self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructMethodInheritedRune(
@@ -338,11 +327,11 @@ where 's: 't,
 
     pub fn make_struct_anonymous_interface(
         &self,
-        interface_a: &'s InterfaceA<'s>,
+        interface_a: &'s InterfaceS<'s>,
         member_runes: &[RuneUsage<'s>],
         members: &[NormalStructMemberS<'s>],
         struct_template_name_s: AnonymousSubstructTemplateNameS<'s>,
-    ) -> &'s StructA<'s> {
+    ) -> &'s StructS<'s> {
 
         let range = |n: i32| RangeS::internal(self.scout_arena, n);
         let use_rune = |n: i32, rune: IRuneS<'s>| RuneUsage { range: range(n), rune };
@@ -397,16 +386,7 @@ where 's: 't,
             struct_generic_params.push(gp);
         }
 
-        use crate::postparsing::names::{
-            AnonymousSubstructMethodSelfBorrowCoordRuneS,
-            AnonymousSubstructMethodSelfOwnCoordRuneS,
-            AnonymousSubstructFunctionBoundParamsListRuneS,
-            AnonymousSubstructFunctionInterfaceTemplateRuneS,
-            AnonymousSubstructFunctionInterfaceKindRuneS,
-            AnonymousSubstructFunctionBoundPrototypeRuneS,
-            AnonymousSubstructDropBoundParamsListRuneS,
-            AnonymousSubstructDropBoundPrototypeRuneS,
-        };
+        use crate::postparsing::names::{AnonymousSubstructMethodSelfBorrowKindRuneS, AnonymousSubstructFunctionBoundParamsListRuneS, AnonymousSubstructFunctionInterfaceTemplateRuneS, AnonymousSubstructFunctionInterfaceKindRuneS, AnonymousSubstructFunctionBoundPrototypeRuneS, AnonymousSubstructDropBoundParamsListRuneS, AnonymousSubstructDropBoundPrototypeRuneS};
         for ((internal_method, member_rune), _method_index) in
             interface_a.internal_methods.iter().zip(member_runes.iter()).zip(0i32..) {
             let internal_method = *internal_method;
@@ -666,7 +646,7 @@ where 's: 't,
         let members_slice: &'s [IStructMemberS<'s>] = self.scout_arena.alloc_slice_from_vec(
             members.iter().map(|m| IStructMemberS::NormalStructMember(*m)).collect::<Vec<_>>());
 
-        let struct_a = StructA::new(
+        let struct_a = StructS::new(
           interface_a.range,
           IStructDeclarationNameS::AnonymousSubstructTemplateName(
                 *self.scout_arena.alloc(struct_template_name_s)),
@@ -688,18 +668,12 @@ where 's: 't,
     pub fn make_forwarder_function_anonymous_interface(
         &self,
         struct_name_s: AnonymousSubstructTemplateNameS<'s>,
-        interface: &'s InterfaceA<'s>,
-        struct_: &'s StructA<'s>,
-        method: &'s FunctionA<'s>,
+        interface: &'s InterfaceS<'s>,
+        struct_: &'s StructS<'s>,
+        method: &'s FunctionS<'s>,
         method_index: i32,
-    ) -> &'s FunctionA<'s> {
-        use crate::postparsing::names::{
-            IRuneValS, INameValS, IVarNameS, SelfOwnershipRuneS, SelfKindRuneS, SelfCoordRuneS,
-            SelfKindTemplateRuneS, AnonymousSubstructParentInterfaceTemplateRuneS,
-            AnonymousSubstructTemplateImpreciseNameValS, IImpreciseNameValS,
-            IFunctionDeclarationNameValS, ForwarderFunctionDeclarationNameValS,
-            INameS, IRuneS,
-        };
+    ) -> &'s FunctionS<'s> {
+        use crate::postparsing::names::{IRuneValS, INameValS, IVarNameS, SelfKindRuneS, SelfKindTemplateRuneS, AnonymousSubstructParentInterfaceTemplateRuneS, AnonymousSubstructTemplateImpreciseNameValS, IImpreciseNameValS, IFunctionDeclarationNameValS, ForwarderFunctionDeclarationNameValS, INameS, IRuneS};
 
         let struct_type = struct_.tyype;
         let method_range = method.range;
@@ -940,7 +914,7 @@ where 's: 't,
         let generic_params_slice = self.scout_arena.alloc_slice_from_vec(generic_params_vec);
         let rune_to_type_map = self.scout_arena.alloc_index_map_from_iter(rune_to_type);
 
-        self.scout_arena.alloc(FunctionA::new(
+        self.scout_arena.alloc(FunctionS::new(
             method_range,
             forwarder_name,
             attributes,

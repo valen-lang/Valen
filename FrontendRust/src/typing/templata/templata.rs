@@ -1,18 +1,12 @@
 use crate::interner::StrI;
-use crate::higher_typing::ast::*;
-use crate::postparsing::itemplatatype::{
-  BooleanTemplataType, CoordTemplataType, ITemplataType, ImplTemplataType,
-  IntegerTemplataType, KindTemplataType, LocationTemplataType,
-  OwnershipTemplataType, PrototypeTemplataType,
-  StringTemplataType, TemplateTemplataType,
-};
+use crate::postparsing::ast::*;
+use crate::postparsing::itemplatatype::{BooleanTemplataType, ITemplataType, ImplTemplataType, IntegerTemplataType, KindTemplataType, StringTemplataType, TemplateTemplataType};
 use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
 use crate::typing::env::environment::*;
 use crate::typing::names::names::IdT;
 use crate::typing::types::types::*;
 use crate::utils::range::RangeS;
 use crate::scout_arena::ScoutArena;
-use crate::higher_typing::ast::CitizenA;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::fmt::Result;
@@ -179,7 +173,7 @@ pub struct StaticSizedArrayTemplateTemplataT {
 #[derive(Copy, Clone, Debug)]
 pub struct FunctionTemplataT<'s, 't> {
   pub outer_env: IEnvironmentT<'s, 't>,
-  pub function: &'s FunctionA<'s>,
+  pub function: &'s FunctionS<'s>,
 }
 impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
   fn eq(&self, other: &Self) -> bool {
@@ -216,7 +210,7 @@ impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
   pub declaring_env: IEnvironmentT<'s, 't>,
-  pub origin_struct: &'s StructA<'s>,
+  pub origin_struct: &'s StructS<'s>,
 }
 
 
@@ -232,25 +226,25 @@ pub enum IContainer<'s> {
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ContainerInterface<'s> {
-  pub interface: &'s InterfaceA<'s>,
+  pub interface: &'s InterfaceS<'s>,
 }
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ContainerStruct<'s> {
-  pub struct_: &'s StructA<'s>,
+  pub struct_: &'s StructS<'s>,
 }
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ContainerFunction<'s> {
-  pub function: &'s FunctionA<'s>,
+  pub function: &'s FunctionS<'s>,
 }
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ContainerImpl<'s> {
-  pub impl_: &'s ImplA<'s>,
+  pub impl_: &'s ImplS<'s>,
 }
 
 /// Value-type (see @TFITCX)
@@ -280,7 +274,7 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceDefinitionTemplataT<'s, 't> {
   pub declaring_env: IEnvironmentT<'s, 't>,
-  pub origin_interface: &'s InterfaceA<'s>,
+  pub origin_interface: &'s InterfaceS<'s>,
 }
 
 
@@ -288,7 +282,7 @@ pub struct InterfaceDefinitionTemplataT<'s, 't> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {
   pub env: IEnvironmentT<'s, 't>,
-  pub impl_: &'s ImplA<'s>,
+  pub impl_: &'s ImplS<'s>,
 }
 
 /// Value-type (see @TFITCX)

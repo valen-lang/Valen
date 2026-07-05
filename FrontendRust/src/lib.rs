@@ -24,7 +24,7 @@ pub mod parsing;
 pub mod pass_manager;
 pub mod postparsing;
 // pub mod simplifying;
-// pub mod typing;
+pub mod typing;
 // pub mod tests;
 // #[cfg(test)]
 // pub mod testvm;

@@ -1,7 +1,7 @@
 use crate::interner::StrI;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
@@ -16,18 +16,18 @@ use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT};
 use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, MacroVoidCoordRuneS, SelfKindTemplateRuneS, SelfKindRuneS, SelfCoordRuneS, IVarNameS, CodeVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
-use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
+use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, SelfKindTemplateRuneS, SelfKindRuneS, IVarNameS, CodeVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
+use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
 use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
 use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS};
-use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
+use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
 use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
 use crate::utils::range::CodeLocationS;
 use crate::utils::fx::HashMap;
 use crate::postparsing::itemplatatype::*;
 use crate::postparsing::names::IImpreciseNameValS;
 use crate::postparsing::names::CodeNameS;
-use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::FunctionS;
 use std::marker::PhantomData;
 
 
@@ -37,7 +37,7 @@ where 's: 't,
     pub fn get_struct_sibling_entries_struct_drop(
         &self,
         struct_name: IdT<'s, 't>,
-        struct_a: &'s StructA<'s>,
+        struct_a: &'s StructS<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
 
         let range = |n: i32| -> RangeS<'s> {
@@ -112,7 +112,7 @@ where 's: 't,
         let mut rune_to_type_map = self.scout_arena.alloc_index_map();
         for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }
         let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
-        let drop_function_a = self.scout_arena.alloc(FunctionA::new(
+        let drop_function_a = self.scout_arena.alloc(FunctionS::new(
             struct_a.range,
             name_s,
             &[],
@@ -153,7 +153,7 @@ where 's: 't,
         &self,
         drop_or_free_function_name_s: IFunctionDeclarationNameS<'s>,
         struct_range: RangeS<'s>,
-    ) -> FunctionA<'s> {
+    ) -> FunctionS<'s> {
 
         let internal_range = |n: i32| {
             let loc = CodeLocationS::internal(self.scout_arena, n);
@@ -213,7 +213,7 @@ where 's: 't,
             }),
         ]);
 
-        FunctionA::new(
+        FunctionS::new(
             struct_range,
             drop_or_free_function_name_s,
             self.scout_arena.alloc_slice_from_vec(vec![]),
@@ -238,7 +238,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'t>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        origin_function1: Option<&'s FunctionA<'s>>,
+        origin_function1: Option<&'s FunctionS<'s>>,
         params2: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {

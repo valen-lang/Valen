@@ -19,7 +19,7 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 use crate::interner::Interner;
 use crate::typing::infer_compiler::include_rule_in_call_site_solve;
 use crate::postparsing::itemplatatype::ITemplataType;

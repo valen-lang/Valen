@@ -1,6 +1,6 @@
 use crate::postparsing::names::{IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS};
 use crate::postparsing::rules::rules::IRulexSR;
-use crate::postparsing::rune_type_solver::RuneTypeSolveError;
+use crate::typing::rune_typing::rune_type_solver::RuneTypeSolveError;
 use crate::solver::solver::FailedSolve;
 use crate::typing::ast::ast::{KindExportT, PrototypeT, SignatureT};
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;

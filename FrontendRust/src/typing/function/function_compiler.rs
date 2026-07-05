@@ -1,4 +1,4 @@
-use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::FunctionS;
 use crate::postparsing::ast::{LocationInDenizen, IBodyS};
 use crate::postparsing::names::{IFunctionDeclarationNameS, IVarNameS};
 use crate::typing::ast::ast::FunctionHeaderT;
@@ -254,7 +254,7 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         name: IFunctionDeclarationNameS<'s>,
-        function_a: &'s FunctionA<'s>,
+        function_a: &'s FunctionS<'s>,
         verify_conclusions: bool,
     ) -> Result<StructTT<'s, 't>, ICompileErrorT<'s, 't>> {
         let code_body = match &function_a.body {

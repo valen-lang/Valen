@@ -2,7 +2,7 @@ use crate::utils::fx::HashSet;
 use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
@@ -69,7 +69,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        function1: &FunctionA<'s>,
+        function1: &FunctionS<'s>,
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> Result<PrototypeTemplataT<'s, 't>, ICompileErrorT<'s, 't>> {
         // Check preconditions
@@ -127,7 +127,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        function1: &FunctionA<'s>,
+        function1: &FunctionS<'s>,
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
         // Check preconditions
@@ -360,7 +360,7 @@ where 's: 't,
         rued_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
         coutputs: &CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
-        function1: &FunctionA<'s>,
+        function1: &FunctionS<'s>,
     ) -> Result<PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
         // Check preconditions
         for (template_param, _) in function1.rune_to_type.iter() {

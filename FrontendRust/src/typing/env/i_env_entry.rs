@@ -1,4 +1,4 @@
-use crate::higher_typing::ast::{FunctionA, ImplA, InterfaceA, StructA};
+use crate::postparsing::ast::{FunctionS, ImplS, InterfaceS, StructS};
 use crate::typing::templata::templata::ITemplataT;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -12,15 +12,15 @@ use std::ptr::eq;
 pub enum IEnvEntryT<'s, 't>
 where 's: 't,
 {
-  Function(&'s FunctionA<'s>),
-  Struct(&'s StructA<'s>),
-  Interface(&'s InterfaceA<'s>),
-  Impl(&'s ImplA<'s>),
+  Function(&'s FunctionS<'s>),
+  Struct(&'s StructS<'s>),
+  Interface(&'s InterfaceS<'s>),
+  Impl(&'s ImplS<'s>),
   Templata(ITemplataT<'s, 't>),
 }
 
 
-// FunctionA/StructA/InterfaceA/ImplA are arena-allocated (ATDCX) and don't
+// FunctionS/StructS/InterfaceS/ImplS are arena-allocated (ATDCX) and don't
 // derive PartialEq/Eq/Hash. Compare/hash those variants by pointer identity;
 // ITemplataT is itself Eq+Hash.
 impl<'s, 't> PartialEq for IEnvEntryT<'s, 't>
@@ -46,10 +46,10 @@ where 's: 't,
   fn hash<H: Hasher>(&self, state: &mut H) {
     discriminant(self).hash(state);
     match self {
-      IEnvEntryT::Function(a) => (*a as *const FunctionA<'s>).hash(state),
-      IEnvEntryT::Struct(a) => (*a as *const StructA<'s>).hash(state),
-      IEnvEntryT::Interface(a) => (*a as *const InterfaceA<'s>).hash(state),
-      IEnvEntryT::Impl(a) => (*a as *const ImplA<'s>).hash(state),
+      IEnvEntryT::Function(a) => (*a as *const FunctionS<'s>).hash(state),
+      IEnvEntryT::Struct(a) => (*a as *const StructS<'s>).hash(state),
+      IEnvEntryT::Interface(a) => (*a as *const InterfaceS<'s>).hash(state),
+      IEnvEntryT::Impl(a) => (*a as *const ImplS<'s>).hash(state),
       IEnvEntryT::Templata(t) => t.hash(state),
     }
   }

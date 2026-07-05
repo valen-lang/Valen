@@ -1,12 +1,11 @@
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::{LocationInDenizen, FunctionS, IFunctionAttributeS, UserFunctionS, IExpressionSE as IExpressionSETrait};
-use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType};
+use crate::postparsing::itemplatatype::{ITemplataType};
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::expressions::*;
 use crate::postparsing::patterns::patterns::AtomSP;
 use crate::postparsing::rules::rules::IRulexSR;
-use crate::higher_typing::ast::FunctionA;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
@@ -33,24 +32,23 @@ use crate::typing::citizen::impl_compiler::IsParentResult;
 use crate::typing::names::names::ArbitraryNameT;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::postparsing::names::ArbitraryNameS;
-use crate::postparsing::rune_type_solver::RuneTypeSolver;
+use crate::typing::rune_typing::rune_type_solver::RuneTypeSolver;
 use crate::typing::env::function_environment_t::NodeEnvironmentBox;
 use crate::typing::typing_interner::TypingInterner;
 use crate::scout_arena::ScoutArena;
-use crate::postparsing::rune_type_solver::IRuneTypeSolverEnv;
+use crate::typing::rune_typing::rune_type_solver::IRuneTypeSolverEnv;
 use crate::postparsing::names::IImpreciseNameS;
-use crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult;
-use crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError;
-use crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult;
-use crate::postparsing::rune_type_solver::TemplataLookupResult;
-use crate::postparsing::rune_type_solver::RuneTypingCouldntFindType;
-use crate::higher_typing::higher_typing_pass::explicify_lookups;
-use crate::higher_typing::patterns::get_rune_types_from_pattern;
+use crate::typing::rune_typing::rune_type_solver::IRuneTypeSolverLookupResult;
+use crate::typing::rune_typing::rune_type_solver::IRuneTypingLookupFailedError;
+use crate::typing::rune_typing::rune_type_solver::CitizenRuneTypeSolverLookupResult;
+use crate::typing::rune_typing::rune_type_solver::TemplataLookupResult;
+use crate::typing::rune_typing::rune_type_solver::RuneTypingCouldntFindType;
+use crate::typing::rune_typing::patterns::get_rune_types_from_pattern;
 use crate::postparsing::names::IRuneValS;
 use crate::postparsing::names::SelfRuneS;
 use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
 use crate::postparsing::rules::rules::RuneUsage;
-use crate::postparsing::rune_type_solver::solve_rune_type;
+use crate::typing::rune_typing::rune_type_solver::solve_rune_type;
 use crate::typing::names::names::RuneNameT;
 use std::iter::once;
 use std::marker::PhantomData;
@@ -2302,7 +2300,7 @@ where 's: 't,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &'t [RangeS<'s>],
         function_s: &'s FunctionS<'s>,
-    ) -> &'s FunctionA<'s> {
+    ) -> &'s FunctionS<'s> {
         let range_s = function_s.range;
         let name_s = *function_s.name;
         let attributes_s = function_s.attributes;
@@ -2368,7 +2366,7 @@ where 's: 't,
         let mut attributes: Vec<IFunctionAttributeS<'s>> = attributes_s.to_vec();
         attributes.push(IFunctionAttributeS::UserFunction(UserFunctionS));
 
-        self.scout_arena.alloc(FunctionA::new(
+        self.scout_arena.alloc(FunctionS::new(
             range_s,
             name_s,
             self.scout_arena.alloc_slice_from_vec(attributes),

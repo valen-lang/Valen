@@ -1,7 +1,7 @@
 use crate::utils::fx::HashMap;
 use crate::utils::fx::IndexMap;
 use std::marker::PhantomData;
-use crate::higher_typing::ast::{ProgramA, StructA, InterfaceA, FunctionA};
+use crate::postparsing::ast::{ProgramS, StructS, InterfaceS, FunctionS};
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::postparsing::ast::{ICitizenAttributeS, LocationInDenizen, MacroCallS};
@@ -509,7 +509,7 @@ where 's: 't,
         _coutputs: &mut CompilerOutputs<'s, 't>,
         _life: LocationInFunctionEnvironmentT<'t>,
         _call_range: &[RangeS<'s>],
-        _origin_function: Option<&'s FunctionA<'s>>,
+        _origin_function: Option<&'s FunctionS<'s>>,
         _param_coords: &[ParameterT<'s, 't>],
         _maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> &'t FunctionHeaderT<'s, 't> {
@@ -1195,7 +1195,7 @@ where 's: 't,
                     } => {
                         let name = *name;
                         let calling_env = *calling_env;
-                        let origin: &'s FunctionA<'s> = origin;
+                        let origin: &'s FunctionS<'s> = origin;
 
                         // (nextDeferredEvaluatingFunction.call)(coutputs)
                         // delegate.evaluateGenericFunctionFromNonCallForHeader(
@@ -1298,7 +1298,7 @@ where 's: 't,
         &self,
         name_to_struct_defined_macro: &HashMap<StrI<'s>, OnStructDefinedMacro>,
         struct_name_t: IdT<'s, 't>,
-        struct_a: &'s StructA<'s>,
+        struct_a: &'s StructS<'s>,
     ) -> Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
 
         let macro1 = self.scout_arena.alloc(MacroCallS {
@@ -1333,7 +1333,7 @@ where 's: 't,
         &self,
         name_to_interface_defined_macro: &HashMap<StrI<'s>, OnInterfaceDefinedMacro>,
         _interface_name_t: IdT<'s, 't>,
-        interface_a: &'s InterfaceA<'s>,
+        interface_a: &'s InterfaceS<'s>,
     ) -> Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
 
         let macro1 = self.scout_arena.alloc(MacroCallS {
@@ -1602,7 +1602,7 @@ where 's: 't,
     
     pub fn is_root_function(
         &self,
-        function_a: &'s FunctionA<'s>,
+        function_a: &'s FunctionS<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15");
         // functionA.name match {
@@ -1618,7 +1618,7 @@ where 's: 't,
     
     pub fn is_root_struct(
         &self,
-        struct_a: &'s StructA<'s>,
+        struct_a: &'s StructS<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15");
         // structA.attributes.exists({ case ExportS(_) => true case _ => false })
@@ -1626,7 +1626,7 @@ where 's: 't,
     
     pub fn is_root_interface(
         &self,
-        interface_a: &'s InterfaceA<'s>,
+        interface_a: &'s InterfaceS<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15");
         // interfaceA.attributes.exists({ case ExportS(_) => true case _ => false })

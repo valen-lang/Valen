@@ -24,7 +24,6 @@ use crate::utils::fx::IndexMap;
 use crate::utils::fx::HashMap;
 use crate::utils::fx::HashSet;
 use crate::postparsing::names::IRuneValS;
-use crate::higher_typing::higher_typing_pass::explicify_lookups;
 use std::iter::once;
 use std::marker::PhantomData;
 

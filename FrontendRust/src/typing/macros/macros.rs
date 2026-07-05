@@ -5,16 +5,16 @@ use crate::interner::StrI;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::utils::range::RangeS;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::FunctionS;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::types::types::CoordT;
 use crate::typing::ast::ast::FunctionHeaderT;
 use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::names::names::IdT;
-use crate::higher_typing::ast::StructA;
+use crate::postparsing::ast::StructS;
 use crate::typing::env::i_env_entry::IEnvEntryT;
-use crate::higher_typing::ast::InterfaceA;
+use crate::postparsing::ast::InterfaceS;
 
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -45,7 +45,7 @@ impl FunctionBodyMacro {
         life: LocationInFunctionEnvironmentT<'t>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        origin_function: Option<&'s FunctionA<'s>>,
+        origin_function: Option<&'s FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>>
@@ -82,7 +82,7 @@ impl OnStructDefinedMacro {
         &self,
         compiler: &Compiler<'s, 'ctx, 't>,
         struct_name: IdT<'s, 't>,
-        struct_a: &'s StructA<'s>,
+        struct_a: &'s StructS<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)>
     where 's: 't,
     {
@@ -106,7 +106,7 @@ impl OnInterfaceDefinedMacro {
         &self,
         compiler: &Compiler<'s, 'ctx, 't>,
         interface_name: IdT<'s, 't>,
-        interface_a: &'s InterfaceA<'s>,
+        interface_a: &'s InterfaceS<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)>
     where 's: 't,
     {

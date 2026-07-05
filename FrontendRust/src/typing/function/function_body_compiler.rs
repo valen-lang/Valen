@@ -1,4 +1,4 @@
-use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::FunctionS;
 use crate::postparsing::ast::{IBodyS, LocationInDenizen, ParameterS};
 use crate::postparsing::expressions::{BodySE, IExpressionSE};
 use crate::postparsing::patterns::patterns::AtomSP;
@@ -28,7 +28,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'t>,
         parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        function_1: &'s FunctionA<'s>,
+        function_1: &'s FunctionS<'s>,
         maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
         params_2: &'t [ParameterT<'s, 't>],
         is_destructor: bool,

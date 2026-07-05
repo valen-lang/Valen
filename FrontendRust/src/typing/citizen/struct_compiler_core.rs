@@ -1,4 +1,4 @@
-use crate::higher_typing::ast::{FunctionA, InterfaceA, StructA};
+use crate::postparsing::ast::{FunctionS, InterfaceS, StructS};
 use crate::postparsing::ast::{ExternS, ICitizenAttributeS, IStructMemberS, LocationInDenizen};
 use crate::postparsing::names::IFunctionDeclarationNameS;
 use crate::typing::ast::ast::{ExternT, ICitizenAttributeT};
@@ -19,7 +19,6 @@ use crate::typing::types::types::StructTTValT;
 use crate::typing::compiler_outputs::DeferredActionT;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::templata::conversions::evaluate_mutability;
 use crate::typing::hinputs_t::make;
 use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
 use crate::parsing::ast::IMacroInclusionP;
@@ -54,7 +53,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        struct_a: &'s StructA<'s>,
+        struct_a: &'s StructS<'s>,
     ) -> Result<(), ICompileErrorT<'s, 't>> {
 
         let template_args = IInstantiationNameT::try_from(struct_runes_env.id.local_name)
@@ -198,7 +197,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        interface_a: &'s InterfaceA<'s>,
+        interface_a: &'s InterfaceS<'s>,
     ) -> Result<&'t InterfaceDefinitionT<'s, 't>, ICompileErrorT<'s, 't>> {
 
         let template_args = IInstantiationNameT::try_from(interface_runes_env.id.local_name)
@@ -333,7 +332,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         name: IFunctionDeclarationNameS<'s>,
-        function_a: &'s FunctionA<'s>,
+        function_a: &'s FunctionS<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
     ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
 

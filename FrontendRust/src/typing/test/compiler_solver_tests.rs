@@ -30,7 +30,7 @@ use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::source_code_utils::{humanize_pos_code_map, line_containing, line_range_containing, lines_between};
 use crate::postparsing::names::{CodeRuneS, IRuneS, IRuneValS};
 use crate::postparsing::ast::LocationInDenizenBuilder;
-use crate::postparsing::rules::rules::{CoordComponentsSR, IRulexSR, KindComponentsSR, RuneUsage};
+use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
 use crate::solver::solver::{FailedSolve, ISolverError, RuleError, SolveIncomplete, Step};
 use crate::typing::ast::ast::SignatureT;
 use crate::typing::compiler_error_humanizer::humanize;
@@ -51,7 +51,7 @@ use crate::typing::types::types::{IRegionT, RegionT};
 use crate::typing::types::types::StructTTValT;
 use crate::typing::ast::expressions::UpcastTE;
 use crate::postparsing::names::{IStructDeclarationNameS, TopLevelStructDeclarationNameS};
-use crate::higher_typing::ast::StructA;
+use crate::postparsing::ast::StructS;
 use crate::solver::solver::SolverConflict;
 use crate::typing::names::names::IdT;
 use crate::typing::names::names::StructNameT;
@@ -1066,8 +1066,8 @@ exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
     let err = compile.get_compiler_outputs().err()
         .unwrap_or_else(|| panic!("expected Err(TypingPassSolverError), got Ok"));
     match &err {
-        ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipA"), .. }), .. }, .. }), new_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipB"), .. }), .. }, .. }), .. }), .. }, .. } => {}
-        ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipB"), .. }), .. }, .. }), new_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipA"), .. }), .. }, .. }), .. }), .. }, .. } => {}
+        ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructS { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipA"), .. }), .. }, .. }), new_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructS { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipB"), .. }), .. }, .. }), .. }), .. }, .. } => {}
+        ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructS { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipB"), .. }), .. }, .. }), new_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructS { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipA"), .. }), .. }, .. }), .. }), .. }, .. } => {}
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipA"), .. }), .. }), .. }, .. }) }), new_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipB"), .. }), .. }), .. }, .. }) }), .. }), .. }, .. } => {}
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipB"), .. }), .. }), .. }, .. }) }), new_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipA"), .. }), .. }), .. }, .. }) }), .. }), .. }, .. } => {}
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::CallResultWasntExpectedType { actual: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipB"), .. }), .. }), .. }, .. }) }), .. }, .. }), .. }, .. } => {}

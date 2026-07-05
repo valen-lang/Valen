@@ -12,7 +12,7 @@ use std::ptr::eq;
 ///
 /// **Use only for `T` whose identity is by-address** per @IEOIBZ — that is,
 /// `/// Arena-allocated` types where two distinct allocations are distinct things
-/// (e.g. `IEnvironmentT`, `FunctionA`, `FunctionHeaderT`, expression nodes).
+/// (e.g. `IEnvironmentT`, `FunctionS`, `FunctionHeaderT`, expression nodes).
 ///
 /// **Do not use for types with canonical content-based Hash/Eq.** `IdT`,
 /// `SignatureT`, `PrototypeT`, and other Interned/Value-types already implement

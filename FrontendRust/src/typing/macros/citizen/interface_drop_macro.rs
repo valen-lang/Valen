@@ -1,20 +1,20 @@
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler::Compiler;
-use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, MacroVoidCoordRuneS, MacroSelfKindTemplateRuneS, MacroSelfKindRuneS, MacroSelfCoordRuneS, IVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
-use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
+use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, MacroSelfKindTemplateRuneS, MacroSelfKindRuneS, IVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
+use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
 use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
 use crate::postparsing::ast::{ParameterS, IBodyS, AbstractBodyS};
-use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
+use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
 use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
 use crate::utils::range::{RangeS, CodeLocationS};
 use crate::utils::fx::HashMap;
 use crate::postparsing::names::IImpreciseNameValS;
 use crate::postparsing::names::CodeNameS;
 use crate::postparsing::names::TopLevelCitizenDeclarationNameS;
-use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::FunctionS;
 use crate::postparsing::ast::AbstractSP;
 
 
@@ -24,7 +24,7 @@ where 's: 't,
     pub fn get_interface_sibling_entries_interface_drop(
         &self,
         interface_name: IdT<'s, 't>,
-        interface_a: &'s InterfaceA<'s>,
+        interface_a: &'s InterfaceS<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
 
         let range = |n: i32| -> RangeS<'s> {
@@ -103,7 +103,7 @@ where 's: 't,
         let mut rune_to_type_map = self.scout_arena.alloc_index_map();
         for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }
         let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
-        let drop_function_a = self.scout_arena.alloc(FunctionA::new(
+        let drop_function_a = self.scout_arena.alloc(FunctionS::new(
             interface_a.range,
             name_s,
             &[],

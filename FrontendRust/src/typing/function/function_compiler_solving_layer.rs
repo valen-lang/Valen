@@ -24,7 +24,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::higher_typing::ast::*;
+use crate::postparsing::ast::*;
 use crate::solver::solver::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -291,7 +291,7 @@ where 's: 't,
 
     pub fn assemble_known_templatas(
         &self,
-        function: &FunctionA<'s>,
+        function: &FunctionS<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
     ) -> Vec<InitialKnown<'s, 't>> {
         function.generic_parameters.iter()
@@ -765,7 +765,7 @@ where 's: 't,
     pub fn assemble_initial_sends_from_args(
         &self,
         call_range: RangeS<'s>,
-        function: &FunctionA<'s>,
+        function: &FunctionS<'s>,
         args: &[Option<CoordT<'s, 't>>],
     ) -> Vec<InitialSend<'s, 't>> {
         function.params.iter()
