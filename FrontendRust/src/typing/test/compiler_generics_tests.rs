@@ -2,7 +2,7 @@ use bumpalo::Bump;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::tests::tests::new_test_code_map;
 use super::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::typing_interner::TypingInterner;

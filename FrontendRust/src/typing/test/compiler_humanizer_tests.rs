@@ -10,7 +10,7 @@
 use bumpalo::Bump;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::scout_arena::ScoutArena;
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;

@@ -4,7 +4,7 @@ use crate::compile_options::GlobalOptions;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::typing::compilation::TypingPassCompilation;
 use std::sync::Arc;
 use crate::typing::typing_interner::TypingInterner;

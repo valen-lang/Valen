@@ -5,7 +5,7 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_compilation::{HammerCompilation, HammerCompilationOptions};
 use crate::simplifying::hammer_interner::HammerInterner;
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use std::sync::Arc;
 use crate::typing::typing_interner::TypingInterner;

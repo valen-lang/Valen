@@ -8,7 +8,8 @@ use crate::parsing::ast::FileP;
 // Simplifying pass unlinked during instantiating bring-up (Slabs 16a–16j).
 // use crate::simplifying::HammerCompilationOptions;
 use crate::typing::TypingPassCompilation;
-use crate::pass_manager::CodeSource;
+use crate::typing::TypingPassOptions;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
@@ -73,8 +74,10 @@ where
     options: InstantiatorCompilationOptions,
     instantiating_bump: &'i Bump,
   ) -> Self {
-    let typing_options = InstantiatorCompilationOptions {
+    let typing_options = TypingPassOptions {
+      global_options: global_options.clone(),
       debug_out: options.debug_out.clone(),
+      tree_shaking_enabled: true,
     };
 
     let typing_pass_compilation = TypingPassCompilation::new(
@@ -85,7 +88,6 @@ where
       parse_arena,
       packages_to_build,
       code_source,
-      global_options.clone(),
       typing_options,
     );
 

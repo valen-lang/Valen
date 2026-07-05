@@ -5,7 +5,7 @@ use crate::lexing::ast::{IDenizenL, ImportL, RangeL};
 use crate::lexing::errors::FailedParse;
 use crate::lexing::lexer::Lexer;
 use crate::lexing::lexing_iterator::LexingIterator;
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::{
   FileCoordinate, FileCoordinateMap, PackageCoordinate,
 };

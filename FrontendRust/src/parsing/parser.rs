@@ -9,7 +9,7 @@ use crate::parsing::parse_utils::{parse_region as parse_region_shared, try_skip_
 use crate::parsing::pattern_parser::PatternParser;
 use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::parsing::parse_and_explore;

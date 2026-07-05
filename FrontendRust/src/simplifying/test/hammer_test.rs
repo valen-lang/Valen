@@ -9,7 +9,7 @@ use crate::final_ast::test::traverse::NodeRefH;
 use crate::final_ast::instructions::StackifyH;
 use crate::tests::tests::new_test_code_map;
 use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::utils::fx::HashMap;
 use crate::collect_where_hnode;
 use crate::typing::typing_interner::TypingInterner;

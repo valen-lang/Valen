@@ -2,7 +2,7 @@
 // but this is a bunch of utils.
 
 use crate::parse_arena::ParseArena;
-use crate::pass_manager::Source;
+use crate::code_source::Source;
 use crate::scout_arena::ScoutArena;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate};
 use crate::utils::fx::HashMap;

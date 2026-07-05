@@ -2,7 +2,7 @@ use bumpalo::Bump;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::tests::parser_test_compilation;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use std::fs;
 use std::path::PathBuf;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate};

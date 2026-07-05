@@ -9,7 +9,7 @@ use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::pass_manager::FullCompilation;
 use crate::pass_manager::FullCompilationOptions;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use bumpalo::Bump;
 use crate::utils::fx::HashMap;

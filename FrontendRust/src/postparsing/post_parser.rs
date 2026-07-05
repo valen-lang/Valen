@@ -39,7 +39,7 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::{CodeLocationS, RangeS};

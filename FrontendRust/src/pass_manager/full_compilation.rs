@@ -7,7 +7,7 @@ use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::FileP;
-use crate::pass_manager::code_source::CodeSource;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use std::sync::Arc;

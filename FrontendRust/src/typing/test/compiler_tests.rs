@@ -3,7 +3,7 @@ use super::compiler_test_compilation::compiler_test_compilation;
 use bumpalo::Bump;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
 use crate::utils::code_hierarchy::PackageCoordinate;

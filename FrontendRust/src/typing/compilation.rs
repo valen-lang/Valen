@@ -16,7 +16,7 @@ use crate::utils::source_code_utils::line_range_containing;
 use crate::utils::source_code_utils::lines_between;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;

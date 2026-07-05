@@ -1,7 +1,7 @@
 use crate::Keywords;
 use crate::compile_options::GlobalOptions;
 use crate::parse_arena::ParseArena;
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::scout_arena::ScoutArena;
 use crate::postparsing::ScoutCompilation;
 use crate::utils::code_hierarchy::PackageCoordinate;

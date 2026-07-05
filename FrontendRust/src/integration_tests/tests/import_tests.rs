@@ -2,7 +2,7 @@ use crate::compile_options::GlobalOptions;
 use crate::integration_tests::tests::run_compilation::RunCompilation;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::utils::fx::HashMap;
 use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_compilation::HammerCompilation;

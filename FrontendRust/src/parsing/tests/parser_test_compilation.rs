@@ -2,7 +2,7 @@ use crate::compile_options::GlobalOptions;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::parser::ParserCompilation;
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::PackageCoordinate;
 pub fn test<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,

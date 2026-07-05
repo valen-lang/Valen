@@ -4,7 +4,7 @@ use crate::lexing::errors::FailedParse;
 use crate::lexing::lex_and_explore;
 use crate::parsing::ast::IDenizenP;
 use crate::parsing::Parser;
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::Keywords;
 use crate::parse_arena::ParseArena;

@@ -8,7 +8,7 @@ use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::simplifying::hammer::Hammer;
 use crate::instantiating::instantiated_compilation::{InstantiatedCompilation, InstantiatorCompilationOptions};
-use crate::pass_manager::CodeSource;
+use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
 use std::sync::Arc;

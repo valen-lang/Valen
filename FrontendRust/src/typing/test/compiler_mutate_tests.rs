@@ -2,7 +2,7 @@ use bumpalo::Bump;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::postparsing::names::{CodeNameS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameValS};
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::expressions::{AddressExpressionTE, ConstantIntTE, LocalLookupTE, MutateTE, ReferenceExpressionTE, ReferenceMemberLookupTE};

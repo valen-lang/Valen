@@ -1,4 +1,4 @@
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::compile_options::GlobalOptions;
 use crate::final_ast::ast::ProgramH;

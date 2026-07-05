@@ -1,7 +1,7 @@
 use bumpalo::Bump;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::scout_arena::ScoutArena;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};

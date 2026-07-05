@@ -1,7 +1,7 @@
 use bumpalo::Bump;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::parse_arena::ParseArena;
 use crate::postparsing::names::{CodeNameS, IImpreciseNameS};
 use crate::scout_arena::ScoutArena;

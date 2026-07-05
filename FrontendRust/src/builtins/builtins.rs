@@ -1,4 +1,5 @@
 
+use crate::code_source::Source;
 use crate::interner::StrI;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate};
 use crate::utils::fx::HashMap;
@@ -69,7 +70,7 @@ pub fn builtin_source_bundle<'a, 'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
     names: &[&str],
-) -> crate::pass_manager::Source<'a>
+) -> Source<'a>
 where 'a: 'ctx,
 {
     let mut result = FileCoordinateMap::new();
@@ -81,7 +82,7 @@ where 'a: 'ctx,
         let file_coord = parse_arena.intern_file_coordinate(package_coord, filename);
         result.put(file_coord, contents.to_string());
     }
-    crate::pass_manager::Source::from_code_map(&result)
+    Source::from_code_map(&result)
 }
 
 /// Cluster helper: `panicutils` and its transitive real-content deps (`panic`,
@@ -90,7 +91,7 @@ where 'a: 'ctx,
 pub fn builtin_source_for_panicutils<'a, 'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
-) -> crate::pass_manager::Source<'a>
+) -> Source<'a>
 where 'a: 'ctx,
 {
     builtin_source_bundle(parse_arena, keywords, &["panicutils", "panic", "print", "str"])
@@ -101,7 +102,7 @@ where 'a: 'ctx,
 pub fn builtin_source_for_arith<'a, 'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
-) -> crate::pass_manager::Source<'a>
+) -> Source<'a>
 where 'a: 'ctx,
 {
     builtin_source_bundle(parse_arena, keywords, &["arith", "implicit_clone"])
@@ -113,7 +114,7 @@ where 'a: 'ctx,
 pub fn builtin_source_for_arrays<'a, 'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
-) -> crate::pass_manager::Source<'a>
+) -> Source<'a>
 where 'a: 'ctx,
 {
     builtin_source_bundle(parse_arena, keywords, &["arrays", "arith", "drop", "implicit_clone"])
@@ -125,7 +126,7 @@ where 'a: 'ctx,
 pub fn builtin_source_for_opt<'a, 'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
-) -> crate::pass_manager::Source<'a>
+) -> Source<'a>
 where 'a: 'ctx,
 {
     builtin_source_bundle(parse_arena, keywords, &[
@@ -139,7 +140,7 @@ where 'a: 'ctx,
 pub fn builtin_source_for_weak<'a, 'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
-) -> crate::pass_manager::Source<'a>
+) -> Source<'a>
 where 'a: 'ctx,
 {
     builtin_source_bundle(parse_arena, keywords, &[
@@ -154,7 +155,7 @@ where 'a: 'ctx,
 pub fn builtin_source_for_as<'a, 'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
-) -> crate::pass_manager::Source<'a>
+) -> Source<'a>
 where 'a: 'ctx,
 {
     builtin_source_bundle(parse_arena, keywords, &[

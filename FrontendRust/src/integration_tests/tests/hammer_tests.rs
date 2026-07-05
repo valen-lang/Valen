@@ -1,5 +1,5 @@
 use crate::compile_options::GlobalOptions;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::final_ast::instructions::ExpressionH;
 use crate::final_ast::types::CoordH;
 use crate::final_ast::types::IntHT;

@@ -1,7 +1,7 @@
 use crate::compile_options::GlobalOptions;
 use crate::instantiating::instantiated_compilation::InstantiatedCompilation;
 use crate::instantiating::instantiated_compilation::InstantiatorCompilationOptions;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::tests::tests::test_source_from_dir;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::tests::tests::new_test_code_map;

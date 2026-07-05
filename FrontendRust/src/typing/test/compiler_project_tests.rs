@@ -2,14 +2,14 @@ use super::compiler_test_compilation::compiler_test_compilation;
 use bumpalo::Bump;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::pass_manager::{CodeSource, Source};
+use crate::code_source::{CodeSource, Source};
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::new_test_code_map_from_files;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
 use crate::builtins::builtins::get_code_map;
 use crate::compile_options::GlobalOptions;
-use crate::instantiating::InstantiatorCompilationOptions;
+use crate::typing::TypingPassOptions;
 use crate::tests::tests::new_test_package_source;
 use crate::typing::compilation::TypingPassCompilation;
 use std::sync::Arc;
@@ -243,8 +243,10 @@ exported func main() {
         verbose_errors: true,
         debug_output: false,
     };
-    let instantiator_options = InstantiatorCompilationOptions {
+    let typing_pass_options = TypingPassOptions {
+        global_options,
         debug_out: Arc::new(|_x: &str| {}),
+        tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
@@ -255,8 +257,7 @@ exported func main() {
         &parse_arena,
         vec![builtin_coord, test_tld],
         &code_source,
-        global_options,
-        instantiator_options,
+        typing_pass_options,
     );
     compile.expect_compiler_outputs();
 }
@@ -299,8 +300,10 @@ exported func main() bool {
         verbose_errors: true,
         debug_output: false,
     };
-    let instantiator_options = InstantiatorCompilationOptions {
+    let typing_pass_options = TypingPassOptions {
+        global_options,
         debug_out: Arc::new(|_x: &str| {}),
+        tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
@@ -311,8 +314,7 @@ exported func main() bool {
         &parse_arena,
         vec![builtin_coord, test_tld],
         &code_source,
-        global_options,
-        instantiator_options,
+        typing_pass_options,
     );
     // Just exercise the path; success means generate_function_body_same_instance ran.
     compile.expect_compiler_outputs();
@@ -354,8 +356,10 @@ exported func main() int {
         verbose_errors: true,
         debug_output: false,
     };
-    let instantiator_options = InstantiatorCompilationOptions {
+    let typing_pass_options = TypingPassOptions {
+        global_options,
         debug_out: Arc::new(|_x: &str| {}),
+        tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
@@ -366,8 +370,7 @@ exported func main() int {
         &parse_arena,
         vec![builtin_coord, test_tld],
         &code_source,
-        global_options,
-        instantiator_options,
+        typing_pass_options,
     );
     compile.expect_compiler_outputs();
 }
@@ -412,8 +415,10 @@ exported func main() {
         verbose_errors: true,
         debug_output: false,
     };
-    let instantiator_options = InstantiatorCompilationOptions {
+    let typing_pass_options = TypingPassOptions {
+        global_options,
         debug_out: Arc::new(|_x: &str| {}),
+        tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
@@ -424,8 +429,7 @@ exported func main() {
         &parse_arena,
         vec![builtin_coord, test_tld],
         &code_source,
-        global_options,
-        instantiator_options,
+        typing_pass_options,
     );
     compile.expect_compiler_outputs();
 }
@@ -464,8 +468,10 @@ exported func main() {
         verbose_errors: true,
         debug_output: false,
     };
-    let instantiator_options = InstantiatorCompilationOptions {
+    let typing_pass_options = TypingPassOptions {
+        global_options,
         debug_out: Arc::new(|_x: &str| {}),
+        tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
@@ -476,8 +482,7 @@ exported func main() {
         &parse_arena,
         vec![builtin_coord, test_tld],
         &code_source,
-        global_options,
-        instantiator_options,
+        typing_pass_options,
     );
     compile.expect_compiler_outputs();
 }
@@ -518,8 +523,10 @@ exported func main() {
         verbose_errors: true,
         debug_output: false,
     };
-    let instantiator_options = InstantiatorCompilationOptions {
+    let typing_pass_options = TypingPassOptions {
+        global_options,
         debug_out: Arc::new(|_x: &str| {}),
+        tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
@@ -530,8 +537,7 @@ exported func main() {
         &parse_arena,
         vec![builtin_coord, test_tld],
         &code_source,
-        global_options,
-        instantiator_options,
+        typing_pass_options,
     );
     compile.expect_compiler_outputs();
 }
@@ -570,8 +576,10 @@ fn typing_pass_on_roguelike() {
         verbose_errors: true,
         debug_output: true,
     };
-    let instantiator_options = InstantiatorCompilationOptions {
+    let typing_pass_options = TypingPassOptions {
+        global_options,
         debug_out: Arc::new(|x: &str| println!("{}", x)),
+        tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
@@ -582,8 +590,7 @@ fn typing_pass_on_roguelike() {
         &parse_arena,
         vec![builtin_coord, test_tld],
         &code_source,
-        global_options,
-        instantiator_options,
+        typing_pass_options,
     );
     let result = compile.get_compiler_outputs();
     match result {
