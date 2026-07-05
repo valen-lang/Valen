@@ -207,10 +207,10 @@ where 's: 't,
                 rune: RuneUsage { range: x.rune.range, rune: func(x.rune.rune) },
                 name: x.name,
             }),
-            IRulexSR::MaybeCoercingLookup(_) => {
-                panic!("implement: map_runes_anonymous_interface MaybeCoercingLookup");
+            // IRulexSR::MaybeCoercingLookup(_) => {
+                // panic!("implement: map_runes_anonymous_interface MaybeCoercingLookup");
                 // LookupSR(range, RuneUsage(a, func(rune)), name)
-            }
+            // }
             IRulexSR::RuneParentEnvLookup(_) => {
                 panic!("implement: map_runes_anonymous_interface RuneParentEnvLookup");
                 // RuneParentEnvLookupSR(range, RuneUsage(a, func(rune)))
@@ -219,26 +219,26 @@ where 's: 't,
                 panic!("implement: map_runes_anonymous_interface Equals");
                 // EqualsSR(range, RuneUsage(a, func(left)), RuneUsage(b, func(right)))
             }
-            IRulexSR::DefinitionCoordIsa(_) => {
-                panic!("implement: map_runes_anonymous_interface DefinitionCoordIsa");
+            // IRulexSR::DefinitionCoordIsa(_) => {
+                // panic!("implement: map_runes_anonymous_interface DefinitionCoordIsa");
                 // DefinitionCoordIsaSR(range, RuneUsage(z, func(result)), RuneUsage(a, func(sub)), RuneUsage(b, func(suuper)))
-            }
-            IRulexSR::CallSiteCoordIsa(_) => {
-                panic!("implement: map_runes_anonymous_interface CallSiteCoordIsa");
+            // }
+            // IRulexSR::CallSiteCoordIsa(_) => {
+                // panic!("implement: map_runes_anonymous_interface CallSiteCoordIsa");
                 // CallSiteCoordIsaSR(range, maybeResult.map(r => RuneUsage(r.rune.range, func(r.rune))), RuneUsage(a, func(sub)), RuneUsage(b, func(suuper)))
-            }
-            IRulexSR::KindComponents(_) => {
-                panic!("implement: map_runes_anonymous_interface KindComponents");
+            // }
+            // IRulexSR::KindComponents(_) => {
+                // panic!("implement: map_runes_anonymous_interface KindComponents");
                 // KindComponentsSR(range, RuneUsage(a, func(resultRune)), RuneUsage(b, func(mutabilityRune)))
-            }
-            IRulexSR::CoordComponents(_) => {
-                panic!("implement: map_runes_anonymous_interface CoordComponents");
+            // }
+            // IRulexSR::CoordComponents(_) => {
+                // panic!("implement: map_runes_anonymous_interface CoordComponents");
                 // CoordComponentsSR(range, RuneUsage(a, func(resultRune)), RuneUsage(b, func(ownershipRune)), RuneUsage(c, func(kindRune)))
-            }
-            IRulexSR::PrototypeComponents(_) => {
-                panic!("implement: map_runes_anonymous_interface PrototypeComponents");
+            // }
+            // IRulexSR::PrototypeComponents(_) => {
+                // panic!("implement: map_runes_anonymous_interface PrototypeComponents");
                 // PrototypeComponentsSR(range, RuneUsage(a, func(resultRune)), RuneUsage(b, func(paramsRune)), RuneUsage(c, func(returnRune)))
-            }
+            // }
             IRulexSR::Resolve(_) => {
                 panic!("implement: map_runes_anonymous_interface Resolve");
                 // ResolveSR(range, RuneUsage(a, func(resultRune)), name, RuneUsage(b, func(paramsListRune)), RuneUsage(c, func(returnRune)))
@@ -251,43 +251,43 @@ where 's: 't,
                 panic!("implement: map_runes_anonymous_interface DefinitionFunc");
                 // DefinitionFuncSR(range, RuneUsage(a, func(resultRune)), name, RuneUsage(b, func(paramsListRune)), RuneUsage(c, func(returnRune)))
             }
-            IRulexSR::OneOf(_) => {
-                panic!("implement: map_runes_anonymous_interface OneOf");
+            // IRulexSR::OneOf(_) => {
+                // panic!("implement: map_runes_anonymous_interface OneOf");
                 // OneOfSR(range, RuneUsage(a, func(rune)), literals)
-            }
-            IRulexSR::IsConcrete(_) => {
-                panic!("implement: map_runes_anonymous_interface IsConcrete");
+            // }
+            // IRulexSR::IsConcrete(_) => {
+                // panic!("implement: map_runes_anonymous_interface IsConcrete");
                 // IsConcreteSR(range, RuneUsage(a, func(rune)))
-            }
-            IRulexSR::IsInterface(_) => {
-                panic!("implement: map_runes_anonymous_interface IsInterface");
+            // }
+            // IRulexSR::IsInterface(_) => {
+                // panic!("implement: map_runes_anonymous_interface IsInterface");
                 // IsInterfaceSR(range, RuneUsage(a, func(rune)))
-            }
-            IRulexSR::IsStruct(_) => {
-                panic!("implement: map_runes_anonymous_interface IsStruct");
+            // }
+            // IRulexSR::IsStruct(_) => {
+                // panic!("implement: map_runes_anonymous_interface IsStruct");
                 // IsStructSR(range, RuneUsage(a, func(rune)))
-            }
-            IRulexSR::CoerceToCoord(x) => IRulexSR::CoerceToCoord(CoerceToCoordSR {
-                range: x.range,
-                coord_rune: RuneUsage { range: x.coord_rune.range, rune: func(x.coord_rune.rune) },
-                kind_rune: RuneUsage { range: x.kind_rune.range, rune: func(x.kind_rune.rune) },
-            }),
+            // }
+            // IRulexSR::CoerceToCoord(x) => IRulexSR::CoerceToCoord(CoerceToCoordSR {
+                // range: x.range,
+                // coord_rune: RuneUsage { range: x.coord_rune.range, rune: func(x.coord_rune.rune) },
+                // kind_rune: RuneUsage { range: x.kind_rune.range, rune: func(x.kind_rune.rune) },
+            // }),
             IRulexSR::Literal(_) => {
                 panic!("implement: map_runes_anonymous_interface Literal");
                 // LiteralSR(range, RuneUsage(a, func(rune)), literal)
             }
-            IRulexSR::Augment(x) => {
-                IRulexSR::Augment(AugmentSR {
-                    range: x.range,
-                    result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
-                    ownership: x.ownership,
-                    inner_rune: RuneUsage { range: x.inner_rune.range, rune: func(x.inner_rune.rune) },
-                })
-            }
-            IRulexSR::MaybeCoercingCall(_) => {
-                panic!("implement: map_runes_anonymous_interface MaybeCoercingCall");
+            // IRulexSR::Augment(x) => {
+                // IRulexSR::Augment(AugmentSR {
+                    // range: x.range,
+                    // result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
+                    // ownership: x.ownership,
+                    // inner_rune: RuneUsage { range: x.inner_rune.range, rune: func(x.inner_rune.rune) },
+                // })
+            // }
+            // IRulexSR::MaybeCoercingCall(_) => {
+                // panic!("implement: map_runes_anonymous_interface MaybeCoercingCall");
                 // MaybeCoercingCallSR(range, RuneUsage(a, func(resultRune)), RuneUsage(b, func(templateRune)), args.map({ case RuneUsage(c, rune) => RuneUsage(c, func(rune)) }))
-            }
+            // }
             IRulexSR::Call(x) => {
                 let new_args: Vec<RuneUsage<'s>> = x.args.iter()
                     .map(|ru| RuneUsage { range: ru.range, rune: func(ru.rune) })
@@ -299,14 +299,14 @@ where 's: 't,
                     args: self.scout_arena.alloc_slice_from_vec(new_args),
                 })
             }
-            IRulexSR::Pack(_) => {
-                panic!("implement: map_runes_anonymous_interface Pack");
+            // IRulexSR::Pack(_) => {
+                // panic!("implement: map_runes_anonymous_interface Pack");
                 // PackSR(range, RuneUsage(a, resultRune), members.map({ case RuneUsage(c, rune) => RuneUsage(c, func(rune)) }))
-            }
-            IRulexSR::RefListCompoundMutability(_) => {
-                panic!("implement: map_runes_anonymous_interface RefListCompoundMutability");
+            // }
+            // IRulexSR::RefListCompoundMutability(_) => {
+                // panic!("implement: map_runes_anonymous_interface RefListCompoundMutability");
                 // RefListCompoundMutabilitySR(range, RuneUsage(a, func(resultRune)), RuneUsage(b, func(coordListRune)))
-            }
+            // }
             other => panic!("vimpl: map_runes_anonymous_interface {:?}", other),
         }
     }
@@ -473,9 +473,9 @@ where 's: 't,
                 let mut collected: Vec<IRuneS<'s>> = Vec::new();
                 for rule in internal_method.rules.iter() {
                     match rule {
-                        IRulexSR::Augment(a) if a.result_rune.rune.ptr_eq(&original_interface_coord_rune) => {
-                            collected.push(a.inner_rune.rune);
-                        }
+                        // IRulexSR::Augment(a) if a.result_rune.rune.ptr_eq(&original_interface_coord_rune) => {
+                            // collected.push(a.inner_rune.rune);
+                        // }
                         _ => {}
                     }
                 }

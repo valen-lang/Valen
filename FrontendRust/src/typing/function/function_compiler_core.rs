@@ -303,8 +303,8 @@ where 's: 't,
         attributes_a.iter().map(|a| {
             match a {
                 IFunctionAttributeS::UserFunction(_) => IFunctionAttributeT::UserFunction,
-                IFunctionAttributeS::Pure(_) => IFunctionAttributeT::Pure,
-                IFunctionAttributeS::Additive(_) => IFunctionAttributeT::Additive,
+                // IFunctionAttributeS::Pure(_) => IFunctionAttributeT::Pure,
+                // IFunctionAttributeS::Additive(_) => IFunctionAttributeT::Additive,
                 _ => {
                     panic!("implement: translate other function attributes");
                     // case other => vimpl(other)

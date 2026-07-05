@@ -1388,26 +1388,26 @@ where 's: 't,
         match rune_type {
             ITemplataType::KindTemplataType(_) => {
                 let (kind_mutable, _region_mutable) = match &generic_param.tyype {
-                    IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS { kind_mutable, region_mutable, .. }) => {
-                        (if *kind_mutable { OwnershipT::Own } else { OwnershipT::Share }, *region_mutable)
-                    }
+                    // IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS { kind_mutable, region_mutable, .. }) => {
+                        // (if *kind_mutable { OwnershipT::Own } else { OwnershipT::Share }, *region_mutable)
+                    // }
                     _ => (OwnershipT::Own, false),
                 };
                 ITemplataT::Kind(self.typing_interner.alloc(self.create_kind_placeholder_inner(
                     coutputs, env, name_prefix, index, rune, kind_mutable, register_with_compiler_outputs)))
             }
-            ITemplataType::CoordTemplataType(_) => {
-                let (kind_mutable, region_mutability) = match &generic_param.tyype {
-                    IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS { kind_mutable, region_mutable, .. }) => {
-                        (if *kind_mutable { OwnershipT::Own } else { OwnershipT::Share },
-                         if *region_mutable { IRegionMutabilityS::ReadWriteRegion } else { IRegionMutabilityS::ReadOnlyRegion })
-                    }
-                    _ => (OwnershipT::Own, IRegionMutabilityS::ReadOnlyRegion),
-                };
-                ITemplataT::Coord(self.typing_interner.alloc(self.create_coord_placeholder_inner(
-                    coutputs, env, name_prefix, index, rune, current_height,
-                    region_mutability, kind_mutable, register_with_compiler_outputs)))
-            }
+            // ITemplataType::CoordTemplataType(_) => {
+                // let (kind_mutable, region_mutability) = match &generic_param.tyype {
+                    // IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS { kind_mutable, region_mutable, .. }) => {
+                        // (if *kind_mutable { OwnershipT::Own } else { OwnershipT::Share },
+                         // if *region_mutable { IRegionMutabilityS::ReadWriteRegion } else { IRegionMutabilityS::ReadOnlyRegion })
+                    // }
+                    // _ => (OwnershipT::Own, IRegionMutabilityS::ReadOnlyRegion),
+                // };
+                // ITemplataT::Coord(self.typing_interner.alloc(self.create_coord_placeholder_inner(
+                    // coutputs, env, name_prefix, index, rune, current_height,
+                    // region_mutability, kind_mutable, register_with_compiler_outputs)))
+            // }
             other_type => {
                 self.create_non_kind_non_region_placeholder_inner(name_prefix, index, rune, other_type)
             }

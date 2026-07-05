@@ -1,7 +1,6 @@
 
 use bumpalo::Bump;
 use crate::compile_options::GlobalOptions;
-use crate::instantiating::instantiated_compilation::InstantiatorCompilationOptions;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
@@ -9,7 +8,7 @@ use crate::pass_manager::CodeSource;
 use crate::typing::compilation::TypingPassCompilation;
 use std::sync::Arc;
 use crate::typing::typing_interner::TypingInterner;
-
+use crate::typing::TypingPassOptions;
 
 pub fn compiler_test_compilation<'s, 'ctx, 't, 'p>(
     typing_interner: &'ctx TypingInterner<'s, 't>,
@@ -30,8 +29,10 @@ where 's: 't,
         verbose_errors: true,
         debug_output: true,
     };
-    let instantiator_options = InstantiatorCompilationOptions {
+    let typing_pass_options = TypingPassOptions {
+        global_options,
         debug_out: Arc::new(|x: &str| println!("{}", x)),
+        tree_shaking_enabled: true,
     };
     TypingPassCompilation::new(
         typing_interner,
@@ -41,7 +42,6 @@ where 's: 't,
         parse_arena,
         vec![test_tld],
         code_source,
-        global_options,
-        instantiator_options,
+        typing_pass_options,
     )
 }

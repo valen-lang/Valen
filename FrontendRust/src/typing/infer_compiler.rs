@@ -436,12 +436,12 @@ where 's: 't,
 
         let runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> =
             rules.iter().filter_map(|rule| match rule {
-                IRulexSR::CallSiteCoordIsa(r) => {
-                    match self.resolve_impl_conclusion(env_with_conclusions_in_denizen, state, ranges, call_location, *r, &conclusions) {
-                        Ok(x) => Some(x),
-                        Err(e) => panic!("implement: ResolvingResolveConclusionError wrapping in checkResolvingConclusionsAndResolve"),
-                    }
-                }
+                // IRulexSR::CallSiteCoordIsa(r) => {
+                    // match self.resolve_impl_conclusion(env_with_conclusions_in_denizen, state, ranges, call_location, *r, &conclusions) {
+                        // Ok(x) => Some(x),
+                        // Err(e) => panic!("implement: ResolvingResolveConclusionError wrapping in checkResolvingConclusionsAndResolve"),
+                    // }
+                // }
                 _ => None,
             }).collect();
         {
@@ -697,30 +697,30 @@ where 's: 't,
         let maybe_runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> =
             rules.iter().filter_map(|rule| {
                 match rule {
-                    IRulexSR::DefinitionCoordIsa(r) => {
-                        let result_rune = r.result_rune.rune;
-                        let isa_templata = match conclusions.get(&result_rune) {
-                            Some(ITemplataT::Isa(isa)) => isa,
-                            Some(other) => panic!("vwat: expected IsaTemplataT for resultRune in DefinitionCoordIsaSR, got {:?}", other),
-                            None => panic!("vassertSome: resultRune not in conclusions for DefinitionCoordIsaSR"),
-                        };
-                        let impl_bound_name_t = match isa_templata.impl_name.local_name {
-                            INameT::ImplBound(bound) => bound,
-                            other => panic!("vwat: expected ImplBoundNameT in isa implName local_name, got {:?}", other),
-                        };
-                        let impl_bound_name = self.typing_interner.intern_impl_bound_name(
-                            ImplBoundNameValT {
-                                template: impl_bound_name_t.template,
-                                template_args: impl_bound_name_t.template_args,
-                            }
-                        );
-                        let impl_id = self.typing_interner.intern_id(IdValT {
-                            package_coord: isa_templata.impl_name.package_coord,
-                            init_steps: isa_templata.impl_name.init_steps,
-                            local_name: INameT::ImplBound(impl_bound_name),
-                        });
-                        Some((result_rune, *impl_id))
-                    }
+                    // IRulexSR::DefinitionCoordIsa(r) => {
+                        // let result_rune = r.result_rune.rune;
+                        // let isa_templata = match conclusions.get(&result_rune) {
+                            // Some(ITemplataT::Isa(isa)) => isa,
+                            // Some(other) => panic!("vwat: expected IsaTemplataT for resultRune in DefinitionCoordIsaSR, got {:?}", other),
+                            // None => panic!("vassertSome: resultRune not in conclusions for DefinitionCoordIsaSR"),
+                        // };
+                        // let impl_bound_name_t = match isa_templata.impl_name.local_name {
+                            // INameT::ImplBound(bound) => bound,
+                            // other => panic!("vwat: expected ImplBoundNameT in isa implName local_name, got {:?}", other),
+                        // };
+                        // let impl_bound_name = self.typing_interner.intern_impl_bound_name(
+                            // ImplBoundNameValT {
+                                // template: impl_bound_name_t.template,
+                                // template_args: impl_bound_name_t.template_args,
+                            // }
+                        // );
+                        // let impl_id = self.typing_interner.intern_id(IdValT {
+                            // package_coord: isa_templata.impl_name.package_coord,
+                            // init_steps: isa_templata.impl_name.init_steps,
+                            // local_name: INameT::ImplBound(impl_bound_name),
+                        // });
+                        // Some((result_rune, *impl_id))
+                    // }
                     _ => None,
                 }
             }).collect();
@@ -948,7 +948,7 @@ where 's: 't,
 pub fn include_rule_in_call_site_solve(rule: &IRulexSR) -> bool {
     match rule {
         IRulexSR::DefinitionFunc(_) => false,
-        IRulexSR::DefinitionCoordIsa(_) => false,
+        // IRulexSR::DefinitionCoordIsa(_) => false,
         _ => true,
     }
 }
@@ -958,7 +958,7 @@ pub fn include_rule_in_call_site_solve(rule: &IRulexSR) -> bool {
 // its callers' prototypes.
 pub fn include_rule_in_definition_solve(rule: &IRulexSR) -> bool {
     match rule {
-        IRulexSR::CallSiteCoordIsa(_) => false,
+        // IRulexSR::CallSiteCoordIsa(_) => false,
         IRulexSR::CallSiteFunc(_) => false,
         IRulexSR::Resolve(_) => false,
         _ => true,

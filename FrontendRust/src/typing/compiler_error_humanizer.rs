@@ -608,7 +608,7 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
     }
     ITemplataT::String(value) => panic!("implement: humanize_templata String"),
     ITemplataT::Placeholder(p) => match p.tyype {
-      ITemplataType::CoordTemplataType(_) => "$".to_string() + &humanize_id(scout_arena, typing_interner, code_map, p.id, None),
+      // ITemplataType::CoordTemplataType(_) => "$".to_string() + &humanize_id(scout_arena, typing_interner, code_map, p.id, None),
       _ => crate::postparsing::post_parser_error_humanizer::humanize_templata_type(&p.tyype) + "$" + &humanize_id(scout_arena, typing_interner, code_map, p.id, None),
     },
     _ => panic!("implement: humanize_templata other"),

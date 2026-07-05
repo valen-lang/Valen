@@ -5,7 +5,7 @@
 // VCOORD: Onion typing arc: parser + postparsing linked; typing and downstream
 // stay unlinked pending their own slices. higher_typing was retired outright.
 // pub mod backend_ffi;
-// pub mod builtins;
+pub mod builtins;
 // pub mod clang;
 pub mod compile_options;
 // pub mod file_coordinate_map;
@@ -25,13 +25,13 @@ pub mod pass_manager;
 pub mod postparsing;
 // pub mod simplifying;
 pub mod typing;
-// pub mod tests;
+pub mod tests;
 // #[cfg(test)]
 // pub mod testvm;
 pub mod utils;
 // pub mod von;
-// #[path = "solver/lib.rs"]
-// pub mod solver;
+#[path = "solver/lib.rs"]
+pub mod solver;
 
 pub use interner::StrI;
 pub use keywords::Keywords;

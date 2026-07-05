@@ -1640,11 +1640,11 @@ where 's: 't,
                 }
                 Ok((ExpressionTE::Reference(block_2), returns_from_exprs))
             }
-            IExpressionSE::Pure(_) => {
-                panic!("implement: evaluate_expression — Pure");
+            // IExpressionSE::Pure(_) => {
+                // panic!("implement: evaluate_expression — Pure");
                 // evaluateAndCoerceToReferenceExpression(
                 //   coutputs, nenv, life + 0, parentRanges, outerCallLocation, region, inner)
-            }
+            // }
             IExpressionSE::ConstantStr(c) => {
                 let result = ReferenceExpressionTE::ConstantStr(self.typing_interner.alloc(ConstantStrTE {
                     value: c.value,
