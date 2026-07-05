@@ -1,6 +1,6 @@
 # Postparse Slice Plan — Onion Typing
 
-**Scope.** Bring `postparsing/` back online (uncomment `pub mod postparsing;` in `lib.rs`) at its long-term onion shape. Land all postparse-side type changes in one atomic set of commits. Everything downstream (`typing/`, `higher_typing/`, `instantiating/`, `simplifying/`, `final_ast/`, `backend_ffi/`, `testvm/`, `integration_tests/`) stays unlinked until its own slice.
+**Scope.** Bring `postparsing/` back online (uncomment `pub mod postparsing;` in `lib.rs`) at its long-term onion shape. Land all postparse-side type changes in one atomic set of commits. Everything downstream (`typing/`, `instantiating/`, `simplifying/`, `final_ast/`, `backend_ffi/`, `testvm/`, `integration_tests/`) stays unlinked until its own slice. (`higher_typing/` was retired outright in a follow-up slice — no longer part of the pipeline.)
 
 **Precondition.** Parser + lexer are at their long-term shape as of `b5bde70e6`. `parsing::tests` 397/0/1, `lexing` 3/0/0 green.
 
@@ -269,7 +269,7 @@ Pre-slice (`b5bde70e6`):
 Post-slice target:
 - `parsing::tests`: unchanged
 - `lexing`: unchanged
-- `postparsing::tests` + `higher_typing::tests` (if it re-links; may be next slice): green, some ignored for downstream dependencies
+- `postparsing::tests`: green, some ignored for downstream dependencies. (`higher_typing::tests` was retired with the pass and no longer exists.)
 - Everything else: still unlinked
 
 The exact test count depends on how many postparse tests referenced retired features (`any(...)`, `Prot[...]`, etc.). Expect a small net loss from deleted feature-specific tests, offset by new `*RefSR` tests.

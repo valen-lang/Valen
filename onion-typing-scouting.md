@@ -4,7 +4,7 @@ Read `vcoord-handoff.md` first for the design; this doc synthesizes what a 10-in
 
 **Blast radius (rough numbers surfaced across investigations):**
 
-- ~40 files with pattern-match sites on `ITemplataT::Coord` / `CoordT` fields — highest densities in `compiler_solver.rs` (63 refs), `compiler_error_humanizer.rs` (49), `templata_compiler.rs` (39), `rune_type_solver.rs` (39), `higher_typing_pass.rs` (29).
+- ~40 files with pattern-match sites on `ITemplataT::Coord` / `CoordT` fields — highest densities in `compiler_solver.rs` (63 refs), `compiler_error_humanizer.rs` (49), `templata_compiler.rs` (39), `rune_type_solver.rs` (39). (Formerly also `higher_typing_pass.rs` (29 refs) — since retired.)
 - ~200 pattern-match sites on the `(ownership, region, kind)` triple.
 - ~400 region-threading argument sites disappear from typing (functions taking `context_region: RegionT`).
 - ~120 `RegionT { region: IRegionT::Default }` literals evaporate.
@@ -176,7 +176,7 @@ The full `ITemplataT::Ownership` variant + `OwnershipTemplataType` + `OwnershipL
 
 `CoerceToCoordSR` (`rules.rs`, solver `:1106`) becomes identity as `Coord = Kind`. Its handler at `compiler_solver.rs:1111-1141` forces `OwnershipT::Own | OwnershipT::Share` only — retires with `CoordT`. Kind→Coord promotion goes away.
 
-`rune_type_solver.rs:486` treats `Kind→Coord` as freely convertible — a fossil pre-onion coherent-collapse hint. Its arm's disappearance is a symptom, not a cause; deleting it triggers `panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet implemented")` at line 497 unless the whole `higher_typing_pass` `explicify_lookups` pass simplifies in the same commit.
+`rune_type_solver.rs:486` treats `Kind→Coord` as freely convertible — a fossil pre-onion coherent-collapse hint. Its arm's disappearance is a symptom, not a cause; deleting it triggers `panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet implemented")` at line 497. (Update: the `higher_typing_pass` was retired outright, so the "simplify in the same commit" concern is moot — the whole pass and its `explicify_lookups` disappeared.)
 
 ### 2.6 Overload resolver — dispatch redesign
 

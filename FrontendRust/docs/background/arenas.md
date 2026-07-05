@@ -12,7 +12,7 @@ The postparser reads `'p` data as input but allocates into `'s` (except syntheti
 
 ## `'s` — Scout Arena
 
-Owned by `ScoutArena<'s>`. Contains all postparser output (`StructS`, `FunctionS`, `IExpressionSE`, `IRulexSR`, etc.), all higher typing output (`StructA`, `FunctionA`, `InterfaceA`, etc.), and interned names/runes (`INameS<'s>`, `IRuneS<'s>`, `IImpreciseNameS<'s>`).
+Owned by `ScoutArena<'s>`. Contains all postparser output (`StructS`, `FunctionS`, `IExpressionSE`, `IRulexSR`, etc.) and interned names/runes (`INameS<'s>`, `IRuneS<'s>`, `IImpreciseNameS<'s>`).
 
 Access: `scout_arena.intern_str(...)`, `scout_arena.intern_rune(...)`, `scout_arena.intern_name(...)`, `scout_arena.bump()`.
 
@@ -38,13 +38,10 @@ Parser --- allocates into 'p arena ---> FileP, FunctionP, IExpressionPE, ...
 PostParser --- allocates into 's arena -> StructS, FunctionS, IExpressionSE, ...
     |                                      (re-interns StrI<'p> -> StrI<'s>)
     v
-HigherTyping --- allocates into 's arena -> StructA, FunctionA, InterfaceA, ...
-    |                                        (same 's arena as postparser)
-    v
 Typing --- allocates into 't arena -----> INameT, IdT, KindT payloads, templatas,
                                           PrototypeT, SignatureT, envs,
                                           expressions, FunctionDefinitionT, HinputsT
-                                          (holds &'s refs to FunctionA/StructA
+                                          (holds &'s refs to FunctionS/StructS
                                           directly — no re-interning)
 ```
 

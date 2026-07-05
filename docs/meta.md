@@ -32,7 +32,6 @@ Sylvan/
       postparsing/docs/
         shields/
         skills/
-      higher_typing/docs/
       solver/docs/
 ```
 

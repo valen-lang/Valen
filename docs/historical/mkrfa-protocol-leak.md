@@ -223,7 +223,7 @@ claim explicit at each declaration-scoped caller is a feature, not a burden.
 
 ### 4. `RuneParentEnvLookupSR` is one node wearing two hats
 
-In the **rune-type solver** (HigherTypingPass), it's a real constraint: "this
+In the **rune-type solver** (formerly HigherTypingPass, since retired), it's a real constraint: "this
 rune has whatever type the outer environment gives it — do a type-level
 lookup." `RuneTypeSolver.scala:141-149, 289-299` uses it substantively.
 

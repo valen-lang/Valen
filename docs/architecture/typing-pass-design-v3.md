@@ -13,7 +13,7 @@ The approach is **pragmatic arena retention**: scout data lives past the typing 
 ### 1.1 Three Arenas
 
 - **`'p` — Parser arena (`ParseArena<'p>`)**: parser AST, `StrI<'p>`, coords.
-- **`'s` — Scout arena (`ScoutArena<'s>`)**: postparser + higher-typing output (`FunctionA<'s>`, `StructA<'s>`, etc.), interned postparser names (`INameS<'s>`, `IRuneS<'s>`, `IImpreciseNameS<'s>`). Unchanged for the typing pass.
+- **`'s` — Scout arena (`ScoutArena<'s>`)**: postparser output (`FunctionS<'s>`, `StructS<'s>`, etc.), interned postparser names (`INameS<'s>`, `IRuneS<'s>`, `IImpreciseNameS<'s>`). Unchanged for the typing pass. (Under onion the retired `higher_typing` `*A` layer collapsed into `*S`.)
 - **`'t` — Typing arena (`TypingInterner<'t>`)**: interned typing-pass types (names, kinds, coords, templatas), typing-pass output AST (function defs, expressions, `HinputsT`), **and typing-pass environments** (`IEnvironmentT` and its 9 concrete variants). Created before the typing pass; outlives the typing pass.
 
 All three arenas use `bumpalo`. Arena-allocated structs follow AASSNCMCX: no `Vec`/`HashMap`/`String` inside arena types.
@@ -34,7 +34,7 @@ fn top_level_driver() {
     // ... parser produces parser AST into 'p ...
 
     let scout_arena = ScoutArena::new();
-    // ... postparser/higher-typing produce into 's ...
+    // ... postparser produces into 's ...
 
     let typing_bump = Bump::new();
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -70,7 +70,7 @@ Rust's drop order (reverse of declaration) naturally enforces `'t < 's < 'p` lif
 
 Bucket-level summary. Per-type detail lives in §6.x (type system) and §3 (envs).
 
-- **`'s` scout arena (read-only inputs):** scout-interned coords/names (`StrI`, `RangeS`, `INameS`, `IRuneS`, `IImpreciseNameS`, …) plus higher-typing output (`FunctionA`, `StructA`, `InterfaceA`, `ImplA`).
+- **`'s` scout arena (read-only inputs):** scout-interned coords/names (`StrI`, `RangeS`, `INameS`, `IRuneS`, `IImpreciseNameS`, …) plus postparser output (`FunctionS`, `StructS`, `InterfaceS`, `ImplS`; under onion the retired `*A` layer collapsed into `*S`).
 - **`'t` typing arena, interned:** ~75 concrete name types, `IdT`, the 5 sealed kind payloads + `KindPlaceholderT`, the 6 interned templata payloads, plus `PrototypeT` / `SignatureT` (Value-type, opt-in dedup). See §6.1.
 - **`'t` typing arena, allocated but not interned:** definitions (`FunctionDefinitionT`, `FunctionHeaderT`, `StructDefinitionT`, `InterfaceDefinitionT`, `ImplT`, `EdgeT`, `OverrideT`, `ParameterT`), the expression hierarchy (`ReferenceExpressionTE` 48 variants + `AddressExpressionTE` 5 variants), `InstantiationBoundArgumentsT`, the 5 heavy templata payloads, `HinputsT`, and the 9 concrete env types + `GlobalEnvironmentT`. `TemplatasStoreT` lives in this bucket and is held as `&'t TemplatasStoreT` inside envs.
 - **Polyvalue enums (~16 bytes, not arena-stored) — closed-set fat pointers, see @TFITCX / @PVECFPZ:** `INameT` + 21 name sub-enums; `KindT` + 3 sub-enums (`ICitizenTT`, `ISubKindTT`, `ISuperKindTT`); `InternedKindPayloadT`; `ITemplataT`; env wrapper enums (`IEnvironmentT` 9 variants, `IInDenizenEnvironmentT` 8-variant subset, `IEnvEntryT` 5). Eq/Hash derive — never hand-roll `ptr::eq(self, other)` on the outer `&self` (silently breaks under by-value use).

@@ -2,7 +2,7 @@
 
 Architecture and design decisions for the simplifying pass. The Scala code called this pass "Hammer" — that's the verb (and the `H`-suffix convention) you'll see throughout. Sister doc to `typing-pass-design-v3.md` and `instantiator-design.md`.
 
-The simplifying pass is **pass 6** in the Vale frontend pipeline (parse → postparse → higher-typing → typing → instantiate → **simplify** → emit). It consumes `HinputsI<'s, 'i>` (the monomorphic instantiated denizen graph from the instantiator) and produces `ProgramH<'s, 'h>` (the wire-format-ready "H-AST" in `src/final_ast/`). The Hammer reads `'i`-mode (`cI`-collapsed) instantiator IR and lowers everything — names, kinds, coords, prototypes, expressions, definitions — into backend-shaped equivalents.
+The simplifying pass is **pass 5** in the Vale frontend pipeline (parse → postparse → typing → instantiate → **simplify** → emit). (The former `higher-typing` intermediate pass was retired under the onion typing arc.) It consumes `HinputsI<'s, 'i>` (the monomorphic instantiated denizen graph from the instantiator) and produces `ProgramH<'s, 'h>` (the wire-format-ready "H-AST" in `src/final_ast/`). The Hammer reads `'i`-mode (`cI`-collapsed) instantiator IR and lowers everything — names, kinds, coords, prototypes, expressions, definitions — into backend-shaped equivalents.
 
 A separate `VonHammer` pass walks the produced `ProgramH` and emits `IVonData` (a heap-owned JSON-shaped wire format consumed by the backend / on-disk format). `VonHammer` doesn't have its own struct — it lives as additional `impl Hammer` blocks per the god-struct collapse.
 

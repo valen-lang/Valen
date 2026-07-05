@@ -47,7 +47,7 @@ Before a large change, read these in full:
 
 Full treatment: design-doc Part 1. The load-bearing facts for a large change:
 
-- **Three arenas.** `'p` parser (`ParseArena`), `'s` scout (`ScoutArena`: postparser/higher-typing output + interned scout names), `'t` typing (`TypingInterner`: interned typing types, output AST, **and envs**). All `bumpalo`.
+- **Three arenas.** `'p` parser (`ParseArena`), `'s` scout (`ScoutArena`: postparser output + interned scout names), `'t` typing (`TypingInterner`: interned typing types, output AST, **and envs**). All `bumpalo`.
 - **`'s` outlives `'t`.** Declare `where 's: 't` on every output type that transitively holds `&'s` data. Rust won't infer the outlives from drop order — you must write the bound.
 - **Envs live in `'t`, not `'s`.** They hold `&'t` refs to interned typing payloads (via `TemplatasStoreT`/`ITemplataT`), and an `'s`-allocated struct can't hold `&'t` refs. Design-doc §3.1.
 - **Arena parameters take a short borrow, never the arena's own lifetime.** Write `&ScoutArena<'s>` or `&'ctx ScoutArena<'s>`, never `&'s ScoutArena<'s>`. `alloc(&self, T) -> &'t mut T` returns arena-lifetimed data from a short `&self`. §1.2.5.

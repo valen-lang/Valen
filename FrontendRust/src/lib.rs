@@ -2,15 +2,14 @@
 #![allow(dead_code)]
 #![allow(unused_variables, unused_imports)]
 
-// VCOORD: Onion typing arc: parser + postparsing linked; higher_typing, typing, and
-// downstream stay unlinked pending their own slices.
+// VCOORD: Onion typing arc: parser + postparsing linked; typing and downstream
+// stay unlinked pending their own slices. higher_typing was retired outright.
 // pub mod backend_ffi;
 // pub mod builtins;
 // pub mod clang;
 pub mod compile_options;
 // pub mod file_coordinate_map;
 // pub mod final_ast;
-// pub mod higher_typing;
 // #[cfg(test)]
 // pub mod end_to_end_tests;
 // #[cfg(test)]

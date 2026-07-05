@@ -41,6 +41,7 @@ pub mod expression;
 pub mod function;
 pub mod infer;
 pub mod macros;
+pub mod rune_typing;
 
 // Tests
 #[cfg(test)]

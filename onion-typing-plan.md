@@ -129,14 +129,14 @@ The following ten areas of change land as one coherent refactor. The Rust source
 
 ### C.4 Templata + rune types — Kind/Coord merger
 
-**Files:** `FrontendRust/src/typing/templata/templata.rs`, `FrontendRust/src/typing/rune_type_solver.rs`, `FrontendRust/src/higher_typing/*`, `FrontendRust/src/postparsing/ast.rs`.
+**Files:** `FrontendRust/src/typing/templata/templata.rs`, `FrontendRust/src/typing/rune_type_solver.rs`, `FrontendRust/src/postparsing/ast.rs`. (Formerly also `FrontendRust/src/higher_typing/*` — since retired outright.)
 
 - `ITemplataT::Coord` variant collapses into `Kind` (or aliased via A16 shim). Every match arm on `Coord(ct) => ct.coord` becomes a single Kind arm.
 - Same for `ITemplataI::Coord` and `ITemplataType::Coord`.
 - `CoerceToCoordSR` handler deleted (C.3).
 - `coerce_kind_lookup_to_coord`, `coerce_kind_template_lookup_to_coord` deleted.
-- `rune_type_solver.rs:486` Kind→Coord auto-convert arm deleted. The `panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet implemented")` at line 497 either becomes reachable (write a real handler) or the `higher_typing_pass` `explicify_lookups` simplification lands in this commit.
-- **`AtomSP.coord_rune`** field renamed to `AtomSP.kind_rune` semantically (per findings §3). ~50 construction sites across `postparsing/`, `higher_typing/`, `typing/` — mechanical rename.
+- `rune_type_solver.rs:486` Kind→Coord auto-convert arm deleted. (The `higher_typing_pass` `explicify_lookups` simplification is moot — the whole pass was retired.)
+- **`AtomSP.coord_rune`** field already renamed to `AtomSP.kind_rune` at the postparse slice (~200 sites across `postparsing/` + `typing/`). Rename in `typing/` still gated out; sweeps land as `typing/` re-links.
 - `type_name_to_mutability` map in `CompilerOutputs` — retire.
 
 ### C.5 Instantiator (T→I) — walker rewrites and side-map deletion
