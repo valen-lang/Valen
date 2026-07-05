@@ -1,4 +1,4 @@
 
-interface IFunction1<P1 Ref, R Ref> {
+interface IFunction1<P1 Kind, R Kind> {
   func __call(virtual self &IFunction1<P1, R>, p1 P1) R;
 }

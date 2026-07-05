@@ -9,7 +9,7 @@ use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
   BlockSE, ConstantBoolSE, ConstantIntSE, ConstantStrSE, CopyPrimSE, DestructSE, DotSE, ExprMutateSE, FunctionCallSE, FunctionSE,
   IExpressionSE, IfSE, IndexSE, LetSE, LoadPartSE, LocalLoadSE, LocalMutateSE, LocalS, NewRuntimeSizedArraySE, OutsideLoadSE, OverloadSetSE,
-  OwnershippedSE, PureSE, ReturnSE, RuneLookupSE, StaticArrayFromCallableSE, StaticArrayFromValuesSE,
+  OwnershippedSE, ReturnSE, RuneLookupSE, StaticArrayFromCallableSE, StaticArrayFromValuesSE,
   TupleSE, VoidSE,
 };
 use crate::postparsing::names::ImplicitRuneValS;
@@ -119,17 +119,8 @@ pub(crate) fn scout_block(
       Ok((stack_frame2, inner_expr_s, self_uses, child_uses))
     },
   )?;
-  let resulting_expr_s = if block_pe.maybe_pure.is_some() {
-    let block_s = &*self.scout_arena.alloc(block_s);
-    &*self.scout_arena.alloc(IExpressionSE::Pure(PureSE {
-      range: PostParser::eval_range(file, block_pe.range),
-      location: lidb.child().consume_in_arena(self.scout_arena),
-      inner: &*self.scout_arena.alloc(IExpressionSE::Block(block_s)),
-    }))
-  } else {
-    let block_s = &*self.scout_arena.alloc(block_s);
-    &*self.scout_arena.alloc(IExpressionSE::Block(block_s))
-  };
+  let block_s = &*self.scout_arena.alloc(block_s);
+  let resulting_expr_s = &*self.scout_arena.alloc(IExpressionSE::Block(block_s));
   Ok((
     resulting_expr_s,
     self_uses_of_things_from_above,
@@ -401,14 +392,22 @@ fn scout_expression(
     }
         
         
-    // STUB: onion typing — IExpressionPE::Augment was retired. Replaced by 4
-    // distinct variants Move/Borrow/Weak/Share at the parser layer. This scout
-    // arm needs 4 new arms; deferred to a downstream slice.
-    IExpressionPE::Move(_)
-    | IExpressionPE::Borrow(_)
-    | IExpressionPE::Weak(_)
-    | IExpressionPE::Share(_) => {
-      panic!("STUB: onion typing — expression_scout Move/Borrow/Weak/Share arms not yet written");
+    IExpressionPE::Move(_) | IExpressionPE::Borrow(_) | IExpressionPE::Weak(_) | IExpressionPE::Share(_) => {
+      let (inner, load_as) = match expression {
+        IExpressionPE::Move(m) => (m.inner, LoadAsP::Move),
+        IExpressionPE::Borrow(b) => (b.inner, LoadAsP::LoadAsBorrow),
+        IExpressionPE::Weak(w) => (w.inner, LoadAsP::LoadAsWeak),
+        IExpressionPE::Share(s) => (s.inner, LoadAsP::LoadAsShare),
+        _ => unreachable!(),
+      };
+      let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) =
+        self.scout_expression_and_coerce(stack_frame, lidb, inner, load_as)?;
+      Ok((
+        stack_frame1,
+        IScoutResult::NormalResult(NormalResultS { expr: inner_expr_s }),
+        inner_self_uses,
+        inner_child_uses,
+      ))
     }
       
     IExpressionPE::Return(ret) => {
@@ -1062,7 +1061,6 @@ fn scout_expression(
         stack_frame.clone(),
         lidb,
         each.range,
-        each.maybe_pure.is_some(),
         &each.entry_pattern,
         each.in_keyword_range,
         each.iterable_expr,
@@ -1589,6 +1587,7 @@ pub(crate) fn coerce(
         let self_uses_after = match load_as_p {
           LoadAsP::LoadAsBorrow => self_uses_before.mark_borrowed(name.clone()),
           LoadAsP::LoadAsWeak => self_uses_before.mark_borrowed(name.clone()),
+          LoadAsP::LoadAsShare => self_uses_before.mark_borrowed(name.clone()),
           LoadAsP::Use | LoadAsP::Move => self_uses_before.mark_moved(name.clone()),
         };
         Ok((

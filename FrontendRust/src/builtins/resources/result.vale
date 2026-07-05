@@ -3,15 +3,15 @@ import v.builtins.panicutils.*;
 import v.builtins.logic.*;
 
 #!DeriveInterfaceDrop
-sealed interface Result<OkType Ref, ErrType Ref> { }
+sealed interface Result<OkType Kind, ErrType Kind> { }
 
 #!DeriveStructDrop
-struct Ok<OkType Ref, ErrType Ref> { value OkType; }
+struct Ok<OkType Kind, ErrType Kind> { value OkType; }
 
 impl<OkType, ErrType> Result<OkType, ErrType> for Ok<OkType, ErrType>;
 
 #!DeriveStructDrop
-struct Err<OkType Ref, ErrType Ref> { value ErrType; }
+struct Err<OkType Kind, ErrType Kind> { value ErrType; }
 
 impl<OkType, ErrType> Result<OkType, ErrType> for Err<OkType, ErrType>;
 

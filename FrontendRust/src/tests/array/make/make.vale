@@ -1,5 +1,5 @@
 
-func MakeArray<T Ref, G Ref>(n int, generator G)
+func MakeArray<T Kind, G Kind>(n int, generator G)
 []T
 where func(&G, int)T, func drop(G)void
 {

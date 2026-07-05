@@ -24,7 +24,6 @@ fn simple_function() {
   assert!(function.header.params.as_ref().unwrap().params.is_empty());
   assert!(function.header.ret.ret_type.is_none());
   let body = function.body.as_ref().unwrap();
-  assert!(body.maybe_pure.is_none());
   assert!(body.maybe_default_region.is_none());
   assert!(matches!(body.inner, IExpressionPE::Void(_)));
 }
@@ -87,27 +86,6 @@ fn simple_function_with_return() {
   assert!(function.header.attributes.is_empty());
   assert!(function.header.params.as_ref().unwrap().params.is_empty());
   assert_templex_name(function.header.ret.ret_type.as_ref().unwrap(), "int");
-  let body = function.body.as_ref().unwrap();
-  assert_eq!(
-    cast!(body.inner, IExpressionPE::ConstantInt).value,
-    3
-  );
-}
-
-#[test]
-fn pure_function() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(&parse_arena, &keywords, "pure func sum() {3}");
-  let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
-  assert!(matches!(
-    function.header.attributes,
-    [IAttributeP::PureAttribute(_)]
-  ));
-  assert!(function.header.params.as_ref().unwrap().params.is_empty());
-  assert!(function.header.ret.ret_type.is_none());
   let body = function.body.as_ref().unwrap();
   assert_eq!(
     cast!(body.inner, IExpressionPE::ConstantInt).value,
@@ -289,17 +267,17 @@ fn simple_function_with_identifying_rune() {
 }
 
 #[test]
-fn simple_function_with_coord_typed_identifying_rune() {
+fn simple_function_with_kind_typed_identifying_rune() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func sum<A Ref>(a A){a}");
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func sum<A Kind>(a A){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "A");
   assert_eq!(
     generic_param.maybe_type.as_ref().unwrap().tyype,
-    ITypePR::CoordType
+    ITypePR::KindType
   );
   assert!(generic_param.coord_region.is_none());
   assert!(generic_param.attributes.is_empty());

@@ -4,7 +4,7 @@ import v.builtins.drop.*;
 import printutils.*;
 
 #!DeriveStructDrop
-struct MyList<T Ref> {
+struct MyList<T Kind> {
   value T;
   next Opt<MyList<T>>;
 }

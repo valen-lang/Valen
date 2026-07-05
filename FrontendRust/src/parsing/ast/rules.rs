@@ -89,10 +89,7 @@ impl IRulexPR<'_> {
 pub enum ITypePR {
   IntType,
   BoolType,
-  OwnershipType,
-  CoordType,
   CoordListType,
-  PrototypeType,
   KindType,
   RegionType,
   CitizenTemplateType,
@@ -209,12 +206,6 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
     }
     ITemplexPT::Tuple(tuple) => get_ordered_rune_declarations_from_templexes_with_duplicates(tuple.elements),
-    ITemplexPT::Inline(_) => panic!(
-      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_INLINE_UNIMPLEMENTED_MATCH_ARM"
-    ),
-    ITemplexPT::Point(_) => panic!(
-      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_POINT_UNIMPLEMENTED_MATCH_ARM"
-    ),
   }
 }
 

@@ -3,7 +3,7 @@ use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, PatternPP};
 use crate::postparsing::ast::LocationInDenizenBuilder;
-use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType};
+use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::postparsing::names::{IRuneS, IVarNameS};
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser, StackFrame};
@@ -48,11 +48,11 @@ pub(crate) fn translate_pattern<'s, 'p>(
   rune_to_explicit_type: &mut HashMap<IRuneS<'s>, ITemplataType>,
   pattern_pp: &PatternPP<'p>,
 ) -> AtomSP<'s> {
-  let maybe_coord_rune = match &pattern_pp.templex {
+  let maybe_kind_rune = match &pattern_pp.templex {
     None => None,
     Some(type_p) => {
       let mut child_lidb = lidb.child();
-      let coord_rune = translate_maybe_type_into_rune(
+      let kind_rune = translate_maybe_type_into_rune(
         scout_arena,
         keywords,
         IEnvironmentS::FunctionEnvironment(stack_frame.parent_env.clone()),
@@ -63,10 +63,10 @@ pub(crate) fn translate_pattern<'s, 'p>(
         Some(type_p),
       );
       rune_to_explicit_type.insert(
-        coord_rune.rune.clone(),
-        ITemplataType::CoordTemplataType(CoordTemplataType {}),
+        kind_rune.rune.clone(),
+        ITemplataType::KindTemplataType(KindTemplataType {}),
       );
-      Some(coord_rune)
+      Some(kind_rune)
     }
   };
 
@@ -123,7 +123,7 @@ pub(crate) fn translate_pattern<'s, 'p>(
   AtomSP {
     range: PostParser::eval_range(stack_frame.file, pattern_pp.range),
     name: capture_s,
-    coord_rune: maybe_coord_rune,
+    kind_rune: maybe_kind_rune,
     destructure: maybe_patterns_s,
   }
 }

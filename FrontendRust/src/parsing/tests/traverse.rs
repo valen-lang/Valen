@@ -289,7 +289,6 @@ where
   collect_if(pred, out, NodeRefP::Block(block));
   let BlockPE {
     range: _range,
-    maybe_pure: _maybe_pure,
     maybe_default_region,
     inner,
   } = block;
@@ -582,10 +581,6 @@ where
       range: _range,
       value: _value,
     }) => {}
-    ITemplexPT::Point(PointPT {
-      range: _range,
-      inner,
-    }) => visit_templex(pred, out, inner),
     ITemplexPT::Call(CallPT {
       range: _range,
       template,
@@ -608,10 +603,6 @@ where
       visit_pack(pred, out, parameters);
       visit_templex(pred, out, return_type);
     }
-    ITemplexPT::Inline(InlinePT {
-      range: _range,
-      inner,
-    }) => visit_templex(pred, out, inner),
     ITemplexPT::Int(IntPT {
       range: _range,
       value: _value,
@@ -824,7 +815,6 @@ where
     IExpressionPE::Each(each_expr) => {
       let EachPE {
         range: _range,
-        maybe_pure: _maybe_pure,
         entry_pattern,
         in_keyword_range: _in_keyword_range,
         iterable_expr,

@@ -19,7 +19,6 @@ fn ifs() {
   let condition = cast!(if_.condition, IExpressionPE::ConstantBool);
   assert!(condition.value);
 
-  assert!(if_.then_body.maybe_pure.is_none());
   assert!(if_.then_body.maybe_default_region.is_none());
   let then_call = cast!(if_.then_body.inner, IExpressionPE::FunctionCall);
   assert_lookup_name(then_call.callable_expr, "doBlarks");
@@ -27,7 +26,6 @@ fn ifs() {
   let borrow_x = cast!(first_arg, IExpressionPE::Borrow);
   assert_lookup_name(borrow_x.inner, "x");
 
-  assert!(if_.else_body.maybe_pure.is_none());
   assert!(if_.else_body.maybe_default_region.is_none());
   cast!(if_.else_body.inner, IExpressionPE::Void);
 }
@@ -51,10 +49,8 @@ fn if_let() {
   assert!(u_pattern.destructure.is_none());
   assert_lookup_name(let_.source, "a");
 
-  assert!(if_.then_body.maybe_pure.is_none());
   assert!(if_.then_body.maybe_default_region.is_none());
   cast!(if_.then_body.inner, IExpressionPE::Void);
-  assert!(if_.else_body.maybe_pure.is_none());
   assert!(if_.else_body.maybe_default_region.is_none());
   cast!(if_.else_body.inner, IExpressionPE::Void);
 }
@@ -85,10 +81,8 @@ fn if_with_condition_declarations() {
   assert!(x_isempty.method_lookup.template_args.is_none());
   assert!(x_isempty.arg_exprs.is_empty());
 
-  assert!(if_.then_body.maybe_pure.is_none());
   assert!(if_.then_body.maybe_default_region.is_none());
   cast!(if_.then_body.inner, IExpressionPE::Void);
-  assert!(if_.else_body.maybe_pure.is_none());
   assert!(if_.else_body.maybe_default_region.is_none());
   cast!(if_.else_body.inner, IExpressionPE::Void);
 }
@@ -121,13 +115,11 @@ fn if_with_condition_declarations_and_block_contents() {
     0
   );
 
-  assert!(if_.then_body.maybe_pure.is_none());
   assert!(if_.then_body.maybe_default_region.is_none());
   assert_eq!(
     cast!(if_.then_body.inner, IExpressionPE::ConstantInt).value,
     1
   );
-  assert!(if_.else_body.maybe_pure.is_none());
   assert!(if_.else_body.maybe_default_region.is_none());
   let two = cast!(if_.else_body.inner, IExpressionPE::ConstantInt);
   assert_eq!(two.value, 2);

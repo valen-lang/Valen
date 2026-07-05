@@ -1,12 +1,7 @@
 use crate::utils::code_hierarchy::FileCoordinate;
-// TEMP: `#[cfg(any())]` gates every scout-facing item in this file while
-// scout_arena is unlinked. Remove all three gates + this import gate when
-// postparsing re-links.
-#[cfg(any())]
 use crate::scout_arena::ScoutArena;
 
 
-#[cfg(any())]
 impl<'a> RangeS<'a> {
   pub fn internal(scout_arena: &ScoutArena<'a>, internal_num: i32) -> RangeS<'a> {
     assert!(internal_num < 0, "RangeS::internal - internal_num must be negative");
@@ -24,7 +19,6 @@ pub struct CodeLocationS<'a> {
 }
 
 
-#[cfg(any())]
 impl<'a> CodeLocationS<'a> {
   // Keep in sync with CodeLocation2
   pub fn test_zero(scout_arena: &ScoutArena<'a>) -> CodeLocationS<'a> {
@@ -59,7 +53,6 @@ impl<'a> RangeS<'a> {
   }
 
   // Should only be used in tests.
-  #[cfg(any())]
   pub fn test_zero(scout_arena: &ScoutArena<'a>) -> RangeS<'a> {
     let tz = CodeLocationS::test_zero(scout_arena);
     RangeS::new(tz.clone(), tz)

@@ -96,14 +96,6 @@ pub struct BodySE<'s> {
 
 
 #[derive(Debug, PartialEq)]
-pub struct PureSE<'s> {
-  pub range: RangeS<'s>,
-  pub location: LocationInDenizen<'s>,
-  pub inner: &'s IExpressionSE<'s>,
-}
-
-
-#[derive(Debug, PartialEq)]
 pub struct BlockSE<'s> {
   pub range: RangeS<'s>,
   pub locals: &'s [LocalS<'s>],
@@ -127,7 +119,6 @@ pub enum IExpressionSE<'s> {
   StaticArrayFromCallable(StaticArrayFromCallableSE<'s>),
   NewRuntimeSizedArray(NewRuntimeSizedArraySE<'s>),
   Block(&'s BlockSE<'s>),
-  Pure(PureSE<'s>),
   Return(ReturnSE<'s>),
   ConstantInt(ConstantIntSE<'s>),
   ConstantBool(ConstantBoolSE<'s>),
@@ -163,7 +154,6 @@ impl<'s> IExpressionSETrait<'s> for IExpressionSE<'s> {
       IExpressionSE::StaticArrayFromCallable(x) => x.range.clone(),
       IExpressionSE::NewRuntimeSizedArray(x) => x.range.clone(),
       IExpressionSE::Block(x) => x.range.clone(),
-      IExpressionSE::Pure(x) => x.range.clone(),
       IExpressionSE::Return(x) => x.range.clone(),
       IExpressionSE::ConstantInt(x) => x.range.clone(),
       IExpressionSE::ConstantBool(x) => x.range.clone(),

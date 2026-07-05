@@ -7,7 +7,7 @@ use crate::interner::{InternedSlice, StrI};
 use crate::postparsing::names::{
   IImpreciseNameS, IImpreciseNameValS, INameS, INameValS, IRuneS, IRuneValS,
   IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IVarNameS, IVarNameValS,
-  ImplicitRegionRuneS, ImplicitCoercionOwnershipRuneS, ImplicitCoercionKindRuneS,
+  ImplicitRegionRuneS, ImplicitCoercionKindRuneS,
   RuneNameS, TopLevelStructDeclarationNameS, TopLevelInterfaceDeclarationNameS,
   ImplicitCoercionTemplateRuneS, AnonymousSubstructMethodInheritedRuneS,
   DispatcherRuneFromImplS, CaseRuneFromImplS,
@@ -392,15 +392,9 @@ impl<'s> ScoutArena<'s> {
         let canonical = IRuneS::ImplicitRegionRune(self.bump.alloc(payload));
         (IRuneValS::ImplicitRegionRune(key), canonical)
       }
-      ImplicitCoercionOwnershipRune(v) => {
-        let key = v.clone();
-        let payload = ImplicitCoercionOwnershipRuneS { range: v.range, original_coord_rune: v.original_coord_rune };
-        let canonical = IRuneS::ImplicitCoercionOwnershipRune(self.bump.alloc(payload));
-        (IRuneValS::ImplicitCoercionOwnershipRune(key), canonical)
-      }
       ImplicitCoercionKindRune(v) => {
         let key = v.clone();
-        let payload = ImplicitCoercionKindRuneS { range: v.range, original_coord_rune: v.original_coord_rune };
+        let payload = ImplicitCoercionKindRuneS { range: v.range, original_kind_rune: v.original_kind_rune };
         let canonical = IRuneS::ImplicitCoercionKindRune(self.bump.alloc(payload));
         (IRuneValS::ImplicitCoercionKindRune(key), canonical)
       }
@@ -430,7 +424,7 @@ impl<'s> ScoutArena<'s> {
       }
       // ── Simple Val variants (same struct in both enums) ──
       CodeRune(p) => { let c = IRuneS::CodeRune(self.bump.alloc(p.clone())); (IRuneValS::CodeRune(p), c) }
-      ImplDropCoordRune(p) => { let c = IRuneS::ImplDropCoordRune(self.bump.alloc(p.clone())); (IRuneValS::ImplDropCoordRune(p), c) }
+      ImplDropKindRune(p) => { let c = IRuneS::ImplDropKindRune(self.bump.alloc(p.clone())); (IRuneValS::ImplDropKindRune(p), c) }
       ImplDropVoidRune(p) => { let c = IRuneS::ImplDropVoidRune(self.bump.alloc(p.clone())); (IRuneValS::ImplDropVoidRune(p), c) }
       ReachablePrototypeRune(p) => { let c = IRuneS::ReachablePrototypeRune(self.bump.alloc(p.clone())); (IRuneValS::ReachablePrototypeRune(p), c) }
       FreeOverrideStructTemplateRune(p) => { let c = IRuneS::FreeOverrideStructTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::FreeOverrideStructTemplateRune(p), c) }
@@ -446,29 +440,21 @@ impl<'s> ScoutArena<'s> {
       StructNameRune(p) => { let c = IRuneS::StructNameRune(self.bump.alloc(p.clone())); (IRuneValS::StructNameRune(p), c) }
       InterfaceNameRune(p) => { let c = IRuneS::InterfaceNameRune(self.bump.alloc(p.clone())); (IRuneValS::InterfaceNameRune(p), c) }
       SelfRune(p) => { let c = IRuneS::SelfRune(self.bump.alloc(p.clone())); (IRuneValS::SelfRune(p), c) }
-      SelfOwnershipRune(p) => { let c = IRuneS::SelfOwnershipRune(self.bump.alloc(p.clone())); (IRuneValS::SelfOwnershipRune(p), c) }
       SelfKindRune(p) => { let c = IRuneS::SelfKindRune(self.bump.alloc(p.clone())); (IRuneValS::SelfKindRune(p), c) }
       SelfKindTemplateRune(p) => { let c = IRuneS::SelfKindTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::SelfKindTemplateRune(p), c) }
-      SelfCoordRune(p) => { let c = IRuneS::SelfCoordRune(self.bump.alloc(p.clone())); (IRuneValS::SelfCoordRune(p), c) }
       MacroVoidKindRune(p) => { let c = IRuneS::MacroVoidKindRune(self.bump.alloc(p.clone())); (IRuneValS::MacroVoidKindRune(p), c) }
-      MacroVoidCoordRune(p) => { let c = IRuneS::MacroVoidCoordRune(self.bump.alloc(p.clone())); (IRuneValS::MacroVoidCoordRune(p), c) }
       MacroSelfKindRune(p) => { let c = IRuneS::MacroSelfKindRune(self.bump.alloc(p.clone())); (IRuneValS::MacroSelfKindRune(p), c) }
       MacroSelfKindTemplateRune(p) => { let c = IRuneS::MacroSelfKindTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::MacroSelfKindTemplateRune(p), c) }
-      MacroSelfCoordRune(p) => { let c = IRuneS::MacroSelfCoordRune(self.bump.alloc(p.clone())); (IRuneValS::MacroSelfCoordRune(p), c) }
       ArgumentRune(p) => { let c = IRuneS::ArgumentRune(self.bump.alloc(p.clone())); (IRuneValS::ArgumentRune(p), c) }
       PatternInputRune(p) => { let c = IRuneS::PatternInputRune(self.bump.alloc(p.clone())); (IRuneValS::PatternInputRune(p), c) }
       ExplicitTemplateArgRune(p) => { let c = IRuneS::ExplicitTemplateArgRune(self.bump.alloc(p.clone())); (IRuneValS::ExplicitTemplateArgRune(p), c) }
       AnonymousSubstructParentInterfaceTemplateRune(p) => { let c = IRuneS::AnonymousSubstructParentInterfaceTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructParentInterfaceTemplateRune(p), c) }
       AnonymousSubstructParentInterfaceKindRune(p) => { let c = IRuneS::AnonymousSubstructParentInterfaceKindRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructParentInterfaceKindRune(p), c) }
-      AnonymousSubstructParentInterfaceCoordRune(p) => { let c = IRuneS::AnonymousSubstructParentInterfaceCoordRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructParentInterfaceCoordRune(p), c) }
       AnonymousSubstructTemplateRune(p) => { let c = IRuneS::AnonymousSubstructTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructTemplateRune(p), c) }
       AnonymousSubstructKindRune(p) => { let c = IRuneS::AnonymousSubstructKindRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructKindRune(p), c) }
-      AnonymousSubstructCoordRune(p) => { let c = IRuneS::AnonymousSubstructCoordRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructCoordRune(p), c) }
       AnonymousSubstructVoidKindRune(p) => { let c = IRuneS::AnonymousSubstructVoidKindRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructVoidKindRune(p), c) }
-      AnonymousSubstructVoidCoordRune(p) => { let c = IRuneS::AnonymousSubstructVoidCoordRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructVoidCoordRune(p), c) }
       AnonymousSubstructMemberRune(p) => { let c = IRuneS::AnonymousSubstructMemberRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructMemberRune(p), c) }
-      AnonymousSubstructMethodSelfBorrowCoordRune(p) => { let c = IRuneS::AnonymousSubstructMethodSelfBorrowCoordRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructMethodSelfBorrowCoordRune(p), c) }
-      AnonymousSubstructMethodSelfOwnCoordRune(p) => { let c = IRuneS::AnonymousSubstructMethodSelfOwnCoordRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructMethodSelfOwnCoordRune(p), c) }
+      AnonymousSubstructMethodSelfBorrowKindRune(p) => { let c = IRuneS::AnonymousSubstructMethodSelfBorrowKindRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructMethodSelfBorrowKindRune(p), c) }
       AnonymousSubstructDropBoundPrototypeRune(p) => { let c = IRuneS::AnonymousSubstructDropBoundPrototypeRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructDropBoundPrototypeRune(p), c) }
       AnonymousSubstructDropBoundParamsListRune(p) => { let c = IRuneS::AnonymousSubstructDropBoundParamsListRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructDropBoundParamsListRune(p), c) }
       AnonymousSubstructFunctionBoundPrototypeRune(p) => { let c = IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructFunctionBoundPrototypeRune(p), c) }

@@ -12,17 +12,17 @@ struct IntEquator { }
 func __call(this &IntEquator, a &int, b &int) bool { return a == b; }
 
 #!DeriveStructDrop
-struct HashMapNode<K Ref, V>
+struct HashMapNode<K Kind, V>
 where func drop(K)void, func drop(V)void {
   key K;
   value V;
 }
-func drop<K Ref, V>(self HashMapNode<K, V>) {
+func drop<K Kind, V>(self HashMapNode<K, V>) {
   destruct ^self;
 }
 
 #!DeriveStructDrop
-struct HashMap<K Ref, V, H, E>
+struct HashMap<K Kind, V, H, E>
 where func(&H, &K)int, func(&E, &K, &K)bool, func drop(K)void, func drop(V)void {
   hasher H;
   equator E;
@@ -30,17 +30,17 @@ where func(&H, &K)int, func(&E, &K, &K)bool, func drop(K)void, func drop(V)void 
   size int;
 }
 
-func drop<K Ref, V, H, E>(self HashMap<K Ref, V, H, E>)
+func drop<K Kind, V, H, E>(self HashMap<K Kind, V, H, E>)
 where func drop(H)void, func drop(E)void {
   destruct ^self;
 }
 
-func HashMap<K Ref, V, H, E>(hasher H, equator E) HashMap<K, V, H, E>
+func HashMap<K Kind, V, H, E>(hasher H, equator E) HashMap<K, V, H, E>
 where func(&H, &K)int, func(&E, &K, &K)bool {
   return HashMap<K, V, H, E>(^hasher, ^equator, 0);
 }
 
-func HashMap<K Ref, V, H, E>(hasher H, equator E, capacity int) HashMap<K, V, H, E>
+func HashMap<K Kind, V, H, E>(hasher H, equator E, capacity int) HashMap<K, V, H, E>
 where func(&H, &K)int, func(&E, &K, &K)bool {
   return HashMap<K, V>(
       ^hasher,
@@ -49,10 +49,10 @@ where func(&H, &K)int, func(&E, &K, &K)bool {
       0);
 }
 
-// TSUGAR: func len<K Ref, V, H, E>(self &HashMap<K, V, H, E>) int { return self.size; }
-func len<K Ref, V, H, E>(self &HashMap<K, V, H, E>) int { return __copy_prim(&self.size); }
+// TSUGAR: func len<K Kind, V, H, E>(self &HashMap<K, V, H, E>) int { return self.size; }
+func len<K Kind, V, H, E>(self &HashMap<K, V, H, E>) int { return __copy_prim(&self.size); }
 
-func update<K Ref, V, H, E>(self &HashMap<K, V, H, E>, key K, value V) V {
+func update<K Kind, V, H, E>(self &HashMap<K, V, H, E>, key K, value V) V {
   // TSUGAR:   hash int = (&self.hasher)(key);
   hash int = (&self.hasher)(&key);
   // TSUGAR:   startIndex = abs(hash mod (&self.table).len());
@@ -66,7 +66,7 @@ func update<K Ref, V, H, E>(self &HashMap<K, V, H, E>, key K, value V) V {
   return set node.value = ^value;
 }
 
-func add<K Ref, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
+func add<K Kind, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
   if ((&map).has(&key)) {
     panic("Map already has given key!");
   }
@@ -107,7 +107,7 @@ func panicVoid<T>(x T) {
   __vbi_panic();
 }
 
-func addNodeToTable<K Ref, V, H>(
+func addNodeToTable<K Kind, V, H>(
     table &Array<Opt<HashMapNode<K, V>>>,
     hasher &H,
     node HashMapNode<K, V>)
@@ -124,7 +124,7 @@ where func(&H, &K)int, func drop(K)void, func drop(V)void
   (set table[__copy_prim(&index)] = ^opt).expect_none();
 }
 
-func findEmptyIndexForKey<K Ref, V>(table &Array<Opt<HashMapNode<K, V>>>, startIndex int, key &K) int
+func findEmptyIndexForKey<K Kind, V>(table &Array<Opt<HashMapNode<K, V>>>, startIndex int, key &K) int
 where func drop(K)void, func drop(V)void {
   i = 0;
   while (i < table.len()) {
@@ -140,7 +140,7 @@ where func drop(K)void, func drop(V)void {
   return panic("findEmptyIndexForKey went past end of table!");
 }
 
-func findIndexOfKey<K Ref, V, E>(table &Array<Opt<HashMapNode<K, V>>>, equator &E, startIndex int, key &K)
+func findIndexOfKey<K Kind, V, E>(table &Array<Opt<HashMapNode<K, V>>>, equator &E, startIndex int, key &K)
 Opt<int>
 where func(&E, &K, &K)bool, func drop(K)void, func drop(V)void {
   i = 0;
@@ -162,7 +162,7 @@ where func(&E, &K, &K)bool, func drop(K)void, func drop(V)void {
   return panic("findIndexOfKey went past end of table! len " + str(table.len()) + " and i " + str(i));
 }
 
-func get<K Ref, V, H, E>(self &HashMap<K, V, H, E>, key &K) Opt<&V> {
+func get<K Kind, V, H, E>(self &HashMap<K, V, H, E>, key &K) Opt<&V> {
   if ((&self.table).len() == 0) {
     return None<&V>();
   }
@@ -180,11 +180,11 @@ func get<K Ref, V, H, E>(self &HashMap<K, V, H, E>, key &K) Opt<&V> {
   return ^opt;
 }
 
-func has<K Ref, V, H, E>(self &HashMap<K, V, H, E>, key &K) bool {
+func has<K Kind, V, H, E>(self &HashMap<K, V, H, E>, key &K) bool {
   return not(self.get(key).isEmpty());
 }
 
-func keys<K Ref, V, H, E>(self &HashMap<K, V, H, E>) []K
+func keys<K Kind, V, H, E>(self &HashMap<K, V, H, E>) []K
 where func clone(&K)K {
   list = List<K>();
   index = 0;
@@ -201,7 +201,7 @@ where func clone(&K)K {
   return ^arr;
 }
 
-func values<K Ref, V, H, E>(self &HashMap<K, V, H, E>) []&V {
+func values<K Kind, V, H, E>(self &HashMap<K, V, H, E>) []&V {
   list = List<&V>();
   index = 0;
   while (index < (&self.table).len()) {
@@ -216,7 +216,7 @@ func values<K Ref, V, H, E>(self &HashMap<K, V, H, E>) []&V {
   return ^arr;
 }
 
-func innerRemove<K Ref, V, H, E>(
+func innerRemove<K Kind, V, H, E>(
   table &Array<Opt<HashMapNode<K, V>>>,
   hasher &H,
   equator &E,
@@ -235,7 +235,7 @@ where func(&H, &K)int, func(&E, &K, &K)bool, func drop(K)void, func drop(V)void
   return (__copy_prim(&index), ^oldElement);
 }
 
-func remove<K Ref, V, H, E>(
+func remove<K Kind, V, H, E>(
   map &HashMap<K, V, H, E>,
   key K)
 V {

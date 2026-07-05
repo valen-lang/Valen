@@ -1,11 +1,11 @@
 
 
 
-sealed interface MyInterface<T> where T Ref {
+sealed interface MyInterface<T> where T Kind {
   func doThing(virtual x MyInterface<T>) int;
 }
 
-struct MyStruct<T> where T Ref { }
+struct MyStruct<T> where T Kind { }
 impl<T> MyInterface<T> for MyStruct<T>;
 func doThing<T>(x MyStruct<T>) int { return 4; }
 

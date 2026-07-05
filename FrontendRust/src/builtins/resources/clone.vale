@@ -13,5 +13,5 @@ func clone(x &bool) bool { __copy_prim(x) }
 func clone(x &float) float { __copy_prim(x) }
 func clone(x &i64) i64 { __copy_prim(x) }
 
-// func clone<T>(x &T) &T where T = Ref[_, Kind[mut]] { x }
-// func clone<T>(x weak T) weak T where T = Ref[_, Kind[mut]] { x }
+// func clone<T>(x &T) &T where T = Kind[_, Kind[mut]] { x }
+// func clone<T>(x weak T) weak T where T = Kind[_, Kind[mut]] { x }

@@ -565,7 +565,6 @@ fn foreach() {
   let expr = compile_statement_expect(&parse_arena, &keywords, "foreach i in myList { }");
   match &expr {
     IExpressionPE::Each(EachPE {
-      maybe_pure: None,
       entry_pattern: PatternPP {
         destination: Some(DestinationLocalP {
           decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("i"))),
@@ -597,7 +596,6 @@ fn foreach_with_borrow() {
   let expr = compile_statement_expect(&parse_arena, &keywords, "foreach i in &myList { }");
   match &expr {
     IExpressionPE::Each(EachPE {
-      maybe_pure: None,
       entry_pattern: PatternPP {
         destination: Some(DestinationLocalP {
           decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("i"))),
@@ -632,7 +630,6 @@ fn foreach_with_two_receivers() {
   let expr = compile_statement_expect(&parse_arena, &keywords, "foreach [a, b] in myList { }");
   match &expr {
     IExpressionPE::Each(EachPE {
-      maybe_pure: None,
       entry_pattern: PatternPP {
         destination: None,
         templex: None,
@@ -684,7 +681,6 @@ fn foreach_complex_iterable() {
   let expr = compile_statement_expect(&parse_arena, &keywords, "foreach i in myList = 3; myList { }");
   match &expr {
     IExpressionPE::Each(EachPE {
-      maybe_pure: None,
       entry_pattern: PatternPP {
         destination: Some(DestinationLocalP {
           decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("i"))),
@@ -1059,7 +1055,6 @@ fn foreach_2() {
   );
   match &expr {
     IExpressionPE::Each(EachPE {
-      maybe_pure: None,
       entry_pattern: PatternPP {
         destination: Some(DestinationLocalP {
           decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("i"))),

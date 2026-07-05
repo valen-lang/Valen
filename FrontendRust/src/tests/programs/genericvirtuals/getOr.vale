@@ -1,9 +1,9 @@
 
 #!DeriveInterfaceDrop
-sealed interface XOpt<T Ref> { }
+sealed interface XOpt<T Kind> { }
 
 #!DeriveStructDrop
-struct XSome<T Ref> { value T; }
+struct XSome<T Kind> { value T; }
 
 
 impl<T> XOpt<T> for XSome<T>;

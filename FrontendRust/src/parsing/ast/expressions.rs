@@ -252,7 +252,6 @@ pub struct WhilePE<'p> {
 #[derive(Debug, PartialEq)]
 pub struct EachPE<'p> {
   pub range: RangeL,
-  pub maybe_pure: Option<RangeL>,
   pub entry_pattern: PatternPP<'p>,
   pub in_keyword_range: RangeL,
   pub iterable_expr: &'p IExpressionPE<'p>,
@@ -523,7 +522,6 @@ pub struct LambdaPE<'p> {
 #[derive(Debug, PartialEq)]
 pub struct BlockPE<'p> {
   pub range: RangeL,
-  pub maybe_pure: Option<RangeL>,
   pub maybe_default_region: Option<RegionRunePT<'p>>,
   pub inner: &'p IExpressionPE<'p>,
 }

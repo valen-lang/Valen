@@ -3,7 +3,7 @@ import v.builtins.arrays.*;
 import v.builtins.migrate.*;
 
 #!DeriveStructDrop
-struct List<E Ref> {
+struct List<E Kind> {
   array []E;
 }
 func List<E>() List<E> {

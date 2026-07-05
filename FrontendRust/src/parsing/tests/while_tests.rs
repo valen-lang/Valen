@@ -15,7 +15,6 @@ fn simple_while_loop() {
   let while_ = cast!(expr, IExpressionPE::While);
   let condition = cast!(while_.condition, IExpressionPE::ConstantBool);
   assert!(condition.value);
-  assert!(while_.body.maybe_pure.is_none());
   assert!(while_.body.maybe_default_region.is_none());
   cast!(while_.body.inner, IExpressionPE::Void);
 }
@@ -32,7 +31,6 @@ fn result_after_while_loop() {
   let while_ = cast!(while_expr, IExpressionPE::While);
   let condition = cast!(while_.condition, IExpressionPE::ConstantBool);
   assert!(condition.value);
-  assert!(while_.body.maybe_pure.is_none());
   assert!(while_.body.maybe_default_region.is_none());
   cast!(while_.body.inner, IExpressionPE::Void);
 
@@ -67,7 +65,6 @@ fn while_with_condition_declarations() {
   assert_eq!(six.value, 6);
   assert_eq!(six.bits, None);
 
-  assert!(while_.body.maybe_pure.is_none());
   assert!(while_.body.maybe_default_region.is_none());
   cast!(while_.body.inner, IExpressionPE::Void);
 }

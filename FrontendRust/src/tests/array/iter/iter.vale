@@ -1,5 +1,5 @@
 
-struct StaticSizedArrayReadonlyIter<N Int, E> where E Ref {
+struct StaticSizedArrayReadonlyIter<N Int, E> where E Kind {
   arr &[#N]E;
   pos int;
 }

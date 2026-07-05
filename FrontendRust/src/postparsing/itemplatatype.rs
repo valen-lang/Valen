@@ -5,9 +5,6 @@
 pub struct RegionTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct CoordTemplataType {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -23,16 +20,7 @@ pub struct IntegerTemplataType {}
 pub struct BooleanTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct PrototypeTemplataType {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StringTemplataType {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LocationTemplataType {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct OwnershipTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PackTemplataType<'s> {
@@ -48,16 +36,12 @@ pub struct TemplateTemplataType<'s> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ITemplataType<'s> {
   RegionTemplataType(RegionTemplataType),
-  CoordTemplataType(CoordTemplataType),
   ImplTemplataType(ImplTemplataType),
   KindTemplataType(KindTemplataType),
   FunctionTemplataType(FunctionTemplataType),
   IntegerTemplataType(IntegerTemplataType),
   BooleanTemplataType(BooleanTemplataType),
-  PrototypeTemplataType(PrototypeTemplataType),
   StringTemplataType(StringTemplataType),
-  LocationTemplataType(LocationTemplataType),
-  OwnershipTemplataType(OwnershipTemplataType),
   PackTemplataType(PackTemplataType<'s>),
   TemplateTemplataType(TemplateTemplataType<'s>),
 }

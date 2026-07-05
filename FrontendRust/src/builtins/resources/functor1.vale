@@ -1,6 +1,5 @@
 
-func __call<P1 Ref, R Ref>(v void, param P1) R
-where F Prot = func drop(P1)R {
-  F(^param)
+func __call<P1 Kind, R Kind>(v void, param P1) R
+where func drop(P1)R {
+  drop(^param)
 }
-

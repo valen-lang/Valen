@@ -110,7 +110,6 @@ pub struct InterfaceL<'p> {
 pub enum IAttributeL<'p> {
   AbstractAttribute(RangeL),
   ExportAttribute(RangeL),
-  PureAttribute(RangeL),
   ExternAttribute {
     range: RangeL,
     maybe_custom_name: Option<ParendLE<'p>>,

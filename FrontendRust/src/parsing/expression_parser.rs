@@ -391,18 +391,12 @@ where
   ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let while_begin = iter.get_pos();
 
-    let mut tentative_iter = iter.clone();
-
-    let pure = tentative_iter.try_skip_word(self.keywords.pure);
-
-    if tentative_iter
+    if iter
       .try_skip_word(self.keywords.whiile)
       .is_none()
     {
       return Ok(None);
     }
-
-    iter.skip_to(&tentative_iter);
 
     // Parse condition (lines 255-259)
     let condition = self.parse_block_contents(iter, true, templex_parser, pattern_parser)?;
@@ -423,7 +417,6 @@ where
       condition: self.parse_arena.alloc(condition),
       body: self.parse_arena.alloc(BlockPE {
         range: body.range(),
-        maybe_pure: pure,
         maybe_default_region: None,
         inner: self.parse_arena.alloc(body),
       }),
@@ -440,15 +433,9 @@ where
   ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let block_begin = iter.get_pos();
 
-    let mut tentative_iter = iter.clone();
-
-    let pure = tentative_iter.try_skip_word(self.keywords.pure);
-
-    if tentative_iter.try_skip_word(self.keywords.block).is_none() {
+    if iter.try_skip_word(self.keywords.block).is_none() {
       return Ok(None);
     }
-
-    iter.skip_to(&tentative_iter);
 
     // Parse body
     let contents = match iter.peek_cloned() {
@@ -463,12 +450,11 @@ where
 
     Ok(Some(IExpressionPE::Block(BlockPE {
       range: RangeL::new(block_begin, iter.get_prev_end_pos()),
-      maybe_pure: pure,
       maybe_default_region: None,
       inner: self.parse_arena.alloc(contents),
     })))
   }
-  
+
 
   fn parse_foreach(
     &self,
@@ -486,8 +472,6 @@ where
     {
       // do nothing for now
     }
-
-    let pure = tentative_iter.try_skip_word(self.keywords.pure);
 
     if tentative_iter
       .try_skip_word(self.keywords.foreeach)
@@ -545,13 +529,11 @@ where
 
     Ok(Some(IExpressionPE::Each(EachPE {
       range: RangeL::new(each_begin, iter.get_prev_end_pos()),
-      maybe_pure: pure,
       entry_pattern: pattern,
       in_keyword_range: in_range,
       iterable_expr: self.parse_arena.alloc(iterable_expr),
       body: self.parse_arena.alloc(BlockPE {
         range: body.range(),
-        maybe_pure: None,
         maybe_default_region: None,
         inner: self.parse_arena.alloc(body),
       }),
@@ -609,7 +591,6 @@ where
       let else_end = iter.get_pos();
       Some(BlockPE {
         range: RangeL::new(else_begin, else_end),
-        maybe_pure: None,
         maybe_default_region: None,
         inner: self.parse_arena.alloc(else_body),
       })
@@ -623,7 +604,6 @@ where
         let pos = iter.get_prev_end_pos();
         BlockPE {
           range: RangeL::new(pos, pos),
-          maybe_pure: None,
           maybe_default_region: None,
           inner: self.parse_arena.alloc(IExpressionPE::Void(VoidPE {
             range: RangeL::new(pos, pos),
@@ -638,7 +618,6 @@ where
     for (cond_block, then_block) in if_elses.into_iter().rev() {
       root_else_block = BlockPE {
         range: RangeL::new(cond_block.range().begin(), then_block.range.end()),
-        maybe_pure: None,
         maybe_default_region: None,
         inner: self.parse_arena.alloc(IExpressionPE::If(IfPE {
           range: RangeL::new(cond_block.range().begin(), then_block.range.end()),
@@ -787,7 +766,6 @@ where
       condition,
       BlockPE {
         range: RangeL::new(if_begin, iter.get_prev_end_pos()),
-        maybe_pure: None,
         maybe_default_region: None,
         inner: body,
       },
@@ -880,10 +858,7 @@ where
   ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let mut tentative_iter = iter.clone();
 
-    // The pure/unsafe is a hack to get syntax highlighting work for
-    // the future pure block feature.
     tentative_iter.try_skip_word(self.keywords.r#unsafe);
-    let pure = tentative_iter.try_skip_word(self.keywords.pure);
 
     if tentative_iter.try_skip_word(self.keywords.block).is_none() {
       return Ok(None);
@@ -910,7 +885,6 @@ where
 
     Ok(Some(IExpressionPE::Block(BlockPE {
       range: RangeL::new(begin, iter.get_prev_end_pos()),
-      maybe_pure: pure,
       maybe_default_region: None,
       inner: self.parse_arena.alloc(inner),
     })))
@@ -2137,7 +2111,6 @@ where
         let statements_p = self.parse_block(&block_l, templex_parser, pattern_parser)?;
         BlockPE {
           range: block_l.range,
-          maybe_pure: None,
           // Would we ever want a lambda with a different default region?
           maybe_default_region: None,
           inner: self.parse_arena.alloc(statements_p),
@@ -2147,7 +2120,6 @@ where
         let result = self.parse_expression(iter, false, templex_parser, pattern_parser)?;
         BlockPE {
           range: result.range(),
-          maybe_pure: None,
           // Would we ever want a lambda with a different default region?
           maybe_default_region: None,
           inner: self.parse_arena.alloc(result),
@@ -2313,7 +2285,6 @@ where
           left: left_operand,
           right: self.parse_arena.alloc(BlockPE {
             range: right_operand.range(),
-            maybe_pure: None,
             maybe_default_region: None,
             inner: right_operand,
           }),
@@ -2324,7 +2295,6 @@ where
           left: left_operand,
           right: self.parse_arena.alloc(BlockPE {
             range: right_operand.range(),
-            maybe_pure: None,
             maybe_default_region: None,
             inner: right_operand,
           }),

@@ -1,13 +1,13 @@
 import v.builtins.drop.*;
 
-sealed interface MyOption<T Ref> { }
+sealed interface MyOption<T Kind> { }
 
-struct MySome<T Ref> where func drop(T)void {
+struct MySome<T Kind> where func drop(T)void {
   value T;
 }
 impl<T> MyOption<T> for MySome<T>;
 
-struct MyNone<T> where T Ref { }
+struct MyNone<T> where T Kind { }
 impl<T> MyOption<T> for MyNone<T>;
 
 abstract func len<T>(virtual opt &MyOption<T>) int;

@@ -14,6 +14,6 @@ pub struct CaptureS<'s> {
 pub struct AtomSP<'s> {
   pub range: RangeS<'s>,
   pub name: Option<CaptureS<'s>>,
-  pub coord_rune: Option<RuneUsage<'s>>,
+  pub kind_rune: Option<RuneUsage<'s>>,
   pub destructure: Option<&'s [AtomSP<'s>]>,
 }

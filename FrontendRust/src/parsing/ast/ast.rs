@@ -185,7 +185,6 @@ pub enum IAttributeP<'p> {
   ExternAttribute(ExternAttributeP),
   BuiltinAttribute(BuiltinAttributeP<'p>),
   ExportAttribute(ExportAttributeP),
-  PureAttribute(PureAttributeP),
 }
 
 
@@ -210,10 +209,6 @@ pub struct ExportAttributeP {
   pub range: RangeL,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct PureAttributeP {
-  pub range: RangeL,
-}
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]

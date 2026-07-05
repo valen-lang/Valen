@@ -133,14 +133,6 @@ where
       ))));
     }
 
-    if iter.try_skip_complete_word("pure") {
-      let end = iter.get_pos();
-      return Ok(Some(IAttributeL::PureAttribute(RangeL::new(
-        attribute_begin,
-        end,
-      ))));
-    }
-
     if iter.try_skip_complete_word("extern") {
       let maybe_custom_name = if iter.peek() == '(' {
         Some(self.lex_parend(iter)?.unwrap())

@@ -49,10 +49,7 @@ exclude_shields = [
     "MigrateAllCommentsToo-MACTX.md",
     "NoChangesWithoutScalaReference-NCWSRX.md",
     "ScalaSealedTraitsToRustEnums-SSTREX.md",
-
-    "NoAddingScalaComments-NASCX.md",
-    "ScalaCommentParity-SCPX.md",
-    "SliceInTheRightPlaces-SITRPX.md"
+    "NoRemovingVMarkers-NRVMX.md",
 ]
 
 [guard_mode]
@@ -60,6 +57,7 @@ include_shields = [
     { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "NoNewDefinitions-NNDX.md" },
     { name = "NoAddingGuardianDirectives-NAGDX.md" },
+    { name = "NoRenamedDefinitions-NRDX.md" },
     { name = "NoMovedDefinitions-NMDX.md" },
 
     { name = "NeverDowncastTraits-NEDCX.md" },

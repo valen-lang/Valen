@@ -1,4 +1,4 @@
-use super::ast::{SharednessP, NameP};
+use super::ast::NameP;
 use super::rules::ITypePR;
 use crate::interner::StrI;
 use crate::lexing::RangeL;
@@ -8,10 +8,8 @@ use crate::lexing::RangeL;
 pub enum ITemplexPT<'p> {
   AnonymousRune(AnonymousRunePT),
   Bool(BoolPT),
-  Point(PointPT<'p>),
   Call(CallPT<'p>),
   Function(FunctionPT<'p>),
-  Inline(InlinePT<'p>),
   Int(IntPT),
   RegionRune(RegionRunePT<'p>),
   Tuple(TuplePT<'p>),
@@ -32,10 +30,8 @@ impl ITemplexPT<'_> {
     match self {
       ITemplexPT::AnonymousRune(r) => r.range,
       ITemplexPT::Bool(r) => r.range,
-      ITemplexPT::Point(r) => r.range,
       ITemplexPT::Call(r) => r.range,
       ITemplexPT::Function(r) => r.range,
-      ITemplexPT::Inline(r) => r.range,
       ITemplexPT::Int(r) => r.range,
       ITemplexPT::RegionRune(r) => r.range,
       ITemplexPT::Tuple(r) => r.range,
@@ -69,13 +65,6 @@ pub struct BoolPT {
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct PointPT<'p> {
-  pub range: RangeL,
-  pub inner: &'p ITemplexPT<'p>,
-}
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CallPT<'p> {
   pub range: RangeL,
   pub template: &'p ITemplexPT<'p>,
@@ -89,13 +78,6 @@ pub struct FunctionPT<'p> {
   pub mutability: Option<&'p ITemplexPT<'p>>,
   pub parameters: &'p PackPT<'p>,
   pub return_type: &'p ITemplexPT<'p>,
-}
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct InlinePT<'p> {
-  pub range: RangeL,
-  pub inner: &'p ITemplexPT<'p>,
 }
 
 
@@ -118,10 +100,6 @@ pub struct TuplePT<'p> {
   pub range: RangeL,
   pub elements: &'p [&'p ITemplexPT<'p>],
 }
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct SharednessPT(pub RangeL, pub SharednessP);
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]

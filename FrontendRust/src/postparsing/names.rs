@@ -688,7 +688,7 @@ pub struct StaticSizedArrayDeclarationNameS {}
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IRuneS<'s> {
   CodeRune(&'s CodeRuneS<'s>),
-  ImplDropCoordRune(&'s ImplDropCoordRuneS),
+  ImplDropKindRune(&'s ImplDropKindRuneS),
   ImplDropVoidRune(&'s ImplDropVoidRuneS),
   ImplicitRune(&'s ImplicitRuneS<'s>),
   CallRegionRune(&'s CallRegionRuneS<'s>),
@@ -705,7 +705,6 @@ pub enum IRuneS<'s> {
   DenizenDefaultRegionRune(&'s DenizenDefaultRegionRuneS<'s>),
   ExportDefaultRegionRune(&'s ExportDefaultRegionRuneS<'s>),
   ExternDefaultRegionRune(&'s ExternDefaultRegionRuneS<'s>),
-  ImplicitCoercionOwnershipRune(&'s ImplicitCoercionOwnershipRuneS<'s>),
   ImplicitCoercionKindRune(&'s ImplicitCoercionKindRuneS<'s>),
   ImplicitCoercionTemplateRune(&'s ImplicitCoercionTemplateRuneS<'s>),
   ArraySizeImplicitRune(&'s ArraySizeImplicitRuneS),
@@ -714,15 +713,11 @@ pub enum IRuneS<'s> {
   StructNameRune(&'s StructNameRuneS<'s>),
   InterfaceNameRune(&'s InterfaceNameRuneS<'s>),
   SelfRune(&'s SelfRuneS),
-  SelfOwnershipRune(&'s SelfOwnershipRuneS),
   SelfKindRune(&'s SelfKindRuneS),
   SelfKindTemplateRune(&'s SelfKindTemplateRuneS<'s>),
-  SelfCoordRune(&'s SelfCoordRuneS),
   MacroVoidKindRune(&'s MacroVoidKindRuneS),
-  MacroVoidCoordRune(&'s MacroVoidCoordRuneS),
   MacroSelfKindRune(&'s MacroSelfKindRuneS),
   MacroSelfKindTemplateRune(&'s MacroSelfKindTemplateRuneS),
-  MacroSelfCoordRune(&'s MacroSelfCoordRuneS),
   ArgumentRune(&'s ArgumentRuneS),
   PatternInputRune(&'s PatternInputRuneS<'s>),
   ExplicitTemplateArgRune(&'s ExplicitTemplateArgRuneS),
@@ -730,15 +725,11 @@ pub enum IRuneS<'s> {
     &'s AnonymousSubstructParentInterfaceTemplateRuneS,
   ),
   AnonymousSubstructParentInterfaceKindRune(&'s AnonymousSubstructParentInterfaceKindRuneS),
-  AnonymousSubstructParentInterfaceCoordRune(&'s AnonymousSubstructParentInterfaceCoordRuneS),
   AnonymousSubstructTemplateRune(&'s AnonymousSubstructTemplateRuneS),
   AnonymousSubstructKindRune(&'s AnonymousSubstructKindRuneS),
-  AnonymousSubstructCoordRune(&'s AnonymousSubstructCoordRuneS),
   AnonymousSubstructVoidKindRune(&'s AnonymousSubstructVoidKindRuneS),
-  AnonymousSubstructVoidCoordRune(&'s AnonymousSubstructVoidCoordRuneS),
   AnonymousSubstructMemberRune(&'s AnonymousSubstructMemberRuneS<'s>),
-  AnonymousSubstructMethodSelfBorrowCoordRune(&'s AnonymousSubstructMethodSelfBorrowCoordRuneS<'s>),
-  AnonymousSubstructMethodSelfOwnCoordRune(&'s AnonymousSubstructMethodSelfOwnCoordRuneS<'s>),
+  AnonymousSubstructMethodSelfBorrowKindRune(&'s AnonymousSubstructMethodSelfBorrowKindRuneS<'s>),
   AnonymousSubstructDropBoundPrototypeRune(&'s AnonymousSubstructDropBoundPrototypeRuneS<'s>),
   AnonymousSubstructDropBoundParamsListRune(&'s AnonymousSubstructDropBoundParamsListRuneS<'s>),
   AnonymousSubstructFunctionBoundPrototypeRune(&'s AnonymousSubstructFunctionBoundPrototypeRuneS<'s>),
@@ -760,7 +751,7 @@ impl<'s> IRuneS<'s> {
   pub fn canonical_ptr(&self) -> *const () {
     match self {
       IRuneS::CodeRune(r) => *r as *const _ as *const (),
-      IRuneS::ImplDropCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::ImplDropKindRune(r) => *r as *const _ as *const (),
       IRuneS::ImplDropVoidRune(r) => *r as *const _ as *const (),
       IRuneS::ImplicitRune(r) => *r as *const _ as *const (),
       IRuneS::CallRegionRune(r) => *r as *const _ as *const (),
@@ -777,7 +768,6 @@ impl<'s> IRuneS<'s> {
       IRuneS::DenizenDefaultRegionRune(r) => *r as *const _ as *const (),
       IRuneS::ExportDefaultRegionRune(r) => *r as *const _ as *const (),
       IRuneS::ExternDefaultRegionRune(r) => *r as *const _ as *const (),
-      IRuneS::ImplicitCoercionOwnershipRune(r) => *r as *const _ as *const (),
       IRuneS::ImplicitCoercionKindRune(r) => *r as *const _ as *const (),
       IRuneS::ImplicitCoercionTemplateRune(r) => *r as *const _ as *const (),
       IRuneS::ArraySizeImplicitRune(r) => *r as *const _ as *const (),
@@ -786,29 +776,21 @@ impl<'s> IRuneS<'s> {
       IRuneS::StructNameRune(r) => *r as *const _ as *const (),
       IRuneS::InterfaceNameRune(r) => *r as *const _ as *const (),
       IRuneS::SelfRune(r) => *r as *const _ as *const (),
-      IRuneS::SelfOwnershipRune(r) => *r as *const _ as *const (),
       IRuneS::SelfKindRune(r) => *r as *const _ as *const (),
       IRuneS::SelfKindTemplateRune(r) => *r as *const _ as *const (),
-      IRuneS::SelfCoordRune(r) => *r as *const _ as *const (),
       IRuneS::MacroVoidKindRune(r) => *r as *const _ as *const (),
-      IRuneS::MacroVoidCoordRune(r) => *r as *const _ as *const (),
       IRuneS::MacroSelfKindRune(r) => *r as *const _ as *const (),
       IRuneS::MacroSelfKindTemplateRune(r) => *r as *const _ as *const (),
-      IRuneS::MacroSelfCoordRune(r) => *r as *const _ as *const (),
       IRuneS::ArgumentRune(r) => *r as *const _ as *const (),
       IRuneS::PatternInputRune(r) => *r as *const _ as *const (),
       IRuneS::ExplicitTemplateArgRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructParentInterfaceTemplateRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructParentInterfaceKindRune(r) => *r as *const _ as *const (),
-      IRuneS::AnonymousSubstructParentInterfaceCoordRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructTemplateRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructKindRune(r) => *r as *const _ as *const (),
-      IRuneS::AnonymousSubstructCoordRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructVoidKindRune(r) => *r as *const _ as *const (),
-      IRuneS::AnonymousSubstructVoidCoordRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructMemberRune(r) => *r as *const _ as *const (),
-      IRuneS::AnonymousSubstructMethodSelfBorrowCoordRune(r) => *r as *const _ as *const (),
-      IRuneS::AnonymousSubstructMethodSelfOwnCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructMethodSelfBorrowKindRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructDropBoundPrototypeRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructDropBoundParamsListRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(r) => *r as *const _ as *const (),
@@ -840,19 +822,11 @@ pub struct ImplicitRegionRuneValS<'s> {
 }
 
 
-/// Value-struct for ImplicitCoercionOwnershipRuneS key. Shallow: references canonical child rune.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplicitCoercionOwnershipRuneValS<'s> {
-  pub range: RangeS<'s>,
-  pub original_coord_rune: IRuneS<'s>,
-}
-
-
 /// Value-struct for ImplicitCoercionKindRuneS key. Shallow: references canonical child rune.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionKindRuneValS<'s> {
   pub range: RangeS<'s>,
-  pub original_coord_rune: IRuneS<'s>,
+  pub original_kind_rune: IRuneS<'s>,
 }
 
 
@@ -920,7 +894,7 @@ impl<'tmp> LocalDefaultRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenV
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IRuneValS<'s, 'tmp> {
   CodeRune(CodeRuneS<'s>),
-  ImplDropCoordRune(ImplDropCoordRuneS),
+  ImplDropKindRune(ImplDropKindRuneS),
   ImplDropVoidRune(ImplDropVoidRuneS),
   ImplicitRune(ImplicitRuneValS<'tmp>),
   CallRegionRune(CallRegionRuneValS<'tmp>),
@@ -937,7 +911,6 @@ pub enum IRuneValS<'s, 'tmp> {
   DenizenDefaultRegionRune(DenizenDefaultRegionRuneS<'s>),
   ExportDefaultRegionRune(ExportDefaultRegionRuneS<'s>),
   ExternDefaultRegionRune(ExternDefaultRegionRuneS<'s>),
-  ImplicitCoercionOwnershipRune(ImplicitCoercionOwnershipRuneValS<'s>),
   ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS<'s>),
   ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS<'s>),
   ArraySizeImplicitRune(ArraySizeImplicitRuneS),
@@ -946,29 +919,21 @@ pub enum IRuneValS<'s, 'tmp> {
   StructNameRune(StructNameRuneS<'s>),
   InterfaceNameRune(InterfaceNameRuneS<'s>),
   SelfRune(SelfRuneS),
-  SelfOwnershipRune(SelfOwnershipRuneS),
   SelfKindRune(SelfKindRuneS),
   SelfKindTemplateRune(SelfKindTemplateRuneS<'s>),
-  SelfCoordRune(SelfCoordRuneS),
   MacroVoidKindRune(MacroVoidKindRuneS),
-  MacroVoidCoordRune(MacroVoidCoordRuneS),
   MacroSelfKindRune(MacroSelfKindRuneS),
   MacroSelfKindTemplateRune(MacroSelfKindTemplateRuneS),
-  MacroSelfCoordRune(MacroSelfCoordRuneS),
   ArgumentRune(ArgumentRuneS),
   PatternInputRune(PatternInputRuneS<'s>),
   ExplicitTemplateArgRune(ExplicitTemplateArgRuneS),
   AnonymousSubstructParentInterfaceTemplateRune(AnonymousSubstructParentInterfaceTemplateRuneS),
   AnonymousSubstructParentInterfaceKindRune(AnonymousSubstructParentInterfaceKindRuneS),
-  AnonymousSubstructParentInterfaceCoordRune(AnonymousSubstructParentInterfaceCoordRuneS),
   AnonymousSubstructTemplateRune(AnonymousSubstructTemplateRuneS),
   AnonymousSubstructKindRune(AnonymousSubstructKindRuneS),
-  AnonymousSubstructCoordRune(AnonymousSubstructCoordRuneS),
   AnonymousSubstructVoidKindRune(AnonymousSubstructVoidKindRuneS),
-  AnonymousSubstructVoidCoordRune(AnonymousSubstructVoidCoordRuneS),
   AnonymousSubstructMemberRune(AnonymousSubstructMemberRuneS<'s>),
-  AnonymousSubstructMethodSelfBorrowCoordRune(AnonymousSubstructMethodSelfBorrowCoordRuneS<'s>),
-  AnonymousSubstructMethodSelfOwnCoordRune(AnonymousSubstructMethodSelfOwnCoordRuneS<'s>),
+  AnonymousSubstructMethodSelfBorrowKindRune(AnonymousSubstructMethodSelfBorrowKindRuneS<'s>),
   AnonymousSubstructDropBoundPrototypeRune(AnonymousSubstructDropBoundPrototypeRuneS<'s>),
   AnonymousSubstructDropBoundParamsListRune(AnonymousSubstructDropBoundParamsListRuneS<'s>),
   AnonymousSubstructFunctionBoundPrototypeRune(AnonymousSubstructFunctionBoundPrototypeRuneS<'s>),
@@ -1016,7 +981,7 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
       (LocalDefaultRegionRune(a), LocalDefaultRegionRune(b)) => a.lid().path() == b.lid().path(),
       // All other variants: same inner type on both sides, delegate to PartialEq
       (CodeRune(a), CodeRune(b)) => a == b,
-      (ImplDropCoordRune(a), ImplDropCoordRune(b)) => a == b,
+      (ImplDropKindRune(a), ImplDropKindRune(b)) => a == b,
       (ImplDropVoidRune(a), ImplDropVoidRune(b)) => a == b,
       (ImplicitRegionRune(a), ImplicitRegionRune(b)) => a == b,
       (ReachablePrototypeRune(a), ReachablePrototypeRune(b)) => a == b,
@@ -1027,7 +992,6 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
       (DenizenDefaultRegionRune(a), DenizenDefaultRegionRune(b)) => a == b,
       (ExportDefaultRegionRune(a), ExportDefaultRegionRune(b)) => a == b,
       (ExternDefaultRegionRune(a), ExternDefaultRegionRune(b)) => a == b,
-      (ImplicitCoercionOwnershipRune(a), ImplicitCoercionOwnershipRune(b)) => a == b,
       (ImplicitCoercionKindRune(a), ImplicitCoercionKindRune(b)) => a == b,
       (ImplicitCoercionTemplateRune(a), ImplicitCoercionTemplateRune(b)) => a == b,
       (ArraySizeImplicitRune(a), ArraySizeImplicitRune(b)) => a == b,
@@ -1036,29 +1000,21 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
       (StructNameRune(a), StructNameRune(b)) => a == b,
       (InterfaceNameRune(a), InterfaceNameRune(b)) => a == b,
       (SelfRune(a), SelfRune(b)) => a == b,
-      (SelfOwnershipRune(a), SelfOwnershipRune(b)) => a == b,
       (SelfKindRune(a), SelfKindRune(b)) => a == b,
       (SelfKindTemplateRune(a), SelfKindTemplateRune(b)) => a == b,
-      (SelfCoordRune(a), SelfCoordRune(b)) => a == b,
       (MacroVoidKindRune(a), MacroVoidKindRune(b)) => a == b,
-      (MacroVoidCoordRune(a), MacroVoidCoordRune(b)) => a == b,
       (MacroSelfKindRune(a), MacroSelfKindRune(b)) => a == b,
       (MacroSelfKindTemplateRune(a), MacroSelfKindTemplateRune(b)) => a == b,
-      (MacroSelfCoordRune(a), MacroSelfCoordRune(b)) => a == b,
       (ArgumentRune(a), ArgumentRune(b)) => a == b,
       (PatternInputRune(a), PatternInputRune(b)) => a == b,
       (ExplicitTemplateArgRune(a), ExplicitTemplateArgRune(b)) => a == b,
       (AnonymousSubstructParentInterfaceTemplateRune(a), AnonymousSubstructParentInterfaceTemplateRune(b)) => a == b,
       (AnonymousSubstructParentInterfaceKindRune(a), AnonymousSubstructParentInterfaceKindRune(b)) => a == b,
-      (AnonymousSubstructParentInterfaceCoordRune(a), AnonymousSubstructParentInterfaceCoordRune(b)) => a == b,
       (AnonymousSubstructTemplateRune(a), AnonymousSubstructTemplateRune(b)) => a == b,
       (AnonymousSubstructKindRune(a), AnonymousSubstructKindRune(b)) => a == b,
-      (AnonymousSubstructCoordRune(a), AnonymousSubstructCoordRune(b)) => a == b,
       (AnonymousSubstructVoidKindRune(a), AnonymousSubstructVoidKindRune(b)) => a == b,
-      (AnonymousSubstructVoidCoordRune(a), AnonymousSubstructVoidCoordRune(b)) => a == b,
       (AnonymousSubstructMemberRune(a), AnonymousSubstructMemberRune(b)) => a == b,
-      (AnonymousSubstructMethodSelfBorrowCoordRune(a), AnonymousSubstructMethodSelfBorrowCoordRune(b)) => a == b,
-      (AnonymousSubstructMethodSelfOwnCoordRune(a), AnonymousSubstructMethodSelfOwnCoordRune(b)) => a == b,
+      (AnonymousSubstructMethodSelfBorrowKindRune(a), AnonymousSubstructMethodSelfBorrowKindRune(b)) => a == b,
       (AnonymousSubstructDropBoundPrototypeRune(a), AnonymousSubstructDropBoundPrototypeRune(b)) => a == b,
       (AnonymousSubstructDropBoundParamsListRune(a), AnonymousSubstructDropBoundParamsListRune(b)) => a == b,
       (AnonymousSubstructFunctionBoundPrototypeRune(a), AnonymousSubstructFunctionBoundPrototypeRune(b)) => a == b,
@@ -1085,7 +1041,7 @@ pub struct CodeRuneS<'s> {
 
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplDropCoordRuneS {}
+pub struct ImplDropKindRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDropVoidRuneS {}
@@ -1161,15 +1117,9 @@ pub struct ExternDefaultRegionRuneS<'s> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplicitCoercionOwnershipRuneS<'s> {
-  pub range: RangeS<'s>,
-  pub original_coord_rune: IRuneS<'s>,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionKindRuneS<'s> {
   pub range: RangeS<'s>,
-  pub original_coord_rune: IRuneS<'s>,
+  pub original_kind_rune: IRuneS<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -1201,9 +1151,6 @@ pub struct InterfaceNameRuneS<'s> {
 pub struct SelfRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct SelfOwnershipRuneS {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SelfKindRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -1212,22 +1159,13 @@ pub struct SelfKindTemplateRuneS<'s> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct SelfCoordRuneS {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MacroVoidKindRuneS {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct MacroVoidCoordRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MacroSelfKindRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MacroSelfKindTemplateRuneS {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct MacroSelfCoordRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeNameS<'s> {
@@ -1262,22 +1200,13 @@ pub struct AnonymousSubstructParentInterfaceTemplateRuneS {}
 pub struct AnonymousSubstructParentInterfaceKindRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AnonymousSubstructParentInterfaceCoordRuneS {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructKindRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AnonymousSubstructCoordRuneS {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructVoidKindRuneS {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AnonymousSubstructVoidCoordRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructMemberRuneS<'s> {
@@ -1286,13 +1215,7 @@ pub struct AnonymousSubstructMemberRuneS<'s> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AnonymousSubstructMethodSelfBorrowCoordRuneS<'s> {
-  pub interface: TopLevelInterfaceDeclarationNameS<'s>,
-  pub method: IFunctionDeclarationNameS<'s>,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AnonymousSubstructMethodSelfOwnCoordRuneS<'s> {
+pub struct AnonymousSubstructMethodSelfBorrowKindRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
 }

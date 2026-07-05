@@ -43,7 +43,6 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
   stack_frame0: StackFrame<'s>,
   lidb: &mut LocationInDenizenBuilder,
   range: RangeL,
-  _pure: bool,
   entry_pattern_pp: &'p PatternPP<'p>,
   in_keyword_range: RangeL,
   iterable_expr: &'p IExpressionPE<'p>,

@@ -1,13 +1,13 @@
 use crate::postparsing::ast::{
-  AbstractBodyS, AdditiveS, BuiltinS, CodeBodyS, ExportAsS, ExportS, ExternBodyS, ExternS,
+  AbstractBodyS, BuiltinS, CodeBodyS, ExportAsS, ExportS, ExternBodyS, ExternS,
   FileS, FunctionS, GeneratedBodyS, GenericParameterDefaultS, GenericParameterS, IBodyS, ICitizenAttributeS,
   ICitizenDenizenS, ICitizenS, IDenizenS, IFunctionAttributeS, IGenericParameterTypeS, IStructMemberS, ImplS,
-  ImportS, InterfaceS, MacroCallS, NormalStructMemberS, ParameterS, ProgramS, PureS, SealedS, SimpleParameterS,
+  ImportS, InterfaceS, MacroCallS, NormalStructMemberS, ParameterS, ProgramS, SealedS,
   StructS, TopLevelExportAsS, TopLevelFunctionS, TopLevelImplS, TopLevelImportS, TopLevelInterfaceS,
   TopLevelStructS, UserFunctionS, VariadicStructMemberS,
 };
 use crate::postparsing::expressions::{
-  BlockSE, BodySE, DotSE, IExpressionSE, LocalS, OutsideLoadSE, OwnershippedSE, PureSE, ReturnSE,
+  BlockSE, BodySE, DotSE, IExpressionSE, LocalS, OutsideLoadSE, OwnershippedSE, ReturnSE,
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, ExportAsNameS as ExportAsNameFromNamesS, FunctionNameS,
@@ -17,9 +17,8 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
-  AugmentSR, BoolLiteralSL, CoerceToCoordSR, CoordComponentsSR, EqualsSR, ILiteralSL, IntLiteralSL,
-  IRulexSR, IsInterfaceSR, LiteralSR, LocationLiteralSL, LookupSR, MaybeCoercingCallSR,
-  MaybeCoercingLookupSR, OneOfSR, OwnershipLiteralSL, StringLiteralSL,
+  BoolLiteralSL, EqualsSR, ILiteralSL, IntLiteralSL,
+  IRulexSR, LiteralSR, LookupSR, StringLiteralSL,
 };
 use crate::postparsing::rules::RuneUsage;
 
@@ -50,8 +49,6 @@ pub enum NodeRefS<'s> {
   MacroCallAttribute(&'s MacroCallS<'s>),
   ExportAttribute(&'s ExportS<'s>),
   SealedAttribute(&'s SealedS),
-  PureAttribute(&'s PureS),
-  AdditiveAttribute(&'s AdditiveS),
   UserFunctionAttribute(&'s UserFunctionS),
 
   StructMember(&'s IStructMemberS<'s>),
@@ -62,7 +59,6 @@ pub enum NodeRefS<'s> {
   GenericParameterDefault(&'s GenericParameterDefaultS<'s>),
   GenericParameterType(&'s IGenericParameterTypeS<'s>),
   Parameter(&'s ParameterS<'s>),
-  SimpleParameter(&'s SimpleParameterS<'s>),
 
   Body(&'s IBodyS<'s>),
   ExternBody(&'s ExternBodyS),
@@ -74,7 +70,6 @@ pub enum NodeRefS<'s> {
   Local(&'s LocalS<'s>),
   Expression(&'s IExpressionSE<'s>),
   BlockExpr(&'s BlockSE<'s>),
-  PureExpr(&'s PureSE<'s>),
 
   Pattern(&'s AtomSP<'s>),
   Capture(&'s CaptureS<'s>),
@@ -82,21 +77,12 @@ pub enum NodeRefS<'s> {
   Rulex(&'s IRulexSR<'s>),
   EqualsRule(&'s EqualsSR<'s>),
   LiteralRule(&'s LiteralSR<'s>),
-  MaybeCoercingLookupRule(&'s MaybeCoercingLookupSR<'s>),
   LookupRule(&'s LookupSR<'s>),
-  MaybeCoercingCallRule(&'s MaybeCoercingCallSR<'s>),
-  AugmentRule(&'s AugmentSR<'s>),
-  OneOfRule(&'s OneOfSR<'s>),
-  IsInterfaceRule(&'s IsInterfaceSR<'s>),
-  CoordComponentsRule(&'s CoordComponentsSR<'s>),
-  CoerceToCoordRule(&'s CoerceToCoordSR<'s>),
   RuneUsage(&'s RuneUsage<'s>),
   Literal(&'s ILiteralSL<'s>),
   IntLiteral(&'s IntLiteralSL),
   StringLiteral(&'s StringLiteralSL<'s>),
   BoolLiteral(&'s BoolLiteralSL),
-  LocationLiteral(&'s LocationLiteralSL),
-  OwnershipLiteral(&'s OwnershipLiteralSL),
 
   Name(&'s INameS<'s>),
   FunctionDeclarationName(&'s IFunctionDeclarationNameS<'s>),
@@ -408,7 +394,7 @@ where
   for param in function.params {
     visit_parameter(pred, out, param);
   }
-  if let Some(rune) = &function.maybe_ret_coord_rune {
+  if let Some(rune) = &function.maybe_ret_kind_rune {
     visit_rune_usage(pred, out, rune);
   }
   for rule in function.rules {
@@ -453,11 +439,6 @@ where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::GenericParameterType(tyype));
-  if let IGenericParameterTypeS::CoordGenericParameterType(x) = tyype {
-    if let Some(coord_region) = &x.coord_region {
-      visit_rune_usage(pred, out, coord_region);
-    }
-  }
 }
 
 fn visit_body<'s, T, F>(pred: &F, out: &mut Vec<T>, body: &'s IBodyS<'s>)
@@ -568,7 +549,6 @@ where
       }
     }
     IExpressionSE::Block(x) => visit_block(pred, out, x),
-    IExpressionSE::Pure(x) => visit_pure(pred, out, x),
     IExpressionSE::Return(x) => visit_return(pred, out, x),
     IExpressionSE::ConstantInt(_) => {}
     IExpressionSE::ConstantBool(_) => {}
@@ -643,14 +623,6 @@ where
   visit_expression(pred, out, block.expr);
 }
 
-fn visit_pure<'s, T, F>(pred: &F, out: &mut Vec<T>, pure: &'s PureSE<'s>)
-where
-  F: Fn(NodeRefS<'s>) -> Option<T>,
-{
-  collect_if(pred, out, NodeRefS::PureExpr(pure));
-  visit_expression(pred, out, pure.inner);
-}
-
 fn visit_local<'s, T, F>(pred: &F, out: &mut Vec<T>, local: &'s LocalS<'s>)
 where
   F: Fn(NodeRefS<'s>) -> Option<T>,
@@ -667,8 +639,8 @@ where
   if let Some(capture) = &pattern.name {
     visit_capture(pred, out, capture);
   }
-  if let Some(coord_rune) = &pattern.coord_rune {
-    visit_rune_usage(pred, out, coord_rune);
+  if let Some(kind_rune) = &pattern.kind_rune {
+    visit_rune_usage(pred, out, kind_rune);
   }
   if let Some(destructure) = pattern.destructure {
     for child_pattern in destructure {
@@ -723,8 +695,6 @@ where
   collect_if(pred, out, NodeRefS::FunctionAttribute(attribute));
   match attribute {
     IFunctionAttributeS::Extern(x) => collect_if(pred, out, NodeRefS::ExternAttribute(x)),
-    IFunctionAttributeS::Pure(x) => collect_if(pred, out, NodeRefS::PureAttribute(x)),
-    IFunctionAttributeS::Additive(x) => collect_if(pred, out, NodeRefS::AdditiveAttribute(x)),
     IFunctionAttributeS::Builtin(x) => collect_if(pred, out, NodeRefS::BuiltinAttribute(x)),
     IFunctionAttributeS::Export(x) => collect_if(pred, out, NodeRefS::ExportAttribute(x)),
     IFunctionAttributeS::UserFunction(x) => collect_if(pred, out, NodeRefS::UserFunctionAttribute(x)),
@@ -747,53 +717,13 @@ where
       visit_rune_usage(pred, out, &x.rune);
       visit_literal(pred, out, &x.literal);
     }
-    IRulexSR::MaybeCoercingLookup(x) => {
-      collect_if(pred, out, NodeRefS::MaybeCoercingLookupRule(x));
-      visit_rune_usage(pred, out, &x.rune);
-      visit_imprecise_name(pred, out, &x.name);
-    }
     IRulexSR::Lookup(x) => {
       collect_if(pred, out, NodeRefS::LookupRule(x));
       visit_rune_usage(pred, out, &x.rune);
       visit_imprecise_name(pred, out, &x.name);
     }
-    IRulexSR::MaybeCoercingCall(x) => {
-      collect_if(pred, out, NodeRefS::MaybeCoercingCallRule(x));
-      visit_rune_usage(pred, out, &x.result_rune);
-      visit_rune_usage(pred, out, &x.template_rune);
-      for arg in x.args {
-        visit_rune_usage(pred, out, arg);
-      }
-    }
     IRulexSR::RuneParentEnvLookup(x) => {
       visit_rune_usage(pred, out, &x.rune);
-    }
-    IRulexSR::Augment(x) => {
-      collect_if(pred, out, NodeRefS::AugmentRule(x));
-      visit_rune_usage(pred, out, &x.result_rune);
-      visit_rune_usage(pred, out, &x.inner_rune);
-    }
-    IRulexSR::OneOf(x) => {
-      collect_if(pred, out, NodeRefS::OneOfRule(x));
-      visit_rune_usage(pred, out, &x.rune);
-      for literal in x.literals {
-        visit_literal(pred, out, literal);
-      }
-    }
-    IRulexSR::IsInterface(x) => {
-      collect_if(pred, out, NodeRefS::IsInterfaceRule(x));
-      visit_rune_usage(pred, out, &x.rune);
-    }
-    IRulexSR::CoordComponents(x) => {
-      collect_if(pred, out, NodeRefS::CoordComponentsRule(x));
-      visit_rune_usage(pred, out, &x.result_rune);
-      visit_rune_usage(pred, out, &x.ownership_rune);
-      visit_rune_usage(pred, out, &x.kind_rune);
-    }
-    IRulexSR::CoerceToCoord(x) => {
-      collect_if(pred, out, NodeRefS::CoerceToCoordRule(x));
-      visit_rune_usage(pred, out, &x.coord_rune);
-      visit_rune_usage(pred, out, &x.kind_rune);
     }
     IRulexSR::Call(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
@@ -802,7 +732,7 @@ where
         visit_rune_usage(pred, out, arg);
       }
     }
-    IRulexSR::Pack(x) => {
+    IRulexSR::KindList(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
       for member in x.members {
         visit_rune_usage(pred, out, member);
@@ -823,43 +753,24 @@ where
       visit_rune_usage(pred, out, &x.params_list_rune);
       visit_rune_usage(pred, out, &x.return_rune);
     }
-    IRulexSR::CoordSend(x) => {
-      visit_rune_usage(pred, out, &x.sender_rune);
-      visit_rune_usage(pred, out, &x.receiver_rune);
-    }
-    IRulexSR::DefinitionCoordIsa(x) => {
+    IRulexSR::BorrowRef(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
-      visit_rune_usage(pred, out, &x.sub_rune);
-      visit_rune_usage(pred, out, &x.super_rune);
-    }
-    IRulexSR::CallSiteCoordIsa(x) => {
-      if let Some(ref r) = x.result_rune {
+      visit_rune_usage(pred, out, &x.inner_rune);
+      if let Some(ref r) = x.region_rune {
         visit_rune_usage(pred, out, r);
       }
-      visit_rune_usage(pred, out, &x.sub_rune);
-      visit_rune_usage(pred, out, &x.super_rune);
     }
-    IRulexSR::KindComponents(x) => {
-      visit_rune_usage(pred, out, &x.kind_rune);
-    }
-    IRulexSR::PrototypeComponents(x) => {
+    IRulexSR::HeapOwnRef(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
-      visit_rune_usage(pred, out, &x.params_rune);
-      visit_rune_usage(pred, out, &x.return_rune);
+      visit_rune_usage(pred, out, &x.inner_rune);
     }
-    IRulexSR::IsConcrete(x) => {
-      visit_rune_usage(pred, out, &x.rune);
-    }
-    IRulexSR::IsStruct(x) => {
-      visit_rune_usage(pred, out, &x.rune);
-    }
-    IRulexSR::RefListCompoundMutability(x) => {
+    IRulexSR::ShareRef(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
-      visit_rune_usage(pred, out, &x.coord_list_rune);
+      visit_rune_usage(pred, out, &x.inner_rune);
     }
-    IRulexSR::IndexList(x) => {
+    IRulexSR::WeakRef(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
-      visit_rune_usage(pred, out, &x.list_rune);
+      visit_rune_usage(pred, out, &x.inner_rune);
     }
   }
 }
@@ -873,8 +784,6 @@ where
     ILiteralSL::IntLiteral(x) => collect_if(pred, out, NodeRefS::IntLiteral(x)),
     ILiteralSL::StringLiteral(x) => collect_if(pred, out, NodeRefS::StringLiteral(x)),
     ILiteralSL::BoolLiteral(x) => collect_if(pred, out, NodeRefS::BoolLiteral(x)),
-    ILiteralSL::LocationLiteral(x) => collect_if(pred, out, NodeRefS::LocationLiteral(x)),
-    ILiteralSL::OwnershipLiteral(x) => collect_if(pred, out, NodeRefS::OwnershipLiteral(x)),
   }
 }
 
@@ -957,7 +866,7 @@ where
       collect_if(pred, out, NodeRefS::DenizenDefaultRegionRune(x));
       visit_name(pred, out, &x.denizen_name);
     }
-    _ => panic!("POSTPARSING_TRAVERSE_RUNE_VARIANT_NOT_YET_IMPLEMENTED"),
+    _ => {}
   }
 }
 

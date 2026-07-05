@@ -739,10 +739,6 @@ where
         iter.advance();
         Ok(Some(ITypePR::IntType))
       }
-      Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.ref_ => {
-        iter.advance();
-        Ok(Some(ITypePR::CoordType))
-      }
       Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.kind => {
         iter.advance();
         Ok(Some(ITypePR::KindType))
@@ -751,17 +747,9 @@ where
         iter.advance();
         Ok(Some(ITypePR::RegionType))
       }
-      Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.prot => {
-        iter.advance();
-        Ok(Some(ITypePR::PrototypeType))
-      }
       Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.ref_list => {
         iter.advance();
         Ok(Some(ITypePR::CoordListType))
-      }
-      Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.ownership => {
-        iter.advance();
-        Ok(Some(ITypePR::OwnershipType))
       }
       _ => Err(ParseError::BadRuneTypeError(iter.get_pos())),
     }

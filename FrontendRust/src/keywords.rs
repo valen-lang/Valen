@@ -1,6 +1,5 @@
 use crate::interner::StrI;
 use crate::parse_arena::ParseArena;
-#[cfg(any())]
 use crate::scout_arena::ScoutArena;
 
 /// All Vale keywords and commonly used identifiers
@@ -35,7 +34,6 @@ pub struct Keywords<'a> {
   pub set: StrI<'a>,
   pub unlet: StrI<'a>,
   pub block: StrI<'a>,
-  pub pure: StrI<'a>,
   pub r#unsafe: StrI<'a>,
   pub and: StrI<'a>,
   pub or: StrI<'a>,
@@ -43,12 +41,9 @@ pub struct Keywords<'a> {
   pub r#virtual: StrI<'a>,
   pub r#impl: StrI<'a>,
   pub int_capitalized: StrI<'a>,
-  pub ref_: StrI<'a>,
   pub kind: StrI<'a>,
   pub region: StrI<'a>,
-  pub prot: StrI<'a>,
   pub ref_list: StrI<'a>,
-  pub ownership: StrI<'a>,
   pub refs: StrI<'a>,
   pub underscore: StrI<'a>,
   pub dot_dot: StrI<'a>,
@@ -187,7 +182,6 @@ impl<'a> Keywords<'a> {
       set: parse_arena.intern_str("set"),
       unlet: parse_arena.intern_str("unlet"),
       block: parse_arena.intern_str("block"),
-      pure: parse_arena.intern_str("pure"),
       r#unsafe: parse_arena.intern_str("unsafe"),
       and: parse_arena.intern_str("and"),
       or: parse_arena.intern_str("or"),
@@ -195,12 +189,9 @@ impl<'a> Keywords<'a> {
       r#virtual: parse_arena.intern_str("virtual"),
       r#impl: parse_arena.intern_str("impl"),
       int_capitalized: parse_arena.intern_str("Int"),
-      ref_: parse_arena.intern_str("Ref"),
       kind: parse_arena.intern_str("Kind"),
       region: parse_arena.intern_str("Region"),
-      prot: parse_arena.intern_str("Prot"),
       ref_list: parse_arena.intern_str("RefList"),
-      ownership: parse_arena.intern_str("Ownership"),
       refs: parse_arena.intern_str("Refs"),
       underscore: parse_arena.intern_str("_"),
       dot_dot: parse_arena.intern_str(".."),
@@ -320,7 +311,6 @@ impl<'a> Keywords<'a> {
     }
   }
 
-  #[cfg(any())]
   pub fn new_for_scout(scout_arena: &ScoutArena<'a>) -> Self {
     Keywords {
       func: scout_arena.intern_str("func"),
@@ -351,7 +341,6 @@ impl<'a> Keywords<'a> {
       set: scout_arena.intern_str("set"),
       unlet: scout_arena.intern_str("unlet"),
       block: scout_arena.intern_str("block"),
-      pure: scout_arena.intern_str("pure"),
       r#unsafe: scout_arena.intern_str("unsafe"),
       and: scout_arena.intern_str("and"),
       or: scout_arena.intern_str("or"),
@@ -359,12 +348,9 @@ impl<'a> Keywords<'a> {
       r#virtual: scout_arena.intern_str("virtual"),
       r#impl: scout_arena.intern_str("impl"),
       int_capitalized: scout_arena.intern_str("Int"),
-      ref_: scout_arena.intern_str("Ref"),
       kind: scout_arena.intern_str("Kind"),
       region: scout_arena.intern_str("Region"),
-      prot: scout_arena.intern_str("Prot"),
       ref_list: scout_arena.intern_str("RefList"),
-      ownership: scout_arena.intern_str("Ownership"),
       refs: scout_arena.intern_str("Refs"),
       underscore: scout_arena.intern_str("_"),
       dot_dot: scout_arena.intern_str(".."),

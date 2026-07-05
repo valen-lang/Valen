@@ -117,7 +117,7 @@ fn regular_variable() {
 }
 
 #[test]
-fn typeless_local_has_no_coord_rune() {
+fn typeless_local_has_no_kind_rune() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -136,7 +136,7 @@ fn typeless_local_has_no_coord_rune() {
       let_se @ LetSE { .. }
     )) => Some(let_se)
   );
-  assert_eq!(local.pattern.coord_rune, None);
+  assert_eq!(local.pattern.kind_rune, None);
 }
 
 #[test]

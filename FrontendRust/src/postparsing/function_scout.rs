@@ -7,16 +7,16 @@
 use crate::parsing::ast::{FunctionP, GenericParameterP, IAttributeP, ITemplexPT, LoadAsP};
 use crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates;
 use crate::postparsing::ast::{
-  AbstractBodyS, AbstractSP, AdditiveS, BuiltinS, CodeBodyS, CoordGenericParameterTypeS, ExportS,
+  AbstractBodyS, AbstractSP, BuiltinS, CodeBodyS, KindGenericParameterTypeS, ExportS,
   ExternBodyS, ExternS, FunctionS, GeneratedBodyS, GenericParameterS, IBodyS, IFunctionAttributeS,
-  IGenericParameterTypeS, IRegionMutabilityS, LocationInDenizenBuilder, ParameterS, PureS,
+  IGenericParameterTypeS, LocationInDenizenBuilder, ParameterS,
   RegionGenericParameterTypeS,
 };
 use crate::postparsing::expressions::{
   BlockSE, BodySE, ConsecutorSE, IExpressionSE,
 };
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
+  FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::lexing::ast::RangeL;
@@ -33,10 +33,8 @@ use crate::postparsing::post_parser::{
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::rules::rule_scout::translate_rulexes;
 use crate::postparsing::rules::templex_scout::translate_maybe_type_into_maybe_rune;
-// STUB: onion typing — OwnershipP retired at parser layer.
-// use crate::parsing::ast::OwnershipP;
 use crate::postparsing::rules::rules::{
-  AugmentSR, CoerceToCoordSR, IRulexSR, LookupSR, MaybeCoercingLookupSR, RuneUsage,
+  BorrowRefSR, IRulexSR, LookupSR, RuneUsage,
 };
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::range::RangeS;
@@ -254,9 +252,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
             rune: rune.clone(),
           },
           tyype: IGenericParameterTypeS::RegionGenericParameterType(
-            RegionGenericParameterTypeS {
-              mutability: IRegionMutabilityS::ReadWriteRegion,
-            },
+            RegionGenericParameterTypeS {},
           ),
           default: None,
         };
@@ -372,13 +368,13 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
             });
             let (pattern, synthesized_rune): (AtomSP<'s>, Option<RuneUsage<'s>>) = match (&param.self_borrow, &param.pattern) {
               (Some(_), None) => {
-                let coord_rune = RuneUsage {
+                let kind_rune = RuneUsage {
                   range: param_range.clone(),
                   rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
                 };
                 rune_to_explicit_type.push((
-                  coord_rune.rune.clone(),
-                  ITemplataType::CoordTemplataType(CoordTemplataType {}),
+                  kind_rune.rune.clone(),
+                  ITemplataType::KindTemplataType(KindTemplataType {}),
                 ));
                 let pattern_s = AtomSP {
                   range: param_range.clone(),
@@ -386,7 +382,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                     name: IVarNameS::CodeVarName(self.keywords.self_),
                     mutate: false,
                   }),
-                  coord_rune: Some(coord_rune),
+                  kind_rune: Some(kind_rune),
                   destructure: None,
                 };
                 (pattern_s, None)
@@ -420,21 +416,21 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                     rune_to_explicit_type.push((rune, tyype));
                   }
                 }
-                match pattern_s.coord_rune {
+                match pattern_s.kind_rune {
                   None => {
                     // Untyped param (like in `(a) => a`) so make a rune that will be added to
                     // genericParams and to the identifying runes. This only happens for lambdas,
                     // top level functions can't have these (enforced elsewhere).
-                    let coord_rune = RuneUsage {
+                    let kind_rune = RuneUsage {
                       range: param_range.clone(),
                       rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
                     };
                     rune_to_explicit_type.push((
-                      coord_rune.rune.clone(),
-                      ITemplataType::CoordTemplataType(CoordTemplataType {}),
+                      kind_rune.rune.clone(),
+                      ITemplataType::KindTemplataType(KindTemplataType {}),
                     ));
-                    pattern_s.coord_rune = Some(coord_rune.clone());
-                    (pattern_s, Some(coord_rune))
+                    pattern_s.kind_rune = Some(kind_rune.clone());
+                    (pattern_s, Some(kind_rune))
                   }
                   Some(_) => (pattern_s, None),
                 }
@@ -445,7 +441,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
               ParameterS::new(
                 param_range.clone(),
                 virtuality,
-                param.maybe_pre_checked.is_some(),
+                false,
                 pattern,
               ),
               synthesized_rune,
@@ -468,11 +464,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           &*self.scout_arena.alloc(GenericParameterS {
             range: rune.range,
             rune,
-            tyype: IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS {
-              coord_region: None,
-              kind_mutable: true,
-              region_mutable: false,
-            }),
+            tyype: IGenericParameterTypeS::KindGenericParameterType(KindGenericParameterTypeS {}),
             default: None,
           })
         })
@@ -510,7 +502,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         Some(first_params)
       }
     };
-    let maybe_ret_coord_rune = match &function.header.ret.ret_type {
+    let maybe_ret_kind_rune = match &function.header.ret.ret_type {
       None | Some(ITemplexPT::RegionRune(_)) => {
         if is_parent_function {
           None
@@ -520,7 +512,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
             range: ret_range_s.clone(),
             rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
           };
-          rules.push(IRulexSR::MaybeCoercingLookup(MaybeCoercingLookupSR {
+          rules.push(IRulexSR::Lookup(LookupSR {
             range: ret_range_s.clone(),
             rune: ret_rune.clone(),
             name: self
@@ -531,7 +523,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           }));
           rune_to_explicit_type.push((
             ret_rune.rune.clone(),
-            ITemplataType::CoordTemplataType(CoordTemplataType {}),
+            ITemplataType::KindTemplataType(KindTemplataType {}),
           ));
           Some(ret_rune)
         }
@@ -562,7 +554,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         if let Some(ret_rune) = &ret_rune {
           rune_to_explicit_type.push((
             ret_rune.rune.clone(),
-            ITemplataType::CoordTemplataType(CoordTemplataType {}),
+            ITemplataType::KindTemplataType(KindTemplataType {}),
           ));
         }
         ret_rune
@@ -636,9 +628,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         .body
         .as_ref()
         .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_FUNCTION_WITHOUT_BODY"));
-      if body.maybe_pure.is_some() {
-        panic!("POSTPARSER_SCOUT_PURE_BLOCKS_NOT_YET_IMPLEMENTED");
-      }
       if body.maybe_default_region.is_some() {
         panic!("POSTPARSER_SCOUT_BLOCK_DEFAULT_REGION_NOT_YET_IMPLEMENTED");
       }
@@ -679,7 +668,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         };
         let closure_struct_kind_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
         let closure_struct_region_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRegionRune(ImplicitRegionRuneValS { original_rune: closure_struct_kind_rune }));
-        let closure_struct_coord_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
         let closure_param_s = self.create_closure_param(
           function.range,
           function_declaration_name_for_env.clone(),
@@ -689,7 +677,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           parent_stack_frame,
           closure_struct_region_rune,
           closure_struct_kind_rune,
-          closure_struct_coord_rune,
         );
         total_params_s.push(closure_param_s);
       }
@@ -700,20 +687,16 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         // Lambdas identifying runes are determined by their magic params.
         // See: Lambdas Dont Need Explicit Identifying Runes (LDNEIR)
         extra_generic_params_from_body.extend(magic_params.iter().map(|magic_param| {
-          let coord_rune = magic_param
+          let kind_rune = magic_param
             .pattern
-            .coord_rune
+            .kind_rune
             .as_ref()
             .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_MAGIC_PARAM_WITHOUT_COORD_RUNE"))
             .clone();
           &*self.scout_arena.alloc(GenericParameterS {
             range: magic_param.pattern.range.clone(),
-            rune: coord_rune,
-            tyype: IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS {
-              coord_region: None,
-              kind_mutable: true,
-              region_mutable: false,
-            }),
+            rune: kind_rune,
+            tyype: IGenericParameterTypeS::KindGenericParameterType(KindGenericParameterTypeS {}),
             default: None,
           })
         }));
@@ -768,8 +751,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         IAttributeP::ExternAttribute(_) => IFunctionAttributeS::Extern(ExternS {
           package_coord: file_coordinate.package_coord,
         }),
-        IAttributeP::PureAttribute(_) => IFunctionAttributeS::Pure(PureS),
-        IAttributeP::AdditiveAttribute(_) => IFunctionAttributeS::Additive(AdditiveS),
         IAttributeP::BuiltinAttribute(builtin_attr) => IFunctionAttributeS::Builtin(BuiltinS {
           generator_name: self.scout_arena.intern_str(builtin_attr.generator_name.str().as_str()),
         }),
@@ -778,27 +759,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       })
       .collect();
 
-    let range_s = Self::eval_range(file_coordinate, function.range);
-    let mut rune_to_predicted_type = Self::predict_rune_types(
-      self.scout_arena,
-      range_s.clone(),
-      &user_specified_identifying_runes
-        .iter()
-        .map(|rune_usage| rune_usage.rune.clone())
-        .collect::<Vec<_>>(),
-      &mut rune_to_explicit_type,
-      &rules_array,
-    )?;
-    rune_to_predicted_type.retain(|_, tyype| !matches!(tyype, ITemplataType::RegionTemplataType(_)));
     let rules_array: &'s [IRulexSR<'s>] = self.scout_arena.alloc_slice_from_vec(rules_array);
-    self.check_identifiability(
-      range_s,
-      &generic_params
-        .iter()
-        .map(|generic_param| generic_param.rune.rune.clone())
-        .collect::<Vec<_>>(),
-      rules_array,
-    )?;
 
     let param_types_vec: Vec<ITemplataType<'s>> = generic_params
         .iter()
@@ -819,10 +780,9 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           function_name_ref,
           self.scout_arena.alloc_slice_from_vec(func_attrs_s),
           self.scout_arena.alloc_slice_from_vec(generic_params),
-          rune_to_predicted_type,
           tyype,
           self.scout_arena.alloc_slice_from_vec(total_params_s),
-          maybe_ret_coord_rune,
+          maybe_ret_kind_rune,
           rules_array,
           body_s,
         )),
@@ -838,9 +798,8 @@ fn create_closure_param(
   rule_builder: &mut Vec<IRulexSR<'s>>,
   rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType)>,
   parent_stack_frame: &StackFrame<'s>,
-  _closure_struct_region_rune: IRuneS<'s>,
+  closure_struct_region_rune: IRuneS<'s>,
   closure_struct_kind_rune: IRuneS<'s>,
-  closure_struct_coord_rune: IRuneS<'s>,
 ) -> ParameterS<'s> {
   let closure_param_pos = PostParser::eval_pos(parent_stack_frame.file, range.begin());
   let closure_param_range = RangeS::new(
@@ -878,34 +837,21 @@ fn create_closure_param(
     },
     name: closure_struct_imprecise_name.clone(),
   }));
-  rune_to_explicit_type.push((
-    closure_struct_coord_rune.clone(),
-    ITemplataType::CoordTemplataType(CoordTemplataType {}),
-  ));
-  rule_builder.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
-    range: closure_param_range.clone(),
-    coord_rune: RuneUsage {
-      range: closure_param_range.clone(),
-      rune: closure_struct_coord_rune.clone(),
-    },
-    kind_rune: RuneUsage {
-      range: closure_param_range.clone(),
-      rune: closure_struct_kind_rune.clone(),
-    },
-  }));
   let closure_param_type_rune = RuneUsage {
     range: closure_param_range.clone(),
     rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
   };
-  rule_builder.push(IRulexSR::Augment(AugmentSR {
+  rule_builder.push(IRulexSR::BorrowRef(BorrowRefSR {
     range: closure_param_range.clone(),
     result_rune: closure_param_type_rune.clone(),
-    // STUB: onion typing — OwnershipP::Borrow retired.
-    ownership: Some(()),
     inner_rune: RuneUsage {
       range: closure_param_range.clone(),
-      rune: closure_struct_coord_rune,
+      rune: closure_struct_kind_rune,
     },
+    region_rune: Some(RuneUsage {
+      range: closure_param_range.clone(),
+      rune: closure_struct_region_rune,
+    }),
   }));
   let capture: CaptureS<'s> = CaptureS {
     name: closure_param_name,
@@ -914,7 +860,7 @@ fn create_closure_param(
   let closure_pattern = AtomSP::<'s> {
     range: closure_param_range.clone(),
     name: Some(capture),
-    coord_rune: Some(closure_param_type_rune),
+    kind_rune: Some(closure_param_type_rune),
     destructure: None,
   };
   return ParameterS::new(
@@ -945,7 +891,7 @@ fn create_magic_parameters(
       let magic_param_rune = self.scout_arena.intern_rune(IRuneValS::MagicParamRune(MagicParamRuneValS::new(lidb.child().borrow_val())));
       rune_to_explicit_type.push((
         magic_param_rune.clone(),
-        ITemplataType::CoordTemplataType(CoordTemplataType {}),
+        ITemplataType::KindTemplataType(KindTemplataType {}),
       ));
       ParameterS::new(
         magic_param_range.clone(),
@@ -957,7 +903,7 @@ fn create_magic_parameters(
             name: magic_param_name,
             mutate: false,
           }),
-          coord_rune: Some(RuneUsage {
+          kind_rune: Some(RuneUsage {
             range: magic_param_range,
             rune: magic_param_rune,
           }),

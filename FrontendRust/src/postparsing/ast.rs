@@ -3,7 +3,7 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::parsing::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::expressions::BodySE;
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, ITemplataType, RegionTemplataType, TemplateTemplataType,
+  ITemplataType, KindTemplataType, RegionTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
   ExportAsNameS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS,
@@ -86,8 +86,6 @@ pub enum ICitizenAttributeS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IFunctionAttributeS<'s> {
   Extern(ExternS<'s>),
-  Pure(PureS),
-  Additive(AdditiveS),
   Builtin(BuiltinS<'s>),
   Export(ExportS<'s>),
   UserFunction(UserFunctionS),
@@ -98,14 +96,6 @@ pub enum IFunctionAttributeS<'s> {
 pub struct ExternS<'s> {
   pub package_coord: &'s PackageCoordinate<'s>,
 }
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct PureS;
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AdditiveS;
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -182,10 +172,8 @@ pub struct StructS<'s> {
   pub sharedness: SharednessP,
   pub tyype: TemplateTemplataType<'s>,
   pub header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
-  pub header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub header_rules: &'s [IRulexSR<'s>],
   pub members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
-  pub members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub member_rules: &'s [IRulexSR<'s>],
   pub members: &'s [IStructMemberS<'s>],
   pub internal_methods: &'s [&'s FunctionS<'s>],
@@ -202,10 +190,8 @@ impl<'s> StructS<'s> {
     sharedness: SharednessP,
     tyype: TemplateTemplataType<'s>,
     header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
-    header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     header_rules: &'s [IRulexSR<'s>],
     members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
-    members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     member_rules: &'s [IRulexSR<'s>],
     members: &'s [IStructMemberS<'s>],
     internal_methods: &'s [&'s FunctionS<'s>],
@@ -215,16 +201,16 @@ impl<'s> StructS<'s> {
       "vassert: generic_params should not contain DenizenDefaultRegionRuneS"
     );
     assert!(
-      !header_rune_to_explicit_type.keys().chain(header_predicted_rune_to_type.keys())
-        .chain(members_rune_to_explicit_type.keys()).chain(members_predicted_rune_to_type.keys())
+      !header_rune_to_explicit_type.keys()
+        .chain(members_rune_to_explicit_type.keys())
         .any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
       "vassert: rune-to-type maps should not contain DenizenDefaultRegionRuneS"
     );
     Self {
       range, name, attributes, weakable, generic_params, sharedness,
       tyype, header_rune_to_explicit_type,
-      header_predicted_rune_to_type, header_rules, members_rune_to_explicit_type,
-      members_predicted_rune_to_type, member_rules, members, internal_methods,
+      header_rules, members_rune_to_explicit_type,
+      member_rules, members, internal_methods,
       _sealed: (),
     }
   }
@@ -279,7 +265,6 @@ pub struct InterfaceS<'s> {
   pub generic_params: &'s [&'s GenericParameterS<'s>],
   pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub sharedness: SharednessP,
-  pub predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub tyype: TemplateTemplataType<'s>,
   pub rules: &'s [IRulexSR<'s>],
   pub internal_methods: &'s [&'s FunctionS<'s>],
@@ -294,7 +279,6 @@ impl<'s> InterfaceS<'s> {
     generic_params: &'s [&'s GenericParameterS<'s>],
     rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     sharedness: SharednessP,
-    predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     tyype: TemplateTemplataType<'s>,
     rules: &'s [IRulexSR<'s>],
     internal_methods: &'s [&'s FunctionS<'s>],
@@ -304,7 +288,7 @@ impl<'s> InterfaceS<'s> {
       "vassert: generic_params should not contain DenizenDefaultRegionRuneS"
     );
     assert!(
-      !rune_to_explicit_type.keys().chain(predicted_rune_to_type.keys())
+      !rune_to_explicit_type.keys()
         .any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
       "vassert: rune-to-type maps should not contain DenizenDefaultRegionRuneS"
     );
@@ -316,7 +300,7 @@ impl<'s> InterfaceS<'s> {
     }
     Self {
       range, name, attributes, weakable, generic_params, rune_to_explicit_type,
-      sharedness, predicted_rune_to_type,
+      sharedness,
       tyype, rules, internal_methods,
       _sealed: (),
     }
@@ -377,7 +361,7 @@ pub struct ParameterS<'s> {
 }
 impl<'s> ParameterS<'s> {
   pub fn new(range: RangeS<'s>, virtuality: Option<AbstractSP<'s>>, pre_checked: bool, pattern: AtomSP<'s>) -> Self {
-    assert!(pattern.coord_rune.is_some(), "vassert: pattern.coordRune.nonEmpty");
+    assert!(pattern.kind_rune.is_some(), "vassert: pattern.coordRune.nonEmpty");
     Self { range, virtuality, pre_checked, pattern, _sealed: () }
   }
 }
@@ -386,15 +370,6 @@ impl<'s> ParameterS<'s> {
 pub struct AbstractSP<'s> {
   pub range: RangeS<'s>,
   pub is_internal_method: bool,
-}
-
-
-#[derive(Debug, PartialEq)]
-pub struct SimpleParameterS<'s> {
-  pub origin: Option<AtomSP<'s>>,
-  pub name: StrI<'s>,
-  pub virtuality: Option<AbstractSP<'s>>,
-  pub tyype: IRulexSR<'s>,
 }
 
 
@@ -427,18 +402,10 @@ pub struct CodeBodyS<'s> {
 }
 
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum IRegionMutabilityS {
-  ReadWriteRegion,
-  ReadOnlyRegion,
-  ImmutableRegion,
-  AdditiveRegion,
-}
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IGenericParameterTypeS<'s> {
   RegionGenericParameterType(RegionGenericParameterTypeS),
-  CoordGenericParameterType(CoordGenericParameterTypeS<'s>),
+  KindGenericParameterType(KindGenericParameterTypeS),
   OtherGenericParameterType(OtherGenericParameterTypeS<'s>),
 }
 
@@ -450,47 +417,40 @@ impl<'s> IGenericParameterTypeS<'s> {
       _ => panic!("Expected region generic parameter type"),
     }
   }
-  
+
 
   pub fn tyype(&self) -> ITemplataType<'s> {
     match self {
       IGenericParameterTypeS::RegionGenericParameterType(x) => x.tyype(),
-      IGenericParameterTypeS::CoordGenericParameterType(x) => x.tyype(),
+      IGenericParameterTypeS::KindGenericParameterType(x) => x.tyype(),
       IGenericParameterTypeS::OtherGenericParameterType(x) => x.tyype.clone(),
     }
   }
-  
+
 }
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct RegionGenericParameterTypeS {
-  pub mutability: IRegionMutabilityS,
-}
+pub struct RegionGenericParameterTypeS {}
 
 
 impl RegionGenericParameterTypeS {
   pub fn tyype<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::RegionTemplataType(RegionTemplataType {})
   }
-  
+
 }
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct CoordGenericParameterTypeS<'s> {
-  pub coord_region: Option<RuneUsage<'s>>,
-  pub kind_mutable: bool,
-  pub region_mutable: bool,
-}
+pub struct KindGenericParameterTypeS {}
 
 
-impl CoordGenericParameterTypeS<'_> {
+impl KindGenericParameterTypeS {
   pub fn tyype<'a>(&self) -> ITemplataType<'a> {
-    assert!(self.coord_region.is_none());
-    ITemplataType::CoordTemplataType(CoordTemplataType {})
+    ITemplataType::KindTemplataType(KindTemplataType {})
   }
-  
+
 }
 
 
@@ -502,8 +462,8 @@ pub struct OtherGenericParameterTypeS<'s> {
 impl<'s> OtherGenericParameterTypeS<'s> {
   pub fn new(tyype: ITemplataType<'s>) -> Self {
     assert!(
-      !matches!(tyype, ITemplataType::RegionTemplataType(_) | ITemplataType::CoordTemplataType(_)),
-      "vwat: Use RegionGenericParameterTypeS or CoordGenericParameterTypeS for these types"
+      !matches!(tyype, ITemplataType::RegionTemplataType(_) | ITemplataType::KindTemplataType(_)),
+      "vwat: Use RegionGenericParameterTypeS or KindGenericParameterTypeS for these types"
     );
     Self { tyype, _sealed: () }
   }
@@ -532,10 +492,9 @@ pub struct FunctionS<'s> {
   pub name: &'s IFunctionDeclarationNameS<'s>,
   pub attributes: &'s [IFunctionAttributeS<'s>],
   pub generic_params: &'s [&'s GenericParameterS<'s>],
-  pub rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub tyype: TemplateTemplataType<'s>,
   pub params: &'s [ParameterS<'s>],
-  pub maybe_ret_coord_rune: Option<RuneUsage<'s>>,
+  pub maybe_ret_kind_rune: Option<RuneUsage<'s>>,
   pub rules: &'s [IRulexSR<'s>],
   pub body: &'s IBodyS<'s>,
   _sealed: (),
@@ -546,20 +505,15 @@ impl<'s> FunctionS<'s> {
     name: &'s IFunctionDeclarationNameS<'s>,
     attributes: &'s [IFunctionAttributeS<'s>],
     generic_params: &'s [&'s GenericParameterS<'s>],
-    rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     tyype: TemplateTemplataType<'s>,
     params: &'s [ParameterS<'s>],
-    maybe_ret_coord_rune: Option<RuneUsage<'s>>,
+    maybe_ret_kind_rune: Option<RuneUsage<'s>>,
     rules: &'s [IRulexSR<'s>],
     body: &'s IBodyS<'s>,
   ) -> Self {
     assert!(
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
       "vassert: generic_params should not contain DenizenDefaultRegionRuneS"
-    );
-    assert!(
-      !rune_to_predicted_type.keys().any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
-      "vassert: rune_to_predicted_type should not contain DenizenDefaultRegionRuneS"
     );
     match body {
       IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => {
@@ -578,8 +532,8 @@ impl<'s> FunctionS<'s> {
       }
     }
     Self {
-      range, name, attributes, generic_params, rune_to_predicted_type,
-      tyype, params, maybe_ret_coord_rune, rules, body,
+      range, name, attributes, generic_params,
+      tyype, params, maybe_ret_kind_rune, rules, body,
       _sealed: (),
     }
   }
@@ -671,7 +625,7 @@ impl LocationInDenizenBuilder {
 /// arenas depending on its owner:
 /// - When inside rune structs (e.g. ImplicitRuneS), it's interned into the
 ///   `'s` interner arena, so `'x = 's`.
-/// - When inside expression structs (e.g. PureSE, FunctionSE), it's allocated
+/// - When inside expression structs (e.g. FunctionSE), it's allocated
 ///   in the `'s` scout arena, so `'x = 's`.
 ///
 /// The path is an arena-allocated slice rather than a Vec so that the entire

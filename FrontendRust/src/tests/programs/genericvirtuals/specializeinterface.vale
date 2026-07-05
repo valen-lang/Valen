@@ -4,12 +4,12 @@ import v.builtins.arith.*;
 import v.builtins.drop.*;
 import printutils.*;
 
-sealed interface MyIFunction1<P1 Ref, R Ref> {
+sealed interface MyIFunction1<P1 Kind, R Kind> {
   func myFunc(virtual this &MyIFunction1<P1, R>, param P1) R
     where func drop(P1)void;
 }
 
-struct MyToBool<T Ref> { }
+struct MyToBool<T Kind> { }
 
 impl<T> MyIFunction1<T, bool> for MyToBool<T>;
 

@@ -16,7 +16,7 @@ use crate::postparsing::expressions::{
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::names::{CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS, IVarNameS};
 use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
-use crate::postparsing::rules::rules::{ILiteralSL, LiteralSR, MaybeCoercingLookupSR};
+use crate::postparsing::rules::rules::{ILiteralSL, LiteralSR, LookupSR};
 use crate::postparsing::test::traverse::NodeRefS;
 use crate::parsing::tests::utils::compile_file;
 use crate::parsing::tests::utils::{expect_1, expect_2, expect_3};
@@ -28,7 +28,6 @@ use crate::postparsing::ast::ParameterS;
 use crate::postparsing::rules::RuneUsage;
 use crate::postparsing::expressions::ConsecutorSE;
 use crate::postparsing::post_parser::VariableNameAlreadyExists;
-use crate::postparsing::post_parser::RuneExplicitTypeConflictS;
 use crate::collect_only_snode;
 use crate::collect_only_snodes;
 use crate::collect_where_snode;
@@ -150,8 +149,8 @@ fn test_struct() {
   let only_member = expect_1(&imoo.members);
   collect_only_snode!(
     NodeRefS::Struct(imoo),
-    NodeRefS::MaybeCoercingLookupRule(
-      MaybeCoercingLookupSR {
+    NodeRefS::LookupRule(
+      LookupSR {
         name: IImpreciseNameS::CodeName(code_name),
         rune,
         ..
@@ -161,23 +160,6 @@ fn test_struct() {
 
   let normal_member = cast!(only_member, IStructMemberS::NormalStructMember);
   assert_eq!(normal_member.name.as_str(), "x");
-}
-
-#[test]
-fn linear_struct() {
-  let parse_bump = Bump::new();
-  let scout_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let scout_arena = ScoutArena::new(&scout_bump);
-  let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(&scout_arena, &keywords, &parse_arena, "linear struct Moo { x int; }");
-  let moo_struct = program.lookup_struct("Moo");
-  collect_only_snode!(
-    NodeRefS::Struct(moo_struct),
-    NodeRefS::MacroCallAttribute(macro_call)
-      if macro_call.include == IMacroInclusionP::DontCallMacro
-        && macro_call.macro_name.as_str() == "DeriveStructDrop" => Some(())
-  );
 }
 
 #[test]
@@ -224,20 +206,8 @@ fn lambda() {
   };
 
   let (first_generic_param, second_generic_param) = expect_2(lambda.generic_params);
-  match &first_generic_param.tyype {
-    IGenericParameterTypeS::CoordGenericParameterType(coord_type) => {
-      assert_eq!(coord_type.coord_region, None);
-      assert!(!coord_type.region_mutable);
-    }
-    _ => panic!("expected first lambda generic param to be a CoordGenericParameterType"),
-  }
-  match &second_generic_param.tyype {
-    IGenericParameterTypeS::CoordGenericParameterType(coord_type) => {
-      assert_eq!(coord_type.coord_region, None);
-      assert!(!coord_type.region_mutable);
-    }
-    _ => panic!("expected second lambda generic param to be a CoordGenericParameterType"),
-  }
+  assert!(matches!(&first_generic_param.tyype, IGenericParameterTypeS::KindGenericParameterType(_)));
+  assert!(matches!(&second_generic_param.tyype, IGenericParameterTypeS::KindGenericParameterType(_)));
   let first_magic_param_rune = match first_generic_param.rune.rune {
     IRuneS::MagicParamRune(magic_param_rune) => magic_param_rune,
     _ => panic!("expected first lambda generic param to be a magic param rune"),
@@ -304,7 +274,7 @@ fn impl_() {
 
   collect_only_snode!(
     NodeRefS::Impl(impl_),
-    NodeRefS::MaybeCoercingLookupRule(MaybeCoercingLookupSR {
+    NodeRefS::LookupRule(LookupSR {
       name: IImpreciseNameS::CodeName(CodeNameS {
         name: StrI("Moo"),
         ..
@@ -315,7 +285,7 @@ fn impl_() {
   );
   collect_only_snode!(
     NodeRefS::Impl(impl_),
-    NodeRefS::MaybeCoercingLookupRule(MaybeCoercingLookupSR {
+    NodeRefS::LookupRule(LookupSR {
       name: IImpreciseNameS::CodeName(CodeNameS {
         name: StrI("IMoo"),
         ..
@@ -447,7 +417,7 @@ fn function_with_magic_lambda_and_regular_lambda() {
               name: IVarNameS::MagicParamName(_),
               mutate: false,
             }),
-          coord_rune:
+          kind_rune:
             Some(RuneUsage {
               rune: IRuneS::MagicParamRune(_),
               ..
@@ -471,7 +441,7 @@ fn function_with_magic_lambda_and_regular_lambda() {
               name: IVarNameS::CodeVarName(StrI("a")),
               mutate: false,
             }),
-          coord_rune:
+          kind_rune:
             Some(RuneUsage {
               rune: IRuneS::ImplicitRune(_),
               ..
@@ -963,7 +933,7 @@ fn foreach() {
             name: IVarNameS::IterableName(_),
             mutate: false,
           }),
-        coord_rune: None,
+        kind_rune: None,
         destructure: None,
         ..
       },
@@ -985,7 +955,7 @@ fn foreach() {
             name: IVarNameS::IteratorName(_),
             mutate: false,
           }),
-        coord_rune: None,
+        kind_rune: None,
         destructure: None,
         ..
       },
@@ -1027,7 +997,7 @@ fn foreach() {
             name: IVarNameS::IterationOptionName(_),
             mutate: false,
           }),
-        coord_rune: None,
+        kind_rune: None,
         destructure: None,
         ..
       },
@@ -1093,7 +1063,7 @@ fn foreach() {
             name: IVarNameS::CodeVarName(StrI("i")),
             mutate: false,
           }),
-        coord_rune: None,
+        kind_rune: None,
         destructure: None,
         ..
       },
@@ -1280,37 +1250,6 @@ func doCivicDance(virtual this Car) {
   match &err {
     ICompileErrorS::StatementAfterReturnS(_) => {}
     _ => panic!("expected StatementAfterReturnS(_), got {:?}", err),
-  }
-}
-
-#[test]
-fn report_type_mismatch() {
-  let parse_bump = Bump::new();
-  let scout_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let scout_arena = ScoutArena::new(&scout_bump);
-  let keywords = Keywords::new_for_scout(&scout_arena);
-  let err = compile_for_error(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    r"
-struct Vec<N, T> where N Int
-{
-  values [#N]T;
-}
-",
-  );
-  match &err {
-    ICompileErrorS::RuneExplicitTypeConflictS(
-      RuneExplicitTypeConflictS {
-        rune: IRuneS::CodeRune(CodeRuneS {
-          name: StrI("N"),
-        }),
-        ..
-      },
-    ) => {}
-    _ => panic!("expected RuneExplicitTypeConflictS(_, CodeRune(\"N\"), _), got {:?}", err),
   }
 }
 

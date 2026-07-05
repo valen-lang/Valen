@@ -608,7 +608,6 @@ where
       IAttributeL::ExportAttribute(range) => {
         Ok(IAttributeP::ExportAttribute(ExportAttributeP { range }))
       }
-      IAttributeL::PureAttribute(range) => Ok(IAttributeP::PureAttribute(PureAttributeP { range })),
     }
   }
   
@@ -764,7 +763,6 @@ where
           expression_parser.parse_block(&block_l, templex_parser, pattern_parser)?;
         Some(&*self.parse_arena.alloc(BlockPE {
           range: block_l.range,
-          maybe_pure: None,
           maybe_default_region: maybe_default_region,
           inner: &*self.parse_arena.alloc(statements_p),
         }))

@@ -3,10 +3,6 @@ use crate::utils::fx::IndexMap;
 use crate::utils::fx::HashMap;
 use crate::interner::{InternedSlice, StrI};
 use crate::parse_arena::ParseArena;
-// TEMP: `#[cfg(any())]` gates every scout-facing item in this file while
-// scout_arena is unlinked. Remove the gates + this import gate when postparsing
-// re-links.
-#[cfg(any())]
 use crate::scout_arena::ScoutArena;
 use crate::Keywords;
 use std::fmt::Display;
@@ -34,7 +30,6 @@ impl<'a> FileCoordinate<'a> {
   }
 
 
-  #[cfg(any())]
   pub fn test(scout_arena: &ScoutArena<'a>) -> FileCoordinate<'a> {
     let test_module = scout_arena.intern_str(TEST_MODULE);
     let package_coord = scout_arena.intern_package_coordinate(test_module, &[]);
@@ -88,7 +83,6 @@ impl<'a> PackageCoordinate<'a> {
   }
 
 
-  #[cfg(any())]
   pub fn internal(
     scout_arena: &ScoutArena<'a>,
     keywords: &Keywords<'a>,

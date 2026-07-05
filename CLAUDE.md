@@ -1,6 +1,6 @@
 # Vale
 
-**Never commit unless the architect says the literal phrase "fire commit" — no other phrasing ("just commit", "go ahead", "ship it", etc.) authorizes a commit.**
+**Never commit unless the architect says the literal phrase "fire commit" or "fire commit temporary" — no other phrasing ("just commit", "go ahead", "ship it", etc.) authorizes a commit.**
 
 This is the Vale compiler. The `FrontendRust/` tree is a Rust compiler frontend.
 
