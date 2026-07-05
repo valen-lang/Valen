@@ -1,3 +1,4 @@
+// VCOORD:
 // The `rune_type_solver.rs` file inside this directory is preserved verbatim
 // from `postparsing/rune_type_solver.rs` at commit `b5bde70e6` (its last
 // living state before the postparse slice deleted it). Under onion typing

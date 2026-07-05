@@ -1,3 +1,4 @@
+// VCOORD:
 
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
