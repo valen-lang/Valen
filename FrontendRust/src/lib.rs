@@ -22,7 +22,7 @@ pub mod parse_arena;
 pub mod scout_arena;
 pub mod lexing;
 pub mod parsing;
-// pub mod pass_manager;
+pub mod pass_manager;
 pub mod postparsing;
 // pub mod simplifying;
 // pub mod typing;
