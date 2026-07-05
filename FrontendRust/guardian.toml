@@ -49,7 +49,6 @@ exclude_shields = [
     "MigrateAllCommentsToo-MACTX.md",
     "NoChangesWithoutScalaReference-NCWSRX.md",
     "ScalaSealedTraitsToRustEnums-SSTREX.md",
-    "NoRemovingVMarkers-NRVMX.md",
 ]
 
 [guard_mode]
@@ -57,6 +56,7 @@ include_shields = [
     { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "NoNewDefinitions-NNDX.md" },
     { name = "NoAddingGuardianDirectives-NAGDX.md" },
+    { name = "NoRemovingVMarkers-NRVMX.md" },
     { name = "NoRenamedDefinitions-NRDX.md" },
     { name = "NoMovedDefinitions-NMDX.md" },
 
@@ -94,6 +94,7 @@ include_shields = [
     { name = "UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
     { name = "NeverUseStaticLifetime-NUSLX.md" },
+    { name = "NoRemovingVMarkers-NRVMX.md" },
 
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
