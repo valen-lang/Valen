@@ -735,7 +735,7 @@ where 's: 't,
                                     let struct_template_id = self.resolve_struct_template(struct_templata);
                                     let look_in_env = coutputs.get_outer_env_for_type(&range_list, *struct_template_id);
                                     let part_rune_to_template_arg: Vec<(RuneUsage<'s>, RuneUsage<'s>)> =
-                                        struct_templata.origin_struct.generic_parameters.iter()
+                                        struct_templata.origin_struct.generic_params.iter()
                                             .zip(part.explicit_template_args.iter())
                                             .map(|(gp, arg_rune)| (gp.rune, *arg_rune))
                                             .collect();
@@ -2482,7 +2482,7 @@ where
                         tyype: ITemplataType::TemplateTemplataType(
                             t.origin_struct.tyype,
                         ),
-                        generic_params: t.origin_struct.generic_parameters,
+                        generic_params: t.origin_struct.generic_params,
                     },
                 ))
             }
@@ -2492,7 +2492,7 @@ where
                         tyype: ITemplataType::TemplateTemplataType(
                             t.origin_interface.tyype,
                         ),
-                        generic_params: t.origin_interface.generic_parameters,
+                        generic_params: t.origin_interface.generic_params,
                     },
                 ))
             }

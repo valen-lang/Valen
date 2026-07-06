@@ -131,7 +131,7 @@ where 's: 't,
                 result_rune: RuneUsage { range: struct_a.range, rune: anon_kind_rune },
                 template_rune: RuneUsage { range: struct_a.range, rune: anon_template_rune },
                 args: self.scout_arena.alloc_slice_from_vec(
-                    struct_a.generic_parameters.iter().map(|gp| gp.rune).collect()
+                    struct_a.generic_params.iter().map(|gp| gp.rune).collect()
                 ),
             }),
             IRulexSR::Lookup(LookupSR {
@@ -144,13 +144,13 @@ where 's: 't,
                 result_rune: RuneUsage { range: interface_a.range, rune: parent_interface_kind_rune },
                 template_rune: RuneUsage { range: interface_a.range, rune: parent_interface_template_rune },
                 args: self.scout_arena.alloc_slice_from_vec(
-                    interface_a.generic_parameters.iter().map(|gp| gp.rune).collect()
+                    interface_a.generic_params.iter().map(|gp| gp.rune).collect()
                 ),
             }),
         ];
 
         let mut rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>> = self.scout_arena.alloc_index_map();
-        for gp in struct_a.generic_parameters.iter() {
+        for gp in struct_a.generic_params.iter() {
             let tyype = *struct_a.header_rune_to_type.get(&gp.rune.rune).unwrap();
             rune_to_type.insert(gp.rune.rune, tyype);
         }
@@ -170,7 +170,7 @@ where 's: 't,
         let impl_a = self.scout_arena.alloc(ImplS::new(
             interface_a.range,
             impl_name_s,
-            struct_a.generic_parameters,
+            struct_a.generic_params,
             rules_slice,
             rune_to_type,
             struct_kind_rune_s,
@@ -368,7 +368,7 @@ where 's: 't,
         }));
 
         let mut struct_generic_params: Vec<&'s GenericParameterS<'s>> = Vec::new();
-        for gp in interface_a.generic_parameters.iter() {
+        for gp in interface_a.generic_params.iter() {
             struct_generic_params.push(*gp);
         }
         for mr in member_runes.iter() {
@@ -510,7 +510,7 @@ where 's: 't,
                     rune: method_interface_template_rune,
                     name: interface_a.name.get_imprecise_name(self.scout_arena),
                 }));
-                let generic_param_runes: Vec<RuneUsage<'s>> = interface_a.generic_parameters.iter().map(|gp| gp.rune).collect();
+                let generic_param_runes: Vec<RuneUsage<'s>> = interface_a.generic_params.iter().map(|gp| gp.rune).collect();
                 let generic_param_runes_slice = self.scout_arena.alloc_slice_from_vec(generic_param_runes);
                 rules_builder.push(IRulexSR::Call(CallSR {
                     range: interface_param.range,
@@ -679,18 +679,18 @@ where 's: 't,
         let method_range = method.range;
         let attributes = method.attributes;
         let method_original_type = method.tyype;
-        let method_original_identifying_runes: &'s [&'s GenericParameterS<'s>] = method.generic_parameters;
+        let method_original_identifying_runes: &'s [&'s GenericParameterS<'s>] = method.generic_params;
         let original_params = method.params;
         let method_original_rules = method.rules;
 
         // vassert(struct.genericParameters.map(_.rune).startsWith(methodOriginalIdentifyingRunes.map(_.rune)))
-        let starts_with = struct_.generic_parameters.len() >= method_original_identifying_runes.len()
-            && struct_.generic_parameters.iter().zip(method_original_identifying_runes.iter())
+        let starts_with = struct_.generic_params.len() >= method_original_identifying_runes.len()
+            && struct_.generic_params.iter().zip(method_original_identifying_runes.iter())
                 .all(|(a, b)| a.rune.rune.ptr_eq(&b.rune.rune));
         assert!(starts_with, "vassert: struct.genericParameters.startsWith(methodOriginalIdentifyingRunes)");
 
         let mut generic_params_vec: Vec<&'s GenericParameterS<'s>> = Vec::new();
-        for gp in struct_.generic_parameters.iter() {
+        for gp in struct_.generic_params.iter() {
             let new_rune = self.inherited_method_rune_anonymous_interface(interface, method, gp.rune.rune);
             generic_params_vec.push(self.scout_arena.alloc(GenericParameterS {
                 range: gp.range,
@@ -719,7 +719,7 @@ where 's: 't,
             rune: self.inherited_method_rune_anonymous_interface(interface, method, original_ret_rune.rune),
         };
 
-        for param in struct_.generic_parameters.iter() {
+        for param in struct_.generic_params.iter() {
             let inh = self.inherited_method_rune_anonymous_interface(interface, method, param.rune.rune);
             rune_to_type.push((inh, param.tyype.tyype()));
         }
@@ -902,7 +902,7 @@ where 's: 't,
 
         // Tyype: param_types ++ struct.genericParameters.map(_ => KindTemplataType()), return FunctionTemplataType
         let mut new_param_types: Vec<ITemplataType<'s>> = method_original_type.param_types.to_vec();
-        for _ in struct_.generic_parameters.iter() {
+        for _ in struct_.generic_params.iter() {
             new_param_types.push(ITemplataType::KindTemplataType(KindTemplataType {}));
         }
         let new_param_types_slice = self.scout_arena.alloc_slice_from_vec(new_param_types);

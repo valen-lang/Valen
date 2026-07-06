@@ -427,7 +427,7 @@ where 's: 't,
                 .map(|p| Compiler::get_placeholder_templata_id(*p))
                 .collect();
         let fresh_dispatcher_placeholders: Vec<ITemplataT<'s, 't>> =
-            origin_function_templata.function.generic_parameters.iter()
+            origin_function_templata.function.generic_params.iter()
                 .filter_map(|gp| {
                     dispatcher_inner_inferences.get(&gp.rune.rune).and_then(|templata| match *templata {
                         ITemplataT::Coord(&CoordTemplataT { coord: CoordT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }), .. } }) =>

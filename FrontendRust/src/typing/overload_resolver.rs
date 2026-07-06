@@ -296,7 +296,7 @@ where 's: 't,
                     let explicit_template_arg_rules_with_connections: Vec<IRulexSR<'s>> = {
                         let mut v = explicit_template_arg_rules_without_connections.to_vec();
                         for (receiving_rune, callsite_rune) in receiving_rune_to_explicit_template_arg_rune.iter() {
-                            if !ft.function.generic_parameters.iter().any(|gp| gp.rune.rune == receiving_rune.rune) {
+                            if !ft.function.generic_params.iter().any(|gp| gp.rune.rune == receiving_rune.rune) {
                                 panic!("Supplied rune {:?} that doesn't exist in called function {:?}", receiving_rune, ft.function.name);
                             }
                             v.push(IRulexSR::Equals(EqualsSR { range: callsite_rune.range, left: *receiving_rune, right: *callsite_rune }));
@@ -310,7 +310,7 @@ where 's: 't,
                     // container template args) also need their callsite rune seeded with the expected type,
                     // otherwise MaybeCoercingLookupSR for those args can't fire in the rune-type solver.
                     let receiving_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-                        ft.function.generic_parameters.iter().map(|gp| (gp.rune.rune, gp.tyype.tyype())).collect();
+                        ft.function.generic_params.iter().map(|gp| (gp.rune.rune, gp.tyype.tyype())).collect();
                     let callsite_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
                         receiving_rune_to_explicit_template_arg_rune.iter()
                             .filter_map(|(receiving_rune, callsite_rune)| {

@@ -148,7 +148,7 @@ where 's: 't,
         let runed_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> =
             self.typing_interner.alloc(self.add_runed_data_to_near_env(
                 declaring_env,
-                &function.generic_parameters.iter().map(|gp| gp.rune.rune).collect::<Vec<_>>(),
+                &function.generic_params.iter().map(|gp| gp.rune.rune).collect::<Vec<_>>(),
                 &inferences,
                 &reachable_bounds));
 
@@ -252,7 +252,7 @@ where 's: 't,
         let runed_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> =
             self.typing_interner.alloc(self.add_runed_data_to_near_env(
                 near_env,
-                &function.generic_parameters.iter().map(|gp| gp.rune.rune).collect::<Vec<_>>(),
+                &function.generic_params.iter().map(|gp| gp.rune.rune).collect::<Vec<_>>(),
                 &inferences,
                 &reachable_bounds));
 
@@ -294,7 +294,7 @@ where 's: 't,
         function: &FunctionS<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
     ) -> Vec<InitialKnown<'s, 't>> {
-        function.generic_parameters.iter()
+        function.generic_params.iter()
             .zip(explicit_template_args.iter())
             .map(|(generic_param, explicit_arg)| {
                 InitialKnown {
@@ -419,7 +419,7 @@ where 's: 't,
         let mut solver = self.make_solver_state(
             envs, coutputs, &call_site_rules, &rune_to_type, invocation_range, &initial_knowns, &initial_sends);
 
-        let mut loop_check = function.generic_parameters.len() as i32 + 1;
+        let mut loop_check = function.generic_params.len() as i32 + 1;
 
         // Per @DRSINI, defaults are added here incrementally as a fallback, only for runes
         // that remain unsolved after argument inference.
@@ -432,7 +432,7 @@ where 's: 't,
                 loop_check -= 1;
 
                 match self.get_first_unsolved_identifying_rune(
-                    function.generic_parameters,
+                    function.generic_params,
                     |rune| solver_state.get_conclusion(&rune).is_some(),
                 ) {
                     None => false,
@@ -480,7 +480,7 @@ where 's: 't,
             };
 
         let identifying_runes: Vec<IRuneS<'s>> =
-            function.generic_parameters.iter().map(|gp| gp.rune.rune).collect();
+            function.generic_params.iter().map(|gp| gp.rune.rune).collect();
         let reachable_bound_protos: Vec<PrototypeTemplataT<'s, 't>> =
             rune_to_function_bound.rune_to_citizen_rune_to_reachable_prototype.iter()
                 .flat_map(|(_rune, x)| x.citizen_rune_to_reachable_prototype.values().copied())
@@ -556,7 +556,7 @@ where 's: 't,
             preliminary_solver_state.userify_conclusions().into_iter().collect();
 
         let placeholder_initial_knowns_from_function: Vec<InitialKnown<'s, 't>> =
-            function.generic_parameters.iter().enumerate().flat_map(|(index, generic_param)| {
+            function.generic_params.iter().enumerate().flat_map(|(index, generic_param)| {
                 match preliminary_inferences.get(&generic_param.rune.rune) {
                     Some(&x) => Some(InitialKnown { rune: generic_param.rune, templata: x }),
                     None => { panic!("implement: create placeholder for missing preliminary inference"); }
@@ -604,7 +604,7 @@ where 's: 't,
         let runed_env =
             self.add_runed_data_to_near_env(
                 near_env,
-                &function.generic_parameters.iter().map(|p| p.rune.rune).collect::<Vec<_>>(),
+                &function.generic_params.iter().map(|p| p.rune.rune).collect::<Vec<_>>(),
                 &inferences,
                 &reachable_bounds);
 
@@ -692,7 +692,7 @@ where 's: 't,
             envs, coutputs, &mut solver,
             |coutputs, solver_state| {
                 match get_first_unsolved(
-                    function.generic_parameters,
+                    function.generic_params,
                     &|rune| solver_state.get_conclusion(&rune).is_some(),
                 ) {
                     None => false,
@@ -742,7 +742,7 @@ where 's: 't,
             Ok(c) => c,
         };
 
-        let identifying_runes: Vec<IRuneS<'s>> = function.generic_parameters.iter()
+        let identifying_runes: Vec<IRuneS<'s>> = function.generic_params.iter()
             .map(|gp| gp.rune.rune)
             .collect();
         let reachable_bounds: Vec<PrototypeTemplataT<'s, 't>> =

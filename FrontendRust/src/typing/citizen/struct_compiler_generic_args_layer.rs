@@ -56,7 +56,7 @@ where 's: 't,
         //   vassert(templateArgs.size == structA.genericParameters.size)
         // because we have default generic arguments now.
         let initial_knowns: Vec<InitialKnown<'s, 't>> =
-            struct_a.generic_parameters.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
+            struct_a.generic_params.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
                 InitialKnown { rune: generic_param.rune, templata: *template_arg }
             }).collect();
 
@@ -76,7 +76,7 @@ where 's: 't,
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &header_rune_to_type_map,
-            call_range, call_location, struct_a.generic_parameters, &initial_knowns, &[],
+            call_range, call_location, struct_a.generic_params, &initial_knowns, &[],
         ).unwrap_or_else(|_e| {
             panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveStruct")
             // throw CompileErrorExceptionT(typing.TypingPassSolverError(callRange, e))
@@ -93,7 +93,7 @@ where 's: 't,
         // missing some, in which case we had to run some default rules.
         // Let's use the inferences to make one.
         let final_generic_args: Vec<ITemplataT<'s, 't>> =
-            struct_a.generic_parameters.iter()
+            struct_a.generic_params.iter()
                 .map(|gp| *complete_resolve_solve.conclusions.get(&gp.rune.rune).unwrap())
                 .collect();
         let struct_name = struct_template_name.make_struct_name(self.typing_interner, &final_generic_args);
@@ -128,18 +128,18 @@ where 's: 't,
         // because we have default generic arguments now.
 
         let initial_knowns: Vec<InitialKnown<'s, 't>> =
-            interface_a.generic_parameters.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
+            interface_a.generic_params.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
                 InitialKnown { rune: RuneUsage { range: *call_range.first().expect("vassertSome: callRange.headOption"), rune: generic_param.rune.rune }, templata: *template_arg }
             }).collect();
 
-        let call_site_rules = self.assemble_predict_rules(interface_a.generic_parameters, template_args.len() as i32);
+        let call_site_rules = self.assemble_predict_rules(interface_a.generic_params, template_args.len() as i32);
         let call_site_rule_runes: Vec<IRuneS<'s>> = call_site_rules.iter().flat_map(|r| r.rune_usages().into_iter().map(|ru| ru.rune)).collect();
         let runes_for_prediction: HashSet<IRuneS<'s>> =
-            interface_a.generic_parameters.iter().map(|gp| gp.rune.rune)
+            interface_a.generic_params.iter().map(|gp| gp.rune.rune)
             .chain(call_site_rule_runes.into_iter())
             .collect();
         let defaults_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            interface_a.generic_parameters.iter()
+            interface_a.generic_params.iter()
                 .filter_map(|gp| gp.default.as_ref())
                 .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
                 .collect();
@@ -174,7 +174,7 @@ where 's: 't,
         // missing some, in which case we had to run some default rules.
         // Let's use the inferences to make one.
 
-        let final_generic_args: Vec<ITemplataT<'s, 't>> = interface_a.generic_parameters.iter().map(|gp| {
+        let final_generic_args: Vec<ITemplataT<'s, 't>> = interface_a.generic_params.iter().map(|gp| {
             *inferences.get(&gp.rune.rune).expect("rune not in inferences")
         }).collect();
         let interface_name = interface_template_name.make_interface_name(self.typing_interner, &final_generic_args);
@@ -204,18 +204,18 @@ where 's: 't,
         // because we have default generic arguments now.
 
         let initial_knowns: Vec<InitialKnown<'s, 't>> =
-            struct_a.generic_parameters.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
+            struct_a.generic_params.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
                 InitialKnown { rune: RuneUsage { range: *call_range.first().expect("vassertSome: callRange.headOption"), rune: generic_param.rune.rune }, templata: *template_arg }
             }).collect();
 
-        let call_site_rules = self.assemble_predict_rules(struct_a.generic_parameters, template_args.len() as i32);
+        let call_site_rules = self.assemble_predict_rules(struct_a.generic_params, template_args.len() as i32);
         let call_site_rule_runes: Vec<IRuneS<'s>> = call_site_rules.iter().flat_map(|r| r.rune_usages().into_iter().map(|ru| ru.rune)).collect();
         let runes_for_prediction: HashSet<IRuneS<'s>> =
-            struct_a.generic_parameters.iter().map(|gp| gp.rune.rune)
+            struct_a.generic_params.iter().map(|gp| gp.rune.rune)
             .chain(call_site_rule_runes.into_iter())
             .collect();
         let defaults_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            struct_a.generic_parameters.iter()
+            struct_a.generic_params.iter()
                 .filter_map(|gp| gp.default.as_ref())
                 .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
                 .collect();
@@ -252,7 +252,7 @@ where 's: 't,
         // missing some, in which case we had to run some default rules.
         // Let's use the inferences to make one.
 
-        let final_generic_args: Vec<ITemplataT<'s, 't>> = struct_a.generic_parameters.iter().map(|gp| {
+        let final_generic_args: Vec<ITemplataT<'s, 't>> = struct_a.generic_params.iter().map(|gp| {
             *inferences.get(&gp.rune.rune).expect("rune not in inferences")
         }).collect();
         let struct_name = struct_template_name.make_struct_name(self.typing_interner, &final_generic_args);
@@ -283,7 +283,7 @@ where 's: 't,
         //   vassert(templateArgs.size == structA.genericParameters.size)
         // because we have default generic arguments now.
         let initial_knowns: Vec<InitialKnown<'s, 't>> =
-            interface_a.generic_parameters.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
+            interface_a.generic_params.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
                 InitialKnown { rune: generic_param.rune, templata: *template_arg }
             }).collect();
 
@@ -303,7 +303,7 @@ where 's: 't,
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &rune_to_type_map,
-            call_range, call_location, interface_a.generic_parameters, &initial_knowns, &[],
+            call_range, call_location, interface_a.generic_params, &initial_knowns, &[],
         ).unwrap_or_else(|_e| {
             panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveInterface")
             // throw CompileErrorExceptionT(typing.TypingPassSolverError(callRange, e))
@@ -320,7 +320,7 @@ where 's: 't,
         // missing some, in which case we had to run some default rules.
         // Let's use the inferences to make one.
         let final_generic_args: Vec<ITemplataT<'s, 't>> =
-            interface_a.generic_parameters.iter()
+            interface_a.generic_params.iter()
                 .map(|gp| *complete_resolve_solve.conclusions.get(&gp.rune.rune).unwrap())
                 .collect();
         let interface_name = interface_template_name.make_interface_name(self.typing_interner, &final_generic_args);
@@ -379,7 +379,7 @@ where 's: 't,
         };
         match self.incrementally_solve(envs, coutputs, &mut solver, |coutputs, solver_state| {
             match get_first_unsolved(
-                struct_a.generic_parameters,
+                struct_a.generic_params,
                 &|rune| solver_state.get_conclusion(&rune).is_some(),
             ) {
                 None => false,
@@ -428,7 +428,7 @@ where 's: 't,
             conclusions: inferences.clone(),
         };
         let template_args: Vec<ITemplataT<'s, 't>> =
-            struct_a.generic_parameters.iter().map(|p| inferences[&p.rune.rune]).collect();
+            struct_a.generic_params.iter().map(|p| inferences[&p.rune.rune]).collect();
         let id = self.assemble_struct_name(*struct_template_id, &template_args);
         let id_steps = id.steps();
         let inner_env_id = self.typing_interner.intern_id(IdValT {
@@ -493,7 +493,7 @@ where 's: 't,
         };
         match self.incrementally_solve(envs, coutputs, &mut solver, |coutputs, solver_state| {
             match get_first_unsolved(
-                interface_a.generic_parameters,
+                interface_a.generic_params,
                 &|rune| solver_state.get_conclusion(&rune).is_some(),
             ) {
                 None => false,
@@ -533,7 +533,7 @@ where 's: 't,
             conclusions: inferences.clone(),
         };
         let template_args: Vec<ITemplataT<'s, 't>> =
-            interface_a.generic_parameters.iter().map(|p| inferences[&p.rune.rune]).collect();
+            interface_a.generic_params.iter().map(|p| inferences[&p.rune.rune]).collect();
         let id = self.assemble_interface_name(*interface_template_id, &template_args);
         let id_steps = id.steps();
         let inner_env_id = self.typing_interner.intern_id(IdValT {

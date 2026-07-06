@@ -1100,7 +1100,7 @@ where
                                 tyype: ITemplataType::TemplateTemplataType(
                                     t.origin_struct.tyype,
                                 ),
-                                generic_params: t.origin_struct.generic_parameters,
+                                generic_params: t.origin_struct.generic_params,
                             },
                         ))
                     }
@@ -1110,7 +1110,7 @@ where
                                 tyype: ITemplataType::TemplateTemplataType(
                                     t.origin_interface.tyype,
                                 ),
-                                generic_params: t.origin_interface.generic_parameters,
+                                generic_params: t.origin_interface.generic_params,
                             },
                         ))
                     }

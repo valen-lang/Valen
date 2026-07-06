@@ -78,7 +78,7 @@ where 's: 't,
 
         let self_kind_rune_s = self.scout_arena.intern_rune(IRuneValS::SelfKindRune(SelfKindRuneS {}));
         rune_to_type.insert(self_kind_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
-        let generic_param_runes: Vec<_> = struct_a.generic_parameters.iter().map(|p| p.rune).collect();
+        let generic_param_runes: Vec<_> = struct_a.generic_params.iter().map(|p| p.rune).collect();
         let generic_param_runes_slice = self.scout_arena.alloc_slice_copy(&generic_param_runes);
         rules.push(IRulexSR::Call(CallSR {
             range: struct_a.name.range(),
@@ -96,7 +96,7 @@ where 's: 't,
         }));
 
         // Use the same generic parameters as the struct
-        let function_generic_parameters = struct_a.generic_parameters;
+        let function_generic_parameters = struct_a.generic_params;
 
         let function_templata_type = TemplateTemplataType {
             param_types: self.scout_arena.alloc_slice_from_vec(

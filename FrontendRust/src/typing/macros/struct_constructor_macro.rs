@@ -84,7 +84,7 @@ where 's: 't,
         }));
         let struct_kind_rune = RuneUsage { range: struct_name_range, rune: struct_kind_rune_s };
         rune_to_type.insert(struct_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
-        let generic_param_runes: Vec<_> = struct_a.generic_parameters.iter().map(|p| p.rune).collect();
+        let generic_param_runes: Vec<_> = struct_a.generic_params.iter().map(|p| p.rune).collect();
         let generic_param_runes_slice = self.scout_arena.alloc_slice_copy(&generic_param_runes);
         rules.push(IRulexSR::Call(CallSR {
             range: struct_name_range,
@@ -130,7 +130,7 @@ where 's: 't,
             ),
             &[],
             TemplateTemplataType { param_types: struct_a.tyype.param_types, return_type: self.scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})) },
-            struct_a.generic_parameters,
+            struct_a.generic_params,
             rune_to_type_map,
             params_slice,
             Some(ret_rune),
