@@ -408,7 +408,7 @@ where 's: 't,
             };
         let dispatcher_params: Vec<CoordT<'s, 't>> =
             origin_function_templata.function.params.iter()
-                .map(|p| p.pattern.coord_rune.unwrap().rune)
+                .map(|p| p.pattern.kind_rune.unwrap().rune)
                 .map(|rune| {
                     let templata = *dispatcher_inner_inferences.get(&rune)
                         .unwrap_or_else(|| panic!("vassertSome: rune {:?} not in dispatcherInnerInferences", rune));

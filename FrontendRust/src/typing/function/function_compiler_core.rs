@@ -67,7 +67,7 @@ where 's: 't,
 
         // val maybeRetTemplata = fullEnv.function.maybeRetCoordRune match { ... }
         let maybe_ret_templata =
-            match &full_env.function.maybe_ret_coord_rune {
+            match &full_env.function.maybe_ret_kind_rune {
                 None => None,
                 Some(ret_coord_rune) => {
                     let imprecise_name = self.scout_arena.intern_imprecise_name(
@@ -219,7 +219,7 @@ where 's: 't,
         full_env: &'t FunctionEnvironmentT<'s, 't>,
         id: IdT<'s, 't>,
     ) -> PrototypeT<'s, 't> {
-        let ret_coord_rune = full_env.function.maybe_ret_coord_rune.unwrap();
+        let ret_coord_rune = full_env.function.maybe_ret_kind_rune.unwrap();
         let imprecise_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::RuneName(RuneNameValS { rune: ret_coord_rune.rune }));
         let mut lookup_filter = HashSet::default();

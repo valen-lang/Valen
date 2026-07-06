@@ -117,7 +117,7 @@ where 's: 't,
                 AtomSP {
                     range: range(-1340),
                     name: Some(CaptureS { name: IVarNameS::CodeVarName(self.keywords.thiss), mutate: false }),
-                    coord_rune: Some(use_(-64002, self_coord_rune_s)),
+                    kind_rune: Some(use_(-64002, self_coord_rune_s)),
                     destructure: None,
                 },
             )]),

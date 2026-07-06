@@ -401,7 +401,7 @@ where 's: 't,
                 rules_builder.push(mapped);
             }
 
-            let original_ret_rune = internal_method.maybe_ret_coord_rune.unwrap();
+            let original_ret_rune = internal_method.maybe_ret_kind_rune.unwrap();
             let return_rune = RuneUsage {
                 range: original_ret_rune.range,
                 rune: self.inherited_method_rune_anonymous_interface(interface_a, internal_method, original_ret_rune.rune),
@@ -429,7 +429,7 @@ where 's: 't,
                             param_runes.push(RuneUsage {
                                 range: param.pattern.range,
                                 rune: self.inherited_method_rune_anonymous_interface(
-                                    interface_a, internal_method, param.pattern.coord_rune.unwrap().rune),
+                                    interface_a, internal_method, param.pattern.kind_rune.unwrap().rune),
                             });
                         }
                         Some(_) => {
@@ -462,11 +462,11 @@ where 's: 't,
                     .collect();
                 assert_eq!(interface_params.len(), 1, "vassertOne");
                 let interface_param = interface_params[0];
-                let original_interface_coord_rune = interface_param.pattern.coord_rune.unwrap().rune;
+                let original_interface_coord_rune = interface_param.pattern.kind_rune.unwrap().rune;
                 let interface_coord_rune = RuneUsage {
                     range: interface_param.range,
                     rune: self.inherited_method_rune_anonymous_interface(
-                        interface_a, internal_method, interface_param.pattern.coord_rune.unwrap().rune),
+                        interface_a, internal_method, interface_param.pattern.kind_rune.unwrap().rune),
                 };
                 rune_to_type.push((interface_coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {})));
 
@@ -713,7 +713,7 @@ where 's: 't,
             });
             rules.push(mapped);
         }
-        let original_ret_rune = method.maybe_ret_coord_rune.unwrap();
+        let original_ret_rune = method.maybe_ret_kind_rune.unwrap();
         let inherited_return_rune = RuneUsage {
             range: original_ret_rune.range,
             rune: self.inherited_method_rune_anonymous_interface(interface, method, original_ret_rune.rune),
@@ -752,7 +752,7 @@ where 's: 't,
         let abstract_param_coord_rune = RuneUsage {
             range: abstract_param_range,
             rune: self.inherited_method_rune_anonymous_interface(
-                interface, method, abstract_param.pattern.coord_rune.unwrap().rune),
+                interface, method, abstract_param.pattern.kind_rune.unwrap().rune),
         };
         rune_to_type.push((abstract_param_coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {})));
 
@@ -802,13 +802,13 @@ where 's: 't,
                         AtomSP {
                             range: abstract_param_range,
                             name: Some(CaptureS { name: IVarNameS::SelfName, mutate: false }),
-                            coord_rune: Some(RuneUsage { range: abstract_param_coord_rune.range, rune: self_coord_rune }),
+                            kind_rune: Some(RuneUsage { range: abstract_param_coord_rune.range, rune: self_coord_rune }),
                             destructure: None,
                         },
                     ));
                 }
                 None => {
-                    let old_rune_usage = param.pattern.coord_rune.unwrap();
+                    let old_rune_usage = param.pattern.kind_rune.unwrap();
                     let new_rune = RuneUsage {
                         range: old_rune_usage.range,
                         rune: self.inherited_method_rune_anonymous_interface(interface, method, old_rune_usage.rune),
@@ -820,7 +820,7 @@ where 's: 't,
                         AtomSP {
                             range: param.pattern.range,
                             name: param.pattern.name,
-                            coord_rune: Some(new_rune),
+                            kind_rune: Some(new_rune),
                             destructure: param.pattern.destructure,
                         },
                     ));

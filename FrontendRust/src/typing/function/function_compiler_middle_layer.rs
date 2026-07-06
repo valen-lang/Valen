@@ -85,7 +85,7 @@ where 's: 't,
         }
         let params2 = self.assemble_function_params(rued_env_as_i, coutputs, call_range, &function1.params)?;
 
-        let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_coord_rune.as_ref().map(|r| &r.rune));
+        let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_kind_rune.as_ref().map(|r| &r.rune));
         let param_types: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
         let named_env: &'t FunctionEnvironmentT<'s, 't> =
             self.typing_interner.alloc(self.make_named_env(rued_env, &param_types, maybe_return_type));
@@ -195,7 +195,7 @@ where 's: 't,
                 let params2 = self.assemble_function_params(rued_env_as_i, coutputs, call_range, &function1.params)?;
 
                 // val maybeReturnType = getMaybeReturnType(runedEnv, function1.maybeRetCoordRune.map(_.rune))
-                let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_coord_rune.as_ref().map(|r| &r.rune));
+                let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_kind_rune.as_ref().map(|r| &r.rune));
 
                 // val namedEnv = makeNamedEnv(runedEnv, params2.map(_.tyype), maybeReturnType)
                 let param_types_for_env: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
@@ -235,7 +235,7 @@ where 's: 't,
         //   coord
         // })
         params1.iter().map(|param1| {
-            let rune = param1.pattern.coord_rune.as_ref().unwrap().rune;
+            let rune = param1.pattern.kind_rune.as_ref().unwrap().rune;
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune }));
             let mut lookup_filter = HashSet::default();
@@ -264,7 +264,7 @@ where 's: 't,
             //     env.lookupNearestWithImpreciseName(
             //       interner.intern(RuneNameS(param1.pattern.coordRune.get.rune)),
             //       Set(TemplataLookupContext)))
-            let rune = param1.pattern.coord_rune.as_ref().unwrap().rune;
+            let rune = param1.pattern.kind_rune.as_ref().unwrap().rune;
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune }));
             let mut lookup_filter = HashSet::default();
@@ -375,7 +375,7 @@ where 's: 't,
 
         let rued_env_as_i = IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(rued_env);
         let param_types = self.evaluate_function_param_types(rued_env_as_i, function1.params);
-        let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_coord_rune.as_ref().map(|ru| &ru.rune));
+        let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_kind_rune.as_ref().map(|ru| &ru.rune));
         let named_env = self.typing_interner.alloc(self.make_named_env(rued_env, &param_types, maybe_return_type));
         let needle_signature = SignatureT { id: named_env.id };
 

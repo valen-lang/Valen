@@ -126,7 +126,7 @@ where 's: 't,
                 AtomSP {
                     range: range(-1340),
                     name: Some(CaptureS { name: IVarNameS::CodeVarName(self.keywords.thiss), mutate: false }),
-                    coord_rune: Some(use_(-64002, self_coord_rune_s)),
+                    kind_rune: Some(use_(-64002, self_coord_rune_s)),
                     destructure: None,
                 },
             )]),
@@ -180,7 +180,7 @@ where 's: 't,
                 AtomSP {
                     range: internal_range(-1342),
                     name: Some(CaptureS { name: IVarNameS::CodeVarName(self.keywords.x), mutate: false }),
-                    coord_rune: Some(RuneUsage { range: internal_range(-64002), rune: drop_p1_rune }),
+                    kind_rune: Some(RuneUsage { range: internal_range(-64002), rune: drop_p1_rune }),
                     destructure: None,
                 }),
         ]);

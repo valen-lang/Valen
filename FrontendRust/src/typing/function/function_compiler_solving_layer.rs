@@ -412,8 +412,8 @@ where 's: 't,
         };
         let include_reachable_bounds_for_runes: Vec<IRuneS<'s>> =
             function.params.iter()
-                .flat_map(|p| p.pattern.coord_rune.map(|ru| ru.rune))
-                .chain(function.maybe_ret_coord_rune.map(|ru| ru.rune))
+                .flat_map(|p| p.pattern.kind_rune.map(|ru| ru.rune))
+                .chain(function.maybe_ret_kind_rune.map(|ru| ru.rune))
                 .collect();
 
         let mut solver = self.make_solver_state(
@@ -585,9 +585,9 @@ where 's: 't,
                 &[],
                 &{
                     let mut runes: Vec<IRuneS<'s>> = function.params.iter()
-                        .flat_map(|p| p.pattern.coord_rune.map(|r| r.rune))
+                        .flat_map(|p| p.pattern.kind_rune.map(|r| r.rune))
                         .collect();
-                    if let Some(r) = function.maybe_ret_coord_rune {
+                    if let Some(r) = function.maybe_ret_kind_rune {
                         runes.push(r.rune);
                     }
                     runes
@@ -656,13 +656,13 @@ where 's: 't,
         let mut seen = HashSet::default();
         let mut param_and_return_runes: Vec<IRuneS<'s>> = Vec::new();
         for param in function.params.iter() {
-            if let Some(coord_rune) = param.pattern.coord_rune {
+            if let Some(coord_rune) = param.pattern.kind_rune {
                 if seen.insert(coord_rune.rune) {
                     param_and_return_runes.push(coord_rune.rune);
                 }
             }
         }
-        if let Some(ret_coord_rune) = function.maybe_ret_coord_rune {
+        if let Some(ret_coord_rune) = function.maybe_ret_kind_rune {
             if seen.insert(ret_coord_rune.rune) {
                 param_and_return_runes.push(ret_coord_rune.rune);
             }
@@ -769,7 +769,7 @@ where 's: 't,
         args: &[Option<CoordT<'s, 't>>],
     ) -> Vec<InitialSend<'s, 't>> {
         function.params.iter()
-            .map(|p| p.pattern.coord_rune.unwrap())
+            .map(|p| p.pattern.kind_rune.unwrap())
             .zip(args.iter())
             .enumerate()
             .flat_map(|(arg_index, (param_rune, arg))| {

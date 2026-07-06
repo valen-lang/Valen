@@ -124,7 +124,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
     ) -> ReferenceExpressionTE<'s, 't> {
         // The rules are different depending on the incoming type.
         // See Impl Rule For Upcasts (IRFU).
-        let converted_input_expr = match &pattern.coord_rune {
+        let converted_input_expr = match &pattern.kind_rune {
             None => {
                 unconverted_input_expr
             }

@@ -2308,14 +2308,14 @@ where 's: 't,
         let rune_to_explicit_type = &function_s.rune_to_predicted_type;
         let tyype = &function_s.tyype;
         let params_s = function_s.params;
-        let maybe_ret_coord_rune = &function_s.maybe_ret_coord_rune;
+        let maybe_ret_coord_rune = &function_s.maybe_ret_kind_rune;
         let rules_with_implicitly_coercing_lookups_s = function_s.rules;
         let body_s = function_s.body;
 
         let mut rune_s_to_pre_known_type_a: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             rune_to_explicit_type.iter().map(|(k, v)| (*k, v.clone())).collect();
         for param in params_s {
-            if let Some(ref coord_rune) = param.pattern.coord_rune {
+            if let Some(ref coord_rune) = param.pattern.kind_rune {
                 rune_s_to_pre_known_type_a.insert(coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
             }
         }

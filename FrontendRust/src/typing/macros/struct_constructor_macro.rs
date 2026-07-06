@@ -80,7 +80,7 @@ where 's: 't,
 
         let struct_kind_rune_s = self.scout_arena.intern_rune(IRuneValS::ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS {
             range: struct_name_range,
-            original_coord_rune: struct_generic_rune_s,
+            original_kind_rune: struct_generic_rune_s,
         }));
         let struct_kind_rune = RuneUsage { range: struct_name_range, rune: struct_kind_rune_s };
         rune_to_type.insert(struct_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
@@ -106,7 +106,7 @@ where 's: 't,
                     vec![ParameterS::new(member.range, None, false, AtomSP {
                         range: member.range,
                         name: Some(capture),
-                        coord_rune: Some(member.type_rune),
+                        kind_rune: Some(member.type_rune),
                         destructure: None,
                     })]
                 }
@@ -114,7 +114,7 @@ where 's: 't,
             }
         }).collect();
         for param in &params {
-            if let Some(coord_rune) = param.pattern.coord_rune {
+            if let Some(coord_rune) = param.pattern.kind_rune {
                 rune_to_type.insert(coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
             }
         }
