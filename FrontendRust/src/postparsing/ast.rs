@@ -489,7 +489,7 @@ pub struct GenericParameterDefaultS<'s> {
 #[derive(Debug, PartialEq)]
 pub struct FunctionS<'s> {
   pub range: RangeS<'s>,
-  pub name: &'s IFunctionDeclarationNameS<'s>,
+  pub name: IFunctionDeclarationNameS<'s>,
   pub attributes: &'s [IFunctionAttributeS<'s>],
   pub generic_params: &'s [&'s GenericParameterS<'s>],
   pub tyype: TemplateTemplataType<'s>,
@@ -502,7 +502,7 @@ pub struct FunctionS<'s> {
 impl<'s> FunctionS<'s> {
   pub fn new(
     range: RangeS<'s>,
-    name: &'s IFunctionDeclarationNameS<'s>,
+    name: IFunctionDeclarationNameS<'s>,
     attributes: &'s [IFunctionAttributeS<'s>],
     generic_params: &'s [&'s GenericParameterS<'s>],
     tyype: TemplateTemplataType<'s>,

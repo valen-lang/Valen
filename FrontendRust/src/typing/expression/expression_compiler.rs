@@ -811,7 +811,7 @@ where 's: 't,
                 let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
                     &once(function_s.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                 let call_expr_2 = self.evaluate_closure(
-                    coutputs, nenv, range_list, outer_call_location, region, *function_s.name, function_s)?;
+                    coutputs, nenv, range_list, outer_call_location, region, function_s.name, function_s)?;
                 Ok((ExpressionTE::Reference(call_expr_2), HashSet::default()))
             }
             IExpressionSE::CopyPrim(cp) => {
@@ -2302,7 +2302,7 @@ where 's: 't,
         function_s: &'s FunctionS<'s>,
     ) -> &'s FunctionS<'s> {
         let range_s = function_s.range;
-        let name_s = *function_s.name;
+        let name_s = function_s.name;
         let attributes_s = function_s.attributes;
         let identifying_runes_s = function_s.generic_params;
         let rune_to_explicit_type = &function_s.rune_to_predicted_type;
