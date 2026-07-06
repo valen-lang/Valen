@@ -1,6 +1,6 @@
 // VCOORD:
 
-use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType};
+use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
 use crate::postparsing::ast::GenericParameterS;
 use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
@@ -220,13 +220,13 @@ fn get_puzzles_rune_type<'s>(
         vec![vec![]]
       }
     }
-    IRulexSR::MaybeCoercingLookup(x) => {
-      if predicting {
-        vec![]
-      } else {
-        vec![vec![x.rune.rune.clone()]]
-      }
-    }
+    // IRulexSR::MaybeCoercingLookup(x) => {
+      // if predicting {
+        // vec![]
+      // } else {
+        // vec![vec![x.rune.rune.clone()]]
+      // }
+    // }
     IRulexSR::RuneParentEnvLookup(x) => {
       if predicting {
         vec![]
@@ -234,29 +234,29 @@ fn get_puzzles_rune_type<'s>(
         vec![vec![x.rune.rune.clone()]]
       }
     }
-    IRulexSR::MaybeCoercingCall(x) => {
-      vec![vec![x.result_rune.rune.clone(), x.template_rune.rune.clone()]]
-    }
-    IRulexSR::Pack(_) => vec![vec![]],
-    IRulexSR::DefinitionCoordIsa(_) => vec![vec![]],
-    IRulexSR::CallSiteCoordIsa(_) => vec![vec![]],
-    IRulexSR::KindComponents(_) => vec![vec![]],
-    IRulexSR::CoordComponents(_) => vec![vec![]],
-    IRulexSR::PrototypeComponents(_) => vec![vec![]],
+    // IRulexSR::MaybeCoercingCall(x) => {
+      // vec![vec![x.result_rune.rune.clone(), x.template_rune.rune.clone()]]
+    // }
+    // IRulexSR::Pack(_) => vec![vec![]],
+    // IRulexSR::DefinitionCoordIsa(_) => vec![vec![]],
+    // IRulexSR::CallSiteCoordIsa(_) => vec![vec![]],
+    // IRulexSR::KindComponents(_) => vec![vec![]],
+    // IRulexSR::CoordComponents(_) => vec![vec![]],
+    // IRulexSR::PrototypeComponents(_) => vec![vec![]],
     IRulexSR::Resolve(_) => vec![vec![]],
     IRulexSR::CallSiteFunc(_) => vec![vec![]],
     IRulexSR::DefinitionFunc(_) => vec![vec![]],
-    IRulexSR::OneOf(_) => vec![vec![]],
-    IRulexSR::IsConcrete(x) => vec![vec![x.rune.rune.clone()]],
-    IRulexSR::IsInterface(_) => vec![vec![]],
-    IRulexSR::IsStruct(_) => vec![vec![]],
-    IRulexSR::CoerceToCoord(_) => vec![vec![]],
+    // IRulexSR::OneOf(_) => vec![vec![]],
+    // IRulexSR::IsConcrete(x) => vec![vec![x.rune.rune.clone()]],
+    // IRulexSR::IsInterface(_) => vec![vec![]],
+    // IRulexSR::IsStruct(_) => vec![vec![]],
+    // IRulexSR::CoerceToCoord(_) => vec![vec![]],
     IRulexSR::Literal(_) => vec![vec![]],
-    IRulexSR::Augment(_) => vec![vec![]],
-    IRulexSR::RefListCompoundMutability(_) => vec![vec![]],
+    // IRulexSR::Augment(_) => vec![vec![]],
+    // IRulexSR::RefListCompoundMutability(_) => vec![vec![]],
     IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in rune_type get_puzzles"),
-    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type get_puzzles"),
-    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in rune_type get_puzzles"),
+    // IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type get_puzzles"),
+    // IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in rune_type get_puzzles"),
   }
 }
 
@@ -280,80 +280,80 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
 
 
   match rule {
-    IRulexSR::KindComponents(x) => {
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
-        (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
-      ].into_iter().collect(), vec![], IndexSet::default())
-    }
-    IRulexSR::CoordComponents(x) => {
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
-        (x.result_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-        (x.ownership_rune.rune.clone(), ITemplataType::OwnershipTemplataType(OwnershipTemplataType {})),
-        (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
-      ].into_iter().collect(), vec![], IndexSet::default())
-    }
-    IRulexSR::PrototypeComponents(x) => {
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
-        (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
-        (x.params_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
-        (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-      ].into_iter().collect(), vec![], IndexSet::default())
-    }
-    IRulexSR::MaybeCoercingCall(x) => {
-      match solver_state.get_conclusion(&x.template_rune.rune).expect("MaybeCoercingCallSR: template rune has no conclusion") {
-        ITemplataType::TemplateTemplataType(TemplateTemplataType { param_types, return_type: _ }) => {
-          let conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = x.args.iter().map(|a| a.rune.clone()).zip(param_types.iter().cloned()).collect();
-          solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
-        }
-        other => panic!("MaybeCoercingCallSR: unexpected template type: {:?}", other),
-      }
-    }
+    // IRulexSR::KindComponents(x) => {
+      // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+        // (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+      // ].into_iter().collect(), vec![], IndexSet::default())
+    // }
+    // IRulexSR::CoordComponents(x) => {
+      // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+        // (x.result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        // (x.ownership_rune.rune.clone(), ITemplataType::OwnershipTemplataType(OwnershipTemplataType {})),
+        // (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+      // ].into_iter().collect(), vec![], IndexSet::default())
+    // }
+    // IRulexSR::PrototypeComponents(x) => {
+      // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+        // (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
+        // (x.params_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})) })),
+        // (x.return_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+      // ].into_iter().collect(), vec![], IndexSet::default())
+    // }
+    // IRulexSR::MaybeCoercingCall(x) => {
+      // match solver_state.get_conclusion(&x.template_rune.rune).expect("MaybeCoercingCallSR: template rune has no conclusion") {
+        // ITemplataType::TemplateTemplataType(TemplateTemplataType { param_types, return_type: _ }) => {
+          // let conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = x.args.iter().map(|a| a.rune.clone()).zip(param_types.iter().cloned()).collect();
+          // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
+        // }
+        // other => panic!("MaybeCoercingCallSR: unexpected template type: {:?}", other),
+      // }
+    // }
     IRulexSR::Resolve(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
-        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
-        (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})) })),
+        (x.return_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
       ].into_iter().collect(), vec![], IndexSet::default())
     }
     IRulexSR::CallSiteFunc(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.prototype_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
-        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
-        (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})) })),
+        (x.return_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
       ].into_iter().collect(), vec![], IndexSet::default())
     }
     IRulexSR::DefinitionFunc(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
-        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
-        (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})) })),
+        (x.return_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
       ].into_iter().collect(), vec![], IndexSet::default())
     }
-    IRulexSR::DefinitionCoordIsa(x) => {
-        solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
-            (x.result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {})),
-            (x.sub_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-            (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-        ].into_iter().collect(), vec![], IndexSet::default())
-    }
-    IRulexSR::CallSiteCoordIsa(x) => {
-        let mut conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = [
-            (x.sub_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-            (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-        ].into_iter().collect();
-        if let Some(result_rune) = &x.result_rune {
-            conclusions.insert(result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {}));
-        }
-        solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
-    }
-    IRulexSR::OneOf(x) => {
-      let types: HashSet<ITemplataType<'s>> = x.literals.iter().map(|l| l.get_type()).collect();
-      if types.len() > 1 {
-        panic!("OneOf rule's possibilities must all be the same type!");
-      }
-      let the_type = types.into_iter().next().unwrap();
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), the_type)].into_iter().collect(), vec![], IndexSet::default())
-    }
+    // IRulexSR::DefinitionCoordIsa(x) => {
+        // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+            // (x.result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {})),
+            // (x.sub_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+            // (x.super_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        // ].into_iter().collect(), vec![], IndexSet::default())
+    // }
+    // IRulexSR::CallSiteCoordIsa(x) => {
+        // let mut conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = [
+            // (x.sub_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+            // (x.super_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        // ].into_iter().collect();
+        // if let Some(result_rune) = &x.result_rune {
+            // conclusions.insert(result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {}));
+        // }
+        // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
+    // }
+    // IRulexSR::OneOf(x) => {
+      // let types: HashSet<ITemplataType<'s>> = x.literals.iter().map(|l| l.get_type()).collect();
+      // if types.len() > 1 {
+        // panic!("OneOf rule's possibilities must all be the same type!");
+      // }
+      // let the_type = types.into_iter().next().unwrap();
+      // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), the_type)].into_iter().collect(), vec![], IndexSet::default())
+    // }
     IRulexSR::Equals(x) => {
       let left_conclusion = solver_state.get_conclusion(&x.left.rune);
       match left_conclusion {
@@ -366,27 +366,27 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
         }
       }
     }
-    IRulexSR::IsConcrete(_) => {
-      panic!("IRulexSR::IsConcrete not yet implemented in rune_type solve_rule");
+    // IRulexSR::IsConcrete(_) => {
+      // panic!("IRulexSR::IsConcrete not yet implemented in rune_type solve_rule");
       // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector(), Set.empty)
-    }
-    IRulexSR::IsInterface(x) => {
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}))].into_iter().collect(), vec![], IndexSet::default())
-    }
-    IRulexSR::IsStruct(_) => {
-      panic!("IRulexSR::IsStruct not yet implemented in rune_type solve_rule");
+    // }
+    // IRulexSR::IsInterface(x) => {
+      // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}))].into_iter().collect(), vec![], IndexSet::default())
+    // }
+    // IRulexSR::IsStruct(_) => {
+      // panic!("IRulexSR::IsStruct not yet implemented in rune_type solve_rule");
       // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector(), Set.empty)
-    }
-    IRulexSR::RefListCompoundMutability(_) => {
-      panic!("IRulexSR::RefListCompoundMutability not yet implemented in rune_type solve_rule");
-      // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> MutabilityTemplataType(), coordListRune.rune -> PackTemplataType(CoordTemplataType())), Vector(), Set.empty)
-    }
-    IRulexSR::CoerceToCoord(x) => {
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
-        (x.coord_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-        (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
-      ].into_iter().collect(), vec![], IndexSet::default())
-    }
+    // }
+    // IRulexSR::RefListCompoundMutability(_) => {
+      // panic!("IRulexSR::RefListCompoundMutability not yet implemented in rune_type solve_rule");
+      // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> MutabilityTemplataType(), coordListRune.rune -> PackTemplataType(KindTemplataType())), Vector(), Set.empty)
+    // }
+    // IRulexSR::CoerceToCoord(x) => {
+      // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+        // (x.coord_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        // (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+      // ].into_iter().collect(), vec![], IndexSet::default())
+    // }
     IRulexSR::Literal(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), x.literal.get_type())].into_iter().collect(), vec![], IndexSet::default())
     }
@@ -406,19 +406,19 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       };
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), tyype)].into_iter().collect(), vec![], IndexSet::default())
     }
-    IRulexSR::MaybeCoercingLookup(x) => {
-      let actual_lookup_result =
-          match env.lookup(x.range.clone(), x.name.clone()) {
-            Err(_e) => {
-              panic!("MaybeCoercingLookupSR solve error path not yet implemented");
+    // IRulexSR::MaybeCoercingLookup(x) => {
+      // let actual_lookup_result =
+          // match env.lookup(x.range.clone(), x.name.clone()) {
+            // Err(_e) => {
+              // panic!("MaybeCoercingLookupSR solve error path not yet implemented");
               // return Err(RuleError(e))
-            }
-            Ok(r) => r,
-          };
+            // }
+            // Ok(r) => r,
+          // };
       // AFTERM: lookup_rune_type only validates, doesn't conclude runes. Need to add commitStep here.
-      lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], IndexMap::default(), vec![], IndexSet::default())
-    }
+      // lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
+      // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], IndexMap::default(), vec![], IndexSet::default())
+    // }
     IRulexSR::RuneParentEnvLookup(x) => {
       let lookup_name = scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: x.rune.rune.clone() }));
       let actual_lookup_result =
@@ -432,22 +432,22 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], IndexMap::default(), vec![], IndexSet::default())
     }
-    IRulexSR::Augment(x) => {
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
-        (x.result_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-        (x.inner_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-      ].into_iter().collect(), vec![], IndexSet::default())
-    }
-    IRulexSR::Pack(x) => {
-      let mut conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = x.members.iter()
-        .map(|m| (m.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})))
-        .collect();
-      conclusions.insert(x.result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) }));
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
-    }
-    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type solve_rule"),
+    // IRulexSR::Augment(x) => {
+      // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+        // (x.result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        // (x.inner_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+      // ].into_iter().collect(), vec![], IndexSet::default())
+    // }
+    // IRulexSR::Pack(x) => {
+      // let mut conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = x.members.iter()
+        // .map(|m| (m.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})))
+        // .collect();
+      // conclusions.insert(x.result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})) }));
+      // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
+    // }
+    // IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type solve_rule"),
     IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in rune_type solve_rule"),
-    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in rune_type solve_rule"),
+    // IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in rune_type solve_rule"),
   }
 }
 
@@ -472,7 +472,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   match actual_lookup_result {
     IRuneTypeSolverLookupResult::Primitive(p) => {
       match &expected_type {
-        ITemplataType::CoordTemplataType(_) | ITemplataType::KindTemplataType(_) => {}
+        // ITemplataType::KindTemplataType(_) | ITemplataType::KindTemplataType(_) => {}
         x if *x == p.tyype => {}
         _ => {
           panic!("lookup_rune_type Primitive error path not yet implemented");
@@ -484,10 +484,10 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
       let actual_type = t.templata;
       match (&actual_type, &expected_type) {
         (x, y) if x == y => {} // Matches, so is fine
-        (ITemplataType::KindTemplataType(_), ITemplataType::CoordTemplataType(_)) => {} // Will convert, so is fine
-        (ITemplataType::TemplateTemplataType(tt), ITemplataType::CoordTemplataType(_) | ITemplataType::KindTemplataType(_))
+        // (ITemplataType::KindTemplataType(_), ITemplataType::KindTemplataType(_)) => {} // Will convert, so is fine
+        (ITemplataType::TemplateTemplataType(tt), ITemplataType::KindTemplataType(_))
             if tt.param_types.is_empty()
-                && matches!(tt.return_type, ITemplataType::KindTemplataType(_) | ITemplataType::CoordTemplataType(_)) => {
+                && matches!(tt.return_type, ITemplataType::KindTemplataType(_) | ITemplataType::KindTemplataType(_)) => {
           // Then it's an implicit call.
           match check_generic_call(vec![_range.clone()], &[], &[]) {
             Ok(()) => {},
@@ -502,13 +502,13 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
     }
     IRuneTypeSolverLookupResult::Citizen(c) => {
       match &expected_type {
-        ITemplataType::CoordTemplataType(_) | ITemplataType::KindTemplataType(_) => {
+        // ITemplataType::KindTemplataType(_) | ITemplataType::KindTemplataType(_) => {
           // Then it's an implicit call, straight from being looked up.
-          match check_generic_call(vec![_range.clone()], &c.generic_params, &[]) {
-            Ok(()) => {},
-            Err(e) => return Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData })),
-          }
-        }
+          // match check_generic_call(vec![_range.clone()], &c.generic_params, &[]) {
+            // Ok(()) => {},
+            // Err(e) => return Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData })),
+          // }
+        // }
         x if *x == c.tyype => {}
         _ => {
           panic!("lookup_rune_type Citizen error path not yet implemented");
@@ -581,55 +581,55 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
             }
           }
         }
-        IRulexSR::MaybeCoercingLookup(lookup) => {
-          match env.lookup(lookup.range.clone(), lookup.name.clone()) {
-            Err(e) => {
-              return Err(RuneTypeSolveError {
-                range: vec![lookup.range.clone()],
-                failed_solve: FailedSolve {
-                    steps: vec![],
-                    conclusions: HashMap::default(),
-                    unsolved_rules: rules_s.to_vec(),
-                    unsolved_runes: vec![],
-                    error: ISolverError::RuleError(
-                      RuleError {
-                        err: e.into(),
-                        _phantom: PhantomData,
-                      }
-                    ),
-                },
-              });
-            }
-            Ok(result) => {
-              let entries: Vec<(IRuneS<'s>, ITemplataType)> = match &result {
+        // IRulexSR::MaybeCoercingLookup(lookup) => {
+          // match env.lookup(lookup.range.clone(), lookup.name.clone()) {
+            // Err(e) => {
+              // return Err(RuneTypeSolveError {
+                // range: vec![lookup.range.clone()],
+                // failed_solve: FailedSolve {
+                    // steps: vec![],
+                    // conclusions: HashMap::default(),
+                    // unsolved_rules: rules_s.to_vec(),
+                    // unsolved_runes: vec![],
+                    // error: ISolverError::RuleError(
+                      // RuleError {
+                        // err: e.into(),
+                        // _phantom: PhantomData,
+                      // }
+                    // ),
+                // },
+              // });
+            // }
+            // Ok(result) => {
+              // let entries: Vec<(IRuneS<'s>, ITemplataType)> = match &result {
                 // We don't know whether we'll coerce this into a kind or a coord.
-                IRuneTypeSolverLookupResult::Primitive(p) => {
-                  match &p.tyype {
-                    ITemplataType::KindTemplataType(_) => vec![],
-                    ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() => vec![],
-                    other => vec![(lookup.rune.rune.clone(), other.clone())],
-                  }
-                }
-                IRuneTypeSolverLookupResult::Citizen(c) => {
-                  match &c.tyype {
-                    ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() && matches!(&*t.return_type, ITemplataType::KindTemplataType(_)) => vec![],
-                    other => vec![(lookup.rune.rune.clone(), other.clone())],
-                  }
-                }
-                IRuneTypeSolverLookupResult::Templata(t) => {
-                  match &t.templata {
-                    ITemplataType::TemplateTemplataType(tt) if tt.param_types.is_empty() && matches!(&*tt.return_type, ITemplataType::KindTemplataType(_)) => vec![],
-                    ITemplataType::KindTemplataType(_) => vec![],
-                    other => vec![(lookup.rune.rune.clone(), other.clone())],
-                  }
-                }
-              };
-              for (k, v) in entries {
-                map.insert(k, v);
-              }
-            }
-          }
-        }
+                // IRuneTypeSolverLookupResult::Primitive(p) => {
+                  // match &p.tyype {
+                    // ITemplataType::KindTemplataType(_) => vec![],
+                    // ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() => vec![],
+                    // other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  // }
+                // }
+                // IRuneTypeSolverLookupResult::Citizen(c) => {
+                  // match &c.tyype {
+                    // ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() && matches!(&*t.return_type, ITemplataType::KindTemplataType(_)) => vec![],
+                    // other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  // }
+                // }
+                // IRuneTypeSolverLookupResult::Templata(t) => {
+                  // match &t.templata {
+                    // ITemplataType::TemplateTemplataType(tt) if tt.param_types.is_empty() && matches!(&*tt.return_type, ITemplataType::KindTemplataType(_)) => vec![],
+                    // ITemplataType::KindTemplataType(_) => vec![],
+                    // other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  // }
+                // }
+              // };
+              // for (k, v) in entries {
+                // map.insert(k, v);
+              // }
+            // }
+          // }
+        // }
         _ => {
           // Other rules don't contribute to initially known runes
         }

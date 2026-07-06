@@ -61,7 +61,7 @@ where 's: 't,
             name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
         }));
         let void_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidCoordRune(MacroVoidCoordRuneS {}));
-        rune_to_type.insert(void_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+        rune_to_type.insert(void_coord_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
         rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
             range: range(-1672147),
             coord_rune: use_(-64002, void_coord_rune_s),
@@ -88,7 +88,7 @@ where 's: 't,
         }));
 
         let self_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::SelfCoordRune(SelfCoordRuneS {}));
-        rune_to_type.insert(self_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+        rune_to_type.insert(self_coord_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
         rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
             range: struct_a.name.range(),
             coord_rune: RuneUsage { range: struct_a.name.range(), rune: self_coord_rune_s },
@@ -166,10 +166,10 @@ where 's: 't,
         let drop_v_rune = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: self.keywords.drop_v }));
 
         let rune_to_type = self.scout_arena.alloc_index_map_from_iter(vec![
-            (drop_p1_rune, ITemplataType::CoordTemplataType(CoordTemplataType {})),
+            (drop_p1_rune, ITemplataType::KindTemplataType(KindTemplataType {})),
             (drop_p1k_rune, ITemplataType::KindTemplataType(KindTemplataType {})),
             (drop_vk_rune, ITemplataType::KindTemplataType(KindTemplataType {})),
-            (drop_v_rune, ITemplataType::CoordTemplataType(CoordTemplataType {})),
+            (drop_v_rune, ITemplataType::KindTemplataType(KindTemplataType {})),
         ]);
 
         let params = self.scout_arena.alloc_slice_from_vec(vec![

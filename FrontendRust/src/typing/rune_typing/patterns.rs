@@ -3,7 +3,7 @@
 // Resurrected from the retired `higher_typing/patterns.rs` at commit
 // `b5bde70e6` with the onion-era renames applied: `pattern.coord_rune` →
 // `pattern.kind_rune` (postparse slice), and the seeded rune type flipped
-// from `CoordTemplataType` to `KindTemplataType` (postparse slice retired
+// from `KindTemplataType` to `KindTemplataType` (postparse slice retired
 // Coord). The pattern-traversal shape is unchanged.
 //
 // Sole caller today: `typing/expression/expression_compiler.rs` at the

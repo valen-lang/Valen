@@ -30,6 +30,7 @@ use crate::postparsing::post_parser_error_humanizer::humanize_rule;
 use crate::postparsing::post_parser_error_humanizer::humanize_rune;
 use crate::postparsing::post_parser_error_humanizer::humanize_templata_type;
 use crate::typing::rune_typing::rune_type_solver::IRuneTypeRuleError;
+use crate::typing::rune_typing::higher_typing_error_humanizer::humanize_rune_type_error;
 use crate::solver::solver_error_humanizer::humanize_failed_solve as solver_humanize_failed_solve;
 use crate::utils::source_code_utils::humanize_package;
 use std::iter::once;
@@ -248,7 +249,7 @@ that wasn't exported from package {}",
     ICompileErrorT::HigherTypingInferError { range: _, err } => {
       let inner_msg = match &err.failed_solve.error {
         ISolverError::RuleError(re) => {
-          crate::postparsing::post_parser_error_humanizer::humanize_rune_type_error(code_map, &re.err)
+          humanize_rune_type_error(code_map, &re.err)
         }
         ISolverError::SolverConflict(_) | ISolverError::SolveIncomplete(_) => {
           format!("{:?}", err.failed_solve.error)
@@ -512,7 +513,7 @@ pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner
     ITypingPassSolverError::KindIsNotConcrete { kind } => {
       "Expected kind to be concrete, but was not. Kind: ".to_string() + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
     }
-    ITypingPassSolverError::OneOfFailed { .. } => panic!("implement: humanize_rule_error OneOfFailed"),
+    // ITypingPassSolverError::OneOfFailed { .. } => panic!("implement: humanize_rule_error OneOfFailed"),
     ITypingPassSolverError::KindIsNotInterface { .. } => panic!("implement: humanize_rule_error KindIsNotInterface"),
     ITypingPassSolverError::CallResultIsntCallable { result } => {
       "Generic call result isn't callable: ".to_string() + &humanize_templata(scout_arena, typing_interner, code_map, result)
@@ -520,10 +521,10 @@ pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner
     ITypingPassSolverError::CallResultWasntExpectedType { expected, actual } => {
       "Expected an instantiation of ".to_string() + &humanize_templata(scout_arena, typing_interner, code_map, expected) + " but got " + &humanize_templata(scout_arena, typing_interner, code_map, actual)
     }
-    ITypingPassSolverError::OwnershipDidntMatch { coord, expected_ownership } => {
-      "Given type ".to_string() + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord }))) +
-        " doesn't have expected ownership " + &humanize_ownership(unevaluate_ownership(expected_ownership))
-    }
+    // ITypingPassSolverError::OwnershipDidntMatch { coord, expected_ownership } => {
+    //   "Given type ".to_string() + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord }))) +
+    //     " doesn't have expected ownership " + &humanize_ownership(unevaluate_ownership(expected_ownership))
+    // }
     ITypingPassSolverError::ReceivingDifferentOwnerships { .. } => panic!("implement: humanize_rule_error ReceivingDifferentOwnerships"),
     ITypingPassSolverError::NoAncestorsSatisfyCall { params } => {
       "No ancestors satisfy call: ".to_string()
@@ -592,7 +593,7 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
     ITemplataT::RuntimeSizedArrayTemplate(_) => "Array".to_string(),
     ITemplataT::StaticSizedArrayTemplate(_) => "StaticArray".to_string(),
     ITemplataT::InterfaceDefinition(interface_def) => interface_def.origin_interface.name.name.0.to_string(),
-    ITemplataT::StructDefinition(struct_def) => humanize_name_for_struct_declaration(struct_def.origin_struct.name),
+    ITemplataT::StructDefinition(struct_def) => struct_def.origin_struct.name.name.as_str().to_string(),
     ITemplataT::Integer(value) => value.to_string(),
     ITemplataT::Ownership(ownership) => match ownership.ownership {
       OwnershipT::Own => "own".to_string(),
@@ -608,7 +609,7 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
     }
     ITemplataT::String(value) => panic!("implement: humanize_templata String"),
     ITemplataT::Placeholder(p) => match p.tyype {
-      // ITemplataType::CoordTemplataType(_) => "$".to_string() + &humanize_id(scout_arena, typing_interner, code_map, p.id, None),
+      // ITemplataType::KindTemplataType(_) => "$".to_string() + &humanize_id(scout_arena, typing_interner, code_map, p.id, None),
       _ => crate::postparsing::post_parser_error_humanizer::humanize_templata_type(&p.tyype) + "$" + &humanize_id(scout_arena, typing_interner, code_map, p.id, None),
     },
     _ => panic!("implement: humanize_templata other"),

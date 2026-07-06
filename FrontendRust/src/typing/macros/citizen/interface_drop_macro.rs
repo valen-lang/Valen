@@ -48,7 +48,7 @@ where 's: 't,
             name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
         }));
         let void_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidCoordRune(MacroVoidCoordRuneS {}));
-        rune_to_type.insert(void_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+        rune_to_type.insert(void_coord_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
         rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
             range: range(-1672147),
             coord_rune: use_(-64002, void_coord_rune_s),
@@ -79,7 +79,7 @@ where 's: 't,
         }));
 
         let self_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroSelfCoordRune(MacroSelfCoordRuneS {}));
-        rune_to_type.insert(self_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+        rune_to_type.insert(self_coord_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
         rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
             range: interface_name_range,
             coord_rune: RuneUsage { range: interface_name_range, rune: self_coord_rune_s },

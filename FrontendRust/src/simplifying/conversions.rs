@@ -31,7 +31,7 @@ pub fn evaluate_ownership(ownership: OwnershipI) -> OwnershipH {
 pub fn unevaluate_templata_type(tyype: ITemplataType) -> ITemplataType {
     panic!("Unimplemented: unevaluate_templata_type");
     // tyype match {
-    //   case CoordTemplataType() => CoordTemplataType()
+    //   case KindTemplataType() => KindTemplataType()
     //   case KindTemplataType() => KindTemplataType()
     //   case IntegerTemplataType() => IntegerTemplataType()
     //   case BooleanTemplataType() => BooleanTemplataType()

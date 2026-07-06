@@ -347,7 +347,7 @@ where 's: 't,
             rune_to_type.push((*rune, *tyype));
         }
         for mr in member_runes.iter() {
-            rune_to_type.push((mr.rune, ITemplataType::CoordTemplataType(CoordTemplataType {})));
+            rune_to_type.push((mr.rune, ITemplataType::KindTemplataType(KindTemplataType {})));
         }
 
         let void_kind_rune = self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructVoidKindRune(AnonymousSubstructVoidKindRuneS {}));
@@ -360,7 +360,7 @@ where 's: 't,
         }));
 
         let void_coord_rune = self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructVoidCoordRune(AnonymousSubstructVoidCoordRuneS {}));
-        rune_to_type.push((void_coord_rune, ITemplataType::CoordTemplataType(CoordTemplataType {})));
+        rune_to_type.push((void_coord_rune, ITemplataType::KindTemplataType(KindTemplataType {})));
         rules_builder.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
             range: range(-1672147),
             coord_rune: use_rune(-64002, void_coord_rune),
@@ -414,7 +414,7 @@ where 's: 't,
                         interface: *interface_a.name,
                         method: internal_method.name,
                     }));
-                rune_to_type.push((self_borrow_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {})));
+                rune_to_type.push((self_borrow_coord_rune_s, ITemplataType::KindTemplataType(KindTemplataType {})));
                 rules_builder.push(IRulexSR::Augment(AugmentSR {
                     range: internal_method.range,
                     result_rune: RuneUsage { range: internal_method.range, rune: self_borrow_coord_rune_s },
@@ -454,7 +454,7 @@ where 's: 't,
                     result_rune: method_params_list_rune,
                     members: param_runes_slice,
                 }));
-                let coord_type_ref = self.scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {}));
+                let coord_type_ref = self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {}));
                 rune_to_type.push((method_params_list_rune.rune, ITemplataType::PackTemplataType(PackTemplataType { element_type: coord_type_ref })));
 
                 let interface_params: Vec<&'s ParameterS<'s>> = internal_method.params.iter()
@@ -468,7 +468,7 @@ where 's: 't,
                     rune: self.inherited_method_rune_anonymous_interface(
                         interface_a, internal_method, interface_param.pattern.coord_rune.unwrap().rune),
                 };
-                rune_to_type.push((interface_coord_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {})));
+                rune_to_type.push((interface_coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {})));
 
                 let mut collected: Vec<IRuneS<'s>> = Vec::new();
                 for rule in internal_method.rules.iter() {
@@ -563,7 +563,7 @@ where 's: 't,
                         interface: *interface_a.name,
                         method: internal_method.name,
                     }));
-                rune_to_type.push((self_own_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {})));
+                rune_to_type.push((self_own_coord_rune_s, ITemplataType::KindTemplataType(KindTemplataType {})));
                 rules_builder.push(IRulexSR::Augment(AugmentSR {
                     range: internal_method.range,
                     result_rune: RuneUsage { range: internal_method.range, rune: self_own_coord_rune_s },
@@ -588,7 +588,7 @@ where 's: 't,
                     result_rune: drop_params_list_rune,
                     members: drop_params_slice,
                 }));
-                let coord_type_ref2 = self.scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {}));
+                let coord_type_ref2 = self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {}));
                 rune_to_type.push((drop_params_list_rune.rune, ITemplataType::PackTemplataType(PackTemplataType { element_type: coord_type_ref2 })));
 
                 let drop_prototype_rune = RuneUsage {
@@ -626,7 +626,7 @@ where 's: 't,
         }
 
         let member_coord_types: Vec<ITemplataType<'s>> = member_runes.iter()
-            .map(|_mr| ITemplataType::CoordTemplataType(CoordTemplataType {}))
+            .map(|_mr| ITemplataType::KindTemplataType(KindTemplataType {}))
             .collect();
         let mut param_types: Vec<ITemplataType<'s>> = interface_a.tyype.param_types.to_vec();
         param_types.extend(member_coord_types);
@@ -731,7 +731,7 @@ where 's: 't,
         let self_kind_rune = self.scout_arena.intern_rune(IRuneValS::SelfKindRune(SelfKindRuneS {}));
         rune_to_type.push((self_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {})));
         let self_coord_rune = self.scout_arena.intern_rune(IRuneValS::SelfCoordRune(SelfCoordRuneS {}));
-        rune_to_type.push((self_coord_rune, ITemplataType::CoordTemplataType(CoordTemplataType {})));
+        rune_to_type.push((self_coord_rune, ITemplataType::KindTemplataType(KindTemplataType {})));
         let self_kind_template_rune = self.scout_arena.intern_rune(IRuneValS::SelfKindTemplateRune(SelfKindTemplateRuneS { loc: struct_.range.begin }));
         rune_to_type.push((self_kind_template_rune, ITemplataType::TemplateTemplataType(struct_type)));
 
@@ -754,7 +754,7 @@ where 's: 't,
             rune: self.inherited_method_rune_anonymous_interface(
                 interface, method, abstract_param.pattern.coord_rune.unwrap().rune),
         };
-        rune_to_type.push((abstract_param_coord_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {})));
+        rune_to_type.push((abstract_param_coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {})));
 
         let destructuring_interface_rule = IRulexSR::CoordComponents(CoordComponentsSR {
             range: abstract_param_range,
@@ -900,10 +900,10 @@ where 's: 't,
             _ => panic!("vwat: intern_name returned non-FunctionDeclaration"),
         };
 
-        // Tyype: param_types ++ struct.genericParameters.map(_ => CoordTemplataType()), return FunctionTemplataType
+        // Tyype: param_types ++ struct.genericParameters.map(_ => KindTemplataType()), return FunctionTemplataType
         let mut new_param_types: Vec<ITemplataType<'s>> = method_original_type.param_types.to_vec();
         for _ in struct_.generic_parameters.iter() {
-            new_param_types.push(ITemplataType::CoordTemplataType(CoordTemplataType {}));
+            new_param_types.push(ITemplataType::KindTemplataType(KindTemplataType {}));
         }
         let new_param_types_slice = self.scout_arena.alloc_slice_from_vec(new_param_types);
         let return_type_ref = self.scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {}));

@@ -522,7 +522,7 @@ where 's: 't,
     pub fn evaluate<'p>(
         &self,
         _code_map: &FileCoordinateMap<'p, String>,
-        package_to_program_a: &PackageCoordinateMap<'s, ProgramA<'s>>,
+        package_to_program_a: &PackageCoordinateMap<'s, ProgramS<'s>>,
     ) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
         let name_to_struct_defined_macro: HashMap<StrI<'s>, OnStructDefinedMacro> = {
             let mut m = HashMap::default();
@@ -835,10 +835,7 @@ where 's: 't,
                                     IResolveOutcome::ResolveSuccess(s) => self.typing_interner.alloc(s.kind),
                                     IResolveOutcome::ResolveFailure(_f) => panic!("vwat: resolve struct failed for export"),
                                 };
-                                let export_name = match struct_a.name {
-                                    IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n.name,
-                                    other => panic!("vwat: {:?}", other),
-                                };
+                                let export_name = struct_a.name.name;
                                 coutputs.add_kind_export(
                                     struct_a.range,
                                     KindT::Struct(export_placeholdered_struct),
@@ -1074,7 +1071,7 @@ where 's: 't,
         }
 
         // Export compile phase
-        // packageToProgramA.flatMap({ case (packageCoord, programA) => ... programA.exports.foreach(...) })
+        // packageToProgramA.flatMap({ case (packageCoord, ProgramS) => ... ProgramS.exports.foreach(...) })
         for (coord, program_a) in &package_to_program_a.package_coord_to_contents {
             for export in program_a.exports.iter() {
 

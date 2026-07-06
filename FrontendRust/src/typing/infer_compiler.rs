@@ -218,7 +218,7 @@ where 's: 't,
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
         let mut rune_to_type = initial_rune_to_type.clone();
         for send in initial_sends {
-            rune_to_type.insert(send.sender_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+            rune_to_type.insert(send.sender_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
         }
         let mut rules: Vec<IRulexSR<'s>> = initial_rules.to_vec();
         for send in initial_sends {

@@ -2316,7 +2316,7 @@ where 's: 't,
             rune_to_explicit_type.iter().map(|(k, v)| (*k, v.clone())).collect();
         for param in params_s {
             if let Some(ref coord_rune) = param.pattern.coord_rune {
-                rune_s_to_pre_known_type_a.insert(coord_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+                rune_s_to_pre_known_type_a.insert(coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
             }
         }
 

@@ -1396,7 +1396,7 @@ where 's: 't,
                 ITemplataT::Kind(self.typing_interner.alloc(self.create_kind_placeholder_inner(
                     coutputs, env, name_prefix, index, rune, kind_mutable, register_with_compiler_outputs)))
             }
-            // ITemplataType::CoordTemplataType(_) => {
+            // ITemplataType::KindTemplataType(_) => {
                 // let (kind_mutable, region_mutability) = match &generic_param.tyype {
                     // IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS { kind_mutable, region_mutable, .. }) => {
                         // (if *kind_mutable { OwnershipT::Own } else { OwnershipT::Share },

@@ -31,7 +31,7 @@ fn expect_coord<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_coord");
   // templata match {
   //   case t @ CoordTemplataT(_) => t
-  //   case PlaceholderTemplataT(idT, CoordTemplataType()) => PlaceholderTemplataT(idT, CoordTemplataType())
+  //   case PlaceholderTemplataT(idT, KindTemplataType()) => PlaceholderTemplataT(idT, KindTemplataType())
   //   case other => vfail(other)
   // }
 }
@@ -94,31 +94,31 @@ pub enum ITemplataT<'s, 't> {
 impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
   pub fn tyype(&self, scout_arena: &ScoutArena<'s>) -> ITemplataType<'s> {
     match self {
-      ITemplataT::Coord(_) => ITemplataType::CoordTemplataType(CoordTemplataType {}),
+      ITemplataT::Coord(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
       ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
       ITemplataT::Placeholder(p) => p.tyype,
-      ITemplataT::Ownership(_) => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
+      // ITemplataT::Ownership(_) => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
       ITemplataT::Integer(_) => ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
       ITemplataT::Boolean(_) => ITemplataType::BooleanTemplataType(BooleanTemplataType {}),
       ITemplataT::String(_) => ITemplataType::StringTemplataType(StringTemplataType {}),
-      ITemplataT::Prototype(_) => ITemplataType::PrototypeTemplataType(PrototypeTemplataType {}),
+      // ITemplataT::Prototype(_) => ITemplataType::PrototypeTemplataType(PrototypeTemplataType {}),
       ITemplataT::Isa(_) => ITemplataType::ImplTemplataType(ImplTemplataType {}),
       ITemplataT::ImplDefinition(_) => ITemplataType::ImplTemplataType(ImplTemplataType {}),
-      ITemplataT::Location(_) => ITemplataType::LocationTemplataType(LocationTemplataType {}),
+      // ITemplataT::Location(_) => ITemplataType::LocationTemplataType(LocationTemplataType {}),
       ITemplataT::CoordList(_) => {
         panic!("Unimplemented: tyype on CoordList");
-        // override def tyype = PackTemplataType(CoordTemplataType())
+        // override def tyype = PackTemplataType(KindTemplataType())
       }
       ITemplataT::RuntimeSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
         param_types: scout_arena.alloc_slice_copy(&[
-          ITemplataType::CoordTemplataType(CoordTemplataType {}),
+          ITemplataType::KindTemplataType(KindTemplataType {}),
         ]),
         return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
       }),
       ITemplataT::StaticSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
         param_types: scout_arena.alloc_slice_copy(&[
           ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
-          ITemplataType::CoordTemplataType(CoordTemplataType {}),
+          ITemplataType::KindTemplataType(KindTemplataType {}),
         ]),
         return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
       }),
@@ -259,14 +259,14 @@ impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
     panic!("Unimplemented: declaring_env");
   }
   
-  pub fn origin_citizen(&self) -> &'s dyn CitizenA<'s> {
+  pub fn origin_citizen(&self) -> &'s ICitizenS<'s> {
     panic!("Unimplemented: origin_citizen");
   }
   
 }
 
 
-fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmentT<'s, 't>, &'s dyn CitizenA<'s>)> {
+fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmentT<'s, 't>, &'s ICitizenS<'s>)> {
   panic!("Unimplemented: unapply");
 }
 

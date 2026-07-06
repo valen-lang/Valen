@@ -64,7 +64,7 @@ where 's: 't,
         let struct_name_range = struct_a.name.range();
         let ret_rune_s = self.scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {}));
         let ret_rune = RuneUsage { range: struct_name_range, rune: ret_rune_s };
-        rune_to_type.insert(ret_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+        rune_to_type.insert(ret_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
 
         let struct_name_as_citizen: ICitizenDeclarationNameS<'s> = struct_a.name.into();
         let struct_generic_rune_s = self.scout_arena.intern_rune(IRuneValS::StructNameRune(StructNameRuneS { struct_name: struct_name_as_citizen }));
@@ -115,7 +115,7 @@ where 's: 't,
         }).collect();
         for param in &params {
             if let Some(coord_rune) = param.pattern.coord_rune {
-                rune_to_type.insert(coord_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+                rune_to_type.insert(coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
             }
         }
 

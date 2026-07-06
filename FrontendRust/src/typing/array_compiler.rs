@@ -14,7 +14,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::postparsing::ast::{LocationInDenizen};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::postparsing::itemplatatype::{IntegerTemplataType, ITemplataType};
+use crate::postparsing::itemplatatype::{IntegerTemplataType, ITemplataType, KindTemplataType};
 use crate::postparsing::rules::rules::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::names::names::*;
@@ -60,7 +60,7 @@ where 's: 't,
         let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
         initially_known_runes.insert(size_rune_a, ITemplataType::IntegerTemplataType(IntegerTemplataType {}));
         if let Some(rune) = maybe_element_type_rune_a {
-            initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+            initially_known_runes.insert(rune, ITemplataType::KindTemplataType(KindTemplataType {}));
         }
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
             solve_rune_type(
@@ -182,7 +182,7 @@ where 's: 't,
         let rune_typing_env = self.create_rune_type_solver_env(IInDenizenEnvironmentT::Node(calling_env));
         let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
         if let Some(rune) = maybe_element_type_rune {
-            initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+            initially_known_runes.insert(rune, ITemplataType::KindTemplataType(KindTemplataType {}));
         }
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
             solve_rune_type(
@@ -357,7 +357,7 @@ where 's: 't,
         let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
         initially_known_runes.insert(size_rune_a, ITemplataType::IntegerTemplataType(IntegerTemplataType {}));
         if let Some(rune) = maybe_element_type_rune_a {
-            initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+            initially_known_runes.insert(rune, ITemplataType::KindTemplataType(KindTemplataType {}));
         }
         // Note: Rust solve_rune_type doesn't accept useOptimizedSolver (pre-existing API difference)
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
@@ -541,7 +541,7 @@ where 's: 't,
         coutputs.declare_type_outer_env(template_id, array_outer_env_ref);
 
         // val TemplateTemplataType(types, _) = StaticSizedArrayTemplateTemplataT().tyype
-        // val Vector(IntegerTemplataType(), SharednessTemplataType(), VariabilityTemplataType(), CoordTemplataType()) = types
+        // val Vector(IntegerTemplataType(), SharednessTemplataType(), VariabilityTemplataType(), KindTemplataType()) = types
         // (assertion only — types are verified by the placeholder calls below)
 
         // val sizePlaceholder =
@@ -668,7 +668,7 @@ where 's: 't,
         coutputs.declare_type_outer_env(template_id, array_outer_env_ref);
 
         // val TemplateTemplataType(types, _) = RuntimeSizedArrayTemplateTemplataT().tyype
-        // val Vector(SharednessTemplataType(), CoordTemplataType()) = types
+        // val Vector(SharednessTemplataType(), KindTemplataType()) = types
         // (assertion only — types are verified by the placeholder calls below)
 
         // val elementPlaceholder =

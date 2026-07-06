@@ -130,7 +130,7 @@ where
   }
 
 
-  pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
+  pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramS<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
     self.typing_pass_compilation.get_astrouts()
   }
 
