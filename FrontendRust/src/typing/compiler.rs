@@ -835,7 +835,11 @@ where 's: 't,
                                     IResolveOutcome::ResolveSuccess(s) => self.typing_interner.alloc(s.kind),
                                     IResolveOutcome::ResolveFailure(_f) => panic!("vwat: resolve struct failed for export"),
                                 };
-                                let export_name = struct_a.name.name;
+                                let export_name = match struct_a.name {
+                                    IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n.name,
+                                    IStructDeclarationNameS::AnonymousSubstructTemplateName(_) =>
+                                        panic!("vwat: anonymous substruct in export handler"),
+                                };
                                 coutputs.add_kind_export(
                                     struct_a.range,
                                     KindT::Struct(export_placeholdered_struct),

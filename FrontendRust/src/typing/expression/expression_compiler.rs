@@ -1,6 +1,6 @@
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::{LocationInDenizen, FunctionS, IFunctionAttributeS, UserFunctionS, IExpressionSE as IExpressionSETrait};
-use crate::postparsing::itemplatatype::{ITemplataType};
+use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::expressions::*;
@@ -876,7 +876,8 @@ where 's: 't,
                                         }
                                         LoadAsP::Use => {
                                             panic!("vcurious");
-                                        }
+                                        },
+                                        LoadAsP::LoadAsShare => todo!()
                                     }
                                 }
                                 OwnershipT::Borrow => { // source is borrow
@@ -894,6 +895,7 @@ where 's: 't,
                                             self.weak_alias(coutputs, self.typing_interner.alloc_slice_copy(&range_with_parent), source_te)?
                                         }
                                         LoadAsP::Use => source_te,
+                                        LoadAsP::LoadAsShare => unimplemented!()
                                     }
                                 }
                                 OwnershipT::Weak => { // source is weak
@@ -934,6 +936,7 @@ where 's: 't,
                                         LoadAsP::Use => { // want to use a share source, no mention of how
                                             source_te
                                         },
+                                        LoadAsP::LoadAsShare => unimplemented!(),
                                     }
                                 }
                             };

@@ -81,8 +81,8 @@ pub fn make_solver_state<Rule, Rune, Conclusion>(
     _use_optimized_solver: bool,
     rule_to_puzzles: Box<dyn Fn(&Rule) -> Vec<Vec<Rune>>>,
     rule_to_runes: &dyn Fn(&Rule) -> Vec<Rune>,
-    initial_rules: Vec<Rule>,
-    initially_known_runes: IndexMap<Rune, Conclusion>,
+    initial_rules: &[Rule],
+    initially_known_runes: &IndexMap<Rune, Conclusion>,
     all_runes: Vec<Rune>,
 ) -> SimpleSolverState<Rule, Rune, Conclusion>
 where

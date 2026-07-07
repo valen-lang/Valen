@@ -44,11 +44,6 @@ pub enum IFindFunctionFailureReason<'s, 't> {
     WrongNumberOfTemplateArguments { supplied: i32, expected: i32 },
     SpecificParamDoesntSend { index: i32, argument: CoordT<'s, 't>, parameter: CoordT<'s, 't> },
     SpecificParamDoesntMatchExactly { index: i32, argument: CoordT<'s, 't>, parameter: CoordT<'s, 't> },
-    SpecificParamRegionDoesntMatch {
-        rune: IRuneS<'s>,
-        supplied_mutability: IRegionMutabilityS,
-        callee_mutability: IRegionMutabilityS,
-    },
     SpecificParamVirtualityDoesntMatch { index: i32 },
     Outscored,
     RuleTypeSolveFailure { reason: RuneTypeSolveError<'s> },

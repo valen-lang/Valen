@@ -217,6 +217,7 @@ pub fn humanize_templata_type(
     ITemplataType::BooleanTemplataType(_) => "Bool".to_string(),
     ITemplataType::StringTemplataType(_) => "Str".to_string(),
     ITemplataType::PackTemplataType(p) => "Pack<".to_string() + &humanize_templata_type(p.element_type) + ">",
+    ITemplataType::PrototypeTemplataType(_) => "Prot".to_string(),
     ITemplataType::TemplateTemplataType(t) => humanize_templata_type(t.return_type) + "<" + &t.param_types.iter().map(humanize_templata_type).collect::<Vec<_>>().join(",") + ">",
     ITemplataType::ImplTemplataType(_) => panic!("implement: humanize_templata_type ImplTemplataType"),
   }

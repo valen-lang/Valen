@@ -112,11 +112,10 @@ where 's: 't,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         initial_knowns: &[InitialKnown<'s, 't>],
-        initial_sends: &[InitialSend<'s, 't>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
     ) -> Result<CompleteDefineSolve<'s, 't>, IDefiningError<'s, 't>> {
         let mut solver =
-            self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns, initial_sends);
+            self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns);
         match self.r#continue(envs, coutputs, &mut solver) {
             Ok(()) => {}
             Err(e) => return Err(IDefiningError::DefiningSolveFailedOrIncomplete(e)),
@@ -145,10 +144,9 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         generic_parameters: &'s [&'s GenericParameterS<'s>],
         initial_knowns: &[InitialKnown<'s, 't>],
-        initial_sends: &[InitialSend<'s, 't>],
     ) -> Result<Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>>, ICompileErrorT<'s, 't>> {
         let mut solver =
-            self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns, initial_sends);
+            self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns);
         match self.incrementally_solve(envs, coutputs, &mut solver, |_coutputs, solver_state| {
             match self.get_first_unsolved_identifying_rune(generic_parameters, |rune| solver_state.get_conclusion(&rune).is_some()) {
                 None => false,
@@ -184,10 +182,9 @@ where 's: 't,
         rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         initial_knowns: &[InitialKnown<'s, 't>],
-        initial_sends: &[InitialSend<'s, 't>],
     ) -> Result<IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
         let mut solver_state =
-            self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns, initial_sends);
+            self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns);
         match self.r#continue(envs, coutputs, &mut solver_state) {
             Ok(()) => {}
             Err(e) => return Err(e),
@@ -210,36 +207,17 @@ where 's: 't,
         &self,
         envs: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
-        initial_rules: &[IRulexSR<'s>],
-        initial_rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
+        rules: &[IRulexSR<'s>],
+        rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         initial_knowns: &[InitialKnown<'s, 't>],
-        initial_sends: &[InitialSend<'s, 't>],
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
-        let mut rune_to_type = initial_rune_to_type.clone();
-        for send in initial_sends {
-            rune_to_type.insert(send.sender_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
-        }
-        let mut rules: Vec<IRulexSR<'s>> = initial_rules.to_vec();
-        for send in initial_sends {
-            rules.push(IRulexSR::CoordSend(CoordSendSR {
-                range: send.receiver_rune.range,
-                sender_rune: send.sender_rune,
-                receiver_rune: send.receiver_rune,
-            }));
-        }
         let mut already_known: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = IndexMap::default();
         for known in initial_knowns {
             if self.opts.global_options.sanity_check {
                 self.sanity_check_conclusion(&envs, state, known.rune.rune, known.templata);
             }
             already_known.insert(known.rune.rune, known.templata);
-        }
-        for send in initial_sends {
-            if self.opts.global_options.sanity_check {
-                self.sanity_check_conclusion(&envs, state, send.sender_rune.rune, send.send_templata);
-            }
-            already_known.insert(send.sender_rune.rune, send.send_templata);
         }
         self.make_solver_state_solver(
             invocation_range.to_vec(), envs, state, rules, rune_to_type, already_known)

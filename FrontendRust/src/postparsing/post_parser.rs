@@ -28,9 +28,10 @@ use crate::postparsing::itemplatatype::{
   RegionTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, ExportAsNameS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS,
-  INameS, INameValS, DenizenDefaultRegionRuneS, IRuneS, IRuneValS, IVarNameS, ImplDeclarationNameS,
-  TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
+  CodeNameS, CodeRuneS, ExportAsNameS, IFunctionDeclarationNameS, IImplDeclarationNameS, IImpreciseNameS,
+  IImpreciseNameValS, INameS, INameValS, DenizenDefaultRegionRuneS, IRuneS, IRuneValS,
+  IStructDeclarationNameS, IVarNameS, ImplDeclarationNameS, TopLevelInterfaceDeclarationNameS,
+  TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::rules::rule_scout::{translate_rulexes, translate_type};
 use crate::postparsing::rules::templex_scout::{translate_templex, add_literal_rule};
@@ -881,18 +882,18 @@ fn scout_impl(
     return_type: self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
   });
 
-  Ok(ImplS {
-    range: range_s,
-    name: impl_name,
-    user_specified_identifying_runes: self.scout_arena.alloc_slice_from_vec(generic_parameters_s),
-    rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
-    rune_to_explicit_type: self.scout_arena.alloc_index_map_from_iter(rune_to_explicit_type.into_iter()),
+  Ok(ImplS::new(
+    range_s,
+    IImplDeclarationNameS::ImplDeclarationName(impl_name),
+    self.scout_arena.alloc_slice_from_vec(generic_parameters_s),
+    self.scout_arena.alloc_slice_from_vec(rule_builder),
+    self.scout_arena.alloc_index_map_from_iter(rune_to_explicit_type.into_iter()),
     tyype,
-    struct_kind_rune: struct_rune,
+    struct_rune,
     sub_citizen_imprecise_name,
-    interface_kind_rune: interface_rune,
+    interface_rune,
     super_interface_imprecise_name,
-  })
+  ))
 }
 
 fn scout_export_as(
@@ -1213,7 +1214,7 @@ fn scout_import(
 
     Ok(StructS::new(
       struct_range_s,
-      struct_name,
+      IStructDeclarationNameS::TopLevelStructDeclarationName(*struct_name),
       self.scout_arena.alloc_slice_from_vec(attrs_s),
       weakable,
       self.scout_arena.alloc_slice_from_vec(generic_parameters_s),

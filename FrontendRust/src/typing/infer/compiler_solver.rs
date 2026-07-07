@@ -127,7 +127,7 @@ where 's: 't,
                         v.extend_from_slice(r.args);
                         v
                     }
-                    //     case PackSR(range, resultRune, members) => Vector(resultRune) ++ members
+                    //     case KindListSR(range, resultRune, members) => Vector(resultRune) ++ members
                     // IRulexSR::Pack(r) => {
                         // let mut v = vec![r.result_rune];
                         // v.extend_from_slice(r.members);
@@ -167,7 +167,7 @@ pub fn get_puzzles<'s>(rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
                 first.extend(r.args.iter().map(|a| a.rune));
                 vec![first, vec![r.result_rune.rune, r.template_rune.rune]]
             }
-            //     case PackSR(range, resultRune, members) => Vector(Vector(resultRune.rune), members.map(_.rune))
+            //     case KindListSR(range, resultRune, members) => Vector(Vector(resultRune.rune), members.map(_.rune))
             // IRulexSR::Pack(r) => {
                 // vec![vec![r.result_rune.rune], r.members.iter().map(|m| m.rune).collect()]
             // }
@@ -232,13 +232,13 @@ where 's: 't,
         _range: Vec<RangeS<'s>>,
         env: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
-        rules: Vec<IRulexSR<'s>>,
-        initial_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>>,
-        initially_known_rune_to_templata: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        rules: &[IRulexSR<'s>],
+        rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
+        initially_known_rune_to_templata: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
-        for rule in &rules {
+        for rule in rules {
             for rune_usage in rule.rune_usages() {
-                assert!(initial_rune_to_type.contains_key(&rune_usage.rune));
+                assert!(rune_to_type.contains_key(&rune_usage.rune));
             }
         }
 
@@ -246,19 +246,15 @@ where 's: 't,
         assert!(
             rules.iter().all(|r| !matches!(r, IRulexSR::CallSiteFunc(_))) ||
             rules.iter().all(|r| !matches!(r, IRulexSR::DefinitionFunc(_))));
-        // These two shouldn't both be in the rules, see SROACSD.
-        assert!(
-            rules.iter().all(|r| !matches!(r, IRulexSR::CallSiteCoordIsa(_))) ||
-            rules.iter().all(|r| !matches!(r, IRulexSR::DefinitionCoordIsa(_))));
 
         for (rune, templata) in &initially_known_rune_to_templata {
             if self.opts.global_options.sanity_check {
                 self.sanity_check_conclusion(&env, state, *rune, *templata);
             }
-            assert_eq!(templata.tyype(self.scout_arena), *initial_rune_to_type.get(rune).unwrap());
+            assert_eq!(templata.tyype(self.scout_arena), *rune_to_type.get(rune).unwrap());
         }
 
-        let all_runes: Vec<IRuneS<'s>> = initial_rune_to_type.keys().copied().collect();
+        let all_runes: Vec<IRuneS<'s>> = rune_to_type.keys().copied().collect();
 
         let rule_to_puzzles: Box<dyn Fn(&IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>>> =
             Box::new(|rule| get_puzzles(*rule));
@@ -282,60 +278,30 @@ where 's: 't,
         state: &mut CompilerOutputs<'s, 't>,
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        //   solverState.sanityCheck()
         solver_state.sanity_check();
-        for (_rune, _conclusion) in solver_state.userify_conclusions() {
+        let solving_rule_index =
+            match solver_state.get_next_solvable() {
+                None => return Ok(false),
+                Some(s) => s
+            };
+        let rule = *solver_state.get_rule(solving_rule_index);
+        let steps_before = solver_state.get_steps().len();
+        match self.solve(state, env, solver_state, solving_rule_index, rule) {
+            Ok(()) => {}
+            Err(e) => return Err(FailedSolve {
+                steps: solver_state.get_steps(),
+                conclusions: solver_state.get_conclusions().into_iter().collect(),
+                unsolved_rules: solver_state.get_unsolved_rules(),
+                unsolved_runes: solver_state.get_unsolved_runes(),
+                error: e,
+            }),
         }
-        // Stage 1: Do simple solves
-        match solver_state.get_next_solvable() {
-            None => {}
-            Some(solving_rule_index) => {
-                let rule = *solver_state.get_rule(solving_rule_index);
-                let steps_before = solver_state.get_steps().len();
-                match self.solve(state, env, solver_state, solving_rule_index, rule) {
-                    Ok(()) => {}
-                    Err(e) => return Err(FailedSolve {
-                        steps: solver_state.get_steps(),
-                        conclusions: solver_state.get_conclusions().into_iter().collect(),
-                        unsolved_rules: solver_state.get_unsolved_rules(),
-                        unsolved_runes: solver_state.get_unsolved_runes(),
-                        error: e,
-                    }),
-                }
-                let steps_after = solver_state.get_steps().len();
-                assert!(steps_after == steps_before + 1);
-                // Per @CSCDSRZ, only true after simple solve.
-                assert!(solver_state.rule_is_solved(solving_rule_index));
-                solver_state.sanity_check();
-                return Ok(true);
-            }
-        }
-        // Stage 2: Do a complex solve if available.
-        if !solver_state.get_unsolved_rules().is_empty() {
-            let conclusions_before = solver_state.get_conclusions().len();
-            match complex_solve(self, self.typing_interner, state, env, solver_state) {
-                Ok(()) => {}
-                Err(e) => return Err(FailedSolve {
-                    steps: solver_state.get_steps(),
-                    conclusions: solver_state.get_conclusions().into_iter().collect(),
-                    unsolved_rules: solver_state.get_unsolved_rules(),
-                    unsolved_runes: solver_state.get_unsolved_runes(),
-                    error: e,
-                }),
-            }
-            solver_state.sanity_check();
-            let conclusions_after = solver_state.get_conclusions().len();
-            // Per @CSCDSRZ, check conclusion count (not rules solved) for progress.
-            if conclusions_after == conclusions_before {
-                // There's nothing more to be done. Let's continue on to stage 3.
-            } else {
-                return Ok(true);
-            }
-        } else {
-            // No more rules to solve, so continue to the wrapping up stages of the solve.
-        }
-        // Stage 3: We're done!
-        Ok(false)
+        let steps_after = solver_state.get_steps().len();
+        assert!(steps_after == steps_before + 1);
+        // Per @CSCDSRZ, only true after simple solve.
+        assert!(solver_state.rule_is_solved(solving_rule_index));
+        solver_state.sanity_check();
+        Ok(true)
     }
 
     pub fn continue_solver(
@@ -369,118 +335,6 @@ pub fn sanity_check_conclusion<'s, 't>(
 ) {
     panic!("Unimplemented: sanity_check_conclusion");
     // delegate.sanityCheckConclusion(env, state, rune, conclusion)
-}
-
-fn complex_solve<'s, 'ctx, 't, 'a>(
-    compiler: &'a Compiler<'s, 'ctx, 't>,
-    typing_interner: &'a TypingInterner<'s, 't>,
-    state: &mut CompilerOutputs<'s, 't>,
-    env: InferEnv<'s, 't>,
-    solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>>
-where 's: 't,
-{
-    complex_solve_inner(compiler, typing_interner, state, env, solver_state)
-}
-
-fn complex_solve_inner<'s, 'ctx, 't, 'a>(
-    compiler: &'a Compiler<'s, 'ctx, 't>,
-    typing_interner: &'a TypingInterner<'s, 't>,
-    state: &mut CompilerOutputs<'s, 't>,
-    env: InferEnv<'s, 't>,
-    solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>>
-where 's: 't,
-{
-    let _env = env;
-    let unsolved_rules = solver_state.get_unsolved_rules();
-
-    let unsolved_receiver_runes: Vec<IRuneS<'s>> = unsolved_rules.iter().filter_map(|rule| {
-        match rule {
-            // IRulexSR::CoordSend(r) => Some(r.receiver_rune.rune),
-            // IRulexSR::CallSiteCoordIsa(r) => Some(r.super_rune.rune),
-            _ => None,
-        }
-    }).collect();
-
-    let receiver_runes = get_kind_equivalent_runes_iter(
-        &unsolved_rules,
-        unsolved_receiver_runes.into_iter(),
-    );
-
-    let new_conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = receiver_runes.iter().filter_map(|receiver| {
-        let runes_sending_to_this_receiver = get_kind_equivalent_runes_iter(
-            &unsolved_rules,
-            unsolved_rules.iter().filter_map(|rule| match rule {
-                // IRulexSR::CoordSend(r) if r.receiver_rune.rune == *receiver => Some(r.sender_rune.rune),
-                // IRulexSR::CallSiteCoordIsa(r) if r.super_rune.rune == *receiver => Some(r.sub_rune.rune),
-                _ => None,
-            }),
-        );
-        let call_rules_template_runes: Vec<IRuneS<'s>> =
-            unsolved_rules.iter().filter_map(|rule| match rule {
-                IRulexSR::Call(r) if receiver_runes.contains(&r.result_rune.rune) => Some(r.template_rune.rune),
-                _ => None,
-            }).collect();
-        let sender_conclusions: Vec<(IRuneS<'s>, CoordT<'s, 't>)> =
-            runes_sending_to_this_receiver.iter().filter_map(|sender_rune| {
-                solver_state.get_conclusion(sender_rune).and_then(|templata| match templata {
-                    ITemplataT::Coord(ct) => Some((*sender_rune, ct.coord)),
-                    _ => panic!("vwat: sender conclusion not a coord: {:?}", templata),
-                })
-            }).collect();
-        let call_templates: Vec<ITemplataT<'s, 't>> =
-            get_kind_equivalent_runes_iter(
-                &unsolved_rules,
-                call_rules_template_runes.iter().copied(),
-            ).iter().filter_map(|rune| solver_state.get_conclusion(rune)).collect();
-        assert!(call_templates.iter().map(|t| *t).collect::<HashSet<_>>().len() <= 1);
-        let all_senders_known = sender_conclusions.len() == runes_sending_to_this_receiver.len();
-        let all_calls_known = call_rules_template_runes.len() == call_templates.len();
-        match solve_receives(compiler, typing_interner, state, _env, sender_conclusions.clone(), call_templates, all_senders_known, all_calls_known) {
-            Err(e) => return Some(Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData }))),
-            Ok(None) => return None,
-            Ok(Some(receiver_instantiation_kind)) => {
-                let possible_coords: Vec<CoordT<'s, 't>> = {
-                    let mut v: Vec<CoordT<'s, 't>> = unsolved_rules.iter().filter_map(|rule| match rule {
-                        // IRulexSR::Augment(r) if r.result_rune.rune == *receiver => {
-                            // let ownership = evaluate_ownership(r.ownership.expect("vassertSome: augment ownership"));
-                            // Some(CoordT::new(ownership, RegionT { region: IRegionT::Default }, receiver_instantiation_kind))
-                        // }
-                        _ => None,
-                    }).collect();
-                    for (_, coord) in sender_conclusions.iter() {
-                        v.push(CoordT::new(coord.ownership, RegionT { region: IRegionT::Default }, receiver_instantiation_kind));
-                    }
-                    v
-                };
-                if possible_coords.is_empty() {
-                    Some(Ok((*receiver, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: receiver_instantiation_kind })))))
-                } else {
-                    let ownerships: HashSet<OwnershipT> = possible_coords.iter().map(|c| c.ownership).collect();
-                    let ownership = match ownerships.len() {
-                        0 => panic!("vwat: no ownerships in possible_coords"),
-                        1 => *ownerships.iter().next().unwrap(),
-                        _ => {
-                            let params = typing_interner.alloc_slice_from_vec(sender_conclusions);
-                            return Some(Err(ISolverError::RuleError(RuleError { err: ITypingPassSolverError::ReceivingDifferentOwnerships { params }, _phantom: PhantomData })));
-                        }
-                    };
-                    Some(Ok((*receiver, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT {
-                        coord: CoordT::new(ownership, RegionT { region: IRegionT::Default }, receiver_instantiation_kind),
-                    })))))
-                }
-            }
-        }
-    }).collect::<Result<IndexMap<_, _>, _>>().map_err(|e| e)?;
-
-    // Per @CSCDSRZ, complex solve only produces conclusions — empty solvedRules and newRules is correct.
-    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(true, vec![], new_conclusions, vec![], IndexSet::default()) {
-        Ok(_) => {}
-        Err(e) => return Err(e),
-    }
-
-    Ok(())
 }
 
 fn solve_receives<'s, 'ctx, 't>(
@@ -1261,7 +1115,7 @@ where 's: 't,
                     // }
                 // }
             // }
-            //     case PackSR(range, resultRune, memberRunes) => {
+            //     case KindListSR(range, resultRune, memberRunes) => {
             // IRulexSR::Pack(pack) => {
                 // match solver_state.get_conclusion(&pack.result_rune.rune) {
                     // None => {

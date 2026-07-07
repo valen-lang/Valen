@@ -6,9 +6,9 @@ use crate::postparsing::itemplatatype::{
   ITemplataType, KindTemplataType, RegionTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
-  ExportAsNameS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS,
-  TopLevelCitizenDeclarationNameS, TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
-  ImplDeclarationNameS,
+  ExportAsNameS, IFunctionDeclarationNameS, IImplDeclarationNameS, IImpreciseNameS, IRuneS,
+  IStructDeclarationNameS, TopLevelCitizenDeclarationNameS, TopLevelInterfaceDeclarationNameS,
+  TopLevelStructDeclarationNameS, ImplDeclarationNameS,
 };
 use crate::postparsing::patterns::AtomSP;
 use crate::postparsing::rules::{IRulexSR, RuneUsage};
@@ -65,7 +65,7 @@ impl<'s> ProgramS<'s> {
       .structs
       .iter()
       .copied()
-      .filter(|s| s.name.name.as_str() == name)
+      .filter(|s| s.name.expect_top_level().name.as_str() == name)
       .collect();
     assert_eq!(matches.len(), 1);
     matches[0]
@@ -138,7 +138,7 @@ pub enum ICitizenS<'s> {
 impl<'s> ICitizenS<'s> {
   pub fn name(&self) -> TopLevelCitizenDeclarationNameS<'_> {
     match self {
-      ICitizenS::Struct(s) => TopLevelCitizenDeclarationNameS::from(s.name),
+      ICitizenS::Struct(s) => TopLevelCitizenDeclarationNameS::from(s.name.expect_top_level()),
       ICitizenS::Interface(i) => TopLevelCitizenDeclarationNameS::from(i.name),
     }
   }
@@ -165,7 +165,7 @@ impl<'s> ICitizenS<'s> {
 #[derive(Debug, PartialEq)]
 pub struct StructS<'s> {
   pub range: RangeS<'s>,
-  pub name: &'s TopLevelStructDeclarationNameS<'s>,
+  pub name: IStructDeclarationNameS<'s>,
   pub attributes: &'s [ICitizenAttributeS<'s>],
   pub weakable: bool,
   pub generic_params: &'s [&'s GenericParameterS<'s>],
@@ -183,15 +183,15 @@ pub struct StructS<'s> {
 impl<'s> StructS<'s> {
   pub fn new(
     range: RangeS<'s>,
-    name: &'s TopLevelStructDeclarationNameS<'s>,
+    name: IStructDeclarationNameS<'s>,
     attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
     generic_params: &'s [&'s GenericParameterS<'s>],
     sharedness: SharednessP,
     tyype: TemplateTemplataType<'s>,
-    header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+    // header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     header_rules: &'s [IRulexSR<'s>],
-    members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+    // members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     member_rules: &'s [IRulexSR<'s>],
     members: &'s [IStructMemberS<'s>],
     internal_methods: &'s [&'s FunctionS<'s>],
@@ -310,15 +310,40 @@ impl<'s> InterfaceS<'s> {
 #[derive(Debug, PartialEq)]
 pub struct ImplS<'s> {
   pub range: RangeS<'s>,
-  pub name: ImplDeclarationNameS<'s>,
+  pub name: IImplDeclarationNameS<'s>,
   pub user_specified_identifying_runes: &'s [&'s GenericParameterS<'s>],
   pub rules: &'s [IRulexSR<'s>],
-  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+  // pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub tyype: ITemplataType<'s>,
   pub struct_kind_rune: RuneUsage<'s>,
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
   pub interface_kind_rune: RuneUsage<'s>,
   pub super_interface_imprecise_name: IImpreciseNameS<'s>,
+  _sealed: (),
+}
+
+impl<'s> ImplS<'s> {
+  pub fn new(
+    range: RangeS<'s>,
+    name: IImplDeclarationNameS<'s>,
+    user_specified_identifying_runes: &'s [&'s GenericParameterS<'s>],
+    rules: &'s [IRulexSR<'s>],
+    // rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+    tyype: ITemplataType<'s>,
+    struct_kind_rune: RuneUsage<'s>,
+    sub_citizen_imprecise_name: IImpreciseNameS<'s>,
+    interface_kind_rune: RuneUsage<'s>,
+    super_interface_imprecise_name: IImpreciseNameS<'s>,
+  ) -> Self {
+    Self {
+      range, name, user_specified_identifying_runes, rules,
+      // rune_to_explicit_type,
+      tyype,
+      struct_kind_rune, sub_citizen_imprecise_name,
+      interface_kind_rune, super_interface_imprecise_name,
+      _sealed: (),
+    }
+  }
 }
 
 
@@ -347,7 +372,7 @@ pub fn interface_s_name<'s>(interface_s: &InterfaceS<'s>) -> TopLevelCitizenDecl
 
 
 pub fn struct_s_name<'s>(struct_s: &StructS<'s>) -> TopLevelCitizenDeclarationNameS<'s> {
-  TopLevelCitizenDeclarationNameS::from(struct_s.name)
+  TopLevelCitizenDeclarationNameS::from(struct_s.name.expect_top_level())
 }
 
 

@@ -295,9 +295,9 @@ where
   collect_if(
     pred,
     out,
-    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(strukt.name)),
+    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(strukt.name.expect_top_level())),
   );
-  collect_if(pred, out, NodeRefS::TopLevelStructDeclarationName(&strukt.name));
+  collect_if(pred, out, NodeRefS::TopLevelStructDeclarationName(strukt.name.expect_top_level()));
   for attribute in strukt.attributes {
     visit_citizen_attribute(pred, out, attribute);
   }
@@ -347,7 +347,7 @@ where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Impl(impl_));
-  collect_if(pred, out, NodeRefS::ImplDeclarationName(&impl_.name));
+  collect_if(pred, out, NodeRefS::ImplDeclarationName(impl_.name.expect_top_level()));
   for param in impl_.user_specified_identifying_runes {
     visit_generic_parameter(pred, out, param);
   }

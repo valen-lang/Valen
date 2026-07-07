@@ -22,6 +22,14 @@ pub struct BooleanTemplataType {}
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StringTemplataType {}
 
+// VCOORD: Internal-only marker for runes whose conclusion is a concrete
+// function prototype (result / prototype_rune of ResolveSR / CallSiteFuncSR /
+// DefinitionFuncSR). The surface `T Prot` type is retired; this marker is not
+// exposed there. Kept parallel to PackTemplataType — no surface counterpart,
+// but the rune-type solver needs the marker for surviving bound-machinery rules.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct PrototypeTemplataType {}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PackTemplataType<'s> {
   pub element_type: &'s ITemplataType<'s>,
@@ -42,6 +50,7 @@ pub enum ITemplataType<'s> {
   IntegerTemplataType(IntegerTemplataType),
   BooleanTemplataType(BooleanTemplataType),
   StringTemplataType(StringTemplataType),
+  PrototypeTemplataType(PrototypeTemplataType),
   PackTemplataType(PackTemplataType<'s>),
   TemplateTemplataType(TemplateTemplataType<'s>),
 }

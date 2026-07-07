@@ -367,6 +367,17 @@ impl<'s> IImplDeclarationNameS<'s> {
     }
   }
 
+  // VCOORD: see if we can get rid of this panic
+  // For sites that structurally can only encounter user-source impls (not
+  // macro-generated anonymous-substruct impls). Panics on the anon variant.
+  pub fn expect_top_level(&self) -> &ImplDeclarationNameS<'s> {
+    match self {
+      IImplDeclarationNameS::ImplDeclarationName(n) => n,
+      IImplDeclarationNameS::AnonymousSubstructImplDeclarationName(_) =>
+        panic!("vwat: expected ImplDeclarationName, got AnonymousSubstructImplDeclarationName"),
+    }
+  }
+
   pub fn to_i_name_s(self, scout_arena: &ScoutArena<'s>) -> INameS<'s> {
     match self {
       IImplDeclarationNameS::ImplDeclarationName(p) => {
@@ -423,6 +434,18 @@ impl<'s> IStructDeclarationNameS<'s> {
     match self {
       IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n.range,
       IStructDeclarationNameS::AnonymousSubstructTemplateName(n) => n.interface_name.range,
+    }
+  }
+
+  // VCOORD: see if we can get rid of this
+  // For sites that structurally can only encounter user-source structs (not
+  // macro-generated anonymous substructs) — e.g., name-based lookups, top-level
+  // citizen conversions. Panics if called on an anonymous substruct name.
+  pub fn expect_top_level(&self) -> &TopLevelStructDeclarationNameS<'s> {
+    match self {
+      IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n,
+      IStructDeclarationNameS::AnonymousSubstructTemplateName(_) =>
+        panic!("vwat: expected TopLevelStructDeclarationName, got AnonymousSubstructTemplateName"),
     }
   }
   

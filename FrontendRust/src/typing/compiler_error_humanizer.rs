@@ -593,7 +593,11 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
     ITemplataT::RuntimeSizedArrayTemplate(_) => "Array".to_string(),
     ITemplataT::StaticSizedArrayTemplate(_) => "StaticArray".to_string(),
     ITemplataT::InterfaceDefinition(interface_def) => interface_def.origin_interface.name.name.0.to_string(),
-    ITemplataT::StructDefinition(struct_def) => struct_def.origin_struct.name.name.as_str().to_string(),
+    ITemplataT::StructDefinition(struct_def) => match struct_def.origin_struct.name {
+      IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n.name.as_str().to_string(),
+      IStructDeclarationNameS::AnonymousSubstructTemplateName(n) =>
+        format!("<anonymous substruct of {}>", n.interface_name.name.as_str()),
+    },
     ITemplataT::Integer(value) => value.to_string(),
     ITemplataT::Ownership(ownership) => match ownership.ownership {
       OwnershipT::Own => "own".to_string(),

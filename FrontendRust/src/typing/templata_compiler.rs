@@ -1422,7 +1422,6 @@ where 's: 't,
         index: i32,
         rune: IRuneS<'s>,
         current_height: Option<i32>,
-        region_mutability: IRegionMutabilityS,
         kind_ownership: OwnershipT,
         register_with_compiler_outputs: bool,
     ) -> CoordTemplataT<'s, 't> {
