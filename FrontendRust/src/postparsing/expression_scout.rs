@@ -36,7 +36,6 @@ use crate::utils::range::RangeS;
 use crate::postparsing::expressions::ConstantFloatSE;
 use crate::postparsing::expressions::BreakSE;
 use crate::postparsing::expressions::UnletSE;
-use crate::utils::fx::HashMap;
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum IScoutResult<'s, 'p> {
   LocalLookupResult(LocalLookupResultS<'s>),
@@ -1089,7 +1088,6 @@ fn scout_expression(
         )?
       };
       let mut rule_builder = Vec::new();
-      let mut rune_to_explicit_type = Vec::new();
       {
         let mut rule_lidb = lidb.child();
         translate_rulexes(
@@ -1098,23 +1096,18 @@ fn scout_expression(
           parent_env,
           &mut rule_lidb,
           &mut rule_builder,
-          &mut rune_to_explicit_type,
           stack_frame1.context_region.clone(),
           &[],
         );
       }
       let pattern_s = {
         let mut pattern_lidb = lidb.child();
-        let mut rune_to_explicit_type_map = rune_to_explicit_type
-          .into_iter()
-          .collect::<HashMap<_, _>>();
         translate_pattern(
           self.scout_arena,
           self.keywords,
           stack_frame1.clone(),
           &mut pattern_lidb,
           &mut rule_builder,
-          &mut rune_to_explicit_type_map,
           &lett.pattern,
         )
       };

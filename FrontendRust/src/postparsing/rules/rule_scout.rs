@@ -25,7 +25,6 @@ pub fn translate_rulexes<'s, 'p>(
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
   builder: &mut Vec<IRulexSR<'s>>,
-  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType<'s>)>,
   context_region: IRuneS<'s>,
   rules_p: &[IRulexPR<'p>],
 ) -> Vec<RuneUsage<'s>> {
@@ -39,7 +38,6 @@ pub fn translate_rulexes<'s, 'p>(
         env.clone(),
         &mut child_lidb,
         builder,
-        rune_to_explicit_type,
         context_region.clone(),
         rule_p,
       )
@@ -53,7 +51,6 @@ fn translate_rulex<'s, 'p>(
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
   builder: &mut Vec<IRulexSR<'s>>,
-  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType<'s>)>,
   context_region: IRuneS<'s>,
   rulex: &IRulexPR<'p>,
 ) -> RuneUsage<'s> {
@@ -70,8 +67,6 @@ fn translate_rulex<'s, 'p>(
           scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val())))
         }
       };
-      let tyype = translate_type(scout_arena, typed_rule.tyype);
-      rune_to_explicit_type.push((rune.clone(), tyype));
       RuneUsage {
         range: PostParser::eval_range(file, typed_rule.range),
         rune,
@@ -99,7 +94,6 @@ fn translate_rulex<'s, 'p>(
           env.clone(),
           &mut child_lidb,
           builder,
-          rune_to_explicit_type,
           context_region.clone(),
           left,
         )
@@ -111,7 +105,6 @@ fn translate_rulex<'s, 'p>(
           env.clone(),
           &mut child_lidb,
           builder,
-          rune_to_explicit_type,
           context_region.clone(),
           right,
         )
@@ -136,7 +129,6 @@ fn translate_rulex<'s, 'p>(
         range: PostParser::eval_range(file, *range),
         rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(rune_child_lidb.borrow_val()))),
       };
-      rune_to_explicit_type.push((rune.rune.clone(), translate_type(scout_arena, *tyype)));
       match tyype {
         ITypePR::KindType => {
           if components.len() != 1 {
@@ -149,7 +141,6 @@ fn translate_rulex<'s, 'p>(
             env,
             &mut translate_child_lidb,
             builder,
-            rune_to_explicit_type,
             context_region,
             components,
           );

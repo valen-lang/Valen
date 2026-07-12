@@ -24,7 +24,6 @@ use crate::utils::range::RangeS;
 use crate::postparsing::rules::rules::{
   CallSiteFuncSR, DefinitionFuncSR, ResolveSR,
 };
-use crate::utils::fx::HashMap;
 use crate::interner::StrI;
 
 
@@ -664,7 +663,6 @@ pub(crate) fn translate_maybe_type_into_maybe_rune<'s, 'p>(scout_arena: &ScoutAr
   lidb: &mut LocationInDenizenBuilder,
   range: RangeS<'s>,
   rule_builder: &mut Vec<IRulexSR<'s>>,
-  rune_to_explicit_type: &mut HashMap<IRuneS<'s>, ITemplataType>,
   context_region: IRuneS<'s>,
   maybe_type_p: Option<&ITemplexPT<'p>>,
 ) -> Option<RuneUsage<'s>> {
@@ -680,10 +678,6 @@ pub(crate) fn translate_maybe_type_into_maybe_rune<'s, 'p>(scout_arena: &ScoutAr
       rule_builder,
       context_region,
       maybe_type_p,
-    );
-    rune_to_explicit_type.insert(
-      result_rune.rune.clone(),
-      ITemplataType::KindTemplataType(KindTemplataType {}),
     );
     Some(result_rune)
   }

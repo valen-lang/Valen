@@ -296,7 +296,6 @@ pub struct ImplS<'s> {
   pub name: IImplDeclarationNameS<'s>,
   pub user_specified_identifying_runes: &'s [&'s GenericParameterS<'s>],
   pub rules: &'s [IRulexSR<'s>],
-  // pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub tyype: ITemplataType<'s>,
   pub struct_kind_rune: RuneUsage<'s>,
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
@@ -311,7 +310,6 @@ impl<'s> ImplS<'s> {
     name: IImplDeclarationNameS<'s>,
     user_specified_identifying_runes: &'s [&'s GenericParameterS<'s>],
     rules: &'s [IRulexSR<'s>],
-    // rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     tyype: ITemplataType<'s>,
     struct_kind_rune: RuneUsage<'s>,
     sub_citizen_imprecise_name: IImpreciseNameS<'s>,
@@ -320,7 +318,6 @@ impl<'s> ImplS<'s> {
   ) -> Self {
     Self {
       range, name, user_specified_identifying_runes, rules,
-      // rune_to_explicit_type,
       tyype,
       struct_kind_rune, sub_citizen_imprecise_name,
       interface_kind_rune, super_interface_imprecise_name,
@@ -540,7 +537,6 @@ pub struct GenericParameterS<'s> {
 pub struct GenericParameterDefaultS<'s> {
   pub result_rune: IRuneS<'s>,
   pub rules: &'s [&'s IRulexSR<'s>],
-  pub rune_to_type: &'s [(IRuneS<'s>, ITemplataType<'s>)],
 }
 
 #[derive(Debug, PartialEq)]

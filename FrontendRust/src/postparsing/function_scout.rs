@@ -39,7 +39,6 @@ use crate::postparsing::rules::rules::{
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::range::RangeS;
 use crate::utils::code_hierarchy::FileCoordinate;
-use crate::utils::fx::HashMap;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::fx::IndexSet;
 use crate::parsing::ast::BlockPE;
@@ -67,7 +66,6 @@ pub struct ParentCitizen<'s> {
   pub citizen_env: IEnvironmentS<'s>,
   pub citizen_generic_params: &'s [&'s GenericParameterS<'s>],
   pub citizen_rules: Vec<IRulexSR<'s>>,
-  pub citizen_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
 }
 
 
@@ -178,7 +176,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     }
     let mut lidb = LocationInDenizenBuilder::new(vec![]);
     let mut rules: Vec<IRulexSR<'s>> = Vec::new();
-    let mut rune_to_explicit_type: Vec<(IRuneS<'s>, ITemplataType)> = Vec::new();
     let function_declaration_name = match (&maybe_parent, function_name) {
       (IFunctionParent::ParentFunction { .. }, Some(_)) => {
         panic!("POSTPARSER_SCOUT_LAMBDA_WITH_NAME_NOT_YET_IMPLEMENTED");
@@ -209,9 +206,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       }) => citizen_generic_params.to_vec(),
       _ => Vec::new(),
     };
-    for gp in &extra_generic_params_from_parent {
-      rune_to_explicit_type.push((gp.rune.rune.clone(), gp.tyype.tyype()));
-    }
     let parent_env: Option<Box<IEnvironmentS<'s>>> = match &maybe_parent {
       IFunctionParent::FunctionNoParent => None,
       IFunctionParent::ParentFunction { parent_stack_frame } => {
@@ -301,7 +295,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           IEnvironmentS::FunctionEnvironment(function_environment.clone()),
           &mut child_lidb,
           &mut rules,
-          &mut rune_to_explicit_type,
           default_region_rune.clone(),
           template_rules_p,
         );
@@ -320,7 +313,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           interface_env.clone(),
           &mut child_lidb,
           &mut rules,
-          &mut rune_to_explicit_type,
           default_region_rune.clone(),
           template_rules_p,
         );
@@ -335,7 +327,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         &*self.scout_arena.alloc(self.scout_generic_parameter(
           IEnvironmentS::FunctionEnvironment(function_environment.clone()),
           &mut child_lidb,
-          &mut rune_to_explicit_type,
           &mut rules,
           default_region_rune.clone(),
           generic_parameter_p,
@@ -385,11 +376,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                       range: param_range.clone(),
                       rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
                     };
-                    // V: lets get rid of rune_to_explicit_type.
-                    rune_to_explicit_type.push((
-                      kind_rune.rune.clone(),
-                      ITemplataType::KindTemplataType(KindTemplataType {}),
-                    ));
                     let self_name = IVarNameS::CodeVarName(self.keywords.self_);
                     (
                       ParameterS::new(
@@ -449,10 +435,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                           range: param_range.clone(),
                           rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
                         };
-                        rune_to_explicit_type.push((
-                          kind_rune.rune.clone(),
-                          ITemplataType::KindTemplataType(KindTemplataType {}),
-                        ));
                         (kind_rune.clone(), kind_rune.clone(), Some(kind_rune))
                       }
                     };
@@ -467,8 +449,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                       None => None,
                       Some(destructure_p) => {
                         let mut destructure_rules: Vec<IRulexSR<'s>> = Vec::new();
-                        let mut rune_to_explicit_type_for_destructure: HashMap<IRuneS<'s>, ITemplataType> =
-                          rune_to_explicit_type.iter().cloned().collect();
                         let mut inner_atoms: Vec<AtomSP<'s>> = Vec::new();
                         for inner_pattern_p in destructure_p.patterns {
                           let mut child_lidb = pattern_lidb.child();
@@ -486,17 +466,8 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                             },
                             &mut child_lidb,
                             &mut destructure_rules,
-                            &mut rune_to_explicit_type_for_destructure,
                             inner_pattern_p,
                           ));
-                        }
-                        for (rune, tyype) in rune_to_explicit_type_for_destructure {
-                          if !rune_to_explicit_type
-                            .iter()
-                            .any(|(existing_rune, _)| *existing_rune == rune)
-                          {
-                            rune_to_explicit_type.push((rune, tyype));
-                          }
                         }
                         let top_atom = AtomSP {
                           range: param_range.clone(),
@@ -608,17 +579,11 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                 name: self.keywords.void,
               })),
           }));
-          rune_to_explicit_type.push((
-            ret_rune.rune.clone(),
-            ITemplataType::KindTemplataType(KindTemplataType {}),
-          ));
           Some(ret_rune)
         }
       }
       Some(ret_type_p) => {
         let mut ret_lidb = lidb.child();
-        let mut rune_to_explicit_type_for_ret: HashMap<IRuneS<'s>, ITemplataType> =
-          rune_to_explicit_type.iter().cloned().collect();
         let ret_rune = translate_maybe_type_into_maybe_rune(
           self.scout_arena,
           self.keywords,
@@ -626,24 +591,9 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           &mut ret_lidb,
           Self::eval_range(file_coordinate, function.header.ret.range),
           &mut rules,
-          &mut rune_to_explicit_type_for_ret,
           default_region_rune.clone(),
           Some(ret_type_p),
         );
-        for (rune, tyype) in rune_to_explicit_type_for_ret {
-          if !rune_to_explicit_type
-            .iter()
-            .any(|(existing_rune, _)| *existing_rune == rune)
-          {
-            rune_to_explicit_type.push((rune, tyype));
-          }
-        }
-        if let Some(ret_rune) = &ret_rune {
-          rune_to_explicit_type.push((
-            ret_rune.rune.clone(),
-            ITemplataType::KindTemplataType(KindTemplataType {}),
-          ));
-        }
         ret_rune
       }
     };
@@ -775,7 +725,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           function_declaration_name_for_env.clone(),
           &mut lidb,
           &mut rules,
-          &mut rune_to_explicit_type,
           parent_stack_frame,
           closure_struct_region_rune,
           closure_struct_kind_rune,
@@ -785,7 +734,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       total_params_s.extend(explicit_params_s);
       if is_parent_function {
         let magic_params: Vec<ParameterS<'s>> =
-          self.create_magic_parameters(&mut lidb, magic_param_names, &mut rune_to_explicit_type);
+          self.create_magic_parameters(&mut lidb, magic_param_names);
         // Lambdas identifying runes are determined by their magic params.
         // See: Lambdas Dont Need Explicit Identifying Runes (LDNEIR)
         extra_generic_params_from_body.extend(magic_params.iter().map(|magic_param| {
@@ -931,7 +880,6 @@ fn create_closure_param(
   func_name: IFunctionDeclarationNameS<'s>,
   lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
-  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType)>,
   parent_stack_frame: &StackFrame<'s>,
   closure_struct_region_rune: IRuneS<'s>,
   closure_struct_kind_rune: IRuneS<'s>,
@@ -949,10 +897,6 @@ fn create_closure_param(
     INameS::VarName(r) => (*r).clone(),
     _ => panic!("POSTPARSER_INTERN_VAR_NAME_EXPECTED_VAR_NAME"),
   };
-  rune_to_explicit_type.push((
-    closure_struct_kind_rune.clone(),
-    ITemplataType::KindTemplataType(KindTemplataType {}),
-  ));
   let IFunctionDeclarationNameS::LambdaDeclarationName(lambda_name) = func_name else {
     panic!("POSTPARSER_SCOUT_CREATE_CLOSURE_PARAM_NON_LAMBDA_NAME");
   };
@@ -1009,7 +953,6 @@ fn create_magic_parameters(
   &self,
   lidb: &mut LocationInDenizenBuilder,
   lambda_magic_param_names: Vec<IVarNameS<'s>>,
-  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType)>,
 ) -> Vec<ParameterS<'s>> {
   lambda_magic_param_names
     .into_iter()
@@ -1023,10 +966,6 @@ fn create_magic_parameters(
         code_location.clone(),
       );
       let magic_param_rune = self.scout_arena.intern_rune(IRuneValS::MagicParamRune(MagicParamRuneValS::new(lidb.child().borrow_val())));
-      rune_to_explicit_type.push((
-        magic_param_rune.clone(),
-        ITemplataType::KindTemplataType(KindTemplataType {}),
-      ));
       let magic_kind_rune_usage = RuneUsage {
         range: magic_param_range.clone(),
         rune: magic_param_rune,

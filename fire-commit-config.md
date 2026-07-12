@@ -1,4 +1,4 @@
-# Fire-Commit Config — Vale1
+# Fire-Commit Config
 
 **External repos:**
 - `Luz/` (gitignored) — own remote (`Verdagon/Luz`), always lands on `main`. Drain any `Luz/shields/*/cases/need-*/` curate queue (`guardian-curate`) before committing.
@@ -22,5 +22,3 @@ Pick the family matching the working branch; ask if ambiguous.
 - Guardian temp-disable sweep: `git grep -n "Guardian: temp-disable:"` — every hit needs ratifying (architect) or the underlying issue fixed before commit.
 - Test-delta report: diff `#[test]` additions/deletions/modifications in the staged Rust diff (`git diff --cached -U0 -- '*.rs' | grep -B0 -A1 '^[+-].*#\[test\]' | grep -E '^[+-].*fn [a-zA-Z_]'`), one-sentence why per deleted/modified test, architect confirms.
 - New `#[ignore]` scan in the staged diff — confirm intended-permanent vs. temporary scaffolding per hit.
-
-<!-- NOTE: Test command uses cargo-nextest (native + wasm32-wasi). Vale2's config still lists `cargo test`; it should move to nextest too. -->

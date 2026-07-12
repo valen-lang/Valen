@@ -425,7 +425,6 @@ pub(crate) fn scout_generic_parameter(
   &self,
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
-  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType<'s>)>,
   rule_builder: &mut Vec<IRulexSR<'s>>,
   // This might seem a bit weird, because the region rune usually comes last and is usually
   // mentioned at the end of the header too. But indeed we need it for knowing the region to use
@@ -444,7 +443,6 @@ pub(crate) fn scout_generic_parameter(
     None => ITemplataType::KindTemplataType(KindTemplataType {}),
     Some(type_p) => translate_type(self.scout_arena, type_p.tyype),
   };
-  rune_to_explicit_type.push((rune_s.rune.clone(), type_s.clone()));
 
   assert!(
     generic_param_p.coord_region.is_none(),
@@ -505,12 +503,9 @@ pub(crate) fn scout_generic_parameter(
       }
     }
 
-    let default_rune_to_type = self.scout_arena.alloc_slice_from_vec(
-      vec![(result_rune.rune.clone(), generic_param_type_s.tyype())]);
     GenericParameterDefaultS {
       result_rune: result_rune.rune,
       rules: self.scout_arena.alloc_slice_from_vec(rules_to_leave_in_default_argument),
-      rune_to_type: default_rune_to_type,
     }
   });
 
@@ -689,7 +684,6 @@ fn scout_impl(
 
   let mut lidb = LocationInDenizenBuilder::new(Vec::new());
   let mut rule_builder = Vec::<IRulexSR<'s>>::new();
-  let mut rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
 
   let default_region_rune_range_s = RangeS::new(
     range_s.end.clone(),
@@ -727,7 +721,6 @@ fn scout_impl(
       &*self.scout_arena.alloc(self.scout_generic_parameter(
         impl_env.clone(),
         &mut child_lidb,
-        &mut rune_to_explicit_type,
         &mut rule_builder,
         default_region_rune_s.clone(),
         g,
@@ -745,7 +738,6 @@ fn scout_impl(
       impl_env.clone(),
       &mut child_lidb,
       &mut rule_builder,
-      &mut rune_to_explicit_type,
       default_region_rune_s.clone(),
       template_rules_p,
     );
@@ -915,12 +907,10 @@ fn scout_export_as(
   });
   let mut lidb = LocationInDenizenBuilder::new(Vec::new());
   let mut rule_builder = Vec::<IRulexSR<'s>>::new();
-  let mut rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
   let region_range = RangeS::new(range_s.end.clone(), range_s.end.clone());
   let default_region_rune_s = self.scout_arena.intern_rune(IRuneValS::DenizenDefaultRegionRune(
     DenizenDefaultRegionRuneS { denizen_name: export_name },
   ));
-  rune_to_explicit_type.push((default_region_rune_s.clone(), ITemplataType::RegionTemplataType(RegionTemplataType {})));
   let _region_generic_param = GenericParameterS {
     range: region_range.clone(),
     rune: RuneUsage { range: region_range, rune: default_region_rune_s.clone() },
@@ -1020,7 +1010,6 @@ fn scout_import(
     });
 
     let mut header_rule_builder = Vec::<IRulexSR<'s>>::new();
-    let mut header_rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
 
     let (_default_region_rune_range_s, default_region_rune_s, _maybe_region_generic_param) =
       match &head.maybe_default_region_rune {
@@ -1037,8 +1026,6 @@ fn scout_import(
                 struct_name.clone(),
               )),
             }));
-          // Put back in when we have regions
-          // header_rune_to_explicit_type.push((rune.clone(), ITemplataType::RegionTemplataType(RegionTemplataType {})));
           let implicit_region_generic_param = GenericParameterS {
             range: region_range.clone(),
             rune: RuneUsage {
@@ -1078,7 +1065,6 @@ fn scout_import(
         &*self.scout_arena.alloc(self.scout_generic_parameter(
           struct_env.clone(),
           &mut lidb.child(),
-          &mut header_rune_to_explicit_type,
           &mut header_rule_builder,
           default_region_rune_s.clone(),
           g,
@@ -1095,13 +1081,11 @@ fn scout_import(
       struct_env.clone(),
       &mut lidb.child(),
       &mut header_rule_builder,
-      &mut header_rune_to_explicit_type,
       default_region_rune_s.clone(),
       &template_rules_p,
     );
 
     let mut member_rule_builder = Vec::<IRulexSR<'s>>::new();
-    let mut members_rune_to_explicit_type = self.scout_arena.alloc_index_map::<IRuneS, ITemplataType<'s>>();
 
     let mut internal_methods_p = Vec::<&'p FunctionP<'p>>::new();
     let members_s = head
@@ -1119,10 +1103,6 @@ fn scout_import(
             default_region_rune_s.clone(),
             &member.tyype,
           );
-          members_rune_to_explicit_type.insert(
-            member_rune.rune.clone(),
-            ITemplataType::KindTemplataType(KindTemplataType {}),
-          );
           vec![IStructMemberS::NormalStructMember(NormalStructMemberS {
             range: Self::eval_range(file, member.range),
             name: self.scout_arena.intern_str(member.name.str().as_str()),
@@ -1138,12 +1118,6 @@ fn scout_import(
             &mut member_rule_builder,
             default_region_rune_s.clone(),
             &member.tyype,
-          );
-          members_rune_to_explicit_type.insert(
-            member_rune.rune.clone(),
-            ITemplataType::PackTemplataType(PackTemplataType {
-              element_type: &*self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
-            }),
           );
           vec![IStructMemberS::VariadicStructMember(VariadicStructMemberS {
             range: Self::eval_range(file, member.range),
@@ -1164,12 +1138,6 @@ fn scout_import(
       .chain(member_rules_s.iter())
       .cloned()
       .collect::<Vec<_>>();
-    let mut all_rune_to_explicit_type = header_rune_to_explicit_type.clone();
-    all_rune_to_explicit_type.extend(
-      members_rune_to_explicit_type
-        .iter()
-        .map(|(rune, tyype)| (rune.clone(), tyype.clone())),
-    );
 
     let param_types_vec: Vec<ITemplataType<'s>> = generic_parameters_s
         .iter()
@@ -1209,7 +1177,6 @@ fn scout_import(
           citizen_env: struct_env.clone(),
           citizen_generic_params: generic_parameters_s_arena,
           citizen_rules: all_rules_s.clone(),
-          citizen_rune_to_explicit_type: all_rune_to_explicit_type.iter().map(|(r, t)| (r.clone(), t.clone())).collect(),
         },
         method,
       )
@@ -1348,8 +1315,6 @@ fn translate_citizen_attributes(
     });
 
     let mut rule_builder = Vec::<IRulexSR<'s>>::new();
-    // This is an array instead of a map so we can detect conflicts afterward
-    let mut rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
 
     // Put this back in when we have regions
     let default_region_rune_s = self.scout_arena.intern_rune(IRuneValS::DenizenDefaultRegionRune(
@@ -1367,7 +1332,6 @@ fn translate_citizen_attributes(
         &*self.scout_arena.alloc(self.scout_generic_parameter(
           interface_env.clone(),
           &mut lidb.child(),
-          &mut rune_to_explicit_type,
           &mut rule_builder,
           default_region_rune_s.clone(),
           g,
@@ -1381,7 +1345,6 @@ fn translate_citizen_attributes(
       interface_env.clone(),
       &mut lidb.child(),
       &mut rule_builder,
-      &mut rune_to_explicit_type,
       default_region_rune_s.clone(),
       &rules_p,
     );
@@ -1404,7 +1367,6 @@ fn translate_citizen_attributes(
           citizen_env: interface_env.clone(),
           citizen_generic_params: generic_parameters_s,
           citizen_rules: rules_s.clone(),
-          citizen_rune_to_explicit_type: rune_to_explicit_type.iter().cloned().collect(),
         },
         member,
       )?);

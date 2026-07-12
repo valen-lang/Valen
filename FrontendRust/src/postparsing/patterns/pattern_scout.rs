@@ -1,10 +1,8 @@
-use crate::utils::fx::HashMap;
 use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, PatternPP};
 use crate::postparsing::ast::LocationInDenizenBuilder;
-use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
-use crate::postparsing::names::{IRuneS, IVarNameS};
+use crate::postparsing::names::IVarNameS;
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser, StackFrame};
 use crate::postparsing::rules::rules::IRulexSR;
@@ -45,7 +43,6 @@ pub(crate) fn translate_pattern<'s, 'p>(
   stack_frame: StackFrame<'s>,
   lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
-  rune_to_explicit_type: &mut HashMap<IRuneS<'s>, ITemplataType>,
   pattern_pp: &PatternPP<'p>,
 ) -> AtomSP<'s> {
   let maybe_kind_rune = match &pattern_pp.templex {
@@ -61,10 +58,6 @@ pub(crate) fn translate_pattern<'s, 'p>(
         rule_builder,
         stack_frame.context_region.clone(),
         Some(type_p),
-      );
-      rune_to_explicit_type.insert(
-        kind_rune.rune.clone(),
-        ITemplataType::KindTemplataType(KindTemplataType {}),
       );
       Some(kind_rune)
     }
@@ -82,7 +75,6 @@ pub(crate) fn translate_pattern<'s, 'p>(
           stack_frame.clone(),
           &mut child_lidb,
           rule_builder,
-          rune_to_explicit_type,
           inner_pattern_p,
         ));
       }
