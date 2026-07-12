@@ -28,7 +28,7 @@ extern func getch() int;
 
 struct Vec<N Int, T>
 {
-  values [#N]T;
+  values StaticArray<N, T>;
 }
 
 struct Goblin {

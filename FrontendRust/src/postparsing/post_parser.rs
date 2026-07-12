@@ -86,6 +86,9 @@ pub enum ICompileErrorS<'s> {
   RangedInternalErrorS(RangedInternalErrorS<'s>),
   CantOwnershipInterfaceInImpl(CantOwnershipInterfaceInImpl<'s>),
   CantOwnershipStructInImpl(CantOwnershipStructInImpl<'s>),
+  /// A parameter uses destructure syntax but the function has no body block to
+  /// prepend the desugared LetSE into (extern / abstract / generated bodies).
+  ParamDestructureRequiresBody { range: RangeS<'s> },
 }
 
 
@@ -104,6 +107,7 @@ impl ICompileErrorS<'_> {
       ICompileErrorS::RangedInternalErrorS(x) => &x.range,
       ICompileErrorS::CantOwnershipInterfaceInImpl(x) => &x.range,
       ICompileErrorS::CantOwnershipStructInImpl(x) => &x.range,
+      ICompileErrorS::ParamDestructureRequiresBody { range } => range,
     }
   }
 
@@ -887,7 +891,6 @@ fn scout_impl(
     IImplDeclarationNameS::ImplDeclarationName(impl_name),
     self.scout_arena.alloc_slice_from_vec(generic_parameters_s),
     self.scout_arena.alloc_slice_from_vec(rule_builder),
-    self.scout_arena.alloc_index_map_from_iter(rune_to_explicit_type.into_iter()),
     tyype,
     struct_rune,
     sub_citizen_imprecise_name,
@@ -1220,9 +1223,7 @@ fn scout_import(
       self.scout_arena.alloc_slice_from_vec(generic_parameters_s),
       head.sharedness,
       tyype,
-      self.scout_arena.alloc_index_map_from_iter(header_rune_to_explicit_type.into_iter()),
       self.scout_arena.alloc_slice_from_vec(header_rules_s),
-      members_rune_to_explicit_type,
       self.scout_arena.alloc_slice_from_vec(member_rules_s),
       self.scout_arena.alloc_slice_from_vec(members_s),
       self.scout_arena.alloc_slice_from_vec(internal_methods_s_vec),
@@ -1415,7 +1416,6 @@ fn translate_citizen_attributes(
       self.scout_arena.alloc_slice_from_vec(attributes),
       weakable,
       generic_parameters_s,
-      self.scout_arena.alloc_index_map_from_iter(rune_to_explicit_type.into_iter()),
       interface.sharedness,
       tyype,
       self.scout_arena.alloc_slice_from_vec(rules_s),

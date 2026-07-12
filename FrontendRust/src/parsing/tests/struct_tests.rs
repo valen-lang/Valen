@@ -295,7 +295,7 @@ fn struct_with_int_rune() {
     "
       struct Vecf<N> where N Int
       {
-        values [#N]float;
+        values StaticArray<N, float>;
       }
     ",
   );
@@ -326,9 +326,12 @@ fn struct_with_int_rune() {
       members: StructMembersP {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("values")),
-              tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
-            size: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
-            element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("float")), .. }),
+              tyype: ITemplexPT::Call(CallPT {
+            template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("StaticArray")), .. }),
+            args: [
+              ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
+              ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("float")), .. }),
+            ],
             ..
           }),
           ..
@@ -341,59 +344,3 @@ fn struct_with_int_rune() {
   }
 }
 
-#[test]
-fn struct_with_int_rune_array_sequence_specifies_mutability() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(
-    &parse_arena,
-    &keywords,
-    "
-      struct Vecf<N> where N Int
-      {
-        values [#N]float;
-      }
-    ",
-  );
-  match denizen {
-    IDenizenP::TopLevelStruct(StructP {
-      name: NameP(_, StrI("Vecf")),
-      attributes: [],
-      sharedness: SharednessP::Single,
-      identifying_runes: Some(GenericParametersP {
-        params: [GenericParameterP {
-          name: NameP(_, StrI("N")),
-          maybe_type: None,
-          coord_region: None,
-          attributes: [],
-          maybe_default: None,
-          ..
-        }],
-        ..
-      }),
-      template_rules: Some(TemplateRulesP {
-        rules: [IRulexPR::Typed(TypedPR {
-          rune: Some(NameP(_, StrI("N"))),
-          tyype: ITypePR::IntType,
-          ..
-        })],
-        ..
-      }),
-      members: StructMembersP {
-        contents: [IStructContent::NormalStructMember(NormalStructMemberP {
-          name: NameP(_, StrI("values")),
-              tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
-            size: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
-            element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("float")), .. }),
-            ..
-          }),
-          ..
-        })],
-        ..
-      },
-      ..
-    }) => {}
-    _ => panic!("expected struct Vecf<N> full structure"),
-  }
-}

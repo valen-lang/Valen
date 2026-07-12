@@ -198,6 +198,28 @@ if has_unresolved_placeholders(&struct_def) {
 }
 ```
 
+## Every test opens with a comment saying what it protects
+
+A test carries a comment stating the invariant it protects, placed as the first line inside the test body, not above `#[test]`.
+
+BEFORE:
+```rust
+// A bare param keeps its real name.
+#[test]
+fn bare_param_keeps_name() {
+    let program = compile(..);
+}
+```
+
+AFTER:
+```rust
+#[test]
+fn bare_param_keeps_name() {
+    // A bare param keeps its real name; no synthetic DesugaredParamName.
+    let program = compile(..);
+}
+```
+
 ## No `|` in a test's match pattern
 
 A test pins one exact shape. An or-pattern accepts several, so a wrong-but-listed variant passes silently. Match the single shape the code actually produces.
@@ -300,4 +322,104 @@ AFTER:
 ```cpp
 std::unordered_map<InterfaceKind*, std::vector<Edge*>,
     AddressHasher<InterfaceKind*>> edgesByInterface;
+```
+
+## Outlaw an impossible state, or assert it
+
+If a combination of data should never occur, make it unrepresentable via the type system (ask before changing a type), else guard it with a debug_assert stating the invariant.
+
+BEFORE:
+```rust
+// Typed to hold any rule, so a Lookup can silently sneak in.
+pub outer_shape_rules: &'s [IRulexSR<'s>],
+```
+
+AFTER:
+```rust
+debug_assert!(
+  outer_shape_rules.iter().all(|r| matches!(r,
+    IRulexSR::BorrowRef(_) | IRulexSR::HeapOwnRef(_) | IRulexSR::ShareRef(_) | IRulexSR::WeakRef(_))),
+  "outer_shape_rules may only hold onion ref wraps");
+```
+
+## Pin a shape with one full match, not asserts
+
+Pin a shape with one `match { expected => {}, other => panic! }` over the whole value. Fold `expect_1`/`.unwrap()` into the pattern. Never `.any` or `assert!(matches!)`; asserts are only for numbers and equality.
+
+BEFORE:
+```rust
+let param = expect_1(&func.header.params.as_ref().unwrap().params);
+assert!(matches!(param.pattern.as_ref().unwrap().destructure, Some(_)));
+```
+
+AFTER:
+```rust
+match &func.header.params {
+    Some(ParamsP { params: [ParameterP {
+        pattern: Some(PatternPP { destructure: Some(_), .. }), .. }], .. }) => {}
+    other => panic!("expected one destructuring param, got {:?}", other),
+}
+```
+
+## Never an `if` guard in a test's match
+
+Pin a literal in the pattern, don't test it in a guard. A guard hides the check outside the pattern.
+
+BEFORE:
+```rust
+match name {
+    IVarNameS::CodeVarName(s) if s.as_str() == "a" => {}
+    other => panic!("got {:?}", other),
+}
+```
+
+AFTER:
+```rust
+match name {
+    IVarNameS::CodeVarName(StrI("a")) => {}
+    other => panic!("got {:?}", other),
+}
+```
+
+## No `cast!` in a test; match the variant
+
+Don't `cast!` into a variant, then work on the result. Match the variant in one flat pattern, so a wrong variant fails through `other => panic!` with the actual value.
+
+BEFORE:
+```rust
+let let_se = cast!(&expr, IExpressionSE::Let);
+match &let_se.pattern.destructure {
+    Some(_) => {}
+    other => panic!("got {:?}", other),
+}
+```
+
+AFTER:
+```rust
+match &expr {
+    IExpressionSE::Let(LetSE { pattern: AtomSP { destructure: Some(_), .. }, .. }) => {}
+    other => panic!("got {:?}", other),
+}
+```
+
+## Pin the exact result; don't `if let` a shape check
+
+A test asserts the one correct shape. An `if let ... panic!` only fires on a specific wrong shape and lets every other invalid result pass silently. Match the expected shape with `other => panic!`, so anything unexpected fails.
+
+BEFORE:
+```rust
+// only catches one bad shape; a totally different (also-wrong) body head passes
+if let IExpressionSE::Consecutor(cons) = &block.expr {
+    if let Some(IExpressionSE::Let(_)) = cons.exprs.first() {
+        panic!("did not expect a param let here");
+    }
+}
+```
+
+AFTER:
+```rust
+match &block.expr {
+    IExpressionSE::Void(_) => {}
+    other => panic!("expected an untouched Void body head, got {:?}", other),
+}
 ```

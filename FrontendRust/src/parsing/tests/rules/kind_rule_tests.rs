@@ -3,6 +3,7 @@ use bumpalo::Bump;
 use crate::cast;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
+use crate::interner::StrI;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
@@ -211,44 +212,42 @@ fn templated_struct_arg_is_another_templated_struct_with_multiple_arg() {
 }
 
 #[test]
-fn static_sized_array() {
+fn static_array_type() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let array = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "[#_]_"),
-    ITemplexPT::StaticSizedArray
-  );
-  cast!(array.size, ITemplexPT::AnonymousRune);
-  cast!(array.element, ITemplexPT::AnonymousRune);
+  match compile_templex_expect(&parse_arena, &keywords, "StaticArray<_, _>") {
+    ITemplexPT::Call(CallPT {
+      template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("StaticArray")), .. }),
+      args: [ITemplexPT::AnonymousRune(_), ITemplexPT::AnonymousRune(_)],
+      ..
+    }) => {}
+    other => panic!("unexpected: {:?}", other),
+  }
 
-  let array = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "[#3]int"),
-    ITemplexPT::StaticSizedArray
-  );
-  assert_eq!(cast!(array.size, ITemplexPT::Int).value, 3);
-  assert_templex_name(array.element, "int");
+  match compile_templex_expect(&parse_arena, &keywords, "StaticArray<3, int>") {
+    ITemplexPT::Call(CallPT {
+      template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("StaticArray")), .. }),
+      args: [
+        ITemplexPT::Int(IntPT { value: 3, .. }),
+        ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
+      ],
+      ..
+    }) => {}
+    other => panic!("unexpected: {:?}", other),
+  }
 
-  let array = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "[#N]int"),
-    ITemplexPT::StaticSizedArray
-  );
-  assert_templex_name(array.size, "N");
-  assert_templex_name(array.element, "int");
-
-  let array = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "[#_]int"),
-    ITemplexPT::StaticSizedArray
-  );
-  cast!(array.size, ITemplexPT::AnonymousRune);
-  assert_templex_name(array.element, "int");
-
-  let array = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "[#N]T"),
-    ITemplexPT::StaticSizedArray
-  );
-  assert_templex_name(array.size, "N");
-  assert_templex_name(array.element, "T");
+  match compile_templex_expect(&parse_arena, &keywords, "StaticArray<N, T>") {
+    ITemplexPT::Call(CallPT {
+      template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("StaticArray")), .. }),
+      args: [
+        ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
+        ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
+      ],
+      ..
+    }) => {}
+    other => panic!("unexpected: {:?}", other),
+  }
 }
 
 #[test]

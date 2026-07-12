@@ -326,6 +326,7 @@ impl<'s> ScoutArena<'s> {
       IVarNameValS::WhileCondResultName(p) => IVarNameS::WhileCondResultName(p),
       IVarNameValS::SelfName => IVarNameS::SelfName,
       IVarNameValS::AnonymousSubstructMemberName(i) => IVarNameS::AnonymousSubstructMemberName(i),
+      IVarNameValS::DesugaredParamName(p) => IVarNameS::DesugaredParamName(p),
     }
   }
 

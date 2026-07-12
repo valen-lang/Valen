@@ -68,6 +68,9 @@ where
     ICompileErrorS::StatementAfterReturnS(_) => {
       panic!("implement: humanize StatementAfterReturnS");
     }
+    ICompileErrorS::ParamDestructureRequiresBody { .. } => {
+      "This function has no body block (extern/abstract/generated), so its parameters can't use destructuring syntax. Take the whole value and destructure it inside the body.".to_string()
+    }
   };
   let range = err.range();
   let pos_str = humanize_pos(&range.begin);

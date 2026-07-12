@@ -7,8 +7,8 @@ use crate::postparsing::itemplatatype::{
 };
 use crate::postparsing::names::{
   ExportAsNameS, IFunctionDeclarationNameS, IImplDeclarationNameS, IImpreciseNameS, IRuneS,
-  IStructDeclarationNameS, TopLevelCitizenDeclarationNameS, TopLevelInterfaceDeclarationNameS,
-  TopLevelStructDeclarationNameS, ImplDeclarationNameS,
+  IStructDeclarationNameS, IVarNameS, TopLevelCitizenDeclarationNameS,
+  TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS, ImplDeclarationNameS,
 };
 use crate::postparsing::patterns::AtomSP;
 use crate::postparsing::rules::{IRulexSR, RuneUsage};
@@ -171,9 +171,7 @@ pub struct StructS<'s> {
   pub generic_params: &'s [&'s GenericParameterS<'s>],
   pub sharedness: SharednessP,
   pub tyype: TemplateTemplataType<'s>,
-  pub header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub header_rules: &'s [IRulexSR<'s>],
-  pub members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub member_rules: &'s [IRulexSR<'s>],
   pub members: &'s [IStructMemberS<'s>],
   pub internal_methods: &'s [&'s FunctionS<'s>],
@@ -189,9 +187,7 @@ impl<'s> StructS<'s> {
     generic_params: &'s [&'s GenericParameterS<'s>],
     sharedness: SharednessP,
     tyype: TemplateTemplataType<'s>,
-    // header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     header_rules: &'s [IRulexSR<'s>],
-    // members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     member_rules: &'s [IRulexSR<'s>],
     members: &'s [IStructMemberS<'s>],
     internal_methods: &'s [&'s FunctionS<'s>],
@@ -200,16 +196,10 @@ impl<'s> StructS<'s> {
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
       "vassert: generic_params should not contain DenizenDefaultRegionRuneS"
     );
-    assert!(
-      !header_rune_to_explicit_type.keys()
-        .chain(members_rune_to_explicit_type.keys())
-        .any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
-      "vassert: rune-to-type maps should not contain DenizenDefaultRegionRuneS"
-    );
     Self {
       range, name, attributes, weakable, generic_params, sharedness,
-      tyype, header_rune_to_explicit_type,
-      header_rules, members_rune_to_explicit_type,
+      tyype,
+      header_rules,
       member_rules, members, internal_methods,
       _sealed: (),
     }
@@ -263,7 +253,6 @@ pub struct InterfaceS<'s> {
   pub attributes: &'s [ICitizenAttributeS<'s>],
   pub weakable: bool,
   pub generic_params: &'s [&'s GenericParameterS<'s>],
-  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub sharedness: SharednessP,
   pub tyype: TemplateTemplataType<'s>,
   pub rules: &'s [IRulexSR<'s>],
@@ -277,7 +266,6 @@ impl<'s> InterfaceS<'s> {
     attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
     generic_params: &'s [&'s GenericParameterS<'s>],
-    rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     sharedness: SharednessP,
     tyype: TemplateTemplataType<'s>,
     rules: &'s [IRulexSR<'s>],
@@ -287,11 +275,6 @@ impl<'s> InterfaceS<'s> {
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
       "vassert: generic_params should not contain DenizenDefaultRegionRuneS"
     );
-    assert!(
-      !rune_to_explicit_type.keys()
-        .any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
-      "vassert: rune-to-type maps should not contain DenizenDefaultRegionRuneS"
-    );
     for internal_method in internal_methods {
       assert!(
         generic_params == internal_method.generic_params,
@@ -299,7 +282,7 @@ impl<'s> InterfaceS<'s> {
       );
     }
     Self {
-      range, name, attributes, weakable, generic_params, rune_to_explicit_type,
+      range, name, attributes, weakable, generic_params,
       sharedness,
       tyype, rules, internal_methods,
       _sealed: (),
@@ -381,13 +364,62 @@ pub struct ParameterS<'s> {
   pub range: RangeS<'s>,
   pub virtuality: Option<AbstractSP<'s>>,
   pub pre_checked: bool,
-  pub pattern: AtomSP<'s>,
+  /// The parameter's name:
+  /// - a user-written param keeps its real name (`p` -> CodeVarName, `&self` -> CodeVarName(self)).
+  /// - an anonymous or ignored param (`Pair[a, b]`, `_ Pair`) gets a synthetic DesugaredParamName.
+  /// A destructure's inner names live on a body-head LetSE that loads this name, synthesized only
+  /// when the param actually destructures.
+  pub name: IVarNameS<'s>,
+  // Per @PFVSZ, the parameter's type is split into its outer ref wraps and the value they enclose.
+  /// Rune for the full type: the outer wraps plus the value type they enclose. Equal to
+  /// value_type_rune when type_outer_ref_rules is empty (the param has no outer wraps).
+  pub full_type_rune: RuneUsage<'s>,
+  /// Rune for the value type: the named-type root, past the outer wraps.
+  pub value_type_rune: RuneUsage<'s>,
+  /// The outer &/heap/share/weak wraps that build the full type. Only BorrowRefSR /
+  /// HeapOwnRefSR / ShareRefSR / WeakRefSR variants live here; they chain from
+  /// full_type_rune down to value_type_rune.
+  pub type_outer_ref_rules: &'s [IRulexSR<'s>],
+  /// Rules that build the value type (Lookup/Call/etc., possibly with nested BorrowRefs
+  /// inside template args).
+  pub value_type_rules: &'s [IRulexSR<'s>],
   _sealed: (),
 }
 impl<'s> ParameterS<'s> {
-  pub fn new(range: RangeS<'s>, virtuality: Option<AbstractSP<'s>>, pre_checked: bool, pattern: AtomSP<'s>) -> Self {
-    assert!(pattern.kind_rune.is_some(), "vassert: pattern.coordRune.nonEmpty");
-    Self { range, virtuality, pre_checked, pattern, _sealed: () }
+  pub fn new(
+    range: RangeS<'s>,
+    virtuality: Option<AbstractSP<'s>>,
+    pre_checked: bool,
+    name: IVarNameS<'s>,
+    full_type_rune: RuneUsage<'s>,
+    value_type_rune: RuneUsage<'s>,
+    type_outer_ref_rules: &'s [IRulexSR<'s>],
+    value_type_rules: &'s [IRulexSR<'s>],
+  ) -> Self {
+    debug_assert!(
+      matches!(name,
+        IVarNameS::CodeVarName(_) | IVarNameS::ConstructingMemberName(_)
+        | IVarNameS::ClosureParamName(_) | IVarNameS::MagicParamName(_)
+        | IVarNameS::DesugaredParamName(_)
+      ),
+      "ParameterS.name must be a param name (real, or synthetic DesugaredParamName)"
+    );
+    debug_assert!(
+      type_outer_ref_rules.iter().all(|r| matches!(r,
+        IRulexSR::BorrowRef(_) | IRulexSR::HeapOwnRef(_) | IRulexSR::ShareRef(_) | IRulexSR::WeakRef(_)
+      )),
+      "type_outer_ref_rules may only contain onion ref wraps"
+    );
+    debug_assert!(
+      !type_outer_ref_rules.is_empty() || full_type_rune.rune == value_type_rune.rune,
+      "full_type_rune must equal value_type_rune when type_outer_ref_rules is empty"
+    );
+    Self {
+      range, virtuality, pre_checked, name,
+      full_type_rune, value_type_rune,
+      type_outer_ref_rules, value_type_rules,
+      _sealed: (),
+    }
   }
 }
 

@@ -255,6 +255,10 @@ pub enum IVarNameS<'s> {
   WhileCondResultName(RangeS<'s>),
   SelfName,
   AnonymousSubstructMemberName(i32),
+  /// Synthetic ABI-slot identifier for a function parameter that has no user-written name
+  /// (an anonymous destructure like `Pair[a, b]`, or an ignored `_ Pair`). Named params
+  /// keep their real name instead.
+  DesugaredParamName(CodeLocationS<'s>),
 }
 
 
@@ -271,6 +275,7 @@ pub enum IVarNameValS<'s> {
   WhileCondResultName(RangeS<'s>),
   SelfName,
   AnonymousSubstructMemberName(i32),
+  DesugaredParamName(CodeLocationS<'s>),
 }
 
 

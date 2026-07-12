@@ -17,7 +17,7 @@ where func ==(&E, &E)bool {
   has(arr, elem, &{ _ == _ })
 }
 
-func has<E, F, N Int>(seq &[#N]E, elem &E, equator &F) bool
+func has<E, F, N Int>(seq &StaticArray<N, E>, elem &E, equator &F) bool
 where func(&F, &E, &E)bool {
   i = 0;
   while (i < seq.len()) {
@@ -30,7 +30,7 @@ where func(&F, &E, &E)bool {
   return false;
 }
 
-func has<E, N Int>(seq &[#N]E, elem &E) bool
+func has<E, N Int>(seq &StaticArray<N, E>, elem &E) bool
 where func ==(&E, &E)bool {
   return has(seq, elem, &{ _ == _ });
 }

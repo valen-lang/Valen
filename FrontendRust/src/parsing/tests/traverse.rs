@@ -655,14 +655,6 @@ where
       }
       visit_templex(pred, out, return_type);
     }
-    ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
-      range: _range,
-      size,
-      element,
-    }) => {
-      visit_templex(pred, out, size);
-      visit_templex(pred, out, element);
-    }
     ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
       range: _range,
       element,

@@ -192,13 +192,6 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
     }
     ITemplexPT::Pack(pack) => get_ordered_rune_declarations_from_templexes_with_duplicates(pack.members),
-    ITemplexPT::StaticSizedArray(static_sized_array) => {
-      let templexes: Vec<&'p ITemplexPT<'p>> = vec![
-        static_sized_array.size,
-        static_sized_array.element,
-      ];
-      get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
-    }
     ITemplexPT::RuntimeSizedArray(runtime_sized_array) => {
       let templexes: Vec<&'p ITemplexPT<'p>> = vec![
         runtime_sized_array.element,

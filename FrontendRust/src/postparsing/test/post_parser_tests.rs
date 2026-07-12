@@ -32,6 +32,7 @@ use crate::collect_only_snode;
 use crate::collect_only_snodes;
 use crate::collect_where_snode;
 use crate::collect_where_snodes;
+use crate::postparsing::test::utils::expect_code_body_expr;
 
 
 fn compile<'s, 'ctx, 'p>(
@@ -377,6 +378,8 @@ fn moving_method_call() {
 
 #[test]
 fn function_with_magic_lambda_and_regular_lambda() {
+  // Lambda params get the right ParameterS: a magic-param lambda's 2nd param is a MagicParamName
+  // with a MagicParamRune; a regular lambda's named 2nd param `a` is a CodeVarName with an implicit rune.
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -406,52 +409,24 @@ fn function_with_magic_lambda_and_regular_lambda() {
   );
   let (first_lambda, second_lambda) = expect_2(&lambdas);
 
-  let (_, first_lambda_second_param) = expect_2(first_lambda.function.params);
-  match first_lambda_second_param {
-    ParameterS {
+  match first_lambda.function.params {
+    [_, ParameterS {
       pre_checked: false,
-      pattern:
-        AtomSP {
-          name:
-            Some(CaptureS {
-              name: IVarNameS::MagicParamName(_),
-              mutate: false,
-            }),
-          kind_rune:
-            Some(RuneUsage {
-              rune: IRuneS::MagicParamRune(_),
-              ..
-            }),
-          destructure: None,
-          ..
-        },
+      name: IVarNameS::MagicParamName(_),
+      full_type_rune: RuneUsage { rune: IRuneS::MagicParamRune(_), .. },
       ..
-    } => {}
-    _ => panic!("expected second param on first lambda to be a magic param"),
+    }] => {}
+    other => panic!("expected first lambda's 2nd param to be a magic param, got {:?}", other),
   }
 
-  let (_, second_lambda_second_param) = expect_2(second_lambda.function.params);
-  match second_lambda_second_param {
-    ParameterS {
+  match second_lambda.function.params {
+    [_, ParameterS {
       pre_checked: false,
-      pattern:
-        AtomSP {
-          name:
-            Some(CaptureS {
-              name: IVarNameS::CodeVarName(StrI("a")),
-              mutate: false,
-            }),
-          kind_rune:
-            Some(RuneUsage {
-              rune: IRuneS::ImplicitRune(_),
-              ..
-            }),
-          destructure: None,
-          ..
-        },
+      name: IVarNameS::CodeVarName(StrI("a")),
+      full_type_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
       ..
-    } => {}
-    _ => panic!("expected second param on second lambda to be code var a with implicit rune"),
+    }] => {}
+    other => panic!("expected second lambda's 2nd param to be code var a with implicit rune, got {:?}", other),
   }
 }
 
@@ -1355,4 +1330,374 @@ fn str_interpolate_expression() {
   let main = program.lookup_function("main");
   let _code_body = cast!(&main.body, IBodyS::CodeBody);
   // Just ensure scout completed without panicking.
+}
+#[test]
+fn test_named_param_keeps_its_name_at_postparse() {
+  // A user-named param keeps its real name as `ParameterS.name` (no desugaring): `foo(x int)`
+  // -> CodeVarName("x"). A synthetic DesugaredParamName is only minted for an anonymous or
+  // ignored param, and no body-head LetSE is synthesized when there's no destructure.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(x int) int { return x; }",
+  );
+  let foo = program.lookup_function("foo");
+  match foo.params {
+    [ParameterS { name: IVarNameS::CodeVarName(StrI("x")), .. }] => {}
+    other => panic!("expected one param named x, got {:?}", other),
+  }
+}
+
+use crate::postparsing::rules::rules::IRulexSR;
+
+#[test]
+fn test_param_no_outer_wrap_routing() {
+  // A param routes its rules to its own slices, not the shared FunctionS.rules. For `x int`
+  // (no wraps): type_outer_ref_rules is empty, value_type_rules is [Lookup(int)], and the int
+  // Lookup didn't leak into FunctionS.rules (just [Lookup(void)] for the void return).
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(x int) void { }",
+  );
+  let foo = program.lookup_function("foo");
+  match (foo.params, foo.rules) {
+    ([ParameterS {
+        type_outer_ref_rules: [],
+        value_type_rules: [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. })],
+        full_type_rune, value_type_rune, .. }],
+     [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. }), .. })]) => {
+      assert_eq!(full_type_rune.rune, value_type_rune.rune, "full == value when there's no outer wrap");
+    }
+    other => panic!("expected `x int` param (no outer wraps, value [Lookup(int)]) and fn rules [Lookup(void)]; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_param_single_ref_wrap_routing() {
+  // One param `x &int`: value_type_rules is [Lookup(int)] and type_outer_ref_rules is exactly one
+  // BorrowRef whose result is full_type_rune and whose inner is value_type_rune (so full != value).
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(x &int) int { return 0; }",
+  );
+  let foo = program.lookup_function("foo");
+  match foo.params {
+    [ParameterS {
+        value_type_rules: [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. })],
+        type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
+        full_type_rune, value_type_rune, .. }] => {
+      assert_ne!(full_type_rune.rune, value_type_rune.rune, "full != value when there IS an outer wrap");
+      assert_eq!(br.result_rune.rune, full_type_rune.rune);
+      assert_eq!(br.inner_rune.rune, value_type_rune.rune);
+    }
+    other => panic!("expected `x &int`: one BorrowRef wrapping [Lookup(int)]; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_param_nested_ref_wrap_routing() {
+  // One param `x &&int`: type_outer_ref_rules is two chained BorrowRefs. It's built during a
+  // post-order recursion, so index 0 is the innermost wrap and index 1 the outer.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(x &&int) int { return 0; }",
+  );
+  let foo = program.lookup_function("foo");
+  match foo.params {
+    [ParameterS {
+        type_outer_ref_rules: [IRulexSR::BorrowRef(inner_br), IRulexSR::BorrowRef(outer_br)],
+        full_type_rune, value_type_rune, .. }] => {
+      assert_eq!(outer_br.result_rune.rune, full_type_rune.rune);
+      assert_eq!(outer_br.inner_rune.rune, inner_br.result_rune.rune);
+      assert_eq!(inner_br.inner_rune.rune, value_type_rune.rune);
+    }
+    other => panic!("expected `x &&int`: two chained BorrowRefs; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_function_rules_no_longer_contains_param_rules() {
+  // Param type Lookups live on their params, not on FunctionS.rules: for `foo(x int, y bool) void`,
+  // FunctionS.rules is exactly the void Lookup, with no int or bool Lookup leaking in.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(x int, y bool) void { }",
+  );
+  let foo = program.lookup_function("foo");
+  match foo.rules {
+    [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. }), .. })] => {}
+    other => panic!("FunctionS.rules should be exactly [Lookup(void)]; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_bare_param_keeps_name_and_gets_no_body_let() {
+  // A body-head LetSE is synthesized only for a param that destructures. A bare param keeps its
+  // real name and needs no let: the name IS the binding. `let [a, b] = <param>` is emitted for
+  // `Pair[a, b]`, but nothing is emitted for `x int`.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(x int) void { }",
+  );
+  let foo = program.lookup_function("foo");
+  // The bare param keeps its real name; no synthetic DesugaredParamName.
+  match foo.params {
+    [ParameterS { name: IVarNameS::CodeVarName(StrI("x")), .. }] => {}
+    other => panic!("expected one param named x, got {:?}", other),
+  }
+  // A bare param produces no body-head let, so the empty body is left untouched: its head
+  // is the plain Void of `{ }`, not a ConsecutorSE prepending a param LetSE.
+  match expect_code_body_expr(&foo.body) {
+    IExpressionSE::Void(_) => {}
+    other => panic!("expected an untouched Void body head (no param let), got {:?}", other),
+  }
+}
+
+#[test]
+fn test_destructure_param_desugars_to_let_with_destructure() {
+  // An anonymous destructuring param `Pair[a, b]` desugars to a body-head `let [a, b] =
+  // load(<param>)`: the param's synthetic slot loaded into a nameless top pattern that
+  // destructures into a and b.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(Pair[a, b]) void { }",
+  );
+  let foo = program.lookup_function("foo");
+  match expect_code_body_expr(&foo.body) {
+    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
+      IExpressionSE::Let(LetSE {
+        pattern: AtomSP {
+          name: None,
+          destructure: Some([
+            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }), .. },
+            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }), .. },
+          ]), .. },
+        expr: IExpressionSE::LocalLoad(LocalLoadSE { name: IVarNameS::DesugaredParamName(_), .. }),
+        .. }),
+      ..
+    ], .. }) => {}
+    other => panic!("expected body head `let [a, b] = load(<param>)`, got {:?}", other),
+  }
+}
+
+#[test]
+fn test_named_destructure_param_keeps_name_and_gets_let() {
+  // A named destructuring param `p Pair[a, b]` keeps its real name `p` on the ParameterS AND
+  // gets a body-head `let [a, b] = load(p)`, so p, a, and b are all available. The let's top
+  // pattern is nameless (the name is the param, not re-bound in the let).
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(p Pair[a, b]) void { }",
+  );
+  let foo = program.lookup_function("foo");
+  match foo.params {
+    [ParameterS { name: IVarNameS::CodeVarName(StrI("p")), .. }] => {}
+    other => panic!("expected one param named p, got {:?}", other),
+  }
+  match expect_code_body_expr(&foo.body) {
+    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
+      IExpressionSE::Let(LetSE {
+        pattern: AtomSP {
+          name: None,
+          destructure: Some([
+            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }), .. },
+            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }), .. },
+          ]), .. },
+        expr: IExpressionSE::LocalLoad(LocalLoadSE { name: IVarNameS::CodeVarName(StrI("p")), .. }),
+        .. }),
+      ..
+    ], .. }) => {}
+    other => panic!("expected body head `let [a, b] = load(p)`, got {:?}", other),
+  }
+}
+
+// Ensures the synthesized LetSE preserves destructure edge cases: nesting, ignore, empty.
+
+#[test]
+fn test_nested_destructure_preserved() {
+  // A nested destructure is preserved: `Pair[a, [b, c]]` desugars to `let [a, [b, c]] =
+  // load(<param>)`, where the second slot is a nameless sub-destructure into b and c.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(Pair[a, [b, c]]) void { }",
+  );
+  let foo = program.lookup_function("foo");
+  match expect_code_body_expr(&foo.body) {
+    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
+      IExpressionSE::Let(LetSE {
+        pattern: AtomSP { name: None, destructure: Some([
+          AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }), .. },
+          AtomSP { name: None, destructure: Some([
+            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }), .. },
+            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("c")), .. }), .. },
+          ]), .. },
+        ]), .. }, .. }),
+      ..
+    ], .. }) => {}
+    other => panic!("expected body head `let [a, [b, c]] = load(<param>)`, got {:?}", other),
+  }
+}
+
+#[test]
+fn test_destructure_ignore() {
+  // An ignore slot in a destructure gets no name capture: `Pair[_, b]` desugars to `let [_, b]`
+  // where the `_` slot has name None (destructure translation drops IgnoredLocalNameDeclaration).
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(Pair[_, b]) void { }",
+  );
+  let foo = program.lookup_function("foo");
+  match expect_code_body_expr(&foo.body) {
+    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
+      IExpressionSE::Let(LetSE {
+        pattern: AtomSP { name: None, destructure: Some([
+          AtomSP { name: None, .. },
+          AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }), .. },
+        ]), .. }, .. }),
+      ..
+    ], .. }) => {}
+    other => panic!("expected body head `let [_, b] = load(<param>)`, got {:?}", other),
+  }
+}
+
+#[test]
+fn test_empty_destructure() {
+  // An empty destructure is preserved: `int[]` desugars to `let [] = load(<param>)`, a nameless
+  // top pattern with an empty destructure.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo(int[]) void { }",
+  );
+  let foo = program.lookup_function("foo");
+  match expect_code_body_expr(&foo.body) {
+    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
+      IExpressionSE::Let(LetSE {
+        pattern: AtomSP { name: None, destructure: Some([]), .. }, .. }),
+      ..
+    ], .. }) => {}
+    other => panic!("expected body head `[] = load(<param>)`, got {:?}", other),
+  }
+}
+
+#[test]
+fn test_extern_param_destructure_rejected() {
+  // An extern/abstract/generated body has no block to prepend a LetSE into, so a param destructure
+  // is rejected at postparse with ParamDestructureRequiresBody.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let err = compile_for_error(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "extern func foo(Pair[a, b]);",
+  );
+  match err {
+    ICompileErrorS::ParamDestructureRequiresBody { .. } => {}
+    other => panic!("expected ParamDestructureRequiresBody, got {:?}", other),
+  }
+}
+
+#[test]
+fn test_extern_bare_param_ok() {
+  // An extern func with a bare param (no destructure) postparses fine: the param keeps its real
+  // name and the body stays an ExternBody.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "extern func foo(x int);",
+  );
+  let foo = program.lookup_function("foo");
+  match foo.params {
+    [ParameterS { name: IVarNameS::CodeVarName(StrI("x")), .. }] => {}
+    other => panic!("expected one param named x, got {:?}", other),
+  }
+  match &foo.body {
+    IBodyS::ExternBody(_) => {}
+    other => panic!("expected an extern body, got {:?}", other),
+  }
 }

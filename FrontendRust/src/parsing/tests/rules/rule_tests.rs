@@ -81,7 +81,7 @@ fn super_complicated() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  compile(&parse_arena, &keywords, "C = any([#I]X, [#N]T)");
+  compile(&parse_arena, &keywords, "C = any(StaticArray<I, X>, StaticArray<N, T>)");
 }
 
 #[test]

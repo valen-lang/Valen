@@ -13,6 +13,7 @@ pub struct AbstractP {
 pub struct ParameterP<'p> {
   pub range: RangeL,
   pub virtuality: Option<AbstractP>,
+  // Some(range) when the parameter begins with a bare self-borrow, e.g. `&self`.
   pub self_borrow: Option<RangeL>,
   pub pattern: Option<PatternPP<'p>>,
 }

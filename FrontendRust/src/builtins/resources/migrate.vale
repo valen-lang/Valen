@@ -7,7 +7,7 @@ func migrate<E>(from []E, to &[]E) {
   drop_into(^intermediate, &{ to.push(^_); });
 }
 
-func migrate<E, N Int>(from [#N]E, to &[]E) {
+func migrate<E, N Int>(from StaticArray<N, E>, to &[]E) {
   intermediate = Array<E>(N);
   drop_into(^from, &{ (&intermediate).push(^_); });
   drop_into(^intermediate, &{ to.push(^_); });

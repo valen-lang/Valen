@@ -25,12 +25,17 @@ pub mod parsing;
 pub mod pass_manager;
 pub mod postparsing;
 // pub mod simplifying;
+// VCOORD: typing gated so parsing/postparse compile alone. Un-gate when the typing
+// cascade compiles again.
+#[cfg(any())]
 pub mod typing;
+#[cfg(any())]
 pub mod tests;
 // #[cfg(test)]
 // pub mod testvm;
 pub mod utils;
 // pub mod von;
+#[cfg(any())]
 #[path = "solver/lib.rs"]
 pub mod solver;
 

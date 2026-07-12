@@ -408,7 +408,8 @@ where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Parameter(parameter));
-  visit_pattern(pred, out, &parameter.pattern);
+  // The param's type; any destructure now lives on a body-head LetSE, visited via the body.
+  visit_rune_usage(pred, out, &parameter.full_type_rune);
 }
 
 fn visit_generic_parameter<'s, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'s GenericParameterS<'s>)

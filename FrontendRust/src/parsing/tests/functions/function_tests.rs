@@ -6,6 +6,7 @@ use crate::cast;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
+use crate::interner::StrI;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 use crate::parsing::tests::utils::{
@@ -611,5 +612,121 @@ fn short_self() {
   assert!(param.virtuality.is_none());
   assert!(param.self_borrow.is_some());
   assert!(param.pattern.is_none());
+}
+
+#[test]
+fn function_with_param_destructure() {
+  // The parser accepts a destructuring param `T[a, b]`: one param with type `T` and a
+  // destructure of two named sub-patterns a and b.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "func foo(T[a, b]) { }");
+  let function = find_func_named(&program, "foo");
+  match &function.header.params {
+    Some(ParamsP { params: [
+      ParameterP {
+        pattern: Some(PatternPP {
+          destination: None,
+          templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. })),
+          destructure: Some(DestructureP { patterns: [
+            PatternPP { destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))), .. }), .. },
+            PatternPP { destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("b"))), .. }), .. },
+          ], .. }),
+          ..
+        }),
+        ..
+      },
+    ], .. }) => {}
+    other => panic!("expected one `T[a, b]` param, got {:?}", other),
+  }
+}
+
+#[test]
+fn function_with_nested_param_destructure() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "func foo(T[a, [b, c]]) { }");
+  let function = find_func_named(&program, "foo");
+  let param = expect_1(&function.header.params.as_ref().unwrap().params);
+  match param.pattern.as_ref().unwrap() {
+    PatternPP {
+      destructure: Some(DestructureP { patterns: [
+        PatternPP { destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))), .. }), .. },
+        PatternPP { destructure: Some(DestructureP { patterns: [
+          PatternPP { destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("b"))), .. }), .. },
+          PatternPP { destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("c"))), .. }), .. },
+        ], .. }), .. },
+      ], .. }),
+      ..
+    } => {}
+    other => panic!("expected `[a, [b, c]] T` param, got {:?}", other),
+  }
+}
+
+#[test]
+fn function_with_typed_sub_atom_param_destructure() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "func foo(T[a A, b B]) { }");
+  let function = find_func_named(&program, "foo");
+  let param = expect_1(&function.header.params.as_ref().unwrap().params);
+  match param.pattern.as_ref().unwrap() {
+    PatternPP {
+      destructure: Some(DestructureP { patterns: [
+        PatternPP {
+          destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))), .. }),
+          templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("A")), .. })),
+          ..
+        },
+        PatternPP {
+          destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("b"))), .. }),
+          templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("B")), .. })),
+          ..
+        },
+      ], .. }),
+      ..
+    } => {}
+    other => panic!("expected `[a A, b B] T` param, got {:?}", other),
+  }
+}
+
+#[test]
+fn function_with_ignore_in_param_destructure() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "func foo(T[_, b]) { }");
+  let function = find_func_named(&program, "foo");
+  let param = expect_1(&function.header.params.as_ref().unwrap().params);
+  match param.pattern.as_ref().unwrap() {
+    PatternPP {
+      destructure: Some(DestructureP { patterns: [
+        PatternPP { destination: Some(DestinationLocalP { decl: INameDeclarationP::IgnoredLocalNameDeclaration(_), .. }), .. },
+        PatternPP { destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("b"))), .. }), .. },
+      ], .. }),
+      ..
+    } => {}
+    other => panic!("expected `[_, b] T` param, got {:?}", other),
+  }
+}
+
+#[test]
+fn function_with_empty_param_destructure() {
+  // The parser accepts an empty destructuring param `T[]`: one param with type `T` and an
+  // empty destructure.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "func foo(T[]) { }");
+  let function = find_func_named(&program, "foo");
+  match &function.header.params {
+    Some(ParamsP { params: [
+      ParameterP { pattern: Some(PatternPP { destructure: Some(DestructureP { patterns: [], .. }), .. }), .. },
+    ], .. }) => {}
+    other => panic!("expected one `T[]` param, got {:?}", other),
+  }
 }
 

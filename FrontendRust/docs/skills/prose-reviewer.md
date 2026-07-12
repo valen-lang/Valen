@@ -106,3 +106,78 @@ AFTER — same facts, one plain idea per sentence:
 // Every concrete class's FFI handle is the same LLVM type: a struct holding one
 // address. Each class still gets its own name in the generated C typedefs.
 ```
+
+## Use a list for equal sub-parts, not a dense paragraph
+
+List a concept's equal sub-parts instead of cramming them into a paragraph. The list shows the reader how many pieces there are and that they're parallel before they dive in.
+
+BEFORE:
+```
+// The parameter stores full_type_rune and value_type_rune for the two type runes,
+// plus value_type_rules (the Lookup/Call) and type_outer_ref_rules (the BorrowRef
+// wraps) for the rules that build them.
+```
+
+AFTER:
+```
+// The parameter stores:
+// - full_type_rune: the rune for the full type.
+// - value_type_rune: the rune for the value type.
+// - value_type_rules: the Lookup/Call that build value_type_rune.
+// - type_outer_ref_rules: the BorrowRef/etc wraps that build full_type_rune.
+```
+
+## Explain a design by the concrete thing it enables
+
+When you say why something exists, describe the concrete operation it enables, with a real example. An abstract benefit reads as explanation but lets the reader picture nothing.
+
+BEFORE:
+```
+// Storing the value type separately lets the typing pass treat it as a single
+// opaque piece and reason about the wraps on their own.
+```
+
+AFTER:
+```
+// The typing pass ignores the outer refs when resolving a call: for
+// `my_ship_ref.launch()` where `my_ship_ref` is `&Ship`, it strips the `&` and
+// looks in `Ship`'s namespace for `launch`. A pre-separated value type makes that easy.
+```
+
+## Comment a non-obvious match arm with what leads into it
+
+When it isn't obvious what input lands you in a match arm, name that case in one concise line, with a concrete example. Don't describe the machinery instead.
+
+BEFORE:
+```rust
+match (&pattern.templex, kind_rune) {
+  (Some(type_p), Some(_)) => { /* ... */ }
+  _ => { /* ... */ }
+}
+```
+
+AFTER:
+```rust
+match (&pattern.templex, kind_rune) {
+  // A typed param, e.g. `foo(x &int)`.
+  (Some(type_p), Some(_)) => { /* ... */ }
+  // An untyped lambda param, e.g. `(a) => a`.
+  _ => { /* ... */ }
+}
+```
+
+## No em-dashes in comments
+
+A comma, colon, parentheses, or a new sentence names the relationship an em-dash leaves the reader to infer. Don't use em-dashes in comments.
+
+BEFORE:
+```rust
+// Prepend a LetSE at the body head — it moves the user's name binding
+// out of ParameterS and into standard body-side machinery.
+```
+
+AFTER:
+```rust
+// Prepend a LetSE at the body head. It moves the user's name binding
+// out of ParameterS and into standard body-side machinery.
+```

@@ -1,5 +1,5 @@
 
-func each<N Int, T, F>(arr &[#N]T, func &F) void
+func each<N Int, T, F>(arr &StaticArray<N, T>, func &F) void
 where func(&F,&T)void {
   i = 0;
   l = len(&arr);
@@ -10,7 +10,7 @@ where func(&F,&T)void {
   }
 }
 
-func eachI<N Int, T, F>(arr &[#N]T, func F) void
+func eachI<N Int, T, F>(arr &StaticArray<N, T>, func F) void
 where func drop(F)void, func(&F,int,&T)void {
   i = 0;
   l = len(&arr);

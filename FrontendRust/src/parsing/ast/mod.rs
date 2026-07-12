@@ -42,5 +42,5 @@ pub use rules::{
 pub use templex::{
   AnonymousRunePT, BoolPT, BorrowRefPT, CallPT, FuncPT, FunctionPT, HeapOwnRefPT, ITemplexPT,
   IntPT, NameOrRunePT, PackPT, RegionRunePT,
-  RuntimeSizedArrayPT, ShareRefPT, StaticSizedArrayPT, StringPT, TuplePT, TypedRunePT, WeakRefPT,
+  RuntimeSizedArrayPT, ShareRefPT, StringPT, TuplePT, TypedRunePT, WeakRefPT,
 };

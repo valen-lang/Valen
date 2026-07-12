@@ -47,34 +47,22 @@ where
       _ => return Ok(None),
     };
 
+    // Only empty brackets `[]T` are an array type (the runtime-sized array). The
+    // known-size array type is the ordinary generic `StaticArray<N, T>`, so a
+    // non-empty `[...]` is not an array type.
+    if size_scramble_iter_l.has_next() {
+      return Ok(None);
+    }
+
     original_iter.skip_to(&tentative_iter);
     let iter = original_iter;
 
-    // Parse size if present
-    let maybe_size_templex = if size_scramble_iter_l.has_next() {
-      let mut size_iter = size_scramble_iter_l;
-      if size_iter.try_skip_symbol('#') {
-        Some(self.parse_templex(&mut size_iter)?)
-      } else {
-        None
-      }
-    } else {
-      None
-    };
-
     let element_type = self.parse_templex(iter)?;
 
-    let result = match maybe_size_templex {
-      None => ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
-        range: RangeL::new(begin, iter.get_prev_end_pos()),
-        element: &*self.parse_arena.alloc(element_type),
-      }),
-      Some(size_templex) => ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
-        range: RangeL::new(begin, iter.get_prev_end_pos()),
-        size: &*self.parse_arena.alloc(size_templex),
-        element: &*self.parse_arena.alloc(element_type),
-      }),
-    };
+    let result = ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
+      range: RangeL::new(begin, iter.get_prev_end_pos()),
+      element: &*self.parse_arena.alloc(element_type),
+    });
 
     Ok(Some(result))
   }

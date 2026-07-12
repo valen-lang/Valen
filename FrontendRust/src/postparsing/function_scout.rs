@@ -4,7 +4,7 @@
 // LocationInDenizenBuilder instead of arena-allocating. The slice is promoted
 // to permanent arena storage only inside intern_rune on a miss.
 
-use crate::parsing::ast::{FunctionP, GenericParameterP, IAttributeP, ITemplexPT, LoadAsP};
+use crate::parsing::ast::{FunctionP, GenericParameterP, IAttributeP, INameDeclarationP, ITemplexPT, LoadAsP};
 use crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates;
 use crate::postparsing::ast::{
   AbstractBodyS, AbstractSP, BuiltinS, CodeBodyS, KindGenericParameterTypeS, ExportS,
@@ -13,12 +13,12 @@ use crate::postparsing::ast::{
   RegionGenericParameterTypeS,
 };
 use crate::postparsing::expressions::{
-  BlockSE, BodySE, ConsecutorSE, IExpressionSE,
+  BlockSE, BodySE, ConsecutorSE, IExpressionSE, LetSE, LocalLoadSE,
 };
 use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
-use crate::postparsing::patterns::{AtomSP, CaptureS};
+use crate::postparsing::patterns::AtomSP;
 use crate::lexing::ast::RangeL;
 use crate::postparsing::names::{
   ClosureParamNameS, CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, FunctionNameS,
@@ -32,7 +32,7 @@ use crate::postparsing::post_parser::{
 };
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::rules::rule_scout::translate_rulexes;
-use crate::postparsing::rules::templex_scout::translate_maybe_type_into_maybe_rune;
+use crate::postparsing::rules::templex_scout::{translate_maybe_type_into_maybe_rune, translate_signature_templex};
 use crate::postparsing::rules::rules::{
   BorrowRefSR, IRulexSR, LookupSR, RuneUsage,
 };
@@ -68,6 +68,17 @@ pub struct ParentCitizen<'s> {
   pub citizen_generic_params: &'s [&'s GenericParameterS<'s>],
   pub citizen_rules: Vec<IRulexSR<'s>>,
   pub citizen_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
+}
+
+
+/// Everything an explicit param needs at body-synthesis time that isn't on ParameterS:
+/// the ABI slot to load, and (only when the param destructures) the body-head let's
+/// pattern and its rules. Built once in the param loop so captures and the let share one
+/// source of truth.
+struct ExplicitParamExtras<'s> {
+  range: RangeS<'s>,
+  abi_name: IVarNameS<'s>,
+  destructure: Option<(AtomSP<'s>, &'s [IRulexSR<'s>])>,
 }
 
 
@@ -358,7 +369,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     // We say PerhapsTypeless because we're in a lambda, they might be anonymous params.
     // For lambdas, untyped explicit params (like `(a, b) => ...` or `(_) => ...`) get a
     // synthesized coord rune here that will be added to the function's identifying runes.
-    let explicit_params_s_and_synthesized_runes: Vec<(ParameterS<'s>, Option<RuneUsage<'s>>)> = params_p
+    let explicit_params_s_and_synthesized_runes: Vec<(ParameterS<'s>, Option<RuneUsage<'s>>, ExplicitParamExtras<'s>)> = params_p
       .iter()
       .map(|param| {
             let param_range = PostParser::eval_range(file_coordinate, param.range);
@@ -366,95 +377,165 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
               range: PostParser::eval_range(file_coordinate, abstract_p.range),
               is_internal_method: matches!(&maybe_parent, IFunctionParent::ParentCitizen(_)),
             });
-            let (pattern, synthesized_rune): (AtomSP<'s>, Option<RuneUsage<'s>>) = match (&param.self_borrow, &param.pattern) {
-              (Some(_), None) => {
-                let kind_rune = RuneUsage {
-                  range: param_range.clone(),
-                  rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
-                };
-                rune_to_explicit_type.push((
-                  kind_rune.rune.clone(),
-                  ITemplataType::KindTemplataType(KindTemplataType {}),
-                ));
-                let pattern_s = AtomSP {
-                  range: param_range.clone(),
-                  name: Some(CaptureS {
-                    name: IVarNameS::CodeVarName(self.keywords.self_),
-                    mutate: false,
-                  }),
-                  kind_rune: Some(kind_rune),
-                  destructure: None,
-                };
-                (pattern_s, None)
-              }
-              (None, Some(pattern)) => {
-                let mut pattern_lidb = lidb.child();
-                let mut rune_to_explicit_type_for_pattern: HashMap<IRuneS<'s>, ITemplataType> =
-                  rune_to_explicit_type.iter().cloned().collect();
-                let mut pattern_s = translate_pattern(
-                  self.scout_arena,
-                  self.keywords,
-                  StackFrame {
-                    file: file_coordinate,
-                    name: function_declaration_name_for_env.clone(),
-                    parent_env: function_environment.clone(),
-                    maybe_parent: None,
-                    context_region: default_region_rune.clone(),
-                    pure_height: 0,
-                    locals: VariableDeclarations { vars: Vec::new() },
-                  },
-                  &mut pattern_lidb,
-                  &mut rules,
-                  &mut rune_to_explicit_type_for_pattern,
-                  pattern,
-                );
-                for (rune, tyype) in rune_to_explicit_type_for_pattern {
-                  if !rune_to_explicit_type
-                    .iter()
-                    .any(|(existing_rune, _)| *existing_rune == rune)
-                  {
-                    rune_to_explicit_type.push((rune, tyype));
-                  }
-                }
-                match pattern_s.kind_rune {
-                  None => {
-                    // Untyped param (like in `(a) => a`) so make a rune that will be added to
-                    // genericParams and to the identifying runes. This only happens for lambdas,
-                    // top level functions can't have these (enforced elsewhere).
+            match (&param.self_borrow, &param.pattern) {
+                  (Some(_), None) => {
+                    // We get here if the parameter was just `&self`. It keeps its real name
+                    // `self`, has no destructure, and so needs no body-head let.
                     let kind_rune = RuneUsage {
                       range: param_range.clone(),
                       rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
                     };
+                    // V: lets get rid of rune_to_explicit_type.
                     rune_to_explicit_type.push((
                       kind_rune.rune.clone(),
                       ITemplataType::KindTemplataType(KindTemplataType {}),
                     ));
-                    pattern_s.kind_rune = Some(kind_rune.clone());
-                    (pattern_s, Some(kind_rune))
+                    let self_name = IVarNameS::CodeVarName(self.keywords.self_);
+                    (
+                      ParameterS::new(
+                        param_range.clone(),
+                        virtuality,
+                        false,
+                        self_name.clone(),
+                        kind_rune.clone(),
+                        kind_rune,
+                        self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+                        self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+                      ),
+                      None, // No synthesized_rune
+                      ExplicitParamExtras { range: param_range.clone(), abi_name: self_name, destructure: None },
+                    )
                   }
-                  Some(_) => (pattern_s, None),
+                  // A normal param, e.g. `foo(x int)`, `foo(&Ship)`, or `foo(Pair[a, b])`.
+                  (None, Some(pattern)) => {
+                    let mut pattern_lidb = lidb.child();
+
+                    // A param keeps its real name; only an anonymous or ignored param (e.g.
+                    // `Pair[a, b]` or `_ Pair`) needs a synthetic DesugaredParamName ABI slot.
+                    let name = match &pattern.destination {
+                      Some(destination) => match &destination.decl {
+                        INameDeclarationP::LocalNameDeclaration(name_p) =>
+                          IVarNameS::CodeVarName(self.scout_arena.intern_str(name_p.str().as_str())),
+                        INameDeclarationP::ConstructingMemberNameDeclaration(name_p) =>
+                          IVarNameS::ConstructingMemberName(self.scout_arena.intern_str(name_p.str().as_str())),
+                        _ => IVarNameS::DesugaredParamName(param_range.begin.clone()),
+                      },
+                      None => IVarNameS::DesugaredParamName(param_range.begin.clone()),
+                    };
+
+                    // Per @PFVSZ, the param's type splits into its outer ref wraps (&/heap/etc)
+                    // and the value type (Lookup/Call/etc.). translate_signature_templex fills
+                    // both buckets. The destructure (if any) is a separate, body-level concern.
+                    let mut param_type_outer_ref_rules_vec: Vec<IRulexSR<'s>> = Vec::new();
+                    let mut param_value_type_rules_vec: Vec<IRulexSR<'s>> = Vec::new();
+                    let (full_type_rune, value_type_rune, synthesized) = match &pattern.templex {
+                      // A typed param, e.g. `foo(x &int)`.
+                      Some(type_p) => {
+                        let (full, inner) = translate_signature_templex(
+                          self.scout_arena,
+                          self.keywords,
+                          IEnvironmentS::FunctionEnvironment(function_environment.clone()),
+                          &mut pattern_lidb,
+                          &mut param_value_type_rules_vec,
+                          &mut param_type_outer_ref_rules_vec,
+                          default_region_rune.clone(),
+                          type_p,
+                        );
+                        (full, inner, None)
+                      }
+                      // An untyped param, e.g. a lambda `(a) => a`. Synthesize an implicit kind rune.
+                      None => {
+                        let kind_rune = RuneUsage {
+                          range: param_range.clone(),
+                          rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
+                        };
+                        rune_to_explicit_type.push((
+                          kind_rune.rune.clone(),
+                          ITemplataType::KindTemplataType(KindTemplataType {}),
+                        ));
+                        (kind_rune.clone(), kind_rune.clone(), Some(kind_rune))
+                      }
+                    };
+                    let type_outer_ref_rules = self.scout_arena.alloc_slice_from_vec(param_type_outer_ref_rules_vec);
+                    let value_type_rules = self.scout_arena.alloc_slice_from_vec(param_value_type_rules_vec);
+
+                    // Only a destructuring param gets a body-head let. Build its pattern once
+                    // here (shared with capture-gathering). It is typeless at the top: the
+                    // param's type rides in via load(name), and translate_pattern's rules land
+                    // in the let's own bucket, not a throwaway.
+                    let destructure = match &pattern.destructure {
+                      None => None,
+                      Some(destructure_p) => {
+                        let mut destructure_rules: Vec<IRulexSR<'s>> = Vec::new();
+                        let mut rune_to_explicit_type_for_destructure: HashMap<IRuneS<'s>, ITemplataType> =
+                          rune_to_explicit_type.iter().cloned().collect();
+                        let mut inner_atoms: Vec<AtomSP<'s>> = Vec::new();
+                        for inner_pattern_p in destructure_p.patterns {
+                          let mut child_lidb = pattern_lidb.child();
+                          inner_atoms.push(translate_pattern(
+                            self.scout_arena,
+                            self.keywords,
+                            StackFrame {
+                              file: file_coordinate,
+                              name: function_declaration_name_for_env.clone(),
+                              parent_env: function_environment.clone(),
+                              maybe_parent: None,
+                              context_region: default_region_rune.clone(),
+                              pure_height: 0,
+                              locals: VariableDeclarations { vars: Vec::new() },
+                            },
+                            &mut child_lidb,
+                            &mut destructure_rules,
+                            &mut rune_to_explicit_type_for_destructure,
+                            inner_pattern_p,
+                          ));
+                        }
+                        for (rune, tyype) in rune_to_explicit_type_for_destructure {
+                          if !rune_to_explicit_type
+                            .iter()
+                            .any(|(existing_rune, _)| *existing_rune == rune)
+                          {
+                            rune_to_explicit_type.push((rune, tyype));
+                          }
+                        }
+                        let top_atom = AtomSP {
+                          range: param_range.clone(),
+                          name: None,
+                          kind_rune: None,
+                          destructure: Some(self.scout_arena.alloc_slice_from_vec(inner_atoms)),
+                        };
+                        Some((top_atom, self.scout_arena.alloc_slice_from_vec(destructure_rules)))
+                      }
+                    };
+
+                    (
+                      ParameterS::new(
+                        param_range.clone(),
+                        virtuality,
+                        false,
+                        name.clone(),
+                        full_type_rune,
+                        value_type_rune,
+                        type_outer_ref_rules,
+                        value_type_rules,
+                      ),
+                      synthesized,
+                      ExplicitParamExtras { range: param_range.clone(), abi_name: name, destructure },
+                    )
+                  }
+                  _ => panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_FORM_NOT_YET_IMPLEMENTED"),
                 }
-              }
-              _ => panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_FORM_NOT_YET_IMPLEMENTED"),
-            };
-            (
-              ParameterS::new(
-                param_range.clone(),
-                virtuality,
-                false,
-                pattern,
-              ),
-              synthesized_rune,
-            )
-      })
-      .collect::<Vec<(ParameterS<'s>, Option<RuneUsage<'s>>)>>();
+          })
+          .collect::<Vec<(ParameterS<'s>, Option<RuneUsage<'s>>, ExplicitParamExtras<'s>)>>();
     let mut explicit_params_s: Vec<ParameterS<'s>> = Vec::new();
     let mut explicit_params_synthesized_runes: Vec<RuneUsage<'s>> = Vec::new();
-    for (param_s, maybe_rune) in explicit_params_s_and_synthesized_runes {
+    let mut explicit_param_extras: Vec<ExplicitParamExtras<'s>> = Vec::new();
+    for (param_s, maybe_rune, extras) in explicit_params_s_and_synthesized_runes {
       explicit_params_s.push(param_s);
       if let Some(rune) = maybe_rune {
         explicit_params_synthesized_runes.push(rune);
       }
+      explicit_param_extras.push(extras);
     }
     // Untyped lambda params (from `(_) =>` or `(a, b) =>`) contribute their synthesized coord runes here so later
     // passes see a uniform FunctionS shape regardless of whether the user wrote `<T>` or an untyped param.
@@ -493,11 +574,17 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
             }
           }
         };
-        for explicit_param_s in &explicit_params_s {
-          let param_declarations = VariableDeclarations {
-            vars: get_parameter_captures(&explicit_param_s.pattern),
-          };
-          first_params = first_params.plus_plus(&param_declarations);
+        for extras in &explicit_param_extras {
+          let mut vars: Vec<VariableDeclarationS<'s>> = Vec::new();
+          // A real param name is itself a body-visible local; a synthetic ABI slot isn't.
+          if !matches!(extras.abi_name, IVarNameS::DesugaredParamName(_)) {
+            vars.push(VariableDeclarationS { name: extras.abi_name.clone() });
+          }
+          // A destructure contributes its inner names (its top atom is nameless).
+          if let Some((atom, _)) = &extras.destructure {
+            vars.extend(get_parameter_captures(atom));
+          }
+          first_params = first_params.plus_plus(&VariableDeclarations { vars });
         }
         Some(first_params)
       }
@@ -580,6 +667,21 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         range: Self::eval_range(file_coordinate, function.range),
         message: "Dont need abstract here".to_string(),
       }));
+    }
+    // extern/abstract/generated bodies have no block to prepend a LetSE into,
+    // so a param using destructure syntax has no place to go. Reject at postparse.
+    let body_is_block_less =
+      is_parent_interface || has_abstract_attr || has_extern_attr || has_builtin_attr;
+    if body_is_block_less {
+      for parser_param in params_p.iter() {
+        if let Some(pattern_pp) = &parser_param.pattern {
+          if pattern_pp.destructure.is_some() {
+            return Err(ICompileErrorS::ParamDestructureRequiresBody {
+              range: Self::eval_range(file_coordinate, parser_param.range),
+            });
+          }
+        }
+      }
     }
     let (body_s, variable_uses, total_params_s, extra_generic_params_from_body) = if is_parent_interface {
       (
@@ -687,21 +789,54 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         // Lambdas identifying runes are determined by their magic params.
         // See: Lambdas Dont Need Explicit Identifying Runes (LDNEIR)
         extra_generic_params_from_body.extend(magic_params.iter().map(|magic_param| {
-          let kind_rune = magic_param
-            .pattern
-            .kind_rune
-            .as_ref()
-            .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_MAGIC_PARAM_WITHOUT_COORD_RUNE"))
-            .clone();
           &*self.scout_arena.alloc(GenericParameterS {
-            range: magic_param.pattern.range.clone(),
-            rune: kind_rune,
+            range: magic_param.range.clone(),
+            rune: magic_param.full_type_rune.clone(),
             tyype: IGenericParameterTypeS::KindGenericParameterType(KindGenericParameterTypeS {}),
             default: None,
           })
         }));
         total_params_s.extend(magic_params);
       }
+      // Prepend a synthesized LetSE at the body head only for params that destructure.
+      // `<destructure> = <ParameterS.name>;`. A bare param needs no let: its real name is
+      // the binding. Only explicit user params can destructure (closure/magic never do),
+      // so we drive off explicit_param_extras.
+      let param_lets: Vec<&'s IExpressionSE<'s>> = explicit_param_extras.iter()
+        .filter_map(|extras| extras.destructure.as_ref().map(|(atom, rules)| {
+          let load_expr = self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
+            range: extras.range.clone(),
+            name: extras.abi_name.clone(),
+            target_ownership: LoadAsP::Use,
+          }));
+          &*self.scout_arena.alloc(IExpressionSE::Let(LetSE {
+            range: extras.range.clone(),
+            rules,
+            pattern: *atom,
+            expr: load_expr,
+          }))
+        }))
+        .collect();
+      let body_s = if !param_lets.is_empty() {
+        // Build combined expr: [param_lets..., original body block expr].
+        let mut all_exprs: Vec<&'s IExpressionSE<'s>> = param_lets;
+        all_exprs.push(body_s.block.expr);
+        let combined = self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
+          exprs: self.scout_arena.alloc_slice_from_vec(all_exprs),
+        }));
+        let new_block = self.scout_arena.alloc(BlockSE {
+          range: body_s.block.range.clone(),
+          locals: body_s.block.locals,
+          expr: combined,
+        });
+        &*self.scout_arena.alloc(BodySE {
+          range: body_s.range.clone(),
+          closured_names: body_s.closured_names,
+          block: new_block,
+        })
+      } else {
+        body_s
+      };
       (
         &*self.scout_arena.alloc(IBodyS::CodeBody(CodeBodyS { body: body_s })),
         variable_uses,
@@ -777,7 +912,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       &*self.scout_arena.alloc(
         FunctionS::new(
           Self::eval_range(file_coordinate, function.range),
-          function_name_ref,
+          *function_name_ref,
           self.scout_arena.alloc_slice_from_vec(func_attrs_s),
           self.scout_arena.alloc_slice_from_vec(generic_params),
           tyype,
@@ -853,21 +988,20 @@ fn create_closure_param(
       rune: closure_struct_region_rune,
     }),
   }));
-  let capture: CaptureS<'s> = CaptureS {
-    name: closure_param_name,
-    mutate: false,
-  };
-  let closure_pattern = AtomSP::<'s> {
-    range: closure_param_range.clone(),
-    name: Some(capture),
-    kind_rune: Some(closure_param_type_rune),
-    destructure: None,
-  };
+  // The closure param's outer-ref / value-type rules stay in the function-level
+  // `rule_builder` (the BorrowRef is emitted at closure_param_range in the caller above),
+  // so the closure param's per-param rule slices are empty and
+  // full_type_rune == value_type_rune == the type rune. It keeps its real name and never
+  // destructures, so it needs no body-head let.
   return ParameterS::new(
     closure_param_range.clone(),
     None,
     false,
-    closure_pattern,
+    closure_param_name,
+    closure_param_type_rune,
+    closure_param_type_rune,
+    self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+    self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
   );
 }
 
@@ -893,22 +1027,20 @@ fn create_magic_parameters(
         magic_param_rune.clone(),
         ITemplataType::KindTemplataType(KindTemplataType {}),
       ));
+      let magic_kind_rune_usage = RuneUsage {
+        range: magic_param_range.clone(),
+        rune: magic_param_rune,
+      };
+      // Magic params keep their real MagicParamName and never destructure, so no body-head let.
       ParameterS::new(
         magic_param_range.clone(),
         None,
         false,
-        AtomSP {
-          range: magic_param_range.clone(),
-          name: Some(CaptureS {
-            name: magic_param_name,
-            mutate: false,
-          }),
-          kind_rune: Some(RuneUsage {
-            range: magic_param_range,
-            rune: magic_param_rune,
-          }),
-          destructure: None,
-        },
+        magic_param_name,
+        magic_kind_rune_usage,
+        magic_kind_rune_usage,
+        self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+        self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
       )
     })
     .collect()

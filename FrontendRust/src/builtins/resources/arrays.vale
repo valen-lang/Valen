@@ -4,7 +4,7 @@ import v.builtins.drop.*;
 import v.builtins.panic.*;
 
 extern("vale_static_sized_array_len")
-func len<S Int, E>(arr &[#S]E) int;
+func len<S Int, E>(arr &StaticArray<S, E>) int;
 
 extern("vale_runtime_sized_array_new")
 func Array<E Ref>(size int) []E;
@@ -35,10 +35,10 @@ where func drop(E)void {
 }
 
 extern("vale_static_sized_array_drop_into")
-func drop_into<S Int, E, F>(arr [#S]E, consumer &F) void
+func drop_into<S Int, E, F>(arr StaticArray<S, E>, consumer &F) void
 where func(&F, E)void;
 
-func drop<S Int, E>(arr [#S]E) void
+func drop<S Int, E>(arr StaticArray<S, E>) void
 where func drop(E)void {
   drop_into(^arr, &{ ^_; });
 }

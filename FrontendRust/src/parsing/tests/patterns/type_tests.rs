@@ -38,27 +38,6 @@ fn ignoring_name() {
 }
 
 #[test]
-fn static_sized_array() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ [#3]MutableStruct");
-  let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
-  assert!(destination.mutate.is_none());
-  let ssa = cast!(
-    pattern.templex.as_ref().unwrap(),
-    ITemplexPT::StaticSizedArray
-  );
-  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element, "MutableStruct");
-  assert!(pattern.destructure.is_none());
-}
-
-#[test]
 fn runtime_sized_array() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -140,67 +119,6 @@ fn borrow_with_region() {
   let region = borrow_ref.region.as_ref().unwrap();
   assert_eq!(region.name.as_ref().unwrap().as_str(), "i");
   assert_templex_name(borrow_ref.inner, "MyStruct");
-  assert!(pattern.destructure.is_none());
-}
-
-#[test]
-fn static_sized_array_with_borrow() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ &[#3]MutableStruct");
-  let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
-  assert!(destination.mutate.is_none());
-  let borrow_ref = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::BorrowRef);
-  assert!(borrow_ref.region.is_none());
-  let ssa = cast!(borrow_ref.inner, ITemplexPT::StaticSizedArray);
-  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element, "MutableStruct");
-  assert!(pattern.destructure.is_none());
-}
-
-#[test]
-fn static_sized_array_with_double_borrow() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ &&[#3]MutableStruct");
-  let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
-  assert!(destination.mutate.is_none());
-  let outer = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::BorrowRef);
-  assert!(outer.region.is_none());
-  let inner = cast!(outer.inner, ITemplexPT::BorrowRef);
-  assert!(inner.region.is_none());
-  let ssa = cast!(inner.inner, ITemplexPT::StaticSizedArray);
-  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element, "MutableStruct");
-  assert!(pattern.destructure.is_none());
-}
-
-#[test]
-fn static_sized_array_with_weak() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ weak [#3]MutableStruct");
-  let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
-  assert!(destination.mutate.is_none());
-  let weak_ref = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::WeakRef);
-  let ssa = cast!(weak_ref.inner, ITemplexPT::StaticSizedArray);
-  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
 

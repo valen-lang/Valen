@@ -20,7 +20,6 @@ pub enum ITemplexPT<'p> {
   HeapOwnRef(HeapOwnRefPT<'p>),
   Pack(PackPT<'p>),
   Func(FuncPT<'p>),
-  StaticSizedArray(StaticSizedArrayPT<'p>),
   RuntimeSizedArray(RuntimeSizedArrayPT<'p>),
   String(StringPT<'p>),
   TypedRune(TypedRunePT<'p>),
@@ -42,7 +41,6 @@ impl ITemplexPT<'_> {
       ITemplexPT::HeapOwnRef(r) => r.range,
       ITemplexPT::Pack(p) => p.range,
       ITemplexPT::Func(r) => r.range,
-      ITemplexPT::StaticSizedArray(r) => r.range,
       ITemplexPT::RuntimeSizedArray(r) => r.range,
       ITemplexPT::String(r) => r.range,
       ITemplexPT::TypedRune(r) => r.range,
@@ -159,14 +157,6 @@ pub struct FuncPT<'p> {
   pub params_range: RangeL,
   pub parameters: &'p [&'p ITemplexPT<'p>],
   pub return_type: &'p ITemplexPT<'p>,
-}
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct StaticSizedArrayPT<'p> {
-  pub range: RangeL,
-  pub size: &'p ITemplexPT<'p>,
-  pub element: &'p ITemplexPT<'p>,
 }
 
 
