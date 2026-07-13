@@ -74,7 +74,8 @@ where 's: 't,
     ) -> Result<PrototypeTemplataT<'s, 't>, ICompileErrorT<'s, 't>> {
         // Check preconditions
         let rued_env_as_i = IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(rued_env);
-        for template_param in function1.rune_to_type.keys() {
+        for generic_param in function1.generic_params {
+            let template_param = &generic_param.rune.rune;
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune: *template_param }));
             let mut lookup_filter = HashSet::default();
@@ -138,7 +139,8 @@ where 's: 't,
         //       Set(TemplataLookupContext, ExpressionLookupContext)).nonEmpty)
         // })
         let rued_env_as_i: IInDenizenEnvironmentT<'s, 't> = IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(rued_env);
-        for rune in function1.rune_to_type.keys() {
+        for generic_param in function1.generic_params {
+            let rune = &generic_param.rune.rune;
             // vassert(runedEnv.lookupNearestWithImpreciseName(
             //   interner.intern(RuneNameS(rune)), Set(TemplataLookupContext, ExpressionLookupContext)).nonEmpty)
             let imprecise_name = self.scout_arena.intern_imprecise_name(
@@ -363,7 +365,8 @@ where 's: 't,
         function1: &FunctionS<'s>,
     ) -> Result<PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
         // Check preconditions
-        for (template_param, _) in function1.rune_to_type.iter() {
+        for generic_param in function1.generic_params {
+            let template_param = &generic_param.rune.rune;
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune: *template_param }));
             let mut lookup_filter = HashSet::default();

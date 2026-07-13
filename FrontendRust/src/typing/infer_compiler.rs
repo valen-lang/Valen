@@ -155,7 +155,7 @@ where 's: 't,
                         Some(default_rules) => {
                             let default_rule_vec: Vec<IRulexSR<'s>> = default_rules.rules.iter().map(|r| **r).collect();
                             let new_runes: crate::utils::fx::IndexSet<IRuneS<'s>> =
-                                default_rules.rune_to_type.iter().map(|(k, _)| *k).collect();
+                                std::iter::once(default_rules.result_rune).collect();
                             solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
                                 false, vec![], IndexMap::default(), default_rule_vec, new_runes
                             ).unwrap();

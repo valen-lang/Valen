@@ -10,7 +10,6 @@ use crate::postparsing::ast::{ParameterS, IBodyS, AbstractBodyS};
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
 use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
 use crate::utils::range::{RangeS, CodeLocationS};
-use crate::utils::fx::HashMap;
 use crate::postparsing::names::IImpreciseNameValS;
 use crate::postparsing::names::CodeNameS;
 use crate::postparsing::names::TopLevelCitizenDeclarationNameS;
@@ -36,19 +35,14 @@ where 's: 't,
         let mut rules: Vec<IRulexSR<'s>> = Vec::new();
         // Use the same rules as the original interface, see MDSFONARFO.
         for r in interface_a.rules.iter() { rules.push(*r); }
-        let mut rune_to_type: HashMap<_, _> = HashMap::default();
-        // Use the same runes as the original interface, see MDSFONARFO.
-        for (k, v) in interface_a.rune_to_type.iter() { rune_to_type.insert(*k, *v); }
 
         let void_kind_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidKindRune(MacroVoidKindRuneS {}));
-        rune_to_type.insert(void_kind_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
         rules.push(IRulexSR::Lookup(LookupSR {
             range: range(-1672147),
             rune: use_(-64002, void_kind_rune_s),
             name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
         }));
         let void_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidCoordRune(MacroVoidCoordRuneS {}));
-        rune_to_type.insert(void_coord_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
         rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
             range: range(-1672147),
             coord_rune: use_(-64002, void_coord_rune_s),
@@ -60,7 +54,6 @@ where 's: 't,
         let interface_imprecise_name = interface_citizen_name.get_imprecise_name(self.scout_arena);
 
         let self_kind_template_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroSelfKindTemplateRune(MacroSelfKindTemplateRuneS {}));
-        rune_to_type.insert(self_kind_template_rune_s, ITemplataType::TemplateTemplataType(interface_a.tyype));
         rules.push(IRulexSR::Lookup(LookupSR {
             range: interface_name_range,
             rune: RuneUsage { range: interface_name_range, rune: self_kind_template_rune_s },
@@ -68,7 +61,6 @@ where 's: 't,
         }));
 
         let self_kind_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroSelfKindRune(MacroSelfKindRuneS {}));
-        rune_to_type.insert(self_kind_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
         let generic_param_runes: Vec<_> = interface_a.generic_params.iter().map(|p| p.rune).collect();
         let generic_param_runes_slice = self.scout_arena.alloc_slice_copy(&generic_param_runes);
         rules.push(IRulexSR::Call(CallSR {
@@ -79,7 +71,6 @@ where 's: 't,
         }));
 
         let self_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroSelfCoordRune(MacroSelfCoordRuneS {}));
-        rune_to_type.insert(self_coord_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
         rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
             range: interface_name_range,
             coord_rune: RuneUsage { range: interface_name_range, rune: self_coord_rune_s },
@@ -91,7 +82,7 @@ where 's: 't,
 
         let function_templata_type = TemplateTemplataType {
             param_types: self.scout_arena.alloc_slice_from_vec(
-                function_generic_parameters.iter().map(|p| *rune_to_type.get(&p.rune.rune).unwrap()).collect()
+                function_generic_parameters.iter().map(|p| p.tyype.tyype()).collect()
             ),
             return_type: self.scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
         };
@@ -100,16 +91,13 @@ where 's: 't,
             name: self.keywords.drop,
             code_location: interface_a.name.range.begin,
         });
-        let mut rune_to_type_map = self.scout_arena.alloc_index_map();
-        for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }
         let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
         let drop_function_a = self.scout_arena.alloc(FunctionS::new(
             interface_a.range,
             name_s,
             &[],
-            function_templata_type,
             function_generic_parameters,
-            rune_to_type_map,
+            function_templata_type,
             self.scout_arena.alloc_slice_from_vec(vec![ParameterS::new(
                 range(-1340),
                 Some(AbstractSP { range: range(-64002), is_internal_method: true }),

@@ -1053,7 +1053,7 @@ where 's: 't,
             scout_arena: self.scout_arena,
         }
     }
-    
+
 }
 
 

@@ -2308,7 +2308,6 @@ where 's: 't,
         let name_s = function_s.name;
         let attributes_s = function_s.attributes;
         let identifying_runes_s = function_s.generic_params;
-        let rune_to_explicit_type = &function_s.rune_to_predicted_type;
         let tyype = &function_s.tyype;
         let params_s = function_s.params;
         let maybe_ret_coord_rune = &function_s.maybe_ret_kind_rune;
@@ -2316,7 +2315,7 @@ where 's: 't,
         let body_s = function_s.body;
 
         let mut rune_s_to_pre_known_type_a: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            rune_to_explicit_type.iter().map(|(k, v)| (*k, v.clone())).collect();
+            identifying_runes_s.iter().map(|gp| (gp.rune.rune, gp.tyype.tyype())).collect();
         for param in params_s {
             if let Some(ref coord_rune) = param.pattern.kind_rune {
                 rune_s_to_pre_known_type_a.insert(coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
@@ -2373,13 +2372,12 @@ where 's: 't,
             range_s,
             name_s,
             self.scout_arena.alloc_slice_from_vec(attributes),
-            tyype.clone(),
             identifying_runes_s,
-            self.scout_arena.alloc_index_map_from_iter(rune_a_to_type.into_iter()),
+            tyype.clone(),
             params_s,
             maybe_ret_coord_rune.clone(),
             self.scout_arena.alloc_slice_from_vec(rule_builder),
-            *body_s,
+            body_s,
         ))
     }
 

@@ -71,7 +71,9 @@ where 's: 't,
             context_region,
         };
         let header_rune_to_type_map: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            struct_a.header_rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+            self.derive_rune_to_type(
+                original_calling_env, call_range.to_vec(),
+                struct_a.generic_params, struct_a.header_rules, IndexMap::default());
 
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
@@ -140,13 +142,15 @@ where 's: 't,
             .collect();
         let defaults_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             interface_a.generic_params.iter()
-                .filter_map(|gp| gp.default.as_ref())
-                .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
+                .filter_map(|gp| gp.default.as_ref().map(|d| (d.result_rune, gp.tyype.tyype())))
                 .collect();
+        let interface_rune_to_type = self.derive_rune_to_type(
+            original_calling_env, call_range.to_vec(),
+            interface_a.generic_params, interface_a.rules, IndexMap::default());
         let rune_to_type_for_prediction: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             runes_for_prediction.iter().map(|r|
                 (*r,
-                 interface_a.rune_to_type.get(r).copied()
+                 interface_rune_to_type.get(r).copied()
                     .unwrap_or_else(|| *defaults_rune_to_type.get(r).expect("rune not in runeToType or defaultsRuneToType")))
             ).collect();
 
@@ -216,13 +220,15 @@ where 's: 't,
             .collect();
         let defaults_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             struct_a.generic_params.iter()
-                .filter_map(|gp| gp.default.as_ref())
-                .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
+                .filter_map(|gp| gp.default.as_ref().map(|d| (d.result_rune, gp.tyype.tyype())))
                 .collect();
+        let header_rune_to_type = self.derive_rune_to_type(
+            original_calling_env, call_range.to_vec(),
+            struct_a.generic_params, struct_a.header_rules, IndexMap::default());
         let rune_to_type_for_prediction: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             runes_for_prediction.iter().map(|r|
                 (*r,
-                 struct_a.header_rune_to_type.get(r).copied()
+                 header_rune_to_type.get(r).copied()
                     .unwrap_or_else(|| *defaults_rune_to_type.get(r).expect("rune not in headerRuneToType or defaultsRuneToType")))
             ).collect();
 
@@ -298,7 +304,9 @@ where 's: 't,
             context_region,
         };
         let rune_to_type_map: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            interface_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+            self.derive_rune_to_type(
+                original_calling_env, call_range.to_vec(),
+                interface_a.generic_params, interface_a.rules, IndexMap::default());
 
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
@@ -358,13 +366,15 @@ where 's: 't,
         let outer_env = coutputs.get_outer_env_for_type(parent_ranges, *struct_template_id);
         let all_rules_s: Vec<IRulexSR<'s>> =
             struct_a.header_rules.iter().copied().chain(struct_a.member_rules.iter().copied()).collect();
-        let all_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            struct_a.header_rune_to_type.iter().chain(struct_a.members_rune_to_type.iter())
-                .map(|(k, v)| (*k, *v)).collect();
         let definition_rules: Vec<IRulexSR<'s>> =
             all_rules_s.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
         let mut all_ranges: Vec<RangeS<'s>> = vec![struct_a.range];
         all_ranges.extend_from_slice(parent_ranges);
+        // Use both member and header rules to figure out the types of all the runes.
+        let all_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+            self.derive_rune_to_type(
+                outer_env, all_ranges.clone(),
+                struct_a.generic_params, &all_rules_s, IndexMap::default());
         let outer_env_ienv = IEnvironmentT::from(outer_env);
         let envs = InferEnv {
             original_calling_env: outer_env,
@@ -473,12 +483,14 @@ where 's: 't,
         let interface_template_id = declaring_env.id().add_step(self.typing_interner, local_name);
         // We declare the interface's outer environment in the precompile stage instead of here because of MDATOEF.
         let outer_env = coutputs.get_outer_env_for_type(parent_ranges, *interface_template_id);
-        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            interface_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
         let definition_rules: Vec<IRulexSR<'s>> =
             interface_a.rules.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
         let mut all_ranges: Vec<RangeS<'s>> = vec![interface_a.range];
         all_ranges.extend_from_slice(parent_ranges);
+        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+            self.derive_rune_to_type(
+                outer_env, all_ranges.clone(),
+                interface_a.generic_params, interface_a.rules, IndexMap::default());
         let outer_env_ienv = IEnvironmentT::from(outer_env);
         let envs = InferEnv {
             original_calling_env: outer_env,

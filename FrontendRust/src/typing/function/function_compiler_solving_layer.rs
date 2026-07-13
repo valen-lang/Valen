@@ -108,7 +108,9 @@ where 's: 't,
         let initial_knowns = self.assemble_known_templatas(function, already_specified_template_args);
 
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            function.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+            self.derive_rune_to_type(
+                original_calling_env, call_range.to_vec(),
+                function.generic_params, function.rules, IndexMap::default());
 
         let call_range_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(call_range);
 
@@ -215,7 +217,9 @@ where 's: 't,
         let initial_knowns = self.assemble_known_templatas(function, explicit_template_args);
 
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            function.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+            self.derive_rune_to_type(
+                original_calling_env, call_range.to_vec(),
+                function.generic_params, function.rules, IndexMap::default());
 
         let call_range_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(call_range);
 
@@ -403,7 +407,9 @@ where 's: 't,
             context_region,
         };
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            function.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+            self.derive_rune_to_type(
+                calling_env, call_range.to_vec(),
+                function.generic_params, function.rules, IndexMap::default());
         let invocation_range = call_range;
         let initial_knowns: Vec<InitialKnown<'s, 't>> = {
             let mut v = self.assemble_known_templatas(function, explicit_template_args);
@@ -444,7 +450,7 @@ where 's: 't,
                                 match solver_state.commit_step::<ITypingPassSolverError>(
                                     false, vec![], IndexMap::default(),
                                     default_rules.rules.iter().map(|r| **r).collect(),
-                                    default_rules.rune_to_type.iter().map(|(k, _)| *k).collect()) {
+                                    std::iter::once(default_rules.result_rune).collect()) {
                                     Ok(()) => {}
                                     Err(_) => panic!("getOrDie"),
                                 };
@@ -533,7 +539,9 @@ where 's: 't,
             context_region: RegionT { region: IRegionT::Default },
         };
         let preliminary_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            function.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+            self.derive_rune_to_type(
+                calling_env, call_range.to_vec(),
+                function.generic_params, function.rules, IndexMap::default());
         let mut preliminary_solver_state =
             self.make_solver_state(
                 preliminary_envs,
@@ -679,9 +687,10 @@ where 's: 't,
             context_region: RegionT { region: IRegionT::Default },
         };
 
-        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> = function.rune_to_type.iter()
-            .map(|(k, v)| (*k, *v))
-            .collect();
+        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+            self.derive_rune_to_type(
+                near_env_as_in_denizen, range.clone(),
+                function.generic_params, function.rules, IndexMap::default());
         let mut solver = self.make_solver_state(
             envs, coutputs, &definition_rules, &rune_to_type, &range, &[], &[]);
 

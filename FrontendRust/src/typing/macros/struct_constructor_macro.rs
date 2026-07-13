@@ -21,7 +21,6 @@ use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS, IStructMemberS
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::names::names::IdValT;
-use crate::utils::fx::HashMap;
 use crate::postparsing::ast::FunctionS;
 use crate::postparsing::names::IFunctionDeclarationNameS;
 
@@ -40,7 +39,6 @@ where 's: 't,
             // Only one we have right now is tuple, which has its own special syntax for constructing.
             return vec![];
         }
-        let mut rune_to_type: HashMap<_, _> = HashMap::default();
         let mut rules: Vec<IRulexSR<'s>> = Vec::new();
 
         // We dont need these, they really just contain bounds and stuff, which we'd inherit from our parameters anyway.
@@ -53,23 +51,19 @@ where 's: 't,
         // So, we just include all the rules from the constructor's header.
         // If we ever need to drop that functionality (the T = Y nonsense) then we can probably take out the inheriting of
         // the header rules.
-        for (k, v) in struct_a.header_rune_to_type.iter() { rune_to_type.insert(*k, *v); }
         for r in struct_a.header_rules.iter() { rules.push(*r); }
 
         // We include these because they become our parameters. If a struct contains a Opt<^MyNode<T>> we want those two
         // CallSRs in our function rules too.
-        for (k, v) in struct_a.members_rune_to_type.iter() { rune_to_type.insert(*k, *v); }
         for r in struct_a.member_rules.iter() { rules.push(*r); }
 
         let struct_name_range = struct_a.name.range();
         let ret_rune_s = self.scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {}));
         let ret_rune = RuneUsage { range: struct_name_range, rune: ret_rune_s };
-        rune_to_type.insert(ret_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
 
         let struct_name_as_citizen: ICitizenDeclarationNameS<'s> = struct_a.name.into();
         let struct_generic_rune_s = self.scout_arena.intern_rune(IRuneValS::StructNameRune(StructNameRuneS { struct_name: struct_name_as_citizen }));
         let struct_generic_rune = RuneUsage { range: struct_name_range, rune: struct_generic_rune_s };
-        rune_to_type.insert(struct_generic_rune.rune, ITemplataType::TemplateTemplataType(struct_a.tyype));
 
         let struct_imprecise_name = struct_a.name.get_imprecise_name(self.scout_arena);
         rules.push(IRulexSR::Lookup(LookupSR {
@@ -83,7 +77,6 @@ where 's: 't,
             original_kind_rune: struct_generic_rune_s,
         }));
         let struct_kind_rune = RuneUsage { range: struct_name_range, rune: struct_kind_rune_s };
-        rune_to_type.insert(struct_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
         let generic_param_runes: Vec<_> = struct_a.generic_params.iter().map(|p| p.rune).collect();
         let generic_param_runes_slice = self.scout_arena.alloc_slice_copy(&generic_param_runes);
         rules.push(IRulexSR::Call(CallSR {
@@ -113,14 +106,7 @@ where 's: 't,
                 IStructMemberS::VariadicStructMember(_) => vec![],
             }
         }).collect();
-        for param in &params {
-            if let Some(coord_rune) = param.pattern.kind_rune {
-                rune_to_type.insert(coord_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
-            }
-        }
 
-        let mut rune_to_type_map = self.scout_arena.alloc_index_map();
-        for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }
         let params_slice = self.scout_arena.alloc_slice_from_vec(params);
         let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
         let function_a = self.scout_arena.alloc(FunctionS::new(
@@ -129,9 +115,8 @@ where 's: 't,
                 &*self.scout_arena.alloc(ConstructorNameS { tlcd: struct_name_as_citizen })
             ),
             &[],
-            TemplateTemplataType { param_types: struct_a.tyype.param_types, return_type: self.scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})) },
             struct_a.generic_params,
-            rune_to_type_map,
+            TemplateTemplataType { param_types: struct_a.tyype.param_types, return_type: self.scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})) },
             params_slice,
             Some(ret_rune),
             rules_slice,

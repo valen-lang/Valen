@@ -23,6 +23,7 @@ use crate::postparsing::ast::*;
 use crate::interner::Interner;
 use crate::typing::infer_compiler::include_rule_in_call_site_solve;
 use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::itemplatatype::KindTemplataType;
 use crate::typing::env::environment::TemplatasStoreBuilder;
 use crate::typing::env::environment::child_of;
 use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
@@ -99,12 +100,19 @@ where 's: 't,
         let call_site_rules: Vec<IRulexSR<'s>> =
             impl_a.rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect();
 
-        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            impl_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
-
         let mut all_ranges: Vec<RangeS<'s>> = vec![impl_a.range];
         all_ranges.extend_from_slice(parent_ranges);
         let all_ranges_slice = self.typing_interner.alloc_slice_copy(&all_ranges);
+
+        // An impl's own struct/interface kind runes live outside its generic-param list,
+        // hand them in as initially known types.
+        let mut impl_self_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
+        impl_self_runes.insert(impl_a.struct_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
+        impl_self_runes.insert(impl_a.interface_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
+        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+            self.derive_rune_to_type(
+                calling_env, all_ranges.clone(),
+                impl_a.user_specified_identifying_runes, impl_a.rules, impl_self_runes);
 
         let original_calling_env = calling_env;
         let envs = InferEnv {
@@ -173,12 +181,20 @@ where 's: 't,
         let call_site_rules: Vec<IRulexSR<'s>> =
             impl_a.rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect();
 
-        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            impl_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
-
         let mut all_ranges: Vec<RangeS<'s>> = vec![impl_a.range];
         all_ranges.extend_from_slice(parent_ranges);
+        let all_ranges_for_derive = all_ranges.clone();
         let all_ranges_slice = self.typing_interner.alloc_slice_from_vec(all_ranges);
+
+        // An impl's own struct/interface kind runes live outside its generic-param list,
+        // hand them in as initially known types.
+        let mut impl_self_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
+        impl_self_runes.insert(impl_a.struct_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
+        impl_self_runes.insert(impl_a.interface_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
+        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+            self.derive_rune_to_type(
+                calling_env, all_ranges_for_derive,
+                impl_a.user_specified_identifying_runes, impl_a.rules, impl_self_runes);
 
         let original_calling_env = calling_env;
         let envs = InferEnv {
@@ -232,8 +248,15 @@ where 's: 't,
         let impl_outer_env_iden: IInDenizenEnvironmentT<'s, 't> =
             IInDenizenEnvironmentT::Citizen(impl_outer_env);
 
+        // An impl's own struct/interface kind runes live outside its generic-param list,
+        // hand them in as initially known types.
+        let mut impl_self_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
+        impl_self_runes.insert(impl_a.struct_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
+        impl_self_runes.insert(impl_a.interface_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            impl_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+            self.derive_rune_to_type(
+                impl_outer_env_iden, vec![impl_a.range],
+                impl_a.user_specified_identifying_runes, impl_a.rules, impl_self_runes);
 
         let impl_placeholders: Vec<InitialKnown<'s, 't>> =
             impl_a.generic_params.iter().enumerate().map(|(index, generic_param)| {
