@@ -185,7 +185,6 @@ impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
     sanity_check: bool,
     env: &E,
     range: Vec<RangeS<'s>>,
-    predicting: bool,
     rules_s: &[IRulexSR<'s>],
     additional_runes: &[IRuneS<'s>],
     expect_complete_solve: bool,
@@ -194,7 +193,7 @@ impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
     IndexMap<IRuneS<'s>, ITemplataType<'s>>,
     RuneTypeSolveError<'s>,
   > {
-    solve_rune_type(self.scout_arena, sanity_check, env, range, predicting, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
+    solve_rune_type(self.scout_arena, sanity_check, env, range, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
   }
   
 }
@@ -207,18 +206,13 @@ fn get_runes_rune_type<'s>(
 
 
 fn get_puzzles_rune_type<'s>(
-  predicting: bool,
   rule: &IRulexSR<'s>,
 ) -> Vec<Vec<IRuneS<'s>>> {
 
   match rule {
     IRulexSR::Equals(x) => vec![vec![x.left.rune.clone()], vec![x.right.rune.clone()]],
     IRulexSR::Lookup(_x) => {
-      if predicting {
-        vec![]
-      } else {
-        vec![vec![]]
-      }
+      vec![vec![]]
     }
     // IRulexSR::MaybeCoercingLookup(x) => {
       // if predicting {
@@ -228,11 +222,7 @@ fn get_puzzles_rune_type<'s>(
       // }
     // }
     IRulexSR::RuneParentEnvLookup(x) => {
-      if predicting {
-        vec![]
-      } else {
-        vec![vec![x.rune.rune.clone()]]
-      }
+      vec![vec![x.rune.rune.clone()]]
     }
     // IRulexSR::MaybeCoercingCall(x) => {
       // vec![vec![x.result_rune.rune.clone(), x.template_rune.rune.clone()]]
@@ -526,7 +516,6 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   sanity_check: bool,
   env: &E,
   range: Vec<RangeS<'s>>,
-  predicting: bool,
   rules_s: &[IRulexSR<'s>],
   additional_runes: &[IRuneS<'s>],
   expect_complete_solve: bool,
@@ -537,11 +526,9 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
 > {
 
 
-  // For the non-predicting case, iterate over LookupSR/MaybeCoercingLookupSR rules and pre-compute types via env.lookup.
+  // Iterate over LookupSR rules and pre-compute types via env.lookup.
   // For now, with no rules in the simple test case, this is empty.
-  let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = if predicting {
-    IndexMap::default()
-  } else {
+  let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = {
     let mut map = IndexMap::default();
     for rule in rules_s {
       match rule {
@@ -654,11 +641,10 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   }
   let solver_runes: Vec<IRuneS<'s>> = all_runes_set.into_iter().collect();
 
-  let predicting_copy = predicting;
   let mut solver_state = make_solver_state(
     sanity_check,
     false,
-    Box::new(move |rule: &IRulexSR<'s>| get_puzzles_rune_type(predicting_copy, rule)),
+    Box::new(move |rule: &IRulexSR<'s>| get_puzzles_rune_type(rule)),
     &get_runes_rune_type,
     rules_s.to_vec(),
     initially_known_runes,
