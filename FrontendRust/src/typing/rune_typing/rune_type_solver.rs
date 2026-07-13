@@ -3,7 +3,7 @@
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
 use crate::postparsing::ast::GenericParameterS;
-use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
+use crate::postparsing::rules::rules::{BorrowRefSR, HeapOwnRefSR, IRulexSR, KindListSR, RuneUsage, ShareRefSR, WeakRefSR};
 use crate::scout_arena::ScoutArena;
 use crate::solver::{FailedSolve, ISolverError, SimpleSolverState, SolveIncomplete, RuleError, make_solver_state};
 use crate::utils::range::RangeS;
@@ -180,7 +180,7 @@ pub struct RuneTypeSolver<'s, 'ctx> {
 
 
 impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
-  pub fn solve_rune_type<E: IRuneTypeSolverEnv<'s>>(
+  pub fn solve_rune_types<E: IRuneTypeSolverEnv<'s>>(
     &self,
     sanity_check: bool,
     env: &E,
@@ -193,22 +193,21 @@ impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
     IndexMap<IRuneS<'s>, ITemplataType<'s>>,
     RuneTypeSolveError<'s>,
   > {
-    solve_rune_type(self.scout_arena, sanity_check, env, range, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
+    solve_rune_types(self.scout_arena, sanity_check, env, range, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
   }
   
 }
 
-fn get_runes_rune_type<'s>(
+fn get_rune_typing_runes<'s>(
   rule: &IRulexSR<'s>,
 ) -> Vec<IRuneS<'s>> {
   rule.rune_usages().iter().map(|ru| ru.rune.clone()).collect()
 }
 
 
-fn get_puzzles_rune_type<'s>(
+fn get_rune_typing_puzzles<'s>(
   rule: &IRulexSR<'s>,
 ) -> Vec<Vec<IRuneS<'s>>> {
-
   match rule {
     IRulexSR::Equals(x) => vec![vec![x.left.rune.clone()], vec![x.right.rune.clone()]],
     IRulexSR::Lookup(_x) => {
@@ -244,9 +243,22 @@ fn get_puzzles_rune_type<'s>(
     IRulexSR::Literal(_) => vec![vec![]],
     // IRulexSR::Augment(_) => vec![vec![]],
     // IRulexSR::RefListCompoundMutability(_) => vec![vec![]],
-    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in rune_type get_puzzles"),
-    // IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type get_puzzles"),
-    // IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in rune_type get_puzzles"),
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in get_rune_typing_puzzles"),
+    // IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in get_rune_typing_puzzles"),
+    // IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in get_rune_typing_puzzles"),
+    IRulexSR::KindList(_) => vec![vec![]],
+    IRulexSR::BorrowRef(BorrowRefSR { result_rune, inner_rune, .. }) => {
+      vec![vec![result_rune.rune.clone()], vec![inner_rune.rune.clone()]]
+    }
+    IRulexSR::HeapOwnRef(HeapOwnRefSR { result_rune, inner_rune, .. }) => {
+      vec![vec![result_rune.rune.clone()], vec![inner_rune.rune.clone()]]
+    }
+    IRulexSR::ShareRef(ShareRefSR { result_rune, inner_rune, .. }) => {
+      vec![vec![result_rune.rune.clone()], vec![inner_rune.rune.clone()]]
+    }
+    IRulexSR::WeakRef(WeakRefSR { result_rune, inner_rune, .. }) => {
+      vec![vec![result_rune.rune.clone()], vec![inner_rune.rune.clone()]]
+    }
   }
 }
 
@@ -438,6 +450,65 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     // IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type solve_rule"),
     IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in rune_type solve_rule"),
     // IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in rune_type solve_rule"),
+    IRulexSR::KindList(KindListSR { result_rune, members, .. }) => {
+      let mut conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = members.iter()
+        .map(|m| (m.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})))
+        .collect();
+      conclusions.insert(
+        result_rune.rune.clone(),
+        ITemplataType::PackTemplataType(PackTemplataType {
+          element_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+        }));
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
+    }
+    IRulexSR::BorrowRef(BorrowRefSR { result_rune, inner_rune, region_rune, .. }) => {
+      let mut conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = [
+        (result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        (inner_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+      ].into_iter().collect();
+      if let Some(region_rune) = region_rune {
+        conclusions.insert(region_rune.rune.clone(), ITemplataType::RegionTemplataType(RegionTemplataType {}));
+      }
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(
+          false,
+          vec![rule_index],
+          conclusions,
+          vec![],
+          IndexSet::default())
+    }
+    IRulexSR::HeapOwnRef(HeapOwnRefSR { result_rune, inner_rune, .. }) => {
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(
+        false,
+        vec![rule_index],
+        [
+          (result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+          (inner_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        ].into_iter().collect(),
+        vec![],
+        IndexSet::default())
+    }
+    IRulexSR::ShareRef(ShareRefSR { result_rune, inner_rune, .. }) => {
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(
+        false,
+        vec![rule_index],
+        [
+          (result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+          (inner_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        ].into_iter().collect(),
+        vec![],
+        IndexSet::default())
+    }
+    IRulexSR::WeakRef(WeakRefSR { result_rune, inner_rune, .. }) => {
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(
+        false,
+        vec![rule_index],
+        [
+          (result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+          (inner_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        ].into_iter().collect(),
+        vec![],
+        IndexSet::default())
+    }
   }
 }
 
@@ -477,7 +548,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
         // (ITemplataType::KindTemplataType(_), ITemplataType::KindTemplataType(_)) => {} // Will convert, so is fine
         (ITemplataType::TemplateTemplataType(tt), ITemplataType::KindTemplataType(_))
             if tt.param_types.is_empty()
-                && matches!(tt.return_type, ITemplataType::KindTemplataType(_) | ITemplataType::KindTemplataType(_)) => {
+                && matches!(tt.return_type, ITemplataType::KindTemplataType(_)) => {
           // Then it's an implicit call.
           match check_generic_call(vec![_range.clone()], &[], &[]) {
             Ok(()) => {},
@@ -511,7 +582,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
 }
 
 
-pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
+pub fn solve_rune_types<'s, E: IRuneTypeSolverEnv<'s>>(
   scout_arena: &ScoutArena<'s>,
   sanity_check: bool,
   env: &E,
@@ -644,10 +715,10 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   let mut solver_state = make_solver_state(
     sanity_check,
     false,
-    Box::new(move |rule: &IRulexSR<'s>| get_puzzles_rune_type(rule)),
-    &get_runes_rune_type,
-    rules_s.to_vec(),
-    initially_known_runes,
+    Box::new(move |rule: &IRulexSR<'s>| get_rune_typing_puzzles(rule)),
+    &get_rune_typing_runes,
+    rules_s,
+    &initially_known_runes,
     solver_runes,
   );
 

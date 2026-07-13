@@ -6,7 +6,7 @@ use crate::postparsing::ast::{LocationInDenizen};
 use crate::postparsing::names::*;
 use crate::postparsing::rules::rules::*;
 use crate::postparsing::itemplatatype::ITemplataType;
-use crate::typing::rune_typing::rune_type_solver::{RuneTypeSolveError, solve_rune_type, IRuneTypeSolverEnv, IRuneTypeSolverLookupResult, IRuneTypingLookupFailedError};
+use crate::typing::rune_typing::rune_type_solver::{RuneTypeSolveError, solve_rune_types, IRuneTypeSolverEnv, IRuneTypeSolverLookupResult, IRuneTypingLookupFailedError};
 use crate::postparsing::*;
 use crate::solver::solver::FailedSolve;
 use crate::typing::ast::ast::*;
@@ -334,7 +334,7 @@ where 's: 't,
                         v.extend(receiving_rune_to_explicit_template_arg_rune.iter().map(|(_, callsite_rune)| callsite_rune.rune));
                         v
                     };
-                    match solve_rune_type(
+                    match solve_rune_types(
                         self.scout_arena,
                         self.opts.global_options.sanity_check,
                         &rune_type_solve_env,

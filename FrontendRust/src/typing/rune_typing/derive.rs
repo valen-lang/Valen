@@ -30,7 +30,7 @@ where 's: 't,
             generic_params.iter().map(|gp| gp.rune.rune).collect();
         let env = self.create_rune_type_solver_env(parent_env);
         let solver = RuneTypeSolver { scout_arena: self.scout_arena };
-        match solver.solve_rune_type(
+        match solver.solve_rune_types(
             self.opts.global_options.sanity_check,
             &env,
             ranges,

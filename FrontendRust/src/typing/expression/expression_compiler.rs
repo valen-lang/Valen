@@ -48,7 +48,7 @@ use crate::postparsing::names::IRuneValS;
 use crate::postparsing::names::SelfRuneS;
 use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
 use crate::postparsing::rules::rules::RuneUsage;
-use crate::typing::rune_typing::rune_type_solver::solve_rune_type;
+use crate::typing::rune_typing::rune_type_solver::solve_rune_types;
 use crate::typing::names::names::RuneNameT;
 use std::iter::once;
 use std::marker::PhantomData;
@@ -618,7 +618,7 @@ where 's: 't,
                 let range_list: Vec<RangeS<'s>> =
                     once(let_se.range).chain(parent_ranges.iter().copied()).collect();
                 let rune_to_type =
-                    solve_rune_type(
+                    solve_rune_types(
                         self.scout_arena,
                         self.opts.global_options.sanity_check,
                         &rune_type_solve_env,
@@ -2332,7 +2332,7 @@ where 's: 't,
         let mut range_list = vec![range_s];
         range_list.extend_from_slice(parent_ranges);
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
-            match rune_type_solver.solve_rune_type(
+            match rune_type_solver.solve_rune_types(
                 self.opts.global_options.sanity_check,
                 &rune_type_solve_env,
                 range_list.clone(),

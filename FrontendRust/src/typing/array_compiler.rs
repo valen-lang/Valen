@@ -19,7 +19,7 @@ use crate::postparsing::rules::rules::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::names::names::*;
 use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::typing::rune_typing::rune_type_solver::solve_rune_type;
+use crate::typing::rune_typing::rune_type_solver::solve_rune_types;
 use crate::typing::infer_compiler::{CompleteResolveSolve, InferEnv, InitialKnown};
 use crate::typing::templata::templata::expect_integer;
 use crate::utils::fx::HashSet;
@@ -63,7 +63,7 @@ where 's: 't,
             initially_known_runes.insert(rune, ITemplataType::KindTemplataType(KindTemplataType {}));
         }
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
-            solve_rune_type(
+            solve_rune_types(
                 self.scout_arena,
                 self.opts.global_options.sanity_check,
                 &rune_typing_env,
@@ -184,7 +184,7 @@ where 's: 't,
             initially_known_runes.insert(rune, ITemplataType::KindTemplataType(KindTemplataType {}));
         }
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
-            solve_rune_type(
+            solve_rune_types(
                 self.scout_arena,
                 self.opts.global_options.sanity_check,
                 &rune_typing_env,
@@ -357,9 +357,9 @@ where 's: 't,
         if let Some(rune) = maybe_element_type_rune_a {
             initially_known_runes.insert(rune, ITemplataType::KindTemplataType(KindTemplataType {}));
         }
-        // Note: Rust solve_rune_type doesn't accept useOptimizedSolver (pre-existing API difference)
+        // Note: Rust solve_rune_types doesn't accept useOptimizedSolver (pre-existing API difference)
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
-            solve_rune_type(
+            solve_rune_types(
                 self.scout_arena,
                 self.opts.global_options.sanity_check,
                 &rune_typing_env,
