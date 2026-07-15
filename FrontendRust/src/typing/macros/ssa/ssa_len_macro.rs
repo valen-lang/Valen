@@ -18,16 +18,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn generate_function_body_ssa_len(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionS<'s>>,
-        param_coords: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      origin_function: Option<&FunctionS<'s>>,
+      param_coords: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
         let header = FunctionHeaderT {
             id: env.id,
@@ -54,7 +54,7 @@ where 's: 't,
             source_expr: ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                 value: len,
                 bits: 32,
-                region: RegionT { region: RegionT::Default },
+                region: RegionT::Default,
             })),
         }));
         let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {

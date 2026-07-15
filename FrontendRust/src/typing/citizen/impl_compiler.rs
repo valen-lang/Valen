@@ -120,7 +120,7 @@ where 's: 't,
             parent_ranges: all_ranges_slice,
             call_location,
             self_env: IEnvironmentT::from(IInDenizenEnvironmentT::Citizen(outer_env)),
-            context_region: RegionT { region: RegionT::Default },
+            context_region: RegionT::Default,
         };
         let mut solver_state = self.make_solver_state(
             envs, coutputs, &call_site_rules, &rune_to_type, all_ranges_slice, initial_knowns);
@@ -202,7 +202,7 @@ where 's: 't,
             parent_ranges: all_ranges_slice,
             call_location,
             self_env: IEnvironmentT::from(IInDenizenEnvironmentT::Citizen(outer_env)),
-            context_region: RegionT { region: RegionT::Default },
+            context_region: RegionT::Default,
         };
         let mut solver_state = self.make_solver_state(
             envs, coutputs, &call_site_rules, &rune_to_type, all_ranges_slice, initial_knowns);
@@ -274,7 +274,7 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![impl_a.range]),
             call_location,
             self_env: IEnvironmentT::from(impl_outer_env_iden),
-            context_region: RegionT { region: RegionT::Default },
+            context_region: RegionT::Default,
         };
 
         let complete_define_solve = match self.solve_for_defining(

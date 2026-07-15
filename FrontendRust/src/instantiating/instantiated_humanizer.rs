@@ -12,7 +12,7 @@ use crate::instantiating::ast::types::SharednessI;
 use crate::instantiating::ast::types::OwnershipI;
 use std::marker::PhantomData;
 use std::mem::discriminant;
-use crate::typing::types::types::{IRegionT, RegionT};
+use crate::typing::types::types::{IRegionT};
 
 
 pub fn humanize_templata<'s, 'i>(

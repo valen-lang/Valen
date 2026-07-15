@@ -87,7 +87,7 @@ where 's: 't,
         let params2 = self.assemble_function_params(rued_env_as_i, coutputs, call_range, &function1.params)?;
 
         let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_kind_rune.as_ref().map(|r| &r.rune));
-        let param_types: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
+        let param_types: Vec<KindT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
         let named_env: &'t FunctionEnvironmentT<'s, 't> =
             self.typing_interner.alloc(self.make_named_env(rued_env, &param_types, maybe_return_type));
         let banner = FunctionBannerT {
@@ -200,7 +200,7 @@ where 's: 't,
                 let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_kind_rune.as_ref().map(|r| &r.rune));
 
                 // val namedEnv = makeNamedEnv(runedEnv, params2.map(_.tyype), maybeReturnType)
-                let param_types_for_env: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
+                let param_types_for_env: Vec<KindT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
                 let named_env = self.make_named_env(rued_env, &param_types_for_env, maybe_return_type);
 
                 // coutputs.declareFunctionInnerEnv(functionId, namedEnv)
@@ -228,7 +228,7 @@ where 's: 't,
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
         params1: &[ParameterS<'s>],
-    ) -> Vec<CoordT<'s, 't>> {
+    ) -> Vec<KindT<'s, 't>> {
         // params1.map(param1 => {
         //   val CoordTemplataT(coord) =
         //     env.lookupNearestWithImpreciseName(
@@ -311,7 +311,7 @@ where 's: 't,
         &self,
         near_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
         maybe_ret_coord_rune: Option<&IRuneS<'s>>,
-    ) -> Option<CoordT<'s, 't>> {
+    ) -> Option<KindT<'s, 't>> {
         // maybeRetCoordRune.map(retCoordRuneA => {
         //   val retCoordRune = (retCoordRuneA)
         //   nearEnv.lookupNearestWithImpreciseName(interner.intern(RuneNameS(retCoordRune)), Set(TemplataLookupContext)) match {
@@ -394,10 +394,10 @@ where 's: 't,
 
 
     pub fn assemble_name(
-        &self,
-        template_name: &IdT<'s, 't>,
-        template_args: &[ITemplataT<'s, 't>],
-        param_types: &[CoordT<'s, 't>],
+      &self,
+      template_name: &IdT<'s, 't>,
+      template_args: &[ITemplataT<'s, 't>],
+      param_types: &[KindT<'s, 't>],
     ) -> IdT<'s, 't> {
         // templateName.copy(localName = templateName.localName.makeFunctionName(interner, keywords, templateArgs, paramTypes))
         let function_template_name: IFunctionTemplateNameT<'s, 't> =
@@ -413,10 +413,10 @@ where 's: 't,
 
 
     pub fn make_named_env(
-        &self,
-        rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
-        param_types: &[CoordT<'s, 't>],
-        maybe_return_type: Option<CoordT<'s, 't>>,
+      &self,
+      rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
+      param_types: &[KindT<'s, 't>],
+      maybe_return_type: Option<KindT<'s, 't>>,
     ) -> FunctionEnvironmentT<'s, 't> {
         // val BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
         //   globalEnv, parentEnv, templateId, templateArgs, templatas,

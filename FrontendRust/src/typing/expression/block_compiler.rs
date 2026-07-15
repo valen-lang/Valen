@@ -29,7 +29,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         block_1: &'s BlockSE<'s>,
-    ) -> (&'t BlockTE<'s, 't>, HashSet<IVarNameT<'s, 't>>, HashSet<IVarNameT<'s, 't>>, HashSet<CoordT<'s, 't>>) {
+    ) -> (&'t BlockTE<'s, 't>, HashSet<IVarNameT<'s, 't>>, HashSet<IVarNameT<'s, 't>>, HashSet<KindT<'s, 't>>) {
         panic!("Unimplemented: Slab 15");
         // evaluateBlockStatements with child fate, BlockTE wrap, return effect sets via getEffectsSince
     }
@@ -44,7 +44,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'t>,
         region: RegionT,
         block_se: &'s BlockSE<'s>,
-    ) -> Result<(ExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let (unnevered_unresultified_undestructed_root_expression, returns_from_exprs) =
             self.evaluate_and_coerce_to_reference_expression(
                 coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges,

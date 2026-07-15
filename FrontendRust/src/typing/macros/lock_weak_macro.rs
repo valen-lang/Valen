@@ -18,16 +18,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn generate_function_body_lock_weak(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionS<'s>>,
-        param_coords: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      origin_function: Option<&FunctionS<'s>>,
+      param_coords: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         let header = FunctionHeaderT {
             id: env.id,
@@ -36,9 +36,9 @@ where 's: 't,
             return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
             maybe_origin_function_templata: Some(env.templata()),
         };
-        let borrow_coord = CoordT::new(OwnershipT::Borrow, param_coords[0].tyype.region, param_coords[0].tyype.kind);
+        let borrow_coord = KindT::new(OwnershipT::Borrow, param_coords[0].tyype.region, param_coords[0].tyype.kind);
         let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
-            self.get_option(coutputs, env, call_range, call_location, RegionT { region: RegionT::Default }, borrow_coord)?;
+            self.get_option(coutputs, env, call_range, call_location, RegionT::Default, borrow_coord)?;
         let lock_expr = ExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE {
             inner_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                 param_index: 0,

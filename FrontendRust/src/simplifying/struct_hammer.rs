@@ -25,7 +25,7 @@ use crate::instantiating::ast::names::StructTemplateNameI;
 use crate::instantiating::ast::names::add_step;
 use crate::instantiating::ast::templata::CoordTemplataI;
 use crate::instantiating::ast::templata::ITemplataI;
-use crate::typing::types::types::{IRegionT, RegionT};
+use crate::typing::types::types::{IRegionT};
 use crate::instantiating::ast::types::InterfaceITValI;
 use crate::instantiating::ast::types::SharednessI;
 use crate::simplifying::name_hammer::simplify_id;

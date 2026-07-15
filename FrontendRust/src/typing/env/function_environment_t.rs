@@ -11,7 +11,7 @@ use crate::typing::env::environment::{
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::names::names::{IdT, INameT, IVarNameT};
 use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT};
-use crate::typing::types::types::{CoordT, RegionT, StructTT};
+use crate::typing::types::types::{KindT, RegionT, StructTT};
 use crate::typing::typing_interner::TypingInterner;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -301,7 +301,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   }
   
 
-  pub fn get_all_locals(&self) -> Vec<ILocalVariableT<'s, 't>> {
+  pub fn get_all_locals(&self) -> Vec<LocalVariable<'s, 't>> {
     panic!("Unimplemented: get_all_locals");
     // declaredLocals.collect({ case i : ILocalVariableT => i })
   }
@@ -380,17 +380,15 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn get_live_variables_introduced_since(
     &self,
     since_nenv: &NodeEnvironmentT<'s, 't>,
-  ) -> Vec<ILocalVariableT<'s, 't>> {
-    let locals_as_of_then: Vec<ILocalVariableT<'s, 't>> =
+  ) -> Vec<LocalVariable<'s, 't>> {
+    let locals_as_of_then: Vec<LocalVariable<'s, 't>> =
         since_nenv.declared_locals.iter().filter_map(|v| match v {
-            IVariableT::ReferenceLocal(r) => Some(ILocalVariableT::Reference(*r)),
-            IVariableT::AddressibleLocal(a) => Some(ILocalVariableT::Addressible(*a)),
+            IVariableT::Local(r) => Some(*r),
             _ => None,
         }).collect();
-    let locals_as_of_now: Vec<ILocalVariableT<'s, 't>> =
+    let locals_as_of_now: Vec<LocalVariable<'s, 't>> =
         self.declared_locals.iter().filter_map(|v| match v {
-            IVariableT::ReferenceLocal(r) => Some(ILocalVariableT::Reference(*r)),
-            IVariableT::AddressibleLocal(a) => Some(ILocalVariableT::Addressible(*a)),
+            IVariableT::Local(r) => Some(*r),
             _ => None,
         }).collect();
 
@@ -399,7 +397,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     assert!(locals_declared_since_then.len() == locals_as_of_now.len() - locals_as_of_then.len());
 
     locals_declared_since_then.iter()
-        .filter(|x| !self.unstackified_locals.contains(&x.name()))
+        .filter(|x| !self.unstackified_locals.contains(&x.name))
         .copied()
         .collect()
   }
@@ -555,7 +553,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   }
 
 
-  pub fn maybe_return_type(&self) -> Option<CoordT<'s, 't>> {
+  pub fn maybe_return_type(&self) -> Option<KindT<'s, 't>> {
     self.parent_function_env.maybe_return_type
   }
 
@@ -593,7 +591,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 
 
   pub fn mark_local_unstackified(&mut self, new_unstackified: IVarNameT<'s, 't>) {
-    assert!(self.get_all_locals().iter().any(|l| l.name() == new_unstackified));
+    assert!(self.get_all_locals().iter().any(|l| l.name == new_unstackified));
     assert!(!self.unstackified_locals.contains(&new_unstackified));
 
     if self.restackified_locals.contains(&new_unstackified) {
@@ -609,7 +607,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 
 
   pub fn mark_local_restackified(&mut self, new_restackified: IVarNameT<'s, 't>) {
-    assert!(self.get_all_locals().iter().any(|l| l.name() == new_restackified));
+    assert!(self.get_all_locals().iter().any(|l| l.name == new_restackified));
     assert!(!self.restackified_locals.contains(&new_restackified));
     if self.unstackified_locals.contains(&new_restackified) {
       // It was an unstackified local, so don't mark it as restackified, just undo the
@@ -632,15 +630,12 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
     self.snapshot(interner).get_variable(name)
   }
 
-
-  pub fn get_all_locals(&self) -> Vec<ILocalVariableT<'s, 't>> {
+  pub fn get_all_locals(&self) -> Vec<LocalVariable<'s, 't>> {
     self.declared_locals.iter().filter_map(|v| match v {
-      IVariableT::AddressibleLocal(a) => Some(ILocalVariableT::Addressible(*a)),
-      IVariableT::ReferenceLocal(r) => Some(ILocalVariableT::Reference(*r)),
-      IVariableT::AddressibleClosure(_) | IVariableT::ReferenceClosure(_) => None,
+      IVariableT::Local(a) => Some(*a),
+      IVariableT::Capture(_) => None,
     }).collect()
   }
-
 
   pub fn get_all_unstackified_locals(&self) -> Vec<IVarNameT<'s, 't>> {
     self.unstackified_locals.clone()
@@ -774,7 +769,7 @@ where 's: 't,
   pub id: IdT<'s, 't>,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
   pub function: &'s FunctionS<'s>,
-  pub maybe_return_type: Option<CoordT<'s, 't>>,
+  pub maybe_return_type: Option<KindT<'s, 't>>,
   pub closured_locals: &'t [IVariableT<'s, 't>],
   pub is_root_compiling_denizen: bool,
   pub default_region: RegionT,
@@ -907,35 +902,8 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 
   pub fn get_closured_declared_locals(&self) -> Vec<IVariableT<'s, 't>> {
     panic!("Unimplemented: get_closured_declared_locals");
-    // parentEnv match {
-    //   case n @ NodeEnvironmentT(_, _, _, _, _, _, _, _, _) => n.declaredLocals
-    //   case f @ FunctionEnvironmentT(_, _, _, _, _, _, _, _, _, _) => f.getClosuredDeclaredLocals()
-    //   case _ => Vector()
-    // }
   }
-  
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /// Value-type (see @TFITCX)
@@ -943,195 +911,50 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 pub enum IVariableT<'s, 't>
 where 's: 't,
 {
-  AddressibleLocal(AddressibleLocalVariableT<'s, 't>),
-  ReferenceLocal(ReferenceLocalVariableT<'s, 't>),
-  AddressibleClosure(AddressibleClosureVariableT<'s, 't>),
-  ReferenceClosure(ReferenceClosureVariableT<'s, 't>),
+  Local(LocalVariable<'s, 't>),
+  Capture(CapturedVariableT<'s, 't>),
 }
 
 
 impl<'s, 't> IVariableT<'s, 't> where 's: 't {
   pub fn name(&self) -> IVarNameT<'s, 't> {
     match self {
-      IVariableT::AddressibleLocal(v) => v.name,
-      IVariableT::ReferenceLocal(v) => v.name,
-      IVariableT::AddressibleClosure(v) => v.name,
-      IVariableT::ReferenceClosure(v) => v.name,
+      IVariableT::Local(v) => v.name,
+      IVariableT::Capture(v) => v.name,
     }
   }
   
-  pub fn coord(&self) -> CoordT<'s, 't> {
+  pub fn coord(&self) -> KindT<'s, 't> {
     panic!("Unimplemented: coord");
   }
-  
 }
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum ILocalVariableT<'s, 't>
-where 's: 't,
-{
-  Addressible(AddressibleLocalVariableT<'s, 't>),
-  Reference(ReferenceLocalVariableT<'s, 't>),
-}
-
-
-impl<'s, 't> ILocalVariableT<'s, 't> where 's: 't {
-  pub fn name(&self) -> IVarNameT<'s, 't> {
-    match self {
-      ILocalVariableT::Addressible(a) => a.name,
-      ILocalVariableT::Reference(r) => r.name,
-    }
-  }
-  
-
-  pub fn coord(&self) -> CoordT<'s, 't> {
-    match self {
-      ILocalVariableT::Addressible(a) => a.coord,
-      ILocalVariableT::Reference(r) => r.coord,
-    }
-  }
-  
-}
-
 
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct AddressibleLocalVariableT<'s, 't>
+pub struct LocalVariable<'s, 't>
 where 's: 't,
 {
   pub name: IVarNameT<'s, 't>,
-  pub coord: CoordT<'s, 't>,
+  pub coord: KindT<'s, 't>,
 }
-
-
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct ReferenceLocalVariableT<'s, 't>
-where 's: 't,
-{
-  pub name: IVarNameT<'s, 't>,
-  pub coord: CoordT<'s, 't>,
-}
-
-
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct AddressibleClosureVariableT<'s, 't>
+pub struct CapturedVariableT<'s, 't>
 where 's: 't,
 {
   pub name: IVarNameT<'s, 't>,
   pub closured_vars_struct_type: &'t StructTT<'s, 't>,
-  pub coord: CoordT<'s, 't>,
+  pub coord: KindT<'s, 't>,
 }
 
-
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct ReferenceClosureVariableT<'s, 't>
-where 's: 't,
-{
-  pub name: IVarNameT<'s, 't>,
-  pub closured_vars_struct_type: &'t StructTT<'s, 't>,
-  pub coord: CoordT<'s, 't>,
-}
-
-
-
-
-impl<'s, 't> From<AddressibleLocalVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
-  fn from(v: AddressibleLocalVariableT<'s, 't>) -> Self { ILocalVariableT::Addressible(v) }
+impl<'s, 't> From<LocalVariable<'s, 't>> for IVariableT<'s, 't> {
+  fn from(v: LocalVariable<'s, 't>) -> Self { IVariableT::Local(v) }
   
 }
-impl<'s, 't> From<ReferenceLocalVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
-  fn from(v: ReferenceLocalVariableT<'s, 't>) -> Self { ILocalVariableT::Reference(v) }
-  
-}
-
-impl<'s, 't> From<AddressibleLocalVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: AddressibleLocalVariableT<'s, 't>) -> Self { IVariableT::AddressibleLocal(v) }
-  
-}
-impl<'s, 't> From<ReferenceLocalVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: ReferenceLocalVariableT<'s, 't>) -> Self { IVariableT::ReferenceLocal(v) }
-  
-}
-impl<'s, 't> From<AddressibleClosureVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: AddressibleClosureVariableT<'s, 't>) -> Self { IVariableT::AddressibleClosure(v) }
-  
-}
-impl<'s, 't> From<ReferenceClosureVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: ReferenceClosureVariableT<'s, 't>) -> Self { IVariableT::ReferenceClosure(v) }
-  
-}
-
-impl<'s, 't> From<ILocalVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: ILocalVariableT<'s, 't>) -> Self {
-    match v {
-      ILocalVariableT::Addressible(a) => IVariableT::AddressibleLocal(a),
-      ILocalVariableT::Reference(r) => IVariableT::ReferenceLocal(r),
-    }
-  }
-  
-}
-
-impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
-  type Error = IVariableT<'s, 't>;
-  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
-    match v {
-      IVariableT::AddressibleLocal(a) => Ok(ILocalVariableT::Addressible(a)),
-      IVariableT::ReferenceLocal(r) => Ok(ILocalVariableT::Reference(r)),
-      other => Err(other),
-    }
-  }
-  
-}
-
-impl<'s, 't> TryFrom<IVariableT<'s, 't>> for AddressibleLocalVariableT<'s, 't> {
-  type Error = IVariableT<'s, 't>;
-  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
-    match v { IVariableT::AddressibleLocal(a) => Ok(a), other => Err(other) }
-  }
-  
-}
-impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ReferenceLocalVariableT<'s, 't> {
-  type Error = IVariableT<'s, 't>;
-  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
-    match v { IVariableT::ReferenceLocal(r) => Ok(r), other => Err(other) }
-  }
-  
-}
-impl<'s, 't> TryFrom<IVariableT<'s, 't>> for AddressibleClosureVariableT<'s, 't> {
-  type Error = IVariableT<'s, 't>;
-  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
-    match v { IVariableT::AddressibleClosure(a) => Ok(a), other => Err(other) }
-  }
-  
-}
-impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ReferenceClosureVariableT<'s, 't> {
-  type Error = IVariableT<'s, 't>;
-  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
-    match v { IVariableT::ReferenceClosure(r) => Ok(r), other => Err(other) }
-  }
-  
-}
-
-impl<'s, 't> TryFrom<ILocalVariableT<'s, 't>> for AddressibleLocalVariableT<'s, 't> {
-  type Error = ILocalVariableT<'s, 't>;
-  fn try_from(v: ILocalVariableT<'s, 't>) -> Result<Self, Self::Error> {
-    match v { ILocalVariableT::Addressible(a) => Ok(a), other => Err(other) }
-  }
-  
-}
-impl<'s, 't> TryFrom<ILocalVariableT<'s, 't>> for ReferenceLocalVariableT<'s, 't> {
-  type Error = ILocalVariableT<'s, 't>;
-  fn try_from(v: ILocalVariableT<'s, 't>) -> Result<Self, Self::Error> {
-    match v { ILocalVariableT::Reference(r) => Ok(r), other => Err(other) }
-  }
+impl<'s, 't> From<CapturedVariableT<'s, 't>> for IVariableT<'s, 't> {
+  fn from(v: CapturedVariableT<'s, 't>) -> Self { IVariableT::Capture(v) }
   
 }
 
@@ -1268,7 +1091,7 @@ where 's: 't,
   pub id: IdT<'s, 't>,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
   pub function: &'s FunctionS<'s>,
-  pub maybe_return_type: Option<CoordT<'s, 't>>,
+  pub maybe_return_type: Option<KindT<'s, 't>>,
   pub closured_locals: Vec<IVariableT<'s, 't>>,
   pub is_root_compiling_denizen: bool,
   pub default_region: RegionT,

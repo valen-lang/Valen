@@ -62,7 +62,7 @@ where 's: 't,
 
         let call_site_rules = self.assemble_call_site_rules(struct_a.header_rules);
 
-        let context_region = RegionT { region: RegionT::Default };
+        let context_region = RegionT::Default;
         let envs = InferEnv {
             original_calling_env,
             parent_ranges: call_range,
@@ -157,7 +157,7 @@ where 's: 't,
         // This *doesnt* check to make sure it's a valid use of the template. Its purpose is really
         // just to populate any generic parameter default values.
 
-        let context_region = RegionT { region: RegionT::Default };
+        let context_region = RegionT::Default;
 
         // We're just predicting, see STCMBDP.
         let inferences =
@@ -236,7 +236,7 @@ where 's: 't,
 
         // Maybe we should make this incremental too, like when solving definitions?
 
-        let context_region = RegionT { region: RegionT::Default };
+        let context_region = RegionT::Default;
 
         // We're just predicting, see STCMBDP.
         let inferences =
@@ -293,7 +293,7 @@ where 's: 't,
 
         let call_site_rules = self.assemble_call_site_rules(interface_a.rules);
 
-        let context_region = RegionT { region: RegionT::Default };
+        let context_region = RegionT::Default;
         let envs = InferEnv {
             original_calling_env,
             parent_ranges: call_range,
@@ -379,7 +379,7 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![struct_a.range]),
             call_location,
             self_env: outer_env_ienv,
-            context_region: RegionT { region: RegionT::Default },
+            context_region: RegionT::Default,
         };
         let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &all_rune_to_type, &all_ranges, &[]);
         let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
@@ -495,7 +495,7 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![interface_a.range]),
             call_location,
             self_env: outer_env_ienv,
-            context_region: RegionT { region: RegionT::Default },
+            context_region: RegionT::Default,
         };
         let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &rune_to_type, &all_ranges, &[]);
         let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {

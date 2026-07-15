@@ -29,7 +29,7 @@ where 's: 't,
       call_location: LocationInDenizen<'s>,
       context_region: RegionT,
       source_exprs: &[ExpressionTE<'s, 't>],
-      target_pointer_types: &[CoordT<'s, 't>],
+      target_pointer_types: &[KindT<'s, 't>],
     ) -> Result<Vec<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         if source_exprs.len() != target_pointer_types.len() {
             panic!(r"num exprs mismatch, source:
@@ -56,21 +56,21 @@ target:
       call_location: LocationInDenizen<'s>,
       context_region: RegionT,
       source_expr: ExpressionTE<'s, 't>,
-      target_pointer_type: CoordT<'s, 't>,
+      target_pointer_type: KindT<'s, 't>,
     ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        if source_expr.result().coord == target_pointer_type {
+        if source_expr.result() == target_pointer_type {
             return Ok(source_expr);
         }
 
-        match source_expr.result().coord.kind {
+        match source_expr.result() {
             KindT::Never(_) => return Ok(source_expr),
             _ => {}
         }
 
         let target_ownership = target_pointer_type.ownership;
         let target_kind = target_pointer_type.kind;
-        let source_ownership = source_expr.result().coord.ownership;
-        let source_kind = source_expr.result().coord.kind;
+        let source_ownership = source_expr.result().ownership;
+        let source_kind = source_expr.result();
 
         match target_kind {
             KindT::Never(_) => panic!("vcurious: convert targeting Never"),
@@ -106,7 +106,7 @@ target:
             match (source_ownership, target_ownership) {
                 (OwnershipT::Own, OwnershipT::Own) => converted_kind_expr,
                 (OwnershipT::Borrow, OwnershipT::Own) => {
-                    let source_coord = source_expr.result().coord;
+                    let source_coord = source_expr.result();
                     let calling_env = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
                     // resolve_function's outer Err fires on internal-lookup failures;
                     // the "name not in scope" case comes back as Ok(Err(fff with rejected=[]))

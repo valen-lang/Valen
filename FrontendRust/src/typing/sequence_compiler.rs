@@ -32,11 +32,11 @@ where 's: 't,
       call_location: LocationInDenizen<'s>,
       exprs: Vec<ExpressionTE<'s, 't>>,
     ) -> ExpressionTE<'s, 't> {
-        let types_2: Vec<CoordT<'s, 't>> = exprs.iter().map(|e| IExpressionResultT::Reference(e.result()).expect_reference().coord).collect();
-        let region = RegionT { region: RegionT::Default };
+        let types_2: Vec<KindT<'s, 't>> = exprs.iter().map(|e| e.result()).collect();
+        let region = RegionT::Default;
         let final_expr = ExpressionTE::Tuple(self.typing_interner.alloc(TupleTE {
             elements: self.typing_interner.alloc_slice_from_vec(exprs),
-            result_reference: self.make_tuple_coord(env, coutputs, parent_ranges, call_location, region, types_2),
+            result: self.make_tuple_coord(env, coutputs, parent_ranges, call_location, region, types_2),
         }));
         final_expr
     }
@@ -47,7 +47,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        types: Vec<CoordT<'s, 't>>,
+        types: Vec<KindT<'s, 't>>,
     ) -> StructTT<'s, 't> {
         let tuple_template_name = self.typing_interner.intern_struct_template_name(StructTemplateNameT { human_name: self.keywords.tuple_human_name[types.len()]});
         let tuple_template = match env.lookup_nearest_with_name(INameT::StructTemplate(tuple_template_name), {
@@ -59,7 +59,7 @@ where 's: 't,
             _ => panic!("make_tuple_kind: expected StructDefinitionTemplataT"),
         };
         let new_parent_ranges: Vec<RangeS<'s>> = once(RangeS::internal(self.scout_arena, -17653)).chain(parent_ranges.iter().copied()).collect();
-        let uncoerced_template_args: Vec<ITemplataT<'s, 't>> = types.iter().map(|c| ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: *c }))).collect();
+        let uncoerced_template_args: Vec<ITemplataT<'s, 't>> = types.iter().map(|c| ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *c }))).collect();
         match self.resolve_struct(coutputs, env, self.typing_interner.alloc_slice_from_vec(new_parent_ranges), call_location, tuple_template, &uncoerced_template_args) {
             IResolveOutcome::ResolveSuccess(s) => s.kind,
             IResolveOutcome::ResolveFailure(_) => panic!("make_tuple_kind: resolve_struct failed"),
@@ -73,10 +73,9 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
-        types: Vec<CoordT<'s, 't>>,
-    ) -> CoordT<'s, 't> {
+        types: Vec<KindT<'s, 't>>,
+    ) -> KindT<'s, 't> {
         let tuple_kind = self.make_tuple_kind(env, coutputs, parent_ranges, call_location, types);
-        self.coerce_kind_to_coord(coutputs, KindT::Struct(self.typing_interner.alloc(tuple_kind)), region)
+        KindT::Struct(self.typing_interner.alloc(tuple_kind))
     }
-
 }

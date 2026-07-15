@@ -36,14 +36,14 @@ where 's: 't,
       receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
       given_args_exprs_2: &[ExpressionTE<'s, 't>],
     ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        match callable_expr.result().coord.kind {
+        match callable_expr.result() {
             KindT::Never(NeverT { from_break: true }) => { panic!("vwat"); }
             KindT::Never(NeverT { from_break: false }) | KindT::Bool(_) => {
-                panic!("wot {:?}", callable_expr.result().coord.kind);
+                panic!("wot {:?}", callable_expr.result());
             }
             KindT::OverloadSet(overload_set) => {
-                let unconverted_args_pointer_types_2: Vec<CoordT<'s, 't>> =
-                    given_args_exprs_2.iter().map(|e| e.result().coord).collect();
+                let unconverted_args_pointer_types_2: Vec<KindT<'s, 't>> =
+                    given_args_exprs_2.iter().map(|e| e.result()).collect();
 
                 // We want to get the prototype here, not the entire header, because
                 // we might be in the middle of a recursive call like:
@@ -128,7 +128,7 @@ where 's: 't,
                     range,
                     call_location,
                     &param_types,
-                    &args_exprs_2.iter().map(|a| a.result().coord).collect::<Vec<_>>(),
+                    &args_exprs_2.iter().map(|a| a.result()).collect::<Vec<_>>(),
                     true);
 
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id).is_some());
@@ -174,9 +174,9 @@ where 's: 't,
     ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         // Whether we're given a borrow or an own, the call itself will be given a borrow.
         let given_callable_borrow_expr_2: ExpressionTE<'s, 't> =
-            match given_callable_unborrowed_expr_2.result().coord {
-                CoordT { ownership: OwnershipT::Borrow | OwnershipT::Share, .. } => given_callable_unborrowed_expr_2,
-                CoordT { ownership: OwnershipT::Own, .. } => {
+            match given_callable_unborrowed_expr_2.result() {
+                KindT { ownership: OwnershipT::Borrow | OwnershipT::Share, .. } => given_callable_unborrowed_expr_2,
+                KindT { ownership: OwnershipT::Own, .. } => {
                     panic!("Unimplemented: evaluate_custom_call OwnT makeTemporaryLocal");
                     // localHelper.makeTemporaryLocal(coutputs, nenv, range, callLocation, life, contextRegion, givenCallableUnborrowedExpr2, BorrowT)
                 }
@@ -185,8 +185,8 @@ where 's: 't,
 
         let env = nenv.snapshot(self.typing_interner);
 
-        let args_types_2: Vec<CoordT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result().coord).collect();
-        let closure_param_type = CoordT::new(given_callable_borrow_expr_2.result().coord.ownership, RegionT { region: RegionT::Default }, kind);
+        let args_types_2: Vec<KindT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result()).collect();
+        let closure_param_type = KindT::new(given_callable_borrow_expr_2.result().ownership, RegionT::Default, kind);
         let mut param_filters = vec![closure_param_type];
         param_filters.extend_from_slice(&args_types_2);
 
@@ -209,13 +209,13 @@ where 's: 't,
             Ok(x) => x,
         };
 
-        assert!(given_callable_borrow_expr_2.result().coord.ownership == OwnershipT::Borrow);
+        assert!(given_callable_borrow_expr_2.result().ownership == OwnershipT::Borrow);
         let actual_callable_expr_2 = given_callable_borrow_expr_2;
 
         let mut actual_args_exprs_2: Vec<ExpressionTE<'s, 't>> = vec![actual_callable_expr_2];
         actual_args_exprs_2.extend_from_slice(given_args_exprs_2);
 
-        let arg_types: Vec<CoordT<'s, 't>> = actual_args_exprs_2.iter().map(|e| e.result().coord).collect();
+        let arg_types: Vec<KindT<'s, 't>> = actual_args_exprs_2.iter().map(|e| e.result()).collect();
         if arg_types != resolved.prototype.param_types() {
             panic!("arg param type mismatch. params: {:?} args: {:?}", resolved.prototype.param_types(), arg_types);
         }
@@ -232,14 +232,14 @@ where 's: 't,
     }
 
     pub fn check_types(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        params: &[CoordT<'s, 't>],
-        args: &[CoordT<'s, 't>],
-        exact: bool,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      calling_env: IInDenizenEnvironmentT<'s, 't>,
+      parent_ranges: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      params: &[KindT<'s, 't>],
+      args: &[KindT<'s, 't>],
+      exact: bool,
     ) {
         assert!(params.len() == args.len());
         for (params_head, args_head) in params.iter().zip(args.iter()) {

@@ -21,16 +21,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn generate_function_body_abstract_body(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&'s FunctionS<'s>>,
-        params2: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      origin_function: Option<&'s FunctionS<'s>>,
+      params2: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
 
         let return_reference_type2 = maybe_ret_coord.expect("vassertSome: maybeRetCoord");
@@ -54,7 +54,7 @@ where 's: 't,
         // conflict with arg-inferred placeholders.
         let imprecise_name = get_imprecise_name(self.scout_arena, env.id.local_name)
             .expect("vassertSome: TemplatasStore.getImpreciseName env.id.localName");
-        let param_types: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
+        let param_types: Vec<KindT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
         let env_as_iindenizen = self.typing_interner.alloc(IInDenizenEnvironmentT::Function(env));
         let prototype = match self.find_function(
           *env_as_iindenizen,
@@ -65,7 +65,7 @@ where 's: 't,
           &[],
           &[],
           &[],
-          RegionT { region: RegionT::Default },
+          RegionT::Default,
           &param_types,
           &[],
           true,

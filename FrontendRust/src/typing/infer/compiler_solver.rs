@@ -51,11 +51,11 @@ pub enum ITypingPassSolverError<'s, 't> {
     BadIsaSuperKind { kind: KindT<'s, 't> },
     SendingNonCitizen { kind: KindT<'s, 't> },
     CantCheckPlaceholder { range: &'t [RangeS<'s>] },
-    ReceivingDifferentOwnerships { params: &'t [(IRuneS<'s>, CoordT<'s, 't>)] },
-    SendingNonIdenticalKinds { send_coord: CoordT<'s, 't>, receive_coord: CoordT<'s, 't> },
-    NoCommonAncestors { params: &'t [(IRuneS<'s>, CoordT<'s, 't>)] },
+    ReceivingDifferentOwnerships { params: &'t [(IRuneS<'s>, KindT<'s, 't>)] },
+    SendingNonIdenticalKinds { send_coord: KindT<'s, 't>, receive_coord: KindT<'s, 't> },
+    NoCommonAncestors { params: &'t [(IRuneS<'s>, KindT<'s, 't>)] },
     LookupFailed { name: IImpreciseNameS<'s> },
-    NoAncestorsSatisfyCall { params: &'t [(IRuneS<'s>, CoordT<'s, 't>)] },
+    NoAncestorsSatisfyCall { params: &'t [(IRuneS<'s>, KindT<'s, 't>)] },
     CantDetermineNarrowestKind { kinds: &'t [KindT<'s, 't>] },
     // OwnershipDidntMatch { coord: CoordT<'s, 't>, expected_ownership: OwnershipT },
     CallResultWasntExpectedType { expected: ITemplataT<'s, 't>, actual: ITemplataT<'s, 't> },
@@ -65,7 +65,7 @@ pub enum ITypingPassSolverError<'s, 't> {
     WrongNumberOfTemplateArgs { expected_min_num_args: i32, expected_max_num_args: i32 },
     FunctionDoesntHaveName { range: &'t [RangeS<'s>], name: IFunctionNameT<'s, 't> },
     CantGetComponentsOfPlaceholderPrototype { range: &'t [RangeS<'s>] },
-    ReturnTypeConflict { range: &'t [RangeS<'s>], expected_return_type: CoordT<'s, 't>, actual: PrototypeT<'s, 't> },
+    ReturnTypeConflict { range: &'t [RangeS<'s>], expected_return_type: KindT<'s, 't>, actual: PrototypeT<'s, 't> },
     InternalSolverError { range: &'t [RangeS<'s>], err: &'t ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>> },
 }
 
@@ -338,14 +338,14 @@ pub fn sanity_check_conclusion<'s, 't>(
 }
 
 fn solve_receives<'s, 'ctx, 't>(
-    compiler: &Compiler<'s, 'ctx, 't>,
-    typing_interner: &TypingInterner<'s, 't>,
-    state: &mut CompilerOutputs<'s, 't>,
-    env: InferEnv<'s, 't>,
-    senders: Vec<(IRuneS<'s>, CoordT<'s, 't>)>,
-    call_templates: Vec<ITemplataT<'s, 't>>,
-    all_senders_known: bool,
-    all_calls_known: bool,
+  compiler: &Compiler<'s, 'ctx, 't>,
+  typing_interner: &TypingInterner<'s, 't>,
+  state: &mut CompilerOutputs<'s, 't>,
+  env: InferEnv<'s, 't>,
+  senders: Vec<(IRuneS<'s>, KindT<'s, 't>)>,
+  call_templates: Vec<ITemplataT<'s, 't>>,
+  all_senders_known: bool,
+  all_calls_known: bool,
 ) -> Result<Option<KindT<'s, 't>>, ITypingPassSolverError<'s, 't>>
 where 's: 't,
 {
@@ -1310,7 +1310,7 @@ where 's: 't,
                             ITemplataT::Coord(ct) => ct.coord,
                             _ => panic!("Expected CoordTemplataT as first arg in solve_call_rule RuntimeSizedArrayTemplate"),
                         };
-                        let context_region = RegionT { region: RegionT::Default };
+                        let context_region = RegionT::Default;
                         let rsa_kind = self.predict_runtime_sized_array_kind(*env, state, coord, context_region);
                         let mut conclusions = IndexMap::default();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: rsa_kind.name })) })));
@@ -1333,7 +1333,7 @@ where 's: 't,
                             ITemplataT::Coord(ct) => ct.coord,
                             _ => panic!("Expected CoordTemplataT as second arg in solve_call_rule StaticSizedArrayTemplate"),
                         };
-                        let context_region = RegionT { region: RegionT::Default };
+                        let context_region = RegionT::Default;
                         let size = expect_integer(s);
                         let ssa_kind = self.predict_static_sized_array_kind(*env, state, size, coord, context_region);
                         let mut conclusions = IndexMap::default();

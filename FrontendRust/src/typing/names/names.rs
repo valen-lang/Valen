@@ -5,8 +5,8 @@ use crate::interner::StrI;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IRuneS;
-use crate::typing::types::types::{KindT, RegionT, RegionT, ICitizenTT};
-use crate::typing::templata::templata::{ITemplataT, expect_integer, expect_coord_templata};
+use crate::typing::types::types::{KindT, RegionT, ICitizenTT};
+use crate::typing::templata::templata::{ITemplataT, expect_integer, expect_kind_templata};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::typing_interner::{MustIntern, TypingInterner};
 use crate::Keywords;
@@ -220,7 +220,7 @@ pub enum INameT<'s, 't> {
 }
 
 impl<'s, 't> INameT<'s, 't> where 's: 't {
-    pub fn parameters(&self) -> &'t [CoordT<'s, 't>] {
+    pub fn parameters(&self) -> &'t [KindT<'s, 't>] {
         match self {
             INameT::OverrideDispatcher(f) => f.parameters,
             INameT::ExternFunction(f) => f.parameters,
@@ -282,7 +282,7 @@ impl<'s, 't> IFunctionTemplateNameT<'s, 't> where 's: 't {
     interner: &TypingInterner<'s, 't>,
     _keywords: &Keywords<'_>,
     template_args: &[ITemplataT<'s, 't>],
-    params: &[CoordT<'s, 't>],
+    params: &[KindT<'s, 't>],
   ) -> INameT<'s, 't> {
     match self {
       IFunctionTemplateNameT::FunctionTemplate(tmpl) => {
@@ -425,12 +425,12 @@ impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
             IInstantiationNameT::Impl(x) => x.template_args,
             IInstantiationNameT::ImplBound(x) => x.template_args,
             IInstantiationNameT::StaticSizedArray(_) => {
-                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(size, variability, CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, variability, KindTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(size, variability, KindTemplataT(arr.elementType))
             }
             IInstantiationNameT::RuntimeSizedArray(_) => {
-                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(KindTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(KindTemplataT(arr.elementType))
             }
             IInstantiationNameT::KindPlaceholder(_) => &[],
             IInstantiationNameT::OverrideDispatcher(x) => x.template_args,
@@ -496,7 +496,7 @@ impl<'s, 't> IFunctionNameT<'s, 't> where 's: 't {
         }
     }
     
-    pub fn parameters(&self) -> &'t [CoordT<'s, 't>] {
+    pub fn parameters(&self) -> &'t [KindT<'s, 't>] {
         match self {
             IFunctionNameT::OverrideDispatcher(f) => f.parameters,
             IFunctionNameT::ExternFunction(f) => f.parameters,
@@ -695,12 +695,12 @@ impl<'s, 't> ISubKindNameT<'s, 't> where 's: 't {
     pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
         match self {
             ISubKindNameT::StaticSizedArray(_) => {
-                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(size, variability, CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, variability, KindTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(size, variability, KindTemplataT(arr.elementType))
             }
             ISubKindNameT::RuntimeSizedArray(_) => {
-                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(KindTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(KindTemplataT(arr.elementType))
             }
             ISubKindNameT::KindPlaceholder(_) => &[],
             ISubKindNameT::Struct(x) => x.template_args,
@@ -738,12 +738,12 @@ impl<'s, 't> ICitizenNameT<'s, 't> where 's: 't {
     pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
         match self {
             ICitizenNameT::StaticSizedArray(_) => {
-                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(size, variability, CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, variability, KindTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(size, variability, KindTemplataT(arr.elementType))
             }
             ICitizenNameT::RuntimeSizedArray(_) => {
-                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(KindTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(KindTemplataT(arr.elementType))
             }
             ICitizenNameT::Struct(x) => x.template_args,
             ICitizenNameT::Interface(x) => x.template_args,
@@ -932,7 +932,7 @@ pub struct ExportAsNameT<'s> {
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RawArrayNameT<'s, 't> {
-    pub element_type: CoordT<'s, 't>,
+    pub element_type: KindT<'s, 't>,
     pub self_region: RegionT,
 }
 
@@ -955,8 +955,8 @@ impl StaticSizedArrayTemplateNameT {
     ) -> INameT<'s, 't> {
         assert!(template_args.len() == 2);
         let size = expect_integer(template_args[0]);
-        let element_type = expect_coord_templata(template_args[1]).coord;
-        let self_region = RegionT { region: RegionT::Default };
+        let element_type = expect_kind_templata(template_args[1]).coord;
+        let self_region = RegionT::Default;
         let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
             element_type,
             self_region,
@@ -993,10 +993,10 @@ impl RuntimeSizedArrayTemplateNameT {
     ) -> INameT<'s, 't> {
         // vassert(templateArgs.size == 1)
         assert!(template_args.len() == 1);
-        // val elementType = expectCoordTemplata(templateArgs(0)).coord
-        let element_type = expect_coord_templata(template_args[0]).coord;
+        // val elementType = expectKindTemplata(templateArgs(0)).coord
+        let element_type = expect_kind_templata(template_args[0]).coord;
         // val region = vregionmut(RegionT(DefaultRegionT))
-        let region = RegionT { region: RegionT::Default };
+        let region = RegionT::Default;
         // interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(elementType, region))))
         let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
             element_type: element_type,
@@ -1076,7 +1076,7 @@ pub struct OverrideDispatcherTemplateNameT<'s, 't> {
 pub struct OverrideDispatcherNameT<'s, 't> {
     pub template: &'t OverrideDispatcherTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
-    pub parameters: &'t [CoordT<'s, 't>],
+    pub parameters: &'t [KindT<'s, 't>],
     pub _must_intern: MustIntern,
 }
 
@@ -1257,7 +1257,7 @@ pub struct ExternNameT<'s, 't> {
 pub struct ExternFunctionNameT<'s, 't> {
     pub human_name: StrI<'s>,
     pub template_args: &'t [ITemplataT<'s, 't>],
-    pub parameters: &'t [CoordT<'s, 't>],
+    pub parameters: &'t [KindT<'s, 't>],
     pub _must_intern: MustIntern,
 }
 
@@ -1266,7 +1266,7 @@ pub struct ExternFunctionNameT<'s, 't> {
 pub struct FunctionNameT<'s, 't> {
     pub template: &'t FunctionTemplateNameT<'s>,
     pub template_args: &'t [ITemplataT<'s, 't>],
-    pub parameters: &'t [CoordT<'s, 't>],
+    pub parameters: &'t [KindT<'s, 't>],
     pub _must_intern: MustIntern,
 }
 
@@ -1288,7 +1288,7 @@ pub struct FunctionBoundTemplateNameT<'s> {
 pub struct FunctionBoundNameT<'s, 't> {
     pub template: &'t FunctionBoundTemplateNameT<'s>,
     pub template_args: &'t [ITemplataT<'s, 't>],
-    pub parameters: &'t [CoordT<'s, 't>],
+    pub parameters: &'t [KindT<'s, 't>],
     pub _must_intern: MustIntern,
 }
 
@@ -1303,7 +1303,7 @@ pub struct PredictedFunctionTemplateNameT<'s> {
 pub struct PredictedFunctionNameT<'s, 't> {
     pub template: &'t PredictedFunctionTemplateNameT<'s>,
     pub template_args: &'t [ITemplataT<'s, 't>],
-    pub parameters: &'t [CoordT<'s, 't>],
+    pub parameters: &'t [KindT<'s, 't>],
     pub _must_intern: MustIntern,
 }
 
@@ -1318,7 +1318,7 @@ pub struct FunctionTemplateNameT<'s> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambdaCallFunctionTemplateNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
-    pub param_types: &'t [CoordT<'s, 't>],
+    pub param_types: &'t [KindT<'s, 't>],
     pub _must_intern: MustIntern,
 }
 
@@ -1327,7 +1327,7 @@ pub struct LambdaCallFunctionTemplateNameT<'s, 't> {
 pub struct LambdaCallFunctionNameT<'s, 't> {
     pub template: &'t LambdaCallFunctionTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
-    pub parameters: &'t [CoordT<'s, 't>],
+    pub parameters: &'t [KindT<'s, 't>],
     pub _must_intern: MustIntern,
 }
 
@@ -1455,7 +1455,7 @@ pub struct AnonymousSubstructConstructorTemplateNameT<'s, 't> {
 pub struct AnonymousSubstructConstructorNameT<'s, 't> {
     pub template: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
-    pub parameters: &'t [CoordT<'s, 't>],
+    pub parameters: &'t [KindT<'s, 't>],
     pub _must_intern: MustIntern,
 }
 
@@ -2861,7 +2861,7 @@ where 's: 't, 't: 'tmp,
 {
     pub template: &'t OverrideDispatcherTemplateNameT<'s, 't>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
-    pub parameters: &'tmp [CoordT<'s, 't>],
+    pub parameters: &'tmp [KindT<'s, 't>],
 }
 
 
@@ -2881,7 +2881,7 @@ where 's: 't, 't: 'tmp,
 {
     pub human_name: StrI<'s>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
-    pub parameters: &'tmp [CoordT<'s, 't>],
+    pub parameters: &'tmp [KindT<'s, 't>],
 }
 
 
@@ -2892,7 +2892,7 @@ where 's: 't, 't: 'tmp,
 {
     pub template: &'t FunctionTemplateNameT<'s>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
-    pub parameters: &'tmp [CoordT<'s, 't>],
+    pub parameters: &'tmp [KindT<'s, 't>],
 }
 
 
@@ -2903,7 +2903,7 @@ where 's: 't, 't: 'tmp,
 {
     pub template: &'t FunctionBoundTemplateNameT<'s>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
-    pub parameters: &'tmp [CoordT<'s, 't>],
+    pub parameters: &'tmp [KindT<'s, 't>],
 }
 
 
@@ -2914,7 +2914,7 @@ where 's: 't, 't: 'tmp,
 {
     pub template: &'t PredictedFunctionTemplateNameT<'s>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
-    pub parameters: &'tmp [CoordT<'s, 't>],
+    pub parameters: &'tmp [KindT<'s, 't>],
 }
 
 
@@ -2924,7 +2924,7 @@ pub struct LambdaCallFunctionTemplateNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
     pub code_location: CodeLocationS<'s>,
-    pub param_types: &'tmp [CoordT<'s, 't>],
+    pub param_types: &'tmp [KindT<'s, 't>],
 }
 
 
@@ -2935,7 +2935,7 @@ where 's: 't, 't: 'tmp,
 {
     pub template: &'t LambdaCallFunctionTemplateNameT<'s, 't>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
-    pub parameters: &'tmp [CoordT<'s, 't>],
+    pub parameters: &'tmp [KindT<'s, 't>],
 }
 
 
@@ -2977,7 +2977,7 @@ where 's: 't, 't: 'tmp,
 {
     pub template: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
-    pub parameters: &'tmp [CoordT<'s, 't>],
+    pub parameters: &'tmp [KindT<'s, 't>],
 }
 
 

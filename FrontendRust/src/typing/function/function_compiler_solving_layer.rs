@@ -46,7 +46,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
-        args: &[CoordT<'s, 't>],
+        args: &[KindT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
         panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype");
         // val function = outerEnv.function
@@ -96,7 +96,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         already_specified_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
-        args: &[CoordT<'s, 't>],
+        args: &[KindT<'s, 't>],
     ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let function = declaring_env.function;
         // Check preconditions
@@ -198,7 +198,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
-        args: &[CoordT<'s, 't>],
+        args: &[KindT<'s, 't>],
     ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let function = near_env.function;
         // Check preconditions
@@ -360,7 +360,7 @@ where 's: 't,
         // newEntries = templatas.addEntries(interner, entries_list)
         let new_entries = self.typing_interner.alloc(near_env.templatas.add_entries(self.typing_interner, self.scout_arena, entries_list));
 
-        let default_region = RegionT { region: RegionT::Default };
+        let default_region = RegionT::Default;
 
         let template_args: &'t [ITemplataT<'s, 't>] = self.typing_interner.alloc_slice_from_vec(identifying_templatas);
         BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT {
@@ -386,7 +386,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
-        args: &[Option<CoordT<'s, 't>>],
+        args: &[Option<KindT<'s, 't>>],
         container_rune_initial_knowns: &[InitialKnown<'s, 't>],
     ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let function = outer_env.function;
@@ -519,7 +519,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        args: &[Option<CoordT<'s, 't>>],
+        args: &[Option<KindT<'s, 't>>],
     ) -> Result<IDefineFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let function = near_env.function;
         self.check_closure_concerns_handled(near_env);
@@ -534,7 +534,7 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_copy(call_range),
             call_location,
             self_env: IEnvironmentT::BuildingWithClosureds(near_env),
-            context_region: RegionT { region: RegionT::Default },
+            context_region: RegionT::Default,
         };
         let preliminary_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             self.derive_rune_to_type(
@@ -575,7 +575,7 @@ where 's: 't,
                     parent_ranges: self.typing_interner.alloc_slice_copy(call_range),
                     call_location,
                     self_env: IEnvironmentT::BuildingWithClosureds(near_env),
-                    context_region: RegionT { region: RegionT::Default },
+                    context_region: RegionT::Default,
                 },
                 coutputs,
                 &function_definition_rules,
@@ -679,7 +679,7 @@ where 's: 't,
             parent_ranges: parent_ranges_alloc,
             call_location,
             self_env: near_env_as_env,
-            context_region: RegionT { region: RegionT::Default },
+            context_region: RegionT::Default,
         };
 
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
@@ -770,7 +770,7 @@ where 's: 't,
         &self,
         call_range: RangeS<'s>,
         function: &FunctionS<'s>,
-        args: &[Option<CoordT<'s, 't>>],
+        args: &[Option<KindT<'s, 't>>],
     ) -> Vec<InitialSend<'s, 't>> {
         function.params.iter()
             .map(|p| p.full_type_rune)

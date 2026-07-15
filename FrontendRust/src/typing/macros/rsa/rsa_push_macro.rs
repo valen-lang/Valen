@@ -16,16 +16,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn generate_function_body_rsa_push(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionS<'s>>,
-        param_coords: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      origin_function: Option<&FunctionS<'s>>,
+      param_coords: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
         let header = FunctionHeaderT {
             id: env.id,

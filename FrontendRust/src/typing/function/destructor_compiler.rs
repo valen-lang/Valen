@@ -4,7 +4,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
 use crate::typing::function::function_compiler::StampFunctionSuccess;
-use crate::typing::types::types::{CoordT, RegionT, KindT, OwnershipT, RegionT};
+use crate::typing::types::types::{KindT, RegionT, KindT, OwnershipT, RegionT};
 use crate::utils::range::RangeS;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::names::IImpreciseNameValS;
@@ -16,13 +16,13 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn get_drop_function(
-        &self,
-        env: IInDenizenEnvironmentT<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        context_region: RegionT,
-        type_2: CoordT<'s, 't>,
+      &self,
+      env: IInDenizenEnvironmentT<'s, 't>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      context_region: RegionT,
+      type_2: KindT<'s, 't>,
     ) -> Result<StampFunctionSuccess<'s, 't>, ICompileErrorT<'s, 't>> {
         let name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(
@@ -47,7 +47,7 @@ where 's: 't,
         context_region: RegionT,
         undestructed_expr_2: ExpressionTE<'s, 't>,
     ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        let result_coord = undestructed_expr_2.result().coord;
+        let result_coord = undestructed_expr_2.result();
         let result_expr_2 = match (result_coord.ownership, result_coord.kind) {
             // VCOORD: doublecheck this: post-cut Share+Never is rejected by CoordT::new, so this arm should be unreachable.
             (OwnershipT::Share, KindT::Never(_)) => undestructed_expr_2,
@@ -63,7 +63,7 @@ where 's: 't,
             }
             (OwnershipT::Own, _) => {
                 let StampFunctionSuccess { prototype: destructor_prototype, .. } =
-                    self.get_drop_function(env, coutputs, call_range, call_location, RegionT { region: RegionT::Default }, result_coord)?;
+                    self.get_drop_function(env, coutputs, call_range, call_location, RegionT::Default, result_coord)?;
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, destructor_prototype.id).is_some());
                 let result_tt = destructor_prototype.return_type;
                 ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
@@ -79,10 +79,10 @@ where 's: 't,
                 ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
         };
-        match result_expr_2.result().coord.kind {
+        match result_expr_2.result() {
             KindT::Void(_) | KindT::Never(_) => {}
             _ => {
-                panic!("Unexpected return type for drop autocall.\nReturn: {:?}\nParam: {:?}", result_expr_2.result().coord.kind, undestructed_expr_2.result().coord);
+                panic!("Unexpected return type for drop autocall.\nReturn: {:?}\nParam: {:?}", result_expr_2.result(), undestructed_expr_2.result());
             }
         }
         Ok(result_expr_2)

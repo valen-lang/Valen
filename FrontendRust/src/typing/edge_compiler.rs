@@ -30,11 +30,11 @@ use crate::utils::range::CodeLocationS;
 use crate::postparsing::names::{IRuneValS, DispatcherRuneFromImplValS};
 use crate::typing::names::names::{INameT, IPlaceholderNameT};
 use crate::typing::names::names::IImplTemplateNameT;
-use crate::typing::templata::templata::expect_coord_templata;
+use crate::typing::templata::templata::expect_kind_templata;
 use crate::typing::names::names::IdValT;
 use crate::typing::templata::templata::KindTemplataT;
 use crate::typing::templata::templata::CoordTemplataT;
-use crate::typing::types::types::CoordT;
+use crate::typing::types::types::KindT;
 use crate::postparsing::names::CaseRuneFromImplValS;
 use crate::typing::infer_compiler::CompleteResolveSolve;
 use crate::utils::fx::HashSet;
@@ -48,7 +48,7 @@ pub enum IMethod<'s, 't> {
 
 pub struct NeededOverride<'s, 't> {
     pub name: IImpreciseNameS<'s>,
-    pub param_filters: Vec<CoordT<'s, 't>>,
+    pub param_filters: Vec<KindT<'s, 't>>,
 }
 
 pub struct FoundFunction<'s, 't> {
@@ -257,9 +257,9 @@ where 's: 't,
                     let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
                     coutputs.declare_type_mutability(placeholder_template_id_ref, mutability);
                     ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT {
-                        coord: CoordT::new(
+                        coord: KindT::new(
                             ct.coord.ownership,
-                            RegionT { region: RegionT::Default },
+                            RegionT::Default,
                             KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
                         ),
                     }))
@@ -376,7 +376,7 @@ where 's: 't,
                 _ => panic!("expected KindTemplataT from substituteTemplatasInKind"),
             }
         };
-        let dispatcher_placeholdered_abstract_param_type = CoordT::new(
+        let dispatcher_placeholdered_abstract_param_type = KindT::new(
             abstract_param_unsubstituted_type.ownership,
             abstract_param_unsubstituted_type.region,
             KindT::Interface(dispatcher_placeholdered_interface),
@@ -391,7 +391,7 @@ where 's: 't,
             IInDenizenEnvironmentT::from(dispatcher_outer_env),
             origin_function_templata,
             &{
-                let mut args: Vec<Option<CoordT<'s, 't>>> =
+                let mut args: Vec<Option<KindT<'s, 't>>> =
                     abstract_function_prototype.param_types().iter().map(|_| None).collect();
                 args[abstract_index as usize] = Some(dispatcher_placeholdered_abstract_param_type);
                 args
@@ -406,13 +406,13 @@ where 's: 't,
                     (s.prototype, s.inferences, s.instantiation_bound_params)
                 }
             };
-        let dispatcher_params: Vec<CoordT<'s, 't>> =
+        let dispatcher_params: Vec<KindT<'s, 't>> =
             origin_function_templata.function.params.iter()
                 .map(|p| p.full_type_rune.rune)
                 .map(|rune| {
                     let templata = *dispatcher_inner_inferences.get(&rune)
                         .unwrap_or_else(|| panic!("vassertSome: rune {:?} not in dispatcherInnerInferences", rune));
-                    expect_coord_templata(templata).coord
+                    expect_kind_templata(templata).coord
                 })
                 .collect();
         // Any generic parameter of the abstract function that wasn't pinned by the impl's self-type
@@ -430,7 +430,7 @@ where 's: 't,
             origin_function_templata.function.generic_params.iter()
                 .filter_map(|gp| {
                     dispatcher_inner_inferences.get(&gp.rune.rune).and_then(|templata| match *templata {
-                        ITemplataT::Coord(&CoordTemplataT { coord: CoordT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }), .. } }) =>
+                        ITemplataT::Coord(&CoordTemplataT { coord: KindT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }), .. } }) =>
                             if existing_dispatcher_placeholder_ids.contains(&id) { None } else { Some(*templata) },
                         ITemplataT::Kind(&KindTemplataT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }) }) =>
                             if existing_dispatcher_placeholder_ids.contains(&id) { None } else { Some(*templata) },
@@ -537,7 +537,7 @@ where 's: 't,
                         citizen_id,
                         IBoundArgumentsSource::InheritBoundsFromTypeItself,
                     );
-                    let raw_entries: Vec<(IRuneS<'s>, &'t FunctionBoundTemplateNameT<'s>, &'t [ITemplataT<'s, 't>], &'t [CoordT<'s, 't>], CoordT<'s, 't>)> = {
+                    let raw_entries: Vec<(IRuneS<'s>, &'t FunctionBoundTemplateNameT<'s>, &'t [ITemplataT<'s, 't>], &'t [KindT<'s, 't>], KindT<'s, 't>)> = {
                         let citizen_inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
                         citizen_inner_env.templatas().name_to_entry.iter()
                             .filter_map(|(name, entry)| {
@@ -653,12 +653,12 @@ where 's: 't,
 
         // Step 6: Use Case Environment to Find Override, see UCEFO.
 
-        let overriding_param_coord = CoordT::new(
+        let overriding_param_coord = KindT::new(
             dispatcher_placeholdered_abstract_param_type.ownership,
             dispatcher_placeholdered_abstract_param_type.region,
             KindT::from(dispatcher_case_placeholdered_sub_citizen),
         );
-        let mut override_function_param_types: Vec<CoordT<'s, 't>> =
+        let mut override_function_param_types: Vec<KindT<'s, 't>> =
             dispatching_func_prototype.prototype.param_types().to_vec();
         override_function_param_types[abstract_index as usize] = overriding_param_coord;
 
@@ -675,7 +675,7 @@ where 's: 't,
             &[],
             &[],
             &[],
-            RegionT { region: RegionT::Default },
+            RegionT::Default,
             &override_function_param_types,
             &extra_envs,
             true,

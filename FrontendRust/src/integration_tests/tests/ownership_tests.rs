@@ -67,7 +67,7 @@ exported func main() int {
                     ..
                 })
             ) => {
-                match let_te.expr.result().coord {
+                match let_te.expr.result() {
                     CoordT {
                         ownership: OwnershipT::Own,
                         kind: KindT::Struct(StructTT { id, .. }),
@@ -76,7 +76,7 @@ exported func main() int {
                     other => panic!("unexpected coord: {:?}", other),
                 }
                 assert_eq!(let_te.target_ownership, OwnershipT::Borrow);
-                assert_eq!(let_te.result().coord.ownership, OwnershipT::Borrow);
+                assert_eq!(let_te.result().ownership, OwnershipT::Borrow);
                 Some(())
             }
         );

@@ -15,7 +15,7 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::fx::HashSet;
 use crate::utils::range::RangeS;
 use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
-use crate::typing::env::function_environment_t::{IVariableT, ReferenceLocalVariableT, AddressibleLocalVariableT, ReferenceClosureVariableT, AddressibleClosureVariableT};
+use crate::typing::env::function_environment_t::{IVariableT, LocalVariable, LocalVariable, CapturedVariableT, CapturedVariableT};
 use crate::typing::templata::templata::PrototypeTemplataT;
 use crate::postparsing::names::IRuneS;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
@@ -114,15 +114,15 @@ where 's: 't,
     }
 
     pub fn evaluate_templated_light_function_from_call_for_prototype(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        function_templata: FunctionTemplataT<'s, 't>,
-        already_specified_template_args: &[ITemplataT<'s, 't>],
-        context_region: RegionT,
-        arg_types: &[CoordT<'s, 't>],
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      calling_env: IInDenizenEnvironmentT<'s, 't>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      function_templata: FunctionTemplataT<'s, 't>,
+      already_specified_template_args: &[ITemplataT<'s, 't>],
+      context_region: RegionT,
+      arg_types: &[KindT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
         panic!("Unimplemented: Slab 15");
         // Profiler.frame(() => {
@@ -134,15 +134,15 @@ where 's: 't,
     }
 
     pub fn evaluate_templated_function_from_call_for_prototype(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        function_templata: FunctionTemplataT<'s, 't>,
-        already_specified_template_args: &[ITemplataT<'s, 't>],
-        context_region: RegionT,
-        arg_types: &[CoordT<'s, 't>],
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      calling_env: IInDenizenEnvironmentT<'s, 't>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      function_templata: FunctionTemplataT<'s, 't>,
+      already_specified_template_args: &[ITemplataT<'s, 't>],
+      context_region: RegionT,
+      arg_types: &[KindT<'s, 't>],
     ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let FunctionTemplataT { outer_env: declaring_env, function } = function_templata;
         if function.is_light() {
@@ -183,15 +183,15 @@ where 's: 't,
     }
 
     pub fn evaluate_templated_function_from_call_for_prototype_ext(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        function_templata: FunctionTemplataT<'s, 't>,
-        explicit_template_args: &[ITemplataT<'s, 't>],
-        context_region: RegionT,
-        arg_types: &[CoordT<'s, 't>],
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      calling_env: IInDenizenEnvironmentT<'s, 't>,
+      function_templata: FunctionTemplataT<'s, 't>,
+      explicit_template_args: &[ITemplataT<'s, 't>],
+      context_region: RegionT,
+      arg_types: &[KindT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
         panic!("Unimplemented: Slab 15");
         // Profiler.frame(() => {
@@ -216,13 +216,13 @@ where 's: 't,
     }
 
     pub fn evaluate_generic_virtual_dispatcher_function_for_prototype(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        function_templata: FunctionTemplataT<'s, 't>,
-        args: &[Option<CoordT<'s, 't>>],
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      calling_env: IInDenizenEnvironmentT<'s, 't>,
+      function_templata: FunctionTemplataT<'s, 't>,
+      args: &[Option<KindT<'s, 't>>],
     ) -> Result<IDefineFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let FunctionTemplataT { outer_env, function } = function_templata;
         self.evaluate_generic_virtual_dispatcher_function_for_prototype_closure_or_light(
@@ -230,16 +230,16 @@ where 's: 't,
     }
 
     pub fn evaluate_generic_light_function_from_call_for_prototype(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        function_templata: FunctionTemplataT<'s, 't>,
-        explicit_template_args: &[ITemplataT<'s, 't>],
-        context_region: RegionT,
-        args: &[CoordT<'s, 't>],
-        container_rune_initial_knowns: &[InitialKnown<'s, 't>],
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      calling_env: IInDenizenEnvironmentT<'s, 't>,
+      function_templata: FunctionTemplataT<'s, 't>,
+      explicit_template_args: &[ITemplataT<'s, 't>],
+      context_region: RegionT,
+      args: &[KindT<'s, 't>],
+      container_rune_initial_knowns: &[InitialKnown<'s, 't>],
     ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let FunctionTemplataT { outer_env: env, function } = function_templata;
         self.evaluate_generic_light_function_from_call_for_prototype2(
@@ -285,30 +285,30 @@ where 's: 't,
     ) -> &'t NormalStructMemberT<'s, 't> {
         let translated_name = self.translate_var_name_step(name);
         let tyype = match env.get_variable(translated_name).unwrap() {
-            IVariableT::ReferenceLocal(ReferenceLocalVariableT { coord, .. }) => {
+            IVariableT::Local(LocalVariable { coord, .. }) => {
                 // See "Captured own is borrow" test for why we do this
                 match coord.ownership {
-                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT::new(OwnershipT::Borrow, coord.region, coord.kind) }),
+                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: KindT::new(OwnershipT::Borrow, coord.region, coord.kind) }),
                     OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                     OwnershipT::Weak => {
                         unreachable!("ReferenceLocalVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
                     }
                 }
             }
-            IVariableT::AddressibleLocal(AddressibleLocalVariableT { coord: reference, .. }) => {
+            IVariableT::Local(LocalVariable { coord: reference, .. }) => {
                 IMemberTypeT::Address(AddressMemberTypeT { reference })
             }
-            IVariableT::ReferenceClosure(ReferenceClosureVariableT { coord, .. }) => {
+            IVariableT::Capture(CapturedVariableT { coord, .. }) => {
                 // See "Captured own is borrow" test for why we do this
                 match coord.ownership {
-                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT::new(OwnershipT::Borrow, coord.region, coord.kind) }),
+                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: KindT::new(OwnershipT::Borrow, coord.region, coord.kind) }),
                     OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                     OwnershipT::Weak => {
                         unreachable!("ReferenceClosureVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
                     }
                 }
             }
-            IVariableT::AddressibleClosure(AddressibleClosureVariableT { coord: reference, .. }) => {
+            IVariableT::Capture(CapturedVariableT { coord: reference, .. }) => {
                 IMemberTypeT::Address(AddressMemberTypeT { reference })
             }
         };

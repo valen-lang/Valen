@@ -17,7 +17,7 @@ use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::typing::infer_compiler::IConclusionResolveError;
 use crate::typing::infer_compiler::IResolvingError;
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
-use crate::typing::types::types::CoordT;
+use crate::typing::types::types::KindT;
 use crate::typing::types::types::IntT;
 use crate::typing::types::types::KindT;
 use crate::typing::types::types::OwnershipT;
@@ -117,7 +117,7 @@ exported func main() {
                 }] => {
                     match boxed.as_ref() {
                         IConclusionResolveError::ReturnTypeConflictInConclusionResolve {
-                            expected_return_type: CoordT {
+                            expected_return_type: KindT {
                                 ownership: OwnershipT::Own,
                                 kind: KindT::Int(_),
                                 ..
@@ -126,7 +126,7 @@ exported func main() {
                             ..
                         } => {
                             match actual_prototype.return_type {
-                                CoordT {
+                                KindT {
                                     ownership: OwnershipT::Own,
                                     kind: KindT::Bool(_),
                                     ..
@@ -350,7 +350,7 @@ func add<X>(i int, x &X) where func str(&X)str {
             match &fff.rejected_callee_to_reason[0].1 {
                 IFindFunctionFailureReason::SpecificParamDoesntSend {
                     index: 0,
-                    argument: CoordT {
+                    argument: KindT {
                         ownership: OwnershipT::Own,
                         kind: KindT::Bool(_),
                         ..

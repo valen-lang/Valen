@@ -1388,7 +1388,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         substitutions,
                         perspective_region_t,
                         &Self::compose_ownerships_second(&outer_ownership_t, &source_it.ownership),
-                        &source_expr_t.result().coord.region);
+                        &source_expr_t.result().region);
                 let result_it = CoordI::new(result_ownership, source_it.kind);
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &variable);
@@ -1563,7 +1563,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (inner_it, result_ce)
             }
             ReferenceExpressionTE::Consecutor(c) => {
-                let result_tt = c.result().coord;
+                let result_tt = c.result();
                 let result_it =
                     self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_tt)
                         .coord;
@@ -1896,7 +1896,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ReferenceExpressionTE::Upcast(u) => {
                 let UpcastTE { inner_expr: inner_expr_unsubstituted, target_super_kind, impl_name: untranslated_impl_id } = *u;
                 let impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &untranslated_impl_id);
-                let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &u.result().coord);
+                let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &u.result());
                 let (_inner_it, inner_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr_unsubstituted);
                 let super_kind = self.translate_super_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &target_super_kind);
                 let result_ce = ReferenceExpressionIE::Upcast(self.interner.bump().alloc(UpcastIE {

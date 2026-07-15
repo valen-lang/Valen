@@ -8,10 +8,10 @@ use crate::scout_arena::ScoutArena;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
-use crate::typing::types::types::{CoordT, IntT, RegionT, KindT, OwnershipT, RegionT};
+use crate::typing::types::types::{KindT, IntT, RegionT, KindT, OwnershipT, RegionT};
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
-use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT};
+use crate::typing::env::function_environment_t::{LocalVariable, LocalVariable};
 use crate::typing::names::names::{INameT, IVarNameT};
 use crate::typing::types::types::{SharednessT, NeverT};
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
@@ -181,8 +181,8 @@ exported func main() int {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
-            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                coord: CoordT { ownership: OwnershipT::Own, kind: KindT::Never(NeverT { from_break: false }), .. },
+            variable: LocalVariable::Reference(LocalVariable {
+                coord: KindT { ownership: OwnershipT::Own, kind: KindT::Never(NeverT { from_break: false }), .. },
                 ..
             }),
             ..
@@ -215,7 +215,7 @@ fn taking_an_argument_and_returning_it() {
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Parameter(p) => Some(p)
     );
-    assert!(param.tyype == CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Int(IntT { bits: 32 })));
+    assert!(param.tyype == KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT { bits: 32 })));
 
     let lookup: &LocalLookupTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
@@ -225,8 +225,8 @@ fn taking_an_argument_and_returning_it() {
         IVarNameT::CodeVar(c) => assert!(c.name.as_str() == "a"),
         _ => panic!("Expected CodeVarNameT"),
     }
-    match lookup.local_variable.coord() {
-        CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
+    match lookup.local_variable.tyype() {
+        KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
         other => panic!("Expected CoordT(Own, _, Int(32)), got {:?}", other),
     }
 }
@@ -515,14 +515,14 @@ exported func main() void {
     let let_normal: &LetNormalTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(ln @ LetNormalTE {
-            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+            variable: LocalVariable::Reference(LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("b"), .. }),
                 ..
             }),
             ..
         }) => Some(ln)
     );
-    assert_eq!(let_normal.variable.coord().ownership, OwnershipT::Borrow);
+    assert_eq!(let_normal.variable.tyype().ownership, OwnershipT::Borrow);
 }
 
 #[test]
@@ -545,7 +545,7 @@ fn recursion() {
     let coutputs = compile.expect_compiler_outputs();
 
     // Make sure it inferred the param type and return type correctly
-    assert!(coutputs.lookup_function_by_str("main").header.return_type == CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Int(IntT { bits: 32 })));
+    assert!(coutputs.lookup_function_by_str("main").header.return_type == KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT { bits: 32 })));
 }
 
 #[test]
@@ -567,7 +567,7 @@ fn test_overloads() {
     );
     let coutputs = compile.expect_compiler_outputs();
     assert!(matches!(coutputs.lookup_function_by_str("main").header.return_type,
-        CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. }
+        KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. }
     ));
 }
 
@@ -664,7 +664,7 @@ fn test_taking_a_callable_param() {
     let coutputs = compile.expect_compiler_outputs();
     let do_fn = coutputs.lookup_function_by_str("do");
     assert!(matches!(do_fn.header.return_type,
-        CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. }
+        KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. }
     ));
 }
 
@@ -718,7 +718,7 @@ fn simple_struct() {
             members: [IStructMemberT::Normal(NormalStructMemberT {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                 tyype: IMemberTypeT::Reference(ReferenceMemberTypeT {
-                    reference: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
+                    reference: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
                 }),
             })],
             is_closure: false,
@@ -739,10 +739,10 @@ fn simple_struct() {
             params: [ParameterT {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                 virtuality: None,
-                tyype: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
+                tyype: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
                 ..
             }],
-            return_type: CoordT {
+            return_type: KindT {
                 ownership: OwnershipT::Own,
                 kind: KindT::Struct(StructTT {
                     id: IdT {
@@ -1020,7 +1020,7 @@ fn reads_a_struct_member() {
             ReferenceMemberLookupTE {
                 struct_expr: ExpressionTE::SoftLoad(SoftLoadTE { target_ownership: OwnershipT::Borrow, .. }),
                 member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
-                member_reference: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
+                member_reference: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
                 ..
             }
         ) => Some(())
@@ -1065,7 +1065,7 @@ fn automatically_drops_struct() {
                         local_name: INameT::Function(FunctionNameT {
                             template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
                             template_args: &[],
-                            parameters: [CoordT {
+                            parameters: [KindT {
                                 ownership: OwnershipT::Own,
                                 kind: KindT::Struct(StructTT {
                                     id: IdT {
@@ -1084,7 +1084,7 @@ fn automatically_drops_struct() {
                         }),
                         ..
                     },
-                    return_type: CoordT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. },
+                    return_type: KindT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. },
                 },
                 ..
             }
@@ -1119,9 +1119,9 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
     let template_args_vec = vec![
         ITemplataT::Coord(
             compile.typing_interner.alloc(CoordTemplataT {
-                coord: CoordT::new(
+                coord: KindT::new(
                     OwnershipT::Own,
-                    RegionT { region: RegionT::Default },
+                    RegionT::Default,
                     KindT::Int(IntT { bits: 32 }),
                 ),
             })
@@ -1141,9 +1141,9 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
         });
     let interface_tt = compile.typing_interner.intern_interface_tt(
         InterfaceTTValT { id: *interface_id });
-    let expected_coord = CoordT::new(
+    let expected_coord = KindT::new(
         OwnershipT::Borrow,
-        RegionT { region: RegionT::Default },
+        RegionT::Default,
         KindT::Interface(interface_tt),
     );
 
@@ -1293,7 +1293,7 @@ fn tests_single_expression_and_single_statement_functions_returns() {
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
     match moo.header.return_type {
-        CoordT {
+        KindT {
             ownership: OwnershipT::Own,
             kind: KindT::Struct(StructTT {
                 id: IdT {
@@ -1312,7 +1312,7 @@ fn tests_single_expression_and_single_statement_functions_returns() {
     }
     let main = coutputs.lookup_function_by_str("main");
     match main.header.return_type {
-        CoordT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. } => {}
+        KindT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. } => {}
         other => panic!("main.header.returnType: {:?}", other),
     }
 }
@@ -1357,7 +1357,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
             id: IdT {
                 local_name: INameT::Function(FunctionNameT {
                     template: FunctionTemplateNameT { human_name: StrI("MySome"), .. },
-                    template_args: [ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                    template_args: [ITemplataT::Coord(CoordTemplataT { coord: KindT {
                         ownership: OwnershipT::Own,
                         kind: KindT::KindPlaceholder(KindPlaceholderT {
                             id: IdT {
@@ -1374,7 +1374,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
                         }),
                         ..
                     } })],
-                    parameters: [CoordT {
+                    parameters: [KindT {
                         ownership: OwnershipT::Own,
                         kind: KindT::KindPlaceholder(KindPlaceholderT {
                             id: IdT {
@@ -1395,7 +1395,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
             params: [ParameterT {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("value"), .. }),
                 virtuality: None,
-                tyype: CoordT {
+                tyype: KindT {
                     ownership: OwnershipT::Own,
                     kind: KindT::KindPlaceholder(KindPlaceholderT {
                         id: IdT {
@@ -1410,13 +1410,13 @@ fn tests_calling_a_templated_struct_s_constructor() {
                 },
                 ..
             }],
-            return_type: CoordT {
+            return_type: KindT {
                 ownership: OwnershipT::Own,
                 kind: KindT::Struct(StructTT {
                     id: IdT {
                         local_name: INameT::Struct(StructNameT {
                             template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MySome"), .. }),
-                            template_args: [ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                            template_args: [ITemplataT::Coord(CoordTemplataT { coord: KindT {
                                 ownership: OwnershipT::Own,
                                 kind: KindT::KindPlaceholder(KindPlaceholderT {
                                     id: IdT {
@@ -1488,9 +1488,9 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
-            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+            variable: LocalVariable::Reference(LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
-                coord: CoordT {
+                coord: KindT {
                     ownership: OwnershipT::Own,
                     kind: KindT::Interface(InterfaceTT {
                         id: IdT {
@@ -1514,8 +1514,8 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
         NodeRefT::Upcast(u) => Some(u)
     );
 
-    match upcast.result().coord {
-        CoordT {
+    match upcast.result() {
+        KindT {
             ownership: OwnershipT::Own,
             kind: KindT::Interface(InterfaceTT {
                 id: IdT {
@@ -1534,8 +1534,8 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
         } => assert!(x.is_test()),
         other => panic!("upcast result coord: {:?}", other),
     }
-    match upcast.inner_expr.result().coord {
-        CoordT {
+    match upcast.inner_expr.result() {
+        KindT {
             ownership: OwnershipT::Own,
             kind: KindT::Struct(StructTT {
                 id: IdT {
@@ -1592,7 +1592,7 @@ fn tests_calling_a_virtual_function() {
             }),
             ..
         }) => {
-            match u.inner_expr.result().coord.kind {
+            match u.inner_expr.result() {
                 KindT::Struct(StructTT {
                     id: IdT {
                         local_name: INameT::Struct(StructNameT {
@@ -1605,7 +1605,7 @@ fn tests_calling_a_virtual_function() {
                 }) => {}
                 other => panic!("inner expr kind: {:?}", other),
             }
-            match u.result().coord.kind {
+            match u.result() {
                 KindT::Interface(InterfaceTT {
                     id: IdT {
                         package_coord: pc,
@@ -1666,7 +1666,7 @@ fn tests_upcasting_has_the_right_stuff() {
         }) => Some(u)
     );
 
-    match upcast.inner_expr.result().coord.kind {
+    match upcast.inner_expr.result() {
         KindT::Struct(StructTT {
             id: IdT {
                 local_name: INameT::Struct(StructNameT {
@@ -1679,7 +1679,7 @@ fn tests_upcasting_has_the_right_stuff() {
         }) => {}
         other => panic!("inner expr kind: {:?}", other),
     }
-    match upcast.result().coord.kind {
+    match upcast.result() {
         KindT::Interface(InterfaceTT {
             id: IdT {
                 package_coord: x,
@@ -1697,8 +1697,8 @@ fn tests_upcasting_has_the_right_stuff() {
     }
 
     let impl_edge = coutputs.lookup_edge(upcast.impl_name);
-    assert!(impl_edge.sub_citizen.id() == upcast.inner_expr.result().coord.kind.expect_citizen().id());
-    assert!(impl_edge.super_interface == upcast.result().coord.kind.expect_citizen().id());
+    assert!(impl_edge.sub_citizen.id() == upcast.inner_expr.result().expect_citizen().id());
+    assert!(impl_edge.super_interface == upcast.result().expect_citizen().id());
 
 //    freePrototype.fullName.last.parameters.head shouldEqual up.result.reference
 }
@@ -1737,7 +1737,7 @@ fn tests_calling_a_virtual_function_through_a_borrow_ref() {
                     ),
                     ..
                 },
-                return_type: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. },
+                return_type: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. },
                 ..
             },
             ..
@@ -1820,9 +1820,9 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
                     SoftLoadTE {
                         expr: ExpressionTE::LocalLookup(
                             LocalLookupTE {
-                                local_variable: ILocalVariableT::Reference(
-                                    ReferenceLocalVariableT {
-                                                                coord: CoordT { kind: KindT::Struct(_), .. },
+                                local_variable: LocalVariable::Reference(
+                                    LocalVariable {
+                                                                coord: KindT { kind: KindT::Struct(_), .. },
                                         ..
                                     }
                                 ),
@@ -1835,7 +1835,7 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
                 member_name: IVarNameT::CodeVar(
                     CodeVarNameT { name: StrI("x"), .. }
                 ),
-                member_reference: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
+                member_reference: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
                 ..
             }
         ) => Some(())
@@ -1936,7 +1936,7 @@ func main() () {
 
     let make_tup0 = coutputs.lookup_function_by_str("make_tup0");
     match make_tup0.header.return_type {
-        CoordT {
+        KindT {
             ownership: OwnershipT::Own,
             kind: KindT::Struct(StructTT {
                 id: IdT {
@@ -1959,9 +1959,9 @@ func main() () {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
-            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+            variable: LocalVariable::Reference(LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
-                coord: CoordT {
+                coord: KindT {
                     ownership: OwnershipT::Own,
                     kind: KindT::Struct(StructTT {
                         id: IdT {
@@ -2029,8 +2029,8 @@ exported func main() int {
                 args: [ExpressionTE::SoftLoad(SoftLoadTE {
                     target_ownership: OwnershipT::Borrow,
                     expr: ExpressionTE::LocalLookup(LocalLookupTE {
-                        local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                            coord: CoordT {
+                        local_variable: LocalVariable::Reference(LocalVariable {
+                            coord: KindT {
                                 ownership: OwnershipT::Own,
                                 kind: KindT::Struct(_),
                                 ..
@@ -2393,7 +2393,7 @@ fn test_return_from_inside_if_destroys_locals() {
                 id: IdT {
                     local_name: INameT::Function(FunctionNameT {
                         template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
-                        parameters: [CoordT {
+                        parameters: [KindT {
                             ownership: OwnershipT::Own,
                             kind: KindT::Struct(StructTT {
                                 id: IdT {
@@ -3064,7 +3064,7 @@ func main() int {
     // what lets it satisfy Array's `func(&G, int)E` bound when G = Lam.
     let call = coutputs.lookup_function_by_str("__call");
     match call.header.params[0].tyype {
-        CoordT {
+        KindT {
             ownership: OwnershipT::Borrow,
             kind: KindT::Struct(StructTT {
                 id: IdT {
@@ -3655,7 +3655,7 @@ fn humanize_errors() {
     });
     let firefly_tt = typing_interner.intern_struct_tt(StructTTValT { id: *firefly_id });
     let firefly_kind = KindT::Struct(firefly_tt);
-    let firefly_coord = CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, firefly_kind);
+    let firefly_coord = KindT::new(OwnershipT::Own, RegionT::Default, firefly_kind);
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Serenity")});
@@ -3666,7 +3666,7 @@ fn humanize_errors() {
     });
     let serenity_tt = typing_interner.intern_struct_tt(StructTTValT { id: *serenity_id });
     let serenity_kind = KindT::Struct(serenity_tt);
-    let serenity_coord = CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, serenity_kind);
+    let serenity_coord = KindT::new(OwnershipT::Own, RegionT::Default, serenity_kind);
 
     let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship")});
@@ -3701,7 +3701,7 @@ fn humanize_errors() {
     let export_template_name = typing_interner.intern_export_template_name(
         ExportTemplateNameT { code_loc: tz_code_loc});
     let export_name = typing_interner.intern_export_name(
-        ExportNameT { template: export_template_name, region: RegionT { region: RegionT::Default } });
+        ExportNameT { template: export_template_name, region: RegionT::Default });
     let firefly_export_id = typing_interner.intern_id(IdValT {
         package_coord: test_tld, init_steps: &[], local_name: INameT::Export(export_name),
     });
@@ -3816,10 +3816,10 @@ exported func main() int {
     let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
     match &err {
         ICompileErrorT::ArrayElementsHaveDifferentTypes { types, .. } => {
-            let types_set: HashSet<CoordT> = types.iter().copied().collect();
+            let types_set: HashSet<KindT> = types.iter().copied().collect();
             assert_eq!(types_set, HashSet::from_iter([
-                CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Int(IntT::I32)),
-                CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Bool(BoolT)),
+                KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT::I32)),
+                KindT::new(OwnershipT::Own, RegionT::Default, KindT::Bool(BoolT)),
             ]));
         }
         _other => panic!("expected ArrayElementsHaveDifferentTypes"),
@@ -3992,7 +3992,7 @@ fn test_struct_default_generic_argument_in_type() {
         NodeRefT::ReferenceMemberType(rmt) => Some(rmt.reference)
     );
     match tyype {
-        CoordT {
+        KindT {
             ownership: OwnershipT::Own,
             kind: KindT::Struct(StructTT {
                 id: IdT {
@@ -4006,7 +4006,7 @@ fn test_struct_default_generic_argument_in_type() {
                         template_args: [
                             ITemplataT::Coord(
                                 CoordTemplataT {
-                                    coord: CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. }
+                                    coord: KindT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. }
                                 }
                             ),
                             ITemplataT::Integer(5),
@@ -4316,7 +4316,7 @@ fn upcast_generic() {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(do_upcast),
         NodeRefT::Upcast(u) => {
-            match u.inner_expr.result().coord.kind {
+            match u.inner_expr.result() {
                 KindT::KindPlaceholder(_) => {}
                 other => panic!("sourceExpr.result.coord.kind: {:?}", other),
             }
@@ -4388,7 +4388,7 @@ fn downcast_function_rrbfs() {
         let as_funcs: Vec<_> = coutputs.functions.iter().filter(|f| {
             matches!(f.header.id.local_name, INameT::Function(FunctionNameT {
                 template: FunctionTemplateNameT { human_name: StrI("as"), .. },
-                parameters: [CoordT { ownership: OwnershipT::Borrow, .. }],
+                parameters: [KindT { ownership: OwnershipT::Borrow, .. }],
                 ..
             }))
         }).copied().collect();
@@ -4403,8 +4403,8 @@ fn downcast_function_rrbfs() {
         let ok_constructor = as_.ok_constructor;
         let err_constructor = as_.err_constructor;
 
-        match source_expr.result().coord {
-            CoordT {
+        match source_expr.result() {
+            KindT {
                 ownership: OwnershipT::Borrow,
                 kind: KindT::KindPlaceholder(KindPlaceholderT {
                     id: IdT {
@@ -4447,7 +4447,7 @@ fn downcast_function_rrbfs() {
             other => panic!("targetSubtype.kind: {:?}", other),
         }
         let (first_generic_arg, second_generic_arg) = match result_opt_type {
-            CoordT {
+            KindT {
                 ownership: OwnershipT::Own,
                 kind: KindT::Interface(InterfaceTT {
                     id: IdT {
@@ -4468,7 +4468,7 @@ fn downcast_function_rrbfs() {
         // They should both be pointers, since we dont really do borrows in structs yet
         match first_generic_arg {
             ITemplataT::Coord(CoordTemplataT {
-                coord: CoordT {
+                coord: KindT {
                     ownership: OwnershipT::Borrow,
                     kind: KindT::KindPlaceholder(KindPlaceholderT {
                         id: IdT {
@@ -4487,7 +4487,7 @@ fn downcast_function_rrbfs() {
         }
         match second_generic_arg {
             ITemplataT::Coord(CoordTemplataT {
-                coord: CoordT {
+                coord: KindT {
                     ownership: OwnershipT::Borrow,
                     kind: KindT::KindPlaceholder(KindPlaceholderT {
                         id: IdT {
@@ -4505,7 +4505,7 @@ fn downcast_function_rrbfs() {
             other => panic!("secondGenericArg: {:?}", other),
         }
         assert_eq!(ok_constructor.id.local_name.parameters()[0], target_subtype);
-        assert_eq!(err_constructor.id.local_name.parameters()[0], source_expr.result().coord);
+        assert_eq!(err_constructor.id.local_name.parameters()[0], source_expr.result());
     }
 }
 
@@ -4573,7 +4573,7 @@ fn downcast_with_as() {
 
         match as_prototype_template_args {
             [
-                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                ITemplataT::Coord(CoordTemplataT { coord: KindT {
                     ownership: OwnershipT::Own,
                     kind: KindT::Struct(StructTT {
                         id: IdT {
@@ -4589,7 +4589,7 @@ fn downcast_with_as() {
                     }),
                     ..
                 }}),
-                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                ITemplataT::Coord(CoordTemplataT { coord: KindT {
                     ownership: OwnershipT::Own,
                     kind: KindT::Interface(InterfaceTT {
                         id: IdT {
@@ -4609,7 +4609,7 @@ fn downcast_with_as() {
             other => panic!("asPrototypeTemplateArgs: {:?}", other),
         }
         match as_prototype_params {
-            [CoordT {
+            [KindT {
                 ownership: OwnershipT::Borrow,
                 kind: KindT::Interface(InterfaceTT {
                     id: IdT {
@@ -4628,7 +4628,7 @@ fn downcast_with_as() {
             other => panic!("asPrototypeParams: {:?}", other),
         }
         match as_prototype_return {
-            CoordT {
+            KindT {
                 ownership: OwnershipT::Own,
                 kind: KindT::Interface(InterfaceTT {
                     id: IdT {
@@ -4636,7 +4636,7 @@ fn downcast_with_as() {
                         local_name: INameT::Interface(InterfaceNameT {
                             template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
                             template_args: [
-                                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                                ITemplataT::Coord(CoordTemplataT { coord: KindT {
                                     ownership: OwnershipT::Borrow,
                                     kind: KindT::Struct(StructTT {
                                         id: IdT {
@@ -4652,7 +4652,7 @@ fn downcast_with_as() {
                                     }),
                                     ..
                                 }}),
-                                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                                ITemplataT::Coord(CoordTemplataT { coord: KindT {
                                     ownership: OwnershipT::Borrow,
                                     kind: KindT::Interface(InterfaceTT {
                                         id: IdT {
@@ -4679,8 +4679,8 @@ fn downcast_with_as() {
             } => {}
             other => panic!("asPrototypeReturn: {:?}", other),
         }
-        match as_arg.result().coord {
-            CoordT {
+        match as_arg.result() {
+            KindT {
                 ownership: OwnershipT::Borrow,
                 kind: KindT::Interface(InterfaceTT {
                     id: IdT {
@@ -4705,7 +4705,7 @@ fn downcast_with_as() {
         let as_funcs: Vec<_> = coutputs.functions.iter().filter(|f| {
             matches!(f.header.id.local_name, INameT::Function(FunctionNameT {
                 template: FunctionTemplateNameT { human_name: StrI("as"), .. },
-                parameters: [CoordT { ownership: OwnershipT::Borrow, .. }],
+                parameters: [KindT { ownership: OwnershipT::Borrow, .. }],
                 ..
             }))
         }).copied().collect();
@@ -4720,8 +4720,8 @@ fn downcast_with_as() {
         let ok_constructor = as_.ok_constructor;
         let err_constructor = as_.err_constructor;
 
-        match source_expr.result().coord {
-            CoordT {
+        match source_expr.result() {
+            KindT {
                 ownership: OwnershipT::Borrow,
                 kind: KindT::KindPlaceholder(KindPlaceholderT {
                     id: IdT {
@@ -4764,7 +4764,7 @@ fn downcast_with_as() {
             other => panic!("targetSubtype.kind: {:?}", other),
         }
         match result_opt_type {
-            CoordT {
+            KindT {
                 ownership: OwnershipT::Own,
                 kind: KindT::Interface(InterfaceTT {
                     id: IdT {
@@ -4772,7 +4772,7 @@ fn downcast_with_as() {
                         local_name: INameT::Interface(InterfaceNameT {
                             template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
                             template_args: [
-                                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                                ITemplataT::Coord(CoordTemplataT { coord: KindT {
                                     ownership: OwnershipT::Borrow,
                                     kind: KindT::KindPlaceholder(KindPlaceholderT {
                                         id: IdT {
@@ -4785,7 +4785,7 @@ fn downcast_with_as() {
                                     }),
                                     ..
                                 }}),
-                                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                                ITemplataT::Coord(CoordTemplataT { coord: KindT {
                                     ownership: OwnershipT::Borrow,
                                     kind: KindT::KindPlaceholder(KindPlaceholderT {
                                         id: IdT {
@@ -4810,7 +4810,7 @@ fn downcast_with_as() {
             other => panic!("resultOptType: {:?}", other),
         }
         assert_eq!(ok_constructor.id.local_name.parameters()[0], target_subtype);
-        assert_eq!(err_constructor.id.local_name.parameters()[0], source_expr.result().coord);
+        assert_eq!(err_constructor.id.local_name.parameters()[0], source_expr.result());
     }
 }
 
@@ -4875,8 +4875,8 @@ fn test_struct_default_generic_argument_in_call() {
         NodeRefT::FunctionDefinition(moo),
         NodeRefT::LetNormal(let_normal) => Some(let_normal.variable)
     );
-    match variable.coord() {
-        CoordT {
+    match variable.tyype() {
+        KindT {
             ownership: OwnershipT::Own,
             kind: KindT::Struct(StructTT {
                 id: IdT {
@@ -4890,7 +4890,7 @@ fn test_struct_default_generic_argument_in_call() {
                         template_args: [
                             ITemplataT::Coord(
                                 CoordTemplataT {
-                                    coord: CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. }
+                                    coord: KindT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. }
                                 }
                             ),
                             ITemplataT::Integer(5),

@@ -33,7 +33,7 @@ use crate::typing::infer_compiler::IResolvingError;
 use crate::typing::infer_compiler::IDefiningError;
 use crate::typing::typing_interner::TypingInterner;
 use crate::scout_arena::ScoutArena;
-use crate::typing::types::types::CoordT;
+use crate::typing::types::types::KindT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::types::types::KindT;
 use crate::typing::types::types::IntT;
@@ -42,8 +42,8 @@ use crate::utils::fx::HashSet;
 pub enum IFindFunctionFailureReason<'s, 't> {
     WrongNumberOfArguments { supplied: i32, expected: i32 },
     WrongNumberOfTemplateArguments { supplied: i32, expected: i32 },
-    SpecificParamDoesntSend { index: i32, argument: CoordT<'s, 't>, parameter: CoordT<'s, 't> },
-    SpecificParamDoesntMatchExactly { index: i32, argument: CoordT<'s, 't>, parameter: CoordT<'s, 't> },
+    SpecificParamDoesntSend { index: i32, argument: KindT<'s, 't>, parameter: KindT<'s, 't> },
+    SpecificParamDoesntMatchExactly { index: i32, argument: KindT<'s, 't>, parameter: KindT<'s, 't> },
     SpecificParamVirtualityDoesntMatch { index: i32 },
     Outscored,
     RuleTypeSolveFailure { reason: RuneTypeSolveError<'s> },
@@ -56,7 +56,7 @@ pub enum IFindFunctionFailureReason<'s, 't> {
 #[derive(Copy, Clone, Debug)]
 pub struct FindFunctionFailure<'s, 't> {
     pub name: IImpreciseNameS<'s>,
-    pub args: &'t [CoordT<'s, 't>],
+    pub args: &'t [KindT<'s, 't>],
     pub rejected_callee_to_reason: &'t [(ICalleeCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>)],
 }
 
@@ -77,7 +77,7 @@ where 's: 't,
         positional_explicit_template_arg_runes_s: &[IRuneS<'s>],
         receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
         context_region: RegionT,
-        args: &[CoordT<'s, 't>],
+        args: &[KindT<'s, 't>],
         extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         exact: bool,
     ) -> Result<Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
@@ -111,8 +111,8 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        desired_params: &[CoordT<'s, 't>],
-        candidate_params: &[CoordT<'s, 't>],
+        desired_params: &[KindT<'s, 't>],
+        candidate_params: &[KindT<'s, 't>],
         exact: bool,
     ) -> Result<(), IFindFunctionFailureReason<'s, 't>> {
         if desired_params.len() != candidate_params.len() {
@@ -152,7 +152,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         function_name: IImpreciseNameS<'s>,
-        param_filters: &[CoordT<'s, 't>],
+        param_filters: &[KindT<'s, 't>],
         extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         searched_envs: &mut Vec<SearchedEnvironment<'s, 't>>,
         results: &mut Vec<ICalleeCandidate<'s, 't>>,
@@ -250,7 +250,7 @@ where 's: 't,
         positional_explicit_template_arg_runes_s: &[IRuneS<'s>],
         receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
         context_region: RegionT,
-        args: &[CoordT<'s, 't>],
+        args: &[KindT<'s, 't>],
         candidate: ICalleeCandidate<'s, 't>,
         exact: bool,
     ) -> Result<Result<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>>, ICompileErrorT<'s, 't>> {
@@ -456,7 +456,7 @@ where 's: 't,
                                         // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
                                         match self.evaluate_generic_light_function_from_call_for_prototype(
                                             coutputs, call_range, call_location, calling_env, ft,
-                                            &positional_explicitly_specified_template_arg_templatas, RegionT { region: RegionT::Default }, args, &receiving_rune_to_explicit_template_arg_templata,
+                                            &positional_explicitly_specified_template_arg_templatas, RegionT::Default, args, &receiving_rune_to_explicit_template_arg_templata,
                                         )? {
                                             IResolveFunctionResult::ResolveFunctionFailure(failure) => {
                                                 Ok(Err(IFindFunctionFailureReason::FindFunctionResolveFailure { reason: failure.reason }))
@@ -493,7 +493,7 @@ where 's: 't,
                     IBoundArgumentsSource::InheritBoundsFromTypeItself,
                 );
                 let func_name = IFunctionNameT::try_from(prototype_t.id.local_name).unwrap_or_else(|_| panic!("attemptCandidateBanner PrototypeTemplata: local_name not IFunctionNameT"));
-                let params: Vec<CoordT<'s, 't>> = func_name.parameters().iter().map(|param_type| {
+                let params: Vec<KindT<'s, 't>> = func_name.parameters().iter().map(|param_type| {
                     substituter.substitute_for_coord(coutputs, *param_type)
                 }).collect();
                 match self.params_match(coutputs, calling_env, call_range, call_location, args, &params, exact) {
@@ -511,7 +511,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
-        param_filters: &[CoordT<'s, 't>],
+        param_filters: &[KindT<'s, 't>],
     ) -> Vec<IInDenizenEnvironmentT<'s, 't>> {
         param_filters.iter().flat_map(|tyype| {
             match tyype.kind {
@@ -528,7 +528,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
-        param_filters: &[CoordT<'s, 't>],
+        param_filters: &[KindT<'s, 't>],
     ) -> Vec<IInDenizenEnvironmentT<'s, 't>> {
         let mut collected: Vec<IInDenizenEnvironmentT<'s, 't>> = Vec::new();
         let mut seen: HashSet<IdT<'s, 't>> = HashSet::default();
@@ -575,7 +575,7 @@ where 's: 't,
         positional_explicit_template_arg_runes_s: &[IRuneS<'s>],
         receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
         context_region: RegionT,
-        args: &[CoordT<'s, 't>],
+        args: &[KindT<'s, 't>],
         extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         exact: bool,
     ) -> Result<Result<AttemptedCandidate<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
@@ -624,7 +624,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         candidate: &'t PrototypeT<'s, 't>,
-        arg_types: &[CoordT<'s, 't>],
+        arg_types: &[KindT<'s, 't>],
     ) -> Option<Vec<bool>> {
         let initial: Option<Vec<bool>> = Some(Vec::new());
         let result = candidate.param_types().iter().zip(arg_types.iter()).fold(initial, |acc, (param_type, arg_type)| {
@@ -658,14 +658,14 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         unfiltered_banners: &[AttemptedCandidate<'s, 't>],
-        arg_types: &[CoordT<'s, 't>],
+        arg_types: &[KindT<'s, 't>],
     ) -> Result<(AttemptedCandidate<'s, 't>, HashMap<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>>), ICompileErrorT<'s, 't>> {
         let deduped_banners: Vec<AttemptedCandidate<'s, 't>> = {
             let mut seen = HashSet::default();
             unfiltered_banners.iter().filter(|b| seen.insert(**b)).copied().collect()
         };
         // Group by paramTypes, prefer ordinary over bound
-        let mut param_types_to_banners: HashMap<Vec<CoordT<'s, 't>>, Vec<AttemptedCandidate<'s, 't>>> = HashMap::default();
+        let mut param_types_to_banners: HashMap<Vec<KindT<'s, 't>>, Vec<AttemptedCandidate<'s, 't>>> = HashMap::default();
         for banner in &deduped_banners {
             param_types_to_banners.entry(banner.prototype.param_types().to_vec()).or_default().push(*banner);
         }
@@ -757,9 +757,9 @@ where 's: 't,
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
         let param_filters = vec![
             callable_te.result().underlying_coord(),
-            CoordT::new(
+            KindT::new(
                 OwnershipT::Own,
-                RegionT { region: RegionT::Default },
+                RegionT::Default,
                 KindT::Int(IntT { bits: 32 }),
             ),
         ];
@@ -780,7 +780,7 @@ where 's: 't,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         callable_te: ExpressionTE<'s, 't>,
-        element_type: CoordT<'s, 't>,
+        element_type: KindT<'s, 't>,
         context_region: RegionT,
     ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
         let func_name = self.scout_arena.intern_imprecise_name(

@@ -30,10 +30,10 @@ use crate::typing::templata::templata::{
     CoordTemplataT, FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, PlaceholderTemplataT,
     PrototypeTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
 };
-use crate::typing::types::types::CoordT;
+use crate::typing::types::types::KindT;
 use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, SharednessT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
-use crate::typing::types::types::{RegionT, RegionT};
+use crate::typing::types::types::{RegionT};
 use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate, PackageCoordinateMap};
@@ -141,7 +141,7 @@ where 's: 't,
     pub fn get_placeholders_in_templata(&self, accum: &mut Vec<IdT<'s, 't>>, templata: ITemplataT<'s, 't>) {
         match templata {
             ITemplataT::Kind(KindTemplataT { kind }) => self.get_placeholders_in_kind(accum, *kind),
-            ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind, .. } }) => self.get_placeholders_in_kind(accum, *kind),
+            ITemplataT::Coord(CoordTemplataT { coord: KindT { kind, .. } }) => self.get_placeholders_in_kind(accum, *kind),
             ITemplataT::Placeholder(PlaceholderTemplataT { id, .. }) => accum.push(*id),
             ITemplataT::Integer(_) => {}
             ITemplataT::Boolean(_) => {}
@@ -296,7 +296,7 @@ where 's: 't,
         _envs: InferEnv<'s, 't>,
         _state: &mut CompilerOutputs<'s, 't>,
         size: ITemplataT<'s, 't>,
-        element: CoordT<'s, 't>,
+        element: KindT<'s, 't>,
         region: RegionT,
     ) -> StaticSizedArrayTT<'s, 't> {
         self.resolve_static_sized_array(size, element, region)
@@ -306,7 +306,7 @@ where 's: 't,
         &self,
         _envs: InferEnv<'s, 't>,
         _state: &mut CompilerOutputs<'s, 't>,
-        element: CoordT<'s, 't>,
+        element: KindT<'s, 't>,
         region: RegionT,
     ) -> RuntimeSizedArrayTT<'s, 't> {
         self.resolve_runtime_sized_array(element, region)
@@ -368,8 +368,8 @@ where 's: 't,
         _state: &mut CompilerOutputs<'s, 't>,
         _function_range: RangeS<'s>,
         name: StrI<'s>,
-        param_coords: &'t [CoordT<'s, 't>],
-        return_coord: CoordT<'s, 't>,
+        param_coords: &'t [KindT<'s, 't>],
+        return_coord: KindT<'s, 't>,
     ) -> PrototypeTemplataT<'s, 't> {
         let tmpl = self.typing_interner.intern_predicted_function_template_name(PredictedFunctionTemplateNameT { human_name: name});
         let pred_name = self.typing_interner.intern_predicted_function_name(PredictedFunctionNameValT { template: tmpl, template_args: &[], parameters: param_coords });
@@ -384,7 +384,7 @@ where 's: 't,
         state: &mut CompilerOutputs<'s, 't>,
         ranges: &[RangeS<'s>],
         name: StrI<'s>,
-        param_coords: &[CoordT<'s, 't>],
+        param_coords: &[KindT<'s, 't>],
     ) -> Result<Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
         self.resolve_function(
             env.original_calling_env,
@@ -404,8 +404,8 @@ where 's: 't,
         state: &mut CompilerOutputs<'s, 't>,
         _range: RangeS<'s>,
         name: StrI<'s>,
-        coords: &'t [CoordT<'s, 't>],
-        return_type: CoordT<'s, 't>,
+        coords: &'t [KindT<'s, 't>],
+        return_type: KindT<'s, 't>,
     ) -> &'t PrototypeT<'s, 't> {
         let tmpl = self.typing_interner.intern_function_bound_template_name(FunctionBoundTemplateNameT { human_name: name});
         let bound_name = self.typing_interner.intern_function_bound_name(FunctionBoundNameValT { template: tmpl, template_args: &[], parameters: coords });
@@ -444,7 +444,7 @@ where 's: 't,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         name: StrI<'s>,
-        coords: &[CoordT<'s, 't>],
+        coords: &[KindT<'s, 't>],
         context_region: RegionT,
         verify_conclusions: bool,
     ) -> Result<Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
@@ -487,7 +487,7 @@ where 's: 't,
         _explicit_template_arg_rules_s: &[IRulexSR<'s>],
         _explicit_template_arg_runes_s: &[IRuneS<'s>],
         _context_region: RegionT,
-        _args: &[CoordT<'s, 't>],
+        _args: &[KindT<'s, 't>],
         _extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         _exact: bool,
     ) -> StampFunctionSuccess<'s, 't> {
@@ -511,7 +511,7 @@ where 's: 't,
         _call_range: &[RangeS<'s>],
         _origin_function: Option<&'s FunctionS<'s>>,
         _param_coords: &[ParameterT<'s, 't>],
-        _maybe_ret_coord: Option<CoordT<'s, 't>>,
+        _maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> &'t FunctionHeaderT<'s, 't> {
         panic!("Unimplemented: generate_function");
         // generator.generate(
@@ -805,7 +805,7 @@ where 's: 't,
                                 });
                                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                                     template: template_name,
-                                    region: RegionT { region: RegionT::Default },
+                                    region: RegionT::Default,
                                 });
                                 let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
                                 let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
@@ -880,7 +880,7 @@ where 's: 't,
                                 });
                                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                                     template: template_name,
-                                    region: RegionT { region: RegionT::Default },
+                                    region: RegionT::Default,
                                 });
                                 let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
                                 let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
@@ -1013,7 +1013,7 @@ where 's: 't,
                                     id: template_id,
                                     templatas: export_outer_templatas,
                                 });
-                                let region_placeholder = RegionT { region: RegionT::Default };
+                                let region_placeholder = RegionT::Default;
                                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                                     template: template_name,
                                     region: region_placeholder,
@@ -1109,7 +1109,7 @@ where 's: 't,
                     templatas: export_outer_templatas,
                 });
 
-                let region_placeholder = RegionT { region: RegionT::Default };
+                let region_placeholder = RegionT::Default;
 
                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                     template: template_name,
@@ -1471,7 +1471,7 @@ where 's: 't,
         let empty_kind_map: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> = IndexMap::default();
         for func_export in coutputs.get_function_exports().iter() {
             let exported_kind_to_export = package_to_kind_to_export.get(func_export.export_id.package_coord).unwrap_or(&empty_kind_map);
-            let all_types: Vec<CoordT<'s, 't>> = once(func_export.prototype.return_type).chain(func_export.prototype.param_types().iter().copied()).collect();
+            let all_types: Vec<KindT<'s, 't>> = once(func_export.prototype.return_type).chain(func_export.prototype.param_types().iter().copied()).collect();
             for param_type in all_types {
                 if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
                     let range_t = self.typing_interner.alloc_slice_copy(&[func_export.range]);
@@ -1488,7 +1488,7 @@ where 's: 't,
 
         for function_extern in coutputs.get_function_externs().iter() {
             let exported_kind_to_export = package_to_kind_to_export.get(function_extern.extern_placeholdered_id.package_coord).unwrap_or(&empty_kind_map);
-            let all_types: Vec<CoordT<'s, 't>> = once(function_extern.prototype.return_type).chain(function_extern.prototype.param_types().iter().copied()).collect();
+            let all_types: Vec<KindT<'s, 't>> = once(function_extern.prototype.return_type).chain(function_extern.prototype.param_types().iter().copied()).collect();
             for param_type in all_types {
                 if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
                     // Method-own and container-inherited template params surface here as

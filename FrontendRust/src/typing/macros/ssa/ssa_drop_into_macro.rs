@@ -18,16 +18,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn generate_function_body_ssa_drop_into(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionS<'s>>,
-        param_coords: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      origin_function: Option<&FunctionS<'s>>,
+      param_coords: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         let header = FunctionHeaderT {
             id: env.id,
@@ -49,7 +49,7 @@ where 's: 't,
           call_location,
           arr_arg,
           callable_arg,
-          RegionT { region: RegionT::Default },
+          RegionT::Default,
         )?;
         let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {

@@ -394,12 +394,12 @@ where 's: 't,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
-        coord: CoordT<'s, 't>,
-    ) -> CoordT<'s, 't> {
-        let CoordT { ownership, region: original_region, kind, .. } = coord;
+        coord: KindT<'s, 't>,
+    ) -> KindT<'s, 't> {
+        let KindT { ownership, region: original_region, kind, .. } = coord;
         let result_region = original_region;
         match Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, kind) {
-            ITemplataT::Kind(k) => CoordT::new(ownership, result_region, k.kind),
+            ITemplataT::Kind(k) => KindT::new(ownership, result_region, k.kind),
             ITemplataT::Coord(c) => {
                 // VCOORD: revisit
                 // Composition of substituted ownership. `Borrow + share-kind` is distinct
@@ -416,7 +416,7 @@ where 's: 't,
                     (OwnershipT::Borrow, OwnershipT::Borrow) => OwnershipT::Borrow,
                     _ => unreachable!("remaining Weak-on-substituting-side ownership pairs are degenerate"),
                 };
-                CoordT::new(result_ownership, result_region, c.coord.kind)
+                KindT::new(result_ownership, result_region, c.coord.kind)
             }
             _ => unreachable!("exhaustive over KindTemplataT/CoordTemplataT only"),
         }
@@ -444,7 +444,7 @@ where 's: 't,
                 let INameT::RuntimeSizedArray(rsa_name) = rsa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
                     element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.element_type),
-                    self_region: RegionT { region: RegionT::Default },
+                    self_region: RegionT::Default,
                 });
                 let new_rsa_name = interner.intern_runtime_sized_array_name(RuntimeSizedArrayNameT {
                     template: rsa_name.template,
@@ -462,7 +462,7 @@ where 's: 't,
                 let INameT::StaticSizedArray(ssa_name) = ssa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
                     element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.element_type),
-                    self_region: RegionT { region: RegionT::Default },
+                    self_region: RegionT::Default,
                 });
                 let new_ssa_name = interner.intern_static_sized_array_name(StaticSizedArrayNameT {
                     template: ssa_name.template,
@@ -792,7 +792,7 @@ where 's: 't,
             Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *templata)
         }).collect();
         let substituted_template_args = interner.alloc_slice_from_vec(substituted_template_args_vec);
-        let substituted_params_vec: Vec<CoordT<'s, 't>> = func_name.parameters().iter().map(|coord| {
+        let substituted_params_vec: Vec<KindT<'s, 't>> = func_name.parameters().iter().map(|coord| {
             Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *coord)
         }).collect();
         let substituted_params = interner.alloc_slice_from_vec(substituted_params_vec);
@@ -871,8 +871,8 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
     pub fn substitute_for_coord(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        coord_t: CoordT<'s, 't>,
-    ) -> CoordT<'s, 't> {
+        coord_t: KindT<'s, 't>,
+    ) -> KindT<'s, 't> {
         Compiler::substitute_templatas_in_coord(
             coutputs,
             self.sanity_check,
@@ -1145,11 +1145,11 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        source_pointer_type: CoordT<'s, 't>,
-        target_pointer_type: CoordT<'s, 't>,
+        source_pointer_type: KindT<'s, 't>,
+        target_pointer_type: KindT<'s, 't>,
     ) -> bool {
-        let CoordT { ownership: target_ownership, region: target_region, kind: target_type, .. } = target_pointer_type;
-        let CoordT { ownership: source_ownership, region: source_region, kind: source_type, .. } = source_pointer_type;
+        let KindT { ownership: target_ownership, region: target_region, kind: target_type, .. } = target_pointer_type;
+        let KindT { ownership: source_ownership, region: source_region, kind: source_type, .. } = source_pointer_type;
 
         match (&source_type, &target_type) {
             (KindT::Never(_), _) => return true,
@@ -1180,36 +1180,37 @@ where 's: 't,
             return false;
         }
 
-        match (source_ownership, target_ownership) {
-            (a, b) if a == b => {}
-            // VCOORD: revisit
-            // (Own, Borrow) and (Borrow, Own) permitted uniformly; convert() decides
-            // target-side:
-            //   (Own, Borrow) → materialize a hidden local + LetAndLend + deferred drop.
-            //   (Borrow, Own) → probe `implicit_clone(&kind) kind`. If it resolves → emit
-            //     the auto-clone call; if missing → emit NoImplicitCloneDefinedT.
-            // "Does implicit_clone exist for this kind" is what actually matters — no
-            // is_primitive check. Ambiguity between an exact-Own overload and an
-            // auto-coerce-permitting overload is resolved by narrow_down_callable_overloads'
-            // "prefer exact match" tiebreaker.
-            (OwnershipT::Own, OwnershipT::Borrow) => {}
-            (OwnershipT::Own, OwnershipT::Weak) => return false,
-            (OwnershipT::Own, OwnershipT::Share) => return false,
-            (OwnershipT::Borrow, OwnershipT::Own) => {}
-            (OwnershipT::Borrow, OwnershipT::Weak) => return false,
-            // VCOORD: revisit
-            // `Borrow + share-kind` → Share is the auto-alias coercion; convert() emits
-            // AliasTE. Ambiguity with an exact-Share candidate is handled by
-            // narrow_down_callable_overloads' "prefer exact match" tiebreaker.
-            (OwnershipT::Borrow, OwnershipT::Share) => {}
-            (OwnershipT::Weak, OwnershipT::Own) => return false,
-            (OwnershipT::Weak, OwnershipT::Borrow) => return false,
-            (OwnershipT::Weak, OwnershipT::Share) => return false,
-            (OwnershipT::Share, OwnershipT::Borrow) => return false,
-            (OwnershipT::Share, OwnershipT::Weak) => return false,
-            (OwnershipT::Share, OwnershipT::Own) => return false,
-            _ => unreachable!(),
-        }
+        unimplemented!()
+        // match (source_ownership, target_ownership) {
+        //     (a, b) if a == b => {}
+        //     // VCOORD: revisit
+        //     // (Own, Borrow) and (Borrow, Own) permitted uniformly; convert() decides
+        //     // target-side:
+        //     //   (Own, Borrow) → materialize a hidden local + LetAndLend + deferred drop.
+        //     //   (Borrow, Own) → probe `implicit_clone(&kind) kind`. If it resolves → emit
+        //     //     the auto-clone call; if missing → emit NoImplicitCloneDefinedT.
+        //     // "Does implicit_clone exist for this kind" is what actually matters — no
+        //     // is_primitive check. Ambiguity between an exact-Own overload and an
+        //     // auto-coerce-permitting overload is resolved by narrow_down_callable_overloads'
+        //     // "prefer exact match" tiebreaker.
+        //     (OwnershipT::Own, OwnershipT::Borrow) => {}
+        //     (OwnershipT::Own, OwnershipT::Weak) => return false,
+        //     (OwnershipT::Own, OwnershipT::Share) => return false,
+        //     (OwnershipT::Borrow, OwnershipT::Own) => {}
+        //     (OwnershipT::Borrow, OwnershipT::Weak) => return false,
+        //     // VCOORD: revisit
+        //     // `Borrow + share-kind` → Share is the auto-alias coercion; convert() emits
+        //     // AliasTE. Ambiguity with an exact-Share candidate is handled by
+        //     // narrow_down_callable_overloads' "prefer exact match" tiebreaker.
+        //     (OwnershipT::Borrow, OwnershipT::Share) => {}
+        //     (OwnershipT::Weak, OwnershipT::Own) => return false,
+        //     (OwnershipT::Weak, OwnershipT::Borrow) => return false,
+        //     (OwnershipT::Weak, OwnershipT::Share) => return false,
+        //     (OwnershipT::Share, OwnershipT::Borrow) => return false,
+        //     (OwnershipT::Share, OwnershipT::Weak) => return false,
+        //     (OwnershipT::Share, OwnershipT::Own) => return false,
+        //     _ => unreachable!(),
+        // }
 
         true
     }
@@ -1220,7 +1221,7 @@ where 's: 't,
         kind: KindT<'s, 't>,
         region: RegionT,
         ownership_if_mutable: OwnershipT,
-    ) -> CoordT<'s, 't> {
+    ) -> KindT<'s, 't> {
         // VCOORD: not sure this should exist long term
         let ownership = match self.get_sharedness(coutputs, kind) {
             SharednessT::Single => ownership_if_mutable,
@@ -1235,13 +1236,13 @@ where 's: 't,
                 panic!("Unimplemented: pointify_kind StaticSizedArray");
                 // CoordT(ownership, region, a)
             }
-            KindT::Struct(_) => CoordT::new(ownership, region, kind),
-            KindT::Interface(_) => CoordT::new(ownership, region, kind),
-            KindT::Void(_) => CoordT::new(ownership, region, kind),
-            KindT::Int(_) => CoordT::new(ownership, region, kind),
-            KindT::Float(_) => CoordT::new(ownership, region, kind),
-            KindT::Bool(_) => CoordT::new(ownership, region, kind),
-            KindT::Str(_) => CoordT::new(ownership, region, kind),
+            KindT::Struct(_) => KindT::new(ownership, region, kind),
+            KindT::Interface(_) => KindT::new(ownership, region, kind),
+            KindT::Void(_) => KindT::new(ownership, region, kind),
+            KindT::Int(_) => KindT::new(ownership, region, kind),
+            KindT::Float(_) => KindT::new(ownership, region, kind),
+            KindT::Bool(_) => KindT::new(ownership, region, kind),
+            KindT::Str(_) => KindT::new(ownership, region, kind),
             _ => unreachable!("pointify_kind is exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str — Never/OverloadSet/KindPlaceholder not accepted"),
         }
     }
@@ -1275,42 +1276,42 @@ where 's: 't,
         results
     }
 
-    pub fn coerce_kind_to_coord(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        kind: KindT<'s, 't>,
-        region: RegionT,
-    ) -> CoordT<'s, 't> {
-        let ownership = match self.get_sharedness(coutputs, kind) {
-            SharednessT::Single => OwnershipT::Own,
-            SharednessT::Shared => OwnershipT::Share,
-        };
-        CoordT::new(ownership, region, kind)
-    }
+    // pub fn coerce_kind_to_coord(
+    //     &self,
+    //     coutputs: &mut CompilerOutputs<'s, 't>,
+    //     kind: KindT<'s, 't>,
+    //     region: RegionT,
+    // ) -> KindT<'s, 't> {
+    //     let ownership = match self.get_sharedness(coutputs, kind) {
+    //         SharednessT::Single => OwnershipT::Own,
+    //         SharednessT::Shared => OwnershipT::Share,
+    //     };
+    //     KindT::new(ownership, region, kind)
+    // }
 
-    pub fn coerce_to_coord(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: IInDenizenEnvironmentT<'s, 't>,
-        range: &[RangeS<'s>],
-        templata: ITemplataT<'s, 't>,
-        region: RegionT,
-    ) -> ITemplataT<'s, 't> {
-        match templata {
-            ITemplataT::Kind(kind_templata) => {
-                ITemplataT::Coord(self.typing_interner.alloc(
-                    CoordTemplataT { coord: self.coerce_kind_to_coord(coutputs, kind_templata.kind, region) }
-                ))
-            }
-            ITemplataT::Coord(_) => { panic!("vcurious"); }
-            ITemplataT::StructDefinition(_) => { panic!("vcurious"); }
-            ITemplataT::InterfaceDefinition(_) => { panic!("vcurious"); }
-            _ => {
-                panic!("Unimplemented: coerce_to_coord for {:?}", templata);
-                // vfail("Can't coerce a " + templata.tyype + " to be a coord!")
-            }
-        }
-    }
+    // pub fn coerce_to_coord(
+    //     &self,
+    //     coutputs: &mut CompilerOutputs<'s, 't>,
+    //     env: IInDenizenEnvironmentT<'s, 't>,
+    //     range: &[RangeS<'s>],
+    //     templata: ITemplataT<'s, 't>,
+    //     region: RegionT,
+    // ) -> ITemplataT<'s, 't> {
+    //     match templata {
+    //         ITemplataT::Kind(kind_templata) => {
+    //             ITemplataT::Coord(self.typing_interner.alloc(
+    //                 CoordTemplataT { coord: self.coerce_kind_to_coord(coutputs, kind_templata.kind, region) }
+    //             ))
+    //         }
+    //         ITemplataT::Coord(_) => { panic!("vcurious"); }
+    //         ITemplataT::StructDefinition(_) => { panic!("vcurious"); }
+    //         ITemplataT::InterfaceDefinition(_) => { panic!("vcurious"); }
+    //         _ => {
+    //             panic!("Unimplemented: coerce_to_coord for {:?}", templata);
+    //             // vfail("Can't coerce a " + templata.tyype + " to be a coord!")
+    //         }
+    //     }
+    // }
 
     pub fn resolve_struct_template(
         &self,
@@ -1359,12 +1360,6 @@ where 's: 't,
                 match ISubKindTT::try_from(kt.kind) {
                     Ok(sub) => self.get_citizen_template(sub.id()),
                     Err(_) => return false,
-                }
-            }
-            ITemplataT::Coord(ct) => {
-                match (ct.coord.ownership, ISubKindTT::try_from(ct.coord.kind)) {
-                    (OwnershipT::Own, Ok(sub)) | (OwnershipT::Share, Ok(sub)) => self.get_citizen_template(sub.id()),
-                    _ => return false,
                 }
             }
             _ => return false,
@@ -1426,7 +1421,7 @@ where 's: 't,
         register_with_compiler_outputs: bool,
     ) -> CoordTemplataT<'s, 't> {
         // val regionPlaceholderTemplata = RegionT(DefaultRegionT)
-        let region_placeholder_templata = RegionT { region: RegionT::Default };
+        let region_placeholder_templata = RegionT::Default;
 
         // val kindPlaceholderT =
         //   createKindPlaceholderInner(
@@ -1436,7 +1431,7 @@ where 's: 't,
 
         // CoordTemplataT(CoordT(sharedness, regionPlaceholderTemplata, kindPlaceholderT.kind))
         CoordTemplataT {
-            coord: CoordT::new(kind_ownership, region_placeholder_templata, kind_placeholder_t.kind)
+            coord: KindT::new(kind_ownership, region_placeholder_templata, kind_placeholder_t.kind)
         }
     }
 

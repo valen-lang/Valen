@@ -11,7 +11,7 @@ use crate::typing::templata::templata::{CoordTemplataT, ITemplataT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::test::traverse::NodeRefT;
-use crate::typing::types::types::{CoordT, KindT, StructTT};
+use crate::typing::types::types::{KindT, KindT, StructTT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::tests::tests::new_test_code_map;
 use crate::utils::code_hierarchy::PackageCoordinate;
@@ -103,7 +103,7 @@ exported func main() {
                 id: IdT {
                     local_name: INameT::Function(FunctionNameT {
                         template: FunctionTemplateNameT { human_name: StrI("launchGeneric"), .. },
-                        template_args: &[ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }), .. }), .. }, .. }), .. }, .. })],
+                        template_args: &[ITemplataT::Coord(CoordTemplataT { coord: KindT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }), .. }), .. }, .. }), .. }, .. })],
                         ..
                     }),
                     ..
@@ -200,7 +200,7 @@ exported func main() bool {
     let coutputs = compile.expect_compiler_outputs();
 
     match coutputs.lookup_function_by_str("main").header.return_type {
-        CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
+        KindT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
         other => panic!("expected CoordT(ShareT, _, BoolT()), got {:?}", other),
     }
 }
@@ -242,7 +242,7 @@ exported func main() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
     let coutputs = compile.expect_compiler_outputs();
     match coutputs.lookup_function_by_str("bork").header.return_type {
-        CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("SomeStruct"), .. }), .. }), .. }, .. }), .. } => {}
+        KindT { ownership: OwnershipT::Own, kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("SomeStruct"), .. }), .. }), .. }, .. }), .. } => {}
         other => panic!("expected CoordT(OwnT, _, StructTT(SomeStruct)), got {:?}", other),
     }
 }
@@ -282,7 +282,7 @@ exported func main() int {
     let generic_get_fuel = coutputs.lookup_function_by_str("genericGetFuel");
     let template_args = IFunctionNameT::try_from(generic_get_fuel.header.id.local_name).unwrap().template_args();
     match template_args.last().unwrap() {
-        ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind: KindT::KindPlaceholder(KindPlaceholderT { id: IdT { local_name: INameT::KindPlaceholder(KindPlaceholderNameT { template: KindPlaceholderTemplateNameT { index: 0, rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }), .. } }), .. }, .. }), .. } }) => {}
+        ITemplataT::Coord(CoordTemplataT { coord: KindT { kind: KindT::KindPlaceholder(KindPlaceholderT { id: IdT { local_name: INameT::KindPlaceholder(KindPlaceholderNameT { template: KindPlaceholderTemplateNameT { index: 0, rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }), .. } }), .. }, .. }), .. } }) => {}
         other => panic!("expected CoordTemplataT(KindPlaceholderT(T)), got {:?}", other),
     }
     let main = coutputs.lookup_function_by_str("main");
@@ -293,7 +293,7 @@ exported func main() int {
                 id: IdT {
                     local_name: INameT::Function(FunctionNameT {
                         template: FunctionTemplateNameT { human_name: StrI("genericGetFuel"), .. },
-                        template_args: &[ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Firefly"), .. }), .. }), .. }, .. }), .. }, .. })],
+                        template_args: &[ITemplataT::Coord(CoordTemplataT { coord: KindT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Firefly"), .. }), .. }), .. }, .. }), .. }, .. })],
                         ..
                     }),
                     ..
@@ -347,7 +347,7 @@ exported func main() bool {
     let coutputs = compile.expect_compiler_outputs();
 
     match coutputs.lookup_function_by_str("tryDowncast").header.return_type {
-        CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
+        KindT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
         other => panic!("expected CoordT(ShareT, _, BoolT()), got {:?}", other),
     }
 }
@@ -387,7 +387,7 @@ exported func main() {
     let lambda_funcs = coutputs.lookup_lambdas_in("main");
     assert_eq!(lambda_funcs.len(), 2);
 
-    let param_type_tuples: HashSet<&[CoordT]> = lambda_funcs.iter().map(|f| match f.header.id.local_name {
+    let param_type_tuples: HashSet<&[KindT]> = lambda_funcs.iter().map(|f| match f.header.id.local_name {
         INameT::LambdaCallFunction(LambdaCallFunctionNameT { template: LambdaCallFunctionTemplateNameT { param_types, .. }, .. }) => *param_types,
         _ => panic!("expected LambdaCallFunctionNameT"),
     }).collect();
@@ -416,19 +416,19 @@ struct MyStruct {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_struct_by_str("MyStruct");
-    let tyype: CoordT = collect_only_tnode!(
+    let tyype: KindT = collect_only_tnode!(
         NodeRefT::StructDefinition(moo),
         NodeRefT::ReferenceMemberType(ReferenceMemberTypeT { reference }) => Some(*reference)
     );
     match tyype {
-        CoordT {
+        KindT {
             ownership: OwnershipT::Own,
             kind: KindT::Interface(InterfaceTT {
                 id: IdT {
                     local_name: INameT::Interface(InterfaceNameT {
                         template: InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
                         template_args: &[
-                            ITemplataT::Coord(CoordTemplataT { coord: CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } }),
+                            ITemplataT::Coord(CoordTemplataT { coord: KindT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } }),
                             ITemplataT::Integer(5),
                         ],
                         ..

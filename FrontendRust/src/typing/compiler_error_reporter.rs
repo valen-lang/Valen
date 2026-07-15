@@ -8,7 +8,7 @@ use crate::typing::infer_compiler::{IDefiningError, IResolvingError};
 use crate::typing::names::names::{IdT, IVarNameT};
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::types::types::{CoordT, InterfaceTT, KindT, StructTT};
+use crate::typing::types::types::{KindT, InterfaceTT, KindT, StructTT};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
 use std::slice::from_ref;
@@ -23,8 +23,8 @@ pub enum ICompileErrorT<'s, 't> {
     ImplSuperInterfaceNotFound { range: &'t [RangeS<'s>], name: IImpreciseNameS<'s> },
     ImmStructCantHaveVaryingMember { range: &'t [RangeS<'s>], struct_name: INameS<'s>, member_name: &'s str },
     ImmStructCantHaveMutableMember { range: &'t [RangeS<'s>], struct_name: INameS<'s>, member_name: &'s str },
-    CantReconcileBranchesResults { range: &'t [RangeS<'s>], then_result: CoordT<'s, 't>, else_result: CoordT<'s, 't> },
-    IndexedArrayWithNonInteger { range: &'t [RangeS<'s>], types: CoordT<'s, 't> },
+    CantReconcileBranchesResults { range: &'t [RangeS<'s>], then_result: KindT<'s, 't>, else_result: KindT<'s, 't> },
+    IndexedArrayWithNonInteger { range: &'t [RangeS<'s>], types: KindT<'s, 't> },
     WrongNumberOfDestructuresError { range: &'t [RangeS<'s>], actual_num: i32, expected_num: i32 },
     CantDowncastUnrelatedTypes {
         range: &'t [RangeS<'s>],
@@ -36,8 +36,8 @@ pub enum ICompileErrorT<'s, 't> {
     CantUseRuneValueAsExpression { range: &'t [RangeS<'s>], rune: IRuneS<'s> },
     CouldntFindTypeT { range: &'t [RangeS<'s>], name: IImpreciseNameS<'s> },
     TooManyTypesWithNameT { range: &'t [RangeS<'s>], name: IImpreciseNameS<'s> },
-    ArrayElementsHaveDifferentTypes { range: &'t [RangeS<'s>], types: &'t [CoordT<'s, 't>] },
-    UnexpectedArrayElementType { range: &'t [RangeS<'s>], expected_type: CoordT<'s, 't>, actual_type: CoordT<'s, 't> },
+    ArrayElementsHaveDifferentTypes { range: &'t [RangeS<'s>], types: &'t [KindT<'s, 't>] },
+    UnexpectedArrayElementType { range: &'t [RangeS<'s>], expected_type: KindT<'s, 't>, actual_type: KindT<'s, 't> },
     InitializedWrongNumberOfElements { range: &'t [RangeS<'s>], expected_num_elements: i32, num_elements_initialized: i32 },
     CannotSubscriptT { range: &'t [RangeS<'s>], tyype: KindT<'s, 't> },
     NonReadonlyReferenceFoundInPureFunctionParameter { range: &'t [RangeS<'s>], param_name: IVarNameT<'s, 't> },
@@ -46,11 +46,11 @@ pub enum ICompileErrorT<'s, 't> {
     BodyResultDoesntMatch {
         range: &'t [RangeS<'s>],
         function_name: IFunctionDeclarationNameS<'s>,
-        expected_return_type: CoordT<'s, 't>,
-        result_type: CoordT<'s, 't>,
+        expected_return_type: KindT<'s, 't>,
+        result_type: KindT<'s, 't>,
     },
-    CouldntConvertForReturnT { range: &'t [RangeS<'s>], expected_type: CoordT<'s, 't>, actual_type: CoordT<'s, 't> },
-    CouldntConvertForMutateT { range: &'t [RangeS<'s>], expected_type: CoordT<'s, 't>, actual_type: CoordT<'s, 't> },
+    CouldntConvertForReturnT { range: &'t [RangeS<'s>], expected_type: KindT<'s, 't>, actual_type: KindT<'s, 't> },
+    CouldntConvertForMutateT { range: &'t [RangeS<'s>], expected_type: KindT<'s, 't>, actual_type: KindT<'s, 't> },
     CantMoveOutOfMemberT { range: &'t [RangeS<'s>], name: IVarNameT<'s, 't> },
     CouldntFindFunctionToCallT { range: &'t [RangeS<'s>], fff: FindFunctionFailure<'s, 't> },
     CouldntEvaluateFunction { range: &'t [RangeS<'s>], eff: IDefiningError<'s, 't> },
@@ -92,8 +92,8 @@ pub enum ICompileErrorT<'s, 't> {
     FunctionAlreadyExists { old_function_range: RangeS<'s>, new_function_range: RangeS<'s>, signature: IdT<'s, 't> },
     CantUseReadonlyReferenceAsReadwrite { range: &'t [RangeS<'s>] },
     LambdaReturnDoesntMatchInterfaceConstructor { range: &'t [RangeS<'s>] },
-    IfConditionIsntBoolean { range: &'t [RangeS<'s>], actual_type: CoordT<'s, 't> },
-    WhileConditionIsntBoolean { range: &'t [RangeS<'s>], actual_type: CoordT<'s, 't> },
+    IfConditionIsntBoolean { range: &'t [RangeS<'s>], actual_type: KindT<'s, 't> },
+    WhileConditionIsntBoolean { range: &'t [RangeS<'s>], actual_type: KindT<'s, 't> },
     HigherTypingInferError { range: &'t [RangeS<'s>], err: RuneTypeSolveError<'s> },
     AbstractMethodOutsideOpenInterface { range: &'t [RangeS<'s>] },
     TypingPassSolverError {
@@ -107,8 +107,8 @@ pub enum ICompileErrorT<'s, 't> {
     RangedInternalErrorT { range: &'t [RangeS<'s>], message: &'s str },
     WeakableImplingMismatch { range: &'t [RangeS<'s>], struct_weakable: bool, interface_weakable: bool },
     TookWeakRefOfNonWeakableError { range: &'t [RangeS<'s>] },
-    NoImplicitCloneDefinedT { range: &'t [RangeS<'s>], source_type: CoordT<'s, 't>, target_type: CoordT<'s, 't> },
-    ImplicitCloneRejectedT { range: &'t [RangeS<'s>], source_type: CoordT<'s, 't>, target_type: CoordT<'s, 't>, fff: FindFunctionFailure<'s, 't> },
+    NoImplicitCloneDefinedT { range: &'t [RangeS<'s>], source_type: KindT<'s, 't>, target_type: KindT<'s, 't> },
+    ImplicitCloneRejectedT { range: &'t [RangeS<'s>], source_type: KindT<'s, 't>, target_type: KindT<'s, 't>, fff: FindFunctionFailure<'s, 't> },
 }
 
 

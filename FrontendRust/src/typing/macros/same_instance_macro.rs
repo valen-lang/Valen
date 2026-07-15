@@ -16,16 +16,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn generate_function_body_same_instance(
-        &self,
-        _coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        _generator_id: StrI<'s>,
-        _life: LocationInFunctionEnvironmentT<'t>,
-        _call_range: &[RangeS<'s>],
-        _call_location: LocationInDenizen<'s>,
-        _origin_function: Option<&FunctionS<'s>>,
-        param_coords: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      _coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      _generator_id: StrI<'s>,
+      _life: LocationInFunctionEnvironmentT<'t>,
+      _call_range: &[RangeS<'s>],
+      _call_location: LocationInDenizen<'s>,
+      _origin_function: Option<&FunctionS<'s>>,
+      param_coords: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
         let header = FunctionHeaderT {
             id: env.id,

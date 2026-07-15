@@ -277,8 +277,8 @@ where 's: 't,
 
 
     pub fn get_compound_type_mutability(
-        &self,
-        member_types: &[CoordT<'s, 't>],
+      &self,
+      member_types: &[KindT<'s, 't>],
     ) -> SharednessT {
         panic!("Unimplemented: Slab 15");
         // val membersOwnerships = memberTypes2.map(_.ownership)

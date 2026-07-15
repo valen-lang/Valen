@@ -17,8 +17,8 @@ use std::marker::PhantomData;
 
 
 pub struct ResultTypeMismatchError<'s, 't> {
-    pub expected_type: CoordT<'s, 't>,
-    pub actual_type: CoordT<'s, 't>,
+    pub expected_type: KindT<'s, 't>,
+    pub actual_type: KindT<'s, 't>,
 }
 
 
@@ -233,12 +233,12 @@ where 's: 't,
     }
 
     pub fn finalize_header(
-        &self,
-        full_env: &'t FunctionEnvironmentT<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        attributes_t: Vec<IFunctionAttributeT<'s>>,
-        params_t: &[ParameterT<'s, 't>],
-        return_coord: CoordT<'s, 't>,
+      &self,
+      full_env: &'t FunctionEnvironmentT<'s, 't>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      attributes_t: Vec<IFunctionAttributeT<'s>>,
+      params_t: &[ParameterT<'s, 't>],
+      return_coord: KindT<'s, 't>,
     ) -> &'t FunctionHeaderT<'s, 't> {
         let header = self.typing_interner.alloc(FunctionHeaderT {
             id: full_env.id,
@@ -256,17 +256,17 @@ where 's: 't,
     }
 
     pub fn finish_function_maybe_deferred(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        full_env_snapshot: &'t FunctionEnvironmentT<'s, 't>,
-        call_range: &'t [RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        attributes_t: &'t [IFunctionAttributeT<'s>],
-        params_t: &'t [ParameterT<'s, 't>],
-        is_destructor: bool,
-        maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
-        instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      full_env_snapshot: &'t FunctionEnvironmentT<'s, 't>,
+      call_range: &'t [RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      attributes_t: &'t [IFunctionAttributeT<'s>],
+      params_t: &'t [ParameterT<'s, 't>],
+      is_destructor: bool,
+      maybe_explicit_return_coord: Option<KindT<'s, 't>>,
+      instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
         // val (maybeEvaluatedRetCoord, body2) =
         //   bodyCompiler.declareAndEvaluateFunctionBody(
@@ -314,14 +314,14 @@ where 's: 't,
     }
 
     pub fn make_extern_function(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        range: RangeS<'s>,
-        attributes: Vec<IFunctionAttributeT<'s>>,
-        params2: &[ParameterT<'s, 't>],
-        return_type: CoordT<'s, 't>,
-        maybe_origin: Option<FunctionTemplataT<'s, 't>>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      range: RangeS<'s>,
+      attributes: Vec<IFunctionAttributeT<'s>>,
+      params2: &[ParameterT<'s, 't>],
+      return_type: KindT<'s, 't>,
+      maybe_origin: Option<FunctionTemplataT<'s, 't>>,
     ) -> &'t FunctionHeaderT<'s, 't> {
         match env.id.local_name {
             INameT::Function(FunctionNameT { template: FunctionTemplateNameT { human_name, .. }, template_args: template_params, parameters, .. }) => {
@@ -388,7 +388,7 @@ where 's: 't,
                 });
                 let placeholdered_extern_name = self.typing_interner.intern_extern_name(ExternNameT {
                     template: extern_template_name,
-                    template_arg: RegionT { region: RegionT::Default },
+                    template_arg: RegionT::Default,
                 });
                 let placeholdered_extern_id = *self.typing_interner.intern_id(IdValT {
                     package_coord: env.id.package_coord,

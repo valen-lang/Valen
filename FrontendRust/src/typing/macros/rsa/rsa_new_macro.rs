@@ -13,22 +13,22 @@ use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS, CodeRuneS, IRuneValS};
 use crate::typing::env::environment::{ILookupContext, IInDenizenEnvironmentT};
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::types::types::{RegionT, RegionT};
+use crate::typing::types::types::{RegionT};
 use crate::utils::fx::HashSet;
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn generate_function_body_rsa_new(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionS<'s>>,
-        param_coords: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      origin_function: Option<&FunctionS<'s>>,
+      param_coords: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
 
         let header = FunctionHeaderT {
@@ -54,13 +54,13 @@ where 's: 't,
             _ => panic!("vwat"),
         };
 
-        let array_tt = self.resolve_runtime_sized_array(element_type, RegionT { region: RegionT::Default });
+        let array_tt = self.resolve_runtime_sized_array(element_type, RegionT::Default);
 
         let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
                 source_expr: ExpressionTE::NewRuntimeSizedArray(self.typing_interner.alloc(NewRuntimeSizedArrayTE {
                     array_type: self.typing_interner.alloc(array_tt),
-                    region: RegionT { region: RegionT::Default },
+                    region: RegionT::Default,
                     capacity_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                         param_index: 0,
                         coord: param_coords[0].tyype,

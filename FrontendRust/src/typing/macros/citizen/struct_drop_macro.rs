@@ -220,7 +220,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         origin_function1: Option<&'s FunctionS<'s>>,
         params2: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+        maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         let body_env = IInDenizenEnvironmentT::Function(env);
 
@@ -233,9 +233,9 @@ where 's: 't,
             SharednessT::Single => OwnershipT::Own,
             SharednessT::Shared => OwnershipT::Share,
         };
-        let struct_type = CoordT::new(struct_ownership, RegionT { region: RegionT::Default }, KindT::Struct(struct_tt));
+        let struct_type = KindT::new(struct_ownership, RegionT::Default, KindT::Struct(struct_tt));
 
-        let ret = CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Void(VoidT {}));
+        let ret = KindT::new(OwnershipT::Own, RegionT::Default, KindT::Void(VoidT {}));
         let params_arena: &'t [ParameterT<'s, 't>] = self.typing_interner.alloc_slice_from_vec(params2.to_vec());
         let header = FunctionHeaderT {
             id: env.id,
@@ -260,7 +260,7 @@ where 's: 't,
                 panic!("auto-generated drop for extern struct is unsupported; supply an explicit `extern func drop(...)` for {:?}", struct_def.instantiated_citizen);
             }
             SharednessT::Single => {
-                let member_local_variables: Vec<ReferenceLocalVariableT<'s, 't>> =
+                let member_local_variables: Vec<LocalVariable<'s, 't>> =
                     struct_def.members.iter().flat_map(|member| {
                         match member {
                             IStructMemberT::Normal(n) => {
@@ -273,7 +273,7 @@ where 's: 't,
                                             IBoundArgumentsSource::InheritBoundsFromTypeItself,
                                         );
                                         let reference = substituter.substitute_for_coord(coutputs, r.reference);
-                                        vec![ReferenceLocalVariableT { name: n.name, coord: reference }]
+                                        vec![LocalVariable { name: n.name, coord: reference }]
                                     }
                                     IMemberTypeT::Address(_) => vec![],
                                 }
@@ -293,9 +293,9 @@ where 's: 't,
                 let drop_call_range_slice = self.typing_interner.alloc_slice_from_vec(drop_call_range);
                 let drop_exprs: Vec<ExpressionTE<'s, 't>> = member_local_variables.iter().map(|v| {
                     let unlet = ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE {
-                        variable: ILocalVariableT::Reference(*v),
+                        variable: LocalVariable::Reference(*v),
                     }));
-                    self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT { region: RegionT::Default }, unlet)
+                    self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT::Default, unlet)
                 }).collect::<Result<Vec<_>, _>>()?;
                 let mut all_exprs: Vec<ExpressionTE<'s, 't>> = vec![destroy];
                 all_exprs.extend(drop_exprs.into_iter());
@@ -305,7 +305,7 @@ where 's: 't,
 
         let return_expr =
             ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT { region: RegionT::Default }})),
+                source_expr: ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT::Default})),
             }));
         let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: self.consecutive(&[body_expr, return_expr]),

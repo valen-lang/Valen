@@ -223,6 +223,27 @@ fn unapply_i_citizen_tt() {
   // Some(self.id)
 }
 
+// // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
+// /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
+// #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// pub enum IRefKindTT<'s, 't> {
+//   Borrow(&'t BorrowRefT<'s, 't>),
+//   Share(&'t ShareRefT<'s, 't>),
+//   Weak(&'t WeakRefT<'s, 't>),
+// }
+// impl<'s, 't> TryFrom<KindT<'s, 't>> for IRefKindTT<'s, 't> {
+//   type Error = ();
+//   fn try_from(k: KindT<'s, 't>) -> Result<Self, ()> {
+//     match k {
+//       KindT::BorrowRef(x) => Ok(IRefKindTT::Borrow(x)),
+//       KindT::ShareRef(x) => Ok(IRefKindTT::Share(x)),
+//       KindT::WeakRef(x) => Ok(IRefKindTT::Weak(x)),
+//       _ => Err(()),
+//     }
+//   }
+// }
+
+
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

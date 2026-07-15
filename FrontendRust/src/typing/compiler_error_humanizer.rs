@@ -620,8 +620,8 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
   }
 }
 
-fn humanize_coord<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, coord: CoordT<'s, 't>) -> String {
-  let CoordT { ownership, region, kind, .. } = coord;
+fn humanize_coord<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, coord: KindT<'s, 't>) -> String {
+  let KindT { ownership, region, kind, .. } = coord;
   let ownership_str = match ownership {
     OwnershipT::Own => "",
     OwnershipT::Share => "@", // VCOORD: revisit

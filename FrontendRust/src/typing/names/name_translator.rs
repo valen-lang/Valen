@@ -13,7 +13,7 @@ use std::mem::discriminant;
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_generic_template_function_name(&self, function_name: IFunctionDeclarationNameS<'s>, params: &[CoordT<'s, 't>]) -> INameT<'s, 't> {
+    pub fn translate_generic_template_function_name(&self, function_name: IFunctionDeclarationNameS<'s>, params: &[KindT<'s, 't>]) -> INameT<'s, 't> {
         match function_name {
             IFunctionDeclarationNameS::LambdaDeclarationName(lambda_name) => {
                 let interned = self.typing_interner.intern_lambda_call_function_template_name(LambdaCallFunctionTemplateNameValT {

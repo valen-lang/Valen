@@ -56,7 +56,7 @@ pub enum IConclusionResolveError<'s, 't> {
     },
     ReturnTypeConflictInConclusionResolve {
         range: &'t [RangeS<'s>],
-        expected_return_type: CoordT<'s, 't>,
+        expected_return_type: KindT<'s, 't>,
         actual: &'t PrototypeT<'s, 't>,
     },
 }
@@ -493,7 +493,7 @@ where 's: 't,
                     let maybe_mentioned_kind =
                         match templata {
                             ITemplataT::Kind(KindTemplataT { kind }) => Some(*kind),
-                            ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind, .. } }) => Some(*kind),
+                            ITemplataT::Coord(CoordTemplataT { coord: KindT { kind, .. } }) => Some(*kind),
                             _ => None,
                         };
                     let maybe_id_and_template_id: Option<(IdT<'s, 't>, IdT<'s, 't>)> =
@@ -832,7 +832,7 @@ where 's: 't,
                     ITemplataT::Coord(ct) => ct.coord,
                     _ => panic!("Expected CoordTemplataT as first arg in resolve_template_call_conclusion RuntimeSizedArrayTemplate"),
                 };
-                let context_region = RegionT { region: RegionT::Default };
+                let context_region = RegionT::Default;
                 let _rsa = self.resolve_runtime_sized_array(coord, context_region);
                 Ok(())
             }
@@ -843,7 +843,7 @@ where 's: 't,
                     _ => panic!("Expected CoordTemplataT as second arg in resolve_template_call_conclusion StaticSizedArrayTemplate"),
                 };
                 let size = expect_integer(s);
-                let context_region = RegionT { region: RegionT::Default };
+                let context_region = RegionT::Default;
                 let _ssa = self.resolve_static_sized_array(size, coord, context_region);
                 Ok(())
             }

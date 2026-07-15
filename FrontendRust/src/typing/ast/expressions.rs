@@ -13,6 +13,7 @@ use crate::typing::types::types::SharednessT;
 use crate::typing::types::types::RegionT;
 use crate::typing::types::types::BoolT;
 use crate::typing::types::types::FloatT;
+use crate::typing::typing_interner::TypingInterner;
 use std::any::Any;
 use std::marker::PhantomData;
 
@@ -42,7 +43,7 @@ pub enum ExpressionTE<'s, 't> {
     Mutate(&'t MutateTE<'s, 't>),
     Restackify(&'t RestackifyTE<'s, 't>),
     Return(&'t ReturnTE<'s, 't>),
-    Break(&'t BreakTE),
+    Break(&'t BreakTE<'s, 't>),
     Block(&'t BlockTE<'s, 't>),
     Consecutor(&'t ConsecutorTE<'s, 't>),
     Tuple(&'t TupleTE<'s, 't>),
@@ -50,11 +51,11 @@ pub enum ExpressionTE<'s, 't> {
     ArraySize(&'t ArraySizeTE<'s, 't>),
     IsSameInstance(&'t IsSameInstanceTE<'s, 't>),
     AsSubtype(&'t AsSubtypeTE<'s, 't>),
-    VoidLiteral(&'t VoidLiteralTE),
+    VoidLiteral(&'t VoidLiteralTE<'s, 't>),
     ConstantInt(&'t ConstantIntTE<'s, 't>),
-    ConstantBool(&'t ConstantBoolTE),
-    ConstantStr(&'t ConstantStrTE<'s>),
-    ConstantFloat(&'t ConstantFloatTE),
+    ConstantBool(&'t ConstantBoolTE<'s, 't>),
+    ConstantStr(&'t ConstantStrTE<'s, 't>),
+    ConstantFloat(&'t ConstantFloatTE<'s, 't>),
     ArgLookup(&'t ArgLookupTE<'s, 't>),
     ArrayLength(&'t ArrayLengthTE<'s, 't>),
     InterfaceFunctionCall(&'t InterfaceFunctionCallTE<'s, 't>),
@@ -72,7 +73,6 @@ pub enum ExpressionTE<'s, 't> {
     PopRuntimeSizedArray(&'t PopRuntimeSizedArrayTE<'s, 't>),
     InterfaceToInterfaceUpcast(&'t InterfaceToInterfaceUpcastTE<'s, 't>),
     Upcast(&'t UpcastTE<'s, 't>),
-    SoftLoad(&'t SoftLoadTE<'s, 't>),
     Destroy(&'t DestroyTE<'s, 't>),
     CopyPrim(&'t CopyPrimTE<'s, 't>),
     LocalLookup(&'t LocalLookupTE<'s, 't>),
@@ -85,56 +85,55 @@ pub enum ExpressionTE<'s, 't> {
 impl<'s, 't> ExpressionTE<'s, 't> where 's: 't {
     pub fn result(&self) -> KindT<'s, 't> {
         match self {
-            ExpressionTE::LetAndLend(e) => e.result(),
-            ExpressionTE::LockWeak(e) => e.result(),
-            ExpressionTE::BorrowToWeak(e) => e.result(),
-            ExpressionTE::LetNormal(e) => e.result(),
-            ExpressionTE::Unlet(e) => e.result(),
-            ExpressionTE::Discard(e) => e.result(),
-            ExpressionTE::Defer(e) => e.result(),
-            ExpressionTE::If(e) => e.result(),
-            ExpressionTE::While(e) => e.result(),
-            ExpressionTE::Mutate(e) => e.result(),
-            ExpressionTE::Restackify(e) => e.result(),
-            ExpressionTE::Return(e) => e.result(),
-            ExpressionTE::Break(e) => e.result(),
-            ExpressionTE::Block(e) => e.result(),
-            ExpressionTE::Consecutor(e) => e.result(),
-            ExpressionTE::Tuple(e) => e.result(),
-            ExpressionTE::StaticArrayFromValues(e) => e.result(),
-            ExpressionTE::ArraySize(e) => e.result(),
-            ExpressionTE::IsSameInstance(e) => e.result(),
-            ExpressionTE::AsSubtype(e) => e.result(),
-            ExpressionTE::VoidLiteral(e) => e.result(),
-            ExpressionTE::ConstantInt(e) => e.result(),
-            ExpressionTE::ConstantBool(e) => e.result(),
-            ExpressionTE::ConstantStr(e) => e.result(),
-            ExpressionTE::ConstantFloat(e) => e.result(),
-            ExpressionTE::ArgLookup(e) => e.result(),
-            ExpressionTE::ArrayLength(e) => e.result(),
-            ExpressionTE::InterfaceFunctionCall(e) => e.result(),
-            ExpressionTE::ExternFunctionCall(e) => e.result(),
-            ExpressionTE::FunctionCall(e) => e.result(),
-            ExpressionTE::Reinterpret(e) => e.result(),
-            ExpressionTE::Construct(e) => e.result(),
-            ExpressionTE::NewRuntimeSizedArray(e) => e.result(),
-            ExpressionTE::StaticArrayFromCallable(e) => e.result(),
-            ExpressionTE::DestroyStaticSizedArrayIntoFunction(e) => e.result(),
-            ExpressionTE::DestroyStaticSizedArrayIntoLocals(e) => e.result(),
-            ExpressionTE::DestroyRuntimeSizedArray(e) => e.result(),
-            ExpressionTE::RuntimeSizedArrayCapacity(e) => e.result(),
-            ExpressionTE::PushRuntimeSizedArray(e) => e.result(),
-            ExpressionTE::PopRuntimeSizedArray(e) => e.result(),
-            ExpressionTE::InterfaceToInterfaceUpcast(e) => e.result(),
-            ExpressionTE::Upcast(e) => e.result(),
-            ExpressionTE::SoftLoad(e) => e.result(),
-            ExpressionTE::Destroy(e) => e.result(),
-            ExpressionTE::CopyPrim(e) => e.result(),
-            ExpressionTE::LocalLookup(e) => e.result(),
-            ExpressionTE::StaticSizedArrayLookup(e) => e.result(),
-            ExpressionTE::RuntimeSizedArrayLookup(e) => e.result(),
-            ExpressionTE::ReferenceMemberLookup(e) => e.result(),
-            ExpressionTE::AddressMemberLookup(e) => e.result(),
+            ExpressionTE::LetAndLend(e) => KindT::BorrowRef(e.result),
+            ExpressionTE::LockWeak(e) => e.result,
+            ExpressionTE::BorrowToWeak(e) => KindT::WeakRef(e.result),
+            ExpressionTE::LetNormal(e) => e.result,
+            ExpressionTE::Unlet(e) => e.result,
+            ExpressionTE::Discard(e) => e.result,
+            ExpressionTE::Defer(e) => e.result,
+            ExpressionTE::If(e) => e.result,
+            ExpressionTE::While(e) => e.result,
+            ExpressionTE::Mutate(e) => e.result,
+            ExpressionTE::Restackify(e) => e.result,
+            ExpressionTE::Return(e) => e.result,
+            ExpressionTE::Break(e) => e.result,
+            ExpressionTE::Block(e) => e.result,
+            ExpressionTE::Consecutor(e) => e.result,
+            ExpressionTE::Tuple(e) => e.result,
+            ExpressionTE::StaticArrayFromValues(e) => e.result,
+            ExpressionTE::ArraySize(e) => e.result,
+            ExpressionTE::IsSameInstance(e) => e.result,
+            ExpressionTE::AsSubtype(e) => e.result,
+            ExpressionTE::VoidLiteral(e) => e.result,
+            ExpressionTE::ConstantInt(e) => e.result,
+            ExpressionTE::ConstantBool(e) => e.result,
+            ExpressionTE::ConstantStr(e) => KindT::ShareRef(e.result),
+            ExpressionTE::ConstantFloat(e) => e.result,
+            ExpressionTE::ArgLookup(e) => e.result,
+            ExpressionTE::ArrayLength(e) => e.result,
+            ExpressionTE::InterfaceFunctionCall(e) => e.result,
+            ExpressionTE::ExternFunctionCall(e) => e.result,
+            ExpressionTE::FunctionCall(e) => e.result,
+            ExpressionTE::Reinterpret(e) => e.result,
+            ExpressionTE::Construct(e) => e.result,
+            ExpressionTE::NewRuntimeSizedArray(e) => e.result,
+            ExpressionTE::StaticArrayFromCallable(e) => e.result,
+            ExpressionTE::DestroyStaticSizedArrayIntoFunction(e) => e.result,
+            ExpressionTE::DestroyStaticSizedArrayIntoLocals(e) => e.result,
+            ExpressionTE::DestroyRuntimeSizedArray(e) => e.result,
+            ExpressionTE::RuntimeSizedArrayCapacity(e) => e.result,
+            ExpressionTE::PushRuntimeSizedArray(e) => e.result,
+            ExpressionTE::PopRuntimeSizedArray(e) => e.result,
+            ExpressionTE::InterfaceToInterfaceUpcast(e) => e.result,
+            ExpressionTE::Upcast(e) => e.result,
+            ExpressionTE::Destroy(e) => e.result,
+            ExpressionTE::CopyPrim(e) => e.result,
+            ExpressionTE::LocalLookup(e) => KindT::BorrowRef(e.result),
+            ExpressionTE::StaticSizedArrayLookup(e) => KindT::BorrowRef(e.result),
+            ExpressionTE::RuntimeSizedArrayLookup(e) => KindT::BorrowRef(e.result),
+            ExpressionTE::ReferenceMemberLookup(e) => KindT::BorrowRef(e.result),
+            ExpressionTE::AddressMemberLookup(e) => KindT::BorrowRef(e.result),
         }
     }
     
@@ -149,29 +148,27 @@ impl<'s, 't> ExpressionTE<'s, 't> where 's: 't {
 pub struct LetAndLendTE<'s, 't>
 where 's: 't,
 {
-    pub variable: ILocalVariableT<'s, 't>,
+    pub variable: LocalVariable<'s, 't>,
     pub expr: ExpressionTE<'s, 't>,
     // Stored instead of computed because I dont want getters to allocate.
     pub result: &'t BorrowRefT<'s, 't>,
     // Always produces a borrow reference, though i can see a world where we go back on that decision.
 
     // VCOORD: _sealed here
+    _sealed: (),
 }
 
 impl<'s, 't> LetAndLendTE<'s, 't> where 's: 't, {
-    fn new(
-        variable: ILocalVariableT<'s, 't>,
+    pub fn new(
+        interner: &TypingInterner<'s, 't>,
+        variable: LocalVariable<'s, 't>,
         expr: ExpressionTE<'s, 't>,
-        result: &'t BorrowRefT<'s, 't>
     ) -> LetAndLendTE<'s, 't> {
-        assert!(result.inner == expr.result());
-        LetAndLendTE { variable, expr, result }
+        let result = interner.alloc(BorrowRefT { inner: expr.result(), region: RegionT::Default });
+        LetAndLendTE { variable, expr, result, _sealed: () }
     }
 
     // VCOORD: get rid of result(), just inline it into the enum's dispatcher
-    pub fn result(&self) -> KindT<'s, 't> {
-        KindT::BorrowRef(self.result)
-    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -179,15 +176,25 @@ pub struct LockWeakTE<'s, 't>
 where 's: 't,
 {
     pub inner_expr: ExpressionTE<'s, 't>,
-    pub result_opt_borrow_type: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
     pub some_constructor: &'t PrototypeT<'s, 't>,
     pub none_constructor: &'t PrototypeT<'s, 't>,
     pub some_impl_name: IdT<'s, 't>,
     pub none_impl_name: IdT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> LockWeakTE<'s, 't> {
-    fn result(&self) -> KindT<'s, 't> { KindT { coord: self.result_opt_borrow_type } }
+impl<'s, 't> LockWeakTE<'s, 't> where 's: 't, {
+    pub fn new(
+        inner_expr: ExpressionTE<'s, 't>,
+        result: KindT<'s, 't>,
+        some_constructor: &'t PrototypeT<'s, 't>,
+        none_constructor: &'t PrototypeT<'s, 't>,
+        some_impl_name: IdT<'s, 't>,
+        none_impl_name: IdT<'s, 't>,
+    ) -> LockWeakTE<'s, 't> {
+        LockWeakTE { inner_expr, result, some_constructor, none_constructor, some_impl_name, none_impl_name, _sealed: () }
+    }
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -197,19 +204,16 @@ where 's: 't,
 {
     pub inner_expr: ExpressionTE<'s, 't>,
     pub result: &'t WeakRefT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> BorrowToWeakTE<'s, 't> {
-    fn new(
+impl<'s, 't> BorrowToWeakTE<'s, 't> where 's: 't, {
+    pub fn new(
+        interner: &TypingInterner<'s, 't>,
         inner_expr: ExpressionTE<'s, 't>,
-        result: &'t WeakRefT<'s, 't>
     ) -> BorrowToWeakTE<'s, 't> {
-        assert_eq!(result.inner, inner_expr.result());
-        BorrowToWeakTE { inner_expr, result }
-    }
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(OwnershipT::Weak, self.inner_expr.result().region, self.inner_expr.kind()) }
+        let result = interner.alloc(WeakRefT { inner: inner_expr.result() });
+        BorrowToWeakTE { inner_expr, result, _sealed: () }
     }
 }
 
@@ -218,37 +222,33 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
 pub struct LetNormalTE<'s, 't>
 where 's: 't,
 {
-    pub variable: ILocalVariableT<'s, 't>,
+    pub variable: LocalVariable<'s, 't>,
     pub expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> LetNormalTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.expr.result().region,
-                KindT::Void(VoidT {}),
-            )
-        }
+impl<'s, 't> LetNormalTE<'s, 't> where 's: 't, {
+    pub fn new(
+        variable: LocalVariable<'s, 't>,
+        expr: ExpressionTE<'s, 't>,
+    ) -> LetNormalTE<'s, 't> {
+        LetNormalTE { variable, expr, result: KindT::Void(VoidT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct UnletTE<'s, 't> {
-    pub variable: ILocalVariableT<'s, 't>,
+    pub variable: LocalVariable<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> UnletTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: self.variable.coord() }
+impl<'s, 't> UnletTE<'s, 't> where 's: 't, {
+    pub fn new(variable: LocalVariable<'s, 't>) -> UnletTE<'s, 't> {
+        let result = variable.tyype();
+        UnletTE { variable, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -256,21 +256,14 @@ pub struct DiscardTE<'s, 't>
 where 's: 't,
 {
     pub expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> DiscardTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.expr.result().region,
-                KindT::Void(VoidT),
-            )
-        }
+impl<'s, 't> DiscardTE<'s, 't> where 's: 't, {
+    pub fn new(expr: ExpressionTE<'s, 't>) -> DiscardTE<'s, 't> {
+        DiscardTE { expr, result: KindT::Void(VoidT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -279,29 +272,18 @@ where 's: 't,
 {
     pub inner_expr: ExpressionTE<'s, 't>,
     pub deferred_expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
     _sealed: (),
 }
 
-impl<'s, 't> DeferTE<'s, 't> {
-
-
-    pub fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: self.inner_expr.result() }
-    }
-
-}
 impl<'s, 't> DeferTE<'s, 't> where 's: 't, {
     pub fn new(
         inner_expr: ExpressionTE<'s, 't>,
         deferred_expr: ExpressionTE<'s, 't>,
     ) -> DeferTE<'s, 't> {
-        let inner_coord = inner_expr.result();
-        assert!(deferred_expr.result() == KindT::new(
-            OwnershipT::Own,
-            inner_coord.region,
-            KindT::Void(VoidT),
-        ));
-        DeferTE { inner_expr, deferred_expr, _sealed: () }
+        assert!(deferred_expr.result() == KindT::Void(VoidT));
+        let result = inner_expr.result();
+        DeferTE { inner_expr, deferred_expr, result, _sealed: () }
     }
 
 }
@@ -313,42 +295,34 @@ where 's: 't,
     pub condition: ExpressionTE<'s, 't>,
     pub then_call: ExpressionTE<'s, 't>,
     pub else_call: ExpressionTE<'s, 't>,
-    pub common_supertype: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
     _sealed: (),
 }
 
-impl<'s, 't> IfTE<'s, 't> {
-
-
+impl<'s, 't> IfTE<'s, 't> where 's: 't, {
     pub fn new(
         condition: ExpressionTE<'s, 't>,
         then_call: ExpressionTE<'s, 't>,
         else_call: ExpressionTE<'s, 't>,
     ) -> IfTE<'s, 't> {
-        let condition_result_coord = condition.result();
-        let then_result_coord = then_call.result();
-        let else_result_coord = else_call.result();
-        match condition_result_coord {
-            KindT { kind: KindT::Bool(_), ownership: OwnershipT::Own, .. } => {}
+        match condition.result() {
+            KindT::Bool(_) => {}
             other => panic!("vfail: {:?}", other),
         }
-        match (then_result_kind, then_result_kind) {
+        let then_result = then_call.result();
+        let else_result = else_call.result();
+        match (then_result, else_result) {
             (KindT::Never(_), _) => {}
             (_, KindT::Never(_)) => {}
             (a, b) if a == b => {}
             _ => panic!("vwat"),
         }
-        let common_supertype = match then_result_kind {
-            KindT::Never(_) => else_result_coord,
-            _ => then_result_coord,
+        let result = match then_result {
+            KindT::Never(_) => else_result,
+            _ => then_result,
         };
-        IfTE { condition, then_call, else_call, common_supertype, _sealed: () }
+        IfTE { condition, then_call, else_call, result, _sealed: () }
     }
-    
-    pub fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: self.common_supertype }
-    }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -356,28 +330,20 @@ pub struct WhileTE<'s, 't>
 where 's: 't,
 {
     pub block: BlockTE<'s, 't>,
-    pub result_coord: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
     _sealed: (),
 }
 
-impl<'s, 't> WhileTE<'s, 't> {
+impl<'s, 't> WhileTE<'s, 't> where 's: 't, {
     pub fn new(block: BlockTE<'s, 't>) -> WhileTE<'s, 't> {
-        let result_coord = match block.result().kind {
-            KindT::Void(_) => block.result(),
-            KindT::Never(NeverT { from_break: true }) => KindT::new(
-                OwnershipT::Own,
-                block.result().region,
-                KindT::Void(VoidT),
-            ),
-            KindT::Never(NeverT { from_break: false }) => block.result(),
+        let result = match block.result {
+            KindT::Void(_) => block.result,
+            KindT::Never(NeverT { from_break: true }) => KindT::Void(VoidT),
+            KindT::Never(NeverT { from_break: false }) => block.result,
             _ => panic!("vwat"),
         };
-        WhileTE { block, result_coord, _sealed: () }
+        WhileTE { block, result, _sealed: () }
     }
-    
-
-    fn result(&self) -> KindT<'s, 't> { KindT { coord: self.result_coord } }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -386,36 +352,38 @@ where 's: 't,
 {
     pub destination_expr: ExpressionTE<'s, 't>,
     pub source_expr: ExpressionTE<'s, 't>,
+    // VCOORD: the old value that was replaced; onion old-value semantics to confirm.
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> MutateTE<'s, 't> {
-
-
-    pub fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: self.destination_expr.result() }
+impl<'s, 't> MutateTE<'s, 't> where 's: 't, {
+    pub fn new(
+        destination_expr: ExpressionTE<'s, 't>,
+        source_expr: ExpressionTE<'s, 't>,
+    ) -> MutateTE<'s, 't> {
+        let result = destination_expr.result();
+        MutateTE { destination_expr, source_expr, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct RestackifyTE<'s, 't>
 where 's: 't,
 {
-    pub variable: ILocalVariableT<'s, 't>,
+    pub variable: LocalVariable<'s, 't>,
     pub source_expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> RestackifyTE<'s, 't> {
-
-
-    pub fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(
-            OwnershipT::Own,
-            self.source_expr.result().region,
-            KindT::Void(VoidT),
-        ) }
+impl<'s, 't> RestackifyTE<'s, 't> where 's: 't, {
+    pub fn new(
+        variable: LocalVariable<'s, 't>,
+        source_expr: ExpressionTE<'s, 't>,
+    ) -> RestackifyTE<'s, 't> {
+        RestackifyTE { variable, source_expr, result: KindT::Void(VoidT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -423,35 +391,27 @@ pub struct ReturnTE<'s, 't>
 where 's: 't,
 {
     pub source_expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> ReturnTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.source_expr.result().region,
-                KindT::Never(NeverT { from_break: false }),
-            )
-        }
+impl<'s, 't> ReturnTE<'s, 't> where 's: 't, {
+    pub fn new(source_expr: ExpressionTE<'s, 't>) -> ReturnTE<'s, 't> {
+        ReturnTE { source_expr, result: KindT::Never(NeverT { from_break: false }), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct BreakTE {
+pub struct BreakTE<'s, 't> {
     pub region: RegionT,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl BreakTE {
-
-
-    fn result<'s, 't>(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(OwnershipT::Own, self.region, KindT::Never(NeverT { from_break: true })) }
+impl<'s, 't> BreakTE<'s, 't> where 's: 't, {
+    pub fn new(region: RegionT) -> BreakTE<'s, 't> {
+        BreakTE { region, result: KindT::Never(NeverT { from_break: true }), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -459,13 +419,15 @@ pub struct BlockTE<'s, 't>
 where 's: 't,
 {
     pub inner: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> BlockTE<'s, 't> {
-
-
-    pub fn result(&self) -> KindT<'s, 't> { self.inner.result() }
-
+impl<'s, 't> BlockTE<'s, 't> where 's: 't, {
+    pub fn new(inner: ExpressionTE<'s, 't>) -> BlockTE<'s, 't> {
+        let result = inner.result();
+        BlockTE { inner, result, _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -473,25 +435,18 @@ pub struct ConsecutorTE<'s, 't>
 where 's: 't,
 {
     pub exprs: &'t [ExpressionTE<'s, 't>],
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> ConsecutorTE<'s, 't> {
-
-
-}
 impl<'s, 't> ConsecutorTE<'s, 't> where 's: 't, {
-    fn new(exprs: &'t [ExpressionTE<'s, 't>]) -> ConsecutorTE<'s, 't> { panic!("Unimplemented: ConsecutorTE::new"); }
-
-}
-impl<'s, 't> ConsecutorTE<'s, 't> {
-    pub fn result(&self) -> KindT<'s, 't> {
-        let never_coord = self.exprs.iter()
-            .map(|e| e.result())
-            .find(|c| matches!(c, KindT { ownership: OwnershipT::Own, kind: KindT::Never(_), .. }));
-        match never_coord {
-            Some(n) => KindT { coord: n },
-            None => self.exprs.last().unwrap().result(),
-        }
+    pub fn new(exprs: &'t [ExpressionTE<'s, 't>]) -> ConsecutorTE<'s, 't> {
+        // A `Never` anywhere makes the whole sequence `Never`; otherwise the last expr's result.
+        let result = match exprs.iter().map(|e| e.result()).find(|c| matches!(c, KindT::Never(_))) {
+            Some(n) => n,
+            None => exprs.last().unwrap().result(),
+        };
+        ConsecutorTE { exprs, result, _sealed: () }
     }
 
     fn last_reference_expr(&self) -> &ExpressionTE<'s, 't> {
@@ -506,14 +461,17 @@ pub struct TupleTE<'s, 't>
 where 's: 't,
 {
     pub elements: &'t [ExpressionTE<'s, 't>],
-    pub result_reference: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> TupleTE<'s, 't> {
-
-
-    pub fn result(&self) -> KindT<'s, 't> { KindT { coord: self.result_reference } }
-
+impl<'s, 't> TupleTE<'s, 't> where 's: 't, {
+    pub fn new(
+        elements: &'t [ExpressionTE<'s, 't>],
+        result: KindT<'s, 't>,
+    ) -> TupleTE<'s, 't> {
+        TupleTE { elements, result, _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -521,15 +479,19 @@ pub struct StaticArrayFromValuesTE<'s, 't>
 where 's: 't,
 {
     pub elements: &'t [ExpressionTE<'s, 't>],
-    pub result_reference: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
     pub array_type: &'t StaticSizedArrayTT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> { KindT { coord: self.result_reference } }
-
+impl<'s, 't> StaticArrayFromValuesTE<'s, 't> where 's: 't, {
+    pub fn new(
+        elements: &'t [ExpressionTE<'s, 't>],
+        result: KindT<'s, 't>,
+        array_type: &'t StaticSizedArrayTT<'s, 't>,
+    ) -> StaticArrayFromValuesTE<'s, 't> {
+        StaticArrayFromValuesTE { elements, result, array_type, _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -537,16 +499,14 @@ pub struct ArraySizeTE<'s, 't>
 where 's: 't,
 {
     pub array: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> ArraySizeTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        panic!("Unimplemented: result");
-        // KindT(KindT(ShareT, array.result.coord.region, IntT.i32))
+impl<'s, 't> ArraySizeTE<'s, 't> where 's: 't, {
+    pub fn new(array: ExpressionTE<'s, 't>) -> ArraySizeTE<'s, 't> {
+        ArraySizeTE { array, result: KindT::Int(IntT::I32), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -555,27 +515,14 @@ where 's: 't,
 {
     pub left: ExpressionTE<'s, 't>,
     pub right: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> IsSameInstanceTE<'s, 't> {
-
-
-}
 impl<'s, 't> IsSameInstanceTE<'s, 't> where 's: 't, {
-    fn new(left: ExpressionTE<'s, 't>, right: ExpressionTE<'s, 't>) -> IsSameInstanceTE<'s, 't> { panic!("Unimplemented: IsSameInstanceTE::new"); }
-
-}
-impl<'s, 't> IsSameInstanceTE<'s, 't> {
-    pub fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.left.result().region,
-                KindT::Bool(BoolT),
-            ),
-        }
+    pub fn new(left: ExpressionTE<'s, 't>, right: ExpressionTE<'s, 't>) -> IsSameInstanceTE<'s, 't> {
+        IsSameInstanceTE { left, right, result: KindT::Bool(BoolT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -584,39 +531,41 @@ where 's: 't,
 {
     pub source_expr: ExpressionTE<'s, 't>,
     pub target_type: KindT<'s, 't>,
-    pub result_result_type: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
     pub ok_constructor: &'t PrototypeT<'s, 't>,
     pub err_constructor: &'t PrototypeT<'s, 't>,
     pub impl_name: IdT<'s, 't>,
     pub ok_impl_name: IdT<'s, 't>,
     pub err_impl_name: IdT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> AsSubtypeTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> { KindT { coord: self.result_result_type } }
-
+impl<'s, 't> AsSubtypeTE<'s, 't> where 's: 't, {
+    pub fn new(
+        source_expr: ExpressionTE<'s, 't>,
+        target_type: KindT<'s, 't>,
+        result: KindT<'s, 't>,
+        ok_constructor: &'t PrototypeT<'s, 't>,
+        err_constructor: &'t PrototypeT<'s, 't>,
+        impl_name: IdT<'s, 't>,
+        ok_impl_name: IdT<'s, 't>,
+        err_impl_name: IdT<'s, 't>,
+    ) -> AsSubtypeTE<'s, 't> {
+        AsSubtypeTE { source_expr, target_type, result, ok_constructor, err_constructor, impl_name, ok_impl_name, err_impl_name, _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct VoidLiteralTE {
+pub struct VoidLiteralTE<'s, 't> {
     pub region: RegionT,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl VoidLiteralTE {
-
-
-    fn result<'s, 't>(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.region,
-                KindT::Void(VoidT),
-            )
-        }
+impl<'s, 't> VoidLiteralTE<'s, 't> where 's: 't, {
+    pub fn new(region: RegionT) -> VoidLiteralTE<'s, 't> {
+        VoidLiteralTE { region, result: KindT::Void(VoidT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -624,94 +573,99 @@ pub struct ConstantIntTE<'s, 't> {
     pub value: ITemplataT<'s, 't>,
     pub bits: i32,
     pub region: RegionT,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> ConstantIntTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(OwnershipT::Own, self.region, KindT::Int(IntT { bits: self.bits })) }
+impl<'s, 't> ConstantIntTE<'s, 't> where 's: 't, {
+    pub fn new(
+        value: ITemplataT<'s, 't>,
+        bits: i32,
+        region: RegionT,
+    ) -> ConstantIntTE<'s, 't> {
+        ConstantIntTE { value, bits, region, result: KindT::Int(IntT { bits }), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct ConstantBoolTE {
+pub struct ConstantBoolTE<'s, 't> {
     pub value: bool,
     pub region: RegionT,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl ConstantBoolTE {
-
-
-    pub fn result<'s, 't>(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(OwnershipT::Own, self.region, KindT::Bool(BoolT)) }
+impl<'s, 't> ConstantBoolTE<'s, 't> where 's: 't, {
+    pub fn new(value: bool, region: RegionT) -> ConstantBoolTE<'s, 't> {
+        ConstantBoolTE { value, region, result: KindT::Bool(BoolT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct ConstantStrTE<'s> {
+pub struct ConstantStrTE<'s, 't> {
     pub value: StrI<'s>,
     pub region: RegionT,
+    // Str is share-flavored, so a string literal is a share reference.
+    pub result: &'t ShareRefT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s> ConstantStrTE<'s> {
-
-
-    fn result<'t>(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(OwnershipT::Share, self.region, KindT::Str(StrT)) }
+impl<'s, 't> ConstantStrTE<'s, 't> where 's: 't, {
+    pub fn new(
+        interner: &TypingInterner<'s, 't>,
+        value: StrI<'s>,
+        region: RegionT,
+    ) -> ConstantStrTE<'s, 't> {
+        let result = interner.alloc(ShareRefT { inner: KindT::Str(StrT) });
+        ConstantStrTE { value, region, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct ConstantFloatTE {
+pub struct ConstantFloatTE<'s, 't> {
     pub value: f64,
     pub region: RegionT,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl ConstantFloatTE {
-
-
-    pub fn result<'s, 't>(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(
-            OwnershipT::Own,
-            self.region,
-            KindT::Float(FloatT),
-        ) }
+impl<'s, 't> ConstantFloatTE<'s, 't> where 's: 't, {
+    pub fn new(value: f64, region: RegionT) -> ConstantFloatTE<'s, 't> {
+        ConstantFloatTE { value, region, result: KindT::Float(FloatT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct LocalLookupTE<'s, 't> {
     pub range: RangeS<'s>,
-    pub local_variable: ILocalVariableT<'s, 't>,
+    pub local_variable: LocalVariable<'s, 't>,
+    // A local lookup is a borrow reference to the variable's value.
+    pub result: &'t BorrowRefT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> LocalLookupTE<'s, 't> {
-
-
-    pub fn result(&self) -> AddressResultT<'s, 't> {
-        AddressResultT { coord: self.local_variable.coord() }
+impl<'s, 't> LocalLookupTE<'s, 't> where 's: 't, {
+    pub fn new(
+        interner: &TypingInterner<'s, 't>,
+        range: RangeS<'s>,
+        local_variable: LocalVariable<'s, 't>,
+    ) -> LocalLookupTE<'s, 't> {
+        let result = interner.alloc(BorrowRefT { inner: local_variable.tyype(), region: RegionT::Default });
+        LocalLookupTE { range, local_variable, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct ArgLookupTE<'s, 't> {
     pub param_index: i32,
-    pub coord: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> ArgLookupTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: self.coord }
+impl<'s, 't> ArgLookupTE<'s, 't> where 's: 't, {
+    pub fn new(param_index: i32, result: KindT<'s, 't>) -> ArgLookupTE<'s, 't> {
+        ArgLookupTE { param_index, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -722,14 +676,22 @@ where 's: 't,
     pub array_expr: ExpressionTE<'s, 't>,
     pub array_type: &'t StaticSizedArrayTT<'s, 't>,
     pub index_expr: ExpressionTE<'s, 't>,
-    pub element_type: KindT<'s, 't>,
+    // A borrow reference to the indexed element.
+    pub result: &'t BorrowRefT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {
-
-
-    fn result(&self) -> AddressResultT<'s, 't> { AddressResultT { coord: self.element_type } }
-
+impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> where 's: 't, {
+    pub fn new(
+        interner: &TypingInterner<'s, 't>,
+        range: RangeS<'s>,
+        array_expr: ExpressionTE<'s, 't>,
+        array_type: &'t StaticSizedArrayTT<'s, 't>,
+        index_expr: ExpressionTE<'s, 't>,
+    ) -> StaticSizedArrayLookupTE<'s, 't> {
+        let result = interner.alloc(BorrowRefT { inner: array_type.element_type(), region: RegionT::Default });
+        StaticSizedArrayLookupTE { range, array_expr, array_type, index_expr, result, _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -740,31 +702,22 @@ where 's: 't,
     pub array_expr: ExpressionTE<'s, 't>,
     pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
     pub index_expr: ExpressionTE<'s, 't>,
+    // See RMLRMO why the result is a borrow reference to the element type.
+    pub result: &'t BorrowRefT<'s, 't>,
     _sealed: (),
 }
 
-impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
-
-
-}
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> where 's: 't, {
     pub fn new(
+        interner: &TypingInterner<'s, 't>,
         range: RangeS<'s>,
         array_expr: ExpressionTE<'s, 't>,
         array_type: &'t RuntimeSizedArrayTT<'s, 't>,
         index_expr: ExpressionTE<'s, 't>,
     ) -> RuntimeSizedArrayLookupTE<'s, 't> {
-        assert_eq!(array_expr.result().kind, KindT::RuntimeSizedArray(array_type));
-        RuntimeSizedArrayLookupTE { range, array_expr, array_type, index_expr, _sealed: () }
+        let result = interner.alloc(BorrowRefT { inner: array_type.element_type(), region: RegionT::Default });
+        RuntimeSizedArrayLookupTE { range, array_expr, array_type, index_expr, result, _sealed: () }
     }
-
-}
-impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
-    pub fn result(&self) -> AddressResultT<'s, 't> {
-        // See RMLRMO why we just return the element type.
-        AddressResultT { coord: self.array_type.element_type() }
-    }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -772,21 +725,14 @@ pub struct ArrayLengthTE<'s, 't>
 where 's: 't,
 {
     pub array_expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> ArrayLengthTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.array_expr.result().region,
-                KindT::Int(IntT::I32),
-            ),
-        }
+impl<'s, 't> ArrayLengthTE<'s, 't> where 's: 't, {
+    pub fn new(array_expr: ExpressionTE<'s, 't>) -> ArrayLengthTE<'s, 't> {
+        ArrayLengthTE { array_expr, result: KindT::Int(IntT::I32), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -796,17 +742,22 @@ where 's: 't,
     pub range: RangeS<'s>,
     pub struct_expr: ExpressionTE<'s, 't>,
     pub member_name: IVarNameT<'s, 't>,
-    pub member_reference: KindT<'s, 't>,
+    // See RMLRMO why the result is a borrow reference to the member.
+    pub result: &'t BorrowRefT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {
-
-
-    pub fn result(&self) -> AddressResultT<'s, 't> {
-        // See RMLRMO why we just return the member type.
-        AddressResultT { coord: self.member_reference }
+impl<'s, 't> ReferenceMemberLookupTE<'s, 't> where 's: 't, {
+    pub fn new(
+        interner: &TypingInterner<'s, 't>,
+        range: RangeS<'s>,
+        struct_expr: ExpressionTE<'s, 't>,
+        member_name: IVarNameT<'s, 't>,
+        member_kind: KindT<'s, 't>,
+    ) -> ReferenceMemberLookupTE<'s, 't> {
+        let result = interner.alloc(BorrowRefT { inner: member_kind, region: RegionT::Default });
+        ReferenceMemberLookupTE { range, struct_expr, member_name, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -816,14 +767,21 @@ where 's: 't,
     pub range: RangeS<'s>,
     pub struct_expr: ExpressionTE<'s, 't>,
     pub member_name: IVarNameT<'s, 't>,
-    pub result_type2: KindT<'s, 't>,
+    pub result: &'t BorrowRefT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> AddressMemberLookupTE<'s, 't> {
-
-
-    fn result(&self) -> AddressResultT<'s, 't> { AddressResultT { coord: self.result_type2 } }
-
+impl<'s, 't> AddressMemberLookupTE<'s, 't> where 's: 't, {
+    pub fn new(
+        interner: &TypingInterner<'s, 't>,
+        range: RangeS<'s>,
+        struct_expr: ExpressionTE<'s, 't>,
+        member_name: IVarNameT<'s, 't>,
+        member_kind: KindT<'s, 't>,
+    ) -> AddressMemberLookupTE<'s, 't> {
+        let result = interner.alloc(BorrowRefT { inner: member_kind, region: RegionT::Default });
+        AddressMemberLookupTE { range, struct_expr, member_name, result, _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -832,15 +790,20 @@ where 's: 't,
 {
     pub super_function_prototype: &'t PrototypeT<'s, 't>,
     pub virtual_param_index: i32,
-    pub result_reference: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
     pub args: &'t [ExpressionTE<'s, 't>],
+    _sealed: (),
 }
 
-impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> { KindT { coord: self.result_reference } }
-
+impl<'s, 't> InterfaceFunctionCallTE<'s, 't> where 's: 't, {
+    pub fn new(
+        super_function_prototype: &'t PrototypeT<'s, 't>,
+        virtual_param_index: i32,
+        result: KindT<'s, 't>,
+        args: &'t [ExpressionTE<'s, 't>],
+    ) -> InterfaceFunctionCallTE<'s, 't> {
+        InterfaceFunctionCallTE { super_function_prototype, virtual_param_index, result, args, _sealed: () }
+    }
 }
 
 /// Value-type (see @TFITCX)
@@ -856,13 +819,18 @@ where 's: 't,
 {
     pub prototype2: &'t PrototypeT<'s, 't>,
     pub args: &'t [ExpressionTE<'s, 't>],
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> ExternFunctionCallTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> { KindT { coord: self.prototype2.return_type } }
-
+impl<'s, 't> ExternFunctionCallTE<'s, 't> where 's: 't, {
+    pub fn new(
+        prototype2: &'t PrototypeT<'s, 't>,
+        args: &'t [ExpressionTE<'s, 't>],
+    ) -> ExternFunctionCallTE<'s, 't> {
+        let result = prototype2.return_type;
+        ExternFunctionCallTE { prototype2, args, result, _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -871,24 +839,18 @@ where 's: 't,
 {
     pub callable: &'t PrototypeT<'s, 't>,
     pub args: &'t [ExpressionTE<'s, 't>],
-    pub return_type: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> FunctionCallTE<'s, 't> {
-
-
-}
 impl<'s, 't> FunctionCallTE<'s, 't> where 's: 't, {
-    fn new(
+    pub fn new(
         callable: &'t PrototypeT<'s, 't>,
         args: &'t [ExpressionTE<'s, 't>],
-        return_type: KindT<'s, 't>,
-    ) -> FunctionCallTE<'s, 't> { panic!("Unimplemented: FunctionCallTE::new"); }
-
-}
-impl<'s, 't> FunctionCallTE<'s, 't> {
-    fn result(&self) -> KindT<'s, 't> { KindT { coord: self.return_type } }
-
+        result: KindT<'s, 't>,
+    ) -> FunctionCallTE<'s, 't> {
+        FunctionCallTE { callable, args, result, _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -896,33 +858,26 @@ pub struct ReinterpretTE<'s, 't>
 where 's: 't,
 {
     pub expr: ExpressionTE<'s, 't>,
-    pub result_reference: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> ReinterpretTE<'s, 't> {
-
-
-}
 impl<'s, 't> ReinterpretTE<'s, 't> where 's: 't, {
-    fn new(expr: ExpressionTE<'s, 't>, result_reference: KindT<'s, 't>) -> ReinterpretTE<'s, 't> { panic!("Unimplemented: ReinterpretTE::new"); }
-
-}
-impl<'s, 't> ReinterpretTE<'s, 't> {
-    fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: self.result_reference }
+    pub fn new(expr: ExpressionTE<'s, 't>, result: KindT<'s, 't>) -> ReinterpretTE<'s, 't> {
+        ReinterpretTE { expr, result, _sealed: () }
     }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct CopyPrimTE<'s, 't> {
     pub inner: ExpressionTE<'s, 't>,
-    pub result_coord: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
-impl<'s, 't> CopyPrimTE<'s, 't> {
-    pub fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: self.result_coord }
+impl<'s, 't> CopyPrimTE<'s, 't> where 's: 't, {
+    pub fn new(inner: ExpressionTE<'s, 't>, result: KindT<'s, 't>) -> CopyPrimTE<'s, 't> {
+        CopyPrimTE { inner, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -930,15 +885,19 @@ pub struct ConstructTE<'s, 't>
 where 's: 't,
 {
     pub struct_tt: &'t StructTT<'s, 't>,
-    pub result_reference: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
     pub args: &'t [ExpressionTE<'s, 't>],
+    _sealed: (),
 }
 
-impl<'s, 't> ConstructTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> { KindT { coord: self.result_reference } }
-
+impl<'s, 't> ConstructTE<'s, 't> where 's: 't, {
+    pub fn new(
+        struct_tt: &'t StructTT<'s, 't>,
+        result: KindT<'s, 't>,
+        args: &'t [ExpressionTE<'s, 't>],
+    ) -> ConstructTE<'s, 't> {
+        ConstructTE { struct_tt, result, args, _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -948,21 +907,19 @@ where 's: 't,
     pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
     pub region: RegionT,
     pub capacity_expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> NewRuntimeSizedArrayTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.region,
-                KindT::RuntimeSizedArray(self.array_type),
-            ),
-        }
+impl<'s, 't> NewRuntimeSizedArrayTE<'s, 't> where 's: 't, {
+    pub fn new(
+        array_type: &'t RuntimeSizedArrayTT<'s, 't>,
+        region: RegionT,
+        capacity_expr: ExpressionTE<'s, 't>,
+    ) -> NewRuntimeSizedArrayTE<'s, 't> {
+        let result = KindT::RuntimeSizedArray(array_type);
+        NewRuntimeSizedArrayTE { array_type, region, capacity_expr, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -973,15 +930,20 @@ where 's: 't,
     pub region: RegionT,
     pub generator: ExpressionTE<'s, 't>,
     pub generator_method: &'t PrototypeT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
-
-
-    pub fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(OwnershipT::Own, self.region, KindT::StaticSizedArray(self.array_type)) }
+impl<'s, 't> StaticArrayFromCallableTE<'s, 't> where 's: 't, {
+    pub fn new(
+        array_type: &'t StaticSizedArrayTT<'s, 't>,
+        region: RegionT,
+        generator: ExpressionTE<'s, 't>,
+        generator_method: &'t PrototypeT<'s, 't>,
+    ) -> StaticArrayFromCallableTE<'s, 't> {
+        let result = KindT::StaticSizedArray(array_type);
+        StaticArrayFromCallableTE { array_type, region, generator, generator_method, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -992,32 +954,19 @@ where 's: 't,
     pub array_type: &'t StaticSizedArrayTT<'s, 't>,
     pub consumer: ExpressionTE<'s, 't>,
     pub consumer_method: &'t PrototypeT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
-
-
-}
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> where 's: 't, {
-    fn new(
+    pub fn new(
         array_expr: ExpressionTE<'s, 't>,
         array_type: &'t StaticSizedArrayTT<'s, 't>,
         consumer: ExpressionTE<'s, 't>,
         consumer_method: &'t PrototypeT<'s, 't>,
-    ) -> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> { panic!("Unimplemented: DestroyStaticSizedArrayIntoFunctionTE::new"); }
-
-}
-impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
-    fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.array_expr.result().region,
-                KindT::Void(VoidT),
-            ),
-        }
+    ) -> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
+        DestroyStaticSizedArrayIntoFunctionTE { array_expr, array_type, consumer, consumer_method, result: KindT::Void(VoidT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -1026,24 +975,19 @@ where 's: 't,
 {
     pub expr: ExpressionTE<'s, 't>,
     pub static_sized_array: &'t StaticSizedArrayTT<'s, 't>,
-    pub destination_reference_variables: &'t [ReferenceLocalVariableT<'s, 't>],
+    pub destination_reference_variables: &'t [LocalVariable<'s, 't>],
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(OwnershipT::Own, self.expr.result().region, KindT::Void(VoidT)) }
-    }
-
-}
 impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> where 's: 't, {
-    fn new(
+    pub fn new(
         expr: ExpressionTE<'s, 't>,
         static_sized_array: &'t StaticSizedArrayTT<'s, 't>,
-        destination_reference_variables: &'t [ReferenceLocalVariableT<'s, 't>],
-    ) -> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> { panic!("Unimplemented: DestroyStaticSizedArrayIntoLocalsTE::new"); }
-
+        destination_reference_variables: &'t [LocalVariable<'s, 't>],
+    ) -> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
+        DestroyStaticSizedArrayIntoLocalsTE { expr, static_sized_array, destination_reference_variables, result: KindT::Void(VoidT), _sealed: () }
+    }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -1051,19 +995,14 @@ pub struct DestroyRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
     pub array_expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> DestroyRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.array_expr.result().region,
-                KindT::Void(VoidT),
-            )
-        }
+impl<'s, 't> DestroyRuntimeSizedArrayTE<'s, 't> where 's: 't, {
+    pub fn new(array_expr: ExpressionTE<'s, 't>) -> DestroyRuntimeSizedArrayTE<'s, 't> {
+        DestroyRuntimeSizedArrayTE { array_expr, result: KindT::Void(VoidT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -1071,19 +1010,14 @@ pub struct RuntimeSizedArrayCapacityTE<'s, 't>
 where 's: 't,
 {
     pub array_expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> {
-    fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.array_expr.result().region,
-                KindT::Int(IntT { bits: 32 }),
-            ),
-        }
+impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> where 's: 't, {
+    pub fn new(array_expr: ExpressionTE<'s, 't>) -> RuntimeSizedArrayCapacityTE<'s, 't> {
+        RuntimeSizedArrayCapacityTE { array_expr, result: KindT::Int(IntT::I32), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -1092,19 +1026,17 @@ where 's: 't,
 {
     pub array_expr: ExpressionTE<'s, 't>,
     pub new_element_expr: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> KindT<'s, 't> {
-        KindT {
-            coord: KindT::new(
-                OwnershipT::Own,
-                self.array_expr.result().region,
-                KindT::Void(VoidT),
-            ),
-        }
+impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> where 's: 't, {
+    pub fn new(
+        array_expr: ExpressionTE<'s, 't>,
+        new_element_expr: ExpressionTE<'s, 't>,
+    ) -> PushRuntimeSizedArrayTE<'s, 't> {
+        PushRuntimeSizedArrayTE { array_expr, new_element_expr, result: KindT::Void(VoidT), _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -1112,14 +1044,17 @@ pub struct PopRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
     pub array_expr: ExpressionTE<'s, 't>,
-    pub element_type: KindT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> PopRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: self.element_type }
+impl<'s, 't> PopRuntimeSizedArrayTE<'s, 't> where 's: 't, {
+    pub fn new(
+        array_expr: ExpressionTE<'s, 't>,
+        result: KindT<'s, 't>,
+    ) -> PopRuntimeSizedArrayTE<'s, 't> {
+        PopRuntimeSizedArrayTE { array_expr, result, _sealed: () }
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -1128,20 +1063,18 @@ where 's: 't,
 {
     pub inner_expr: ExpressionTE<'s, 't>,
     pub target_interface: &'t InterfaceTT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        panic!("Unimplemented: result");
-        // KindT(
-        //   KindT(
-        //     innerExpr.result.coord.ownership,
-        //     innerExpr.result.coord.region,
-        //     targetInterface))
+impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> where 's: 't, {
+    pub fn new(
+        inner_expr: ExpressionTE<'s, 't>,
+        target_interface: &'t InterfaceTT<'s, 't>,
+    ) -> InterfaceToInterfaceUpcastTE<'s, 't> {
+        // VCOORD: preserve the inner wrap and swap the innermost citizen to target_interface.
+        unimplemented!("InterfaceToInterfaceUpcastTE onion result")
     }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -1151,52 +1084,19 @@ where 's: 't,
     pub inner_expr: ExpressionTE<'s, 't>,
     pub target_super_kind: ISuperKindTT<'s, 't>,
     pub impl_name: IdT<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> UpcastTE<'s, 't> {
-
-
-    pub fn result(&self) -> KindT<'s, 't> {
-        let inner_coord = self.inner_expr.result();
-        KindT {
-            coord: KindT::new(
-                inner_coord.ownership,
-                inner_coord.region,
-                self.target_super_kind.into(),
-            )
-        }
+impl<'s, 't> UpcastTE<'s, 't> where 's: 't, {
+    pub fn new(
+        inner_expr: ExpressionTE<'s, 't>,
+        target_super_kind: ISuperKindTT<'s, 't>,
+        impl_name: IdT<'s, 't>,
+    ) -> UpcastTE<'s, 't> {
+        // VCOORD: preserve the inner wrap and swap the innermost citizen to target_super_kind.
+        unimplemented!("UpcastTE onion result")
     }
-
-}
-/// Arena-allocated (see @TFITCX)
-#[derive(Debug)]
-pub struct SoftLoadTE<'s, 't>
-where 's: 't,
-{
-    pub expr: ExpressionTE<'s, 't>,
-    pub target_ownership: OwnershipT,
-}
-
-impl<'s, 't> SoftLoadTE<'s, 't> {
-
-
-}
-impl<'s, 't> SoftLoadTE<'s, 't> where 's: 't, {
-    fn new(expr: ExpressionTE<'s, 't>, target_ownership: OwnershipT) -> SoftLoadTE<'s, 't> { panic!("Unimplemented: SoftLoadTE::new"); }
-
-}
-impl<'s, 't> SoftLoadTE<'s, 't> {
-    fn result(&self) -> KindT<'s, 't> {
-        let addr_result = self.expr.result();
-        KindT {
-            coord: KindT::new(
-                self.target_ownership,
-                addr_result.coord.region,
-                addr_result.kind,
-            )
-        }
-    }
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -1205,16 +1105,19 @@ where 's: 't,
 {
     pub expr: ExpressionTE<'s, 't>,
     pub struct_tt: &'t StructTT<'s, 't>,
-    pub destination_reference_variables: &'t [ReferenceLocalVariableT<'s, 't>],
+    pub destination_reference_variables: &'t [LocalVariable<'s, 't>],
+    pub result: KindT<'s, 't>,
+    _sealed: (),
 }
 
-impl<'s, 't> DestroyTE<'s, 't> {
-
-
-    fn result(&self) -> KindT<'s, 't> {
-        KindT { coord: KindT::new(OwnershipT::Own, self.expr.result().region, KindT::Void(VoidT {})) }
+impl<'s, 't> DestroyTE<'s, 't> where 's: 't, {
+    pub fn new(
+        expr: ExpressionTE<'s, 't>,
+        struct_tt: &'t StructTT<'s, 't>,
+        destination_reference_variables: &'t [LocalVariable<'s, 't>],
+    ) -> DestroyTE<'s, 't> {
+        DestroyTE { expr, struct_tt, destination_reference_variables, result: KindT::Void(VoidT), _sealed: () }
     }
-
 }
 fn reference_expr_result_struct_name_unapply<'s, 't>(expr: &ExpressionTE<'s, 't>) -> Option<StrI<'s>> {
     panic!("Unimplemented: unapply");

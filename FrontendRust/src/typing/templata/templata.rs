@@ -30,19 +30,10 @@ pub fn expect_integer<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't
 fn expect_coord<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_coord");
   // templata match {
-  //   case t @ CoordTemplataT(_) => t
+  //   case t @ KindTemplataT(_) => t
   //   case PlaceholderTemplataT(idT, KindTemplataType()) => PlaceholderTemplataT(idT, KindTemplataType())
   //   case other => vfail(other)
   // }
-}
-
-pub fn expect_coord_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> CoordTemplataT<'s, 't> {
-  match templata {
-    // case t @ CoordTemplataT(_) => t
-    ITemplataT::Coord(t) => *t,
-    // case other => vfail(other)
-    _ => panic!("expect_coord_templata: not a coord"),
-  }
 }
 
 fn expect_prototype_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> PrototypeTemplataT<'s, 't> {
@@ -72,10 +63,8 @@ fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplataT<'s, 't> {
-  Coord(&'t CoordTemplataT<'s, 't>),
   Kind(&'t KindTemplataT<'s, 't>),
   Placeholder(&'t PlaceholderTemplataT<'s, 't>),
-  Ownership(OwnershipTemplataT),
   Integer(i64),
   Boolean(bool),
   String(StrI<'s>),
@@ -89,12 +78,10 @@ pub enum ITemplataT<'s, 't> {
   InterfaceDefinition(&'t InterfaceDefinitionTemplataT<'s, 't>),
   ImplDefinition(&'t ImplDefinitionTemplataT<'s, 't>),
   ExternFunction(&'t ExternFunctionTemplataT<'s, 't>),
-  Location(LocationTemplataT),
 }
 impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
   pub fn tyype(&self, scout_arena: &ScoutArena<'s>) -> ITemplataType<'s> {
     match self {
-      ITemplataT::Coord(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
       ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
       ITemplataT::Placeholder(p) => p.tyype,
       // ITemplataT::Ownership(_) => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
@@ -136,14 +123,9 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
         panic!("Unimplemented: tyype on ExternFunction");
         // vfail()
       }
+      ITemplataT::Prototype(_) => unimplemented!(),
     }
   }
-}
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct CoordTemplataT<'s, 't> {
-  pub coord: CoordT<'s, 't>,
 }
 
 /// Value-type (see @TFITCX)
@@ -207,10 +189,26 @@ impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
 // `FunctionTemplataT`'s equality ignores `outerEnv` but this type's derived
 // equality includes `declaring_env`.
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// Identity equality on the origin denizen (range + name), mirroring `FunctionTemplataT`.
+// `StructS` isn't `Eq`/`Hash` (it holds `PartialEq`-only `IRulexSR` rules), so this
+// keeps `ITemplataT` derivably `Eq`/`Hash` without recursing into the raw rules.
+#[derive(Copy, Clone, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
   pub declaring_env: IEnvironmentT<'s, 't>,
   pub origin_struct: &'s StructS<'s>,
+}
+impl<'s, 't> PartialEq for StructDefinitionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    self.origin_struct.range == other.origin_struct.range
+      && self.origin_struct.name == other.origin_struct.name
+  }
+}
+impl<'s, 't> Eq for StructDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> Hash for StructDefinitionTemplataT<'s, 't> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.origin_struct.range.hash(state);
+    self.origin_struct.name.hash(state);
+  }
 }
 
 
@@ -224,31 +222,87 @@ pub enum IContainer<'s> {
 }
 
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// Identity equality on the contained denizen (range + name), mirroring `FunctionTemplataT`.
+#[derive(Copy, Clone, Debug)]
 pub struct ContainerInterface<'s> {
   pub interface: &'s InterfaceS<'s>,
 }
+impl<'s> PartialEq for ContainerInterface<'s> {
+  fn eq(&self, other: &Self) -> bool {
+    self.interface.range == other.interface.range
+      && self.interface.name == other.interface.name
+  }
+}
+impl<'s> Eq for ContainerInterface<'s> {}
+impl<'s> Hash for ContainerInterface<'s> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.interface.range.hash(state);
+    self.interface.name.hash(state);
+  }
+}
 
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// Identity equality on the contained denizen (range + name), mirroring `FunctionTemplataT`.
+#[derive(Copy, Clone, Debug)]
 pub struct ContainerStruct<'s> {
   pub struct_: &'s StructS<'s>,
 }
+impl<'s> PartialEq for ContainerStruct<'s> {
+  fn eq(&self, other: &Self) -> bool {
+    self.struct_.range == other.struct_.range
+      && self.struct_.name == other.struct_.name
+  }
+}
+impl<'s> Eq for ContainerStruct<'s> {}
+impl<'s> Hash for ContainerStruct<'s> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.struct_.range.hash(state);
+    self.struct_.name.hash(state);
+  }
+}
 
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// Identity equality on the contained denizen (range + name), mirroring `FunctionTemplataT`.
+#[derive(Copy, Clone, Debug)]
 pub struct ContainerFunction<'s> {
   pub function: &'s FunctionS<'s>,
 }
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct ContainerImpl<'s> {
-  pub impl_: &'s ImplS<'s>,
+impl<'s> PartialEq for ContainerFunction<'s> {
+  fn eq(&self, other: &Self) -> bool {
+    self.function.range == other.function.range
+      && self.function.name == other.function.name
+  }
+}
+impl<'s> Eq for ContainerFunction<'s> {}
+impl<'s> Hash for ContainerFunction<'s> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.function.range.hash(state);
+    self.function.name.hash(state);
+  }
 }
 
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// Identity equality on the contained denizen (range + name), mirroring `FunctionTemplataT`.
+#[derive(Copy, Clone, Debug)]
+pub struct ContainerImpl<'s> {
+  pub impl_: &'s ImplS<'s>,
+}
+impl<'s> PartialEq for ContainerImpl<'s> {
+  fn eq(&self, other: &Self) -> bool {
+    self.impl_.range == other.impl_.range
+      && self.impl_.name == other.impl_.name
+  }
+}
+impl<'s> Eq for ContainerImpl<'s> {}
+impl<'s> Hash for ContainerImpl<'s> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.impl_.range.hash(state);
+    self.impl_.name.hash(state);
+  }
+}
+
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum CitizenDefinitionTemplataT<'s, 't> {
   Struct(&'t StructDefinitionTemplataT<'s, 't>),
   Interface(&'t InterfaceDefinitionTemplataT<'s, 't>),
@@ -271,30 +325,46 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 }
 
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// Identity equality on the origin denizen (range + name), mirroring `FunctionTemplataT`.
+#[derive(Copy, Clone, Debug)]
 pub struct InterfaceDefinitionTemplataT<'s, 't> {
   pub declaring_env: IEnvironmentT<'s, 't>,
   pub origin_interface: &'s InterfaceS<'s>,
 }
+impl<'s, 't> PartialEq for InterfaceDefinitionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    self.origin_interface.range == other.origin_interface.range
+      && self.origin_interface.name == other.origin_interface.name
+  }
+}
+impl<'s, 't> Eq for InterfaceDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> Hash for InterfaceDefinitionTemplataT<'s, 't> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.origin_interface.range.hash(state);
+    self.origin_interface.name.hash(state);
+  }
+}
 
 
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// Identity equality on the origin denizen (range + name), mirroring `FunctionTemplataT`.
+#[derive(Copy, Clone, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {
   pub env: IEnvironmentT<'s, 't>,
   pub impl_: &'s ImplS<'s>,
 }
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct OwnershipTemplataT {
-    pub ownership: OwnershipT,
+impl<'s, 't> PartialEq for ImplDefinitionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    self.impl_.range == other.impl_.range
+      && self.impl_.name == other.impl_.name
+  }
 }
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct LocationTemplataT {
-    pub location: LocationT,
+impl<'s, 't> Eq for ImplDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> Hash for ImplDefinitionTemplataT<'s, 't> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.impl_.range.hash(state);
+    self.impl_.name.hash(state);
+  }
 }
 
 /// Value-type (see @TFITCX)
@@ -333,7 +403,7 @@ pub struct IsaTemplataT<'s, 't> {
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CoordListTemplataT<'s, 't> {
-  pub coords: &'t [CoordT<'s, 't>],
+  pub coords: &'t [KindT<'s, 't>],
 }
 
 

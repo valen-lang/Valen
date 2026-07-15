@@ -11,7 +11,7 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::types::types::{CoordT, RegionT, OwnershipT, ISubKindTT, ISuperKindTT};
+use crate::typing::types::types::{KindT, RegionT, OwnershipT, ISubKindTT, ISuperKindTT};
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::citizen::impl_compiler::IsParentResult;
 use crate::typing::names::names::IFunctionNameT;
@@ -22,16 +22,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn generate_function_body_as_subtype(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionS<'s>>,
-        param_coords: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      origin_function: Option<&FunctionS<'s>>,
+      param_coords: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
 
         let header = FunctionHeaderT {
@@ -54,10 +54,10 @@ where 's: 't,
 
         // Because we dont yet put borrows in structs
         let result_ownership = incoming_ownership;
-        let success_coord = CoordT::new(result_ownership, RegionT { region: RegionT::Default }, target_kind);
-        let fail_coord = CoordT::new(result_ownership, RegionT { region: RegionT::Default }, incoming_kind);
+        let success_coord = KindT::new(result_ownership, RegionT::Default, target_kind);
+        let fail_coord = KindT::new(result_ownership, RegionT::Default, incoming_kind);
         let (result_coord, ok_constructor, ok_result_impl, err_constructor, err_result_impl) =
-            self.get_result(coutputs, env, call_range, call_location, RegionT { region: RegionT::Default }, success_coord, fail_coord)?;
+            self.get_result(coutputs, env, call_range, call_location, RegionT::Default, success_coord, fail_coord)?;
         if result_coord != maybe_ret_coord.expect("vassertSome: maybeRetCoord") {
             panic!("CompileErrorExceptionT: RangedInternalErrorT: Bad result coord");
         }

@@ -65,7 +65,7 @@ fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
                     coord: CoordT { ownership: OwnershipT::Weak, .. },
                 }),
                 expr: ref_expr,
-            }) => match ref_expr.result().coord {
+            }) => match ref_expr.result() {
                 CoordT {
                     ownership: OwnershipT::Weak,
                     kind: KindT::Struct(StructTT {
@@ -288,7 +288,7 @@ fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
                     coord: CoordT { ownership: OwnershipT::Weak, .. },
                 }),
                 expr: ref_expr,
-            }) => match ref_expr.result().coord {
+            }) => match ref_expr.result() {
                 CoordT {
                     ownership: OwnershipT::Weak,
                     kind: KindT::Interface(InterfaceTT {

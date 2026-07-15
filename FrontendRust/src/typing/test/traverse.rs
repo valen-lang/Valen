@@ -24,7 +24,7 @@ use crate::typing::ast::expressions::{
     TupleTE, UnletTE, UpcastTE, VoidLiteralTE, WhileTE,
 };
 use crate::typing::env::environment::IEnvironmentT;
-use crate::typing::env::function_environment_t::ILocalVariableT;
+use crate::typing::env::function_environment_t::LocalVariable;
 use crate::typing::hinputs_t::{HinputsT, InstantiationBoundArgumentsT};
 use crate::typing::names::names::{INameT, IVarNameT, IdT};
 use crate::typing::templata::templata::{
@@ -33,8 +33,8 @@ use crate::typing::templata::templata::{
     PlaceholderTemplataT, PrototypeTemplataT, StructDefinitionTemplataT,
 };
 use crate::typing::types::types::{
-    CoordT, InterfaceTT, KindPlaceholderT, KindT, OverloadSetT, RuntimeSizedArrayTT,
-    StaticSizedArrayTT, StructTT,
+  KindT, InterfaceTT, KindPlaceholderT, KindT, OverloadSetT, RuntimeSizedArrayTT,
+  StaticSizedArrayTT, StructTT,
 };
 use crate::typing::types::types::ICitizenTT;
 use crate::typing::types::types::ISuperKindTT;
@@ -131,7 +131,7 @@ pub enum NodeRefT<'s, 't> {
     RuntimeSizedArrayTT(&'t RuntimeSizedArrayTT<'s, 't>),
     KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
     OverloadSet(&'t OverloadSetT<'s, 't>),
-    Coord(&'t CoordT<'s, 't>),
+    Coord(&'t KindT<'s, 't>),
     Id(&'t IdT<'s, 't>),
     Signature(&'t SignatureT<'s, 't>),
     Prototype(&'t PrototypeT<'s, 't>),
@@ -147,7 +147,7 @@ pub enum NodeRefT<'s, 't> {
     StructMember(&'t IStructMemberT<'s, 't>),
     ReferenceMemberType(&'t ReferenceMemberTypeT<'s, 't>),
     AddressMemberType(&'t AddressMemberTypeT<'s, 't>),
-    LocalVariable(&'t ILocalVariableT<'s, 't>),
+    LocalVariable(&'t LocalVariable<'s, 't>),
 
     // ---- Override / Edge children ----
     Override(&'t OverrideT<'s, 't>),
@@ -270,7 +270,7 @@ where
     out
 }
 
-pub fn collect_in_coord<'s, 't, T, F>(c: &'t CoordT<'s, 't>, predicate: &F) -> Vec<T>
+pub fn collect_in_coord<'s, 't, T, F>(c: &'t KindT<'s, 't>, predicate: &F) -> Vec<T>
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -1440,7 +1440,7 @@ where
     // Stop at trait level for env — see TL.md "What This Plan Deliberately Does NOT Cover".
 }
 
-fn visit_coord<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, c: &'t CoordT<'s, 't>)
+fn visit_coord<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, c: &'t KindT<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -1543,7 +1543,7 @@ where
 fn visit_local_variable<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    v: &'t ILocalVariableT<'s, 't>,
+    v: &'t LocalVariable<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,

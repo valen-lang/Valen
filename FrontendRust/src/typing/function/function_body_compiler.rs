@@ -8,7 +8,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::function_environment_t::{FunctionEnvironmentT, NodeEnvironmentBox};
 use crate::typing::env::environment::IInDenizenEnvironmentT;
-use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, RegionT};
+use crate::typing::types::types::{KindT, KindT, NeverT, OwnershipT, RegionT};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::range::RangeS;
 use crate::utils::fx::HashSet;
@@ -22,17 +22,17 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn declare_and_evaluate_function_body(
-        &self,
-        func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        parent_ranges: &'t [RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        function_1: &'s FunctionS<'s>,
-        maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
-        params_2: &'t [ParameterT<'s, 't>],
-        is_destructor: bool,
-    ) -> Result<(Option<CoordT<'s, 't>>, &'t BlockTE<'s, 't>), ICompileErrorT<'s, 't>> {
+      &self,
+      func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      parent_ranges: &'t [RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      function_1: &'s FunctionS<'s>,
+      maybe_explicit_return_coord: Option<KindT<'s, 't>>,
+      params_2: &'t [ParameterT<'s, 't>],
+      is_destructor: bool,
+    ) -> Result<(Option<KindT<'s, 't>>, &'t BlockTE<'s, 't>), ICompileErrorT<'s, 't>> {
         // val bodyS = function1.body match { case CodeBodyS(b) => b; case _ => vwat() }
         let body_s = match &function_1.body {
             IBodyS::CodeBody(b) => b,
@@ -61,11 +61,11 @@ where 's: 't,
                     Ok((body, returns)) => (body, returns),
                 };
 
-                assert!(body2.result().coord.kind != KindT::Never(NeverT { from_break: true }));
+                assert!(body2.result() != KindT::Never(NeverT { from_break: true }));
                 let return_type2 =
-                    if returns.is_empty() && body2.result().coord.kind == KindT::Never(NeverT { from_break: false }) {
+                    if returns.is_empty() && body2.result() == KindT::Never(NeverT { from_break: false }) {
                         // No returns yet the body results in a Never. This can happen if we call panic from inside.
-                        body2.result().coord
+                        body2.result()
                     } else {
                         assert!(!returns.is_empty());
                         if returns.len() > 1 {
@@ -100,7 +100,7 @@ where 's: 't,
                 // vcurious(returns.size <= 1)
                 assert!(returns.len() <= 1);
                 // (returns.headOption, body2.result.kind) match { ... }
-                match (returns.iter().next(), body2.result().coord.kind) {
+                match (returns.iter().next(), body2.result()) {
                     (Some(x), _) if *x == explicit_ret_coord => {
                         // Let it through, it returns the expected type.
                     }
@@ -126,8 +126,8 @@ where 's: 't,
 }
 
 pub struct ResultTypeMismatchError<'s, 't> {
-    pub expected_type: CoordT<'s, 't>,
-    pub actual_type: CoordT<'s, 't>,
+    pub expected_type: KindT<'s, 't>,
+    pub actual_type: KindT<'s, 't>,
 }
 
 
@@ -135,20 +135,20 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_function_body(
-        &self,
-        func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        parent_ranges: &'t [RangeS<'s>],
-        region: RegionT,
-        call_location: LocationInDenizen<'s>,
-        params_1: &[&'s ParameterS<'s>],
-        params_2: &'t [ParameterT<'s, 't>],
-        body_1: &'s BodySE<'s>,
-        is_destructor: bool,
-        maybe_expected_result_type: Option<CoordT<'s, 't>>,
+      &self,
+      func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      parent_ranges: &'t [RangeS<'s>],
+      region: RegionT,
+      call_location: LocationInDenizen<'s>,
+      params_1: &[&'s ParameterS<'s>],
+      params_2: &'t [ParameterT<'s, 't>],
+      body_1: &'s BodySE<'s>,
+      is_destructor: bool,
+      maybe_expected_result_type: Option<KindT<'s, 't>>,
     ) -> Result<
-        Result<(&'t BlockTE<'s, 't>, HashSet<CoordT<'s, 't>>), ResultTypeMismatchError<'s, 't>>,
+        Result<(&'t BlockTE<'s, 't>, HashSet<KindT<'s, 't>>), ResultTypeMismatchError<'s, 't>>,
         ICompileErrorT<'s, 't>,
     > {
         // val env = NodeEnvironmentBox(funcOuterEnv.makeChildNodeEnvironment(body1.block, life))
@@ -179,8 +179,8 @@ where 's: 't,
             None => unconverted_body_without_return,
             Some(expected_result_type) => {
                 if self.is_type_convertible(coutputs, starting_env_ref, parent_ranges, call_location,
-                    unconverted_body_without_return.result().coord, expected_result_type) {
-                    if unconverted_body_without_return.result().coord.kind == KindT::Never(NeverT { from_break: false }) {
+                    unconverted_body_without_return.result(), expected_result_type) {
+                    if unconverted_body_without_return.result() == KindT::Never(NeverT { from_break: false }) {
                         unconverted_body_without_return
                     } else {
                         self.convert(&mut env, life, coutputs, &range_list, call_location,
@@ -189,18 +189,18 @@ where 's: 't,
                 } else {
                     return Ok(Err(ResultTypeMismatchError {
                         expected_type: expected_result_type,
-                        actual_type: unconverted_body_without_return.result().coord,
+                        actual_type: unconverted_body_without_return.result(),
                     }));
                 }
             }
         };
 
         let (converted_body_with_return, returns_maybe_with_never) =
-            if converted_body_without_return.result().coord.kind == KindT::Never(NeverT { from_break: false }) {
+            if converted_body_without_return.result() == KindT::Never(NeverT { from_break: false }) {
                 (converted_body_without_return, returns_from_inside_maybe_with_never)
             } else {
                 let mut returns = returns_from_inside_maybe_with_never;
-                returns.insert(converted_body_without_return.result().coord);
+                returns.insert(converted_body_without_return.result());
                 let return_te =
                     ExpressionTE::Return(self.typing_interner.alloc(ReturnTE { source_expr: converted_body_without_return }));
                 (return_te, returns)
@@ -209,7 +209,7 @@ where 's: 't,
         let returns =
             if returns_maybe_with_never.len() > 1 {
                 returns_maybe_with_never.into_iter().filter(|c| {
-                    !matches!(c, CoordT { ownership: OwnershipT::Own, kind: KindT::Never(NeverT { from_break: false }), .. })
+                    !matches!(c, KindT { ownership: OwnershipT::Own, kind: KindT::Never(NeverT { from_break: false }), .. })
                 }).collect()
             } else {
                 returns_maybe_with_never

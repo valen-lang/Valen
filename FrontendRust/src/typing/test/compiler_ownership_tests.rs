@@ -7,7 +7,7 @@ use crate::postparsing::names::{CodeNameS, IImpreciseNameS};
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::expressions::RestackifyTE;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT};
+use crate::typing::env::function_environment_t::{LocalVariable, LocalVariable};
 use crate::typing::names::names::IVarNameT;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
@@ -335,7 +335,7 @@ fn restackify() {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Restackify(RestackifyTE {
-            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+            variable: LocalVariable::Reference(LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("ship"), .. }),
                 ..
             }),
@@ -366,7 +366,7 @@ fn loop_restackify() {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Restackify(RestackifyTE {
-            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+            variable: LocalVariable::Reference(LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("ship"), .. }),
                 ..
             }),
@@ -397,7 +397,7 @@ fn destructure_restackify() {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Restackify(RestackifyTE {
-            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+            variable: LocalVariable::Reference(LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("ship"), .. }),
                 ..
             }),

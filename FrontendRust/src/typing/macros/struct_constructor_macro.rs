@@ -135,16 +135,16 @@ where 's: 't,
     }
 
     pub fn generate_function_body_struct_constructor(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionS<'s>>,
-        param_coords: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      origin_function: Option<&FunctionS<'s>>,
+      param_coords: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
         let ret_coord = maybe_ret_coord.expect("vassertSome: maybeRetCoord");
         let struct_tt = match ret_coord.kind {
@@ -158,7 +158,7 @@ where 's: 't,
             instantiation_bound_params,
             instantiation_bound_arguments: instantiation_bounds,
         };
-        let members: Vec<(IVarNameT<'s, 't>, CoordT<'s, 't>)> = {
+        let members: Vec<(IVarNameT<'s, 't>, KindT<'s, 't>)> = {
             let placeholder_substituter = self.get_placeholder_substituter(
                 false, // sanity_check
                 env.template_id,
@@ -198,7 +198,7 @@ where 's: 't,
           false, // sanity_check
           coutputs,
           env.template_id,
-          RegionT { region: RegionT::Default },
+          RegionT::Default,
           *struct_tt,
           bound_arguments_source2,
         );
@@ -206,7 +206,7 @@ where 's: 't,
             SharednessT::Single => OwnershipT::Own,
             SharednessT::Shared => OwnershipT::Share,
         };
-        let constructor_return_type = CoordT::new(constructor_return_ownership, RegionT { region: RegionT::Default }, KindT::Struct(struct_tt));
+        let constructor_return_type = KindT::new(constructor_return_ownership, RegionT::Default, KindT::Struct(struct_tt));
 
         let constructor_params_slice = self.typing_interner.alloc_slice_from_vec(constructor_params);
         let header = FunctionHeaderT {

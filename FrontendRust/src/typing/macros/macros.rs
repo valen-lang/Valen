@@ -7,7 +7,7 @@ use crate::utils::range::RangeS;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::ast::FunctionS;
 use crate::typing::ast::ast::ParameterT;
-use crate::typing::types::types::CoordT;
+use crate::typing::types::types::KindT;
 use crate::typing::ast::ast::FunctionHeaderT;
 use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -37,17 +37,17 @@ pub enum FunctionBodyMacro {
 
 impl FunctionBodyMacro {
     pub fn generate_function_body<'s, 'ctx, 't>(
-        &self,
-        compiler: &Compiler<'s, 'ctx, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&'s FunctionS<'s>>,
-        param_coords: &[ParameterT<'s, 't>],
-        maybe_ret_coord: Option<CoordT<'s, 't>>,
+      &self,
+      compiler: &Compiler<'s, 'ctx, 't>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      env: &'t FunctionEnvironmentT<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      call_range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      origin_function: Option<&'s FunctionS<'s>>,
+      param_coords: &[ParameterT<'s, 't>],
+      maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>>
     where 's: 't,
     {

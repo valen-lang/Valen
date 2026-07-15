@@ -25,7 +25,7 @@ use crate::typing::templata::templata::expect_integer;
 use crate::utils::fx::HashSet;
 use crate::typing::types::types::KindT;
 use crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE;
-use crate::typing::templata::templata::expect_coord_templata;
+use crate::typing::templata::templata::expect_kind_templata;
 use crate::postparsing::names::CodeNameS;
 use crate::postparsing::names::CodeRuneS;
 use crate::postparsing::names::IImpreciseNameValS;
@@ -280,10 +280,10 @@ where 's: 't,
         if let Some(e) = maybe_element_type_rune {
             positional_runes.push(e);
         }
-        let mut args: Vec<CoordT<'s, 't>> = Vec::new();
-        args.push(size_te.result().coord);
+        let mut args: Vec<KindT<'s, 't>> = Vec::new();
+        args.push(size_te.result());
         if let Some(c) = maybe_callable_te {
-            args.push(c.result().coord);
+            args.push(c.result());
         }
         let array_imprecise_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.array }));
@@ -372,8 +372,8 @@ where 's: 't,
                 err: e,
             })?;
 
-        let member_types: crate::utils::fx::IndexSet<CoordT<'s, 't>> =
-            exprs_2.iter().map(|e| e.result().coord).collect();
+        let member_types: crate::utils::fx::IndexSet<KindT<'s, 't>> =
+            exprs_2.iter().map(|e| e.result()).collect();
         if member_types.len() > 1 {
             let parent_ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
             let types_t = self.typing_interner.alloc_slice_copy(&member_types.iter().copied().collect::<Vec<_>>());
@@ -458,7 +458,7 @@ where 's: 't,
         let static_sized_array_type = self.resolve_static_sized_array(
             ITemplataT::Integer(exprs_2.len() as i64), member_type, region);
         let ssa_ref = self.typing_interner.alloc(static_sized_array_type);
-        let ssa_coord = CoordT::new(OwnershipT::Own, region, KindT::StaticSizedArray(ssa_ref));
+        let ssa_coord = KindT::new(OwnershipT::Own, region, KindT::StaticSizedArray(ssa_ref));
         Ok(StaticArrayFromValuesTE {
             elements: self.typing_interner.alloc_slice_from_vec(exprs_2),
             result_reference: ssa_coord,
@@ -476,7 +476,7 @@ where 's: 't,
         callable_te: ExpressionTE<'s, 't>,
         context_region: RegionT,
     ) -> Result<DestroyStaticSizedArrayIntoFunctionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        let array_tt = match arr_te.result().coord.kind {
+        let array_tt = match arr_te.result() {
             KindT::StaticSizedArray(s) => s,
             other => panic!("Destroying a non-array with a callable! Destroying: {:?}", other),
         };
@@ -595,7 +595,7 @@ where 's: 't,
     pub fn resolve_static_sized_array(
         &self,
         size: ITemplataT<'s, 't>,
-        type_2: CoordT<'s, 't>,
+        type_2: KindT<'s, 't>,
         region: RegionT,
     ) -> StaticSizedArrayTT<'s, 't> {
         let builtin_package: &'s PackageCoordinate<'s> =
@@ -712,7 +712,7 @@ where 's: 't,
 
     pub fn resolve_runtime_sized_array(
         &self,
-        type_2: CoordT<'s, 't>,
+        type_2: KindT<'s, 't>,
         region: RegionT,
     ) -> RuntimeSizedArrayTT<'s, 't> {
         let builtin_package: &'s PackageCoordinate<'s> =
@@ -740,8 +740,8 @@ where 's: 't,
         // m.toInt
     }
 
-    fn get_array_element_type(&self, templatas: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> CoordT<'s, 't> {
-        let coord_templata = expect_coord_templata(*templatas.get(&type_rune_a).expect("vassertSome: typeRuneA not in templatas"));
+    fn get_array_element_type(&self, templatas: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> KindT<'s, 't> {
+        let coord_templata = expect_kind_templata(*templatas.get(&type_rune_a).expect("vassertSome: typeRuneA not in templatas"));
         coord_templata.coord
     }
 
@@ -770,12 +770,12 @@ where 's: 't,
         index_expr_2: ExpressionTE<'s, 't>,
         rsa: &'t RuntimeSizedArrayTT<'s, 't>,
     ) -> Result<RuntimeSizedArrayLookupTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        if index_expr_2.result().coord.kind != KindT::Int(IntT::I32) {
+        if index_expr_2.result() != KindT::Int(IntT::I32) {
             let range_with_parent: Vec<RangeS<'s>> =
                 once(range).chain(parent_ranges.iter().copied()).collect();
             return Err(ICompileErrorT::IndexedArrayWithNonInteger {
                 range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
-                types: index_expr_2.result().coord,
+                types: index_expr_2.result(),
             });
         }
         Ok(RuntimeSizedArrayLookupTE::new(range, container_expr_2, rsa, index_expr_2))

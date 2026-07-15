@@ -8,12 +8,12 @@ use crate::scout_arena::ScoutArena;
 use crate::typing::ast::expressions::{ExpressionTE, ConstantIntTE, LocalLookupTE, MutateTE, ExpressionTE, ReferenceMemberLookupTE};
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT};
+use crate::typing::env::function_environment_t::{LocalVariable, LocalVariable};
 use crate::typing::names::names::{CodeVarNameT, FunctionNameValT, FunctionTemplateNameT, IdT, IdValT, INameT, IStructTemplateNameT, IVarNameT, RawArrayNameT, StaticSizedArrayNameT, StructNameValT, StructTemplateNameT};
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::test::humanize_helper::{humanize_compile_error, assert_humanized_eq};
-use crate::typing::types::types::{CoordT, IntT, RegionT, KindT, SharednessT, OwnershipT, RegionT, StaticSizedArrayTT, StructTTValT};
+use crate::typing::types::types::{KindT, IntT, RegionT, KindT, SharednessT, OwnershipT, RegionT, StaticSizedArrayTT, StructTTValT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate};
@@ -58,7 +58,7 @@ exported func main() {a = 3; set a = 4; }
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Mutate(MutateTE {
             destination_expr: ExpressionTE::LocalLookup(LocalLookupTE {
-                local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+                local_variable: LocalVariable::Reference(LocalVariable {
                     name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                     ..
                 }),
@@ -75,8 +75,8 @@ exported func main() {a = 3; set a = 4; }
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LocalLookup(l) => Some(l)
     );
-    let result_coord = lookup.result().coord;
-    assert_eq!(result_coord, CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Int(IntT { bits: 32 })));
+    let result_coord = lookup.result();
+    assert_eq!(result_coord, KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT { bits: 32 })));
 }
 
 #[test]
@@ -110,10 +110,10 @@ exported func main() {
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ReferenceMemberLookup(l) => Some(l)
     );
-    let result_coord = lookup.result().coord;
+    let result_coord = lookup.result();
     // See RMLRMO, it should result in the same type as the member.
     match result_coord {
-        CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(_), .. } => {}
+        KindT { ownership: OwnershipT::Own, kind: KindT::Struct(_), .. } => {}
         x => panic!("{:?}", x),
     }
 }
@@ -230,7 +230,7 @@ exported func main() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
     let err = compile.get_compiler_outputs().err().unwrap();
     match &err {
-        ICompileErrorT::CouldntConvertForMutateT { expected_type: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. }, actual_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Str(_), .. }, .. } => {}
+        ICompileErrorT::CouldntConvertForMutateT { expected_type: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. }, actual_type: KindT { ownership: OwnershipT::Share, kind: KindT::Str(_), .. }, .. } => {}
         _ => panic!("expected CouldntConvertForMutateT"),
     }
     assert_humanized_eq(
@@ -461,7 +461,7 @@ fn humanize_errors() {
     });
     let firefly_tt = typing_interner.intern_struct_tt(StructTTValT { id: *firefly_id });
     let firefly_kind = KindT::Struct(firefly_tt);
-    let firefly_coord = CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, firefly_kind);
+    let firefly_coord = KindT::new(OwnershipT::Own, RegionT::Default, firefly_kind);
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Serenity")});
@@ -472,7 +472,7 @@ fn humanize_errors() {
     });
     let serenity_tt = typing_interner.intern_struct_tt(StructTTValT { id: *serenity_id });
     let serenity_kind = KindT::Struct(serenity_tt);
-    let serenity_coord = CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, serenity_kind);
+    let serenity_coord = KindT::new(OwnershipT::Own, RegionT::Default, serenity_kind);
 
     let myfunc_template_name = typing_interner.intern_function_template_name(
         FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz_code_loc});

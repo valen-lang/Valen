@@ -158,7 +158,7 @@ exported func main() int {
             NodeRefT::If(if2) => Some(if2)
         );
         for iff in &ifs {
-            assert_eq!(iff.result().coord, CoordT::new(
+            assert_eq!(iff.result(), CoordT::new(
                 OwnershipT::Own,
                 RegionT { region: IRegionT::Default },
                 KindT::Int(IntT::I32),
@@ -220,7 +220,7 @@ exported func main() int {
             NodeRefT::If(if2) => Some(if2)
         );
         for iff in &ifs {
-            assert_eq!(iff.result().coord, CoordT::new(
+            assert_eq!(iff.result(), CoordT::new(
                 OwnershipT::Own,
                 RegionT { region: IRegionT::Default },
                 KindT::Int(IntT::I32),
@@ -277,7 +277,7 @@ exported func main() str {
             NodeRefT::If(if2) => Some(if2)
         );
         for iff in &ifs {
-            assert_eq!(iff.result().coord, CoordT::new(
+            assert_eq!(iff.result(), CoordT::new(
                 OwnershipT::Share,
                 RegionT { region: IRegionT::Default },
                 KindT::Str(StrT),

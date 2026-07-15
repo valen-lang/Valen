@@ -36,7 +36,7 @@ where 's: 't,
         attributes_t: &'t [IFunctionAttributeT<'s>],
         params_t: &'t [ParameterT<'s, 't>],
         is_destructor: bool,
-        maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
+        maybe_explicit_return_coord: Option<KindT<'s, 't>>,
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     },
     
@@ -53,7 +53,7 @@ pub struct CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub return_types_by_signature:
-        HashMap<SignatureT<'s, 't>, CoordT<'s, 't>>,
+        HashMap<SignatureT<'s, 't>, KindT<'s, 't>>,
     // Per @IIIOZ, iterated by get_all_functions → IndexMap for cross-run determinism.
     pub signature_to_function:
         IndexMap<SignatureT<'s, 't>, &'t FunctionDefinitionT<'s, 't>>,
@@ -273,9 +273,9 @@ where 's: 't,
     }
     
     pub fn declare_function_return_type(
-        &mut self,
-        signature: &'t SignatureT<'s, 't>,
-        return_type_2: CoordT<'s, 't>,
+      &mut self,
+      signature: &'t SignatureT<'s, 't>,
+      return_type_2: KindT<'s, 't>,
     ) {
         match self.return_types_by_signature.get(signature) {
             None => {}
@@ -290,8 +290,8 @@ where 's: 't,
         function: &'t FunctionDefinitionT<'s, 't>,
     ) {
         assert!(
-            function.body.result().coord.kind == KindT::Never(NeverT { from_break: false }) ||
-            function.body.result().coord == function.header.return_type);
+            function.body.result() == KindT::Never(NeverT { from_break: false }) ||
+            function.body.result() == function.header.return_type);
 
         assert!(!self.signature_to_function.contains_key(signature),
             "wot");
@@ -678,7 +678,7 @@ where 's: 't,
     pub fn get_return_type_for_signature(
         &self,
         sig: &'t SignatureT<'s, 't>,
-    ) -> Option<CoordT<'s, 't>> {
+    ) -> Option<KindT<'s, 't>> {
         panic!("Unimplemented: Slab 10");
     }
     
