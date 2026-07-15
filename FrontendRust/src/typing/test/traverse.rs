@@ -10,7 +10,7 @@ use crate::typing::ast::citizens::{
     StructDefinitionT,
 };
 use crate::typing::ast::expressions::{
-    AddressExpressionTE, AddressMemberLookupTE, ArgLookupTE, ArrayLengthTE, ArraySizeTE,
+    ExpressionTE, AddressMemberLookupTE, ArgLookupTE, ArrayLengthTE, ArraySizeTE,
     AsSubtypeTE, BlockTE, BorrowToWeakTE, BreakTE, ConsecutorTE, ConstantBoolTE, ConstantFloatTE,
     ConstantIntTE, ConstantStrTE, ConstructTE, DeferTE,
     DestroyRuntimeSizedArrayTE, DestroyStaticSizedArrayIntoFunctionTE,
@@ -18,7 +18,7 @@ use crate::typing::ast::expressions::{
     FunctionCallTE, IfTE, InterfaceFunctionCallTE, InterfaceToInterfaceUpcastTE,
     IsSameInstanceTE, LetAndLendTE, LetNormalTE, LocalLookupTE, LockWeakTE, MutateTE,
     NewRuntimeSizedArrayTE, PopRuntimeSizedArrayTE,
-    PushRuntimeSizedArrayTE, ReferenceExpressionTE, ReferenceMemberLookupTE, ReinterpretTE,
+    PushRuntimeSizedArrayTE, ExpressionTE, ReferenceMemberLookupTE, ReinterpretTE,
     RestackifyTE, ReturnTE, RuntimeSizedArrayCapacityTE, RuntimeSizedArrayLookupTE, SoftLoadTE,
     StaticArrayFromCallableTE, StaticArrayFromValuesTE, StaticSizedArrayLookupTE,
     TupleTE, UnletTE, UpcastTE, VoidLiteralTE, WhileTE,
@@ -53,8 +53,8 @@ pub enum NodeRefT<'s, 't> {
 
     // ---- Expression hierarchy ----
     Expression(ExpressionTE<'s, 't>),
-    ReferenceExpression(ReferenceExpressionTE<'s, 't>),
-    AddressExpression(AddressExpressionTE<'s, 't>),
+    ReferenceExpression(ExpressionTE<'s, 't>),
+    AddressExpression(ExpressionTE<'s, 't>),
 
     // 48 reference expression variants
     LetAndLend(&'t LetAndLendTE<'s, 't>),
@@ -222,8 +222,8 @@ where
 }
 
 pub fn collect_in_reference_expression<'s, 't, T, F>(
-    e: ReferenceExpressionTE<'s, 't>,
-    predicate: &F,
+  e: ExpressionTE<'s, 't>,
+  predicate: &F,
 ) -> Vec<T>
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
@@ -235,7 +235,7 @@ where
 }
 
 pub fn collect_in_address_expression<'s, 't, T, F>(
-    e: AddressExpressionTE<'s, 't>,
+    e: ExpressionTE<'s, 't>,
     predicate: &F,
 ) -> Vec<T>
 where
@@ -518,105 +518,105 @@ where
 }
 
 fn visit_reference_expression<'s, 't, T, F>(
-    pred: &F,
-    out: &mut Vec<T>,
-    e: ReferenceExpressionTE<'s, 't>,
+  pred: &F,
+  out: &mut Vec<T>,
+  e: ExpressionTE<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     collect_if(pred, out, NodeRefT::ReferenceExpression(e));
     match e {
-        ReferenceExpressionTE::LetAndLend(x) => visit_let_and_lend(pred, out, x),
-        ReferenceExpressionTE::LockWeak(x) => visit_lock_weak(pred, out, x),
-        ReferenceExpressionTE::BorrowToWeak(x) => visit_borrow_to_weak(pred, out, x),
-        ReferenceExpressionTE::LetNormal(x) => visit_let_normal(pred, out, x),
-        ReferenceExpressionTE::Unlet(x) => visit_unlet(pred, out, x),
-        ReferenceExpressionTE::Discard(x) => visit_discard(pred, out, x),
-        ReferenceExpressionTE::Defer(x) => visit_defer(pred, out, x),
-        ReferenceExpressionTE::If(x) => visit_if(pred, out, x),
-        ReferenceExpressionTE::While(x) => visit_while(pred, out, x),
-        ReferenceExpressionTE::Mutate(x) => visit_mutate(pred, out, x),
-        ReferenceExpressionTE::Restackify(x) => visit_restackify(pred, out, x),
-        ReferenceExpressionTE::Return(x) => visit_return(pred, out, x),
-        ReferenceExpressionTE::Break(x) => visit_break(pred, out, x),
-        ReferenceExpressionTE::Block(x) => visit_block(pred, out, x),
-        ReferenceExpressionTE::Consecutor(x) => visit_consecutor(pred, out, x),
-        ReferenceExpressionTE::Tuple(x) => visit_tuple(pred, out, x),
-        ReferenceExpressionTE::StaticArrayFromValues(x) => {
+        ExpressionTE::LetAndLend(x) => visit_let_and_lend(pred, out, x),
+        ExpressionTE::LockWeak(x) => visit_lock_weak(pred, out, x),
+        ExpressionTE::BorrowToWeak(x) => visit_borrow_to_weak(pred, out, x),
+        ExpressionTE::LetNormal(x) => visit_let_normal(pred, out, x),
+        ExpressionTE::Unlet(x) => visit_unlet(pred, out, x),
+        ExpressionTE::Discard(x) => visit_discard(pred, out, x),
+        ExpressionTE::Defer(x) => visit_defer(pred, out, x),
+        ExpressionTE::If(x) => visit_if(pred, out, x),
+        ExpressionTE::While(x) => visit_while(pred, out, x),
+        ExpressionTE::Mutate(x) => visit_mutate(pred, out, x),
+        ExpressionTE::Restackify(x) => visit_restackify(pred, out, x),
+        ExpressionTE::Return(x) => visit_return(pred, out, x),
+        ExpressionTE::Break(x) => visit_break(pred, out, x),
+        ExpressionTE::Block(x) => visit_block(pred, out, x),
+        ExpressionTE::Consecutor(x) => visit_consecutor(pred, out, x),
+        ExpressionTE::Tuple(x) => visit_tuple(pred, out, x),
+        ExpressionTE::StaticArrayFromValues(x) => {
             visit_static_array_from_values(pred, out, x)
         }
-        ReferenceExpressionTE::ArraySize(x) => visit_array_size(pred, out, x),
-        ReferenceExpressionTE::IsSameInstance(x) => visit_is_same_instance(pred, out, x),
-        ReferenceExpressionTE::AsSubtype(x) => visit_as_subtype(pred, out, x),
-        ReferenceExpressionTE::VoidLiteral(x) => visit_void_literal(pred, out, x),
-        ReferenceExpressionTE::ConstantInt(x) => visit_constant_int(pred, out, x),
-        ReferenceExpressionTE::ConstantBool(x) => visit_constant_bool(pred, out, x),
-        ReferenceExpressionTE::ConstantStr(x) => visit_constant_str(pred, out, x),
-        ReferenceExpressionTE::ConstantFloat(x) => visit_constant_float(pred, out, x),
-        ReferenceExpressionTE::ArgLookup(x) => visit_arg_lookup(pred, out, x),
-        ReferenceExpressionTE::ArrayLength(x) => visit_array_length(pred, out, x),
-        ReferenceExpressionTE::InterfaceFunctionCall(x) => {
+        ExpressionTE::ArraySize(x) => visit_array_size(pred, out, x),
+        ExpressionTE::IsSameInstance(x) => visit_is_same_instance(pred, out, x),
+        ExpressionTE::AsSubtype(x) => visit_as_subtype(pred, out, x),
+        ExpressionTE::VoidLiteral(x) => visit_void_literal(pred, out, x),
+        ExpressionTE::ConstantInt(x) => visit_constant_int(pred, out, x),
+        ExpressionTE::ConstantBool(x) => visit_constant_bool(pred, out, x),
+        ExpressionTE::ConstantStr(x) => visit_constant_str(pred, out, x),
+        ExpressionTE::ConstantFloat(x) => visit_constant_float(pred, out, x),
+        ExpressionTE::ArgLookup(x) => visit_arg_lookup(pred, out, x),
+        ExpressionTE::ArrayLength(x) => visit_array_length(pred, out, x),
+        ExpressionTE::InterfaceFunctionCall(x) => {
             visit_interface_function_call(pred, out, x)
         }
-        ReferenceExpressionTE::ExternFunctionCall(x) => visit_extern_function_call(pred, out, x),
-        ReferenceExpressionTE::FunctionCall(x) => visit_function_call(pred, out, x),
-        ReferenceExpressionTE::Reinterpret(x) => visit_reinterpret(pred, out, x),
-        ReferenceExpressionTE::Construct(x) => visit_construct(pred, out, x),
-        ReferenceExpressionTE::NewRuntimeSizedArray(x) => {
+        ExpressionTE::ExternFunctionCall(x) => visit_extern_function_call(pred, out, x),
+        ExpressionTE::FunctionCall(x) => visit_function_call(pred, out, x),
+        ExpressionTE::Reinterpret(x) => visit_reinterpret(pred, out, x),
+        ExpressionTE::Construct(x) => visit_construct(pred, out, x),
+        ExpressionTE::NewRuntimeSizedArray(x) => {
             visit_new_mut_runtime_sized_array(pred, out, x)
         }
-        ReferenceExpressionTE::StaticArrayFromCallable(x) => {
+        ExpressionTE::StaticArrayFromCallable(x) => {
             visit_static_array_from_callable(pred, out, x)
         }
-        ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(x) => {
+        ExpressionTE::DestroyStaticSizedArrayIntoFunction(x) => {
             visit_destroy_static_sized_array_into_function(pred, out, x)
         }
-        ReferenceExpressionTE::DestroyStaticSizedArrayIntoLocals(x) => {
+        ExpressionTE::DestroyStaticSizedArrayIntoLocals(x) => {
             visit_destroy_static_sized_array_into_locals(pred, out, x)
         }
-        ReferenceExpressionTE::DestroyRuntimeSizedArray(x) => {
+        ExpressionTE::DestroyRuntimeSizedArray(x) => {
             visit_destroy_mut_runtime_sized_array(pred, out, x)
         }
-        ReferenceExpressionTE::RuntimeSizedArrayCapacity(x) => {
+        ExpressionTE::RuntimeSizedArrayCapacity(x) => {
             visit_runtime_sized_array_capacity(pred, out, x)
         }
-        ReferenceExpressionTE::PushRuntimeSizedArray(x) => {
+        ExpressionTE::PushRuntimeSizedArray(x) => {
             visit_push_runtime_sized_array(pred, out, x)
         }
-        ReferenceExpressionTE::PopRuntimeSizedArray(x) => {
+        ExpressionTE::PopRuntimeSizedArray(x) => {
             visit_pop_runtime_sized_array(pred, out, x)
         }
-        ReferenceExpressionTE::InterfaceToInterfaceUpcast(x) => {
+        ExpressionTE::InterfaceToInterfaceUpcast(x) => {
             visit_interface_to_interface_upcast(pred, out, x)
         }
-        ReferenceExpressionTE::Upcast(x) => visit_upcast(pred, out, x),
-        ReferenceExpressionTE::SoftLoad(x) => visit_soft_load(pred, out, x),
-        ReferenceExpressionTE::Destroy(x) => visit_destroy(pred, out, x),
-        ReferenceExpressionTE::CopyPrim(x) => visit_reference_expression(pred, out, x.inner),
-        ReferenceExpressionTE::Alias(x) => visit_reference_expression(pred, out, x.source_expr),
+        ExpressionTE::Upcast(x) => visit_upcast(pred, out, x),
+        ExpressionTE::SoftLoad(x) => visit_soft_load(pred, out, x),
+        ExpressionTE::Destroy(x) => visit_destroy(pred, out, x),
+        ExpressionTE::CopyPrim(x) => visit_reference_expression(pred, out, x.inner),
+        ExpressionTE::Alias(x) => visit_reference_expression(pred, out, x.source_expr),
     }
 }
 
 fn visit_address_expression<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    e: AddressExpressionTE<'s, 't>,
+    e: ExpressionTE<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     collect_if(pred, out, NodeRefT::AddressExpression(e));
     match e {
-        AddressExpressionTE::LocalLookup(x) => visit_local_lookup(pred, out, x),
-        AddressExpressionTE::StaticSizedArrayLookup(x) => {
+        ExpressionTE::LocalLookup(x) => visit_local_lookup(pred, out, x),
+        ExpressionTE::StaticSizedArrayLookup(x) => {
             visit_static_sized_array_lookup(pred, out, x)
         }
-        AddressExpressionTE::RuntimeSizedArrayLookup(x) => {
+        ExpressionTE::RuntimeSizedArrayLookup(x) => {
             visit_runtime_sized_array_lookup(pred, out, x)
         }
-        AddressExpressionTE::ReferenceMemberLookup(x) => visit_reference_member_lookup(pred, out, x),
-        AddressExpressionTE::AddressMemberLookup(x) => visit_address_member_lookup(pred, out, x),
+        ExpressionTE::ReferenceMemberLookup(x) => visit_reference_member_lookup(pred, out, x),
+        ExpressionTE::AddressMemberLookup(x) => visit_address_member_lookup(pred, out, x),
     }
 }
 

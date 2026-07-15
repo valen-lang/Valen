@@ -237,7 +237,7 @@ where 's: 't,
         //   coord
         // })
         params1.iter().map(|param1| {
-            let rune = param1.pattern.kind_rune.as_ref().unwrap().rune;
+            let rune = param1.full_type_rune.rune;
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune }));
             let mut lookup_filter = HashSet::default();
@@ -266,7 +266,7 @@ where 's: 't,
             //     env.lookupNearestWithImpreciseName(
             //       interner.intern(RuneNameS(param1.pattern.coordRune.get.rune)),
             //       Set(TemplataLookupContext)))
-            let rune = param1.pattern.kind_rune.as_ref().unwrap().rune;
+            let rune = param1.full_type_rune.rune;
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune }));
             let mut lookup_filter = HashSet::default();

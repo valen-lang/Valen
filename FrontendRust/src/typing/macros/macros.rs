@@ -9,7 +9,7 @@ use crate::postparsing::ast::FunctionS;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::types::types::CoordT;
 use crate::typing::ast::ast::FunctionHeaderT;
-use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::names::names::IdT;
 use crate::postparsing::ast::StructS;
@@ -48,7 +48,7 @@ impl FunctionBodyMacro {
         origin_function: Option<&'s FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>>
+    ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>>
     where 's: 't,
     {
         match self {

@@ -221,7 +221,7 @@ where 's: 't,
         origin_function1: Option<&'s FunctionS<'s>>,
         params2: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         let body_env = IInDenizenEnvironmentT::Function(env);
 
         let struct_tt = match params2[0].tyype.kind {
@@ -233,9 +233,9 @@ where 's: 't,
             SharednessT::Single => OwnershipT::Own,
             SharednessT::Shared => OwnershipT::Share,
         };
-        let struct_type = CoordT::new(struct_ownership, RegionT { region: IRegionT::Default }, KindT::Struct(struct_tt));
+        let struct_type = CoordT::new(struct_ownership, RegionT { region: RegionT::Default }, KindT::Struct(struct_tt));
 
-        let ret = CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, KindT::Void(VoidT {}));
+        let ret = CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Void(VoidT {}));
         let params_arena: &'t [ParameterT<'s, 't>] = self.typing_interner.alloc_slice_from_vec(params2.to_vec());
         let header = FunctionHeaderT {
             id: env.id,
@@ -249,10 +249,10 @@ where 's: 't,
             self.typing_interner.alloc(header.to_signature()), header.return_type);
 
         let is_extern = struct_def.attributes.iter().any(|a| matches!(a, ICitizenAttributeT::Extern(_)));
-        let body_expr: ReferenceExpressionTE<'s, 't> = match struct_def.sharedness {
+        let body_expr: ExpressionTE<'s, 't> = match struct_def.sharedness {
             SharednessT::Shared => {
-                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
-                    expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type })),
+                ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
+                    expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type })),
                 }))
             }
             SharednessT::Single if is_extern => {
@@ -282,8 +282,8 @@ where 's: 't,
                         }
                     }).collect();
                 let member_local_variables_slice = self.typing_interner.alloc_slice_from_vec(member_local_variables.clone());
-                let arg_lookup = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type }));
-                let destroy = ReferenceExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE {
+                let arg_lookup = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type }));
+                let destroy = ExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE {
                     expr: arg_lookup,
                     struct_tt,
                     destination_reference_variables: member_local_variables_slice,
@@ -291,23 +291,23 @@ where 's: 't,
                 let origin_range: Vec<RangeS<'s>> = origin_function1.map(|f| f.range).into_iter().collect();
                 let drop_call_range: Vec<RangeS<'s>> = origin_range.into_iter().chain(call_range.iter().copied()).collect();
                 let drop_call_range_slice = self.typing_interner.alloc_slice_from_vec(drop_call_range);
-                let drop_exprs: Vec<ReferenceExpressionTE<'s, 't>> = member_local_variables.iter().map(|v| {
-                    let unlet = ReferenceExpressionTE::Unlet(self.typing_interner.alloc(UnletTE {
+                let drop_exprs: Vec<ExpressionTE<'s, 't>> = member_local_variables.iter().map(|v| {
+                    let unlet = ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE {
                         variable: ILocalVariableT::Reference(*v),
                     }));
-                    self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT { region: IRegionT::Default }, unlet)
+                    self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT { region: RegionT::Default }, unlet)
                 }).collect::<Result<Vec<_>, _>>()?;
-                let mut all_exprs: Vec<ReferenceExpressionTE<'s, 't>> = vec![destroy];
+                let mut all_exprs: Vec<ExpressionTE<'s, 't>> = vec![destroy];
                 all_exprs.extend(drop_exprs.into_iter());
                 self.consecutive(&all_exprs)
             }
         };
 
         let return_expr =
-            ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT { region: IRegionT::Default }})),
+            ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT { region: RegionT::Default }})),
             }));
-        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: self.consecutive(&[body_expr, return_expr]),
         }));
 

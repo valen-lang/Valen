@@ -8,7 +8,7 @@ use crate::scout_arena::ScoutArena;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
-use crate::typing::types::types::{CoordT, IntT, IRegionT, KindT, OwnershipT, RegionT};
+use crate::typing::types::types::{CoordT, IntT, RegionT, KindT, OwnershipT, RegionT};
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
 use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT};
@@ -37,7 +37,7 @@ use crate::typing::test::traverse::NodeRefT;
 use crate::typing::ast::expressions::ConstantIntTE;
 use crate::typing::ast::expressions::DeferTE;
 use crate::typing::ast::expressions::FunctionCallTE;
-use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::names::names::FunctionNameT;
 use crate::typing::ast::citizens::IStructMemberT;
@@ -55,7 +55,7 @@ use crate::typing::names::names::InterfaceNameT;
 use crate::typing::types::types::ISuperKindTT;
 use crate::typing::types::types::InterfaceTT;
 use crate::typing::ast::expressions::SoftLoadTE;
-use crate::typing::ast::expressions::AddressExpressionTE;
+use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::LetAndLendTE;
 use crate::typing::ast::citizens::StructDefinitionT;
 use crate::typing::ast::ast::FunctionHeaderT;
@@ -215,7 +215,7 @@ fn taking_an_argument_and_returning_it() {
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Parameter(p) => Some(p)
     );
-    assert!(param.tyype == CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, KindT::Int(IntT { bits: 32 })));
+    assert!(param.tyype == CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Int(IntT { bits: 32 })));
 
     let lookup: &LocalLookupTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
@@ -290,9 +290,9 @@ fn tests_adding_two_numbers() {
     // Post-flip: we wrote `+(&2, &3)` to match the `+(&int, &int)` signature in arith.vale.
     // Each `&literal` becomes Defer(LetAndLend(ConstantInt, ...)). Verify that exact shape.
     match &func_call.args[0] {
-        ReferenceExpressionTE::Defer(DeferTE {
-            inner_expr: ReferenceExpressionTE::LetAndLend(LetAndLendTE {
-                expr: ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+        ExpressionTE::Defer(DeferTE {
+            inner_expr: ExpressionTE::LetAndLend(LetAndLendTE {
+                expr: ExpressionTE::ConstantInt(ConstantIntTE {
                     value: ITemplataT::Integer(2), ..
                 }),
                 ..
@@ -302,9 +302,9 @@ fn tests_adding_two_numbers() {
         other => panic!("Expected arg 0 shape Defer(LetAndLend(ConstantInt(2))), got {:?}", other),
     }
     match &func_call.args[1] {
-        ReferenceExpressionTE::Defer(DeferTE {
-            inner_expr: ReferenceExpressionTE::LetAndLend(LetAndLendTE {
-                expr: ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+        ExpressionTE::Defer(DeferTE {
+            inner_expr: ExpressionTE::LetAndLend(LetAndLendTE {
+                expr: ExpressionTE::ConstantInt(ConstantIntTE {
                     value: ITemplataT::Integer(3), ..
                 }),
                 ..
@@ -545,7 +545,7 @@ fn recursion() {
     let coutputs = compile.expect_compiler_outputs();
 
     // Make sure it inferred the param type and return type correctly
-    assert!(coutputs.lookup_function_by_str("main").header.return_type == CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, KindT::Int(IntT { bits: 32 })));
+    assert!(coutputs.lookup_function_by_str("main").header.return_type == CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Int(IntT { bits: 32 })));
 }
 
 #[test]
@@ -777,7 +777,7 @@ fn simple_struct() {
                     },
                     ..
                 },
-                args: [ReferenceExpressionTE::ConstantInt(
+                args: [ExpressionTE::ConstantInt(
                     ConstantIntTE {
                         value: ITemplataT::Integer(7),
                         ..
@@ -1018,7 +1018,7 @@ fn reads_a_struct_member() {
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ReferenceMemberLookup(
             ReferenceMemberLookupTE {
-                struct_expr: ReferenceExpressionTE::SoftLoad(SoftLoadTE { target_ownership: OwnershipT::Borrow, .. }),
+                struct_expr: ExpressionTE::SoftLoad(SoftLoadTE { target_ownership: OwnershipT::Borrow, .. }),
                 member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                 member_reference: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
                 ..
@@ -1121,7 +1121,7 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
             compile.typing_interner.alloc(CoordTemplataT {
                 coord: CoordT::new(
                     OwnershipT::Own,
-                    RegionT { region: IRegionT::Default },
+                    RegionT { region: RegionT::Default },
                     KindT::Int(IntT { bits: 32 }),
                 ),
             })
@@ -1143,7 +1143,7 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
         InterfaceTTValT { id: *interface_id });
     let expected_coord = CoordT::new(
         OwnershipT::Borrow,
-        RegionT { region: IRegionT::Default },
+        RegionT { region: RegionT::Default },
         KindT::Interface(interface_tt),
     );
 
@@ -1816,9 +1816,9 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ReferenceMemberLookup(
             ReferenceMemberLookupTE {
-                struct_expr: ReferenceExpressionTE::SoftLoad(
+                struct_expr: ExpressionTE::SoftLoad(
                     SoftLoadTE {
-                        expr: AddressExpressionTE::LocalLookup(
+                        expr: ExpressionTE::LocalLookup(
                             LocalLookupTE {
                                 local_variable: ILocalVariableT::Reference(
                                     ReferenceLocalVariableT {
@@ -2026,9 +2026,9 @@ exported func main() int {
                     },
                     ..
                 },
-                args: [ReferenceExpressionTE::SoftLoad(SoftLoadTE {
+                args: [ExpressionTE::SoftLoad(SoftLoadTE {
                     target_ownership: OwnershipT::Borrow,
-                    expr: AddressExpressionTE::LocalLookup(LocalLookupTE {
+                    expr: ExpressionTE::LocalLookup(LocalLookupTE {
                         local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
                             coord: CoordT {
                                 ownership: OwnershipT::Own,
@@ -3655,7 +3655,7 @@ fn humanize_errors() {
     });
     let firefly_tt = typing_interner.intern_struct_tt(StructTTValT { id: *firefly_id });
     let firefly_kind = KindT::Struct(firefly_tt);
-    let firefly_coord = CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, firefly_kind);
+    let firefly_coord = CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, firefly_kind);
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Serenity")});
@@ -3666,7 +3666,7 @@ fn humanize_errors() {
     });
     let serenity_tt = typing_interner.intern_struct_tt(StructTTValT { id: *serenity_id });
     let serenity_kind = KindT::Struct(serenity_tt);
-    let serenity_coord = CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, serenity_kind);
+    let serenity_coord = CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, serenity_kind);
 
     let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship")});
@@ -3701,7 +3701,7 @@ fn humanize_errors() {
     let export_template_name = typing_interner.intern_export_template_name(
         ExportTemplateNameT { code_loc: tz_code_loc});
     let export_name = typing_interner.intern_export_name(
-        ExportNameT { template: export_template_name, region: RegionT { region: IRegionT::Default } });
+        ExportNameT { template: export_template_name, region: RegionT { region: RegionT::Default } });
     let firefly_export_id = typing_interner.intern_id(IdValT {
         package_coord: test_tld, init_steps: &[], local_name: INameT::Export(export_name),
     });
@@ -3818,8 +3818,8 @@ exported func main() int {
         ICompileErrorT::ArrayElementsHaveDifferentTypes { types, .. } => {
             let types_set: HashSet<CoordT> = types.iter().copied().collect();
             assert_eq!(types_set, HashSet::from_iter([
-                CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, KindT::Int(IntT::I32)),
-                CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, KindT::Bool(BoolT)),
+                CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Int(IntT::I32)),
+                CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Bool(BoolT)),
             ]));
         }
         _other => panic!("expected ArrayElementsHaveDifferentTypes"),

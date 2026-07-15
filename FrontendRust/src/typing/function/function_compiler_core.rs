@@ -3,7 +3,7 @@ use crate::postparsing::ast::{IBodyS, IFunctionAttributeS, LocationInDenizen};
 use crate::postparsing::names::*;
 use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
-use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ExternFunctionCallTE, GenericParametersInheritance, ReferenceExpressionTE, ReturnTE};
+use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ExternFunctionCallTE, GenericParametersInheritance, ExpressionTE, ReturnTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -293,7 +293,7 @@ where 's: 't,
         let function2 = self.typing_interner.alloc(FunctionDefinitionT {
             header,
             instantiation_bound_params,
-            body: ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE { inner: body2.inner })),
+            body: ExpressionTE::Block(self.typing_interner.alloc(BlockTE { inner: body2.inner })),
         });
         coutputs.add_function(header_sig, function2);
         Ok(function2.header)
@@ -357,9 +357,9 @@ where 's: 't,
                     }),
                 );
 
-                let arg_lookups: Vec<ReferenceExpressionTE<'s, 't>> =
+                let arg_lookups: Vec<ExpressionTE<'s, 't>> =
                     header.params.iter().enumerate().map(|(index, param)| {
-                        ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
+                        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                             param_index: index as i32,
                             coord: param.tyype,
                         }))
@@ -372,8 +372,8 @@ where 's: 't,
                         rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map(),
                         rune_to_bound_impl: self.typing_interner.alloc_index_map(),
                     }),
-                    body: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                        source_expr: ReferenceExpressionTE::ExternFunctionCall(self.typing_interner.alloc(ExternFunctionCallTE {
+                    body: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                        source_expr: ExpressionTE::ExternFunctionCall(self.typing_interner.alloc(ExternFunctionCallTE {
                             prototype2: extern_prototype,
                             args: self.typing_interner.alloc_slice_from_vec(arg_lookups),
                         })),
@@ -388,7 +388,7 @@ where 's: 't,
                 });
                 let placeholdered_extern_name = self.typing_interner.intern_extern_name(ExternNameT {
                     template: extern_template_name,
-                    template_arg: RegionT { region: IRegionT::Default },
+                    template_arg: RegionT { region: RegionT::Default },
                 });
                 let placeholdered_extern_id = *self.typing_interner.intern_id(IdValT {
                     package_coord: env.id.package_coord,

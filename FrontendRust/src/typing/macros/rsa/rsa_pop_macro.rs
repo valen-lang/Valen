@@ -27,7 +27,7 @@ where 's: 't,
         origin_function: Option<&FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+    ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
         let header = FunctionHeaderT {
             id: env.id,
             attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
@@ -35,10 +35,10 @@ where 's: 't,
             return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
             maybe_origin_function_templata: Some(env.templata()),
         };
-        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ReferenceExpressionTE::PopRuntimeSizedArray({
-                    let array_expr = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ExpressionTE::PopRuntimeSizedArray({
+                    let array_expr = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                         param_index: 0,
                         coord: param_coords[0].tyype,
                     }));

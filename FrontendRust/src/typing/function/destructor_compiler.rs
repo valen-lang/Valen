@@ -1,10 +1,10 @@
 use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::ast::expressions::{DiscardTE, FunctionCallTE, ReferenceExpressionTE};
+use crate::typing::ast::expressions::{DiscardTE, FunctionCallTE, ExpressionTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
 use crate::typing::function::function_compiler::StampFunctionSuccess;
-use crate::typing::types::types::{CoordT, IRegionT, KindT, OwnershipT, RegionT};
+use crate::typing::types::types::{CoordT, RegionT, KindT, OwnershipT, RegionT};
 use crate::utils::range::RangeS;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::names::IImpreciseNameValS;
@@ -45,38 +45,38 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
-        undestructed_expr_2: ReferenceExpressionTE<'s, 't>,
-    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+        undestructed_expr_2: ExpressionTE<'s, 't>,
+    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let result_coord = undestructed_expr_2.result().coord;
         let result_expr_2 = match (result_coord.ownership, result_coord.kind) {
             // VCOORD: doublecheck this: post-cut Share+Never is rejected by CoordT::new, so this arm should be unreachable.
             (OwnershipT::Share, KindT::Never(_)) => undestructed_expr_2,
             (OwnershipT::Share, _) => {
-                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
+                ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
             (OwnershipT::Own, KindT::Never(_)) => undestructed_expr_2,
             (OwnershipT::Own, KindT::OverloadSet(_)) => {
-                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
+                ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
             (OwnershipT::Own, kind) if self.is_primitive(kind) => {
-                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
+                ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
             (OwnershipT::Own, _) => {
                 let StampFunctionSuccess { prototype: destructor_prototype, .. } =
-                    self.get_drop_function(env, coutputs, call_range, call_location, RegionT { region: IRegionT::Default }, result_coord)?;
+                    self.get_drop_function(env, coutputs, call_range, call_location, RegionT { region: RegionT::Default }, result_coord)?;
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, destructor_prototype.id).is_some());
                 let result_tt = destructor_prototype.return_type;
-                ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
+                ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
                     callable: destructor_prototype,
                     args: self.typing_interner.alloc_slice_from_vec(vec![undestructed_expr_2]),
                     return_type: result_tt,
                 }))
             }
             (OwnershipT::Borrow, _) => {
-                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
+                ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
             (OwnershipT::Weak, _) => {
-                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
+                ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
         };
         match result_expr_2.result().coord.kind {

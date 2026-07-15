@@ -44,7 +44,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'t>,
         region: RegionT,
         block_se: &'s BlockSE<'s>,
-    ) -> Result<(ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(ExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let (unnevered_unresultified_undestructed_root_expression, returns_from_exprs) =
             self.evaluate_and_coerce_to_reference_expression(
                 coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges,

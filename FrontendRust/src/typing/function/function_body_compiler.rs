@@ -3,7 +3,7 @@ use crate::postparsing::ast::{IBodyS, LocationInDenizen, ParameterS};
 use crate::postparsing::expressions::{BodySE, IExpressionSE};
 use crate::postparsing::patterns::patterns::AtomSP;
 use crate::typing::ast::ast::{LocationInFunctionEnvironmentT, ParameterT};
-use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ReferenceExpressionTE, ReturnTE};
+use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ExpressionTE, ReturnTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::function_environment_t::{FunctionEnvironmentT, NodeEnvironmentBox};
@@ -202,7 +202,7 @@ where 's: 't,
                 let mut returns = returns_from_inside_maybe_with_never;
                 returns.insert(converted_body_without_return.result().coord);
                 let return_te =
-                    ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE { source_expr: converted_body_without_return }));
+                    ExpressionTE::Return(self.typing_interner.alloc(ReturnTE { source_expr: converted_body_without_return }));
                 (return_te, returns)
             };
 
@@ -240,17 +240,17 @@ where 's: 't,
         region: RegionT,
         params_1: &[&'s ParameterS<'s>],
         params_2: &[&'t ParameterT<'s, 't>],
-    ) -> ReferenceExpressionTE<'s, 't> {
+    ) -> ExpressionTE<'s, 't> {
         // val paramLookups2 = params2.zipWithIndex.map({ case (p, index) => ArgLookupTE(index, p.tyype) })
-        let param_lookups_2: Vec<ReferenceExpressionTE<'s, 't>> =
+        let param_lookups_2: Vec<ExpressionTE<'s, 't>> =
             params_2.iter().enumerate().map(|(index, p)| {
-                ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
+                ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                     param_index: index as i32,
                     coord: p.tyype,
                 }))
             }).collect();
 
-        let param_lookups_2_refs: &'t [ReferenceExpressionTE<'s, 't>] =
+        let param_lookups_2_refs: &'t [ExpressionTE<'s, 't>] =
             self.typing_interner.alloc_slice_from_vec(param_lookups_2);
         let patterns: &'t [&'s AtomSP<'s>] = self.typing_interner.alloc_slice_copy(
             &params_1.iter().map(|p| &p.pattern).collect::<Vec<_>>());

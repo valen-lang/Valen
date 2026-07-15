@@ -66,7 +66,7 @@ pub struct StructDefinitionT<'s, 't> {
     pub attributes: &'t [ICitizenAttributeT<'s>],
     pub weakable: bool,
     pub sharedness: SharednessT,
-    pub members: &'t [IStructMemberT<'s, 't>],
+    pub members: &'t [NormalStructMemberT<'s, 't>],
     pub is_closure: bool,
     pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
@@ -84,87 +84,20 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 
     pub fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&NormalStructMemberT<'s, 't>, usize)> {
         for (index, member) in self.members.iter().enumerate() {
-            match member {
-                IStructMemberT::Normal(m) if &m.name == needle_name => {
-                    return Some((m, index));
-                }
-                _ => {}
+            if &member.name == needle_name {
+                return Some((member, index));
             }
         }
         None
     }
 
 }
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum IStructMemberT<'s, 't> {
-    Normal(NormalStructMemberT<'s, 't>),
-    Variadic(VariadicStructMemberT<'s, 't>),
-}
 
-impl<'s, 't> IStructMemberT<'s, 't> where 's: 't {
-    pub fn name(&self) -> &IVarNameT<'s, 't> {
-        match self {
-            IStructMemberT::Normal(m) => &m.name,
-            IStructMemberT::Variadic(m) => &m.name,
-        }
-    }
-    
-}
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct NormalStructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
-    pub tyype: IMemberTypeT<'s, 't>,
-}
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct VariadicStructMemberT<'s, 't> {
-    pub name: IVarNameT<'s, 't>,
-    pub tyype: PlaceholderTemplataT<'s, 't>,
-}
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum IMemberTypeT<'s, 't> {
-    Address(AddressMemberTypeT<'s, 't>),
-    Reference(ReferenceMemberTypeT<'s, 't>),
-}
-
-impl<'s, 't> IMemberTypeT<'s, 't> where 's: 't {
-    pub fn reference(&self) -> CoordT<'s, 't> {
-        match self {
-            IMemberTypeT::Address(m) => m.reference,
-            IMemberTypeT::Reference(m) => m.reference,
-        }
-    }
-    
-    pub fn expect_reference_member(&self) -> &ReferenceMemberTypeT<'s, 't> {
-        match self {
-            IMemberTypeT::Reference(r) => r,
-            IMemberTypeT::Address(_) => panic!("Expected reference member, was address member!"),
-        }
-    }
-    
-    pub fn expect_address_member(&self) -> &AddressMemberTypeT<'s, 't> {
-        match self {
-            IMemberTypeT::Reference(_) => panic!("Expected address member, was reference member!"),
-            IMemberTypeT::Address(a) => a,
-        }
-    }
-    
-}
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct AddressMemberTypeT<'s, 't> {
-    pub reference: CoordT<'s, 't>,
-}
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct ReferenceMemberTypeT<'s, 't> {
-    pub reference: CoordT<'s, 't>,
+    pub tyype: KindT<'s, 't>,
 }
 
 /// Arena-allocated (see @TFITCX)

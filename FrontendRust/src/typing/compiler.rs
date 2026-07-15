@@ -10,7 +10,7 @@ use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberT
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::postparsing::names::{IImpreciseNameS, IRuneS};
 use crate::scout_arena::ScoutArena;
-use crate::typing::ast::expressions::{ReferenceExpressionTE, ConsecutorTE, VoidLiteralTE};
+use crate::typing::ast::expressions::{ExpressionTE, ConsecutorTE, VoidLiteralTE};
 use crate::typing::ast::ast::{FunctionHeaderT, InterfaceEdgeBlueprintT, KindExportT, PrototypeT};
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::compilation::TypingPassOptions;
@@ -33,7 +33,7 @@ use crate::typing::templata::templata::{
 use crate::typing::types::types::CoordT;
 use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, SharednessT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
-use crate::typing::types::types::{IRegionT, RegionT};
+use crate::typing::types::types::{RegionT, RegionT};
 use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate, PackageCoordinateMap};
@@ -805,7 +805,7 @@ where 's: 't,
                                 });
                                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                                     template: template_name,
-                                    region: RegionT { region: IRegionT::Default },
+                                    region: RegionT { region: RegionT::Default },
                                 });
                                 let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
                                 let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
@@ -880,7 +880,7 @@ where 's: 't,
                                 });
                                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                                     template: template_name,
-                                    region: RegionT { region: IRegionT::Default },
+                                    region: RegionT { region: RegionT::Default },
                                 });
                                 let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
                                 let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
@@ -1013,7 +1013,7 @@ where 's: 't,
                                     id: template_id,
                                     templatas: export_outer_templatas,
                                 });
-                                let region_placeholder = RegionT { region: IRegionT::Default };
+                                let region_placeholder = RegionT { region: RegionT::Default };
                                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                                     template: template_name,
                                     region: region_placeholder,
@@ -1109,7 +1109,7 @@ where 's: 't,
                     templatas: export_outer_templatas,
                 });
 
-                let region_placeholder = RegionT { region: IRegionT::Default };
+                let region_placeholder = RegionT { region: RegionT::Default };
 
                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                     template: template_name,
@@ -1153,7 +1153,6 @@ where 's: 't,
                     &rune_to_type,
                     parent_ranges_t,
                     LocationInDenizen { path: &[] },
-                    &[],
                     &[],
                     &[],
                 ) {
@@ -1637,24 +1636,24 @@ where 's: 't,
     
     pub fn consecutive(
         &self,
-        exprs: &[ReferenceExpressionTE<'s, 't>],
-    ) -> ReferenceExpressionTE<'s, 't> {
+        exprs: &[ExpressionTE<'s, 't>],
+    ) -> ExpressionTE<'s, 't> {
         match exprs {
             [] => panic!("Shouldn't have zero-element consecutors!"),
             [only] => *only,
             _ => {
-                let flattened: Vec<ReferenceExpressionTE<'s, 't>> =
+                let flattened: Vec<ExpressionTE<'s, 't>> =
                     exprs.iter().flat_map(|e| {
                         match e {
-                            ReferenceExpressionTE::Consecutor(c) => c.exprs.to_vec(),
+                            ExpressionTE::Consecutor(c) => c.exprs.to_vec(),
                             other => vec![*other],
                         }
                     }).collect();
 
-                let without_init_voids: Vec<ReferenceExpressionTE<'s, 't>> = {
+                let without_init_voids: Vec<ExpressionTE<'s, 't>> = {
                     let (init, last) = flattened.split_at(flattened.len() - 1);
-                    let mut filtered: Vec<ReferenceExpressionTE<'s, 't>> = init.iter()
-                        .filter(|e| !matches!(e, ReferenceExpressionTE::VoidLiteral(_)))
+                    let mut filtered: Vec<ExpressionTE<'s, 't>> = init.iter()
+                        .filter(|e| !matches!(e, ExpressionTE::VoidLiteral(_)))
                         .copied()
                         .collect();
                     filtered.push(last[0]);
@@ -1666,7 +1665,7 @@ where 's: 't,
                     [only] => *only,
                     _ => {
                         let exprs_slice = self.typing_interner.alloc_slice_copy(&without_init_voids);
-                        ReferenceExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE { exprs: exprs_slice }))
+                        ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE { exprs: exprs_slice }))
                     }
                 }
             }

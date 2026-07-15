@@ -597,7 +597,11 @@ impl<'s> FunctionS<'s> {
       IBodyS::CodeBody(body) => !body.body.closured_names.is_empty(),
     }
   }
-  
+
+  pub fn is_lambda(&self) -> bool {
+    matches!(self.name, IFunctionDeclarationNameS::LambdaDeclarationName(_))
+  }
+
 }
 
 

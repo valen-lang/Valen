@@ -1310,7 +1310,7 @@ where 's: 't,
                             ITemplataT::Coord(ct) => ct.coord,
                             _ => panic!("Expected CoordTemplataT as first arg in solve_call_rule RuntimeSizedArrayTemplate"),
                         };
-                        let context_region = RegionT { region: IRegionT::Default };
+                        let context_region = RegionT { region: RegionT::Default };
                         let rsa_kind = self.predict_runtime_sized_array_kind(*env, state, coord, context_region);
                         let mut conclusions = IndexMap::default();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: rsa_kind.name })) })));
@@ -1333,7 +1333,7 @@ where 's: 't,
                             ITemplataT::Coord(ct) => ct.coord,
                             _ => panic!("Expected CoordTemplataT as second arg in solve_call_rule StaticSizedArrayTemplate"),
                         };
-                        let context_region = RegionT { region: IRegionT::Default };
+                        let context_region = RegionT { region: RegionT::Default };
                         let size = expect_integer(s);
                         let ssa_kind = self.predict_static_sized_array_kind(*env, state, size, coord, context_region);
                         let mut conclusions = IndexMap::default();

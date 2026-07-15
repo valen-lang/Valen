@@ -120,7 +120,7 @@ impl<'s, 't> EdgeT<'s, 't> {
 pub struct FunctionDefinitionT<'s, 't> {
     pub header: &'t FunctionHeaderT<'s, 't>,
     pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
-    pub body: ReferenceExpressionTE<'s, 't>,
+    pub body: ExpressionTE<'s, 't>,
 }
 
 impl<'s, 't> FunctionDefinitionT<'s, 't> {
@@ -131,7 +131,7 @@ impl<'s, 't> FunctionDefinitionT<'s, 't> where 's: 't, {
     fn new(
         header: FunctionHeaderT<'s, 't>,
         instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
-        body: ReferenceExpressionTE<'s, 't>,
+        body: ExpressionTE<'s, 't>,
     ) -> FunctionDefinitionT<'s, 't> { panic!("Unimplemented: FunctionDefinitionT::new"); }
 
 }
@@ -177,7 +177,7 @@ pub struct ParameterT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub virtuality: Option<AbstractT>,
     pub pre_checked: bool,
-    pub tyype: CoordT<'s, 't>,
+    pub tyype: KindT<'s, 't>,
 }
 
 impl<'s, 't> ParameterT<'s, 't> {
@@ -233,7 +233,7 @@ pub struct SignatureT<'s, 't> {
 
 impl<'s, 't> SignatureT<'s, 't> {
 
-    fn param_types(&self) -> Vec<CoordT<'s, 't>> {
+    fn param_types(&self) -> Vec<KindT<'s, 't>> {
         panic!("Unimplemented: param_types");
         // id.localName.parameters
     }
@@ -320,7 +320,7 @@ pub struct FunctionHeaderT<'s, 't> {
     pub id: IdT<'s, 't>,
     pub attributes: &'t [IFunctionAttributeT<'s>],
     pub params: &'t [ParameterT<'s, 't>],
-    pub return_type: CoordT<'s, 't>,
+    pub return_type: KindT<'s, 't>,
     pub maybe_origin_function_templata: Option<FunctionTemplataT<'s, 't>>,
 }
 
@@ -336,15 +336,13 @@ impl<'s, 't> Hash for FunctionHeaderT<'s, 't> {
     
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-
     fn new(
         id: IdT<'s, 't>,
         attributes: Vec<IFunctionAttributeT<'s>>,
         params: Vec<ParameterT<'s, 't>>,
-        return_type: CoordT<'s, 't>,
+        return_type: KindT<'s, 't>,
         maybe_origin_function_templata: Option<FunctionTemplataT<'s, 't>>,
     ) -> FunctionHeaderT<'s, 't> { panic!("Unimplemented: FunctionHeaderT::new"); }
-
 
     fn is_extern(&self) -> bool {
         panic!("Unimplemented: is_extern");
@@ -359,7 +357,7 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
         let abstract_interfaces: Vec<InterfaceTT<'s, 't>> =
             self.params.iter().filter_map(|param| {
                 match param {
-                    ParameterT { virtuality: Some(AbstractT), tyype: CoordT { kind: KindT::Interface(ir), .. }, .. } => Some(**ir),
+                    ParameterT { virtuality: Some(AbstractT), tyype: KindT::Interface(ir), .. } => Some(**ir),
                     _ => None,
                 }
             }).collect();
@@ -387,13 +385,13 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
         self.to_prototype().to_signature()
     }
 
-    fn param_types(&self) -> Vec<CoordT<'s, 't>> {
+    fn param_types(&self) -> Vec<KindT<'s, 't>> {
         panic!("Unimplemented: param_types");
         // id.localName.parameters
     }
 
 }
-fn function_header_unapply<'a, 's, 't>(arg: &'a FunctionHeaderT<'s, 't>) -> Option<(&'a IdT<'s, 't>, &'a Vec<ParameterT<'s, 't>>, &'a CoordT<'s, 't>)> {
+fn function_header_unapply<'a, 's, 't>(arg: &'a FunctionHeaderT<'s, 't>) -> Option<(&'a IdT<'s, 't>, &'a Vec<ParameterT<'s, 't>>, &'a KindT<'s, 't>)> {
     panic!("Unimplemented: unapply");
     // Some(id, params, returnType)
 }
@@ -411,12 +409,12 @@ pub struct PrototypeT<'s, 't>
 where 's: 't,
 {
     pub id: IdT<'s, 't>,
-    pub return_type: CoordT<'s, 't>,
+    pub return_type: KindT<'s, 't>,
 }
 
 impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
 
-    pub fn param_types(&self) -> &'t [CoordT<'s, 't>] {
+    pub fn param_types(&self) -> &'t [KindT<'s, 't>] {
         IFunctionNameT::try_from(self.id.local_name)
             .unwrap_or_else(|_| panic!("param_types called on non-function name: {:?}", self.id.local_name))
             .parameters()
@@ -434,7 +432,7 @@ pub struct PrototypeValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
     pub id: IdValT<'s, 't, 'tmp>,
-    pub return_type: CoordT<'s, 't>,
+    pub return_type: KindT<'s, 't>,
 }
 
 /// Interning transient (see @TFITCX)

@@ -20,7 +20,7 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::function::function_compiler::IDefineFunctionResult;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::names::names::{KindPlaceholderNameT, KindPlaceholderTemplateNameT};
-use crate::typing::types::types::{IRegionT, KindPlaceholderT, KindT, RegionT};
+use crate::typing::types::types::{RegionT, KindPlaceholderT, KindT, RegionT};
 use crate::typing::templata::templata::PlaceholderTemplataT;
 use crate::typing::env::environment::child_of;
 use crate::typing::infer_compiler::InitialKnown;
@@ -259,7 +259,7 @@ where 's: 't,
                     ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT {
                         coord: CoordT::new(
                             ct.coord.ownership,
-                            RegionT { region: IRegionT::Default },
+                            RegionT { region: RegionT::Default },
                             KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
                         ),
                     }))
@@ -408,7 +408,7 @@ where 's: 't,
             };
         let dispatcher_params: Vec<CoordT<'s, 't>> =
             origin_function_templata.function.params.iter()
-                .map(|p| p.pattern.kind_rune.unwrap().rune)
+                .map(|p| p.full_type_rune.rune)
                 .map(|rune| {
                     let templata = *dispatcher_inner_inferences.get(&rune)
                         .unwrap_or_else(|| panic!("vassertSome: rune {:?} not in dispatcherInnerInferences", rune));
@@ -675,7 +675,7 @@ where 's: 't,
             &[],
             &[],
             &[],
-            RegionT { region: IRegionT::Default },
+            RegionT { region: RegionT::Default },
             &override_function_param_types,
             &extra_envs,
             true,

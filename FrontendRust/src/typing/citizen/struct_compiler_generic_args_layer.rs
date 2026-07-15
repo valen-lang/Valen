@@ -22,7 +22,7 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::solver::solver::*;
 use crate::typing::infer_compiler::{InferEnv, InitialKnown};
 use crate::typing::names::names::IStructTemplateNameT;
-use crate::typing::types::types::{IRegionT, StructTTValT, RegionT};
+use crate::typing::types::types::{RegionT, StructTTValT, RegionT};
 use crate::typing::citizen::struct_compiler::{ResolveSuccess, ResolveFailure, IResolveOutcome};
 use crate::utils::fx::{IndexMap, IndexSet};
 use crate::utils::fx::HashMap;
@@ -62,7 +62,7 @@ where 's: 't,
 
         let call_site_rules = self.assemble_call_site_rules(struct_a.header_rules);
 
-        let context_region = RegionT { region: IRegionT::Default };
+        let context_region = RegionT { region: RegionT::Default };
         let envs = InferEnv {
             original_calling_env,
             parent_ranges: call_range,
@@ -78,7 +78,7 @@ where 's: 't,
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &header_rune_to_type_map,
-            call_range, call_location, struct_a.generic_params, &initial_knowns, &[],
+            call_range, call_location, struct_a.generic_params, &initial_knowns,
         ).unwrap_or_else(|_e| {
             panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveStruct")
             // throw CompileErrorExceptionT(typing.TypingPassSolverError(callRange, e))
@@ -157,7 +157,7 @@ where 's: 't,
         // This *doesnt* check to make sure it's a valid use of the template. Its purpose is really
         // just to populate any generic parameter default values.
 
-        let context_region = RegionT { region: IRegionT::Default };
+        let context_region = RegionT { region: RegionT::Default };
 
         // We're just predicting, see STCMBDP.
         let inferences =
@@ -168,7 +168,6 @@ where 's: 't,
                 &rune_to_type_for_prediction,
                 call_range,
                 &initial_knowns,
-                &[],
             ) {
                 Ok(i) => i,
                 Err(_e) => panic!("vimpl: TypingPassSolverError in predict_interface_layer"),
@@ -237,7 +236,7 @@ where 's: 't,
 
         // Maybe we should make this incremental too, like when solving definitions?
 
-        let context_region = RegionT { region: IRegionT::Default };
+        let context_region = RegionT { region: RegionT::Default };
 
         // We're just predicting, see STCMBDP.
         let inferences =
@@ -248,7 +247,6 @@ where 's: 't,
                 &rune_to_type_for_prediction,
                 call_range,
                 &initial_knowns,
-                &[],
             ) {
                 Ok(i) => i,
                 Err(_e) => panic!("vimpl: TypingPassSolverError in predict_struct_layer"),
@@ -295,7 +293,7 @@ where 's: 't,
 
         let call_site_rules = self.assemble_call_site_rules(interface_a.rules);
 
-        let context_region = RegionT { region: IRegionT::Default };
+        let context_region = RegionT { region: RegionT::Default };
         let envs = InferEnv {
             original_calling_env,
             parent_ranges: call_range,
@@ -311,7 +309,7 @@ where 's: 't,
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &rune_to_type_map,
-            call_range, call_location, interface_a.generic_params, &initial_knowns, &[],
+            call_range, call_location, interface_a.generic_params, &initial_knowns,
         ).unwrap_or_else(|_e| {
             panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveInterface")
             // throw CompileErrorExceptionT(typing.TypingPassSolverError(callRange, e))
@@ -381,9 +379,9 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![struct_a.range]),
             call_location,
             self_env: outer_env_ienv,
-            context_region: RegionT { region: IRegionT::Default },
+            context_region: RegionT { region: RegionT::Default },
         };
-        let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &all_rune_to_type, &all_ranges, &[], &[]);
+        let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &all_rune_to_type, &all_ranges, &[]);
         let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
             self.get_first_unsolved_identifying_rune(generic_parameters, |rune| is_solved(rune))
         };
@@ -497,9 +495,9 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![interface_a.range]),
             call_location,
             self_env: outer_env_ienv,
-            context_region: RegionT { region: IRegionT::Default },
+            context_region: RegionT { region: RegionT::Default },
         };
-        let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &rune_to_type, &all_ranges, &[], &[]);
+        let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &rune_to_type, &all_ranges, &[]);
         let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
             self.get_first_unsolved_identifying_rune(generic_parameters, |rune| is_solved(rune))
         };

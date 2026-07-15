@@ -145,7 +145,7 @@ where 's: 't,
         origin_function: Option<&FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+    ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
         let ret_coord = maybe_ret_coord.expect("vassertSome: maybeRetCoord");
         let struct_tt = match ret_coord.kind {
             KindT::Struct(s) => s,
@@ -195,18 +195,18 @@ where 's: 't,
             instantiation_bound_arguments: instantiation_bounds,
         };
         let mutability = self.struct_compiler_get_sharedness(
-            false, // sanity_check
-            coutputs,
-            env.template_id,
-            RegionT { region: IRegionT::Default },
-            *struct_tt,
-            bound_arguments_source2,
+          false, // sanity_check
+          coutputs,
+          env.template_id,
+          RegionT { region: RegionT::Default },
+          *struct_tt,
+          bound_arguments_source2,
         );
         let constructor_return_ownership = match mutability {
             SharednessT::Single => OwnershipT::Own,
             SharednessT::Shared => OwnershipT::Share,
         };
-        let constructor_return_type = CoordT::new(constructor_return_ownership, RegionT { region: IRegionT::Default }, KindT::Struct(struct_tt));
+        let constructor_return_type = CoordT::new(constructor_return_ownership, RegionT { region: RegionT::Default }, KindT::Struct(struct_tt));
 
         let constructor_params_slice = self.typing_interner.alloc_slice_from_vec(constructor_params);
         let header = FunctionHeaderT {
@@ -218,17 +218,17 @@ where 's: 't,
         };
 
         let args: Vec<ExpressionTE<'s, 't>> = constructor_params_slice.iter().enumerate().map(|(index, p)| {
-            ExpressionTE::Reference(ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: index as i32, coord: p.tyype })))
+            ExpressionTE::Reference(ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: index as i32, coord: p.tyype })))
         }).collect();
         let args_slice = self.typing_interner.alloc_slice_from_vec(args);
         let struct_tt_ref = self.typing_interner.alloc(struct_tt);
-        let construct_expr = ReferenceExpressionTE::Construct(self.typing_interner.alloc(ConstructTE {
+        let construct_expr = ExpressionTE::Construct(self.typing_interner.alloc(ConstructTE {
             struct_tt: struct_tt_ref,
             result_reference: constructor_return_type,
             args: args_slice,
         }));
-        let return_expr = ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE { source_expr: construct_expr }));
-        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE { inner: return_expr }));
+        let return_expr = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE { source_expr: construct_expr }));
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE { inner: return_expr }));
         (header, body)
     }
 

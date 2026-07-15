@@ -32,7 +32,7 @@ where 's: 't,
         rlv
     }
 
-    pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'t>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> Result<&'t DeferTE<'s, 't>, ICompileErrorT<'s, 't>> {
+    pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'t>, context_region: RegionT, r: ExpressionTE<'s, 't>, target_ownership: OwnershipT) -> Result<&'t DeferTE<'s, 't>, ICompileErrorT<'s, 't>> {
         match target_ownership {
             OwnershipT::Borrow => {}
             _ => {
@@ -40,13 +40,13 @@ where 's: 't,
             }
         }
         let rlv = self.make_temporary_local(nenv, life, r.result().coord);
-        let let_expr_2 = ReferenceExpressionTE::LetAndLend(self.typing_interner.alloc(LetAndLendTE {
+        let let_expr_2 = ExpressionTE::LetAndLend(self.typing_interner.alloc(LetAndLendTE {
             variable: ILocalVariableT::Reference(rlv),
             expr: r,
             target_ownership,
         }));
         let unlet = self.unlet_local_without_dropping(nenv, &ILocalVariableT::Reference(rlv));
-        let unlet_te: ReferenceExpressionTE<'s, 't> = ReferenceExpressionTE::Unlet(self.typing_interner.alloc(unlet));
+        let unlet_te: ExpressionTE<'s, 't> = ExpressionTE::Unlet(self.typing_interner.alloc(unlet));
         let snapshot: &'t NodeEnvironmentT<'s, 't> = nenv.snapshot(self.typing_interner);
         let env_in_denizen: IInDenizenEnvironmentT<'s, 't> =
             IInDenizenEnvironmentT::Node(snapshot);
@@ -60,19 +60,19 @@ where 's: 't,
         UnletTE { variable: *local_var }
     }
 
-    pub fn unlet_and_drop_all(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, context_region: RegionT, variables: &[&ILocalVariableT<'s, 't>]) -> Result<Vec<ReferenceExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
+    pub fn unlet_and_drop_all(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, context_region: RegionT, variables: &[&ILocalVariableT<'s, 't>]) -> Result<Vec<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         variables.iter().map(|variable| {
             let unlet = self.unlet_local_without_dropping(nenv, variable);
-            let unlet_ref = ReferenceExpressionTE::Unlet(self.typing_interner.alloc(unlet));
+            let unlet_ref = ExpressionTE::Unlet(self.typing_interner.alloc(unlet));
             let snapshot = nenv.snapshot(self.typing_interner);
             let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
             self.drop(snapshot_env, coutputs, range, call_location, context_region, unlet_ref)
         }).collect()
     }
 
-    pub fn unlet_all_without_dropping(&self, _coutputs: &CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, _range: &[RangeS<'s>], variables: &[&ILocalVariableT<'s, 't>]) -> Vec<ReferenceExpressionTE<'s, 't>> {
+    pub fn unlet_all_without_dropping(&self, _coutputs: &CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, _range: &[RangeS<'s>], variables: &[&ILocalVariableT<'s, 't>]) -> Vec<ExpressionTE<'s, 't>> {
         variables.iter().map(|variable| {
-            ReferenceExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, variable)))
+            ExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, variable)))
         }).collect()
     }
 
@@ -101,14 +101,14 @@ where 's: 't,
         local_var
     }
 
-    pub fn maybe_borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: &ExpressionTE<'s, 't>) -> ReferenceExpressionTE<'s, 't> {
+    pub fn maybe_borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: &ExpressionTE<'s, 't>) -> ExpressionTE<'s, 't> {
         match expr2 {
             ExpressionTE::Reference(e) => *e,
             ExpressionTE::Address(e) => self.borrow_soft_load(coutputs, *e),
         }
     }
 
-    pub fn soft_load(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, load_range: &[RangeS<'s>], a: AddressExpressionTE<'s, 't>, load_as_p: LoadAsP, region: RegionT) -> ReferenceExpressionTE<'s, 't> {
+    pub fn soft_load(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, load_range: &[RangeS<'s>], a: ExpressionTE<'s, 't>, load_as_p: LoadAsP, region: RegionT) -> ExpressionTE<'s, 't> {
         match a.result().coord.ownership {
             OwnershipT::Share => {
                 match load_as_p {
@@ -116,17 +116,17 @@ where 's: 't,
                     // Bare-use of a Share local produces `Borrow + share-kind`. The
                     // (Borrow, Share) auto-alias in convert() reflavors via AliasTE at
                     // target boundaries that want Share.
-                    LoadAsP::Use => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })),
+                    LoadAsP::Use => ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })),
                     LoadAsP::Move => {
                         match a {
-                            AddressExpressionTE::LocalLookup(ref lv_lookup) => {
+                            ExpressionTE::LocalLookup(ref lv_lookup) => {
                                 nenv.mark_local_unstackified(lv_lookup.local_variable.name());
-                                ReferenceExpressionTE::Unlet(self.typing_interner.alloc(UnletTE { variable: lv_lookup.local_variable }))
+                                ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE { variable: lv_lookup.local_variable }))
                             }
-                            AddressExpressionTE::ReferenceMemberLookup(ref r) => {
+                            ExpressionTE::ReferenceMemberLookup(ref r) => {
                                 panic!("unimplemented: {:?}", r.member_name);
                             }
-                            AddressExpressionTE::AddressMemberLookup(ref r) => {
+                            ExpressionTE::AddressMemberLookup(ref r) => {
                                 panic!("unimplemented: {:?}", r.member_name);
                             }
                             _ => {
@@ -135,10 +135,10 @@ where 's: 't,
                         }
                     }
                     LoadAsP::LoadAsBorrow => {
-                        ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
+                        ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
                     }
                     LoadAsP::LoadAsWeak => {
-                        ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak }))
+                        ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak }))
                     }
                 }
             }
@@ -146,34 +146,34 @@ where 's: 't,
                 match load_as_p {
                     LoadAsP::Use => {
                         match a {
-                            AddressExpressionTE::LocalLookup(ref lv_lookup) => {
+                            ExpressionTE::LocalLookup(ref lv_lookup) => {
                                 nenv.mark_local_unstackified(lv_lookup.local_variable.name());
-                                ReferenceExpressionTE::Unlet(self.typing_interner.alloc(UnletTE { variable: lv_lookup.local_variable }))
+                                ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE { variable: lv_lookup.local_variable }))
                             }
-                            AddressExpressionTE::RuntimeSizedArrayLookup(_) => {
-                                ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
+                            ExpressionTE::RuntimeSizedArrayLookup(_) => {
+                                ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
                             }
-                            AddressExpressionTE::StaticSizedArrayLookup(_) => {
-                                ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
+                            ExpressionTE::StaticSizedArrayLookup(_) => {
+                                ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
                             }
-                            AddressExpressionTE::ReferenceMemberLookup(_) => {
-                                ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
+                            ExpressionTE::ReferenceMemberLookup(_) => {
+                                ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
                             }
-                            AddressExpressionTE::AddressMemberLookup(_) => {
-                                ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
+                            ExpressionTE::AddressMemberLookup(_) => {
+                                ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
                             }
                         }
                     }
                     LoadAsP::Move => {
                         match a {
-                            AddressExpressionTE::LocalLookup(ref lv_lookup) => {
+                            ExpressionTE::LocalLookup(ref lv_lookup) => {
                                 nenv.mark_local_unstackified(lv_lookup.local_variable.name());
-                                ReferenceExpressionTE::Unlet(self.typing_interner.alloc(UnletTE { variable: lv_lookup.local_variable }))
+                                ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE { variable: lv_lookup.local_variable }))
                             }
-                            AddressExpressionTE::ReferenceMemberLookup(ref r) => {
+                            ExpressionTE::ReferenceMemberLookup(ref r) => {
                                 panic!("CantMoveOutOfMemberT: {:?}", r.member_name);
                             }
-                            AddressExpressionTE::AddressMemberLookup(ref r) => {
+                            ExpressionTE::AddressMemberLookup(ref r) => {
                                 panic!("CantMoveOutOfMemberT: {:?}", r.member_name);
                             }
                             _ => {
@@ -182,35 +182,35 @@ where 's: 't,
                         }
                     }
                     LoadAsP::LoadAsBorrow => {
-                        ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
+                        ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
                     }
                     LoadAsP::LoadAsWeak => {
-                        ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak }))
+                        ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak }))
                     }
                 }
             }
             OwnershipT::Borrow => {
                 match load_as_p {
                     LoadAsP::Move => panic!("vfail: soft_load BorrowT + MoveP"),
-                    LoadAsP::Use => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: a.result().coord.ownership })),
-                    LoadAsP::LoadAsBorrow => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })),
-                    LoadAsP::LoadAsWeak => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak })),
+                    LoadAsP::Use => ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: a.result().coord.ownership })),
+                    LoadAsP::LoadAsBorrow => ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })),
+                    LoadAsP::LoadAsWeak => ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak })),
                 }
             }
             OwnershipT::Weak => {
                 match load_as_p {
-                    LoadAsP::Use => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak })),
+                    LoadAsP::Use => ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak })),
                     LoadAsP::Move => panic!("vfail: soft_load WeakT + MoveP"),
-                    LoadAsP::LoadAsBorrow => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak })),
-                    LoadAsP::LoadAsWeak => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak })),
+                    LoadAsP::LoadAsBorrow => ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak })),
+                    LoadAsP::LoadAsWeak => ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak })),
                 }
             }
         }
     }
 
-    pub fn borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: AddressExpressionTE<'s, 't>) -> ReferenceExpressionTE<'s, 't> {
+    pub fn borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: ExpressionTE<'s, 't>) -> ExpressionTE<'s, 't> {
         let ownership = self.get_borrow_ownership(coutputs, expr2.result().coord.kind);
-        ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: expr2, target_ownership: ownership }))
+        ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: expr2, target_ownership: ownership }))
     }
 
     pub fn get_borrow_ownership(&self, coutputs: &CompilerOutputs<'s, 't>, kind: KindT<'s, 't>) -> OwnershipT {

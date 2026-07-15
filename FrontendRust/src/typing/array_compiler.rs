@@ -52,7 +52,7 @@ where 's: 't,
         rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
         maybe_element_type_rune_a: Option<IRuneS<'s>>,
         size_rune_a: IRuneS<'s>,
-        callable_te: ReferenceExpressionTE<'s, 't>,
+        callable_te: ExpressionTE<'s, 't>,
     ) -> Result<StaticArrayFromCallableTE<'s, 't>, ICompileErrorT<'s, 't>> {
 
         let rune_typing_env = self.create_rune_type_solver_env(calling_env);
@@ -136,7 +136,6 @@ where 's: 't,
                 call_location,
                 &[],
                 &initial_knowns,
-                &[],
             )
             .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from solve_for_resolving in evaluate_static_sized_array_from_callable"))
             .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_static_sized_array_from_callable — TypingPassResolvingError"));
@@ -175,9 +174,9 @@ where 's: 't,
         region: RegionT,
         rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
         maybe_element_type_rune: Option<IRuneS<'s>>,
-        size_te: ReferenceExpressionTE<'s, 't>,
-        maybe_callable_te: Option<ReferenceExpressionTE<'s, 't>>,
-    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+        size_te: ExpressionTE<'s, 't>,
+        maybe_callable_te: Option<ExpressionTE<'s, 't>>,
+    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let rune_typing_env = self.create_rune_type_solver_env(IInDenizenEnvironmentT::Node(calling_env));
         let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
         if let Some(rune) = maybe_element_type_rune {
@@ -248,7 +247,7 @@ where 's: 't,
             context_region: region,
         };
         let mut solver_state = self.make_solver_state(
-            envs, coutputs, &rules_without_rune_parent_env_lookups, &rune_a_to_type, parent_ranges, &initial_knowns, &[]);
+            envs, coutputs, &rules_without_rune_parent_env_lookups, &rune_a_to_type, parent_ranges, &initial_knowns);
         match self.incrementally_solve(envs, coutputs, &mut solver_state, |_coutputs, _solver| false) {
             Err(_f) => {
                 panic!("implement: evaluate_runtime_sized_array_from_callable — TypingPassSolverError");
@@ -324,12 +323,12 @@ where 's: 't,
         }
         assert!(coutputs.get_instantiation_bounds(self.typing_interner, prototype.id).is_some());
         let result_te = prototype.return_type;
-        let mut args_te: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
+        let mut args_te: Vec<ExpressionTE<'s, 't>> = Vec::new();
         args_te.push(size_te);
         if let Some(c) = maybe_callable_te {
             args_te.push(c);
         }
-        let call_te = ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
+        let call_te = ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
             callable: prototype,
             args: self.typing_interner.alloc_slice_from_vec(args_te),
             return_type: result_te,
@@ -346,7 +345,7 @@ where 's: 't,
         rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
         maybe_element_type_rune_a: Option<IRuneS<'s>>,
         size_rune_a: IRuneS<'s>,
-        exprs_2: Vec<ReferenceExpressionTE<'s, 't>>,
+        exprs_2: Vec<ExpressionTE<'s, 't>>,
         region: RegionT,
     ) -> Result<StaticArrayFromValuesTE<'s, 't>, ICompileErrorT<'s, 't>> {
 
@@ -430,7 +429,7 @@ where 's: 't,
             context_region: region,
         };
         let mut solver_state = self.make_solver_state(
-            envs, coutputs, &rules_without_rune_parent_env_lookups, &rune_a_to_type, parent_ranges, &initial_knowns, &[]);
+            envs, coutputs, &rules_without_rune_parent_env_lookups, &rune_a_to_type, parent_ranges, &initial_knowns);
         match self.incrementally_solve(envs, coutputs, &mut solver_state, |_coutputs, _solver| false) {
             Err(_f) => {
                 panic!("implement: evaluate_static_sized_array_from_values — TypingPassSolverError");
@@ -473,8 +472,8 @@ where 's: 't,
         fate: &'t FunctionEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        arr_te: ReferenceExpressionTE<'s, 't>,
-        callable_te: ReferenceExpressionTE<'s, 't>,
+        arr_te: ExpressionTE<'s, 't>,
+        callable_te: ExpressionTE<'s, 't>,
         context_region: RegionT,
     ) -> Result<DestroyStaticSizedArrayIntoFunctionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let array_tt = match arr_te.result().coord.kind {
@@ -749,8 +748,8 @@ where 's: 't,
     pub fn lookup_in_static_sized_array(
         &self,
         range: RangeS<'s>,
-        container_expr_2: ReferenceExpressionTE<'s, 't>,
-        index_expr_2: ReferenceExpressionTE<'s, 't>,
+        container_expr_2: ExpressionTE<'s, 't>,
+        index_expr_2: ExpressionTE<'s, 't>,
         at: StaticSizedArrayTT<'s, 't>,
     ) -> StaticSizedArrayLookupTE<'s, 't> {
         let member_type = at.element_type();
@@ -767,8 +766,8 @@ where 's: 't,
         &self,
         parent_ranges: &[RangeS<'s>],
         range: RangeS<'s>,
-        container_expr_2: ReferenceExpressionTE<'s, 't>,
-        index_expr_2: ReferenceExpressionTE<'s, 't>,
+        container_expr_2: ExpressionTE<'s, 't>,
+        index_expr_2: ExpressionTE<'s, 't>,
         rsa: &'t RuntimeSizedArrayTT<'s, 't>,
     ) -> Result<RuntimeSizedArrayLookupTE<'s, 't>, ICompileErrorT<'s, 't>> {
         if index_expr_2.result().coord.kind != KindT::Int(IntT::I32) {

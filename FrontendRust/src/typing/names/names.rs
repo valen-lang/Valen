@@ -5,7 +5,7 @@ use crate::interner::StrI;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IRuneS;
-use crate::typing::types::types::{CoordT, IRegionT, RegionT, ICitizenTT};
+use crate::typing::types::types::{KindT, RegionT, RegionT, ICitizenTT};
 use crate::typing::templata::templata::{ITemplataT, expect_integer, expect_coord_templata};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::typing_interner::{MustIntern, TypingInterner};
@@ -956,7 +956,7 @@ impl StaticSizedArrayTemplateNameT {
         assert!(template_args.len() == 2);
         let size = expect_integer(template_args[0]);
         let element_type = expect_coord_templata(template_args[1]).coord;
-        let self_region = RegionT { region: IRegionT::Default };
+        let self_region = RegionT { region: RegionT::Default };
         let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
             element_type,
             self_region,
@@ -996,7 +996,7 @@ impl RuntimeSizedArrayTemplateNameT {
         // val elementType = expectCoordTemplata(templateArgs(0)).coord
         let element_type = expect_coord_templata(template_args[0]).coord;
         // val region = vregionmut(RegionT(DefaultRegionT))
-        let region = RegionT { region: IRegionT::Default };
+        let region = RegionT { region: RegionT::Default };
         // interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(elementType, region))))
         let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
             element_type: element_type,

@@ -21,16 +21,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn convert_exprs(
-        &self,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        context_region: RegionT,
-        source_exprs: &[ReferenceExpressionTE<'s, 't>],
-        target_pointer_types: &[CoordT<'s, 't>],
-    ) -> Result<Vec<ReferenceExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
+      &self,
+      nenv: &mut NodeEnvironmentBox<'s, 't>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      context_region: RegionT,
+      source_exprs: &[ExpressionTE<'s, 't>],
+      target_pointer_types: &[CoordT<'s, 't>],
+    ) -> Result<Vec<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         if source_exprs.len() != target_pointer_types.len() {
             panic!(r"num exprs mismatch, source:
 {:?}
@@ -48,16 +48,16 @@ target:
     }
 
     pub fn convert(
-        &self,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        context_region: RegionT,
-        source_expr: ReferenceExpressionTE<'s, 't>,
-        target_pointer_type: CoordT<'s, 't>,
-    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+      &self,
+      nenv: &mut NodeEnvironmentBox<'s, 't>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      context_region: RegionT,
+      source_expr: ExpressionTE<'s, 't>,
+      target_pointer_type: CoordT<'s, 't>,
+    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         if source_expr.result().coord == target_pointer_type {
             return Ok(source_expr);
         }
@@ -87,7 +87,7 @@ target:
                         match self.is_parent(coutputs, calling_env, range, call_location, source_sub_kind, target_super_kind) {
                             IsParentResult::IsParent(is_parent) => {
                                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, is_parent.impl_id).is_some());
-                                ReferenceExpressionTE::Upcast(self.typing_interner.alloc(UpcastTE {
+                                ExpressionTE::Upcast(self.typing_interner.alloc(UpcastTE {
                                     inner_expr: source_expr,
                                     target_super_kind,
                                     impl_name: is_parent.impl_id,
@@ -123,7 +123,7 @@ target:
                         Ok(stamp) => {
                             assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp.prototype.id).is_some());
                             let args_te = self.typing_interner.alloc_slice_from_vec(vec![converted_kind_expr]);
-                            ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
+                            ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
                                 callable: stamp.prototype,
                                 args: args_te,
                                 return_type: stamp.prototype.return_type,
@@ -168,7 +168,7 @@ target:
                         coutputs, nenv, range, call_location, life, context_region,
                         converted_kind_expr, OwnershipT::Borrow,
                     )?;
-                    ReferenceExpressionTE::Defer(defer)
+                    ExpressionTE::Defer(defer)
                 }
                 (OwnershipT::Borrow, OwnershipT::Borrow) => converted_kind_expr,
                 (OwnershipT::Share, OwnershipT::Share) => converted_kind_expr,
@@ -176,7 +176,7 @@ target:
                 // `Borrow + share-kind` → `Share` auto-alias. Both flavors point at
                 // the same refcounted object; represented as an AliasTE IR node.
                 (OwnershipT::Borrow, OwnershipT::Share) => {
-                    ReferenceExpressionTE::Alias(self.typing_interner.alloc(AliasTE {
+                    ExpressionTE::Alias(self.typing_interner.alloc(AliasTE {
                         source_expr: converted_kind_expr,
                         target_ownership: OwnershipT::Share,
                     }))

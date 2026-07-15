@@ -4,24 +4,6 @@ use crate::typing::env::environment::*;
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::typing_interner::MustIntern;
 
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum OwnershipT {
-    Share,
-    Own,
-    Borrow,
-    Weak,
-}
-
-// merged into OwnershipT above
-
-// merged into OwnershipT above
-
-// merged into OwnershipT above
-
-// merged into OwnershipT above
-
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum SharednessT {
@@ -29,63 +11,37 @@ pub enum SharednessT {
   Shared,
 }
 
-
-
-
-
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum LocationT {
-    Inline,
-    Yonder,
-}
-
-
-
-
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum IRegionT {
+pub enum RegionT {
   Iso,
   // TODO: Get rid of this when we have an actual default region
   Default,
 }
 
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RegionT {
-  pub region: IRegionT,
-}
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct CoordT<'s, 't> {
-  pub ownership: OwnershipT,
+pub struct BorrowRefT<'s, 't> {
+  pub inner: KindT<'s, 't>,
   pub region: RegionT,
-  pub kind: KindT<'s, 't>,
-  _sealed: (), // Force construction via `CoordT::new(...)`
 }
 
-impl<'s, 't> CoordT<'s, 't> {
-    pub fn new(ownership: OwnershipT, region: RegionT, kind: KindT<'s, 't>) -> Self {
-        let is_primitive = matches!(
-            kind,
-            KindT::Int(_) | KindT::Bool(_) | KindT::Float(_) | KindT::Void(_) | KindT::Never(_),
-        );
-        if ownership == OwnershipT::Share && is_primitive {
-            panic!(
-                "Illegal CoordT combination: ownership=Share, kind={:?}. Primitives are Own at typing post-cut.",
-                kind,
-            );
-        }
-        if ownership == OwnershipT::Share && matches!(kind, KindT::OverloadSet(_)) {
-            panic!(
-                "Illegal CoordT combination: ownership=Share, kind=OverloadSet. OverloadSet is Own/Borrow flavored.",
-            );
-        }
-        CoordT { ownership, region, kind, _sealed: () }
-    }
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct HeapOwnRefT<'s, 't> {
+  pub inner: KindT<'s, 't>,
+}
+
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ShareRefT<'s, 't> {
+  pub inner: KindT<'s, 't>,
+}
+
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct WeakRefT<'s, 't> {
+  pub inner: KindT<'s, 't>,
 }
 
 // KindT is inline-owned (not arena-interned). Concrete non-primitive payloads
@@ -106,6 +62,10 @@ pub enum KindT<'s, 't> {
   RuntimeSizedArray(&'t RuntimeSizedArrayTT<'s, 't>),
   KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
   OverloadSet(&'t OverloadSetT<'s, 't>),
+  BorrowRef(&'t BorrowRefT<'s, 't>),
+  HeapOwnRef(&'t HeapOwnRefT<'s, 't>),
+  ShareRef(&'t ShareRefT<'s, 't>),
+  WeakRef(&'t WeakRefT<'s, 't>),
 }
 
 impl<'s, 't> KindT<'s, 't> {
@@ -148,6 +108,10 @@ impl<'s, 't> KindT<'s, 't> {
       KindT::RuntimeSizedArray(_) => false,
       KindT::KindPlaceholder(_) => false,
       KindT::OverloadSet(_) => true,
+      KindT::BorrowRef(_) => false,
+      KindT::HeapOwnRef(_) => false,
+      KindT::ShareRef(_) => false,
+      KindT::WeakRef(_) => false,
     }
   }
   
@@ -203,7 +167,7 @@ pub struct StaticSizedArrayTT<'s, 't> {
 
 
 impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
-  pub fn element_type(&self) -> CoordT<'s, 't> {
+  pub fn element_type(&self) -> KindT<'s, 't> {
     match self.name.local_name {
       INameT::StaticSizedArray(ssa_name) => ssa_name.arr.element_type,
       _ => panic!("vwat"),
@@ -239,7 +203,7 @@ pub struct RuntimeSizedArrayTT<'s, 't> {
 }
 
 impl<'s, 't> RuntimeSizedArrayTT<'s, 't> where 's: 't {
-  pub fn element_type(&self) -> CoordT<'s, 't> {
+  pub fn element_type(&self) -> KindT<'s, 't> {
     match self.name.local_name {
       INameT::RuntimeSizedArray(rsa_name) => rsa_name.arr.element_type,
       _ => panic!("vwat"),

@@ -23,19 +23,19 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_call(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        context_region: RegionT,
-        callable_expr: ReferenceExpressionTE<'s, 't>,
-        explicit_template_arg_rules_s: &[IRulexSR<'s>],
-        explicit_template_arg_runes_s: &[IRuneS<'s>],
-        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
-        given_args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
-    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      nenv: &mut NodeEnvironmentBox<'s, 't>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      context_region: RegionT,
+      callable_expr: ExpressionTE<'s, 't>,
+      explicit_template_arg_rules_s: &[IRulexSR<'s>],
+      explicit_template_arg_runes_s: &[IRuneS<'s>],
+      receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
+      given_args_exprs_2: &[ExpressionTE<'s, 't>],
+    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         match callable_expr.result().coord.kind {
             KindT::Never(NeverT { from_break: true }) => { panic!("vwat"); }
             KindT::Never(NeverT { from_break: false }) | KindT::Bool(_) => {
@@ -133,7 +133,7 @@ where 's: 't,
 
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id).is_some());
                 let result_te = stamp_result.prototype.return_type;
-                Ok(ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
+                Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
                     callable: stamp_result.prototype,
                     args: self.typing_interner.alloc_slice_from_vec(args_exprs_2),
                     return_type: result_te,
@@ -158,22 +158,22 @@ where 's: 't,
     }
 
     pub fn evaluate_custom_call(
-        &self,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        context_region: RegionT,
-        kind: KindT<'s, 't>,
-        explicit_template_arg_rules_s: &[IRulexSR<'s>],
-        explicit_template_arg_runes_s: &[IRuneS<'s>],
-        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
-        given_callable_unborrowed_expr_2: ReferenceExpressionTE<'s, 't>,
-        given_args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
-    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+      &self,
+      nenv: &mut NodeEnvironmentBox<'s, 't>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      context_region: RegionT,
+      kind: KindT<'s, 't>,
+      explicit_template_arg_rules_s: &[IRulexSR<'s>],
+      explicit_template_arg_runes_s: &[IRuneS<'s>],
+      receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
+      given_callable_unborrowed_expr_2: ExpressionTE<'s, 't>,
+      given_args_exprs_2: &[ExpressionTE<'s, 't>],
+    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         // Whether we're given a borrow or an own, the call itself will be given a borrow.
-        let given_callable_borrow_expr_2: ReferenceExpressionTE<'s, 't> =
+        let given_callable_borrow_expr_2: ExpressionTE<'s, 't> =
             match given_callable_unborrowed_expr_2.result().coord {
                 CoordT { ownership: OwnershipT::Borrow | OwnershipT::Share, .. } => given_callable_unborrowed_expr_2,
                 CoordT { ownership: OwnershipT::Own, .. } => {
@@ -186,7 +186,7 @@ where 's: 't,
         let env = nenv.snapshot(self.typing_interner);
 
         let args_types_2: Vec<CoordT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result().coord).collect();
-        let closure_param_type = CoordT::new(given_callable_borrow_expr_2.result().coord.ownership, RegionT { region: IRegionT::Default }, kind);
+        let closure_param_type = CoordT::new(given_callable_borrow_expr_2.result().coord.ownership, RegionT { region: RegionT::Default }, kind);
         let mut param_filters = vec![closure_param_type];
         param_filters.extend_from_slice(&args_types_2);
 
@@ -212,7 +212,7 @@ where 's: 't,
         assert!(given_callable_borrow_expr_2.result().coord.ownership == OwnershipT::Borrow);
         let actual_callable_expr_2 = given_callable_borrow_expr_2;
 
-        let mut actual_args_exprs_2: Vec<ReferenceExpressionTE<'s, 't>> = vec![actual_callable_expr_2];
+        let mut actual_args_exprs_2: Vec<ExpressionTE<'s, 't>> = vec![actual_callable_expr_2];
         actual_args_exprs_2.extend_from_slice(given_args_exprs_2);
 
         let arg_types: Vec<CoordT<'s, 't>> = actual_args_exprs_2.iter().map(|e| e.result().coord).collect();
@@ -224,7 +224,7 @@ where 's: 't,
 
         assert!(coutputs.get_instantiation_bounds(self.typing_interner, resolved.prototype.id).is_some());
         let result_te = resolved.prototype.return_type;
-        Ok(ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
+        Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
             callable: resolved.prototype,
             args: self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
             return_type: result_te,
@@ -268,19 +268,19 @@ where 's: 't,
     }
 
     pub fn evaluate_prefix_call(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        region: RegionT,
-        callable_reference_expr_2: ReferenceExpressionTE<'s, 't>,
-        explicit_template_arg_rules_s: &[IRulexSR<'s>],
-        explicit_template_arg_runes_s: &[IRuneS<'s>],
-        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
-        args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
-    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+      &self,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      nenv: &mut NodeEnvironmentBox<'s, 't>,
+      life: LocationInFunctionEnvironmentT<'t>,
+      range: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      region: RegionT,
+      callable_reference_expr_2: ExpressionTE<'s, 't>,
+      explicit_template_arg_rules_s: &[IRulexSR<'s>],
+      explicit_template_arg_runes_s: &[IRuneS<'s>],
+      receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
+      args_exprs_2: &[ExpressionTE<'s, 't>],
+    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let call_expr =
             self.evaluate_call(
                 coutputs,

@@ -832,7 +832,7 @@ where 's: 't,
                     ITemplataT::Coord(ct) => ct.coord,
                     _ => panic!("Expected CoordTemplataT as first arg in resolve_template_call_conclusion RuntimeSizedArrayTemplate"),
                 };
-                let context_region = RegionT { region: IRegionT::Default };
+                let context_region = RegionT { region: RegionT::Default };
                 let _rsa = self.resolve_runtime_sized_array(coord, context_region);
                 Ok(())
             }
@@ -843,7 +843,7 @@ where 's: 't,
                     _ => panic!("Expected CoordTemplataT as second arg in resolve_template_call_conclusion StaticSizedArrayTemplate"),
                 };
                 let size = expect_integer(s);
-                let context_region = RegionT { region: IRegionT::Default };
+                let context_region = RegionT { region: RegionT::Default };
                 let _ssa = self.resolve_static_sized_array(size, coord, context_region);
                 Ok(())
             }

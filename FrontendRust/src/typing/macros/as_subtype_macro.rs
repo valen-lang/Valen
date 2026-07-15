@@ -32,7 +32,7 @@ where 's: 't,
         origin_function: Option<&FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
 
         let header = FunctionHeaderT {
             id: env.id,
@@ -54,10 +54,10 @@ where 's: 't,
 
         // Because we dont yet put borrows in structs
         let result_ownership = incoming_ownership;
-        let success_coord = CoordT::new(result_ownership, RegionT { region: IRegionT::Default }, target_kind);
-        let fail_coord = CoordT::new(result_ownership, RegionT { region: IRegionT::Default }, incoming_kind);
+        let success_coord = CoordT::new(result_ownership, RegionT { region: RegionT::Default }, target_kind);
+        let fail_coord = CoordT::new(result_ownership, RegionT { region: RegionT::Default }, incoming_kind);
         let (result_coord, ok_constructor, ok_result_impl, err_constructor, err_result_impl) =
-            self.get_result(coutputs, env, call_range, call_location, RegionT { region: IRegionT::Default }, success_coord, fail_coord)?;
+            self.get_result(coutputs, env, call_range, call_location, RegionT { region: RegionT::Default }, success_coord, fail_coord)?;
         if result_coord != maybe_ret_coord.expect("vassertSome: maybeRetCoord") {
             panic!("CompileErrorExceptionT: RangedInternalErrorT: Bad result coord");
         }
@@ -83,8 +83,8 @@ where 's: 't,
             IsParentResult::IsntParent(_) => panic!("vwat"),
         };
 
-        let as_subtype_expr = ReferenceExpressionTE::AsSubtype(self.typing_interner.alloc(AsSubtypeTE {
-            source_expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
+        let as_subtype_expr = ExpressionTE::AsSubtype(self.typing_interner.alloc(AsSubtypeTE {
+            source_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                 param_index: 0,
                 coord: incoming_coord,
             })),
@@ -97,8 +97,8 @@ where 's: 't,
             err_impl_name: err_result_impl,
         }));
 
-        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
                 source_expr: as_subtype_expr,
             })),
         }));

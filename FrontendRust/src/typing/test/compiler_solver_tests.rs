@@ -16,7 +16,7 @@ use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::names::names::{IFunctionNameT, INameT};
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::types::types::{CoordT, KindT, OwnershipT};
-use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::ConstantIntTE;
 use crate::typing::types::types::IntT;
 use crate::postparsing::itemplatatype::ITemplataType;
@@ -47,7 +47,7 @@ use crate::typing::names::names::StructNameValT;
 use crate::typing::names::names::StructTemplateNameT;
 use crate::typing::templata::templata::OwnershipTemplataT;
 use crate::typing::types::types::InterfaceTTValT;
-use crate::typing::types::types::{IRegionT, RegionT};
+use crate::typing::types::types::{RegionT, RegionT};
 use crate::typing::types::types::StructTTValT;
 use crate::typing::ast::expressions::UpcastTE;
 use crate::postparsing::names::{IStructDeclarationNameS, TopLevelStructDeclarationNameS};
@@ -248,7 +248,7 @@ exported func main() {
                 },
                 return_type: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. },
             },
-            args: &[ReferenceExpressionTE::ConstantInt(ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. })],
+            args: &[ExpressionTE::ConstantInt(ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. })],
             ..
         }) => Some(())
     );
@@ -338,10 +338,10 @@ exported func main() {
     let coutputs = compile.expect_compiler_outputs();
     let bork = coutputs.lookup_function_by_str("main");
     let prototype = match bork.body {
-        ReferenceExpressionTE::Block(BlockTE { inner }) => match inner {
-            ReferenceExpressionTE::Return(ReturnTE { source_expr }) => match source_expr {
-                ReferenceExpressionTE::Consecutor(ConsecutorTE { exprs }) => match exprs {
-                    [ReferenceExpressionTE::FunctionCall(call), ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { .. })] => call.callable,
+        ExpressionTE::Block(BlockTE { inner }) => match inner {
+            ExpressionTE::Return(ReturnTE { source_expr }) => match source_expr {
+                ExpressionTE::Consecutor(ConsecutorTE { exprs }) => match exprs {
+                    [ExpressionTE::FunctionCall(call), ExpressionTE::VoidLiteral(VoidLiteralTE { .. })] => call.callable,
                     _ => panic!("expected Vector(FunctionCallTE, VoidLiteralTE)"),
                 },
                 _ => panic!("expected ConsecutorTE"),
@@ -405,7 +405,7 @@ fn humanize_errors() {
     region_init_steps.push(func_template_id.local_name);
     let region_init_steps_slice: &[INameT] = typing_bump.alloc_slice_copy(&region_init_steps);
     let _region_name = typing_interner.intern_id(IdValT { package_coord: func_template_id.package_coord, init_steps: region_init_steps_slice, local_name: INameT::KindPlaceholder(kp_name) });
-    let region = RegionT { region: IRegionT::Default };
+    let region = RegionT { region: RegionT::Default };
 
     let firefly_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Firefly")});
@@ -450,10 +450,10 @@ fn humanize_errors() {
     let _firefly_signature = SignatureT { id: *myfunc_id };
 
     let export_template_name = typing_interner.intern_export_template_name(ExportTemplateNameT { code_loc: tz[0].begin});
-    let firefly_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT { region: IRegionT::Default } });
+    let firefly_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT { region: RegionT::Default } });
     let firefly_export_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Export(firefly_export_name) });
     let _firefly_export = KindExportT { range: tz[0], tyype: firefly_kind, id: *firefly_export_id, exported_name: scout_arena.intern_str("Firefly") };
-    let serenity_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT { region: IRegionT::Default } });
+    let serenity_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT { region: RegionT::Default } });
     let serenity_export_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Export(serenity_export_name) });
     let _serenity_export = KindExportT { range: tz[0], tyype: firefly_kind, id: *serenity_export_id, exported_name: scout_arena.intern_str("Serenity") };
 
@@ -902,7 +902,7 @@ exported func main() {
         if !is_moo { return false; }
         if c.args.len() != 1 { return false; }
         let upcast = match c.args[0] {
-            ReferenceExpressionTE::Upcast(u) => u,
+            ExpressionTE::Upcast(u) => u,
             _ => return false,
         };
         match upcast.target_super_kind {
@@ -1152,7 +1152,7 @@ exported func main() int {
         _ => panic!("expected Function local_name"),
     };
     let last = *template_args.last().unwrap();
-    assert_eq!(last, ITemplataT::Coord(typing_bump.alloc(CoordTemplataT { coord: CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, KindT::Int(IntT::I32)) })));
+    assert_eq!(last, ITemplataT::Coord(typing_bump.alloc(CoordTemplataT { coord: CoordT::new(OwnershipT::Own, RegionT { region: RegionT::Default }, KindT::Int(IntT::I32)) })));
 }
 
 #[test]

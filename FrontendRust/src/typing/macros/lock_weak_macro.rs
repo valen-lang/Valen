@@ -28,7 +28,7 @@ where 's: 't,
         origin_function: Option<&FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         let header = FunctionHeaderT {
             id: env.id,
             attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
@@ -38,9 +38,9 @@ where 's: 't,
         };
         let borrow_coord = CoordT::new(OwnershipT::Borrow, param_coords[0].tyype.region, param_coords[0].tyype.kind);
         let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
-            self.get_option(coutputs, env, call_range, call_location, RegionT { region: IRegionT::Default }, borrow_coord)?;
-        let lock_expr = ReferenceExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE {
-            inner_expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
+            self.get_option(coutputs, env, call_range, call_location, RegionT { region: RegionT::Default }, borrow_coord)?;
+        let lock_expr = ExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE {
+            inner_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                 param_index: 0,
                 coord: param_coords[0].tyype,
             })),
@@ -50,8 +50,8 @@ where 's: 't,
             some_impl_name: some_impl_id,
             none_impl_name: none_impl_id,
         }));
-        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
                 source_expr: lock_expr,
             })),
         }));

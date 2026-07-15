@@ -28,7 +28,7 @@ where 's: 't,
         origin_function: Option<&FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         let header = FunctionHeaderT {
             id: env.id,
             attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
@@ -40,20 +40,20 @@ where 's: 't,
             self.typing_interner.alloc(header.to_signature()),
             header.return_type,
         );
-        let arr_arg = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: param_coords[0].tyype }));
-        let callable_arg = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 1, coord: param_coords[1].tyype }));
+        let arr_arg = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: param_coords[0].tyype }));
+        let callable_arg = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 1, coord: param_coords[1].tyype }));
         let destroy_te = self.evaluate_destroy_static_sized_array_into_callable(
-            coutputs,
-            env,
-            call_range,
-            call_location,
-            arr_arg,
-            callable_arg,
-            RegionT { region: IRegionT::Default },
+          coutputs,
+          env,
+          call_range,
+          call_location,
+          arr_arg,
+          callable_arg,
+          RegionT { region: RegionT::Default },
         )?;
-        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(self.typing_interner.alloc(destroy_te)),
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ExpressionTE::DestroyStaticSizedArrayIntoFunction(self.typing_interner.alloc(destroy_te)),
             })),
         }));
         Ok((header, body))

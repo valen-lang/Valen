@@ -28,7 +28,7 @@ where 's: 't,
         origin_function: Option<&FunctionS<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+    ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
         let header = FunctionHeaderT {
             id: env.id,
             attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
@@ -44,21 +44,21 @@ where 's: 't,
             KindT::StaticSizedArray(ssa) => ssa.size(),
             other => panic!("SSALenMacro received non-SSA param: {:?}", other),
         };
-        let discard_te = ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
-            expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
+        let discard_te = ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
+            expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                 param_index: 0,
                 coord: param_coords[0].tyype,
             })),
         }));
-        let return_te = ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-            source_expr: ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
+        let return_te = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+            source_expr: ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                 value: len,
                 bits: 32,
-                region: RegionT { region: IRegionT::Default },
+                region: RegionT { region: RegionT::Default },
             })),
         }));
-        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ReferenceExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE {
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE {
                 exprs: self.typing_interner.alloc_slice_from_vec(vec![discard_te, return_te]),
             })),
         }));

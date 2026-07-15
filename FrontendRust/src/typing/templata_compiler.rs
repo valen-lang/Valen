@@ -444,7 +444,7 @@ where 's: 't,
                 let INameT::RuntimeSizedArray(rsa_name) = rsa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
                     element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.element_type),
-                    self_region: RegionT { region: IRegionT::Default },
+                    self_region: RegionT { region: RegionT::Default },
                 });
                 let new_rsa_name = interner.intern_runtime_sized_array_name(RuntimeSizedArrayNameT {
                     template: rsa_name.template,
@@ -462,7 +462,7 @@ where 's: 't,
                 let INameT::StaticSizedArray(ssa_name) = ssa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
                     element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.element_type),
-                    self_region: RegionT { region: IRegionT::Default },
+                    self_region: RegionT { region: RegionT::Default },
                 });
                 let new_ssa_name = interner.intern_static_sized_array_name(StaticSizedArrayNameT {
                     template: ssa_name.template,
@@ -1426,7 +1426,7 @@ where 's: 't,
         register_with_compiler_outputs: bool,
     ) -> CoordTemplataT<'s, 't> {
         // val regionPlaceholderTemplata = RegionT(DefaultRegionT)
-        let region_placeholder_templata = RegionT { region: IRegionT::Default };
+        let region_placeholder_templata = RegionT { region: RegionT::Default };
 
         // val kindPlaceholderT =
         //   createKindPlaceholderInner(

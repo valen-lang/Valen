@@ -130,7 +130,6 @@ where 's: 't,
                 call_range_t,
                 call_location,
                 &initial_knowns,
-                &initial_sends,
                 &[],
             ) {
                 Err(e) => return Ok(IEvaluateFunctionResult::EvaluateFunctionFailure(EvaluateFunctionFailure { reason: e })),
@@ -239,7 +238,6 @@ where 's: 't,
                 call_range_t,
                 call_location,
                 &initial_knowns,
-                &initial_sends,
                 &[],
             ) {
                 Err(e) => return Ok(IEvaluateFunctionResult::EvaluateFunctionFailure(EvaluateFunctionFailure { reason: e })),
@@ -362,7 +360,7 @@ where 's: 't,
         // newEntries = templatas.addEntries(interner, entries_list)
         let new_entries = self.typing_interner.alloc(near_env.templatas.add_entries(self.typing_interner, self.scout_arena, entries_list));
 
-        let default_region = RegionT { region: IRegionT::Default };
+        let default_region = RegionT { region: RegionT::Default };
 
         let template_args: &'t [ITemplataT<'s, 't>] = self.typing_interner.alloc_slice_from_vec(identifying_templatas);
         BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT {
@@ -418,12 +416,12 @@ where 's: 't,
         };
         let include_reachable_bounds_for_runes: Vec<IRuneS<'s>> =
             function.params.iter()
-                .flat_map(|p| p.pattern.kind_rune.map(|ru| ru.rune))
+                .map(|p| p.full_type_rune.rune)
                 .chain(function.maybe_ret_kind_rune.map(|ru| ru.rune))
                 .collect();
 
         let mut solver = self.make_solver_state(
-            envs, coutputs, &call_site_rules, &rune_to_type, invocation_range, &initial_knowns, &initial_sends);
+            envs, coutputs, &call_site_rules, &rune_to_type, invocation_range, &initial_knowns);
 
         let mut loop_check = function.generic_params.len() as i32 + 1;
 
@@ -536,7 +534,7 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_copy(call_range),
             call_location,
             self_env: IEnvironmentT::BuildingWithClosureds(near_env),
-            context_region: RegionT { region: IRegionT::Default },
+            context_region: RegionT { region: RegionT::Default },
         };
         let preliminary_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             self.derive_rune_to_type(
@@ -553,8 +551,7 @@ where 's: 't,
                     ranges.extend_from_slice(call_range);
                     ranges
                 },
-                &[],
-                &initial_sends);
+                &[]);
         match self.r#continue(preliminary_envs, coutputs, &mut preliminary_solver_state) {
             Ok(()) => {}
             Err(_f) => { panic!("implement: TypingPassSolverError from preliminary continue"); }
@@ -578,7 +575,7 @@ where 's: 't,
                     parent_ranges: self.typing_interner.alloc_slice_copy(call_range),
                     call_location,
                     self_env: IEnvironmentT::BuildingWithClosureds(near_env),
-                    context_region: RegionT { region: IRegionT::Default },
+                    context_region: RegionT { region: RegionT::Default },
                 },
                 coutputs,
                 &function_definition_rules,
@@ -590,10 +587,9 @@ where 's: 't,
                 },
                 call_location,
                 &placeholder_initial_knowns_from_function,
-                &[],
                 &{
                     let mut runes: Vec<IRuneS<'s>> = function.params.iter()
-                        .flat_map(|p| p.pattern.kind_rune.map(|r| r.rune))
+                        .map(|p| p.full_type_rune.rune)
                         .collect();
                     if let Some(r) = function.maybe_ret_kind_rune {
                         runes.push(r.rune);
@@ -664,10 +660,9 @@ where 's: 't,
         let mut seen = HashSet::default();
         let mut param_and_return_runes: Vec<IRuneS<'s>> = Vec::new();
         for param in function.params.iter() {
-            if let Some(coord_rune) = param.pattern.kind_rune {
-                if seen.insert(coord_rune.rune) {
-                    param_and_return_runes.push(coord_rune.rune);
-                }
+            let coord_rune = param.full_type_rune;
+            if seen.insert(coord_rune.rune) {
+                param_and_return_runes.push(coord_rune.rune);
             }
         }
         if let Some(ret_coord_rune) = function.maybe_ret_kind_rune {
@@ -684,7 +679,7 @@ where 's: 't,
             parent_ranges: parent_ranges_alloc,
             call_location,
             self_env: near_env_as_env,
-            context_region: RegionT { region: IRegionT::Default },
+            context_region: RegionT { region: RegionT::Default },
         };
 
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
@@ -692,7 +687,7 @@ where 's: 't,
                 near_env_as_in_denizen, range.clone(),
                 function.generic_params, function.rules, IndexMap::default());
         let mut solver = self.make_solver_state(
-            envs, coutputs, &definition_rules, &rune_to_type, &range, &[], &[]);
+            envs, coutputs, &definition_rules, &rune_to_type, &range, &[]);
 
         let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
             self.get_first_unsolved_identifying_rune(generic_parameters, |rune| is_solved(rune))
@@ -778,7 +773,7 @@ where 's: 't,
         args: &[Option<CoordT<'s, 't>>],
     ) -> Vec<InitialSend<'s, 't>> {
         function.params.iter()
-            .map(|p| p.pattern.kind_rune.unwrap())
+            .map(|p| p.full_type_rune)
             .zip(args.iter())
             .enumerate()
             .flat_map(|(arg_index, (param_rune, arg))| {

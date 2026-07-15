@@ -31,7 +31,7 @@ where 's: 't,
         origin_function: Option<&'s FunctionS<'s>>,
         params2: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
 
         let return_reference_type2 = maybe_ret_coord.expect("vassertSome: maybeRetCoord");
         assert!(params2.iter().any(|p| p.virtuality == Some(AbstractT)));
@@ -57,18 +57,18 @@ where 's: 't,
         let param_types: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
         let env_as_iindenizen = self.typing_interner.alloc(IInDenizenEnvironmentT::Function(env));
         let prototype = match self.find_function(
-            *env_as_iindenizen,
-            coutputs,
-            call_range,
-            call_location,
-            imprecise_name,
-            &[],
-            &[],
-            &[],
-            RegionT { region: IRegionT::Default },
-            &param_types,
-            &[],
-            true,
+          *env_as_iindenizen,
+          coutputs,
+          call_range,
+          call_location,
+          imprecise_name,
+          &[],
+          &[],
+          &[],
+          RegionT { region: RegionT::Default },
+          &param_types,
+          &[],
+          true,
         )? {
             Ok(stamp) => stamp.prototype,
             Err(_fff) => panic!("CouldntFindFunctionToCallT"),
@@ -76,9 +76,9 @@ where 's: 't,
 
         let virtual_index = header.get_virtual_index()
             .expect("vassertSome: header.getVirtualIndex") as i32;
-        let args: Vec<ReferenceExpressionTE<'s, 't>> = prototype.param_types().iter().enumerate()
+        let args: Vec<ExpressionTE<'s, 't>> = prototype.param_types().iter().enumerate()
             .map(|(index, param_type)| {
-                ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
+                ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                     param_index: index as i32,
                     coord: *param_type,
                 }))
@@ -90,9 +90,9 @@ where 's: 't,
             result_reference: prototype.return_type,
             args: args_slice,
         };
-        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ReferenceExpressionTE::InterfaceFunctionCall(self.typing_interner.alloc(ifc)),
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ExpressionTE::InterfaceFunctionCall(self.typing_interner.alloc(ifc)),
             })),
         }));
 

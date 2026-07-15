@@ -25,16 +25,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn resolve_tuple(
-        &self,
-        env: IInDenizenEnvironmentT<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        exprs: Vec<ReferenceExpressionTE<'s, 't>>,
-    ) -> ReferenceExpressionTE<'s, 't> {
+      &self,
+      env: IInDenizenEnvironmentT<'s, 't>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      parent_ranges: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      exprs: Vec<ExpressionTE<'s, 't>>,
+    ) -> ExpressionTE<'s, 't> {
         let types_2: Vec<CoordT<'s, 't>> = exprs.iter().map(|e| IExpressionResultT::Reference(e.result()).expect_reference().coord).collect();
-        let region = RegionT { region: IRegionT::Default };
-        let final_expr = ReferenceExpressionTE::Tuple(self.typing_interner.alloc(TupleTE {
+        let region = RegionT { region: RegionT::Default };
+        let final_expr = ExpressionTE::Tuple(self.typing_interner.alloc(TupleTE {
             elements: self.typing_interner.alloc_slice_from_vec(exprs),
             result_reference: self.make_tuple_coord(env, coutputs, parent_ranges, call_location, region, types_2),
         }));

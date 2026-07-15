@@ -10,7 +10,7 @@ use crate::typing::rune_typing::rune_type_solver::{RuneTypeSolveError, solve_run
 use crate::postparsing::*;
 use crate::solver::solver::FailedSolve;
 use crate::typing::ast::ast::*;
-use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::environment::*;
@@ -410,7 +410,6 @@ where 's: 't,
                                 call_location,
                                 &[],
                                 &initial_knowns,
-                                &[],
                             )? {
                                 Err(_e) => {
                                     panic!("implement: attemptCandidateBanner FindFunctionResolveFailure");
@@ -457,7 +456,7 @@ where 's: 't,
                                         // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
                                         match self.evaluate_generic_light_function_from_call_for_prototype(
                                             coutputs, call_range, call_location, calling_env, ft,
-                                            &positional_explicitly_specified_template_arg_templatas, RegionT { region: IRegionT::Default }, args, &receiving_rune_to_explicit_template_arg_templata,
+                                            &positional_explicitly_specified_template_arg_templatas, RegionT { region: RegionT::Default }, args, &receiving_rune_to_explicit_template_arg_templata,
                                         )? {
                                             IResolveFunctionResult::ResolveFunctionFailure(failure) => {
                                                 Ok(Err(IFindFunctionFailureReason::FindFunctionResolveFailure { reason: failure.reason }))
@@ -751,7 +750,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        callable_te: ReferenceExpressionTE<'s, 't>,
+        callable_te: ExpressionTE<'s, 't>,
         context_region: RegionT,
     ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
         let func_name = self.scout_arena.intern_imprecise_name(
@@ -760,7 +759,7 @@ where 's: 't,
             callable_te.result().underlying_coord(),
             CoordT::new(
                 OwnershipT::Own,
-                RegionT { region: IRegionT::Default },
+                RegionT { region: RegionT::Default },
                 KindT::Int(IntT { bits: 32 }),
             ),
         ];
@@ -780,7 +779,7 @@ where 's: 't,
         fate: &'t FunctionEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        callable_te: ReferenceExpressionTE<'s, 't>,
+        callable_te: ExpressionTE<'s, 't>,
         element_type: CoordT<'s, 't>,
         context_region: RegionT,
     ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
