@@ -101,9 +101,9 @@ where 's: 't,
         );
         coutputs.declare_type(struct_template_id);
         // VCOORD: rename to declare_type_sharedness
-        coutputs.declare_type_mutability(
+        coutputs.declare_type_sharedness(
             struct_template_id,
-            evaluate_mutability(struct_a.sharedness),
+            evaluate_sharedness(struct_a.sharedness),
         );
         // Build internal method entries for the outer env
         let internal_method_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
@@ -149,9 +149,9 @@ where 's: 't,
             self.typing_interner.alloc(interface_templata)
         );
         coutputs.declare_type(interface_template_id);
-        coutputs.declare_type_mutability(
+        coutputs.declare_type_sharedness(
             interface_template_id,
-            evaluate_mutability(interface_a.sharedness),
+            evaluate_sharedness(interface_a.sharedness),
         );
         // We do this here because we might compile a virtual function somewhere before we compile
         // the interface. The virtual function will need to know if the type is sealed to know
@@ -269,7 +269,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionS<'s>,
-        members: &[&'t NormalStructMemberT<'s, 't>],
+        members: &[&'t StructMemberT<'s, 't>],
     ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
         self.make_closure_understruct_core(
             containing_function_env, coutputs, parent_ranges, call_location, name, function_s, members)

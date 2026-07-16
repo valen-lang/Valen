@@ -66,7 +66,7 @@ pub struct StructDefinitionT<'s, 't> {
     pub attributes: &'t [ICitizenAttributeT<'s>],
     pub weakable: bool,
     pub sharedness: SharednessT,
-    pub members: &'t [NormalStructMemberT<'s, 't>],
+    pub members: &'t [StructMemberT<'s, 't>],
     pub is_closure: bool,
     pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
@@ -82,7 +82,7 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
     }
 
 
-    pub fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&NormalStructMemberT<'s, 't>, usize)> {
+    pub fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&StructMemberT<'s, 't>, usize)> {
         for (index, member) in self.members.iter().enumerate() {
             if &member.name == needle_name {
                 return Some((member, index));
@@ -95,7 +95,7 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct NormalStructMemberT<'s, 't> {
+pub struct StructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub tyype: KindT<'s, 't>,
 }

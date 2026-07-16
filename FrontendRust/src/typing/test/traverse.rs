@@ -6,11 +6,10 @@ use crate::typing::ast::ast::{
     OverrideT, ParameterT, PrototypeT, SignatureT,
 };
 use crate::typing::ast::citizens::{
-    AddressMemberTypeT, IMemberTypeT, IStructMemberT, InterfaceDefinitionT, ReferenceMemberTypeT,
-    StructDefinitionT,
+    InterfaceDefinitionT, StructDefinitionT, StructMemberT,
 };
 use crate::typing::ast::expressions::{
-    ExpressionTE, AddressMemberLookupTE, ArgLookupTE, ArrayLengthTE, ArraySizeTE,
+    AddressMemberLookupTE, ArgLookupTE, ArrayLengthTE, ArraySizeTE,
     AsSubtypeTE, BlockTE, BorrowToWeakTE, BreakTE, ConsecutorTE, ConstantBoolTE, ConstantFloatTE,
     ConstantIntTE, ConstantStrTE, ConstructTE, DeferTE,
     DestroyRuntimeSizedArrayTE, DestroyStaticSizedArrayIntoFunctionTE,
@@ -18,8 +17,8 @@ use crate::typing::ast::expressions::{
     FunctionCallTE, IfTE, InterfaceFunctionCallTE, InterfaceToInterfaceUpcastTE,
     IsSameInstanceTE, LetAndLendTE, LetNormalTE, LocalLookupTE, LockWeakTE, MutateTE,
     NewRuntimeSizedArrayTE, PopRuntimeSizedArrayTE,
-    PushRuntimeSizedArrayTE, ExpressionTE, ReferenceMemberLookupTE, ReinterpretTE,
-    RestackifyTE, ReturnTE, RuntimeSizedArrayCapacityTE, RuntimeSizedArrayLookupTE, SoftLoadTE,
+    PushRuntimeSizedArrayTE, ReferenceMemberLookupTE, ReinterpretTE,
+    RestackifyTE, ReturnTE, RuntimeSizedArrayCapacityTE, RuntimeSizedArrayLookupTE,
     StaticArrayFromCallableTE, StaticArrayFromValuesTE, StaticSizedArrayLookupTE,
     TupleTE, UnletTE, UpcastTE, VoidLiteralTE, WhileTE,
 };
@@ -28,12 +27,12 @@ use crate::typing::env::function_environment_t::LocalVariable;
 use crate::typing::hinputs_t::{HinputsT, InstantiationBoundArgumentsT};
 use crate::typing::names::names::{INameT, IVarNameT, IdT};
 use crate::typing::templata::templata::{
-    CoordListTemplataT, CoordTemplataT, ExternFunctionTemplataT, FunctionTemplataT, ITemplataT,
+    CoordListTemplataT, ExternFunctionTemplataT, FunctionTemplataT, ITemplataT,
     ImplDefinitionTemplataT, InterfaceDefinitionTemplataT, IsaTemplataT, KindTemplataT,
     PlaceholderTemplataT, PrototypeTemplataT, StructDefinitionTemplataT,
 };
 use crate::typing::types::types::{
-  KindT, InterfaceTT, KindPlaceholderT, KindT, OverloadSetT, RuntimeSizedArrayTT,
+  KindT, InterfaceTT, KindPlaceholderT, OverloadSetT, RuntimeSizedArrayTT,
   StaticSizedArrayTT, StructTT,
 };
 use crate::typing::types::types::ICitizenTT;
@@ -53,8 +52,6 @@ pub enum NodeRefT<'s, 't> {
 
     // ---- Expression hierarchy ----
     Expression(ExpressionTE<'s, 't>),
-    ReferenceExpression(ExpressionTE<'s, 't>),
-    AddressExpression(ExpressionTE<'s, 't>),
 
     // 48 reference expression variants
     LetAndLend(&'t LetAndLendTE<'s, 't>),
@@ -69,7 +66,7 @@ pub enum NodeRefT<'s, 't> {
     Mutate(&'t MutateTE<'s, 't>),
     Restackify(&'t RestackifyTE<'s, 't>),
     Return(&'t ReturnTE<'s, 't>),
-    Break(&'t BreakTE),
+    Break(&'t BreakTE<'s, 't>),
     Block(&'t BlockTE<'s, 't>),
     Consecutor(&'t ConsecutorTE<'s, 't>),
     Tuple(&'t TupleTE<'s, 't>),
@@ -77,11 +74,11 @@ pub enum NodeRefT<'s, 't> {
     ArraySize(&'t ArraySizeTE<'s, 't>),
     IsSameInstance(&'t IsSameInstanceTE<'s, 't>),
     AsSubtype(&'t AsSubtypeTE<'s, 't>),
-    VoidLiteral(&'t VoidLiteralTE),
+    VoidLiteral(&'t VoidLiteralTE<'s, 't>),
     ConstantInt(&'t ConstantIntTE<'s, 't>),
-    ConstantBool(&'t ConstantBoolTE),
-    ConstantStr(&'t ConstantStrTE<'s>),
-    ConstantFloat(&'t ConstantFloatTE),
+    ConstantBool(&'t ConstantBoolTE<'s, 't>),
+    ConstantStr(&'t ConstantStrTE<'s, 't>),
+    ConstantFloat(&'t ConstantFloatTE<'s, 't>),
     ArgLookup(&'t ArgLookupTE<'s, 't>),
     ArrayLength(&'t ArrayLengthTE<'s, 't>),
     InterfaceFunctionCall(&'t InterfaceFunctionCallTE<'s, 't>),
@@ -99,7 +96,6 @@ pub enum NodeRefT<'s, 't> {
     PopRuntimeSizedArray(&'t PopRuntimeSizedArrayTE<'s, 't>),
     InterfaceToInterfaceUpcast(&'t InterfaceToInterfaceUpcastTE<'s, 't>),
     Upcast(&'t UpcastTE<'s, 't>),
-    SoftLoad(&'t SoftLoadTE<'s, 't>),
     Destroy(&'t DestroyTE<'s, 't>),
 
     // 5 address expression variants
@@ -111,7 +107,6 @@ pub enum NodeRefT<'s, 't> {
 
     // ---- Templata hierarchy ----
     Templata(&'t ITemplataT<'s, 't>),
-    CoordTemplata(&'t CoordTemplataT<'s, 't>),
     KindTemplata(&'t KindTemplataT<'s, 't>),
     PlaceholderTemplata(&'t PlaceholderTemplataT<'s, 't>),
     PrototypeTemplata(&'t PrototypeTemplataT<'s, 't>),
@@ -124,14 +119,13 @@ pub enum NodeRefT<'s, 't> {
     ExternFunctionTemplata(&'t ExternFunctionTemplataT<'s, 't>),
 
     // ---- Kinds + types ----
-    Kind(&'t KindT<'s, 't>),
+    Kind(KindT<'s, 't>),
     StructTT(&'t StructTT<'s, 't>),
     InterfaceTT(&'t InterfaceTT<'s, 't>),
     StaticSizedArrayTT(&'t StaticSizedArrayTT<'s, 't>),
     RuntimeSizedArrayTT(&'t RuntimeSizedArrayTT<'s, 't>),
     KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
     OverloadSet(&'t OverloadSetT<'s, 't>),
-    Coord(&'t KindT<'s, 't>),
     Id(&'t IdT<'s, 't>),
     Signature(&'t SignatureT<'s, 't>),
     Prototype(&'t PrototypeT<'s, 't>),
@@ -144,9 +138,7 @@ pub enum NodeRefT<'s, 't> {
     // ---- Auxiliaries (trait-level only) ----
     FunctionAttribute(&'t IFunctionAttributeT<'s>),
     CitizenAttribute(&'t ICitizenAttributeT<'s>),
-    StructMember(&'t IStructMemberT<'s, 't>),
-    ReferenceMemberType(&'t ReferenceMemberTypeT<'s, 't>),
-    AddressMemberType(&'t AddressMemberTypeT<'s, 't>),
+    StructMember(&'t StructMemberT<'s, 't>),
     LocalVariable(&'t LocalVariable<'s, 't>),
 
     // ---- Override / Edge children ----
@@ -221,7 +213,7 @@ where
     out
 }
 
-pub fn collect_in_reference_expression<'s, 't, T, F>(
+pub fn collect_in_expression<'s, 't, T, F>(
   e: ExpressionTE<'s, 't>,
   predicate: &F,
 ) -> Vec<T>
@@ -230,20 +222,7 @@ where
     's: 't,
 {
     let mut out = Vec::new();
-    visit_reference_expression(predicate, &mut out, e);
-    out
-}
-
-pub fn collect_in_address_expression<'s, 't, T, F>(
-    e: ExpressionTE<'s, 't>,
-    predicate: &F,
-) -> Vec<T>
-where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    let mut out = Vec::new();
-    visit_address_expression(predicate, &mut out, e);
+    visit_expression_te(predicate, &mut out, e);
     out
 }
 
@@ -260,23 +239,13 @@ where
     out
 }
 
-pub fn collect_in_kind<'s, 't, T, F>(k: &'t KindT<'s, 't>, predicate: &F) -> Vec<T>
+pub fn collect_in_kind<'s, 't, T, F>(k: KindT<'s, 't>, predicate: &F) -> Vec<T>
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     let mut out = Vec::new();
     visit_kind(predicate, &mut out, k);
-    out
-}
-
-pub fn collect_in_coord<'s, 't, T, F>(c: &'t KindT<'s, 't>, predicate: &F) -> Vec<T>
-where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    let mut out = Vec::new();
-    visit_coord(predicate, &mut out, c);
     out
 }
 
@@ -335,7 +304,7 @@ fn visit_function_definition<'s, 't, T, F>(
     collect_if(pred, out, NodeRefT::FunctionDefinition(f));
     visit_function_header(pred, out, f.header);
     visit_instantiation_bound_arguments(pred, out, f.instantiation_bound_params);
-    visit_reference_expression(pred, out, f.body);
+    visit_expression_te(pred, out, f.body);
 }
 
 fn visit_function_header<'s, 't, T, F>(
@@ -354,7 +323,7 @@ fn visit_function_header<'s, 't, T, F>(
     for param in h.params {
         visit_parameter(pred, out, param);
     }
-    visit_coord(pred, out, &h.return_type);
+    visit_kind(pred, out, h.return_type);
     if let Some(t) = &h.maybe_origin_function_templata {
         visit_function_templata(pred, out, t);
     }
@@ -476,7 +445,7 @@ where
 {
     collect_if(pred, out, NodeRefT::Parameter(p));
     visit_var_name(pred, out, &p.name);
-    visit_coord(pred, out, &p.tyype);
+    visit_kind(pred, out, p.tyype);
 }
 
 fn visit_instantiation_bound_arguments<'s, 't, T, F>(
@@ -505,19 +474,7 @@ fn visit_instantiation_bound_arguments<'s, 't, T, F>(
 // Expression hierarchy visitors
 // ============================================================================
 
-fn visit_expression_te<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, e: ExpressionTE<'s, 't>)
-where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    collect_if(pred, out, NodeRefT::Expression(e));
-    match e {
-        ExpressionTE::Reference(r) => visit_reference_expression(pred, out, r),
-        ExpressionTE::Address(a) => visit_address_expression(pred, out, a),
-    }
-}
-
-fn visit_reference_expression<'s, 't, T, F>(
+fn visit_expression_te<'s, 't, T, F>(
   pred: &F,
   out: &mut Vec<T>,
   e: ExpressionTE<'s, 't>,
@@ -525,7 +482,7 @@ fn visit_reference_expression<'s, 't, T, F>(
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
-    collect_if(pred, out, NodeRefT::ReferenceExpression(e));
+    collect_if(pred, out, NodeRefT::Expression(e));
     match e {
         ExpressionTE::LetAndLend(x) => visit_let_and_lend(pred, out, x),
         ExpressionTE::LockWeak(x) => visit_lock_weak(pred, out, x),
@@ -591,23 +548,8 @@ fn visit_reference_expression<'s, 't, T, F>(
             visit_interface_to_interface_upcast(pred, out, x)
         }
         ExpressionTE::Upcast(x) => visit_upcast(pred, out, x),
-        ExpressionTE::SoftLoad(x) => visit_soft_load(pred, out, x),
         ExpressionTE::Destroy(x) => visit_destroy(pred, out, x),
-        ExpressionTE::CopyPrim(x) => visit_reference_expression(pred, out, x.inner),
-        ExpressionTE::Alias(x) => visit_reference_expression(pred, out, x.source_expr),
-    }
-}
-
-fn visit_address_expression<'s, 't, T, F>(
-    pred: &F,
-    out: &mut Vec<T>,
-    e: ExpressionTE<'s, 't>,
-) where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    collect_if(pred, out, NodeRefT::AddressExpression(e));
-    match e {
+        ExpressionTE::CopyPrim(x) => visit_expression_te(pred, out, x.inner),
         ExpressionTE::LocalLookup(x) => visit_local_lookup(pred, out, x),
         ExpressionTE::StaticSizedArrayLookup(x) => {
             visit_static_sized_array_lookup(pred, out, x)
@@ -629,7 +571,7 @@ where
 {
     collect_if(pred, out, NodeRefT::LetAndLend(x));
     visit_local_variable(pred, out, &x.variable);
-    visit_reference_expression(pred, out, x.expr);
+    visit_expression_te(pred, out, x.expr);
 }
 
 fn visit_lock_weak<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t LockWeakTE<'s, 't>)
@@ -638,8 +580,8 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::LockWeak(x));
-    visit_reference_expression(pred, out, x.inner_expr);
-    visit_coord(pred, out, &x.result_opt_borrow_type);
+    visit_expression_te(pred, out, x.inner_expr);
+    visit_kind(pred, out, x.result);
     visit_prototype(pred, out, x.some_constructor);
     visit_prototype(pred, out, x.none_constructor);
     visit_id(pred, out, &x.some_impl_name);
@@ -652,7 +594,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::BorrowToWeak(x));
-    visit_reference_expression(pred, out, x.inner_expr);
+    visit_expression_te(pred, out, x.inner_expr);
 }
 
 fn visit_let_normal<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t LetNormalTE<'s, 't>)
@@ -662,7 +604,7 @@ where
 {
     collect_if(pred, out, NodeRefT::LetNormal(x));
     visit_local_variable(pred, out, &x.variable);
-    visit_reference_expression(pred, out, x.expr);
+    visit_expression_te(pred, out, x.expr);
 }
 
 fn visit_unlet<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t UnletTE<'s, 't>)
@@ -680,7 +622,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::Discard(x));
-    visit_reference_expression(pred, out, x.expr);
+    visit_expression_te(pred, out, x.expr);
 }
 
 fn visit_defer<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t DeferTE<'s, 't>)
@@ -689,8 +631,8 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::Defer(x));
-    visit_reference_expression(pred, out, x.inner_expr);
-    visit_reference_expression(pred, out, x.deferred_expr);
+    visit_expression_te(pred, out, x.inner_expr);
+    visit_expression_te(pred, out, x.deferred_expr);
 }
 
 fn visit_if<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t IfTE<'s, 't>)
@@ -699,9 +641,9 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::If(x));
-    visit_reference_expression(pred, out, x.condition);
-    visit_reference_expression(pred, out, x.then_call);
-    visit_reference_expression(pred, out, x.else_call);
+    visit_expression_te(pred, out, x.condition);
+    visit_expression_te(pred, out, x.then_call);
+    visit_expression_te(pred, out, x.else_call);
 }
 
 fn visit_while<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t WhileTE<'s, 't>)
@@ -719,8 +661,8 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::Mutate(x));
-    visit_address_expression(pred, out, x.destination_expr);
-    visit_reference_expression(pred, out, x.source_expr);
+    visit_expression_te(pred, out, x.destination_expr);
+    visit_expression_te(pred, out, x.source_expr);
 }
 
 fn visit_restackify<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t RestackifyTE<'s, 't>)
@@ -730,7 +672,7 @@ where
 {
     collect_if(pred, out, NodeRefT::Restackify(x));
     visit_local_variable(pred, out, &x.variable);
-    visit_reference_expression(pred, out, x.source_expr);
+    visit_expression_te(pred, out, x.source_expr);
 }
 
 fn visit_return<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ReturnTE<'s, 't>)
@@ -739,10 +681,10 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::Return(x));
-    visit_reference_expression(pred, out, x.source_expr);
+    visit_expression_te(pred, out, x.source_expr);
 }
 
-fn visit_break<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t BreakTE)
+fn visit_break<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t BreakTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -756,7 +698,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::Block(x));
-    visit_reference_expression(pred, out, x.inner);
+    visit_expression_te(pred, out, x.inner);
 }
 
 fn visit_consecutor<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConsecutorTE<'s, 't>)
@@ -766,7 +708,7 @@ where
 {
     collect_if(pred, out, NodeRefT::Consecutor(x));
     for e in x.exprs {
-        visit_reference_expression(pred, out, *e);
+        visit_expression_te(pred, out, *e);
     }
 }
 
@@ -777,9 +719,9 @@ where
 {
     collect_if(pred, out, NodeRefT::Tuple(x));
     for e in x.elements {
-        visit_reference_expression(pred, out, *e);
+        visit_expression_te(pred, out, *e);
     }
-    visit_coord(pred, out, &x.result_reference);
+    visit_kind(pred, out, x.result);
 }
 
 fn visit_static_array_from_values<'s, 't, T, F>(
@@ -792,9 +734,9 @@ fn visit_static_array_from_values<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::StaticArrayFromValues(x));
     for e in x.elements {
-        visit_reference_expression(pred, out, *e);
+        visit_expression_te(pred, out, *e);
     }
-    visit_coord(pred, out, &x.result_reference);
+    visit_kind(pred, out, x.result);
     visit_static_sized_array_tt(pred, out, x.array_type);
 }
 
@@ -804,7 +746,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::ArraySize(x));
-    visit_reference_expression(pred, out, x.array);
+    visit_expression_te(pred, out, x.array);
 }
 
 fn visit_is_same_instance<'s, 't, T, F>(
@@ -816,8 +758,8 @@ fn visit_is_same_instance<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::IsSameInstance(x));
-    visit_reference_expression(pred, out, x.left);
-    visit_reference_expression(pred, out, x.right);
+    visit_expression_te(pred, out, x.left);
+    visit_expression_te(pred, out, x.right);
 }
 
 fn visit_as_subtype<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t AsSubtypeTE<'s, 't>)
@@ -826,9 +768,9 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::AsSubtype(x));
-    visit_reference_expression(pred, out, x.source_expr);
-    visit_coord(pred, out, &x.target_type);
-    visit_coord(pred, out, &x.result_result_type);
+    visit_expression_te(pred, out, x.source_expr);
+    visit_kind(pred, out, x.target_type);
+    visit_kind(pred, out, x.result);
     visit_prototype(pred, out, x.ok_constructor);
     visit_prototype(pred, out, x.err_constructor);
     visit_id(pred, out, &x.impl_name);
@@ -836,7 +778,7 @@ where
     visit_id(pred, out, &x.err_impl_name);
 }
 
-fn visit_void_literal<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t VoidLiteralTE)
+fn visit_void_literal<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t VoidLiteralTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -853,7 +795,7 @@ where
     visit_templata(pred, out, &x.value);
 }
 
-fn visit_constant_bool<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantBoolTE)
+fn visit_constant_bool<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantBoolTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -861,7 +803,7 @@ where
     collect_if(pred, out, NodeRefT::ConstantBool(x));
 }
 
-fn visit_constant_str<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantStrTE<'s>)
+fn visit_constant_str<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantStrTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -869,7 +811,7 @@ where
     collect_if(pred, out, NodeRefT::ConstantStr(x));
 }
 
-fn visit_constant_float<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantFloatTE)
+fn visit_constant_float<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantFloatTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -883,7 +825,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::ArgLookup(x));
-    visit_coord(pred, out, &x.coord);
+    visit_kind(pred, out, x.result);
 }
 
 fn visit_array_length<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ArrayLengthTE<'s, 't>)
@@ -892,7 +834,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::ArrayLength(x));
-    visit_reference_expression(pred, out, x.array_expr);
+    visit_expression_te(pred, out, x.array_expr);
 }
 
 fn visit_interface_function_call<'s, 't, T, F>(
@@ -905,9 +847,9 @@ fn visit_interface_function_call<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::InterfaceFunctionCall(x));
     visit_prototype(pred, out, x.super_function_prototype);
-    visit_coord(pred, out, &x.result_reference);
+    visit_kind(pred, out, x.result);
     for a in x.args {
-        visit_reference_expression(pred, out, *a);
+        visit_expression_te(pred, out, *a);
     }
 }
 
@@ -922,7 +864,7 @@ fn visit_extern_function_call<'s, 't, T, F>(
     collect_if(pred, out, NodeRefT::ExternFunctionCall(x));
     visit_prototype(pred, out, x.prototype2);
     for a in x.args {
-        visit_reference_expression(pred, out, *a);
+        visit_expression_te(pred, out, *a);
     }
 }
 
@@ -934,9 +876,9 @@ where
     collect_if(pred, out, NodeRefT::FunctionCall(x));
     visit_prototype(pred, out, x.callable);
     for a in x.args {
-        visit_reference_expression(pred, out, *a);
+        visit_expression_te(pred, out, *a);
     }
-    visit_coord(pred, out, &x.return_type);
+    visit_kind(pred, out, x.result);
 }
 
 fn visit_reinterpret<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ReinterpretTE<'s, 't>)
@@ -945,8 +887,8 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::Reinterpret(x));
-    visit_reference_expression(pred, out, x.expr);
-    visit_coord(pred, out, &x.result_reference);
+    visit_expression_te(pred, out, x.expr);
+    visit_kind(pred, out, x.result);
 }
 
 fn visit_construct<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstructTE<'s, 't>)
@@ -956,7 +898,7 @@ where
 {
     collect_if(pred, out, NodeRefT::Construct(x));
     visit_struct_tt(pred, out, x.struct_tt);
-    visit_coord(pred, out, &x.result_reference);
+    visit_kind(pred, out, x.result);
     for a in x.args {
         visit_expression_te(pred, out, *a);
     }
@@ -972,7 +914,7 @@ fn visit_new_mut_runtime_sized_array<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::NewRuntimeSizedArray(x));
     visit_runtime_sized_array_tt(pred, out, x.array_type);
-    visit_reference_expression(pred, out, x.capacity_expr);
+    visit_expression_te(pred, out, x.capacity_expr);
 }
 
 fn visit_static_array_from_callable<'s, 't, T, F>(
@@ -985,7 +927,7 @@ fn visit_static_array_from_callable<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::StaticArrayFromCallable(x));
     visit_static_sized_array_tt(pred, out, x.array_type);
-    visit_reference_expression(pred, out, x.generator);
+    visit_expression_te(pred, out, x.generator);
     visit_prototype(pred, out, x.generator_method);
 }
 
@@ -998,9 +940,9 @@ fn visit_destroy_static_sized_array_into_function<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::DestroyStaticSizedArrayIntoFunction(x));
-    visit_reference_expression(pred, out, x.array_expr);
+    visit_expression_te(pred, out, x.array_expr);
     visit_static_sized_array_tt(pred, out, x.array_type);
-    visit_reference_expression(pred, out, x.consumer);
+    visit_expression_te(pred, out, x.consumer);
     visit_prototype(pred, out, x.consumer_method);
 }
 
@@ -1013,7 +955,7 @@ fn visit_destroy_static_sized_array_into_locals<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::DestroyStaticSizedArrayIntoLocals(x));
-    visit_reference_expression(pred, out, x.expr);
+    visit_expression_te(pred, out, x.expr);
     visit_static_sized_array_tt(pred, out, x.static_sized_array);
     // destination_reference_variables: ReferenceLocalVariableT — stop at trait level
 }
@@ -1027,7 +969,7 @@ fn visit_destroy_mut_runtime_sized_array<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::DestroyRuntimeSizedArray(x));
-    visit_reference_expression(pred, out, x.array_expr);
+    visit_expression_te(pred, out, x.array_expr);
 }
 
 fn visit_runtime_sized_array_capacity<'s, 't, T, F>(
@@ -1039,7 +981,7 @@ fn visit_runtime_sized_array_capacity<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::RuntimeSizedArrayCapacity(x));
-    visit_reference_expression(pred, out, x.array_expr);
+    visit_expression_te(pred, out, x.array_expr);
 }
 
 fn visit_push_runtime_sized_array<'s, 't, T, F>(
@@ -1051,8 +993,8 @@ fn visit_push_runtime_sized_array<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::PushRuntimeSizedArray(x));
-    visit_reference_expression(pred, out, x.array_expr);
-    visit_reference_expression(pred, out, x.new_element_expr);
+    visit_expression_te(pred, out, x.array_expr);
+    visit_expression_te(pred, out, x.new_element_expr);
 }
 
 fn visit_pop_runtime_sized_array<'s, 't, T, F>(
@@ -1064,7 +1006,7 @@ fn visit_pop_runtime_sized_array<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::PopRuntimeSizedArray(x));
-    visit_reference_expression(pred, out, x.array_expr);
+    visit_expression_te(pred, out, x.array_expr);
 }
 
 fn visit_interface_to_interface_upcast<'s, 't, T, F>(
@@ -1076,7 +1018,7 @@ fn visit_interface_to_interface_upcast<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::InterfaceToInterfaceUpcast(x));
-    visit_reference_expression(pred, out, x.inner_expr);
+    visit_expression_te(pred, out, x.inner_expr);
     visit_interface_tt(pred, out, x.target_interface);
 }
 
@@ -1086,7 +1028,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::Upcast(x));
-    visit_reference_expression(pred, out, x.inner_expr);
+    visit_expression_te(pred, out, x.inner_expr);
     visit_super_kind(pred, out, &x.target_super_kind);
     visit_id(pred, out, &x.impl_name);
 }
@@ -1107,22 +1049,13 @@ fn visit_super_kind<'s, 't, T, F>(
     }
 }
 
-fn visit_soft_load<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t SoftLoadTE<'s, 't>)
-where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    collect_if(pred, out, NodeRefT::SoftLoad(x));
-    visit_address_expression(pred, out, x.expr);
-}
-
 fn visit_destroy<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t DestroyTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     collect_if(pred, out, NodeRefT::Destroy(x));
-    visit_reference_expression(pred, out, x.expr);
+    visit_expression_te(pred, out, x.expr);
     visit_struct_tt(pred, out, x.struct_tt);
     // destination_reference_variables: ReferenceLocalVariableT — stop at trait level
 }
@@ -1147,10 +1080,10 @@ fn visit_static_sized_array_lookup<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::StaticSizedArrayLookup(x));
-    visit_reference_expression(pred, out, x.array_expr);
+    visit_expression_te(pred, out, x.array_expr);
     visit_static_sized_array_tt(pred, out, x.array_type);
-    visit_reference_expression(pred, out, x.index_expr);
-    visit_coord(pred, out, &x.element_type);
+    visit_expression_te(pred, out, x.index_expr);
+    visit_kind(pred, out, KindT::BorrowRef(x.result));
 }
 
 fn visit_runtime_sized_array_lookup<'s, 't, T, F>(
@@ -1162,9 +1095,9 @@ fn visit_runtime_sized_array_lookup<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::RuntimeSizedArrayLookup(x));
-    visit_reference_expression(pred, out, x.array_expr);
+    visit_expression_te(pred, out, x.array_expr);
     visit_runtime_sized_array_tt(pred, out, x.array_type);
-    visit_reference_expression(pred, out, x.index_expr);
+    visit_expression_te(pred, out, x.index_expr);
 }
 
 fn visit_reference_member_lookup<'s, 't, T, F>(
@@ -1176,9 +1109,9 @@ fn visit_reference_member_lookup<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::ReferenceMemberLookup(x));
-    visit_reference_expression(pred, out, x.struct_expr);
+    visit_expression_te(pred, out, x.struct_expr);
     visit_var_name(pred, out, &x.member_name);
-    visit_coord(pred, out, &x.member_reference);
+    visit_kind(pred, out, KindT::BorrowRef(x.result));
 }
 
 fn visit_address_member_lookup<'s, 't, T, F>(
@@ -1190,9 +1123,9 @@ fn visit_address_member_lookup<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::AddressMemberLookup(x));
-    visit_reference_expression(pred, out, x.struct_expr);
+    visit_expression_te(pred, out, x.struct_expr);
     visit_var_name(pred, out, &x.member_name);
-    visit_coord(pred, out, &x.result_type2);
+    visit_kind(pred, out, KindT::BorrowRef(x.result));
 }
 
 // ============================================================================
@@ -1206,10 +1139,8 @@ where
 {
     collect_if(pred, out, NodeRefT::Templata(t));
     match t {
-        ITemplataT::Coord(x) => visit_coord_templata(pred, out, x),
         ITemplataT::Kind(x) => visit_kind_templata(pred, out, x),
         ITemplataT::Placeholder(x) => visit_placeholder_templata(pred, out, x),
-        ITemplataT::Ownership(_) => {}
         ITemplataT::Integer(_) => {}
         ITemplataT::Boolean(_) => {}
         ITemplataT::String(_) => {}
@@ -1223,17 +1154,7 @@ where
         ITemplataT::InterfaceDefinition(x) => visit_interface_definition_templata(pred, out, x),
         ITemplataT::ImplDefinition(x) => visit_impl_definition_templata(pred, out, x),
         ITemplataT::ExternFunction(x) => visit_extern_function_templata(pred, out, x),
-        ITemplataT::Location(_) => {}
     }
-}
-
-fn visit_coord_templata<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t CoordTemplataT<'s, 't>)
-where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    collect_if(pred, out, NodeRefT::CoordTemplata(x));
-    visit_coord(pred, out, &x.coord);
 }
 
 fn visit_kind_templata<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t KindTemplataT<'s, 't>)
@@ -1242,7 +1163,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::KindTemplata(x));
-    visit_kind(pred, out, &x.kind);
+    visit_kind(pred, out, x.kind);
 }
 
 fn visit_placeholder_templata<'s, 't, T, F>(
@@ -1276,8 +1197,8 @@ where
 {
     collect_if(pred, out, NodeRefT::IsaTemplata(x));
     visit_id(pred, out, &x.impl_name);
-    visit_kind(pred, out, &x.sub_kind);
-    visit_kind(pred, out, &x.super_kind);
+    visit_kind(pred, out, x.sub_kind);
+    visit_kind(pred, out, x.super_kind);
 }
 
 fn visit_coord_list_templata<'s, 't, T, F>(
@@ -1290,7 +1211,7 @@ fn visit_coord_list_templata<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::CoordListTemplata(x));
     for c in x.coords {
-        visit_coord(pred, out, c);
+        visit_kind(pred, out, *c);
     }
 }
 
@@ -1355,7 +1276,8 @@ fn visit_extern_function_templata<'s, 't, T, F>(
 // Kinds + types
 // ============================================================================
 
-fn visit_kind<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, k: &'t KindT<'s, 't>)
+/// Emits a node for every onion layer on the way down, then for the base kind.
+fn visit_kind<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, k: KindT<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -1374,6 +1296,10 @@ where
         KindT::RuntimeSizedArray(a) => visit_runtime_sized_array_tt(pred, out, a),
         KindT::KindPlaceholder(p) => visit_kind_placeholder(pred, out, p),
         KindT::OverloadSet(o) => visit_overload_set(pred, out, o),
+        KindT::BorrowRef(b) => visit_kind(pred, out, b.inner),
+        KindT::HeapOwnRef(h) => visit_kind(pred, out, h.inner),
+        KindT::ShareRef(s) => visit_kind(pred, out, s.inner),
+        KindT::WeakRef(w) => visit_kind(pred, out, w.inner),
     }
 }
 
@@ -1440,15 +1366,6 @@ where
     // Stop at trait level for env — see TL.md "What This Plan Deliberately Does NOT Cover".
 }
 
-fn visit_coord<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, c: &'t KindT<'s, 't>)
-where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    collect_if(pred, out, NodeRefT::Coord(c));
-    visit_kind(pred, out, &c.kind);
-}
-
 fn visit_id<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, id: &'t IdT<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
@@ -1474,7 +1391,7 @@ where
 {
     collect_if(pred, out, NodeRefT::Prototype(p));
     visit_id(pred, out, &p.id);
-    visit_coord(pred, out, &p.return_type);
+    visit_kind(pred, out, p.return_type);
 }
 
 // ============================================================================
@@ -1511,33 +1428,14 @@ fn visit_citizen_attribute<'s, 't, T, F>(
     collect_if(pred, out, NodeRefT::CitizenAttribute(a));
 }
 
-fn visit_struct_member<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, m: &'t IStructMemberT<'s, 't>)
+fn visit_struct_member<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, m: &'t StructMemberT<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     collect_if(pred, out, NodeRefT::StructMember(m));
-    match m {
-        IStructMemberT::Normal(n) => visit_member_type(pred, out, &n.tyype),
-        IStructMemberT::Variadic(_) => {}
-    }
-}
-
-fn visit_member_type<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, m: &'t IMemberTypeT<'s, 't>)
-where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    match m {
-        IMemberTypeT::Reference(r) => {
-            collect_if(pred, out, NodeRefT::ReferenceMemberType(r));
-            visit_coord(pred, out, &r.reference);
-        }
-        IMemberTypeT::Address(a) => {
-            collect_if(pred, out, NodeRefT::AddressMemberType(a));
-            visit_coord(pred, out, &a.reference);
-        }
-    }
+    visit_var_name(pred, out, &m.name);
+    visit_kind(pred, out, m.tyype);
 }
 
 fn visit_local_variable<'s, 't, T, F>(
@@ -1561,7 +1459,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::KindExport(e));
-    visit_kind(pred, out, &e.tyype);
+    visit_kind(pred, out, e.tyype);
     visit_id(pred, out, &e.id);
 }
 
@@ -1584,7 +1482,7 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::KindExtern(e));
-    visit_kind(pred, out, &e.tyype);
+    visit_kind(pred, out, e.tyype);
 }
 
 fn visit_function_extern<'s, 't, T, F>(
@@ -1615,11 +1513,9 @@ where
         NodeRefT::FunctionDefinition(f) => visit_function_definition(predicate, &mut out, f),
         NodeRefT::StructDefinition(s) => visit_struct_definition(predicate, &mut out, s),
         NodeRefT::InterfaceDefinition(i) => visit_interface_definition(predicate, &mut out, i),
-        NodeRefT::ReferenceExpression(e) => visit_reference_expression(predicate, &mut out, *e),
-        NodeRefT::AddressExpression(e) => visit_address_expression(predicate, &mut out, *e),
+        NodeRefT::Expression(e) => visit_expression_te(predicate, &mut out, *e),
         NodeRefT::Templata(t) => visit_templata(predicate, &mut out, t),
-        NodeRefT::Kind(k) => visit_kind(predicate, &mut out, k),
-        NodeRefT::Coord(c) => visit_coord(predicate, &mut out, c),
+        NodeRefT::Kind(k) => visit_kind(predicate, &mut out, *k),
         _ => panic!("TYPING_TEST_COLLECT_IN_TNODE_NODE_KIND_NOT_YET_IMPLEMENTED"),
     }
     out

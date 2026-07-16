@@ -22,7 +22,7 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::solver::solver::*;
 use crate::typing::infer_compiler::{InferEnv, InitialKnown};
 use crate::typing::names::names::IStructTemplateNameT;
-use crate::typing::types::types::{RegionT, StructTTValT, RegionT};
+use crate::typing::types::types::{RegionT, StructTTValT};
 use crate::typing::citizen::struct_compiler::{ResolveSuccess, ResolveFailure, IResolveOutcome};
 use crate::utils::fx::{IndexMap, IndexSet};
 use crate::utils::fx::HashMap;
@@ -580,7 +580,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionS<'s>,
-        members: &[&'t NormalStructMemberT<'s, 't>],
+        members: &[&'t StructMemberT<'s, 't>],
     ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
         self.make_closure_understruct_core(
             containing_function_env, coutputs, parent_ranges, call_location, name, function_s, members)

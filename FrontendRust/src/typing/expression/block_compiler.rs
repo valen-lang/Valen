@@ -46,7 +46,7 @@ where 's: 't,
         block_se: &'s BlockSE<'s>,
     ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let (unnevered_unresultified_undestructed_root_expression, returns_from_exprs) =
-            self.evaluate_and_coerce_to_reference_expression(
+            self.evaluate_expression(
                 coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges,
                 call_location, region, block_se.expr)?;
 

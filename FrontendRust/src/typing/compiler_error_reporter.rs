@@ -3,12 +3,13 @@ use crate::postparsing::rules::rules::IRulexSR;
 use crate::typing::rune_typing::rune_type_solver::RuneTypeSolveError;
 use crate::solver::solver::FailedSolve;
 use crate::typing::ast::ast::{KindExportT, PrototypeT, SignatureT};
+use crate::typing::citizen::impl_compiler::IsntParent;
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::typing::infer_compiler::{IDefiningError, IResolvingError};
 use crate::typing::names::names::{IdT, IVarNameT};
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::types::types::{KindT, InterfaceTT, KindT, StructTT};
+use crate::typing::types::types::{KindT, InterfaceTT, StructTT};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
 use std::slice::from_ref;
@@ -51,6 +52,12 @@ pub enum ICompileErrorT<'s, 't> {
     },
     CouldntConvertForReturnT { range: &'t [RangeS<'s>], expected_type: KindT<'s, 't>, actual_type: KindT<'s, 't> },
     CouldntConvertForMutateT { range: &'t [RangeS<'s>], expected_type: KindT<'s, 't>, actual_type: KindT<'s, 't> },
+    // The two types are unrelated, e.g. converting an `int` to a `bool`. Neither can be an
+    // upcast, because one of them isn't a citizen at all.
+    CouldntConvertT { range: &'t [RangeS<'s>], source_type: KindT<'s, 't>, target_type: KindT<'s, 't> },
+    // Both are citizens, but no impl makes the source a subtype of the target, e.g. a `Dog`
+    // where a `Cat` is wanted. Carries what the impl search rejected.
+    CouldntUpcastT { range: &'t [RangeS<'s>], source_type: KindT<'s, 't>, target_type: KindT<'s, 't>, isnt_parent: IsntParent<'s, 't> },
     CantMoveOutOfMemberT { range: &'t [RangeS<'s>], name: IVarNameT<'s, 't> },
     CouldntFindFunctionToCallT { range: &'t [RangeS<'s>], fff: FindFunctionFailure<'s, 't> },
     CouldntEvaluateFunction { range: &'t [RangeS<'s>], eff: IDefiningError<'s, 't> },
@@ -140,6 +147,8 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
             Self::BodyResultDoesntMatch { range, .. } => *range,
             Self::CouldntConvertForReturnT { range, .. } => *range,
             Self::CouldntConvertForMutateT { range, .. } => *range,
+            Self::CouldntConvertT { range, .. } => *range,
+            Self::CouldntUpcastT { range, .. } => *range,
             Self::CantMoveOutOfMemberT { range, .. } => *range,
             Self::CouldntFindFunctionToCallT { range, .. } => *range,
             Self::CouldntEvaluateFunction { range, .. } => *range,

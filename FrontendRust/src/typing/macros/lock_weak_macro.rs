@@ -40,21 +40,19 @@ where 's: 't,
         let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
             self.get_option(coutputs, env, call_range, call_location, RegionT::Default, borrow_coord)?;
         let lock_expr = ExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE {
-            inner_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
-                param_index: 0,
-                coord: param_coords[0].tyype,
-            })),
+            inner_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(
+                ArgLookupTE::new(0, param_coords[0].tyype))),
             result_opt_borrow_type: opt_coord,
             some_constructor: self.typing_interner.alloc(some_constructor),
             none_constructor: self.typing_interner.alloc(none_constructor),
             some_impl_name: some_impl_id,
             none_impl_name: none_impl_id,
         }));
-        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: lock_expr,
-            })),
-        }));
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
+            ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
+                lock_expr,
+            ))),
+        )));
         Ok((header, body))
     }
 

@@ -226,7 +226,7 @@ where 's: 't,
         lookup_filter.insert(ILookupContext::TemplataLookupContext);
         let full_env_as_i = IInDenizenEnvironmentT::Function(full_env);
         let return_coord = match full_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner) {
-            Some(ITemplataT::Coord(coord_templata)) => coord_templata.coord,
+            Some(ITemplataT::Kind(kind_templata)) => kind_templata.kind,
             other => panic!("vwat: unexpected in getFunctionPrototypeInnerForCall: {:?}", other),
         };
         PrototypeT { id, return_type: return_coord }
@@ -293,7 +293,7 @@ where 's: 't,
         let function2 = self.typing_interner.alloc(FunctionDefinitionT {
             header,
             instantiation_bound_params,
-            body: ExpressionTE::Block(self.typing_interner.alloc(BlockTE { inner: body2.inner })),
+            body: ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(body2.inner))),
         });
         coutputs.add_function(header_sig, function2);
         Ok(function2.header)
@@ -359,10 +359,10 @@ where 's: 't,
 
                 let arg_lookups: Vec<ExpressionTE<'s, 't>> =
                     header.params.iter().enumerate().map(|(index, param)| {
-                        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
-                            param_index: index as i32,
-                            coord: param.tyype,
-                        }))
+                        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(
+                            index as i32,
+                            param.tyype,
+                        )))
                     }).collect();
 
                 let function2 = self.typing_interner.alloc(FunctionDefinitionT {
@@ -372,12 +372,12 @@ where 's: 't,
                         rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map(),
                         rune_to_bound_impl: self.typing_interner.alloc_index_map(),
                     }),
-                    body: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                        source_expr: ExpressionTE::ExternFunctionCall(self.typing_interner.alloc(ExternFunctionCallTE {
-                            prototype2: extern_prototype,
-                            args: self.typing_interner.alloc_slice_from_vec(arg_lookups),
-                        })),
-                    })),
+                    body: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
+                        ExpressionTE::ExternFunctionCall(self.typing_interner.alloc(ExternFunctionCallTE::new(
+                            extern_prototype,
+                            self.typing_interner.alloc_slice_from_vec(arg_lookups),
+                        ))),
+                    ))),
                 });
 
                 let header_sig = self.typing_interner.alloc(function2.header.to_signature());

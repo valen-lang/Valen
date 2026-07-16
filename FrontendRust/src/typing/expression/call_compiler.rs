@@ -133,11 +133,11 @@ where 's: 't,
 
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id).is_some());
                 let result_te = stamp_result.prototype.return_type;
-                Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
-                    callable: stamp_result.prototype,
-                    args: self.typing_interner.alloc_slice_from_vec(args_exprs_2),
-                    return_type: result_te,
-                })))
+                Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+                    stamp_result.prototype,
+                    self.typing_interner.alloc_slice_from_vec(args_exprs_2),
+                    result_te,
+                ))))
             }
             other => {
                 self.evaluate_custom_call(
@@ -224,11 +224,11 @@ where 's: 't,
 
         assert!(coutputs.get_instantiation_bounds(self.typing_interner, resolved.prototype.id).is_some());
         let result_te = resolved.prototype.return_type;
-        Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
-            callable: resolved.prototype,
-            args: self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
-            return_type: result_te,
-        })))
+        Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+            resolved.prototype,
+            self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
+            result_te,
+        ))))
     }
 
     pub fn check_types(
@@ -250,7 +250,7 @@ where 's: 't,
                     panic!("implement: checkTypes non-exact isTypeConvertible");
                     // val isConvertible = templataCompiler.isTypeConvertible(...) — handle false branch
                 } else {
-                    match args_head.kind {
+                    match args_head {
                         KindT::Never(_) => {
                             // This is fine, no conversion will ever actually happen.
                             // This can be seen in this call: +(5, panic())

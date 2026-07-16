@@ -23,9 +23,8 @@ use crate::typing::names::names::LambdaCitizenTemplateNameT;
 use crate::typing::names::names::LambdaCitizenNameT;
 use crate::typing::types::types::StructTTValT;
 use crate::typing::types::types::KindT;
-use crate::typing::types::types::OwnershipT;
+use crate::typing::types::types::BorrowRefT;
 use crate::typing::types::types::{RegionT};
-use crate::typing::types::types::KindT;
 use crate::typing::names::names::LambdaCallFunctionTemplateNameValT;
 use crate::typing::names::names::LambdaCallFunctionNameValT;
 use crate::typing::names::names::StructTemplateNameT;
@@ -133,11 +132,8 @@ fn lambda_has_correct_name() {
         });
         let lambda_struct = typing_interner.intern_struct_tt(
             StructTTValT { id: *lambda_citizen_id });
-        let lambda_borrow_coord = KindT::new(
-          OwnershipT::Borrow,
-          RegionT::Default,
-          KindT::Struct(lambda_struct),
-        );
+        let lambda_borrow_coord = KindT::BorrowRef(typing_interner.alloc(
+          BorrowRefT { inner: KindT::Struct(lambda_struct), region: RegionT::Default }));
         let lambda_func_template_name = typing_interner.intern_lambda_call_function_template_name(
             LambdaCallFunctionTemplateNameValT {
                 code_location: lambda_loc,

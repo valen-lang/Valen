@@ -20,7 +20,7 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::function::function_compiler::IDefineFunctionResult;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::names::names::{KindPlaceholderNameT, KindPlaceholderTemplateNameT};
-use crate::typing::types::types::{RegionT, KindPlaceholderT, KindT, RegionT};
+use crate::typing::types::types::{RegionT, KindPlaceholderT, KindT};
 use crate::typing::templata::templata::PlaceholderTemplataT;
 use crate::typing::env::environment::child_of;
 use crate::typing::infer_compiler::InitialKnown;
@@ -33,8 +33,6 @@ use crate::typing::names::names::IImplTemplateNameT;
 use crate::typing::templata::templata::expect_kind_templata;
 use crate::typing::names::names::IdValT;
 use crate::typing::templata::templata::KindTemplataT;
-use crate::typing::templata::templata::CoordTemplataT;
-use crate::typing::types::types::KindT;
 use crate::postparsing::names::CaseRuneFromImplValS;
 use crate::typing::infer_compiler::CompleteResolveSolve;
 use crate::utils::fx::HashSet;
@@ -244,7 +242,7 @@ where 's: 't,
                 KindT::KindPlaceholder(kp) => {
                     let original_placeholder_template_id = self.get_placeholder_template(kp.id);
                     let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
-                    coutputs.declare_type_mutability(placeholder_template_id_ref, mutability);
+                    coutputs.declare_type_sharedness(placeholder_template_id_ref, mutability);
                     ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
                         kind: KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
                     }))
@@ -255,7 +253,7 @@ where 's: 't,
                 KindT::KindPlaceholder(kp) => {
                     let original_placeholder_template_id = self.get_placeholder_template(kp.id);
                     let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
-                    coutputs.declare_type_mutability(placeholder_template_id_ref, mutability);
+                    coutputs.declare_type_sharedness(placeholder_template_id_ref, mutability);
                     ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT {
                         coord: KindT::new(
                             ct.coord.ownership,
@@ -412,7 +410,7 @@ where 's: 't,
                 .map(|rune| {
                     let templata = *dispatcher_inner_inferences.get(&rune)
                         .unwrap_or_else(|| panic!("vassertSome: rune {:?} not in dispatcherInnerInferences", rune));
-                    expect_kind_templata(templata).coord
+                    expect_kind_templata(templata).kind
                 })
                 .collect();
         // Any generic parameter of the abstract function that wasn't pinned by the impl's self-type

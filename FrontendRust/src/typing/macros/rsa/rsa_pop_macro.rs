@@ -35,21 +35,21 @@ where 's: 't,
             return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
             maybe_origin_function_templata: Some(env.templata()),
         };
-        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ExpressionTE::PopRuntimeSizedArray({
-                    let array_expr = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
-                        param_index: 0,
-                        coord: param_coords[0].tyype,
-                    }));
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
+            ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
+                ExpressionTE::PopRuntimeSizedArray({
+                    let array_expr = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(
+                        0,
+                        param_coords[0].tyype,
+                    )));
                     let element_type = match array_expr.result() {
                         KindT::RuntimeSizedArray(rsa) => rsa.element_type(),
                         other => panic!("vwat: {:?}", other),
                     };
                     self.typing_interner.alloc(PopRuntimeSizedArrayTE { array_expr, element_type })
                 }),
-            })),
-        }));
+            ))),
+        )));
         (header, body)
     }
 

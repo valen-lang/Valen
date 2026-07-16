@@ -8,7 +8,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::function_environment_t::{FunctionEnvironmentT, NodeEnvironmentBox};
 use crate::typing::env::environment::IInDenizenEnvironmentT;
-use crate::typing::types::types::{KindT, KindT, NeverT, OwnershipT, RegionT};
+use crate::typing::types::types::{KindT, NeverT, RegionT};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::range::RangeS;
 use crate::utils::fx::HashSet;
@@ -61,11 +61,11 @@ where 's: 't,
                     Ok((body, returns)) => (body, returns),
                 };
 
-                assert!(body2.result() != KindT::Never(NeverT { from_break: true }));
+                assert!(body2.result != KindT::Never(NeverT { from_break: true }));
                 let return_type2 =
-                    if returns.is_empty() && body2.result() == KindT::Never(NeverT { from_break: false }) {
+                    if returns.is_empty() && body2.result == KindT::Never(NeverT { from_break: false }) {
                         // No returns yet the body results in a Never. This can happen if we call panic from inside.
-                        body2.result()
+                        body2.result
                     } else {
                         assert!(!returns.is_empty());
                         if returns.len() > 1 {
@@ -100,7 +100,7 @@ where 's: 't,
                 // vcurious(returns.size <= 1)
                 assert!(returns.len() <= 1);
                 // (returns.headOption, body2.result.kind) match { ... }
-                match (returns.iter().next(), body2.result()) {
+                match (returns.iter().next(), body2.result) {
                     (Some(x), _) if *x == explicit_ret_coord => {
                         // Let it through, it returns the expected type.
                     }
@@ -202,14 +202,14 @@ where 's: 't,
                 let mut returns = returns_from_inside_maybe_with_never;
                 returns.insert(converted_body_without_return.result());
                 let return_te =
-                    ExpressionTE::Return(self.typing_interner.alloc(ReturnTE { source_expr: converted_body_without_return }));
+                    ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(converted_body_without_return)));
                 (return_te, returns)
             };
 
         let returns =
             if returns_maybe_with_never.len() > 1 {
                 returns_maybe_with_never.into_iter().filter(|c| {
-                    !matches!(c, KindT { ownership: OwnershipT::Own, kind: KindT::Never(NeverT { from_break: false }), .. })
+                    !matches!(c, KindT::Never(NeverT { from_break: false }))
                 }).collect()
             } else {
                 returns_maybe_with_never
@@ -227,7 +227,7 @@ where 's: 't,
             }
         }
 
-        Ok(Ok((&*self.typing_interner.alloc(BlockTE { inner: converted_body_with_return }), returns)))
+        Ok(Ok((&*self.typing_interner.alloc(BlockTE::new(converted_body_with_return)), returns)))
     }
 
     pub fn evaluate_lets(
@@ -244,10 +244,10 @@ where 's: 't,
         // val paramLookups2 = params2.zipWithIndex.map({ case (p, index) => ArgLookupTE(index, p.tyype) })
         let param_lookups_2: Vec<ExpressionTE<'s, 't>> =
             params_2.iter().enumerate().map(|(index, p)| {
-                ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
-                    param_index: index as i32,
-                    coord: p.tyype,
-                }))
+                ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(
+                    index as i32,
+                    p.tyype,
+                )))
             }).collect();
 
         let param_lookups_2_refs: &'t [ExpressionTE<'s, 't>] =

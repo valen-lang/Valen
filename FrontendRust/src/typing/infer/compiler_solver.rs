@@ -27,10 +27,7 @@ use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::citizen::impl_compiler::IsntParent;
 use crate::typing::citizen::struct_compiler::ResolveFailure;
 use crate::typing::templata::templata::KindTemplataT;
-use crate::typing::types::types::OwnershipT;
-use crate::typing::templata::templata::CoordTemplataT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::typing::templata::templata::OwnershipTemplataT;
 use crate::solver::solver::make_solver_state;
 use crate::typing::templata::templata::expect_integer;
 use std::iter::once;
@@ -247,7 +244,7 @@ where 's: 't,
             rules.iter().all(|r| !matches!(r, IRulexSR::CallSiteFunc(_))) ||
             rules.iter().all(|r| !matches!(r, IRulexSR::DefinitionFunc(_))));
 
-        for (rune, templata) in &initially_known_rune_to_templata {
+        for (rune, templata) in initially_known_rune_to_templata {
             if self.opts.global_options.sanity_check {
                 self.sanity_check_conclusion(&env, state, *rune, *templata);
             }
@@ -337,59 +334,59 @@ pub fn sanity_check_conclusion<'s, 't>(
     // delegate.sanityCheckConclusion(env, state, rune, conclusion)
 }
 
-fn solve_receives<'s, 'ctx, 't>(
-  compiler: &Compiler<'s, 'ctx, 't>,
-  typing_interner: &TypingInterner<'s, 't>,
-  state: &mut CompilerOutputs<'s, 't>,
-  env: InferEnv<'s, 't>,
-  senders: Vec<(IRuneS<'s>, KindT<'s, 't>)>,
-  call_templates: Vec<ITemplataT<'s, 't>>,
-  all_senders_known: bool,
-  all_calls_known: bool,
-) -> Result<Option<KindT<'s, 't>>, ITypingPassSolverError<'s, 't>>
-where 's: 't,
-{
-    let sender_kinds: Vec<KindT<'s, 't>> = senders.iter().map(|(_, coord)| coord.kind).collect();
-    if sender_kinds.is_empty() {
-        return Ok(None);
-    }
-    let sender_ancestor_lists: Vec<HashSet<KindT<'s, 't>>> =
-        sender_kinds.iter().map(|kind| compiler.get_ancestors(env, state, *kind, true)).collect();
-    let common_ancestors: HashSet<KindT<'s, 't>> =
-        sender_ancestor_lists.into_iter().reduce(|a, b| a.intersection(&b).copied().collect())
-            .unwrap_or_default();
-    if common_ancestors.is_empty() {
-        let params = typing_interner.alloc_slice_from_vec(senders);
-        return Err(ITypingPassSolverError::NoCommonAncestors { params });
-    }
-    let common_ancestors_call_constrained: HashSet<KindT<'s, 't>> =
-        if call_templates.is_empty() {
-            common_ancestors
-        } else {
-            common_ancestors.into_iter().filter(|ancestor| {
-                call_templates.iter().any(|template| compiler.kind_is_from_template(state, *ancestor, *template))
-            }).collect()
-        };
-    let narrowed_common_ancestor =
-        if common_ancestors_call_constrained.is_empty() {
-            let params = typing_interner.alloc_slice_from_vec(senders);
-            return Err(ITypingPassSolverError::NoAncestorsSatisfyCall { params });
-        } else if common_ancestors_call_constrained.len() == 1 {
-            *common_ancestors_call_constrained.iter().next().unwrap()
-        } else {
-            if !all_senders_known {
-                return Ok(None);
-            }
-            if !all_calls_known {
-                return Ok(None);
-            }
-            match narrow(compiler, typing_interner, env, state, common_ancestors_call_constrained) {
-                Ok(x) => x,
-                Err(e) => return Err(e),
-            }
-        };
-    Ok(Some(narrowed_common_ancestor))
-}
+// fn solve_receives<'s, 'ctx, 't>(
+//   compiler: &Compiler<'s, 'ctx, 't>,
+//   typing_interner: &TypingInterner<'s, 't>,
+//   state: &mut CompilerOutputs<'s, 't>,
+//   env: InferEnv<'s, 't>,
+//   senders: Vec<(IRuneS<'s>, KindT<'s, 't>)>,
+//   call_templates: Vec<ITemplataT<'s, 't>>,
+//   all_senders_known: bool,
+//   all_calls_known: bool,
+// ) -> Result<Option<KindT<'s, 't>>, ITypingPassSolverError<'s, 't>>
+// where 's: 't,
+// {
+//     let sender_kinds: Vec<KindT<'s, 't>> = senders.iter().map(|(_, coord)| coord.kind).collect();
+//     if sender_kinds.is_empty() {
+//         return Ok(None);
+//     }
+//     let sender_ancestor_lists: Vec<HashSet<KindT<'s, 't>>> =
+//         sender_kinds.iter().map(|kind| compiler.get_ancestors(env, state, *kind, true)).collect();
+//     let common_ancestors: HashSet<KindT<'s, 't>> =
+//         sender_ancestor_lists.into_iter().reduce(|a, b| a.intersection(&b).copied().collect())
+//             .unwrap_or_default();
+//     if common_ancestors.is_empty() {
+//         let params = typing_interner.alloc_slice_from_vec(senders);
+//         return Err(ITypingPassSolverError::NoCommonAncestors { params });
+//     }
+//     let common_ancestors_call_constrained: HashSet<KindT<'s, 't>> =
+//         if call_templates.is_empty() {
+//             common_ancestors
+//         } else {
+//             common_ancestors.into_iter().filter(|ancestor| {
+//                 call_templates.iter().any(|template| compiler.kind_is_from_template(state, *ancestor, *template))
+//             }).collect()
+//         };
+//     let narrowed_common_ancestor =
+//         if common_ancestors_call_constrained.is_empty() {
+//             let params = typing_interner.alloc_slice_from_vec(senders);
+//             return Err(ITypingPassSolverError::NoAncestorsSatisfyCall { params });
+//         } else if common_ancestors_call_constrained.len() == 1 {
+//             *common_ancestors_call_constrained.iter().next().unwrap()
+//         } else {
+//             if !all_senders_known {
+//                 return Ok(None);
+//             }
+//             if !all_calls_known {
+//                 return Ok(None);
+//             }
+//             match narrow(compiler, typing_interner, env, state, common_ancestors_call_constrained) {
+//                 Ok(x) => x,
+//                 Err(e) => return Err(e),
+//             }
+//         };
+//     Ok(Some(narrowed_common_ancestor))
+// }
 
 fn narrow<'s, 'ctx, 't, 'a>(
     compiler: &'a Compiler<'s, 'ctx, 't>,
@@ -536,11 +533,11 @@ where 's: 't,
                 //       solverState.getConclusion(returnRune.rune) match {
                 //         case Some(CoordTemplataT(returnCoord)) => {
                 match solver_state.get_conclusion(&resolve.return_rune.rune) {
-                    Some(ITemplataT::Coord(ct)) => {
+                    Some(ITemplataT::Kind(ct)) => {
                         // Existing predict path: both params and return are known. We only pretend
                         // the function exists for now; actual resolution is postponed to after the
                         // solve completes. See SFWPRL in docs/Generics.md:353.
-                        let return_coord = ct.coord;
+                        let return_coord = ct.kind; // VCOORD: rename all variables like _coord to _type
                         let prototype_templata = self.predict_function(env, state, resolve.range, resolve.name, param_coords, return_coord);
                         let new_templata = ITemplataT::Prototype(self.typing_interner.alloc(prototype_templata));
                         let mut conclusions = IndexMap::default();
@@ -571,7 +568,7 @@ where 's: 't,
                                 let return_type = stamp_result.prototype.return_type;
                                 let mut conclusions = IndexMap::default();
                                 conclusions.insert(resolve.result_rune.rune, ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: stamp_result.prototype })));
-                                conclusions.insert(resolve.return_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: return_type })));
+                                conclusions.insert(resolve.return_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: return_type })));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => Ok(()),
                                     Err(e) => {
@@ -595,7 +592,7 @@ where 's: 't,
                         let prototype = proto_templata.prototype;
                         let mut conclusions = IndexMap::default();
                         conclusions.insert(csf.params_list_rune.rune, ITemplataT::CoordList(self.typing_interner.alloc(CoordListTemplataT { coords: prototype.param_types() })));
-                        conclusions.insert(csf.return_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: prototype.return_type })));
+                        conclusions.insert(csf.return_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: prototype.return_type })));
                         match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
@@ -620,7 +617,7 @@ where 's: 't,
                     _ => unreachable!("DefinitionFunc: paramListRune is statically typed CoordList"),
                 };
                 let return_type = match solver_state.get_conclusion(&def_func.return_rune.rune).expect("DefinitionFunc returnRune has no conclusion") {
-                    ITemplataT::Coord(ct) => ct.coord,
+                    ITemplataT::Kind(ct) => ct.kind,
                     _ => unreachable!("DefinitionFunc: returnRune is statically typed Coord"),
                 };
                 let new_prototype = self.assemble_prototype(env, state, def_func.range, def_func.name, param_coords, return_type);
@@ -1257,7 +1254,7 @@ where 's: 't,
                                 }
                                 let element_rune = arg_runes[0];
                                 let mut conclusions = IndexMap::default();
-                                conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: rsa_tt.element_type() })));
+                                conclusions.insert(element_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: rsa_tt.element_type() })));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
@@ -1284,7 +1281,7 @@ where 's: 't,
                                 let element_rune = arg_runes[1];
                                 let mut conclusions = IndexMap::default();
                                 conclusions.insert(size_rune.rune, ssa_tt.size());
-                                conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: ssa_tt.element_type() })));
+                                conclusions.insert(element_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: ssa_tt.element_type() })));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
@@ -1307,7 +1304,7 @@ where 's: 't,
                             solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule RuntimeSizedArrayTemplate")
                         }).collect();
                         let coord = match args[0] {
-                            ITemplataT::Coord(ct) => ct.coord,
+                            ITemplataT::Kind(ct) => ct.kind,
                             _ => panic!("Expected CoordTemplataT as first arg in solve_call_rule RuntimeSizedArrayTemplate"),
                         };
                         let context_region = RegionT::Default;
@@ -1330,7 +1327,7 @@ where 's: 't,
                         }).collect();
                         let s = args[0];
                         let coord = match args[1] {
-                            ITemplataT::Coord(ct) => ct.coord,
+                            ITemplataT::Kind(ct) => ct.kind,
                             _ => panic!("Expected CoordTemplataT as second arg in solve_call_rule StaticSizedArrayTemplate"),
                         };
                         let context_region = RegionT::Default;

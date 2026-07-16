@@ -34,10 +34,10 @@ where 's: 't,
     ) -> ExpressionTE<'s, 't> {
         let types_2: Vec<KindT<'s, 't>> = exprs.iter().map(|e| e.result()).collect();
         let region = RegionT::Default;
-        let final_expr = ExpressionTE::Tuple(self.typing_interner.alloc(TupleTE {
-            elements: self.typing_interner.alloc_slice_from_vec(exprs),
-            result: self.make_tuple_coord(env, coutputs, parent_ranges, call_location, region, types_2),
-        }));
+        let final_expr = ExpressionTE::Tuple(self.typing_interner.alloc(TupleTE::new(
+            self.typing_interner.alloc_slice_from_vec(exprs),
+            self.make_tuple_coord(env, coutputs, parent_ranges, call_location, region, types_2),
+        )));
         final_expr
     }
 

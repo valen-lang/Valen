@@ -936,7 +936,7 @@ pub struct LocalVariable<'s, 't>
 where 's: 't,
 {
   pub name: IVarNameT<'s, 't>,
-  pub coord: KindT<'s, 't>,
+  pub tyype: KindT<'s, 't>,
 }
 
 /// Value-type (see @TFITCX)

@@ -72,7 +72,7 @@ where 's: 't,
     pub type_name_to_inner_env:
         HashMap<IdT<'s, 't>, IInDenizenEnvironmentT<'s, 't>>,
 
-    pub type_name_to_mutability:
+    pub type_name_to_sharedness:
         HashMap<IdT<'s, 't>, SharednessT>,
     pub interface_name_to_sealed:
         HashMap<IdT<'s, 't>, bool>,
@@ -121,7 +121,7 @@ where 's: 't,
             function_name_to_inner_env: HashMap::default(),
             type_name_to_outer_env: HashMap::default(),
             type_name_to_inner_env: HashMap::default(),
-            type_name_to_mutability: HashMap::default(),
+            type_name_to_sharedness: HashMap::default(),
             interface_name_to_sealed: HashMap::default(),
             struct_template_name_to_definition: IndexMap::default(),
             interface_template_name_to_definition: IndexMap::default(),
@@ -328,14 +328,14 @@ where 's: 't,
         self.type_declared_names.insert(*template_name);
     }
     
-    pub fn declare_type_mutability(
+    pub fn declare_type_sharedness(
         &mut self,
         template_name: &'t IdT<'s, 't>,
         sharedness: SharednessT,
     ) {
         assert!(self.type_declared_names.contains(template_name));
-        assert!(!self.type_name_to_mutability.contains_key(template_name));
-        self.type_name_to_mutability.insert(*template_name, sharedness);
+        assert!(!self.type_name_to_sharedness.contains_key(template_name));
+        self.type_name_to_sharedness.insert(*template_name, sharedness);
     }
     
     pub fn declare_type_sealed(
@@ -407,7 +407,7 @@ where 's: 't,
         &mut self,
         struct_def: &'t StructDefinitionT<'s, 't>,
     ) {
-        assert!(self.type_name_to_mutability.contains_key(&struct_def.template_name));
+        assert!(self.type_name_to_sharedness.contains_key(&struct_def.template_name));
         assert!(!self.struct_template_name_to_definition.contains_key(&struct_def.template_name));
         self.struct_template_name_to_definition.insert(struct_def.template_name, struct_def);
     }
@@ -416,7 +416,7 @@ where 's: 't,
         &mut self,
         interface_def: &'t InterfaceDefinitionT<'s, 't>,
     ) {
-        assert!(self.type_name_to_mutability.contains_key(&interface_def.template_name));
+        assert!(self.type_name_to_sharedness.contains_key(&interface_def.template_name));
         assert!(self.interface_name_to_sealed.contains_key(&interface_def.template_name));
         assert!(!self.interface_template_name_to_definition.contains_key(&interface_def.template_name));
         self.interface_template_name_to_definition.insert(interface_def.template_name, interface_def);
@@ -535,7 +535,7 @@ where 's: 't,
         &self,
         template_name: IdT<'s, 't>,
     ) -> SharednessT {
-        match self.type_name_to_mutability.get(&template_name) {
+        match self.type_name_to_sharedness.get(&template_name) {
             None => panic!("Still figuring out mutability for struct: {:?}", template_name),
             Some(s) => *s,
         }

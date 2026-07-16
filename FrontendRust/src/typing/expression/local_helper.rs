@@ -27,18 +27,19 @@ where 's: 't,
     pub fn make_temporary_local(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, life: LocationInFunctionEnvironmentT<'t>, coord: KindT<'s, 't>) -> LocalVariable<'s, 't> {
         let var_id = self.typing_interner.intern_typing_pass_temporary_var_name(
             TypingPassTemporaryVarNameT { life });
-        let rlv = LocalVariable { name: var_id.into(), coord };
+        let rlv = LocalVariable { name: var_id.into(), tyype: coord };
         nenv.add_variable(IVariableT::Local(rlv));
         rlv
     }
 
     pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'t>, context_region: RegionT, r: ExpressionTE<'s, 't>) -> Result<&'t DeferTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let rlv = self.make_temporary_local(nenv, life, r.result());
-        let let_expr_2 = ExpressionTE::LetAndLend(self.typing_interner.alloc(LetAndLendTE {
-            variable: LocalVariable::Reference(rlv),
-            expr: r,
-        }));
-        let unlet = self.unlet_local_without_dropping(nenv, &LocalVariable::Reference(rlv));
+        let let_expr_2 = ExpressionTE::LetAndLend(self.typing_interner.alloc(LetAndLendTE::new(
+            self.typing_interner,
+            rlv,
+            r,
+        )));
+        let unlet = self.unlet_local_without_dropping(nenv, &rlv);
         let unlet_te: ExpressionTE<'s, 't> = ExpressionTE::Unlet(self.typing_interner.alloc(unlet));
         let snapshot: &'t NodeEnvironmentT<'s, 't> = nenv.snapshot(self.typing_interner);
         let env_in_denizen: IInDenizenEnvironmentT<'s, 't> =
@@ -49,7 +50,7 @@ where 's: 't,
     }
 
     pub fn unlet_local_without_dropping(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, local_var: &LocalVariable<'s, 't>) -> UnletTE<'s, 't> {
-        nenv.mark_local_unstackified(local_var.name());
+        nenv.mark_local_unstackified(local_var.name);
         UnletTE::new(*local_var)
     }
 
@@ -76,20 +77,12 @@ where 's: 't,
             panic!("There's already a variable named {:?}", var_id);
         }
 
-        let mutable = self.get_sharedness(coutputs, reference_type2.kind);
-        let addressible = Compiler::determine_if_local_is_addressible(mutable, local_variable_a);
-
-        let local_var = if addressible {
-            LocalVariable::Addressible(LocalVariable {
+        let mutable = self.get_sharedness(coutputs, reference_type2);
+        let local_var =
+            LocalVariable {
                 name: var_id,
-                coord: reference_type2,
-            })
-        } else {
-            LocalVariable::Reference(LocalVariable {
-                name: var_id,
-                coord: reference_type2,
-            })
-        };
+                tyype: reference_type2,
+            };
         nenv.add_variable(IVariableT::from(local_var));
         local_var
     }
@@ -225,20 +218,20 @@ where 's: 't,
     //     }
     // }
 
-    // See ClosureTests for requirements here
-    pub fn determine_if_local_is_addressible(
-        sharedness: SharednessT,
-        local_a: &'s LocalS<'s>,
-    ) -> bool {
-        match sharedness {
-            SharednessT::Single => {
-                local_a.child_mutated != IVariableUseCertainty::NotUsed || local_a.child_moved != IVariableUseCertainty::NotUsed
-            }
-            SharednessT::Shared => {
-                local_a.child_mutated != IVariableUseCertainty::NotUsed
-            }
-        }
-    }
+    // // See ClosureTests for requirements here
+    // pub fn determine_if_local_is_addressible(
+    //     sharedness: SharednessT,
+    //     local_a: &'s LocalS<'s>,
+    // ) -> bool {
+    //     match sharedness {
+    //         SharednessT::Single => {
+    //             local_a.child_mutated != IVariableUseCertainty::NotUsed || local_a.child_moved != IVariableUseCertainty::NotUsed
+    //         }
+    //         SharednessT::Shared => {
+    //             local_a.child_mutated != IVariableUseCertainty::NotUsed
+    //         }
+    //     }
+    // }
 
     
 }

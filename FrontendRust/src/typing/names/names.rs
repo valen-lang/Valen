@@ -955,7 +955,7 @@ impl StaticSizedArrayTemplateNameT {
     ) -> INameT<'s, 't> {
         assert!(template_args.len() == 2);
         let size = expect_integer(template_args[0]);
-        let element_type = expect_kind_templata(template_args[1]).coord;
+        let element_type = expect_kind_templata(template_args[1]).kind;
         let self_region = RegionT::Default;
         let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
             element_type,
@@ -994,7 +994,7 @@ impl RuntimeSizedArrayTemplateNameT {
         // vassert(templateArgs.size == 1)
         assert!(template_args.len() == 1);
         // val elementType = expectKindTemplata(templateArgs(0)).coord
-        let element_type = expect_kind_templata(template_args[0]).coord;
+        let element_type = expect_kind_templata(template_args[0]).kind;
         // val region = vregionmut(RegionT(DefaultRegionT))
         let region = RegionT::Default;
         // interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(elementType, region))))

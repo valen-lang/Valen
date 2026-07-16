@@ -15,10 +15,8 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::postparsing::rules::RuneUsage;
 use crate::typing::infer_compiler::{InferEnv, InitialKnown, InitialSend};
-use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
+use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
 use crate::typing::templata_compiler::IBoundArgumentsSource;
-use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT};
-use crate::parsing::ast::LoadAsP;
 use crate::postparsing::expressions::IExpressionSE;
 use crate::utils::fx::IndexMap;
 use crate::utils::fx::HashMap;
@@ -72,7 +70,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             &[LocalVariable<'s, 't>],
         ) -> ExpressionTE<'s, 't> + 'ctx,
     ) -> ExpressionTE<'s, 't> {
-        let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+        let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
         let distinct: HashSet<_> = names.iter().collect();
         assert!(names.len() == distinct.len());
 
@@ -88,7 +86,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     head_pattern_a, live_capture_locals, head_pattern_input_te, region,
                     move |compiler, coutputs, nenv, _life, live_capture_locals_raw| {
                         let live_capture_locals: &'t [LocalVariable<'s, 't>] = compiler.typing_interner.alloc_slice_copy(live_capture_locals_raw);
-                        let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+                        let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
                         let distinct: HashSet<_> = names.iter().collect();
                         assert!(names.len() == distinct.len());
 
@@ -215,8 +213,8 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                         })
                         .collect::<Vec<_>>());
                 let expected_coord = match complete_define_solve.conclusions.get(&receiver_rune.rune) {
-                    Some(ITemplataT::Coord(coord_templata)) => coord_templata.coord,
-                    _ => panic!("Expected coord templata for receiver rune"),
+                    Some(ITemplataT::Kind(kind_templata)) => kind_templata.kind,
+                    _ => panic!("Expected kind templata for receiver rune"),
                 };
 
                 let range_list: Vec<RangeS<'s>> =
@@ -257,7 +255,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         ) -> ExpressionTE<'s, 't> + 'ctx,
     ) -> ExpressionTE<'s, 't> {
         {
-            let names: Vec<_> = previous_live_capture_locals.iter().map(|l| l.name()).collect();
+            let names: Vec<_> = previous_live_capture_locals.iter().map(|l| l.name).collect();
             let distinct: Vec<_> = {
                 let mut seen = Vec::new();
                 for n in &names {
@@ -281,15 +279,13 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                         once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                     let local_t = if capture_s.mutate {
                         let local_t = match nenv.declared_locals().iter().find(|v| v.name() == local_name_t) {
-                            Some(IVariableT::Local(rlv)) => LocalVariable::Reference(*rlv),
+                            Some(IVariableT::Local(rlv)) => *rlv,
                             _ => panic!("expected ReferenceLocalVariableT in declared_locals"),
                         };
                         nenv.mark_local_restackified(local_name_t);
                         current_instructions.push(
-                            ExpressionTE::Restackify(self.typing_interner.alloc(RestackifyTE {
-                                variable: local_t,
-                                source_expr: input_expr,
-                            })));
+                            ExpressionTE::Restackify(self.typing_interner.alloc(
+                                RestackifyTE::new(local_t, input_expr))));
                         local_t
                     } else {
                         let (_block_env, block_expr) = nenv.nearest_block_env(self.typing_interner)
@@ -304,25 +300,22 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                         let local_t = self.make_user_local_variable(
                             coutputs, nenv, &range_list, local_s, input_expr.result());
                         current_instructions.push(
-                            ExpressionTE::LetNormal(self.typing_interner.alloc(LetNormalTE {
-                                variable: local_t,
-                                expr: input_expr,
-                            })));
+                            ExpressionTE::LetNormal(self.typing_interner.alloc(
+                                LetNormalTE::new(local_t, input_expr))));
                         local_t
                     };
-                    let local_lookup =
-                        ExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
-                            range: pattern.range,
-                            local_variable: local_t,
-                        }));
+                    // A local lookup is already a borrow reference to the local's value.
                     let captured_local_alias_te =
-                        self.soft_load(nenv, &range_list, local_lookup, LoadAsP::LoadAsBorrow, region);
+                        ExpressionTE::LocalLookup(self.typing_interner.alloc(
+                            LocalLookupTE::new(self.typing_interner, pattern.range, local_t)));
                     (Some(local_t), captured_local_alias_te)
                 }
             };
 
         if maybe_capture_local_var_t.is_some() {
-            assert!(expr_to_destructure_or_drop_or_pass_te.result().ownership != OwnershipT::Own);
+            // Capturing moved the input into the local, so what we pass on is a borrow of it.
+            assert!(matches!(
+                expr_to_destructure_or_drop_or_pass_te.result(), KindT::BorrowRef(_)));
         }
 
         let mut live_capture_locals: Vec<LocalVariable<'s, 't>> = previous_live_capture_locals.to_vec();
@@ -330,7 +323,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             live_capture_locals.push(local_t);
         }
         {
-            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
             let distinct: Vec<_> = {
                 let mut seen = Vec::new();
                 for n in &names {
@@ -368,17 +361,8 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 let list_refs: &'t [&'s AtomSP<'s>] = self.typing_interner.alloc_slice_copy(
                     &list_of_maybe_destructure_member_patterns.iter().collect::<Vec<_>>());
                 let live_capture_locals_t: &'t [LocalVariable<'s, 't>] = self.typing_interner.alloc_slice_copy(&live_capture_locals);
-                match expr_to_destructure_or_drop_or_pass_te.result().ownership {
-                    OwnershipT::Own => {
-                        vec![self.destructure_owning(
-                            coutputs, nenv, life.add(self.typing_interner, 1),
-                            ranges, call_location, live_capture_locals_t,
-                            expr_to_destructure_or_drop_or_pass_te,
-                            list_refs,
-                            region,
-                            after_sub_pattern_success_continuation)]
-                    }
-                    OwnershipT::Borrow | OwnershipT::Share => {
+                match expr_to_destructure_or_drop_or_pass_te.result() {
+                    KindT::BorrowRef(_) | KindT::ShareRef(_) => {
                         vec![self.destructure_non_owning_and_maybe_continue(
                             coutputs, nenv, life.add(self.typing_interner, 2),
                             ranges, call_location, live_capture_locals_t,
@@ -387,8 +371,21 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                             region,
                             after_sub_pattern_success_continuation)]
                     }
-                    OwnershipT::Weak => {
-                        unreachable!("ownership match handles only OwnT and BorrowT|ShareT here; Weak is a Rust-side exhaustiveness arm");
+                    KindT::HeapOwnRef(_) => {
+                        panic!("implement: destructure a heap-owned value");
+                    }
+                    KindT::WeakRef(_) => {
+                        unreachable!("a weak reference is never destructured; the pattern compiler only sees it via lock");
+                    }
+                    // A bare value is owned, so destructuring it destroys it.
+                    _ => {
+                        vec![self.destructure_owning(
+                            coutputs, nenv, life.add(self.typing_interner, 1),
+                            ranges, call_location, live_capture_locals_t,
+                            expr_to_destructure_or_drop_or_pass_te,
+                            list_refs,
+                            region,
+                            after_sub_pattern_success_continuation)]
                     }
                 }
             }
@@ -419,7 +416,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         ) -> ExpressionTE<'s, 't> + 'ctx,
     ) -> ExpressionTE<'s, 't> {
         {
-            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
+            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name).collect();
             let distinct: Vec<_> = {
                 let mut seen = Vec::new();
                 for n in &names { if !seen.contains(n) { seen.push(*n); } }
@@ -427,9 +424,11 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             };
             assert!(names == distinct);
         }
-        let expected_container_kind = match input_expr.result().ownership {
-            OwnershipT::Own => input_expr.result().clone(),
-            _ => panic!("destructureOwning: expected Own"),
+        let expected_container_kind = match input_expr.result() {
+            // Only a bare value is owned, and destructure_owning destroys what it's given.
+            KindT::BorrowRef(_) | KindT::HeapOwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) =>
+                panic!("destructure_owning: expected a bare value"),
+            bare_kind => bare_kind,
         };
         match expected_container_kind {
             KindT::Struct(_) => {
@@ -466,16 +465,16 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 let element_locals: Vec<LocalVariable<'s, 't>> = (0..size as usize).map(|i| {
                     self.make_temporary_local(nenv, life.add(self.typing_interner, (3 + i) as i32), element_type)
                 }).collect();
-                let destroy_te = ExpressionTE::DestroyStaticSizedArrayIntoLocals(self.typing_interner.alloc(DestroyStaticSizedArrayIntoLocalsTE {
-                    expr: input_expr,
-                    static_sized_array: self.typing_interner.alloc(*static_sized_array_t),
-                    destination_reference_variables: self.typing_interner.alloc_slice_from_vec(element_locals.clone()),
-                }));
+                let destroy_te = ExpressionTE::DestroyStaticSizedArrayIntoLocals(self.typing_interner.alloc(
+                    DestroyStaticSizedArrayIntoLocalsTE::new(
+                        input_expr,
+                        self.typing_interner.alloc(*static_sized_array_t),
+                        self.typing_interner.alloc_slice_from_vec(element_locals.clone()))));
                 let live_capture_locals: Vec<LocalVariable<'s, 't>> = initial_live_capture_locals.iter().copied()
-                    .chain(element_locals.iter().map(|l: &LocalVariable<'s, 't>| LocalVariable::Reference(*l)))
+                    .chain(element_locals.iter().copied())
                     .collect();
                 {
-                    let names: Vec<_> = live_capture_locals.iter().map(|l: &LocalVariable<'s, 't>| l.name()).collect();
+                    let names: Vec<_> = live_capture_locals.iter().map(|l: &LocalVariable<'s, 't>| l.name).collect();
                     let distinct: Vec<_> = { let mut seen = Vec::new(); for n in &names { if !seen.contains(n) { seen.push(*n); } } seen };
                     assert!(names == distinct);
                 }
@@ -484,9 +483,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     // throw CompileErrorExceptionT(WrongNumberOfDestructuresError(parentRanges, ...))
                 }
                 let live_capture_locals_slice = self.typing_interner.alloc_slice_from_vec(live_capture_locals);
-                let element_locals_slice = self.typing_interner.alloc_slice_from_vec(
-                    element_locals.into_iter().map(|l| LocalVariable::Reference(l)).collect()
-                );
+                let element_locals_slice = self.typing_interner.alloc_slice_from_vec(element_locals);
                 let lets = self.make_lets_for_own_and_maybe_continue(
                     coutputs, nenv, life.add(self.typing_interner, 4), parent_ranges, call_location,
                     live_capture_locals_slice, element_locals_slice, list_of_maybe_destructure_member_patterns, region,
@@ -498,9 +495,8 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     panic!("implement: destructureOwning RuntimeSizedArray — RangedInternalErrorT: Can only destruct RSA with zero destructure targets.");
                     // throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Can only destruct RSA with zero destructure targets."))
                 }
-                ExpressionTE::DestroyRuntimeSizedArray(self.typing_interner.alloc(DestroyRuntimeSizedArrayTE {
-                    array_expr: input_expr,
-                }))
+                ExpressionTE::DestroyRuntimeSizedArray(self.typing_interner.alloc(
+                    DestroyRuntimeSizedArrayTE::new(input_expr)))
             }
             _ => {
                 panic!("implement: destructureOwning — non-struct kind");
@@ -529,7 +525,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         ) -> ExpressionTE<'s, 't> + 'ctx,
     ) -> ExpressionTE<'s, 't> {
         {
-            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
             let distinct: Vec<_> = {
                 let mut seen = Vec::new();
                 for n in &names { if !seen.contains(n) { seen.push(*n); } }
@@ -539,16 +535,12 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         }
 
         let local_t = self.make_temporary_local(nenv, life.add(self.typing_interner, 0), container_te.result());
-        let let_te = ExpressionTE::LetNormal(self.typing_interner.alloc(LetNormalTE {
-            variable: LocalVariable::Reference(local_t),
-            expr: container_te,
-        }));
-        let local_lookup = ExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
-            range: range[0],
-            local_variable: LocalVariable::Reference(local_t),
-        }));
+        let let_te = ExpressionTE::LetNormal(self.typing_interner.alloc(
+            LetNormalTE::new(local_t, container_te)));
+        // A local lookup is already a borrow reference to the local's value.
         let container_aliasing_expr_te: ExpressionTE<'s, 't> =
-            self.soft_load(nenv, range, local_lookup, LoadAsP::LoadAsBorrow, region);
+            ExpressionTE::LocalLookup(self.typing_interner.alloc(
+                LocalLookupTE::new(self.typing_interner, range[0], local_t)));
         let iterate_expr = self.iterate_destructure_non_owning_and_maybe_continue(
             coutputs, nenv, life.add(self.typing_interner, 1), range, call_location, live_capture_locals,
             container_te.result(), container_aliasing_expr_te, 0,
@@ -578,7 +570,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         ) -> ExpressionTE<'s, 't> + 'ctx>,
     ) -> ExpressionTE<'s, 't> {
         {
-            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
             let distinct: Vec<_> = {
                 let mut seen = Vec::new();
                 for n in &names { if !seen.contains(n) { seen.push(*n); } }
@@ -587,7 +579,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             assert!(names == distinct);
         }
 
-        let KindT { kind: expected_container_kind, .. } = expected_container_coord;
+        let expected_container_kind = expected_container_coord;
 
         match list_of_maybe_destructure_member_patterns {
             [] => after_destructure_success_continuation(self, coutputs, nenv, life.add(self.typing_interner, 0), live_capture_locals),
@@ -600,19 +592,17 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                         self.load_from_struct(coutputs, env, head_maybe_destructure_member_pattern.range, region, container_aliasing_expr_te, *struct_tt, member_index)
                     }
                     KindT::StaticSizedArray(static_sized_array_t) => {
-                        self.load_from_static_sized_array(head_maybe_destructure_member_pattern.range, *static_sized_array_t, expected_container_coord, expected_container_coord.ownership, container_aliasing_expr_te, member_index)
+                        self.load_from_static_sized_array(head_maybe_destructure_member_pattern.range, *static_sized_array_t, container_aliasing_expr_te, member_index)
                     }
                     _ => {
                         panic!("implement: iterate_destructure_non_owning_and_maybe_continue — unknown container kind");
                         // throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Unknown type to destructure: " + other))
                     }
                 };
-                let member_ownership_in_struct = member_addr_expr_te.result().ownership;
-                let coerce_to_ownership = self.load_result_ownership(member_ownership_in_struct);
-                let load_expr = ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE {
-                    expr: member_addr_expr_te,
-                    target_ownership: coerce_to_ownership,
-                }));
+                // A member lookup is already a borrow reference to the member. Reading it as a
+                // value is the sub-pattern's business: its type annotation drives convert(),
+                // which probes implicit_clone.
+                let load_expr = member_addr_expr_te;
                 let next_member_index = member_index + 1;
                 self.inner_translate_sub_pattern_and_maybe_continue(
                     coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, call_location,
@@ -620,7 +610,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     Box::new(move |compiler: &Compiler<'s, 'ctx, 't>, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, life: LocationInFunctionEnvironmentT<'t>, live_capture_locals: &[LocalVariable<'s, 't>]| {
                         let live_capture_locals: &'t [LocalVariable<'s, 't>] = compiler.typing_interner.alloc_slice_copy(live_capture_locals);
                         {
-                            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+                            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
                             let distinct: Vec<_> = {
                                 let mut seen = Vec::new();
                                 for n in &names { if !seen.contains(n) { seen.push(*n); } }
@@ -658,7 +648,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         ) -> ExpressionTE<'s, 't> + 'ctx,
     ) -> ExpressionTE<'s, 't> {
         {
-            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
+            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name).collect();
             let distinct: Vec<_> = {
                 let mut seen = Vec::new();
                 for n in &names { if !seen.contains(n) { seen.push(*n); } }
@@ -681,33 +671,19 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         let member_locals: Vec<LocalVariable<'s, 't>> = struct_def_t.members.iter()
             .enumerate()
             .map(|(i, member)| {
-                let unsubstituted_member_coord = match member {
-                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => *reference,
-                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
-                        panic!("implement: translateDestroyStructInnerAndMaybeContinue — AddressMemberTypeT");
-                        // vimpl()
-                    }
-                    IStructMemberT::Variadic(_) => {
-                        panic!("implement: translateDestroyStructInnerAndMaybeContinue — VariadicStructMemberT");
-                        // vimpl()
-                    }
-                };
-                let member_type = substituter.substitute_for_coord(coutputs, unsubstituted_member_coord);
+                let member_type = substituter.substitute_for_coord(coutputs, member.tyype);
                 self.make_temporary_local(nenv, life.add(self.typing_interner, 1 + i as i32), member_type)
             })
             .collect();
         let struct_tt_ref = self.typing_interner.alloc(struct_tt);
         let member_locals_ref = self.typing_interner.alloc_slice_copy(&member_locals);
-        let destroy_te = ExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE {
-            expr: input_struct_expr,
-            struct_tt: struct_tt_ref,
-            destination_reference_variables: member_locals_ref,
-        }));
+        let destroy_te = ExpressionTE::Destroy(self.typing_interner.alloc(
+            DestroyTE::new(input_struct_expr, struct_tt_ref, member_locals_ref)));
         let live_capture_locals: Vec<LocalVariable<'s, 't>> = initial_live_capture_locals.iter().copied()
-            .chain(member_locals.iter().map(|l| LocalVariable::Reference(*l)))
+            .chain(member_locals.iter().copied())
             .collect();
         {
-            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
             let distinct: Vec<_> = {
                 let mut seen = Vec::new();
                 for n in &names { if !seen.contains(n) { seen.push(*n); } }
@@ -719,8 +695,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             panic!("WrongNumberOfDestructuresError: expected {} got {}", inner_patterns.len(), member_locals.len());
         }
         let live_capture_locals: &'t [LocalVariable<'s, 't>] = self.typing_interner.alloc_slice_copy(&live_capture_locals);
-        let member_locals_as_local: &'t [LocalVariable<'s, 't>] = self.typing_interner.alloc_slice_copy(
-            &member_locals.iter().map(|l| LocalVariable::Reference(*l)).collect::<Vec<_>>());
+        let member_locals_as_local: &'t [LocalVariable<'s, 't>] = self.typing_interner.alloc_slice_copy(&member_locals);
         let rest_te = self.make_lets_for_own_and_maybe_continue(
             coutputs, nenv, life.add(self.typing_interner, 0),
             parent_ranges, call_location, live_capture_locals,
@@ -749,7 +724,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         ) -> ExpressionTE<'s, 't> + 'ctx>,
     ) -> ExpressionTE<'s, 't> {
         {
-            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
+            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name).collect();
             let distinct: Vec<_> = {
                 let mut seen = Vec::new();
                 for n in &names { if !seen.contains(n) { seen.push(*n); } }
@@ -767,7 +742,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 let unlet_expr_te = ExpressionTE::Unlet(self.typing_interner.alloc(unlet_expr));
                 let live_capture_locals: &'t [LocalVariable<'s, 't>] = self.typing_interner.alloc_slice_copy(
                     &initial_live_capture_locals.iter().copied()
-                        .filter(|l| l.name() != head_member_local_variable.name())
+                        .filter(|l| l.name != head_member_local_variable.name)
                         .collect::<Vec<_>>());
                 assert!(live_capture_locals.len() == initial_live_capture_locals.len() - 1);
                 let head_inner_pattern_range = head_inner_pattern.range;
@@ -782,7 +757,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     move |compiler, coutputs, nenv, life, live_capture_locals_raw| {
                         let live_capture_locals: &'t [LocalVariable<'s, 't>] = compiler.typing_interner.alloc_slice_copy(live_capture_locals_raw);
                         {
-                            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
+                            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name).collect();
                             let distinct: Vec<_> = {
                                 let mut seen = Vec::new();
                                 for n in &names { if !seen.contains(n) { seen.push(*n); } }
@@ -801,18 +776,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         }
     }
 
-    pub fn load_result_ownership(
-        &self,
-        member_ownership_in_struct: OwnershipT,
-    ) -> OwnershipT {
-        match member_ownership_in_struct {
-            OwnershipT::Own => OwnershipT::Borrow,
-            OwnershipT::Borrow => OwnershipT::Borrow,
-            OwnershipT::Weak => OwnershipT::Weak,
-            OwnershipT::Share => OwnershipT::Share,
-        }
-    }
-
     pub fn load_from_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -825,17 +788,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
     ) -> ExpressionTE<'s, 't> {
         let struct_def_t = coutputs.lookup_struct(struct_tt.id, self);
         let member = &struct_def_t.members[index as usize];
-        let unsubstituted_member_coord = match member {
-            IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => *reference,
-            IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
-                panic!("implement: load_from_struct — AddressMemberTypeT");
-                // vimpl()
-            }
-            IStructMemberT::Variadic(_) => {
-                panic!("implement: load_from_struct — VariadicStructMemberT");
-                // vimpl()
-            }
-        };
         let instantiation_bounds = coutputs.get_instantiation_bounds(self.typing_interner, struct_tt.id).unwrap();
         let member_type = self.get_placeholder_substituter(
             self.opts.global_options.sanity_check,
@@ -845,29 +797,21 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 instantiation_bound_params: struct_def_t.instantiation_bound_params,
                 instantiation_bound_arguments: instantiation_bounds,
             },
-        ).substitute_for_coord(coutputs, unsubstituted_member_coord);
-        ExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(ReferenceMemberLookupTE {
-            range: load_range,
-            struct_expr: container_alias,
-            member_name: *struct_def_t.members[index as usize].name(),
-            member_reference: member_type,
-        }))
+        ).substitute_for_coord(coutputs, member.tyype);
+        ExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(
+            ReferenceMemberLookupTE::new(
+                self.typing_interner, load_range, container_alias, member.name, member_type)))
     }
 
     pub fn load_from_static_sized_array(
         &self,
         range: RangeS<'s>,
         static_sized_array_t: StaticSizedArrayTT<'s, 't>,
-        _local_coord: KindT<'s, 't>,
-        _struct_ownership: OwnershipT,
         container_alias: ExpressionTE<'s, 't>,
         index: i32,
     ) -> ExpressionTE<'s, 't> {
-        let index_expr = ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
-            value: ITemplataT::Integer(index as i64),
-            bits: 32,
-            region: RegionT::Default,
-        }));
+        let index_expr = ExpressionTE::ConstantInt(self.typing_interner.alloc(
+            ConstantIntTE::new(ITemplataT::Integer(index as i64), 32, RegionT::Default)));
         let lookup = self.lookup_in_static_sized_array(range, container_alias, index_expr, static_sized_array_t);
         ExpressionTE::StaticSizedArrayLookup(self.typing_interner.alloc(lookup))
     }

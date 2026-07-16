@@ -11,7 +11,7 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::types::types::{KindT, RegionT, OwnershipT, ISubKindTT, ISuperKindTT};
+use crate::typing::types::types::{KindT, RegionT, ISubKindTT, ISuperKindTT};
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::citizen::impl_compiler::IsParentResult;
 use crate::typing::names::names::IFunctionNameT;
@@ -84,10 +84,8 @@ where 's: 't,
         };
 
         let as_subtype_expr = ExpressionTE::AsSubtype(self.typing_interner.alloc(AsSubtypeTE {
-            source_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
-                param_index: 0,
-                coord: incoming_coord,
-            })),
+            source_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(
+                ArgLookupTE::new(0, incoming_coord))),
             target_type: success_coord,
             result_result_type: result_coord,
             ok_constructor: self.typing_interner.alloc(ok_constructor),
@@ -97,11 +95,11 @@ where 's: 't,
             err_impl_name: err_result_impl,
         }));
 
-        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: as_subtype_expr,
-            })),
-        }));
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
+            ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
+                as_subtype_expr,
+            ))),
+        )));
         Ok((header, body))
     }
 

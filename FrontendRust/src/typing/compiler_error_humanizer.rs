@@ -23,7 +23,6 @@ use crate::postparsing::ast::*;
 use crate::postparsing::ast::FunctionS;
 use crate::typing::citizen::struct_compiler::*;
 use crate::utils::code_hierarchy::FileCoordinate;
-use crate::typing::types::types::OwnershipT;
 use crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name;
 use crate::postparsing::post_parser_error_humanizer::humanize_name_for_struct_declaration;
 use crate::postparsing::post_parser_error_humanizer::humanize_rule;
@@ -97,6 +96,17 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
       format!("Couldn't convert {} to expected return type {}",
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *actual_type }))),
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *expected_type }))))
+    }
+    ICompileErrorT::CouldntConvertT { range: _, source_type, target_type } => {
+      format!("Couldn't convert {} to {}",
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *source_type }))),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *target_type }))))
+    }
+    ICompileErrorT::CouldntUpcastT { range: _, source_type, target_type, isnt_parent } => {
+      format!("Couldn't upcast {} to {}, no impl makes it a subtype. Rejected {} candidate(s).",
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *source_type }))),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *target_type }))),
+        isnt_parent.candidates.len())
     }
     ICompileErrorT::CouldntConvertForMutateT { range: _, expected_type, actual_type } => {
       format!("Mutate couldn't convert {} to expected destination type {}",

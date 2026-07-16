@@ -246,7 +246,7 @@ pub struct UnletTE<'s, 't> {
 
 impl<'s, 't> UnletTE<'s, 't> where 's: 't, {
     pub fn new(variable: LocalVariable<'s, 't>) -> UnletTE<'s, 't> {
-        let result = variable.tyype();
+        let result = variable.tyype;
         UnletTE { variable, result, _sealed: () }
     }
 }
@@ -362,7 +362,15 @@ impl<'s, 't> MutateTE<'s, 't> where 's: 't, {
         destination_expr: ExpressionTE<'s, 't>,
         source_expr: ExpressionTE<'s, 't>,
     ) -> MutateTE<'s, 't> {
-        let result = destination_expr.result();
+        let destination_inner_type =
+            match destination_expr.result() {
+                KindT::BorrowRef(BorrowRefT { inner: destination_inner_type, region: _ }) => {
+                    *destination_inner_type
+                }
+                _ => panic!("Unexpected destination expr type in MutateTE::new: {:?} in expr: {:?}", destination_expr.result(), destination_expr)
+            };
+        assert_eq!(destination_inner_type, source_expr.result());
+        let result = destination_inner_type;
         MutateTE { destination_expr, source_expr, result, _sealed: () }
     }
 }
@@ -650,7 +658,7 @@ impl<'s, 't> LocalLookupTE<'s, 't> where 's: 't, {
         range: RangeS<'s>,
         local_variable: LocalVariable<'s, 't>,
     ) -> LocalLookupTE<'s, 't> {
-        let result = interner.alloc(BorrowRefT { inner: local_variable.tyype(), region: RegionT::Default });
+        let result = interner.alloc(BorrowRefT { inner: local_variable.tyype, region: RegionT::Default });
         LocalLookupTE { range, local_variable, result, _sealed: () }
     }
 }
@@ -839,6 +847,7 @@ where 's: 't,
 {
     pub callable: &'t PrototypeT<'s, 't>,
     pub args: &'t [ExpressionTE<'s, 't>],
+    // VCOORD: rename to return_type
     pub result: KindT<'s, 't>,
     _sealed: (),
 }

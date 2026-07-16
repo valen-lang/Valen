@@ -2,7 +2,7 @@ use crate::postparsing::ast::{FunctionS, InterfaceS, StructS};
 use crate::postparsing::ast::{ExternS, ICitizenAttributeS, IStructMemberS, LocationInDenizen};
 use crate::postparsing::names::IFunctionDeclarationNameS;
 use crate::typing::ast::ast::{ExternT, ICitizenAttributeT};
-use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT, InterfaceDefinitionT, NormalStructMemberT, StructDefinitionT};
+use crate::typing::ast::citizens::{InterfaceDefinitionT, StructMemberT, StructDefinitionT};
 use crate::typing::names::names::{CodeVarNameT, IVarNameT};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
@@ -10,7 +10,7 @@ use crate::typing::env::environment::{CitizenEnvironmentT, IInDenizenEnvironment
 use crate::typing::env::function_environment_t::NodeEnvironmentT;
 use crate::typing::templata::templata::FunctionTemplataT;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
-use crate::typing::types::types::{SharednessT, OwnershipT, StructTT};
+use crate::typing::types::types::{SharednessT, StructTT};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::range::RangeS;
 use crate::typing::names::names::{IInstantiationNameT, IStructTemplateNameT, IdValT, INameT};
@@ -30,12 +30,10 @@ use crate::postparsing::names::RuneNameS;
 use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
-use crate::typing::ast::citizens::ReferenceMemberTypeT;
 use crate::postparsing::names::INameValS;
 use crate::postparsing::names::IFunctionDeclarationNameValS;
 use crate::postparsing::names::FunctionNameS;
 use crate::postparsing::names::INameS;
-use crate::typing::ast::citizens::AddressMemberTypeT;
 use crate::postparsing::ast::MacroCallS;
 use crate::postparsing::names::IStructDeclarationNameS;
 use crate::typing::ast::ast::PrototypeT;
@@ -313,7 +311,7 @@ where 's: 't,
                         // val CoordTemplataT(coord) = typeTemplata  // pattern-destructure that vfails otherwise
                     }
                 };
-                IStructMemberT::Normal(NormalStructMemberT {
+                IStructMemberT::Normal(StructMemberT {
                     name: IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(CodeVarNameT { name: n.name})),
                     tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                 })
@@ -326,14 +324,14 @@ where 's: 't,
     }
 
     pub fn make_closure_understruct_core(
-        &self,
-        containing_function_env: &'t NodeEnvironmentT<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        name: IFunctionDeclarationNameS<'s>,
-        function_a: &'s FunctionS<'s>,
-        members: &[&'t NormalStructMemberT<'s, 't>],
+      &self,
+      containing_function_env: &'t NodeEnvironmentT<'s, 't>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      parent_ranges: &[RangeS<'s>],
+      call_location: LocationInDenizen<'s>,
+      name: IFunctionDeclarationNameS<'s>,
+      function_a: &'s FunctionS<'s>,
+      members: &[&'t StructMemberT<'s, 't>],
     ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
 
         // VCOORD:
@@ -452,7 +450,7 @@ where 's: 't,
             IInDenizenEnvironmentT::Citizen(struct_outer_env));
         coutputs.declare_type_inner_env(understruct_templated_id,
             IInDenizenEnvironmentT::Citizen(struct_inner_env));
-        coutputs.declare_type_mutability(understruct_templated_id, sharedness);
+        coutputs.declare_type_sharedness(understruct_templated_id, sharedness);
 
         let closure_struct_definition = StructDefinitionT {
             template_name: *understruct_templated_id,
@@ -465,7 +463,7 @@ where 's: 't,
                     IMemberTypeT::Address(a) => IMemberTypeT::Address(AddressMemberTypeT { reference: a.reference }),
                     IMemberTypeT::Reference(r) => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: r.reference }),
                 };
-                IStructMemberT::Normal(NormalStructMemberT { name: m.name, tyype })
+                IStructMemberT::Normal(StructMemberT { name: m.name, tyype })
             }).collect::<Vec<_>>()),
             is_closure: true,
             instantiation_bound_params: self.typing_interner.alloc(InstantiationBoundArgumentsT {

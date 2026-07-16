@@ -15,7 +15,7 @@ use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::names::names::{IFunctionNameT, INameT};
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::types::types::{KindT, KindT, OwnershipT};
+use crate::typing::types::types::{KindT, OwnershipT, BorrowRefT};
 use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::ConstantIntTE;
 use crate::typing::types::types::IntT;
@@ -58,7 +58,6 @@ use crate::typing::names::names::StructNameT;
 use crate::typing::templata::templata::StructDefinitionTemplataT;
 use crate::typing::templata::templata::KindTemplataT;
 use crate::typing::types::types::StructTT;
-use crate::typing::templata::templata::CoordTemplataT;
 use crate::typing::test::traverse::NodeRefT;
 use crate::postparsing::names::INameValS;
 use crate::postparsing::names::IFunctionDeclarationNameValS;
@@ -162,14 +161,14 @@ fn test_having_drop_function_concept_function() {
     let template_args = IFunctionNameT::try_from(bork.header.id.local_name).unwrap().template_args();
     assert_eq!(template_args.len(), 1);
     match template_args[0] {
-        ITemplataT::Coord(ct) => match ct.coord {
-            KindT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(kp), .. } => match kp.id.local_name {
+        ITemplataT::Kind(ct) => match ct.kind {
+            KindT::KindPlaceholder(kp) => match kp.id.local_name {
                 INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 0),
                 _ => panic!("expected KindPlaceholder local_name"),
             },
-            _ => panic!("expected CoordT with KindPlaceholder"),
+            _ => panic!("expected KindPlaceholder"),
         },
-        _ => panic!("expected Coord template arg"),
+        _ => panic!("expected Kind template arg"),
     }
 
     // Make sure it calls drop, and that it has the right placeholders
@@ -181,24 +180,20 @@ fn test_having_drop_function_concept_function() {
                     local_name: INameT::FunctionBound(FunctionBoundNameT {
                         template: FunctionBoundTemplateNameT { human_name: StrI("drop"), .. },
                         template_args: &[],
-                        parameters: &[KindT {
-                            ownership: OwnershipT::Own,
-                            kind: KindT::KindPlaceholder(KindPlaceholderT {
-                                id: IdT {
-                                    init_steps: &[INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("bork"), .. })],
-                                    local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
-                                        template: KindPlaceholderTemplateNameT { index: 0, .. },
-                                    }),
-                                    ..
-                                },
-                            }),
-                            ..
-                        }],
+                        parameters: &[KindT::KindPlaceholder(KindPlaceholderT {
+                            id: IdT {
+                                init_steps: &[INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("bork"), .. })],
+                                local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                    template: KindPlaceholderTemplateNameT { index: 0, .. },
+                                }),
+                                ..
+                            },
+                        })],
                         ..
                     }),
                     ..
                 },
-                return_type: KindT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. },
+                return_type: KindT::Void(_),
             },
             ..
         }) => Some(())
@@ -238,15 +233,15 @@ exported func main() {
                 id: IdT {
                     local_name: INameT::Function(FunctionNameT {
                         template: FunctionTemplateNameT { human_name: StrI("bork"), .. },
-                        template_args: &[ITemplataT::Coord(CoordTemplataT {
-                            coord: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. },
+                        template_args: &[ITemplataT::Kind(KindTemplataT {
+                            kind: KindT::Int(IntT::I32),
                         })],
-                        parameters: &[KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. }],
+                        parameters: &[KindT::Int(IntT::I32)],
                         ..
                     }),
                     ..
                 },
-                return_type: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. },
+                return_type: KindT::Int(IntT::I32),
             },
             args: &[ExpressionTE::ConstantInt(ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. })],
             ..
@@ -354,26 +349,26 @@ exported func main() {
         INameT::Function(fn_name) => {
             assert_eq!(fn_name.template.human_name.0, "bork");
             let template_arg_coord = match fn_name.template_args {
-                [ITemplataT::Coord(ct)] => ct.coord,
-                _ => panic!("expected Vector(CoordTemplataT(templateArgCoord))"),
+                [ITemplataT::Kind(ct)] => ct.kind,
+                _ => panic!("expected Vector(KindTemplataT(templateArgKind))"),
             };
             let arg = match fn_name.parameters {
                 [a] => *a,
                 _ => panic!("expected Vector(arg)"),
             };
             match prototype.return_type {
-                KindT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. } => {}
-                _ => panic!("expected Share Void return_type"),
+                KindT::Void(_) => {}
+                _ => panic!("expected Void return_type"),
             }
             match template_arg_coord {
-                KindT { ownership: OwnershipT::Own, kind: KindT::Struct(stt), .. } => match stt.id.local_name {
+                KindT::Struct(stt) => match stt.id.local_name {
                     INameT::Struct(sn) => match sn.template {
                         IStructTemplateNameT::StructTemplate(st) => assert_eq!(st.human_name.0, "Mork"),
                         _ => panic!("expected StructTemplate"),
                     },
                     _ => panic!("expected Struct local_name"),
                 },
-                _ => panic!("expected Own Struct(Mork)"),
+                _ => panic!("expected Struct(Mork)"),
             }
             assert_eq!(arg, template_arg_coord);
         }
@@ -405,7 +400,6 @@ fn humanize_errors() {
     region_init_steps.push(func_template_id.local_name);
     let region_init_steps_slice: &[INameT] = typing_bump.alloc_slice_copy(&region_init_steps);
     let _region_name = typing_interner.intern_id(IdValT { package_coord: func_template_id.package_coord, init_steps: region_init_steps_slice, local_name: INameT::KindPlaceholder(kp_name) });
-    let region = RegionT::Default;
 
     let firefly_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Firefly")});
@@ -414,7 +408,6 @@ fn humanize_errors() {
     let firefly_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(firefly_struct_name) });
     let firefly_tt = typing_interner.intern_struct_tt(StructTTValT { id: *firefly_id });
     let firefly_kind = KindT::Struct(firefly_tt);
-    let _firefly_coord = KindT::new(OwnershipT::Own, region, firefly_kind);
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Serenity")});
@@ -423,7 +416,6 @@ fn humanize_errors() {
     let serenity_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(serenity_struct_name) });
     let serenity_tt = typing_interner.intern_struct_tt(StructTTValT { id: *serenity_id });
     let serenity_kind = KindT::Struct(serenity_tt);
-    let _serenity_coord = KindT::new(OwnershipT::Own, region, serenity_kind);
 
     let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship")});
@@ -432,7 +424,6 @@ fn humanize_errors() {
     let ispaceship_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Interface(ispaceship_interface_name) });
     let ispaceship_tt = typing_interner.intern_interface_tt(InterfaceTTValT { id: *ispaceship_id });
     let ispaceship_kind = KindT::Interface(ispaceship_tt);
-    let _ispaceship_coord = KindT::new(OwnershipT::Own, region, ispaceship_kind);
 
     let unrelated_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Spoon")});
@@ -441,10 +432,9 @@ fn humanize_errors() {
     let unrelated_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(unrelated_struct_name) });
     let unrelated_tt = typing_interner.intern_struct_tt(StructTTValT { id: *unrelated_id });
     let unrelated_kind = KindT::Struct(unrelated_tt);
-    let _unrelated_coord = KindT::new(OwnershipT::Own, region, unrelated_kind);
 
     let myfunc_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz[0].begin});
-    let myfunc_params: &[KindT] = typing_bump.alloc_slice_copy(&[KindT::new(OwnershipT::Own, region, firefly_kind)]);
+    let myfunc_params: &[KindT] = typing_bump.alloc_slice_copy(&[firefly_kind]);
     let myfunc_name = typing_interner.intern_function_name(FunctionNameValT { template: myfunc_template, template_args: &[], parameters: myfunc_params });
     let myfunc_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Function(myfunc_name) });
     let _firefly_signature = SignatureT { id: *myfunc_id };
@@ -644,8 +634,8 @@ where
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
     let coutputs = compile.expect_compiler_outputs();
     match coutputs.lookup_function_by_str("main").header.return_type {
-        KindT { ownership: OwnershipT::Borrow, kind: KindT::Struct(_), .. } => {}
-        _ => panic!("expected Borrow Struct return_type"),
+        KindT::BorrowRef(BorrowRefT { inner: KindT::Struct(_), .. }) => {}
+        _ => panic!("expected BorrowRef(Struct) return_type"),
     }
 }
 
@@ -835,11 +825,11 @@ exported func main() {
                 _ => panic!("expected Function local_name"),
             };
             match fn_name.template_args[0] {
-                ITemplataT::Coord(ct) => match ct.coord {
-                    KindT { kind: KindT::Interface(_), .. } => {}
+                ITemplataT::Kind(ct) => match ct.kind {
+                    KindT::Interface(_) => {}
                     _ => panic!("expected Interface template arg"),
                 },
-                _ => panic!("expected Coord template arg"),
+                _ => panic!("expected Kind template arg"),
             }
             c
         })
@@ -877,17 +867,17 @@ exported func main() {
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
     match moo.header.params[0].tyype {
-        KindT { kind: KindT::Interface(itt), .. } => match itt.id.local_name {
+        KindT::Interface(itt) => match itt.id.local_name {
             INameT::Interface(in_) => match in_.template_args {
-                [ITemplataT::Coord(ct)] => match ct.coord {
-                    KindT { kind: KindT::KindPlaceholder(_), .. } => {}
+                [ITemplataT::Kind(ct)] => match ct.kind {
+                    KindT::KindPlaceholder(_) => {}
                     _ => panic!("expected KindPlaceholder template arg"),
                 },
-                _ => panic!("expected single Coord template arg"),
+                _ => panic!("expected single Kind template arg"),
             },
             _ => panic!("expected Interface local_name"),
         },
-        _ => panic!("expected Interface param coord"),
+        _ => panic!("expected Interface param kind"),
     }
     let main = coutputs.lookup_function_by_str("main");
     let calls: Vec<&FunctionCallTE> = collect_where_tnode!(
@@ -909,7 +899,7 @@ exported func main() {
             ISuperKindTT::Interface(itt) => match itt.id.local_name {
                 INameT::Interface(in_) => {
                     in_.template.human_namee.0 == "IShip" && match in_.template_args {
-                        [ITemplataT::Coord(ct)] => matches!(ct.coord, KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. }),
+                        [ITemplataT::Kind(ct)] => matches!(ct.kind, KindT::Int(IntT::I32)),
                         _ => false,
                     }
                 }
@@ -1037,10 +1027,12 @@ exported func main() int {
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
     let coutputs = compile.expect_compiler_outputs();
-    // Ensures that `&T` on a share-flavored kind stays a distinct Borrow ownership
-    // rather than collapsing to `Share T`, e.g. `&SomeStruct` here where SomeStruct
+    // Ensures that `&T` on a share-flavored kind stays a distinct BorrowRef layer
+    // rather than collapsing to `ShareRef T`, e.g. `&SomeStruct` here where SomeStruct
     // is share-flavored.
-    assert_eq!(coutputs.lookup_function_by_str("bork").header.params[0].tyype.ownership, OwnershipT::Borrow);
+    assert!(matches!(
+        coutputs.lookup_function_by_str("bork").header.params[0].tyype,
+        KindT::BorrowRef(_)));
 }
 
 #[test]
@@ -1152,7 +1144,7 @@ exported func main() int {
         _ => panic!("expected Function local_name"),
     };
     let last = *template_args.last().unwrap();
-    assert_eq!(last, ITemplataT::Coord(typing_bump.alloc(CoordTemplataT { coord: KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT::I32)) })));
+    assert_eq!(last, ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: KindT::Int(IntT::I32) })));
 }
 
 #[test]
@@ -1193,8 +1185,8 @@ exported func main() int {
         _ => panic!("expected Function local_name"),
     };
     match swap_template_args.last().unwrap() {
-        ITemplataT::Coord(ct) => match ct.coord {
-            KindT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(kp), .. } => match kp.id {
+        ITemplataT::Kind(ct) => match ct.kind {
+            KindT::KindPlaceholder(kp) => match kp.id {
                 IdT {
                     init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("swap"), .. })],
                     local_name: INameT::KindPlaceholder(KindPlaceholderNameT { template: KindPlaceholderTemplateNameT { index: 0, .. } }),
@@ -1202,7 +1194,7 @@ exported func main() int {
                 } => {}
                 _ => panic!("expected KindPlaceholder local_name inside swap init_step"),
             },
-            _ => panic!("expected Own KindPlaceholder coord"),
+            _ => panic!("expected KindPlaceholder kind"),
         },
         _ => panic!("expected Coord template arg"),
     }
@@ -1229,11 +1221,11 @@ exported func main() int {
         _ => panic!("expected Function local_name"),
     };
     match call_template_args.last().unwrap() {
-        ITemplataT::Coord(ct) => match ct.coord {
-            KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. } => {}
-            _ => panic!("expected Share Int32 template arg"),
+        ITemplataT::Kind(ct) => match ct.kind {
+            KindT::Int(IntT::I32) => {}
+            _ => panic!("expected Int32 template arg"),
         },
-        _ => panic!("expected Coord template arg"),
+        _ => panic!("expected Kind template arg"),
     }
 }
 

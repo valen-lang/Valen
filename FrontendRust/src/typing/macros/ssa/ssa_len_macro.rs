@@ -44,24 +44,24 @@ where 's: 't,
             KindT::StaticSizedArray(ssa) => ssa.size(),
             other => panic!("SSALenMacro received non-SSA param: {:?}", other),
         };
-        let discard_te = ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
-            expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
-                param_index: 0,
-                coord: param_coords[0].tyype,
-            })),
-        }));
-        let return_te = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-            source_expr: ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
-                value: len,
-                bits: 32,
-                region: RegionT::Default,
-            })),
-        }));
-        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE {
-                exprs: self.typing_interner.alloc_slice_from_vec(vec![discard_te, return_te]),
-            })),
-        }));
+        let discard_te = ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(
+            ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(
+                0,
+                param_coords[0].tyype,
+            ))),
+        )));
+        let return_te = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
+            ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE::new(
+                len,
+                32,
+                RegionT::Default,
+            ))),
+        )));
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
+            ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE::new(
+                self.typing_interner.alloc_slice_from_vec(vec![discard_te, return_te]),
+            ))),
+        )));
         (header, body)
     }
 

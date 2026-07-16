@@ -40,8 +40,8 @@ where 's: 't,
             self.typing_interner.alloc(header.to_signature()),
             header.return_type,
         );
-        let arr_arg = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: param_coords[0].tyype }));
-        let callable_arg = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 1, coord: param_coords[1].tyype }));
+        let arr_arg = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(0, param_coords[0].tyype)));
+        let callable_arg = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(1, param_coords[1].tyype)));
         let destroy_te = self.evaluate_destroy_static_sized_array_into_callable(
           coutputs,
           env,
@@ -51,11 +51,11 @@ where 's: 't,
           callable_arg,
           RegionT::Default,
         )?;
-        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ExpressionTE::DestroyStaticSizedArrayIntoFunction(self.typing_interner.alloc(destroy_te)),
-            })),
-        }));
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
+            ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
+                ExpressionTE::DestroyStaticSizedArrayIntoFunction(self.typing_interner.alloc(destroy_te)),
+            ))),
+        )));
         Ok((header, body))
     }
 

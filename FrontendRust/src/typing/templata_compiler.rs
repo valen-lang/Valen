@@ -1215,37 +1215,41 @@ where 's: 't,
         true
     }
 
-    pub fn pointify_kind(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        kind: KindT<'s, 't>,
-        region: RegionT,
-        ownership_if_mutable: OwnershipT,
-    ) -> KindT<'s, 't> {
-        // VCOORD: not sure this should exist long term
-        let ownership = match self.get_sharedness(coutputs, kind) {
-            SharednessT::Single => ownership_if_mutable,
-            SharednessT::Shared => OwnershipT::Share,
-        };
-        match kind {
-            KindT::RuntimeSizedArray(_) => {
-                panic!("Unimplemented: pointify_kind RuntimeSizedArray");
-                // CoordT(ownership, region, a)
-            }
-            KindT::StaticSizedArray(_) => {
-                panic!("Unimplemented: pointify_kind StaticSizedArray");
-                // CoordT(ownership, region, a)
-            }
-            KindT::Struct(_) => KindT::new(ownership, region, kind),
-            KindT::Interface(_) => KindT::new(ownership, region, kind),
-            KindT::Void(_) => KindT::new(ownership, region, kind),
-            KindT::Int(_) => KindT::new(ownership, region, kind),
-            KindT::Float(_) => KindT::new(ownership, region, kind),
-            KindT::Bool(_) => KindT::new(ownership, region, kind),
-            KindT::Str(_) => KindT::new(ownership, region, kind),
-            _ => unreachable!("pointify_kind is exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str — Never/OverloadSet/KindPlaceholder not accepted"),
-        }
-    }
+    // Picks an ownership tag from a kind's sharedness — the flat-ownership pattern onion
+    // typing dissolves. Its sole caller (evaluate_closure) fed only a tautological assert:
+    // make_closure_struct_construct_expression derives the same shape from the same
+    // lookup_mutability on the same struct. Under onion, a closure struct's
+    // bare-vs-ShareRef shape is settled at construction, so nothing recomputes it.
+    // pub fn pointify_kind(
+    //     &self,
+    //     coutputs: &mut CompilerOutputs<'s, 't>,
+    //     kind: KindT<'s, 't>,
+    //     region: RegionT,
+    //     ownership_if_mutable: OwnershipT,
+    // ) -> KindT<'s, 't> {
+    //     let ownership = match self.get_sharedness(coutputs, kind) {
+    //         SharednessT::Single => ownership_if_mutable,
+    //         SharednessT::Shared => OwnershipT::Share,
+    //     };
+    //     match kind {
+    //         KindT::RuntimeSizedArray(_) => {
+    //             panic!("Unimplemented: pointify_kind RuntimeSizedArray");
+    //             // CoordT(ownership, region, a)
+    //         }
+    //         KindT::StaticSizedArray(_) => {
+    //             panic!("Unimplemented: pointify_kind StaticSizedArray");
+    //             // CoordT(ownership, region, a)
+    //         }
+    //         KindT::Struct(_) => KindT::new(ownership, region, kind),
+    //         KindT::Interface(_) => KindT::new(ownership, region, kind),
+    //         KindT::Void(_) => KindT::new(ownership, region, kind),
+    //         KindT::Int(_) => KindT::new(ownership, region, kind),
+    //         KindT::Float(_) => KindT::new(ownership, region, kind),
+    //         KindT::Bool(_) => KindT::new(ownership, region, kind),
+    //         KindT::Str(_) => KindT::new(ownership, region, kind),
+    //         _ => unreachable!("pointify_kind is exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str — Never/OverloadSet/KindPlaceholder not accepted"),
+    //     }
+    // }
 
     pub fn lookup_templata_by_name(
         &self,
@@ -1479,7 +1483,7 @@ where 's: 't,
                 OwnershipT::Share => SharednessT::Shared,
                 _ => unreachable!("create_kind_placeholder_inner is exhaustive over Own/Share — Borrow/Weak not valid kind ownerships"),
             };
-            coutputs.declare_type_mutability(kind_placeholder_template_id, sharedness);
+            coutputs.declare_type_sharedness(kind_placeholder_template_id, sharedness);
 
             // Per @BDPFWDZ: the placeholder env stays empty. Bound declarations
             // (IsaTemplataT, FunctionBoundNameT) live in the introducing function's near-env, not

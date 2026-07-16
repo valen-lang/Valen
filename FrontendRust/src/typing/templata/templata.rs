@@ -55,7 +55,7 @@ fn expect_kind<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   // }
 }
 
-fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'s, 't> {
+pub fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'s, 't> {
   panic!("Unimplemented: expect_kind_templata");
   // templata match { case t @ KindTemplataT(_) => t; case _ => vfail() }
 }

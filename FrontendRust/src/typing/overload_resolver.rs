@@ -34,8 +34,6 @@ use crate::typing::infer_compiler::IDefiningError;
 use crate::typing::typing_interner::TypingInterner;
 use crate::scout_arena::ScoutArena;
 use crate::typing::types::types::KindT;
-use crate::typing::types::types::OwnershipT;
-use crate::typing::types::types::KindT;
 use crate::typing::types::types::IntT;
 use crate::utils::fx::HashSet;
 #[derive(Debug)]

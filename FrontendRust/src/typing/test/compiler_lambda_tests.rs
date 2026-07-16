@@ -7,7 +7,7 @@ use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-use crate::typing::types::types::{KindT, IntT, RegionT, KindT, OwnershipT, RegionT};
+use crate::typing::types::types::{KindT, IntT};
 use crate::tests::tests::new_test_code_map;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
@@ -48,7 +48,7 @@ fn simple_lambda() {
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let expected = KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT { bits: 32 }));
+    let expected = KindT::Int(IntT { bits: 32 });
     assert_eq!(coutputs.lookup_lambda_in("main").header.return_type, expected);
     assert_eq!(coutputs.lookup_function_by_str("main").header.return_type, expected);
 }
@@ -77,18 +77,14 @@ fn lambda_with_one_magic_arg() {
         NodeRefT::Parameter(
             ParameterT {
                 virtuality: None,
-                tyype: KindT {
-                    ownership: OwnershipT::Own,
-                    kind: KindT::Int(IntT { bits: 32 }),
-                    ..
-                },
+                tyype: KindT::Int(IntT { bits: 32 }),
                 ..
             }
         ) => Some(())
     );
     assert_eq!(
         coutputs.lookup_lambda_in("main").header.return_type,
-        KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT { bits: 32 })),
+        KindT::Int(IntT { bits: 32 }),
     );
 }
 
@@ -209,11 +205,7 @@ exported func main() int {
             ParameterT {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                 virtuality: None,
-                tyype: KindT {
-                    ownership: OwnershipT::Own,
-                    kind: KindT::Int(IntT { bits: 32 }),
-                    ..
-                },
+                tyype: KindT::Int(IntT { bits: 32 }),
                 ..
             }
         ) => Some(())

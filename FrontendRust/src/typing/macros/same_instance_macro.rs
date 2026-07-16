@@ -34,20 +34,20 @@ where 's: 't,
             return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
             maybe_origin_function_templata: Some(env.templata()),
         };
-        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ExpressionTE::IsSameInstance(self.typing_interner.alloc(IsSameInstanceTE {
-                    left: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
-                        param_index: 0,
-                        coord: param_coords[0].tyype,
-                    })),
-                    right: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
-                        param_index: 1,
-                        coord: param_coords[1].tyype,
-                    })),
-                })),
-            })),
-        }));
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
+            ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
+                ExpressionTE::IsSameInstance(self.typing_interner.alloc(IsSameInstanceTE::new(
+                    ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(
+                        0,
+                        param_coords[0].tyype,
+                    ))),
+                    ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(
+                        1,
+                        param_coords[1].tyype,
+                    ))),
+                ))),
+            ))),
+        )));
         (header, body)
     }
 

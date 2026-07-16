@@ -8,10 +8,10 @@ use crate::scout_arena::ScoutArena;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
-use crate::typing::types::types::{KindT, IntT, RegionT, KindT, OwnershipT, RegionT};
+use crate::typing::types::types::{KindT, IntT, RegionT, OwnershipT, BorrowRefT};
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
-use crate::typing::env::function_environment_t::{LocalVariable, LocalVariable};
+use crate::typing::env::function_environment_t::LocalVariable;
 use crate::typing::names::names::{INameT, IVarNameT};
 use crate::typing::types::types::{SharednessT, NeverT};
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
@@ -40,12 +40,8 @@ use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::names::names::FunctionNameT;
-use crate::typing::ast::citizens::IStructMemberT;
-use crate::typing::ast::citizens::NormalStructMemberT;
-use crate::typing::ast::citizens::IMemberTypeT;
-use crate::typing::ast::citizens::ReferenceMemberTypeT;
+use crate::typing::ast::citizens::StructMemberT;
 use crate::typing::ast::expressions::ReferenceMemberLookupTE;
-use crate::typing::templata::templata::CoordTemplataT;
 use crate::typing::types::types::KindPlaceholderT;
 use crate::typing::names::names::KindPlaceholderNameT;
 use crate::typing::names::names::KindPlaceholderTemplateNameT;
@@ -55,7 +51,6 @@ use crate::typing::names::names::InterfaceNameT;
 use crate::typing::types::types::ISuperKindTT;
 use crate::typing::types::types::InterfaceTT;
 use crate::typing::ast::expressions::SoftLoadTE;
-use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::LetAndLendTE;
 use crate::typing::ast::citizens::StructDefinitionT;
 use crate::typing::ast::ast::FunctionHeaderT;
@@ -182,7 +177,7 @@ exported func main() int {
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
             variable: LocalVariable::Reference(LocalVariable {
-                coord: KindT { ownership: OwnershipT::Own, kind: KindT::Never(NeverT { from_break: false }), .. },
+                tyype: KindT::Never(NeverT { from_break: false }),
                 ..
             }),
             ..
@@ -215,7 +210,7 @@ fn taking_an_argument_and_returning_it() {
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Parameter(p) => Some(p)
     );
-    assert!(param.tyype == KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT { bits: 32 })));
+    assert!(param.tyype == KindT::Int(IntT { bits: 32 }));
 
     let lookup: &LocalLookupTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
@@ -226,7 +221,7 @@ fn taking_an_argument_and_returning_it() {
         _ => panic!("Expected CodeVarNameT"),
     }
     match lookup.local_variable.tyype() {
-        KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
+        KindT::Int(IntT { bits: 32 }) => {}
         other => panic!("Expected CoordT(Own, _, Int(32)), got {:?}", other),
     }
 }
@@ -522,7 +517,7 @@ exported func main() void {
             ..
         }) => Some(ln)
     );
-    assert_eq!(let_normal.variable.tyype().ownership, OwnershipT::Borrow);
+    assert!(matches!(let_normal.variable.tyype(), KindT::BorrowRef(_)));
 }
 
 #[test]
@@ -545,7 +540,7 @@ fn recursion() {
     let coutputs = compile.expect_compiler_outputs();
 
     // Make sure it inferred the param type and return type correctly
-    assert!(coutputs.lookup_function_by_str("main").header.return_type == KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT { bits: 32 })));
+    assert!(coutputs.lookup_function_by_str("main").header.return_type == KindT::Int(IntT { bits: 32 }));
 }
 
 #[test]
@@ -567,7 +562,7 @@ fn test_overloads() {
     );
     let coutputs = compile.expect_compiler_outputs();
     assert!(matches!(coutputs.lookup_function_by_str("main").header.return_type,
-        KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. }
+        KindT::Int(IntT { bits: 32 })
     ));
 }
 
@@ -664,7 +659,7 @@ fn test_taking_a_callable_param() {
     let coutputs = compile.expect_compiler_outputs();
     let do_fn = coutputs.lookup_function_by_str("do");
     assert!(matches!(do_fn.header.return_type,
-        KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. }
+        KindT::Int(IntT { bits: 32 })
     ));
 }
 
@@ -715,12 +710,10 @@ fn simple_struct() {
             },
             weakable: false,
             sharedness: SharednessT::Single,
-            members: [IStructMemberT::Normal(NormalStructMemberT {
+            members: [StructMemberT {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
-                tyype: IMemberTypeT::Reference(ReferenceMemberTypeT {
-                    reference: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
-                }),
-            })],
+                tyype: KindT::Int(IntT { bits: 32 }),
+            }],
             is_closure: false,
             ..
         }
@@ -739,25 +732,21 @@ fn simple_struct() {
             params: [ParameterT {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                 virtuality: None,
-                tyype: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
+                tyype: KindT::Int(IntT { bits: 32 }),
                 ..
             }],
-            return_type: KindT {
-                ownership: OwnershipT::Own,
-                kind: KindT::Struct(StructTT {
-                    id: IdT {
-                        local_name: INameT::Struct(StructNameT {
-                            template: IStructTemplateNameT::StructTemplate(
-                                StructTemplateNameT { human_name: StrI("MyStruct"), .. }
-                            ),
-                            ..
-                        }),
+            return_type: KindT::Struct(StructTT {
+                id: IdT {
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(
+                            StructTemplateNameT { human_name: StrI("MyStruct"), .. }
+                        ),
                         ..
-                    },
+                    }),
                     ..
-                }),
+                },
                 ..
-            },
+            }),
             ..
         }) => Some(h)
     );
@@ -1020,7 +1009,7 @@ fn reads_a_struct_member() {
             ReferenceMemberLookupTE {
                 struct_expr: ExpressionTE::SoftLoad(SoftLoadTE { target_ownership: OwnershipT::Borrow, .. }),
                 member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
-                member_reference: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
+                member_reference: KindT::Int(IntT { bits: 32 }),
                 ..
             }
         ) => Some(())
@@ -1065,26 +1054,22 @@ fn automatically_drops_struct() {
                         local_name: INameT::Function(FunctionNameT {
                             template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
                             template_args: &[],
-                            parameters: [KindT {
-                                ownership: OwnershipT::Own,
-                                kind: KindT::Struct(StructTT {
-                                    id: IdT {
-                                        local_name: INameT::Struct(StructNameT {
-                                            template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyStruct"), .. }),
-                                            template_args: &[],
-                                            ..
-                                        }),
+                            parameters: [KindT::Struct(StructTT {
+                                id: IdT {
+                                    local_name: INameT::Struct(StructNameT {
+                                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyStruct"), .. }),
+                                        template_args: &[],
                                         ..
-                                    },
+                                    }),
                                     ..
-                                }),
+                                },
                                 ..
-                            }],
+                            })],
                             ..
                         }),
                         ..
                     },
-                    return_type: KindT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. },
+                    return_type: KindT::Void(_),
                 },
                 ..
             }
@@ -1117,13 +1102,9 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
             human_namee: scout_arena.intern_str("MyOption"),
         });
     let template_args_vec = vec![
-        ITemplataT::Coord(
-            compile.typing_interner.alloc(CoordTemplataT {
-                coord: KindT::new(
-                    OwnershipT::Own,
-                    RegionT::Default,
-                    KindT::Int(IntT { bits: 32 }),
-                ),
+        ITemplataT::Kind(
+            compile.typing_interner.alloc(KindTemplataT {
+                kind: KindT::Int(IntT { bits: 32 }),
             })
         ),
     ];
@@ -1141,11 +1122,8 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
         });
     let interface_tt = compile.typing_interner.intern_interface_tt(
         InterfaceTTValT { id: *interface_id });
-    let expected_coord = KindT::new(
-        OwnershipT::Borrow,
-        RegionT::Default,
-        KindT::Interface(interface_tt),
-    );
+    let expected_coord = KindT::BorrowRef(compile.typing_interner.alloc(
+        BorrowRefT { inner: KindT::Interface(interface_tt), region: RegionT::Default }));
 
     let coutputs = compile.expect_compiler_outputs();
     coutputs.lookup_interface_by_template_name(interface_template_name);
@@ -1176,13 +1154,11 @@ fn reports_mismatched_return_type_when_expecting_void() {
                 IFunctionDeclarationNameS::FunctionName(fn_name) => assert_eq!(fn_name.name.as_str(), "main"),
                 other => panic!("expected FunctionName: {:?}", other),
             }
-            assert_eq!(expected_return_type.ownership, OwnershipT::Own);
-            match expected_return_type.kind {
+            match expected_return_type {
                 KindT::Void(_) => {}
                 other => panic!("expected VoidT: {:?}", other),
             }
-            assert_eq!(result_type.ownership, OwnershipT::Own);
-            match result_type.kind {
+            match result_type {
                 KindT::Int(_) => {}
                 other => panic!("expected IntT: {:?}", other),
             }
@@ -1293,26 +1269,22 @@ fn tests_single_expression_and_single_statement_functions_returns() {
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
     match moo.header.return_type {
-        KindT {
-            ownership: OwnershipT::Own,
-            kind: KindT::Struct(StructTT {
-                id: IdT {
-                    init_steps: &[],
-                    local_name: INameT::Struct(StructNameT {
-                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyThing"), .. }),
-                        ..
-                    }),
+        KindT::Struct(StructTT {
+            id: IdT {
+                init_steps: &[],
+                local_name: INameT::Struct(StructNameT {
+                    template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyThing"), .. }),
                     ..
-                },
+                }),
                 ..
-            }),
+            },
             ..
-        } => {}
+        }) => {}
         other => panic!("moo.header.returnType: {:?}", other),
     }
     let main = coutputs.lookup_function_by_str("main");
     match main.header.return_type {
-        KindT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. } => {}
+        KindT::Void(_) => {}
         other => panic!("main.header.returnType: {:?}", other),
     }
 }
@@ -1357,36 +1329,28 @@ fn tests_calling_a_templated_struct_s_constructor() {
             id: IdT {
                 local_name: INameT::Function(FunctionNameT {
                     template: FunctionTemplateNameT { human_name: StrI("MySome"), .. },
-                    template_args: [ITemplataT::Coord(CoordTemplataT { coord: KindT {
-                        ownership: OwnershipT::Own,
-                        kind: KindT::KindPlaceholder(KindPlaceholderT {
-                            id: IdT {
-                                local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
-                                    template: KindPlaceholderTemplateNameT {
-                                        index: 0,
-                                        rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T") }),
-                                        ..
-                                    },
-                                }),
-                                ..
-                            },
+                    template_args: [ITemplataT::Kind(KindTemplataT { kind: KindT::KindPlaceholder(KindPlaceholderT {
+                        id: IdT {
+                            local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                template: KindPlaceholderTemplateNameT {
+                                    index: 0,
+                                    rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T") }),
+                                    ..
+                                },
+                            }),
                             ..
-                        }),
+                        },
                         ..
-                    } })],
-                    parameters: [KindT {
-                        ownership: OwnershipT::Own,
-                        kind: KindT::KindPlaceholder(KindPlaceholderT {
-                            id: IdT {
-                                local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
-                                    template: KindPlaceholderTemplateNameT { index: 0, .. },
-                                }),
-                                ..
-                            },
+                    }) })],
+                    parameters: [KindT::KindPlaceholder(KindPlaceholderT {
+                        id: IdT {
+                            local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                template: KindPlaceholderTemplateNameT { index: 0, .. },
+                            }),
                             ..
-                        }),
+                        },
                         ..
-                    }],
+                    })],
                     ..
                 }),
                 ..
@@ -1395,48 +1359,36 @@ fn tests_calling_a_templated_struct_s_constructor() {
             params: [ParameterT {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("value"), .. }),
                 virtuality: None,
-                tyype: KindT {
-                    ownership: OwnershipT::Own,
-                    kind: KindT::KindPlaceholder(KindPlaceholderT {
-                        id: IdT {
-                            local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
-                                template: KindPlaceholderTemplateNameT { index: 0, .. },
-                            }),
-                            ..
-                        },
-                        ..
-                    }),
-                    ..
-                },
-                ..
-            }],
-            return_type: KindT {
-                ownership: OwnershipT::Own,
-                kind: KindT::Struct(StructTT {
+                tyype: KindT::KindPlaceholder(KindPlaceholderT {
                     id: IdT {
-                        local_name: INameT::Struct(StructNameT {
-                            template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MySome"), .. }),
-                            template_args: [ITemplataT::Coord(CoordTemplataT { coord: KindT {
-                                ownership: OwnershipT::Own,
-                                kind: KindT::KindPlaceholder(KindPlaceholderT {
-                                    id: IdT {
-                                        local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
-                                            template: KindPlaceholderTemplateNameT { index: 0, .. },
-                                        }),
-                                        ..
-                                    },
-                                    ..
-                                }),
-                                ..
-                            } })],
-                            ..
+                        local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                            template: KindPlaceholderTemplateNameT { index: 0, .. },
                         }),
                         ..
                     },
                     ..
                 }),
                 ..
-            },
+            }],
+            return_type: KindT::Struct(StructTT {
+                id: IdT {
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MySome"), .. }),
+                        template_args: [ITemplataT::Kind(KindTemplataT { kind: KindT::KindPlaceholder(KindPlaceholderT {
+                            id: IdT {
+                                local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                    template: KindPlaceholderTemplateNameT { index: 0, .. },
+                                }),
+                                ..
+                            },
+                            ..
+                        }) })],
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
             maybe_origin_function_templata: Some(_),
             ..
         } => {}
@@ -1490,20 +1442,16 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
         NodeRefT::LetNormal(LetNormalTE {
             variable: LocalVariable::Reference(LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
-                coord: KindT {
-                    ownership: OwnershipT::Own,
-                    kind: KindT::Interface(InterfaceTT {
-                        id: IdT {
-                            local_name: INameT::Interface(InterfaceNameT {
-                                template: InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
-                                ..
-                            }),
+                tyype: KindT::Interface(InterfaceTT {
+                    id: IdT {
+                        local_name: INameT::Interface(InterfaceNameT {
+                            template: InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
                             ..
-                        },
+                        }),
                         ..
-                    }),
+                    },
                     ..
-                },
+                }),
             }),
             ..
         }) => Some(())
@@ -1515,44 +1463,36 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
     );
 
     match upcast.result() {
-        KindT {
-            ownership: OwnershipT::Own,
-            kind: KindT::Interface(InterfaceTT {
-                id: IdT {
-                    package_coord: x,
-                    init_steps: &[],
-                    local_name: INameT::Interface(InterfaceNameT {
-                        template: InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
-                        template_args: &[],
-                        ..
-                    }),
+        KindT::Interface(InterfaceTT {
+            id: IdT {
+                package_coord: x,
+                init_steps: &[],
+                local_name: INameT::Interface(InterfaceNameT {
+                    template: InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
+                    template_args: &[],
                     ..
-                },
+                }),
                 ..
-            }),
+            },
             ..
-        } => assert!(x.is_test()),
-        other => panic!("upcast result coord: {:?}", other),
+        }) => assert!(x.is_test()),
+        other => panic!("upcast result kind: {:?}", other),
     }
     match upcast.inner_expr.result() {
-        KindT {
-            ownership: OwnershipT::Own,
-            kind: KindT::Struct(StructTT {
-                id: IdT {
-                    package_coord: x,
-                    init_steps: &[],
-                    local_name: INameT::Struct(StructNameT {
-                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyStruct"), .. }),
-                        template_args: &[],
-                        ..
-                    }),
+        KindT::Struct(StructTT {
+            id: IdT {
+                package_coord: x,
+                init_steps: &[],
+                local_name: INameT::Struct(StructNameT {
+                    template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyStruct"), .. }),
+                    template_args: &[],
                     ..
-                },
+                }),
                 ..
-            }),
+            },
             ..
-        } => assert!(x.is_test()),
-        other => panic!("inner expr coord: {:?}", other),
+        }) => assert!(x.is_test()),
+        other => panic!("inner expr kind: {:?}", other),
     }
 }
 
@@ -1737,7 +1677,7 @@ fn tests_calling_a_virtual_function_through_a_borrow_ref() {
                     ),
                     ..
                 },
-                return_type: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. },
+                return_type: KindT::Int(IntT::I32),
                 ..
             },
             ..
@@ -1822,7 +1762,7 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
                             LocalLookupTE {
                                 local_variable: LocalVariable::Reference(
                                     LocalVariable {
-                                                                coord: KindT { kind: KindT::Struct(_), .. },
+                                                                tyype: KindT { kind: KindT::Struct(_), .. },
                                         ..
                                     }
                                 ),
@@ -1835,7 +1775,7 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
                 member_name: IVarNameT::CodeVar(
                     CodeVarNameT { name: StrI("x"), .. }
                 ),
-                member_reference: KindT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. },
+                member_reference: KindT::Int(IntT { bits: 32 }),
                 ..
             }
         ) => Some(())
@@ -1936,23 +1876,19 @@ func main() () {
 
     let make_tup0 = coutputs.lookup_function_by_str("make_tup0");
     match make_tup0.header.return_type {
-        KindT {
-            ownership: OwnershipT::Own,
-            kind: KindT::Struct(StructTT {
-                id: IdT {
-                    local_name: INameT::Struct(StructNameT {
-                        template: IStructTemplateNameT::StructTemplate(
-                            StructTemplateNameT { human_name: StrI("Tup0"), .. }
-                        ),
-                        ..
-                    }),
+        KindT::Struct(StructTT {
+            id: IdT {
+                local_name: INameT::Struct(StructNameT {
+                    template: IStructTemplateNameT::StructTemplate(
+                        StructTemplateNameT { human_name: StrI("Tup0"), .. }
+                    ),
                     ..
-                },
+                }),
                 ..
-            }),
+            },
             ..
-        } => {}
-        other => panic!("Expected make_tup0's return to be Own Tup0, got {:?}", other),
+        }) => {}
+        other => panic!("Expected make_tup0's return to be Tup0, got {:?}", other),
     }
 
     let main = coutputs.lookup_function_by_str("main");
@@ -1961,22 +1897,18 @@ func main() () {
         NodeRefT::LetNormal(LetNormalTE {
             variable: LocalVariable::Reference(LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
-                coord: KindT {
-                    ownership: OwnershipT::Own,
-                    kind: KindT::Struct(StructTT {
-                        id: IdT {
-                            local_name: INameT::Struct(StructNameT {
-                                template: IStructTemplateNameT::StructTemplate(
-                                    StructTemplateNameT { human_name: StrI("Tup0"), .. }
-                                ),
-                                ..
-                            }),
+                tyype: KindT::Struct(StructTT {
+                    id: IdT {
+                        local_name: INameT::Struct(StructNameT {
+                            template: IStructTemplateNameT::StructTemplate(
+                                StructTemplateNameT { human_name: StrI("Tup0"), .. }
+                            ),
                             ..
-                        },
+                        }),
                         ..
-                    }),
+                    },
                     ..
-                },
+                }),
             }),
             ..
         }) => Some(())
@@ -2030,11 +1962,7 @@ exported func main() int {
                     target_ownership: OwnershipT::Borrow,
                     expr: ExpressionTE::LocalLookup(LocalLookupTE {
                         local_variable: LocalVariable::Reference(LocalVariable {
-                            coord: KindT {
-                                ownership: OwnershipT::Own,
-                                kind: KindT::Struct(_),
-                                ..
-                            },
+                            tyype: KindT::Struct(_),
                             ..
                         }),
                         ..
@@ -2082,8 +2010,8 @@ exported func main() int {
         .unwrap_or_else(|| panic!("expected Err(NoImplicitCloneDefinedT), got Ok"));
     match &err {
         ICompileErrorT::NoImplicitCloneDefinedT { source_type, target_type, .. } => {
-            assert_eq!(source_type.ownership, OwnershipT::Borrow);
-            assert_eq!(target_type.ownership, OwnershipT::Own);
+            assert!(matches!(source_type, KindT::BorrowRef(_)));
+            assert!(!matches!(target_type, KindT::BorrowRef(_)));
         }
         other => panic!("expected NoImplicitCloneDefinedT, got {:?}", other),
     }
@@ -2128,8 +2056,8 @@ exported func main() int {
         .unwrap_or_else(|| panic!("expected Err(ImplicitCloneRejectedT), got Ok"));
     match &err {
         ICompileErrorT::ImplicitCloneRejectedT { source_type, target_type, fff, .. } => {
-            assert_eq!(source_type.ownership, OwnershipT::Borrow);
-            assert_eq!(target_type.ownership, OwnershipT::Own);
+            assert!(matches!(source_type, KindT::BorrowRef(_)));
+            assert!(!matches!(target_type, KindT::BorrowRef(_)));
             assert!(!fff.rejected_callee_to_reason.is_empty(),
                 "expected at least one rejected candidate, got empty");
         }
@@ -2393,20 +2321,16 @@ fn test_return_from_inside_if_destroys_locals() {
                 id: IdT {
                     local_name: INameT::Function(FunctionNameT {
                         template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
-                        parameters: [KindT {
-                            ownership: OwnershipT::Own,
-                            kind: KindT::Struct(StructTT {
-                                id: IdT {
-                                    local_name: INameT::Struct(StructNameT {
-                                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Marine"), .. }),
-                                        ..
-                                    }),
+                        parameters: [KindT::Struct(StructTT {
+                            id: IdT {
+                                local_name: INameT::Struct(StructNameT {
+                                    template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Marine"), .. }),
                                     ..
-                                },
+                                }),
                                 ..
-                            }),
+                            },
                             ..
-                        }],
+                        })],
                         ..
                     }),
                     init_steps: [INameT::StructTemplate(StructTemplateNameT { human_name: StrI("Marine"), .. })],
@@ -3064,9 +2988,8 @@ func main() int {
     // what lets it satisfy Array's `func(&G, int)E` bound when G = Lam.
     let call = coutputs.lookup_function_by_str("__call");
     match call.header.params[0].tyype {
-        KindT {
-            ownership: OwnershipT::Borrow,
-            kind: KindT::Struct(StructTT {
+        KindT::BorrowRef(BorrowRefT {
+            inner: KindT::Struct(StructTT {
                 id: IdT {
                     local_name: INameT::Struct(StructNameT {
                         template: IStructTemplateNameT::StructTemplate(
@@ -3079,8 +3002,8 @@ func main() int {
                 ..
             }),
             ..
-        } => {}
-        other => panic!("expected __call's first param to be Borrow Lam, got {:?}", other),
+        }) => {}
+        other => panic!("expected __call's first param to be BorrowRef(Lam), got {:?}", other),
     }
 }
 
@@ -3655,7 +3578,7 @@ fn humanize_errors() {
     });
     let firefly_tt = typing_interner.intern_struct_tt(StructTTValT { id: *firefly_id });
     let firefly_kind = KindT::Struct(firefly_tt);
-    let firefly_coord = KindT::new(OwnershipT::Own, RegionT::Default, firefly_kind);
+    let firefly_coord = firefly_kind;
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Serenity")});
@@ -3666,7 +3589,7 @@ fn humanize_errors() {
     });
     let serenity_tt = typing_interner.intern_struct_tt(StructTTValT { id: *serenity_id });
     let serenity_kind = KindT::Struct(serenity_tt);
-    let serenity_coord = KindT::new(OwnershipT::Own, RegionT::Default, serenity_kind);
+    let serenity_coord = serenity_kind;
 
     let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship")});
@@ -3818,8 +3741,8 @@ exported func main() int {
         ICompileErrorT::ArrayElementsHaveDifferentTypes { types, .. } => {
             let types_set: HashSet<KindT> = types.iter().copied().collect();
             assert_eq!(types_set, HashSet::from_iter([
-                KindT::new(OwnershipT::Own, RegionT::Default, KindT::Int(IntT::I32)),
-                KindT::new(OwnershipT::Own, RegionT::Default, KindT::Bool(BoolT)),
+                KindT::Int(IntT::I32),
+                KindT::Bool(BoolT),
             ]));
         }
         _other => panic!("expected ArrayElementsHaveDifferentTypes"),
@@ -3989,36 +3912,30 @@ fn test_struct_default_generic_argument_in_type() {
     let moo = coutputs.lookup_struct_by_str("MyStruct");
     let tyype = collect_only_tnode!(
         NodeRefT::StructDefinition(moo),
-        NodeRefT::ReferenceMemberType(rmt) => Some(rmt.reference)
+        NodeRefT::StructMember(m) => Some(m.tyype)
     );
     match tyype {
-        KindT {
-            ownership: OwnershipT::Own,
-            kind: KindT::Struct(StructTT {
-                id: IdT {
-                    local_name: INameT::Struct(StructNameT {
-                        template: IStructTemplateNameT::StructTemplate(
-                            StructTemplateNameT {
-                                human_name: StrI("MyHashSet"),
-                                ..
-                            }
+        KindT::Struct(StructTT {
+            id: IdT {
+                local_name: INameT::Struct(StructNameT {
+                    template: IStructTemplateNameT::StructTemplate(
+                        StructTemplateNameT {
+                            human_name: StrI("MyHashSet"),
+                            ..
+                        }
+                    ),
+                    template_args: [
+                        ITemplataT::Kind(
+                            KindTemplataT { kind: KindT::Bool(_) }
                         ),
-                        template_args: [
-                            ITemplataT::Coord(
-                                CoordTemplataT {
-                                    coord: KindT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. }
-                                }
-                            ),
-                            ITemplataT::Integer(5),
-                        ],
-                        ..
-                    }),
+                        ITemplataT::Integer(5),
+                    ],
                     ..
-                },
+                }),
                 ..
-            }),
+            },
             ..
-        } => {}
+        }) => {}
         _ => panic!("unexpected tyype"),
     }
 }
@@ -4388,7 +4305,7 @@ fn downcast_function_rrbfs() {
         let as_funcs: Vec<_> = coutputs.functions.iter().filter(|f| {
             matches!(f.header.id.local_name, INameT::Function(FunctionNameT {
                 template: FunctionTemplateNameT { human_name: StrI("as"), .. },
-                parameters: [KindT { ownership: OwnershipT::Borrow, .. }],
+                parameters: [KindT::BorrowRef(_)],
                 ..
             }))
         }).copied().collect();
@@ -4404,9 +4321,8 @@ fn downcast_function_rrbfs() {
         let err_constructor = as_.err_constructor;
 
         match source_expr.result() {
-            KindT {
-                ownership: OwnershipT::Borrow,
-                kind: KindT::KindPlaceholder(KindPlaceholderT {
+            KindT::BorrowRef(BorrowRefT {
+                inner: KindT::KindPlaceholder(KindPlaceholderT {
                     id: IdT {
                         init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
                         local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
@@ -4417,9 +4333,8 @@ fn downcast_function_rrbfs() {
                     ..
                 }),
                 ..
-            } => {}
-            //case CoordT(BorrowT, InterfaceTT(FullNameT(_, Vector(), InterfaceNameT(InterfaceTemplateNameT(StrI("IShip")), Vector())))) =>
-            other => panic!("sourceExpr.result.coord: {:?}", other),
+            }) => {}
+            other => panic!("sourceExpr.result: {:?}", other),
         }
         match target_subtype.kind {
             KindT::KindPlaceholder(KindPlaceholderT {
@@ -4447,30 +4362,25 @@ fn downcast_function_rrbfs() {
             other => panic!("targetSubtype.kind: {:?}", other),
         }
         let (first_generic_arg, second_generic_arg) = match result_opt_type {
-            KindT {
-                ownership: OwnershipT::Own,
-                kind: KindT::Interface(InterfaceTT {
-                    id: IdT {
-                        init_steps: &[],
-                        local_name: INameT::Interface(InterfaceNameT {
-                            template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
-                            template_args: [first, second],
-                            ..
-                        }),
+            KindT::Interface(InterfaceTT {
+                id: IdT {
+                    init_steps: &[],
+                    local_name: INameT::Interface(InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
+                        template_args: [first, second],
                         ..
-                    },
+                    }),
                     ..
-                }),
+                },
                 ..
-            } => (first, second),
+            }) => (first, second),
             other => panic!("resultOptType: {:?}", other),
         };
         // They should both be pointers, since we dont really do borrows in structs yet
         match first_generic_arg {
-            ITemplataT::Coord(CoordTemplataT {
-                coord: KindT {
-                    ownership: OwnershipT::Borrow,
-                    kind: KindT::KindPlaceholder(KindPlaceholderT {
+            ITemplataT::Kind(KindTemplataT {
+                kind: KindT::BorrowRef(BorrowRefT {
+                    inner: KindT::KindPlaceholder(KindPlaceholderT {
                         id: IdT {
                             init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
                             local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
@@ -4481,15 +4391,14 @@ fn downcast_function_rrbfs() {
                         ..
                     }),
                     ..
-                }
+                })
             }) => {}
             other => panic!("firstGenericArg: {:?}", other),
         }
         match second_generic_arg {
-            ITemplataT::Coord(CoordTemplataT {
-                coord: KindT {
-                    ownership: OwnershipT::Borrow,
-                    kind: KindT::KindPlaceholder(KindPlaceholderT {
+            ITemplataT::Kind(KindTemplataT {
+                kind: KindT::BorrowRef(BorrowRefT {
+                    inner: KindT::KindPlaceholder(KindPlaceholderT {
                         id: IdT {
                             init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
                             local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
@@ -4500,7 +4409,7 @@ fn downcast_function_rrbfs() {
                         ..
                     }),
                     ..
-                }
+                })
             }) => {}
             other => panic!("secondGenericArg: {:?}", other),
         }
@@ -4573,45 +4482,36 @@ fn downcast_with_as() {
 
         match as_prototype_template_args {
             [
-                ITemplataT::Coord(CoordTemplataT { coord: KindT {
-                    ownership: OwnershipT::Own,
-                    kind: KindT::Struct(StructTT {
-                        id: IdT {
-                            init_steps: &[],
-                            local_name: INameT::Struct(StructNameT {
-                                template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }),
-                                template_args: &[],
-                                ..
-                            }),
+                ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(StructTT {
+                    id: IdT {
+                        init_steps: &[],
+                        local_name: INameT::Struct(StructNameT {
+                            template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }),
+                            template_args: &[],
                             ..
-                        },
+                        }),
                         ..
-                    }),
+                    },
                     ..
-                }}),
-                ITemplataT::Coord(CoordTemplataT { coord: KindT {
-                    ownership: OwnershipT::Own,
-                    kind: KindT::Interface(InterfaceTT {
-                        id: IdT {
-                            init_steps: &[],
-                            local_name: INameT::Interface(InterfaceNameT {
-                                template: InterfaceTemplateNameT { human_namee: StrI("IShip"), .. },
-                                template_args: &[],
-                                ..
-                            }),
+                }) }),
+                ITemplataT::Kind(KindTemplataT { kind: KindT::Interface(InterfaceTT {
+                    id: IdT {
+                        init_steps: &[],
+                        local_name: INameT::Interface(InterfaceNameT {
+                            template: InterfaceTemplateNameT { human_namee: StrI("IShip"), .. },
+                            template_args: &[],
                             ..
-                        },
+                        }),
                         ..
-                    }),
+                    },
                     ..
-                }}),
+                }) }),
             ] => {}
             other => panic!("asPrototypeTemplateArgs: {:?}", other),
         }
         match as_prototype_params {
-            [KindT {
-                ownership: OwnershipT::Borrow,
-                kind: KindT::Interface(InterfaceTT {
+            [KindT::BorrowRef(BorrowRefT {
+                inner: KindT::Interface(InterfaceTT {
                     id: IdT {
                         init_steps: &[],
                         local_name: INameT::Interface(InterfaceNameT {
@@ -4624,65 +4524,58 @@ fn downcast_with_as() {
                     ..
                 }),
                 ..
-            }] => {}
+            })] => {}
             other => panic!("asPrototypeParams: {:?}", other),
         }
         match as_prototype_return {
-            KindT {
-                ownership: OwnershipT::Own,
-                kind: KindT::Interface(InterfaceTT {
-                    id: IdT {
-                        init_steps: &[],
-                        local_name: INameT::Interface(InterfaceNameT {
-                            template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
-                            template_args: [
-                                ITemplataT::Coord(CoordTemplataT { coord: KindT {
-                                    ownership: OwnershipT::Borrow,
-                                    kind: KindT::Struct(StructTT {
-                                        id: IdT {
-                                            init_steps: &[],
-                                            local_name: INameT::Struct(StructNameT {
-                                                template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }),
-                                                template_args: &[],
-                                                ..
-                                            }),
+            KindT::Interface(InterfaceTT {
+                id: IdT {
+                    init_steps: &[],
+                    local_name: INameT::Interface(InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
+                        template_args: [
+                            ITemplataT::Kind(KindTemplataT { kind: KindT::BorrowRef(BorrowRefT {
+                                inner: KindT::Struct(StructTT {
+                                    id: IdT {
+                                        init_steps: &[],
+                                        local_name: INameT::Struct(StructNameT {
+                                            template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }),
+                                            template_args: &[],
                                             ..
-                                        },
+                                        }),
                                         ..
-                                    }),
+                                    },
                                     ..
-                                }}),
-                                ITemplataT::Coord(CoordTemplataT { coord: KindT {
-                                    ownership: OwnershipT::Borrow,
-                                    kind: KindT::Interface(InterfaceTT {
-                                        id: IdT {
-                                            init_steps: &[],
-                                            local_name: INameT::Interface(InterfaceNameT {
-                                                template: InterfaceTemplateNameT { human_namee: StrI("IShip"), .. },
-                                                template_args: &[],
-                                                ..
-                                            }),
+                                }),
+                                ..
+                            }) }),
+                            ITemplataT::Kind(KindTemplataT { kind: KindT::BorrowRef(BorrowRefT {
+                                inner: KindT::Interface(InterfaceTT {
+                                    id: IdT {
+                                        init_steps: &[],
+                                        local_name: INameT::Interface(InterfaceNameT {
+                                            template: InterfaceTemplateNameT { human_namee: StrI("IShip"), .. },
+                                            template_args: &[],
                                             ..
-                                        },
+                                        }),
                                         ..
-                                    }),
+                                    },
                                     ..
-                                }}),
-                            ],
-                            ..
-                        }),
+                                }),
+                                ..
+                            }) }),
+                        ],
                         ..
-                    },
+                    }),
                     ..
-                }),
+                },
                 ..
-            } => {}
+            }) => {}
             other => panic!("asPrototypeReturn: {:?}", other),
         }
         match as_arg.result() {
-            KindT {
-                ownership: OwnershipT::Borrow,
-                kind: KindT::Interface(InterfaceTT {
+            KindT::BorrowRef(BorrowRefT {
+                inner: KindT::Interface(InterfaceTT {
                     id: IdT {
                         init_steps: &[],
                         local_name: INameT::Interface(InterfaceNameT {
@@ -4695,7 +4588,7 @@ fn downcast_with_as() {
                     ..
                 }),
                 ..
-            } => {}
+            }) => {}
             other => panic!("asArg.result.coord: {:?}", other),
         }
     }
@@ -4705,7 +4598,7 @@ fn downcast_with_as() {
         let as_funcs: Vec<_> = coutputs.functions.iter().filter(|f| {
             matches!(f.header.id.local_name, INameT::Function(FunctionNameT {
                 template: FunctionTemplateNameT { human_name: StrI("as"), .. },
-                parameters: [KindT { ownership: OwnershipT::Borrow, .. }],
+                parameters: [KindT::BorrowRef(_)],
                 ..
             }))
         }).copied().collect();
@@ -4721,9 +4614,8 @@ fn downcast_with_as() {
         let err_constructor = as_.err_constructor;
 
         match source_expr.result() {
-            KindT {
-                ownership: OwnershipT::Borrow,
-                kind: KindT::KindPlaceholder(KindPlaceholderT {
+            KindT::BorrowRef(BorrowRefT {
+                inner: KindT::KindPlaceholder(KindPlaceholderT {
                     id: IdT {
                         init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
                         local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
@@ -4734,9 +4626,8 @@ fn downcast_with_as() {
                     ..
                 }),
                 ..
-            } => {}
-            //case CoordT(BorrowT, InterfaceTT(FullNameT(_, Vector(), InterfaceNameT(InterfaceTemplateNameT(StrI("IShip")), Vector())))) =>
-            other => panic!("sourceExpr.result.coord: {:?}", other),
+            }) => {}
+            other => panic!("sourceExpr.result: {:?}", other),
         }
         match target_subtype.kind {
             KindT::KindPlaceholder(KindPlaceholderT {
@@ -4764,49 +4655,43 @@ fn downcast_with_as() {
             other => panic!("targetSubtype.kind: {:?}", other),
         }
         match result_opt_type {
-            KindT {
-                ownership: OwnershipT::Own,
-                kind: KindT::Interface(InterfaceTT {
-                    id: IdT {
-                        init_steps: &[],
-                        local_name: INameT::Interface(InterfaceNameT {
-                            template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
-                            template_args: [
-                                ITemplataT::Coord(CoordTemplataT { coord: KindT {
-                                    ownership: OwnershipT::Borrow,
-                                    kind: KindT::KindPlaceholder(KindPlaceholderT {
-                                        id: IdT {
-                                            local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
-                                                template: KindPlaceholderTemplateNameT { index: 0, .. },
-                                            }),
-                                            ..
-                                        },
+            KindT::Interface(InterfaceTT {
+                id: IdT {
+                    init_steps: &[],
+                    local_name: INameT::Interface(InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
+                        template_args: [
+                            ITemplataT::Kind(KindTemplataT { kind: KindT::BorrowRef(BorrowRefT {
+                                inner: KindT::KindPlaceholder(KindPlaceholderT {
+                                    id: IdT {
+                                        local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                            template: KindPlaceholderTemplateNameT { index: 0, .. },
+                                        }),
                                         ..
-                                    }),
+                                    },
                                     ..
-                                }}),
-                                ITemplataT::Coord(CoordTemplataT { coord: KindT {
-                                    ownership: OwnershipT::Borrow,
-                                    kind: KindT::KindPlaceholder(KindPlaceholderT {
-                                        id: IdT {
-                                            local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
-                                                template: KindPlaceholderTemplateNameT { index: 1, .. },
-                                            }),
-                                            ..
-                                        },
+                                }),
+                                ..
+                            }) }),
+                            ITemplataT::Kind(KindTemplataT { kind: KindT::BorrowRef(BorrowRefT {
+                                inner: KindT::KindPlaceholder(KindPlaceholderT {
+                                    id: IdT {
+                                        local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                            template: KindPlaceholderTemplateNameT { index: 1, .. },
+                                        }),
                                         ..
-                                    }),
+                                    },
                                     ..
-                                }}),
-                            ],
-                            ..
-                        }),
+                                }),
+                                ..
+                            }) }),
+                        ],
                         ..
-                    },
+                    }),
                     ..
-                }),
+                },
                 ..
-            } => {}
+            }) => {}
             other => panic!("resultOptType: {:?}", other),
         }
         assert_eq!(ok_constructor.id.local_name.parameters()[0], target_subtype);
@@ -4876,34 +4761,28 @@ fn test_struct_default_generic_argument_in_call() {
         NodeRefT::LetNormal(let_normal) => Some(let_normal.variable)
     );
     match variable.tyype() {
-        KindT {
-            ownership: OwnershipT::Own,
-            kind: KindT::Struct(StructTT {
-                id: IdT {
-                    local_name: INameT::Struct(StructNameT {
-                        template: IStructTemplateNameT::StructTemplate(
-                            StructTemplateNameT {
-                                human_name: StrI("MyHashSet"),
-                                ..
-                            }
+        KindT::Struct(StructTT {
+            id: IdT {
+                local_name: INameT::Struct(StructNameT {
+                    template: IStructTemplateNameT::StructTemplate(
+                        StructTemplateNameT {
+                            human_name: StrI("MyHashSet"),
+                            ..
+                        }
+                    ),
+                    template_args: [
+                        ITemplataT::Kind(
+                            KindTemplataT { kind: KindT::Bool(_) }
                         ),
-                        template_args: [
-                            ITemplataT::Coord(
-                                CoordTemplataT {
-                                    coord: KindT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. }
-                                }
-                            ),
-                            ITemplataT::Integer(5),
-                        ],
-                        ..
-                    }),
+                        ITemplataT::Integer(5),
+                    ],
                     ..
-                },
+                }),
                 ..
-            }),
+            },
             ..
-        } => {}
-        _ => panic!("unexpected coord"),
+        }) => {}
+        _ => panic!("unexpected kind"),
     }
 }
 

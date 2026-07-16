@@ -19,8 +19,6 @@ use crate::typing::infer_compiler::IResolvingError;
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
 use crate::typing::types::types::KindT;
 use crate::typing::types::types::IntT;
-use crate::typing::types::types::KindT;
-use crate::typing::types::types::OwnershipT;
 
 
 pub struct AfterRegionsErrorTests {}
@@ -117,24 +115,16 @@ exported func main() {
                 }] => {
                     match boxed.as_ref() {
                         IConclusionResolveError::ReturnTypeConflictInConclusionResolve {
-                            expected_return_type: KindT {
-                                ownership: OwnershipT::Own,
-                                kind: KindT::Int(_),
-                                ..
-                            },
+                            expected_return_type: KindT::Int(_),
                             actual: actual_prototype,
                             ..
                         } => {
                             match actual_prototype.return_type {
-                                KindT {
-                                    ownership: OwnershipT::Own,
-                                    kind: KindT::Bool(_),
-                                    ..
-                                } => {}
-                                other => panic!("expected CoordT(Share,_,Bool), got {:?}", other),
+                                KindT::Bool(_) => {}
+                                other => panic!("expected Bool, got {:?}", other),
                             }
                         }
-                        other => panic!("expected ReturnTypeConflictInConclusionResolve(_, CoordT(Share,_,Int), _), got {:?}", other),
+                        other => panic!("expected ReturnTypeConflictInConclusionResolve(_, Int, _), got {:?}", other),
                     }
                 }
                 other => panic!("expected Vec[FindFunctionResolveFailure(ResolvingResolveConclusionError(...))], got {:?}", other),
@@ -350,14 +340,10 @@ func add<X>(i int, x &X) where func str(&X)str {
             match &fff.rejected_callee_to_reason[0].1 {
                 IFindFunctionFailureReason::SpecificParamDoesntSend {
                     index: 0,
-                    argument: KindT {
-                        ownership: OwnershipT::Own,
-                        kind: KindT::Bool(_),
-                        ..
-                    },
+                    argument: KindT::Bool(_),
                     ..
                 } => {}
-                other => panic!("expected SpecificParamDoesntSend(0, CoordT(Own,_,Bool), _), got {:?}", other),
+                other => panic!("expected SpecificParamDoesntSend(0, Bool, _), got {:?}", other),
             }
         }
         e => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", e),

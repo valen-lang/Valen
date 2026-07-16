@@ -35,7 +35,6 @@ use crate::postparsing::rules::rules::RuneUsage;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::names::names::RuneNameT;
-use crate::typing::templata::templata::CoordTemplataT;
 use std::marker::PhantomData;
 
 
@@ -157,12 +156,12 @@ where 's: 't,
             }
         }
 
-        Ok(StaticArrayFromCallableTE {
-            array_type: self.typing_interner.alloc(ssa_mt),
+        Ok(StaticArrayFromCallableTE::new(
+            self.typing_interner.alloc(ssa_mt),
             region,
-            generator: callable_te,
-            generator_method: prototype,
-        })
+            callable_te,
+            prototype,
+        ))
     }
 
     pub fn evaluate_runtime_sized_array_from_callable(
@@ -482,12 +481,12 @@ where 's: 't,
         };
         let prototype = self.get_array_consumer_prototype(
             coutputs, fate, range, call_location, callable_te, array_tt.element_type(), context_region)?;
-        Ok(DestroyStaticSizedArrayIntoFunctionTE {
-            array_expr: arr_te,
-            array_type: array_tt,
-            consumer: callable_te,
-            consumer_method: prototype,
-        })
+        Ok(DestroyStaticSizedArrayIntoFunctionTE::new(
+            arr_te,
+            array_tt,
+            callable_te,
+            prototype,
+        ))
     }
 
     pub fn compile_static_sized_array(&self, global_env: &'t GlobalEnvironmentT<'s, 't>, coutputs: &mut CompilerOutputs<'s, 't>) {
@@ -741,8 +740,8 @@ where 's: 't,
     }
 
     fn get_array_element_type(&self, templatas: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> KindT<'s, 't> {
-        let coord_templata = expect_kind_templata(*templatas.get(&type_rune_a).expect("vassertSome: typeRuneA not in templatas"));
-        coord_templata.coord
+        let kind_templata = expect_kind_templata(*templatas.get(&type_rune_a).expect("vassertSome: typeRuneA not in templatas"));
+        kind_templata.kind
     }
 
     pub fn lookup_in_static_sized_array(

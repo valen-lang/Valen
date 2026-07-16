@@ -14,7 +14,6 @@ use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
-use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT};
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, SelfKindTemplateRuneS, SelfKindRuneS, IVarNameS, CodeVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
 use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
@@ -251,9 +250,9 @@ where 's: 't,
         let is_extern = struct_def.attributes.iter().any(|a| matches!(a, ICitizenAttributeT::Extern(_)));
         let body_expr: ExpressionTE<'s, 't> = match struct_def.sharedness {
             SharednessT::Shared => {
-                ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
-                    expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type })),
-                }))
+                ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(
+                    ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(0, struct_type))),
+                )))
             }
             SharednessT::Single if is_extern => {
                 // VCOORD: implement this per todo/opaque-extern-drop.md
@@ -273,7 +272,7 @@ where 's: 't,
                                             IBoundArgumentsSource::InheritBoundsFromTypeItself,
                                         );
                                         let reference = substituter.substitute_for_coord(coutputs, r.reference);
-                                        vec![LocalVariable { name: n.name, coord: reference }]
+                                        vec![LocalVariable { name: n.name, tyype: reference }]
                                     }
                                     IMemberTypeT::Address(_) => vec![],
                                 }
@@ -282,19 +281,17 @@ where 's: 't,
                         }
                     }).collect();
                 let member_local_variables_slice = self.typing_interner.alloc_slice_from_vec(member_local_variables.clone());
-                let arg_lookup = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type }));
-                let destroy = ExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE {
-                    expr: arg_lookup,
+                let arg_lookup = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(0, struct_type)));
+                let destroy = ExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE::new(
+                    arg_lookup,
                     struct_tt,
-                    destination_reference_variables: member_local_variables_slice,
-                }));
+                    member_local_variables_slice,
+                )));
                 let origin_range: Vec<RangeS<'s>> = origin_function1.map(|f| f.range).into_iter().collect();
                 let drop_call_range: Vec<RangeS<'s>> = origin_range.into_iter().chain(call_range.iter().copied()).collect();
                 let drop_call_range_slice = self.typing_interner.alloc_slice_from_vec(drop_call_range);
                 let drop_exprs: Vec<ExpressionTE<'s, 't>> = member_local_variables.iter().map(|v| {
-                    let unlet = ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE {
-                        variable: LocalVariable::Reference(*v),
-                    }));
+                    let unlet = ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE::new(*v)));
                     self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT::Default, unlet)
                 }).collect::<Result<Vec<_>, _>>()?;
                 let mut all_exprs: Vec<ExpressionTE<'s, 't>> = vec![destroy];
@@ -304,12 +301,12 @@ where 's: 't,
         };
 
         let return_expr =
-            ExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT::Default})),
-            }));
-        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE {
-            inner: self.consecutive(&[body_expr, return_expr]),
-        }));
+            ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
+                ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(RegionT::Default))),
+            )));
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
+            self.consecutive(&[body_expr, return_expr]),
+        )));
 
         Ok((header, body))
     }

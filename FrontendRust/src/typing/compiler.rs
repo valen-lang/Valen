@@ -6,7 +6,7 @@ use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::postparsing::ast::{ICitizenAttributeS, LocationInDenizen, MacroCallS};
 use crate::typing::citizen::struct_compiler::UncheckedDefiningConclusions;
-use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT};
+use crate::typing::ast::citizens::StructMemberT;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::postparsing::names::{IImpreciseNameS, IRuneS};
 use crate::scout_arena::ScoutArena;
@@ -27,10 +27,9 @@ use crate::typing::names::names::{
     IStructTemplateNameT, IInterfaceTemplateNameT, IImplTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
 };
 use crate::typing::templata::templata::{
-    CoordTemplataT, FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, PlaceholderTemplataT,
+    FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, PlaceholderTemplataT,
     PrototypeTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
 };
-use crate::typing::types::types::KindT;
 use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, SharednessT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::types::types::{RegionT};
@@ -1537,11 +1536,11 @@ where 's: 't,
                                     panic!("implement: ensure_deep_exports — VariadicStructMemberT");
                                     // vimpl()
                                 }
-                                IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
+                                IStructMemberT::Normal(StructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
                                     panic!("implement: ensure_deep_exports — AddressMemberTypeT");
                                     // vimpl()
                                 }
-                                IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: unsubstituted_member_coord }), .. }) => {
+                                IStructMemberT::Normal(StructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: unsubstituted_member_coord }), .. }) => {
                                     let member_coord = substituter.substitute_for_coord(coutputs, *unsubstituted_member_coord);
                                     let member_kind = member_coord.kind;
                                     if struct_def.sharedness == SharednessT::Shared
@@ -1665,7 +1664,7 @@ where 's: 't,
                     [only] => *only,
                     _ => {
                         let exprs_slice = self.typing_interner.alloc_slice_copy(&without_init_voids);
-                        ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE { exprs: exprs_slice }))
+                        ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE::new(exprs_slice)))
                     }
                 }
             }

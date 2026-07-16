@@ -243,7 +243,7 @@ where 's: 't,
             let mut lookup_filter = HashSet::default();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).unwrap() {
-                ITemplataT::Coord(coord_templata) => coord_templata.coord,
+                ITemplataT::Kind(kind_templata) => kind_templata.kind,
                 other => {
                     panic!("implement unexpected templata in evaluateFunctionParamTypes: {:?}", other);
                     // case other => vimpl(other)
@@ -251,7 +251,6 @@ where 's: 't,
             }
         }).collect()
     }
-
 
     pub fn assemble_function_params(
         &self,
@@ -272,7 +271,7 @@ where 's: 't,
             let mut lookup_filter = HashSet::default();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             let coord = match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).unwrap() {
-                ITemplataT::Coord(coord_templata) => coord_templata.coord,
+                ITemplataT::Kind(kind_templata) => kind_templata.kind,
                 other => {
                     panic!("implement unexpected templata in assembleFunctionParams: {:?}", other);
                     // case other => vimpl(other)
@@ -281,7 +280,7 @@ where 's: 't,
 
             //   val maybeVirtuality = evaluateMaybeVirtuality(env, coutputs, parentRanges, coord.kind, param1.virtuality)
             let maybe_virtuality = self.evaluate_maybe_virtuality(
-                env, coutputs, parent_ranges, &coord.kind, param1.virtuality.as_ref())?;
+                env, coutputs, parent_ranges, &coord, param1.virtuality.as_ref())?;
 
             //   val nameT = param1.pattern.name match {
             //     case None => interner.intern(TypingIgnoredParamNameT(index))
@@ -327,7 +326,7 @@ where 's: 't,
             let mut lookup_filter = HashSet::default();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             match near_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner) {
-                Some(ITemplataT::Coord(coord_templata)) => coord_templata.coord,
+                Some(ITemplataT::Kind(kind_templata)) => kind_templata.kind,
                 other => {
                     panic!("implement vwat in getMaybeReturnType: {:?}", other);
                     // case other => vwat(other)
@@ -335,7 +334,6 @@ where 's: 't,
             }
         })
     }
-
 
     pub fn get_generic_function_banner_from_call(
         &self,

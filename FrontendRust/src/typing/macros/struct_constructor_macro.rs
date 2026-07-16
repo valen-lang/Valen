@@ -12,7 +12,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
-use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT};
 use crate::postparsing::ast::*;
 use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ImplicitCoercionKindRuneValS, ICitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
 use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
@@ -218,7 +217,7 @@ where 's: 't,
         };
 
         let args: Vec<ExpressionTE<'s, 't>> = constructor_params_slice.iter().enumerate().map(|(index, p)| {
-            ExpressionTE::Reference(ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: index as i32, coord: p.tyype })))
+            ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(index as i32, p.tyype)))
         }).collect();
         let args_slice = self.typing_interner.alloc_slice_from_vec(args);
         let struct_tt_ref = self.typing_interner.alloc(struct_tt);
@@ -227,8 +226,8 @@ where 's: 't,
             result_reference: constructor_return_type,
             args: args_slice,
         }));
-        let return_expr = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE { source_expr: construct_expr }));
-        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE { inner: return_expr }));
+        let return_expr = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(construct_expr)));
+        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(return_expr)));
         (header, body)
     }
 

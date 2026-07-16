@@ -2,7 +2,7 @@ use crate::postparsing::ast::FunctionS;
 use crate::postparsing::ast::{LocationInDenizen, IBodyS};
 use crate::postparsing::names::{IFunctionDeclarationNameS, IVarNameS};
 use crate::typing::ast::ast::FunctionHeaderT;
-use crate::typing::ast::citizens::NormalStructMemberT;
+use crate::typing::ast::citizens::StructMemberT;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::{IInDenizenEnvironmentT, IEnvironmentT};
@@ -14,8 +14,7 @@ use crate::typing::env::environment::ILookupContext;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::fx::HashSet;
 use crate::utils::range::RangeS;
-use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
-use crate::typing::env::function_environment_t::{IVariableT, LocalVariable, LocalVariable, CapturedVariableT, CapturedVariableT};
+use crate::typing::env::function_environment_t::{IVariableT, LocalVariable, CapturedVariableT};
 use crate::typing::templata::templata::PrototypeTemplataT;
 use crate::postparsing::names::IRuneS;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
@@ -264,7 +263,7 @@ where 's: 't,
         let closured_names = code_body.body.closured_names;
 
         // Note, this is where the unordered closuredNames set becomes ordered.
-        let closured_var_names_and_types: Vec<&'t NormalStructMemberT<'s, 't>> =
+        let closured_var_names_and_types: Vec<&'t StructMemberT<'s, 't>> =
             closured_names.iter().map(|name| {
                 self.determine_closure_variable_member(containing_node_env, coutputs, *name)
             }).collect();
@@ -282,10 +281,10 @@ where 's: 't,
         env: &'t NodeEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         name: IVarNameS<'s>,
-    ) -> &'t NormalStructMemberT<'s, 't> {
+    ) -> &'t StructMemberT<'s, 't> {
         let translated_name = self.translate_var_name_step(name);
         let tyype = match env.get_variable(translated_name).unwrap() {
-            IVariableT::Local(LocalVariable { coord, .. }) => {
+            IVariableT::Local(LocalVariable { tyype: coord, .. }) => {
                 // See "Captured own is borrow" test for why we do this
                 match coord.ownership {
                     OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: KindT::new(OwnershipT::Borrow, coord.region, coord.kind) }),
@@ -295,7 +294,7 @@ where 's: 't,
                     }
                 }
             }
-            IVariableT::Local(LocalVariable { coord: reference, .. }) => {
+            IVariableT::Local(LocalVariable { tyype: reference, .. }) => {
                 IMemberTypeT::Address(AddressMemberTypeT { reference })
             }
             IVariableT::Capture(CapturedVariableT { coord, .. }) => {
@@ -312,7 +311,7 @@ where 's: 't,
                 IMemberTypeT::Address(AddressMemberTypeT { reference })
             }
         };
-        self.typing_interner.alloc(NormalStructMemberT { name: translated_name, tyype })
+        self.typing_interner.alloc(StructMemberT { name: translated_name, tyype })
     }
 
 }

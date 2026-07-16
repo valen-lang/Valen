@@ -19,8 +19,8 @@ use crate::typing::infer_compiler::InitialKnown;
 use crate::postparsing::ast::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
-use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
-use crate::typing::env::function_environment_t::{IVariableT, CapturedVariableT, CapturedVariableT};
+use crate::typing::ast::citizens::StructMemberT;
+use crate::typing::env::function_environment_t::{IVariableT, CapturedVariableT};
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::templata::templata::KindTemplataT;
@@ -280,14 +280,14 @@ where 's: 't,
         let variables: Vec<IVariableT<'s, 't>> =
             closure_struct_def.members.iter().map(|member| {
                 match member {
-                    IStructMemberT::Normal(NormalStructMemberT { name: var_name, tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }) }) => {
+                    IStructMemberT::Normal(StructMemberT { name: var_name, tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }) }) => {
                         IVariableT::Capture(CapturedVariableT {
                             name: *var_name,
                             closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
                             coord: substituter.substitute_for_coord(coutputs, *reference),
                         })
                     }
-                    IStructMemberT::Normal(NormalStructMemberT { name: var_name, tyype: IMemberTypeT::Address(AddressMemberTypeT { reference }) }) => {
+                    IStructMemberT::Normal(StructMemberT { name: var_name, tyype: IMemberTypeT::Address(AddressMemberTypeT { reference }) }) => {
                         IVariableT::Capture(CapturedVariableT {
                             name: *var_name,
                             closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
