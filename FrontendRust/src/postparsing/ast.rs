@@ -373,8 +373,8 @@ pub struct ParameterS<'s> {
   pub full_type_rune: RuneUsage<'s>,
   /// Rune for the value type: the named-type root, past the outer wraps.
   pub value_type_rune: RuneUsage<'s>,
-  /// The outer &/heap/share/weak wraps that build the full type. Only BorrowRefSR /
-  /// HeapOwnRefSR / ShareRefSR / WeakRefSR variants live here; they chain from
+  /// The outer &/weak wraps that build the full type. Only BorrowRefSR /
+  /// WeakRefSR variants live here; they chain from
   /// full_type_rune down to value_type_rune.
   pub type_outer_ref_rules: &'s [IRulexSR<'s>],
   /// Rules that build the value type (Lookup/Call/etc., possibly with nested BorrowRefs
@@ -403,7 +403,7 @@ impl<'s> ParameterS<'s> {
     );
     debug_assert!(
       type_outer_ref_rules.iter().all(|r| matches!(r,
-        IRulexSR::BorrowRef(_) | IRulexSR::HeapOwnRef(_) | IRulexSR::ShareRef(_) | IRulexSR::WeakRef(_)
+        IRulexSR::BorrowRef(_) | IRulexSR::WeakRef(_) | IRulexSR::OwnRef(_)
       )),
       "type_outer_ref_rules may only contain onion ref wraps"
     );

@@ -8,7 +8,7 @@ use crate::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::parsing::ast::{IMacroInclusionP, LoadAsP};
-use crate::postparsing::ast::{IStructMemberS, ProgramS};
+use crate::postparsing::ast::{IFunctionAttributeS, IStructMemberS, ProgramS};
 use crate::postparsing::expressions::{
   ConstantIntSE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LetSE, LoadPartSE, LocalLoadSE,
   LocalS, OutsideLoadSE, OverloadSetSE, OwnershippedSE, ReturnSE,
@@ -1354,7 +1354,7 @@ fn test_named_param_keeps_its_name_at_postparse() {
   }
 }
 
-use crate::postparsing::rules::rules::IRulexSR;
+use crate::postparsing::rules::rules::{IRulexSR, RegionSR};
 
 #[test]
 fn test_param_no_outer_wrap_routing() {
@@ -1411,6 +1411,69 @@ fn test_param_single_ref_wrap_routing() {
       assert_eq!(br.inner_rune.rune, value_type_rune.rune);
     }
     other => panic!("expected `x &int`: one BorrowRef wrapping [Lookup(int)]; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_param_held_ref_wrap_routing() {
+  // One param `x held int`: value_type_rules is [Lookup(int)] and type_outer_ref_rules is exactly
+  // one BorrowRef with region Held, whose result is full_type_rune and inner is value_type_rune.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    r#"
+exported func foo(x held int) int { return 0; }
+"#,
+  );
+  let foo = program.lookup_function("foo");
+  match foo.params {
+    [ParameterS {
+        value_type_rules: [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. })],
+        type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
+        full_type_rune, value_type_rune, .. }] => {
+      assert_eq!(br.region, RegionSR::Held);
+      assert_ne!(full_type_rune.rune, value_type_rune.rune, "full != value when there IS an outer wrap");
+      assert_eq!(br.result_rune.rune, full_type_rune.rune);
+      assert_eq!(br.inner_rune.rune, value_type_rune.rune);
+    }
+    other => panic!("expected `x held int`: one BorrowRef(Held) wrapping [Lookup(int)]; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_param_own_ref_wrap_routing() {
+  // One param `x own int`: value_type_rules is [Lookup(int)] and type_outer_ref_rules is exactly
+  // one OwnRef whose result is full_type_rune and inner is value_type_rune.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    r#"
+exported func foo(x own int) int { return 0; }
+"#,
+  );
+  let foo = program.lookup_function("foo");
+  match foo.params {
+    [ParameterS {
+        value_type_rules: [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. })],
+        type_outer_ref_rules: [IRulexSR::OwnRef(or)],
+        full_type_rune, value_type_rune, .. }] => {
+      assert_ne!(full_type_rune.rune, value_type_rune.rune, "full != value when there IS an outer wrap");
+      assert_eq!(or.result_rune.rune, full_type_rune.rune);
+      assert_eq!(or.inner_rune.rune, value_type_rune.rune);
+    }
+    other => panic!("expected `x own int`: one OwnRef wrapping [Lookup(int)]; got {:?}", other),
   }
 }
 
@@ -1700,4 +1763,46 @@ fn test_extern_bare_param_ok() {
     IBodyS::ExternBody(_) => {}
     other => panic!("expected an extern body, got {:?}", other),
   }
+}
+
+#[test]
+fn plain_function_is_marked_user_function() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "func helper() int { return 3; }",
+  );
+  let helper = program.lookup_function("helper");
+  assert!(
+    helper.attributes.iter().any(|a| matches!(a, IFunctionAttributeS::UserFunction(_))),
+    "expected a UserFunction attribute, got {:?}", helper.attributes);
+}
+
+#[test]
+fn exported_function_keeps_export_and_is_user_function() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func main() int { return 3; }",
+  );
+  let main = program.lookup_function("main");
+  // The source-written Export attribute survives, and UserFunction is stamped alongside it.
+  assert!(
+    main.attributes.iter().any(|a| matches!(a, IFunctionAttributeS::Export(_))),
+    "expected the source-written Export attribute to survive, got {:?}", main.attributes);
+  assert!(
+    main.attributes.iter().any(|a| matches!(a, IFunctionAttributeS::UserFunction(_))),
+    "expected a UserFunction attribute, got {:?}", main.attributes);
 }

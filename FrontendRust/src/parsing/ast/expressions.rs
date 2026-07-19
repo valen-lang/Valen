@@ -37,7 +37,6 @@ pub enum IExpressionPE<'p> {
   Move(MovePE<'p>),
   Borrow(BorrowPE<'p>),
   Weak(WeakPE<'p>),
-  Share(SharePE<'p>),
   Transmigrate(TransmigratePE<'p>),
   BinaryCall(BinaryCallPE<'p>),
   MethodCall(MethodCallPE<'p>),
@@ -81,7 +80,6 @@ impl IExpressionPE<'_> {
       IExpressionPE::Move(x) => x.range,
       IExpressionPE::Borrow(x) => x.range,
       IExpressionPE::Weak(x) => x.range,
-      IExpressionPE::Share(x) => x.range,
       IExpressionPE::Transmigrate(x) => x.range,
       IExpressionPE::BinaryCall(x) => x.range,
       IExpressionPE::MethodCall(x) => x.range,
@@ -131,7 +129,6 @@ impl IExpressionPE<'_> {
       IExpressionPE::Move(_) => true,
       IExpressionPE::Borrow(_) => true,
       IExpressionPE::Weak(_) => true,
-      IExpressionPE::Share(_) => true,
       IExpressionPE::Transmigrate(_) => true,
       IExpressionPE::BinaryCall(_) => true,
       IExpressionPE::MethodCall(_) => true,
@@ -180,7 +177,6 @@ impl IExpressionPE<'_> {
       IExpressionPE::Move(_) => true,
       IExpressionPE::Borrow(_) => true,
       IExpressionPE::Weak(_) => true,
-      IExpressionPE::Share(_) => true,
       IExpressionPE::Transmigrate(_) => true,
       IExpressionPE::BinaryCall(_) => true,
       IExpressionPE::MethodCall(_) => true,
@@ -434,13 +430,6 @@ pub struct BorrowPE<'p> {
 
 #[derive(Debug, PartialEq)]
 pub struct WeakPE<'p> {
-  pub range: RangeL,
-  pub inner: &'p IExpressionPE<'p>,
-}
-
-
-#[derive(Debug, PartialEq)]
-pub struct SharePE<'p> {
   pub range: RangeL,
   pub inner: &'p IExpressionPE<'p>,
 }

@@ -24,7 +24,7 @@ pub use expressions::{
   ConstantBoolPE, ConstantFloatPE, ConstantIntPE, ConstantStrPE, ConstructArrayPE, DestructPE,
   DotPE, EachPE, FunctionCallPE, IArraySizeP, IExpressionPE, IImpreciseNameP, IfPE, IndexPE,
   LambdaPE, LetPE, LookupPE, MagicParamLookupPE, MethodCallPE, MovePE, MutatePE, NotPE, OrPE,
-  PackPE, RangePE, ReturnPE, SharePE, ShortcallPE, StaticSizedArraySizeP, StrInterpolatePE,
+  PackPE, RangePE, ReturnPE, ShortcallPE, StaticSizedArraySizeP, StrInterpolatePE,
   SubExpressionPE, TemplateArgsP, TransmigratePE, TuplePE, UnletPE, VoidPE, WeakPE, WhilePE,
 };
 
@@ -40,7 +40,7 @@ pub use rules::{
 
 // Re-export everything from templex.rs
 pub use templex::{
-  AnonymousRunePT, BoolPT, BorrowRefPT, CallPT, FuncPT, FunctionPT, HeapOwnRefPT, ITemplexPT,
-  IntPT, NameOrRunePT, PackPT, RegionRunePT,
-  RuntimeSizedArrayPT, ShareRefPT, StringPT, TuplePT, TypedRunePT, WeakRefPT,
+  AnonymousRunePT, BoolPT, BorrowRefPT, CallPT, FuncPT, FunctionPT, ITemplexPT,
+  IntPT, NameOrRunePT, OwnRefPT, PackPT, RegionP, RegionRunePT,
+  RuntimeSizedArrayPT, StringPT, TuplePT, TypedRunePT, WeakRefPT,
 };

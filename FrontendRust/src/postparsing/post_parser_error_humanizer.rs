@@ -188,7 +188,6 @@ pub fn humanize_rune<'s>(
     IRuneS::DenizenDefaultRegionRune(_) => panic!("implement: humanize_rune DenizenDefaultRegionRune"),
     IRuneS::ExternDefaultRegionRune(_) => panic!("implement: humanize_rune ExternDefaultRegionRune"),
     IRuneS::AnonymousSubstructVoidKindRune(_) => "anon.void.kind".to_string(),
-    IRuneS::ImplicitCoercionKindRune(inner) => humanize_rune(inner.original_kind_rune) + ".kind",
     IRuneS::ImplicitCoercionTemplateRune(inner) => humanize_rune(inner.original_kind_rune) + ".gen",
     IRuneS::ImplicitRegionRune(_) => panic!("implement: humanize_rune ImplicitRegionRune"),
     IRuneS::CallRegionRune(_) => panic!("implement: humanize_rune CallRegionRune"),
@@ -231,9 +230,8 @@ pub fn humanize_rule<'s>(
 ) -> String {
   match rule {
     IRulexSR::BorrowRef(r) => "&".to_string() + &humanize_rune(r.inner_rune.rune),
-    IRulexSR::HeapOwnRef(r) => "heap ".to_string() + &humanize_rune(r.inner_rune.rune),
-    IRulexSR::ShareRef(r) => "@".to_string() + &humanize_rune(r.inner_rune.rune),
     IRulexSR::WeakRef(r) => "weak ".to_string() + &humanize_rune(r.inner_rune.rune),
+    IRulexSR::OwnRef(r) => "own ".to_string() + &humanize_rune(r.inner_rune.rune),
     IRulexSR::Call(r) => humanize_rune(r.result_rune.rune) + " = " + &humanize_rune(r.template_rune.rune) + "<" + &r.args.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ") + ">",
     IRulexSR::Lookup(r) => humanize_rune(r.rune.rune) + " = \"" + &humanize_imprecise_name(r.name) + "\"",
     IRulexSR::Literal(r) => humanize_rune(r.rune.rune) + " = " + &humanize_literal(&r.literal),

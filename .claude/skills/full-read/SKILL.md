@@ -1,0 +1,1 @@
+../../../docs/skills/full-read.md

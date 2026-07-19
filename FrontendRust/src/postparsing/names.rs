@@ -733,7 +733,6 @@ pub enum IRuneS<'s> {
   DenizenDefaultRegionRune(&'s DenizenDefaultRegionRuneS<'s>),
   ExportDefaultRegionRune(&'s ExportDefaultRegionRuneS<'s>),
   ExternDefaultRegionRune(&'s ExternDefaultRegionRuneS<'s>),
-  ImplicitCoercionKindRune(&'s ImplicitCoercionKindRuneS<'s>),
   ImplicitCoercionTemplateRune(&'s ImplicitCoercionTemplateRuneS<'s>),
   ArraySizeImplicitRune(&'s ArraySizeImplicitRuneS),
   ArrayMutabilityImplicitRune(&'s ArrayMutabilityImplicitRuneS),
@@ -796,7 +795,6 @@ impl<'s> IRuneS<'s> {
       IRuneS::DenizenDefaultRegionRune(r) => *r as *const _ as *const (),
       IRuneS::ExportDefaultRegionRune(r) => *r as *const _ as *const (),
       IRuneS::ExternDefaultRegionRune(r) => *r as *const _ as *const (),
-      IRuneS::ImplicitCoercionKindRune(r) => *r as *const _ as *const (),
       IRuneS::ImplicitCoercionTemplateRune(r) => *r as *const _ as *const (),
       IRuneS::ArraySizeImplicitRune(r) => *r as *const _ as *const (),
       IRuneS::ArrayMutabilityImplicitRune(r) => *r as *const _ as *const (),
@@ -847,14 +845,6 @@ impl<'s> IRuneS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitRegionRuneValS<'s> {
   pub original_rune: IRuneS<'s>,
-}
-
-
-/// Value-struct for ImplicitCoercionKindRuneS key. Shallow: references canonical child rune.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplicitCoercionKindRuneValS<'s> {
-  pub range: RangeS<'s>,
-  pub original_kind_rune: IRuneS<'s>,
 }
 
 
@@ -939,7 +929,6 @@ pub enum IRuneValS<'s, 'tmp> {
   DenizenDefaultRegionRune(DenizenDefaultRegionRuneS<'s>),
   ExportDefaultRegionRune(ExportDefaultRegionRuneS<'s>),
   ExternDefaultRegionRune(ExternDefaultRegionRuneS<'s>),
-  ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS<'s>),
   ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS<'s>),
   ArraySizeImplicitRune(ArraySizeImplicitRuneS),
   ArrayMutabilityImplicitRune(ArrayMutabilityImplicitRuneS),
@@ -1020,7 +1009,6 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
       (DenizenDefaultRegionRune(a), DenizenDefaultRegionRune(b)) => a == b,
       (ExportDefaultRegionRune(a), ExportDefaultRegionRune(b)) => a == b,
       (ExternDefaultRegionRune(a), ExternDefaultRegionRune(b)) => a == b,
-      (ImplicitCoercionKindRune(a), ImplicitCoercionKindRune(b)) => a == b,
       (ImplicitCoercionTemplateRune(a), ImplicitCoercionTemplateRune(b)) => a == b,
       (ArraySizeImplicitRune(a), ArraySizeImplicitRune(b)) => a == b,
       (ArrayMutabilityImplicitRune(a), ArrayMutabilityImplicitRune(b)) => a == b,
@@ -1144,11 +1132,6 @@ pub struct ExternDefaultRegionRuneS<'s> {
   pub denizen_name: INameS<'s>,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplicitCoercionKindRuneS<'s> {
-  pub range: RangeS<'s>,
-  pub original_kind_rune: IRuneS<'s>,
-}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionTemplateRuneS<'s> {

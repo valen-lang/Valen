@@ -312,24 +312,6 @@ fn weak_expression() {
 }
 
 #[test]
-fn share_expression() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let expr = compile_expression_expect(&parse_arena, &keywords, "@x");
-  match &expr {
-    IExpressionPE::Share(SharePE {
-      inner: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-        template_args: None,
-      }),
-      ..
-    }) => {}
-    _ => panic!("expected @x → Share(x) structure"),
-  }
-}
-
-#[test]
 fn method_call() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);

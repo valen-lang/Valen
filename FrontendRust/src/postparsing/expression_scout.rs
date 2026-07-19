@@ -391,12 +391,11 @@ fn scout_expression(
     }
         
         
-    IExpressionPE::Move(_) | IExpressionPE::Borrow(_) | IExpressionPE::Weak(_) | IExpressionPE::Share(_) => {
+    IExpressionPE::Move(_) | IExpressionPE::Borrow(_) | IExpressionPE::Weak(_) => {
       let (inner, load_as) = match expression {
         IExpressionPE::Move(m) => (m.inner, LoadAsP::Move),
         IExpressionPE::Borrow(b) => (b.inner, LoadAsP::LoadAsBorrow),
         IExpressionPE::Weak(w) => (w.inner, LoadAsP::LoadAsWeak),
-        IExpressionPE::Share(s) => (s.inner, LoadAsP::LoadAsShare),
         _ => unreachable!(),
       };
       let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) =
@@ -1580,7 +1579,6 @@ pub(crate) fn coerce(
         let self_uses_after = match load_as_p {
           LoadAsP::LoadAsBorrow => self_uses_before.mark_borrowed(name.clone()),
           LoadAsP::LoadAsWeak => self_uses_before.mark_borrowed(name.clone()),
-          LoadAsP::LoadAsShare => self_uses_before.mark_borrowed(name.clone()),
           LoadAsP::Use | LoadAsP::Move => self_uses_before.mark_moved(name.clone()),
         };
         Ok((

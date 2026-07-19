@@ -10,7 +10,7 @@ use crate::postparsing::ast::{
   AbstractBodyS, AbstractSP, BuiltinS, CodeBodyS, KindGenericParameterTypeS, ExportS,
   ExternBodyS, ExternS, FunctionS, GeneratedBodyS, GenericParameterS, IBodyS, IFunctionAttributeS,
   IGenericParameterTypeS, LocationInDenizenBuilder, ParameterS,
-  RegionGenericParameterTypeS,
+  RegionGenericParameterTypeS, UserFunctionS,
 };
 use crate::postparsing::expressions::{
   BlockSE, BodySE, ConsecutorSE, IExpressionSE, LetSE, LocalLoadSE,
@@ -34,7 +34,7 @@ use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, transl
 use crate::postparsing::rules::rule_scout::translate_rulexes;
 use crate::postparsing::rules::templex_scout::{translate_maybe_type_into_maybe_rune, translate_signature_templex};
 use crate::postparsing::rules::rules::{
-  BorrowRefSR, IRulexSR, LookupSR, RuneUsage,
+  BorrowRefSR, IRulexSR, LookupSR, RegionSR, RuneUsage,
 };
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::range::RangeS;
@@ -826,7 +826,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       IFunctionParent::ParentCitizen(_) => unfiltered_attrs_p.iter().collect(),
       IFunctionParent::ParentFunction { .. } => unfiltered_attrs_p.iter().collect(),
     };
-    let func_attrs_s: Vec<IFunctionAttributeS<'s>> = filtered_attrs
+    let mut func_attrs_s: Vec<IFunctionAttributeS<'s>> = filtered_attrs
       .into_iter()
       .map(|attr| match attr {
         IAttributeP::ExportAttribute(_) => IFunctionAttributeS::Export(ExportS {
@@ -842,6 +842,8 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         other => panic!("POSTPARSER_SCOUT_FUNCTION_ATTRIBUTE_NOT_YET_IMPLEMENTED: {:?}", other),
       })
       .collect();
+    // Postparser only runs on user functions.
+    func_attrs_s.push(IFunctionAttributeS::UserFunction(UserFunctionS));
 
     let rules_array: &'s [IRulexSR<'s>] = self.scout_arena.alloc_slice_from_vec(rules_array);
 
@@ -927,7 +929,7 @@ fn create_closure_param(
       range: closure_param_range.clone(),
       rune: closure_struct_kind_rune,
     },
-    region_rune: Some(RuneUsage {
+    region: RegionSR::Rune(RuneUsage {
       range: closure_param_range.clone(),
       rune: closure_struct_region_rune,
     }),

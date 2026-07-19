@@ -622,7 +622,7 @@ where
       inner,
       region,
     }) => {
-      if let Some(region) = region {
+      if let RegionP::Rune(region) = region {
         visit_region_rune(pred, out, region);
       }
       visit_templex(pred, out, inner);
@@ -631,11 +631,7 @@ where
       range: _range,
       inner,
     }) => visit_templex(pred, out, inner),
-    ITemplexPT::ShareRef(ShareRefPT {
-      range: _range,
-      inner,
-    }) => visit_templex(pred, out, inner),
-    ITemplexPT::HeapOwnRef(HeapOwnRefPT {
+    ITemplexPT::OwnRef(OwnRefPT {
       range: _range,
       inner,
     }) => visit_templex(pred, out, inner),
@@ -963,9 +959,6 @@ where
       visit_expression(pred, out, inner);
     }
     IExpressionPE::Weak(WeakPE { range: _range, inner }) => {
-      visit_expression(pred, out, inner);
-    }
-    IExpressionPE::Share(SharePE { range: _range, inner }) => {
       visit_expression(pred, out, inner);
     }
     IExpressionPE::Transmigrate(transmigrate_expr) => {

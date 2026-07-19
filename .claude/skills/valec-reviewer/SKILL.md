@@ -1,1 +1,1 @@
-../../../FrontendRust/docs/skills/valec-reviewer.md
+../../../docs/skills/valec-reviewer.md

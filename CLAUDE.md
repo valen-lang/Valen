@@ -76,6 +76,8 @@ Instead, use the same file.
 ## SEE ALSO (auto)
 
 - **Read when writing an `r#"..."#` raw string containing embedded Vale source in a Rust test.** → FrontendRust/docs/shields/MultiLineValeFixtures-MLVFX.md
+- **Read when reviewing or writing FrontendRust compiler code in any pass.** → FrontendRust/docs/skills/valec-reviewer.md
+- **Read when reviewing or writing code in the typing pass (FrontendRust/src/typing/).** → FrontendRust/src/typing/docs/skills/typing-reviewer.md
 - **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
 - **Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.** → docs/skills/bug-repro.md
 - **Read when the human asks to close, end, or shut down the current Claude Code session.** → docs/skills/close-session.md
@@ -95,6 +97,9 @@ Instead, use the same file.
 - **Read when a skill exists in Luz/skills/ (e.g. added upstream and pulled in) but isn't showing up as a usable skill in this repo.** → docs/skills/luz-import-skill.md
 - **Read when the architect asks what `experimental` has that `master` might want, or asks to pull specific commits from `experimental`.** → docs/skills/merging-from-experimental.md
 - **Read when the architect asks what `master` has that `experimental` might want, or asks to pull specific commits from `master`.** → docs/skills/merging-from-master.md
+- **Read when writing or reviewing prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-reviewer.md
+- **Read when checking the grammar and voice of prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-tactical.md
 - **Read when authoring or running any bulk-edit script (`./tmp/scripts/*.py`, shell loops over many files, or any per-file transform across more than a handful of files).** → docs/skills/scripting.md
 - **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → docs/skills/tdd.md
 - **Read when reviewing or writing typing-pass tests (or other tests that walk the AST with collect_ macros).** → docs/skills/test-review.md
+- **Read when a human asks you to use the mailbox, or to coordinate with another Claude Code session via messages.** → docs/skills/use-mailbox.md

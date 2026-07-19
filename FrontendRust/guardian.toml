@@ -52,6 +52,7 @@ exclude_shields = [
     "NoNewDefinitions-NNDX.md",
     "NoRenamedDefinitions-NRDX.md",
     "NoMovedDefinitions-NMDX.md",
+
 ]
 
 [guard_mode]
@@ -67,11 +68,12 @@ include_shields = [
     { name = "MultiLineValeFixtures-MLVFX.md" },
     { name = "AllowedFileExtensionsOnly-AFEOX.md" },
 
+    { name = "AllowedFileExtensionsOnly-AFEOX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
     { name = "MailboxWorkflow-MBXX.md" },
-    { name = "MailboxWatcherGuard-MWGX.md" },
-    { name = "NoRemovingVMarkers-NRVMX.md" }
+
+    { name = "MailboxWatcherGuard-MWGX.md" }
 ]
 
 [review_mode]

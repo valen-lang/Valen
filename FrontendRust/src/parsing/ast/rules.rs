@@ -148,11 +148,8 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
     ITemplexPT::WeakRef(weak_ref) => {
       get_ordered_rune_declarations_from_templex_with_duplicates(weak_ref.inner)
     }
-    ITemplexPT::ShareRef(share_ref) => {
-      get_ordered_rune_declarations_from_templex_with_duplicates(share_ref.inner)
-    }
-    ITemplexPT::HeapOwnRef(heap_own_ref) => {
-      get_ordered_rune_declarations_from_templex_with_duplicates(heap_own_ref.inner)
+    ITemplexPT::OwnRef(own_ref) => {
+      get_ordered_rune_declarations_from_templex_with_duplicates(own_ref.inner)
     }
     ITemplexPT::String(_)
     | ITemplexPT::Int(_)

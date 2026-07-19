@@ -8,7 +8,7 @@ The `ParameterS` holds:
 - `full_type_rune` holds the rune for the full type.
 - `value_type_rune` holds the rune for the value type.
 - `value_type_rules` holds the `Lookup` / `Call` / etc. that build `value_type_rune`.
-- `type_outer_ref_rules` holds the chain of `BorrowRef` / `HeapOwnRef` / `ShareRef` / `WeakRef` wraps whose outermost result is `full_type_rune`.
+- `type_outer_ref_rules` holds the chain of `BorrowRef` / `WeakRef` / `OwnRef` wraps whose outermost result is `full_type_rune`.
 
 `translate_signature_templex` produces the split. It peels the outermost run of wraps into `type_outer_ref_rules`, and puts the value type, plus anything nested inside it (including wraps buried in template args), into `value_type_rules`.
 

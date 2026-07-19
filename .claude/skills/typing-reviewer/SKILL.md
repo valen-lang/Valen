@@ -1,1 +1,1 @@
-../../../FrontendRust/src/typing/docs/skills/typing-reviewer.md
+../../../docs/skills/typing-reviewer.md

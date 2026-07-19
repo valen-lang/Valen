@@ -7,7 +7,7 @@ use crate::interner::{InternedSlice, StrI};
 use crate::postparsing::names::{
   IImpreciseNameS, IImpreciseNameValS, INameS, INameValS, IRuneS, IRuneValS,
   IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IVarNameS, IVarNameValS,
-  ImplicitRegionRuneS, ImplicitCoercionKindRuneS,
+  ImplicitRegionRuneS,
   RuneNameS, TopLevelStructDeclarationNameS, TopLevelInterfaceDeclarationNameS,
   ImplicitCoercionTemplateRuneS, AnonymousSubstructMethodInheritedRuneS,
   DispatcherRuneFromImplS, CaseRuneFromImplS,
@@ -392,12 +392,6 @@ impl<'s> ScoutArena<'s> {
         let payload = ImplicitRegionRuneS { original_rune: v.original_rune };
         let canonical = IRuneS::ImplicitRegionRune(self.bump.alloc(payload));
         (IRuneValS::ImplicitRegionRune(key), canonical)
-      }
-      ImplicitCoercionKindRune(v) => {
-        let key = v.clone();
-        let payload = ImplicitCoercionKindRuneS { range: v.range, original_kind_rune: v.original_kind_rune };
-        let canonical = IRuneS::ImplicitCoercionKindRune(self.bump.alloc(payload));
-        (IRuneValS::ImplicitCoercionKindRune(key), canonical)
       }
       ImplicitCoercionTemplateRune(v) => {
         let key = v.clone();

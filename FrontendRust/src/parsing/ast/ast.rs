@@ -298,14 +298,13 @@ pub enum SharednessP {
 
 /// The load intent for a value-level use — how the scout should interpret
 /// identifier occurrences. The prefix expression variants (Move / Borrow /
-/// Weak / Share on `IExpressionPE`) lower to the matching variant here;
+/// Weak on `IExpressionPE`) lower to the matching variant here;
 /// `Use` is the "no explicit prefix, use whatever ownership is there" default.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LoadAsP {
   Move,
   LoadAsBorrow,
   LoadAsWeak,
-  LoadAsShare,
   Use,
 }
 

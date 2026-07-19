@@ -1904,9 +1904,9 @@ where
       _ => {}
     }
 
-    // Value-level prefix operators — 4 structural variants. `^x` = Move,
-    // `&x` = Borrow (`&&x` = nested double-borrow), `@x` = Share, `weak x` = Weak.
-    enum Prefix { Move, Borrow, Weak, Share }
+    // Value-level prefix operators — 3 structural variants. `^x` = Move,
+    // `&x` = Borrow (`&&x` = nested double-borrow), `weak x` = Weak.
+    enum Prefix { Move, Borrow, Weak }
     let maybe_prefix = match iter.peek_cloned() {
       Some(INodeLEEnum::Symbol(SymbolLE(_, '^'))) => {
         iter.advance();
@@ -1915,10 +1915,6 @@ where
       Some(INodeLEEnum::Symbol(SymbolLE(_, '&'))) => {
         iter.advance();
         Some(Prefix::Borrow)
-      }
-      Some(INodeLEEnum::Symbol(SymbolLE(_, '@'))) => {
-        iter.advance();
-        Some(Prefix::Share)
       }
       Some(INodeLEEnum::Word(WordLE { str, .. })) if str == self.keywords.weak => {
         iter.advance();
@@ -1941,7 +1937,6 @@ where
         Prefix::Move => IExpressionPE::Move(MovePE { range, inner: inner_pe }),
         Prefix::Borrow => IExpressionPE::Borrow(BorrowPE { range, inner: inner_pe }),
         Prefix::Weak => IExpressionPE::Weak(WeakPE { range, inner: inner_pe }),
-        Prefix::Share => IExpressionPE::Share(SharePE { range, inner: inner_pe }),
       };
       return Ok(self.parse_arena.alloc(result));
     }

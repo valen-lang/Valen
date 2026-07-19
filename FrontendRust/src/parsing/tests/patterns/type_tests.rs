@@ -4,8 +4,10 @@ use crate::cast;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
-  INameDeclarationP, ITemplexPT, SharednessP, PatternPP,
+  BorrowRefPT, INameDeclarationP, ITemplexPT, NameOrRunePT, NameP, OwnRefPT, RegionP,
+  SharednessP, PatternPP, WeakRefPT,
 };
+use crate::interner::StrI;
 use crate::parsing::tests::utils::{
   assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
@@ -88,24 +90,31 @@ fn caret_type_is_error() {
 }
 
 #[test]
-fn heap_prefix_type() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ heap T");
-  let heap_own_ref = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::HeapOwnRef);
-  assert_templex_name(heap_own_ref.inner, "T");
-  assert!(pattern.destructure.is_none());
-}
-
-#[test]
 fn weak_prefix_type() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ weak T");
-  let weak_ref = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::WeakRef);
-  assert_templex_name(weak_ref.inner, "T");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::WeakRef(WeakRefPT {
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }), .. }) => {}
+    other => panic!("expected `weak T` → WeakRef(T), got {:?}", other),
+  }
+  assert!(pattern.destructure.is_none());
+}
+
+#[test]
+fn own_prefix_type() {
+  // `own T` parses as an OwnRef wrap around T.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ own T");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::OwnRef(OwnRefPT {
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }), .. }) => {}
+    other => panic!("expected `own T` → OwnRef(T), got {:?}", other),
+  }
   assert!(pattern.destructure.is_none());
 }
 
@@ -115,10 +124,46 @@ fn borrow_with_region() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ &i'MyStruct");
-  let borrow_ref = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::BorrowRef);
-  let region = borrow_ref.region.as_ref().unwrap();
-  assert_eq!(region.name.as_ref().unwrap().as_str(), "i");
-  assert_templex_name(borrow_ref.inner, "MyStruct");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region: RegionP::Rune(region),
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }), .. }) => {
+      assert_eq!(region.name.as_ref().unwrap().as_str(), "i");
+    }
+    other => panic!("expected `&i'MyStruct` → BorrowRef(Rune, MyStruct), got {:?}", other),
+  }
+  assert!(pattern.destructure.is_none());
+}
+
+#[test]
+fn held_ref_type() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ held MyStruct");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region: RegionP::Held,
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }), .. }) => {}
+    other => panic!("expected `held MyStruct` → BorrowRef(Held, MyStruct), got {:?}", other),
+  }
+  assert!(pattern.destructure.is_none());
+}
+
+#[test]
+fn held_and_borrow_ref_type() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ held &MyStruct");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region: RegionP::Held,
+      inner: ITemplexPT::BorrowRef(BorrowRefPT {
+        region: RegionP::Unspecified,
+        inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }), .. }), .. }) => {}
+    other => panic!("expected `held &MyStruct` → BorrowRef(Held, BorrowRef(Unspecified, MyStruct)), got {:?}", other),
+  }
   assert!(pattern.destructure.is_none());
 }
 

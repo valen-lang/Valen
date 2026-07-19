@@ -113,19 +113,13 @@ fn templated_struct_one_arg() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let rule = compile(&parse_arena, &keywords, "Moo<int>");
-  let templex = cast!(rule, IRulexPR::Templex);
-  let call = cast!(templex, ITemplexPT::Call);
-  assert_templex_name(call.template, "Moo");
-  let arg = expect_1(&call.args);
-  assert_templex_name(arg, "int");
-
-  let rule = compile(&parse_arena, &keywords, "Moo<@int>");
-  let templex = cast!(rule, IRulexPR::Templex);
-  let call = cast!(templex, ITemplexPT::Call);
-  assert_templex_name(call.template, "Moo");
-  let arg = expect_1(&call.args);
-  let share_ref = cast!(arg, ITemplexPT::ShareRef);
-  assert_templex_name(share_ref.inner, "int");
+  match rule {
+    IRulexPR::Templex(ITemplexPT::Call(CallPT {
+      template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("Moo")), .. }),
+      args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. })],
+      .. })) => {}
+    other => panic!("expected `Moo<int>` → Call(Moo, [int]), got {:?}", other),
+  }
 }
 
 #[test]

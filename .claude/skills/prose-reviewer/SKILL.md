@@ -1,1 +1,1 @@
-../../../FrontendRust/docs/skills/prose-reviewer.md
+../../../docs/skills/prose-reviewer.md

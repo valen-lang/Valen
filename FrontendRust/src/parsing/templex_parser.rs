@@ -266,21 +266,23 @@ where
       })));
     }
 
-    // `heap T` → ITemplexPT::HeapOwnRef
-    if iter.try_skip_word(self.keywords.heap).is_some() {
+    // `own T` → ITemplexPT::OwnRef
+    if iter.try_skip_word(self.keywords.own).is_some() {
       let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
-      return Ok(Some(ITemplexPT::HeapOwnRef(HeapOwnRefPT {
+      return Ok(Some(ITemplexPT::OwnRef(OwnRefPT {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
         inner: &*self.parse_arena.alloc(inner),
       })));
     }
 
-    // `@T` → ITemplexPT::ShareRef
-    if iter.try_skip_symbol('@') {
+    // `held T` → ITemplexPT::BorrowRef with the held region (a borrow the caller proves the
+    // callee can't destroy). Takes no explicit region: held is itself a region.
+    if iter.try_skip_word(self.keywords.held).is_some() {
       let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
-      return Ok(Some(ITemplexPT::ShareRef(ShareRefPT {
+      return Ok(Some(ITemplexPT::BorrowRef(BorrowRefPT {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
         inner: &*self.parse_arena.alloc(inner),
+        region: RegionP::Held,
       })));
     }
 
@@ -292,7 +294,10 @@ where
       return Ok(Some(ITemplexPT::BorrowRef(BorrowRefPT {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
         inner: &*self.parse_arena.alloc(inner),
-        region: maybe_region.map(|x| &*self.parse_arena.alloc(x)),
+        region: match maybe_region {
+          None => RegionP::Unspecified,
+          Some(x) => RegionP::Rune(&*self.parse_arena.alloc(x)),
+        },
       })));
     }
 

@@ -28,37 +28,6 @@ fn simple_struct() {
 }
 
 #[test]
-fn struct_with_list_node() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let struct_ = compile_struct_expect(
-    &parse_arena,
-    &keywords,
-    "
-      struct Mork {
-        a @ListNode<T>;
-      }
-    ",
-  );
-  match expect_1(&struct_.members.contents) {
-    IStructContent::NormalStructMember(NormalStructMemberP {
-      name: NameP(_, StrI("a")),
-      tyype: ITemplexPT::ShareRef(ShareRefPT {
-        inner: ITemplexPT::Call(CallPT {
-          template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("ListNode")), .. }),
-          args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. })],
-          ..
-        }),
-        ..
-      }),
-      ..
-    }) => {}
-    _ => panic!("expected struct Mork {{ a @ListNode<T>; }} member structure"),
-  }
-}
-
-#[test]
 fn share_struct_aliases_imm() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -148,9 +117,9 @@ fn struct_with_double_borrow() {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("x")),
           tyype: ITemplexPT::BorrowRef(BorrowRefPT {
-            region: None,
+            region: RegionP::Unspecified,
             inner: ITemplexPT::BorrowRef(BorrowRefPT {
-              region: None,
+              region: RegionP::Unspecified,
               inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
               ..
             }),
@@ -213,7 +182,7 @@ fn export_struct() {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("x")),
           tyype: ITemplexPT::BorrowRef(BorrowRefPT {
-            region: None,
+            region: RegionP::Unspecified,
             inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
             ..
           }),

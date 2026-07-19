@@ -2,7 +2,7 @@
 sealed interface MyOption share { }
 
 struct MySome share {
-  value @MyList;
+  value MyList;
 }
 impl MyOption for MySome;
 
@@ -12,16 +12,16 @@ impl MyOption for MyNone;
 
 struct MyList share {
   value int;
-  next @MyOption;
+  next MyOption;
 }
 
-func sum(list @MyList) int {
+func sum(list MyList) int {
   return list.value + sum(list.next);
 }
 
-abstract func sum(virtual opt @MyOption) int;
-func sum(opt @MyNone) int { return 0; }
-func sum(opt @MySome) int {
+abstract func sum(virtual opt MyOption) int;
+func sum(opt MyNone) int { return 0; }
+func sum(opt MySome) int {
    return sum(opt.value);
 }
 

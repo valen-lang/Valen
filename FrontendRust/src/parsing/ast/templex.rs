@@ -16,8 +16,7 @@ pub enum ITemplexPT<'p> {
   NameOrRune(NameOrRunePT<'p>),
   BorrowRef(BorrowRefPT<'p>),
   WeakRef(WeakRefPT<'p>),
-  ShareRef(ShareRefPT<'p>),
-  HeapOwnRef(HeapOwnRefPT<'p>),
+  OwnRef(OwnRefPT<'p>),
   Pack(PackPT<'p>),
   Func(FuncPT<'p>),
   RuntimeSizedArray(RuntimeSizedArrayPT<'p>),
@@ -37,8 +36,7 @@ impl ITemplexPT<'_> {
       ITemplexPT::NameOrRune(n) => n.name.0,
       ITemplexPT::BorrowRef(r) => r.range,
       ITemplexPT::WeakRef(r) => r.range,
-      ITemplexPT::ShareRef(r) => r.range,
-      ITemplexPT::HeapOwnRef(r) => r.range,
+      ITemplexPT::OwnRef(r) => r.range,
       ITemplexPT::Pack(p) => p.range,
       ITemplexPT::Func(r) => r.range,
       ITemplexPT::RuntimeSizedArray(r) => r.range,
@@ -113,11 +111,25 @@ impl<'p> NameOrRunePT<'p> {
 }
 
 
+/// The region of a borrow reference. `held` and an explicit region annotation are sibling values
+/// here alongside "no annotation", so a borrow's region lives in one slot.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum RegionP<'p> {
+  /// No region written: `&Ship`.
+  Unspecified,
+  /// A held reference: `held Ship`. A borrow into an anonymous region the callee treats as
+  /// undestroyable, proven at the call site by the caller.
+  Held,
+  /// An explicit region annotation: `&'Ship` (anonymous rune) or `&i'Ship` (named).
+  Rune(&'p RegionRunePT<'p>),
+}
+
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BorrowRefPT<'p> {
   pub range: RangeL,
   pub inner: &'p ITemplexPT<'p>,
-  pub region: Option<&'p RegionRunePT<'p>>,
+  pub region: RegionP<'p>,
 }
 
 
@@ -129,14 +141,7 @@ pub struct WeakRefPT<'p> {
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct ShareRefPT<'p> {
-  pub range: RangeL,
-  pub inner: &'p ITemplexPT<'p>,
-}
-
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct HeapOwnRefPT<'p> {
+pub struct OwnRefPT<'p> {
   pub range: RangeL,
   pub inner: &'p ITemplexPT<'p>,
 }

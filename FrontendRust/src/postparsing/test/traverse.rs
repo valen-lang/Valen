@@ -18,7 +18,7 @@ use crate::postparsing::names::{
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
   BoolLiteralSL, EqualsSR, ILiteralSL, IntLiteralSL,
-  IRulexSR, LiteralSR, LookupSR, StringLiteralSL,
+  IRulexSR, LiteralSR, LookupSR, RegionSR, StringLiteralSL,
 };
 use crate::postparsing::rules::RuneUsage;
 
@@ -757,19 +757,15 @@ where
     IRulexSR::BorrowRef(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
       visit_rune_usage(pred, out, &x.inner_rune);
-      if let Some(ref r) = x.region_rune {
+      if let RegionSR::Rune(ref r) = x.region {
         visit_rune_usage(pred, out, r);
       }
     }
-    IRulexSR::HeapOwnRef(x) => {
-      visit_rune_usage(pred, out, &x.result_rune);
-      visit_rune_usage(pred, out, &x.inner_rune);
-    }
-    IRulexSR::ShareRef(x) => {
-      visit_rune_usage(pred, out, &x.result_rune);
-      visit_rune_usage(pred, out, &x.inner_rune);
-    }
     IRulexSR::WeakRef(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.inner_rune);
+    }
+    IRulexSR::OwnRef(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
       visit_rune_usage(pred, out, &x.inner_rune);
     }

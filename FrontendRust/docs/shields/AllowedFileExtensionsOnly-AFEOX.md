@@ -1,5 +1,5 @@
 ---
-description: Only .rs, .md, .cpp, .c, and .h files may be edited by an AI agent in this project.
+description: Only .rs, .md, .cpp, .c, .h, and .vale files may be edited by an AI agent in this project.
 g_model: SimpleSmall
 g_primary: rust
 g_program: AllowedFileExtensionsOnly-AFEOX
@@ -10,7 +10,7 @@ g_read_when: Read when an AI agent is about to edit a file with an unfamiliar ex
 
 # Allowed File Extensions Only (AFEOX)
 
-This project restricts AI-driven edits to a fixed set of file extensions: `.rs`, `.md`, `.cpp`, `.c`, and `.h`. Any edit to a file whose path doesn't end in one of these extensions is a violation, regardless of what the edit contains.
+This project restricts AI-driven edits to a fixed set of file extensions: `.rs`, `.md`, `.cpp`, `.c`, `.h`, and `.vale`. Any edit to a file whose path doesn't end in one of these extensions is a violation, regardless of what the edit contains.
 
 ## Examples
 
@@ -54,4 +54,11 @@ FILE: /Volumes/V/Vale1/FrontendRust/src/typing/mod.rs
 FILE: /Volumes/V/Vale1/docs/architecture/arenas.md
 
 +Arenas are immutable after construction.
+```
+
+**ALLOW:**
+```
+FILE: /Volumes/V/Vale1/FrontendRust/src/tests/programs/virtuals/interfaceimm.vale
+
++My
 ```

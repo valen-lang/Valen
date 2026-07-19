@@ -5,7 +5,7 @@ import printutils.*;
 sealed interface MyOption share { }
 
 struct MySome share {
-  value @MyList;
+  value MyList;
 }
 impl MyOption for MySome;
 
@@ -15,18 +15,18 @@ impl MyOption for MyNone;
 
 struct MyList share {
   value int;
-  next @MyOption;
+  next MyOption;
 }
 
-func printValues(list @MyList) void {
+func printValues(list MyList) void {
   // TSUGAR:   print(list.value);
   print(__copy_prim(list.value));
   printNextValue(list.next);
 }
 
-func printNextValue(virtual opt @MyOption) void { }
-func printNextValue(opt @MyNone) void { }
-func printNextValue(opt @MySome) void {
+func printNextValue(virtual opt MyOption) void { }
+func printNextValue(opt MyNone) void { }
+func printNextValue(opt MySome) void {
   printValues(opt.value);
 }
 

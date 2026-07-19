@@ -1,9 +1,11 @@
 
 use bumpalo::Bump;
-use crate::cast;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
-use crate::parsing::ast::{INameDeclarationP, ITemplexPT, PatternPP};
+use crate::parsing::ast::{
+  BorrowRefPT, INameDeclarationP, ITemplexPT, NameOrRunePT, NameP, PatternPP, RegionP,
+};
+use crate::interner::StrI;
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect,
 };
@@ -57,9 +59,12 @@ fn capture_with_borrow_tame() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "arr &R");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "arr");
-  let borrow_ref = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::BorrowRef);
-  assert!(borrow_ref.region.is_none());
-  assert_templex_name(borrow_ref.inner, "R");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region: RegionP::Unspecified,
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("R")), .. }), .. }) => {}
+    other => panic!("expected `&R` → BorrowRef(Unspecified, R), got {:?}", other),
+  }
   assert!(pattern.destructure.is_none());
 }
 
@@ -70,17 +75,21 @@ fn capture_with_self_in_front() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "self.arr &&R");
   let destination = pattern.destination.as_ref().unwrap();
-  let member_name = cast!(
-    &destination.decl,
-    INameDeclarationP::ConstructingMemberNameDeclaration
-  );
-  assert_eq!(member_name.as_str(), "arr");
+  match &destination.decl {
+    INameDeclarationP::ConstructingMemberNameDeclaration(member_name) => {
+      assert_eq!(member_name.as_str(), "arr");
+    }
+    other => panic!("expected `self.arr` → ConstructingMemberNameDeclaration, got {:?}", other),
+  }
   assert!(destination.mutate.is_none());
-  let outer = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::BorrowRef);
-  assert!(outer.region.is_none());
-  let inner = cast!(outer.inner, ITemplexPT::BorrowRef);
-  assert!(inner.region.is_none());
-  assert_templex_name(inner.inner, "R");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region: RegionP::Unspecified,
+      inner: ITemplexPT::BorrowRef(BorrowRefPT {
+        region: RegionP::Unspecified,
+        inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("R")), .. }), .. }), .. }) => {}
+    other => panic!("expected `&&R` → BorrowRef(Unspecified, BorrowRef(Unspecified, R)), got {:?}", other),
+  }
   assert!(pattern.destructure.is_none());
 }
 

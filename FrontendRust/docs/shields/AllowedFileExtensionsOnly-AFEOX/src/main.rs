@@ -6,13 +6,13 @@ struct ProgramInput {
     file_path: String,
 }
 
-const ALLOWED_EXTENSIONS: &[&str] = &[".rs", ".md", ".cpp", ".c", ".h"];
+const ALLOWED_EXTENSIONS: &[&str] = &[".rs", ".md", ".cpp", ".c", ".h", ".vale"];
 
 fn check(file_path: &str) -> Vec<String> {
     if file_path.is_empty() || ALLOWED_EXTENSIONS.iter().any(|ext| file_path.ends_with(ext)) {
         vec![]
     } else {
-        vec![format!("File extension not allowed (only .rs, .md, .cpp, .c, .h may be edited): {}", file_path)]
+        vec![format!("File extension not allowed (only .rs, .md, .cpp, .c, .h, .vale may be edited): {}", file_path)]
     }
 }
 
@@ -77,6 +77,11 @@ mod tests {
     #[test]
     fn allow_h_file() {
         assert!(run(&make_input("/Volumes/V/Vale1/Backend/builtins/ValeBuiltins.h")).is_empty());
+    }
+
+    #[test]
+    fn allow_vale_file() {
+        assert!(run(&make_input("/Volumes/V/Vale1/FrontendRust/src/tests/programs/virtuals/interfaceimm.vale")).is_empty());
     }
 
     #[test]

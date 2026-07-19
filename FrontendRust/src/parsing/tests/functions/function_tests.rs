@@ -524,17 +524,24 @@ fn func_with_func_bound() {
     &keywords,
     "func sum<T>() where func moo(&T)void {3}",
   );
-  let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  let template_rules = function.header.template_rules.as_ref().unwrap();
-  let first_rule = expect_1(&template_rules.rules);
-  let first_rule_templex = cast!(first_rule, IRulexPR::Templex);
-  let function_bound = cast!(first_rule_templex, ITemplexPT::Func);
-  assert_eq!(function_bound.name.as_str(), "moo");
-  let first_param = expect_1(&function_bound.parameters);
-  let borrow_ref = cast!(first_param, ITemplexPT::BorrowRef);
-  assert!(borrow_ref.region.is_none());
-  assert_templex_name(borrow_ref.inner, "T");
-  assert_templex_name(function_bound.return_type, "void");
+  match denizen {
+    IDenizenP::TopLevelFunction(FunctionP {
+      header: FunctionHeaderP {
+        template_rules: Some(TemplateRulesP {
+          rules: [IRulexPR::Templex(ITemplexPT::Func(FuncPT {
+            name: bound_name,
+            parameters: [ITemplexPT::BorrowRef(BorrowRefPT {
+              region: RegionP::Unspecified,
+              inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }), .. })],
+            return_type: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("void")), .. }),
+            .. })),
+          ], .. }),
+        .. },
+      .. }) => {
+      assert_eq!(bound_name.as_str(), "moo");
+    }
+    other => panic!("expected `func sum<T>() where func moo(&T)void`, got {:?}", other),
+  }
 }
 
 #[test]

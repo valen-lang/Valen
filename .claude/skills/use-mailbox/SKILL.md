@@ -1,0 +1,1 @@
+../../../docs/skills/use-mailbox.md

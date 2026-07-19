@@ -27,9 +27,8 @@ pub enum IRulexSR<'s> {
   DefinitionFunc(DefinitionFuncSR<'s>),
   Resolve(ResolveSR<'s>),
   BorrowRef(BorrowRefSR<'s>),
-  HeapOwnRef(HeapOwnRefSR<'s>),
-  ShareRef(ShareRefSR<'s>),
   WeakRef(WeakRefSR<'s>),
+  OwnRef(OwnRefSR<'s>),
 }
 
 impl<'s> IRulexSR<'s> {
@@ -45,9 +44,8 @@ impl<'s> IRulexSR<'s> {
       IRulexSR::DefinitionFunc(x) => &x.range,
       IRulexSR::Resolve(x) => &x.range,
       IRulexSR::BorrowRef(x) => &x.range,
-      IRulexSR::HeapOwnRef(x) => &x.range,
-      IRulexSR::ShareRef(x) => &x.range,
       IRulexSR::WeakRef(x) => &x.range,
+      IRulexSR::OwnRef(x) => &x.range,
     }
   }
 
@@ -73,14 +71,13 @@ impl<'s> IRulexSR<'s> {
       IRulexSR::Resolve(x) => vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
       IRulexSR::BorrowRef(x) => {
         let mut usages = vec![x.result_rune.clone(), x.inner_rune.clone()];
-        if let Some(region_rune) = &x.region_rune {
+        if let RegionSR::Rune(region_rune) = &x.region {
           usages.push(region_rune.clone());
         }
         usages
       }
-      IRulexSR::HeapOwnRef(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
-      IRulexSR::ShareRef(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
       IRulexSR::WeakRef(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
+      IRulexSR::OwnRef(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
     }
   }
 
@@ -151,30 +148,32 @@ pub struct RuneParentEnvLookupSR<'s> {
   pub rune: RuneUsage<'s>,
 }
 
+/// The region of a borrow reference (postparse). Mirrors the parser's `RegionP`: `held` and an
+/// explicit region rune are siblings alongside "no annotation".
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum RegionSR<'s> {
+  Unspecified,
+  Held,
+  Rune(RuneUsage<'s>),
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BorrowRefSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
   pub inner_rune: RuneUsage<'s>,
-  pub region_rune: Option<RuneUsage<'s>>,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct HeapOwnRefSR<'s> {
-  pub range: RangeS<'s>,
-  pub result_rune: RuneUsage<'s>,
-  pub inner_rune: RuneUsage<'s>,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct ShareRefSR<'s> {
-  pub range: RangeS<'s>,
-  pub result_rune: RuneUsage<'s>,
-  pub inner_rune: RuneUsage<'s>,
+  pub region: RegionSR<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WeakRefSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub inner_rune: RuneUsage<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct OwnRefSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
   pub inner_rune: RuneUsage<'s>,
