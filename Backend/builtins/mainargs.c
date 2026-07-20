@@ -1,20 +1,18 @@
 #include <stdint.h>
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "ValeBuiltins.h"
-
 
 extern int64_t __main_num_args;
 extern char** __main_args;
 int64_t __vale_numMainArgs() {
   return __main_num_args;
 }
-ValeStr* __vale_getMainArg(int64_t i) {
-  char* argCStr = __main_args[i];
-  int64_t len = strlen(argCStr);
-  ValeStr* vstr = ValeStrNew(len);
-  strncpy(vstr->chars, argCStr, len);
-  return vstr;
+
+int32_t __vale_rt_get_main_arg_len(int64_t i) {
+  const char* arg = __main_args[i];
+  int32_t len = 0;
+  while (arg[len] != '\0') len++;
+  return len;
+}
+
+const char* __vale_rt_get_main_arg_ptr(int64_t i) {
+  return __main_args[i];
 }

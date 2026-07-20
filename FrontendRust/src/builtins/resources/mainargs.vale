@@ -1,3 +1,5 @@
 
 extern func numMainArgs() int;
-extern func getMainArg(i int) str;
+
+func getMainArg(i int) str { return __vbi_getMainArg(i); }
+extern func __vbi_getMainArg(i int) str;

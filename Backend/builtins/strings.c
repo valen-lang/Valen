@@ -1,234 +1,47 @@
+// Primitive-typed helpers used by the __vbi_* string intrinsics in
+// Backend/src/function/expressions/externs.cpp. All operations that touch
+// share `str` refs (allocation, RC management) happen Vale-side inside the
+// intrinsic; C only handles raw byte buffers and format conversions.
+//
+// Naming: functions prefixed with `__vbi_` are recognized by the Backend as
+// compiler intrinsics — they never exist as real symbols. Functions prefixed
+// with `__vale_rt_` are Vale's compiler runtime support library (compare
+// LLVM's compiler-rt): real linked symbols that compiler-emitted IR calls
+// directly, invisible to the language and outside the FFI machinery.
+
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include "ValeBuiltins.h"
 
-#define TRUE 1
-#define FALSE 0
-
-ValeStr* ValeStrNew(ValeInt length) {
-  ValeStr* result = (ValeStr*)malloc(sizeof(ValeStr) + length + 1);
-  result->length = length;
-  result->chars[0] = 0;
-  result->chars[length] = 0;
-  return result;
+// Format an int64 into `buffer` as decimal ASCII. Returns bytes written
+// (excluding null terminator).
+int32_t __vale_rt_i64_to_ascii(int64_t n, char* buffer, int32_t bufferSize) {
+  int written = snprintf(buffer, bufferSize, "%lld", (long long)n);
+  return (int32_t)written;
 }
 
-ValeStr* ValeStrFrom(char* source) {
-  int length = strlen(source);
-  ValeStr* result = ValeStrNew(length);
-  strncpy(result->chars, source, length);
-  result->chars[length] = 0;
-  return result;
+// Format a double into `buffer` as ASCII. Returns bytes written.
+int32_t __vale_rt_float_to_ascii(double f, char* buffer, int32_t bufferSize) {
+  int written = snprintf(buffer, bufferSize, "%lf", f);
+  return (int32_t)written;
 }
 
-ValeInt __vale_strindexof(
-    ValeStr* haystackContainerStr, ValeInt haystackBegin, ValeInt haystackEnd,
-    ValeStr* needleContainerStr, ValeInt needleBegin, ValeInt needleEnd) {
-  char* haystackContainerChars = haystackContainerStr->chars;
-  char* haystack = haystackContainerChars + haystackBegin;
-  ValeInt haystackLen = haystackEnd - haystackBegin;
-
-  char* needleContainerChars = needleContainerStr->chars;
-  char* needle = needleContainerChars + needleBegin;
-  ValeInt needleLen = needleEnd - needleBegin;
-
-  for (ValeInt i = 0; i <= haystackLen - needleLen; i++) {
-    if (strncmp(needle, haystack + i, needleLen) == 0) {
-      free(haystackContainerStr);
-      free(needleContainerStr);
+// Find `needle` in `haystack`. Returns byte offset within haystack, or -1.
+int32_t __vale_rt_bytes_find(
+    const char* haystack, int32_t haystackLen,
+    const char* needle, int32_t needleLen) {
+  if (needleLen == 0) return 0;
+  if (needleLen > haystackLen) return -1;
+  for (int32_t i = 0; i <= haystackLen - needleLen; i++) {
+    if (memcmp(haystack + i, needle, (size_t)needleLen) == 0) {
       return i;
     }
   }
-  free(haystackContainerStr);
-  free(needleContainerStr);
   return -1;
 }
 
-
-ValeStr* __vale_substring(
-    ValeStr* sourceStr,
-    ValeInt begin,
-    ValeInt length) {
-  char* sourceChars = sourceStr->chars;
-
-  assert(begin >= 0);
-  assert(length >= 0);
-
-  ValeStr* result = ValeStrNew(length);
-  char* resultChars = result->chars;
-  strncpy(resultChars, sourceChars + begin, length);
-  free(sourceStr);
-  return result;
+// Write `len` bytes from `bytes` to stdout.
+void __vale_rt_write_stdout(const char* bytes, int32_t len) {
+  fwrite(bytes, 1, (size_t)len, stdout);
 }
 
-char __vale_streq(
-    ValeStr* aStr,
-    ValeInt aBegin,
-    ValeInt aEnd,
-    ValeStr* bStr,
-    ValeInt bBegin,
-    ValeInt bEnd) {
-  char* aContainerChars = aStr->chars;
-  char* a = aContainerChars + aBegin;
-  ValeInt aLen = aEnd - aBegin;
-
-  char* bContainerChars = bStr->chars;
-  char* b = bContainerChars + bBegin;
-  ValeInt bLen = bEnd - bBegin;
-
-  if (aLen != bLen) {
-    free(aStr);
-    free(bStr);
-    return FALSE;
-  }
-  ValeInt len = aLen;
-
-  for (int i = 0; i < len; i++) {
-    if (a[i] != b[i]) {
-      free(aStr);
-      free(bStr);
-      return FALSE;
-    }
-  }
-
-  free(aStr);
-  free(bStr);
-  return TRUE;
-}
-
-ValeInt __vale_strcmp(
-    ValeStr* aStr,
-    ValeInt aBegin,
-    ValeInt aEnd,
-    ValeStr* bStr,
-    ValeInt bBegin,
-    ValeInt bEnd) {
-  char* aContainerChars = aStr->chars;
-  char* a = aContainerChars + aBegin;
-  ValeInt aLen = aEnd - aBegin;
-
-  char* bContainerChars = bStr->chars;
-  char* b = bContainerChars + bBegin;
-  ValeInt bLen = bEnd - bBegin;
-
-  for (int i = 0; ; i++) {
-    if (i >= aLen && i >= bLen) {
-      break;
-    }
-    if (i >= aLen && i < bLen) {
-      free(aStr);
-      free(bStr);
-      return -1;
-    }
-    if (i < aLen && i >= bLen) {
-      free(aStr);
-      free(bStr);
-      return 1;
-    }
-    if (a[i] < b[i]) {
-      free(aStr);
-      free(bStr);
-      return -1;
-    }
-    if (a[i] > b[i]) {
-      free(aStr);
-      free(bStr);
-      return 1;
-    }
-  }
-  free(aStr);
-  free(bStr);
-  return 0;
-}
-
-ValeStr* __vale_addStr(
-    ValeStr* aStr, ValeInt aBegin, ValeInt aLength,
-    ValeStr* bStr, ValeInt bBegin, ValeInt bLength) {
-  char* a = aStr->chars;
-  char* b = bStr->chars;
-
-  ValeStr* result = ValeStrNew(aLength + bLength);
-  char* dest = result->chars;
-
-  for (int i = 0; i < aLength; i++) {
-    dest[i] = a[aBegin + i];
-  }
-  for (int i = 0; i < bLength; i++) {
-    dest[i + aLength] = b[bBegin + i];
-  }
-  // Add a null terminating char for compatibility with C.
-  // Backend should allocate an extra byte to accommodate this.
-  // (Backend also adds this in case we didn't do it here)
-  dest[aLength + bLength] = 0;
-
-  free(aStr);
-  free(bStr);
-  return result;
-}
-
-extern ValeStr* __vale_castI64Str(int64_t n) {
-  char tempBuffer[100] = { 0 };
-  int charsWritten = snprintf(tempBuffer, 100, "%lld", n);
-  ValeStr* result = ValeStrNew(charsWritten);
-  char* resultChars = result->chars;
-  strncpy(resultChars, tempBuffer, charsWritten);
-  return result;
-}
-
-extern ValeStr* __vale_castI32Str(int32_t n) {
-  return __vale_castI64Str((int64_t)n);
-}
-
-extern ValeStr* __vale_castFloatStr(double f) {
-  char tempBuffer[100] = { 0 };
-  int charsWritten = snprintf(tempBuffer, 100, "%lf", f);
-  ValeStr* result = ValeStrNew(charsWritten);
-  char* resultChars = result->chars;
-  strncpy(resultChars, tempBuffer, charsWritten);
-  return result;
-}
-
-void __vale_printstr(ValeStr* s, ValeInt start, ValeInt length) {
-  char* chars = s->chars;
-  fwrite(chars + start, 1, length, stdout);
-  free(s);
-}
-
-ValeInt __vale_strtoascii(ValeStr* s, ValeInt begin, ValeInt end) {
-  assert(begin + 1 <= end);
-  char* chars = s->chars;
-  ValeInt result = (ValeInt)*(chars + begin);
-  free(s);
-  return result;
-}
-
-ValeStr* __vale_strfromascii(ValeInt code) {
-  ValeStr* result = ValeStrNew(1);
-  char* dest = result->chars;
-  *dest = code;
-  return result;
-}
-
-// Compiler extern, put into the program at runtime for internal use
-uint64_t strHasherCall(void* unused, char* str) {
-  uint64_t hash = 0;
-  for (int i = 0; str[i]; i++) {
-    hash = hash * 37 + str[i];
-  }
-  return hash;
-}
-
-// Compiler extern, put into the program at runtime for internal use
-int8_t strEquatorCall(void* unused, char* strA, char* strB) {
-  for (int i = 0; ; i++) {
-    if (strA[i] != strB[i]) {
-      return FALSE;
-    }
-    if (strA[i] == 0) {
-      return TRUE;
-    }
-  }
-}

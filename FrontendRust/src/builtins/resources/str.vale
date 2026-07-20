@@ -1,24 +1,40 @@
 import v.builtins.implicit_clone.*;
 
-func +(a &str, b &str) str { return addStr(a, 0, len(a), b, 0, len(b)); }
-extern func addStr(a &str, aBegin int, aEnd int, b &str, bBegin int, bEnd int) str;
+func +(a str, b str) str { return __vbi_addStr(a, 0, len(a), b, 0, len(b)); }
+extern func __vbi_addStr(a str, aBegin int, aEnd int, b str, bBegin int, bEnd int) str;
 
-func str(x int) str { return castI32Str(x); }
-extern func castI32Str(x int) str;
+func str(x int) str { return __vbi_castI32Str(x); }
+extern func __vbi_castI32Str(x int) str;
 
-func str(x i64) str { return castI64Str(x); }
-extern func castI64Str(x i64) str;
+func str(x i64) str { return __vbi_castI64Str(x); }
+extern func __vbi_castI64Str(x i64) str;
 
-func str(x float) str { return castFloatStr(x); }
-extern func castFloatStr(x float) str;
+func str(x float) str { return __vbi_castFloatStr(x); }
+extern func __vbi_castFloatStr(x float) str;
 
-func len(s &str) int { return __vbi_strLength(s); }
-extern func __vbi_strLength(s &str) int;
+func len(s str) int { return __vbi_strLength(s); }
+extern func __vbi_strLength(s str) int;
 
-extern func strtoascii(s str, begin int, end int) int;
-extern func strfromascii(code int) str;
+func strtoascii(s str, begin int, end int) int {
+  return __vbi_strtoascii(s, begin, end);
+}
+extern func __vbi_strtoascii(s str, begin int, end int) int;
 
-extern func strindexof(
+func strfromascii(code int) str { return __vbi_strfromascii(code); }
+extern func __vbi_strfromascii(code int) str;
+
+func strindexof(
+  haystackContainer str,
+  haystackBegin int,
+  haystackEnd int,
+  needleContainer str,
+  needleBegin int,
+  needleEnd int)
+int {
+  return __vbi_strindexof(haystackContainer, haystackBegin, haystackEnd,
+                          needleContainer, needleBegin, needleEnd);
+}
+extern func __vbi_strindexof(
   haystackContainer str,
   haystackBegin int,
   haystackEnd int,
@@ -27,13 +43,30 @@ extern func strindexof(
   needleEnd int)
 int;
 
-extern func substring(
+func substring(
+  haystackContainer str,
+  begin int,
+  end int)
+str {
+  return __vbi_substring(haystackContainer, begin, end);
+}
+extern func __vbi_substring(
   haystackContainer str,
   begin int,
   end int)
 str;
 
-extern func strcmp(
+func strcmp(
+  aContainerStr str,
+  aBegin int,
+  aEnd int,
+  bContainerStr str,
+  bBegin int,
+  bEnd int)
+int {
+  return __vbi_strcmp(aContainerStr, aBegin, aEnd, bContainerStr, bBegin, bEnd);
+}
+extern func __vbi_strcmp(
   aContainerStr str,
   aBegin int,
   aEnd int,
