@@ -3,10 +3,10 @@
 // ownership onward) before returning. This test exercises the C-side
 // `IShip_dealias(s)` call — the pattern that pre-slice-5 tests used before
 // the silent-boundary refactor forced BORROW-only.
-sealed exported interface IShip imm { }
+sealed exported interface IShip share { }
 abstract func getFuel(virtual ship &IShip) int;
 
-exported struct Firefly imm { fuel int; }
+exported struct Firefly share { fuel int; }
 impl IShip for Firefly;
 func getFuel(ship Firefly) int { ship.fuel }
 

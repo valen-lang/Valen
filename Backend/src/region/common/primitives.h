@@ -22,20 +22,17 @@ public:
         dynamic_cast<Float *>(referenceM->kind) != nullptr;
   }
 
-  // VCOORD: All 4 Own asserts below are pre-Q1 — primitives can now flow non-Own (borrow-flavor).
-  // Per vcoord-handoff.md line 310, Phase 1 of Option A2 is: drop these asserts, always return scalar.
+  // Phase 1 of Option A2 (vcoord-handoff.md): primitives can flow non-Own (borrow-flavor), so
+  // translatePrimitive always returns the scalar type regardless of ownership. Phase 2 (when
+  // `*int_ptr = 42` semantics land) will dispatch on ownership — scalar for Own, pointer for Borrow.
   LLVMTypeRef translatePrimitive(GlobalState* globalState, Reference* referenceM) {
     if (auto innt = dynamic_cast<Int*>(referenceM->kind)) {
-      assert(referenceM->ownership == Ownership::OWN);
       return LLVMIntTypeInContext(globalState->context, innt->bits);
     } else if (auto vooid = dynamic_cast<Void*>(referenceM->kind)) {
-      assert(referenceM->ownership == Ownership::OWN);
       return LLVMIntTypeInContext(globalState->context, VOID_INT_BITS);
     } else if (dynamic_cast<Bool*>(referenceM->kind) != nullptr) {
-      assert(referenceM->ownership == Ownership::OWN);
       return LLVMInt1TypeInContext(globalState->context);
     } else if (dynamic_cast<Float*>(referenceM->kind) != nullptr) {
-      assert(referenceM->ownership == Ownership::OWN);
       return LLVMDoubleTypeInContext(globalState->context);
     } else if (dynamic_cast<Never*>(referenceM->kind) != nullptr) {
       return LLVMArrayType(LLVMIntTypeInContext(globalState->context, NEVER_INT_BITS), 0);

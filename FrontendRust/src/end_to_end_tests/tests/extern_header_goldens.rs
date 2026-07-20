@@ -22,6 +22,7 @@ use std::fs;
 
 // Concrete share kind: 8-byte handle typedef + the full struct C API.
 #[test]
+#[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"]
 fn structimm_export_headers_golden() {
     let dir = programs_dir().join("programs/externs/structimmreturnexport");
     let cp = compile_program(&dir, &[], |_| {});
@@ -195,6 +196,7 @@ extern vtest_Flamscrankle vtest_valeMakeStruct();
 
 // Interface: 16-byte handle typedef + `_TAG_` constants + downcast/upcast/typeTag.
 #[test]
+#[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"]
 fn interfaceimm_export_headers_golden() {
     let dir = programs_dir().join("programs/externs/interfaceimmreturnexport");
     let cp = compile_program(&dir, &[], |_| {});

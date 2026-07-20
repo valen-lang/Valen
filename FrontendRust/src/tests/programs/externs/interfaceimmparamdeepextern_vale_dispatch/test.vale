@@ -1,11 +1,11 @@
-exported struct Engine imm { leftFuel int; rightFuel int; }
+exported struct Engine share { leftFuel int; rightFuel int; }
 
-sealed exported interface IShip imm { }
+sealed exported interface IShip share { }
 
-exported struct Spaceship imm { fuel int; }
+exported struct Spaceship share { fuel int; }
 impl IShip for Spaceship;
 
-exported struct Seaship imm { engine Engine; }
+exported struct Seaship share { engine Engine; }
 impl IShip for Seaship;
 
 abstract func getFuel(virtual s IShip) int;

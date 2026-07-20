@@ -7,7 +7,7 @@
 // Before the PSBCBO restoration this test would SIGSEGV during replay
 // because the label slot was `real + adjuster_w` (writer's own malloc
 // address plus 2×bufferBegin), meaningless in the reader's process.
-exported struct Named imm { id int; label str; }
+exported struct Named share { id int; label str; }
 
 exported func makeNamed(id int, s str) Named { Named(id, s) }
 exported func fixedLabel() str { "hello" }

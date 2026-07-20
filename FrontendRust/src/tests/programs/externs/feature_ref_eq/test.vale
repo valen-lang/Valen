@@ -2,7 +2,7 @@
 // C receives three handles: two aliases of the same object, one different.
 // Verifies that _ref_eq returns true for same-object handles and false for
 // different-object handles.
-exported struct Widget imm { n int; }
+exported struct Widget share { n int; }
 
 extern func testRefEq(a Widget, b Widget, c Widget) int;
 
