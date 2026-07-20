@@ -1,0 +1,7 @@
+// Basic getMainArg exercise: reads argv[1] via the __vbi_getMainArg intrinsic
+// and returns its length. The test harness passes "hello" as argv[1] so the
+// program returns 5.
+exported func main() int {
+  arg1 = getMainArg(1);
+  return len(arg1);
+}

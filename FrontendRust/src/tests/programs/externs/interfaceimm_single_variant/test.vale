@@ -1,0 +1,14 @@
+// Interface with a single impl — edge case for tag dispatch (does the tag
+// switch cover exactly one case? does the auto-gen'd tag emit a valid single
+// tag constant?).
+sealed exported interface OnlyOne imm { }
+
+exported struct TheOne imm { val int; }
+impl OnlyOne for TheOne;
+
+extern func handleIt(o OnlyOne) int;
+
+exported func main() int {
+  x OnlyOne = TheOne(1); // force the impl to happen
+  return handleIt(TheOne(42));
+}

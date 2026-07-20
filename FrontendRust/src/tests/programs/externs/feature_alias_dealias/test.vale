@@ -1,0 +1,10 @@
+// Isolates the auto-gen'd Foo_alias and Foo_dealias primitives.
+// C receives a Widget, calls _alias then _dealias (net zero on RC),
+// reads the field, returns.
+exported struct Widget imm { n int; }
+
+extern func testAliasDealias(w Widget) int;
+
+exported func main() int {
+  return testAliasDealias(Widget(42));
+}

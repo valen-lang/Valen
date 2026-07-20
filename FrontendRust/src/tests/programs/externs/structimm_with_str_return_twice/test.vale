@@ -1,0 +1,22 @@
+// Two nested-pointer values recorded in sequence. `main` calls cMakeNamed()
+// twice, so the SECOND Named is serialized at a NONZERO fileOffset. Its
+// internal `label` (str) slot is stored in PSBCBO stored form
+// `strDestOffset + fileOffset` with fileOffset > 0 — the only replay scenario
+// that actually exercises the file-offset term of the linear-region address
+// adjuster. structimm_with_str_return records a single value at fileOffset 0,
+// where that term is trivially zero; this fixture pins that the write-side
+// (+fileOffset baked into the stored pointer) and read-side (-fileOffset in
+// the read adjuster) cancel correctly across the disk boundary.
+exported struct Named imm { id int; label str; }
+
+exported func makeNamed(id int, s str) Named { Named(id, s) }
+exported func fixedLabel() str { "hello" }
+
+extern func cMakeNamed() Named;
+
+exported func main() int {
+  a = cMakeNamed();
+  b = cMakeNamed();
+  // len("hello") == 5. runNumbers 1,2 -> (1+5)+(2+5)=13; runNumbers 3,4 -> (3+5)+(4+5)=17.
+  return a.id + len(a.label) + b.id + len(b.label);
+}

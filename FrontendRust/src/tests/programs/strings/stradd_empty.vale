@@ -1,0 +1,13 @@
+
+exported func main() int {
+  a = "";
+  b = "foo";
+  ab = a + b;
+  ba = b + a;
+  ee = a + a;
+  return if len(ab) == 3 {
+    if len(ba) == 3 {
+      if len(ee) == 0 { 42 } else { 3 }
+    } else { 2 }
+  } else { 1 };
+}

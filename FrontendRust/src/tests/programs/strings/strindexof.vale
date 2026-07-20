@@ -1,0 +1,11 @@
+
+exported func main() int {
+  hay = "hello world";
+  found = "world";
+  notfound = "xyz";
+  posFound = strindexof(hay, 0, len(hay), found, 0, len(found));
+  posNotFound = strindexof(hay, 0, len(hay), notfound, 0, len(notfound));
+  return if posFound == 6 {
+    if posNotFound == -1 { 42 } else { 2 }
+  } else { 1 };
+}

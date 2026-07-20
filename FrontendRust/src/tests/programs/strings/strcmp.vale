@@ -1,0 +1,15 @@
+
+exported func main() int {
+  a = "apple";
+  b = "banana";
+  c = "cherry";
+  lt = strcmp(a, 0, len(a), b, 0, len(b));
+  eq = strcmp(b, 0, len(b), b, 0, len(b));
+  gt = strcmp(c, 0, len(c), b, 0, len(b));
+  return if lt < 0 {
+    if eq == 0 {
+      if gt > 0 { 42 }
+      else { 3 }
+    } else { 2 }
+  } else { 1 };
+}

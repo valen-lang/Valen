@@ -1,27 +1,17 @@
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+
 #include "vtest/IShip.h"
 #include "vtest/Firefly.h"
-#include "vtest/cMakeShip.h"
+#include "vtest/Firefly_new.h"
+#include "vtest/Firefly_alias.h"
+#include "vtest/Firefly_dealias.h"
+#include "vtest/Firefly_asIShip.h"
 
+// Per @FRMACZ: alias firefly for the asIShip pass, dealias the handle we own,
+// and return shipRef (which moves out).
 vtest_IShip vtest_cMakeShip() {
-  vtest_Firefly* firefly = (vtest_Firefly*)malloc(sizeof(vtest_Firefly));
-  firefly->fuel = 42;
-
-  // If the enum isnt 64 bits, we run into some undefined padding when there
-  // are only 1 or 2 values in the enum.
-  // Oddly, when we have 3 values in the enum, the problem disappears.
-  // Anyway, we generate a vtest_IShip_Type_MAX_VALUE = 0x7FFFFFFFFFFFFFFF to
-  // force this and fix it for good.
-  // This assert is to check that it's 64 bits even though there's only one
-  // entry in the enum.
-  // Nevermind, it doesn't work for windows!
-
-  vtest_IShip shipRef;
-  shipRef.obj = firefly;
-  shipRef.type = vtest_IShip_Type_Firefly;
-
-  return shipRef;
+  vtest_Firefly firefly = vtest_Firefly_new(42);                     // owned 1
+  vtest_IShip shipRef = vtest_Firefly_asIShip(vtest_Firefly_alias(firefly));
+  vtest_Firefly_dealias(firefly);
+  return shipRef;                                                    // moves out
 }

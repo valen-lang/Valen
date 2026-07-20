@@ -1,0 +1,10 @@
+
+exported func main() int {
+  a = "aa";
+  b = "bb";
+  c = "cc";
+  d = "dd";
+  combined = a + b + c + d;
+  target = "aabbccdd";
+  return if streq(combined, 0, len(combined), target, 0, len(target)) { 42 } else { 1 };
+}

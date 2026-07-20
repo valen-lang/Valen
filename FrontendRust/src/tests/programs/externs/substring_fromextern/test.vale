@@ -1,0 +1,10 @@
+// Replay coverage for __vbi_substring: end offset comes from C, so the
+// resulting substring length varies across runs and forces the record/replay
+// path to capture the full intrinsic behavior.
+extern func cSubEnd() int;
+
+exported func main() int {
+  s = "hello world";
+  sub = substring(s, 0, cSubEnd());
+  return len(sub);
+}

@@ -1,0 +1,11 @@
+// Isolates the auto-gen'd Foo_fieldName getter primitives.
+// Struct has a primitive field and a nested-share field; C reads both,
+// dealiases the intermediate NEW ref from the share-field getter.
+exported struct Inner imm { x int; }
+exported struct Outer imm { name int; inner Inner; }
+
+extern func testGetters(o Outer) int;
+
+exported func main() int {
+  return testGetters(Outer(10, Inner(32)));
+}

@@ -1,0 +1,7 @@
+
+exported func main() int {
+  s = strfromascii(42);
+  return if len(s) == 1 {
+    if strtoascii(s, 0, 1) == 42 { 42 } else { 2 }
+  } else { 1 };
+}

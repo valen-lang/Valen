@@ -1,5 +1,15 @@
 exported func getAStr() str { "hello!" }
 
+exported func makeRepeatingHello(n int) str {
+  result = "";
+  i = 0;
+  while (i < n) {
+    set result = result + "hello!";
+    set i = i + 1;
+  }
+  return result;
+}
+
 extern func runExtCommand() str;
 
 exported func main() int {

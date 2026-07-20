@@ -1,0 +1,18 @@
+// Explicit OWN discharge: under the always-OWN extern-arg ABI, C receives a
+// +1'd share ref and is responsible for dealiasing it (or transferring
+// ownership onward) before returning. This test exercises the C-side
+// `IShip_dealias(s)` call — the pattern that pre-slice-5 tests used before
+// the silent-boundary refactor forced BORROW-only.
+sealed exported interface IShip imm { }
+abstract func getFuel(virtual ship &IShip) int;
+
+exported struct Firefly imm { fuel int; }
+impl IShip for Firefly;
+func getFuel(ship Firefly) int { ship.fuel }
+
+extern func cGetShipFuel(s IShip) int;
+
+exported func main() int {
+  x IShip = Firefly(7); // force the impl to be emitted
+  return cGetShipFuel(Firefly(42));
+}

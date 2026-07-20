@@ -16,8 +16,8 @@ exported struct Spigglewigget share {
   z int;
 }
 
-extern func extFunc_vasp(flam Flamscrankle) int;
+extern func extFunc(flam Flamscrankle) int;
 
 exported func main() int {
-  return extFunc_vasp(Flamscrankle(7, Bogglewoggle(Spigglewigget(5, 7, 4), 5), 14));
+  return extFunc(Flamscrankle(7, Bogglewoggle(Spigglewigget(5, 7, 4), 5), 14));
 }

@@ -1,0 +1,9 @@
+// Isolates the auto-gen'd Arr_at + _SIZE constant for a static-sized array.
+export [#3]<imm>int as MyIntArray;
+
+extern func testArrRead(arr [#3]<imm>int) int;
+
+exported func main() int {
+  a = #[#](6, 14, 22);
+  return testArrRead(a);
+}

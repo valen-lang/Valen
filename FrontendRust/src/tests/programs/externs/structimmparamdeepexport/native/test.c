@@ -1,19 +1,14 @@
 #include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
 
 #include "vtest/Bogglewoggle.h"
 #include "vtest/Flamscrankle.h"
-
-extern ValeInt vtest_expFunc(vtest_Flamscrankle* flam);
+#include "vtest/expFunc.h"
 
 // We use incrementIntFile to get some side effects to test replayability, see AASETR.
 int64_t incrementIntFile(const char* filename);
 
-ValeInt vtest_extFunc(vtest_Flamscrankle* flam) {
+// flam is BORROW (extern arg) — pass-through to another export.
+ValeInt vtest_extFunc(vtest_Flamscrankle flam) {
   int runNumber = incrementIntFile("myfile.bin");
-
   return vtest_expFunc(flam) * runNumber;
 }

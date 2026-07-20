@@ -3,13 +3,13 @@
 
 pub mod arrays;
 pub mod downcast;
+pub mod extern_header_goldens;
 pub mod externs;
 pub mod ifelse;
 pub mod inline;
 pub mod lambdas;
 pub mod misc;
 pub mod native_walker;
-pub mod replay;
 pub mod strings;
 pub mod structs;
 pub mod virtuals;

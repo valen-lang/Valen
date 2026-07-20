@@ -1,0 +1,9 @@
+// Isolates the auto-gen'd str_len + str_char_at primitives.
+// C reads every char of a Vale-produced string via char_at and asserts each.
+exported func getVal() str { "hello" }
+
+extern func testStrRead() int;
+
+exported func main() int {
+  return testStrRead();
+}

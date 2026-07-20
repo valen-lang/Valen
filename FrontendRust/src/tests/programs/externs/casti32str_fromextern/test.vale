@@ -1,0 +1,10 @@
+// Replay coverage for __vbi_castI32Str: Vale converts a C-supplied int to str
+// and returns len(str) + value so both the width of the conversion and its
+// value get folded into the exit code.
+extern func cGetInt() int;
+
+exported func main() int {
+  n = cGetInt();
+  s = str(n);
+  return len(s) + n;
+}

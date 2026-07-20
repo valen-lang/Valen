@@ -1,0 +1,9 @@
+// Empty-string edge case: verify str_len returns 0 and str_dealias is safe
+// on an empty share str.
+exported func makeEmpty() str { "" }
+
+extern func getLen() int;
+
+exported func main() int {
+  return getLen() + 42;
+}

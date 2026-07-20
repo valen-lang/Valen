@@ -1,0 +1,11 @@
+// C-side aliasing: C receives the same share ref via two different args,
+// uses both, returns int. RC must remain correct across the double-arg
+// borrow (both a and b reference the same object; net effect must be zero).
+exported struct Widget imm { n int; }
+
+extern func testAlias(a Widget, b Widget) int;
+
+exported func main() int {
+  w = Widget(42);
+  return testAlias(w, w);
+}

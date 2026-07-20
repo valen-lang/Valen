@@ -1,0 +1,10 @@
+
+exported func main() int {
+  s = "hello world";
+  sub = substring(s, 6, 11);
+  target = "world";
+  empty = substring(s, 3, 3);
+  return if streq(sub, 0, len(sub), target, 0, len(target)) {
+    if len(empty) == 0 { 42 } else { 2 }
+  } else { 1 };
+}

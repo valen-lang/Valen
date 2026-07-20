@@ -1,0 +1,8 @@
+# LSan suppressions for false-positive leaks that aren't Vale's fault.
+# Used when VALE_TEST_ASAN=1 to focus reports on actual Vale RC balance issues.
+
+# Apple's Objective-C runtime allocates class caches during dyld init that
+# are never freed by design. Reported as "leaked" by LSan because there's no
+# `dealloc` for a class list that lives the process lifetime. Not our bug.
+leak:libobjc
+leak:_fetchInitializingClassList

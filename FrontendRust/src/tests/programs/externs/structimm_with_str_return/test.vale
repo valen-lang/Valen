@@ -1,0 +1,21 @@
+// Nested on-disk pointer marshaling: C returns a struct whose second field is
+// a `str` (a pointer, not a primitive). Under PSBCBO the label slot in the
+// recorded record must hold `strDestOffset + fileOffset` — a process-
+// independent absolute file position — and the reader must translate it
+// back to a real pointer via the read-side adjuster.
+//
+// Before the PSBCBO restoration this test would SIGSEGV during replay
+// because the label slot was `real + adjuster_w` (writer's own malloc
+// address plus 2×bufferBegin), meaningless in the reader's process.
+exported struct Named imm { id int; label str; }
+
+exported func makeNamed(id int, s str) Named { Named(id, s) }
+exported func fixedLabel() str { "hello" }
+
+extern func cMakeNamed() Named;
+
+exported func main() int {
+  n = cMakeNamed();
+  // len("hello") == 5, so this is id + 5.
+  return n.id + len(n.label);
+}

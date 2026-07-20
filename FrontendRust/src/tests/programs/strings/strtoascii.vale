@@ -1,0 +1,6 @@
+
+exported func main() int {
+  // '*' is ASCII 42.
+  s = "*";
+  return strtoascii(s, 0, 1);
+}

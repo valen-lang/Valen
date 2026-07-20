@@ -1,0 +1,22 @@
+// Isolates the auto-gen'd IFoo_typeTag + IFoo_asBar + TAG_* constants for
+// interface dispatch from C. Three-impl interface exercises all three
+// downcast primitives.
+sealed exported interface IShape imm { }
+
+exported struct Circle imm { radius int; }
+impl IShape for Circle;
+
+exported struct Square imm { side int; }
+impl IShape for Square;
+
+exported struct Triangle imm { base int; height int; }
+impl IShape for Triangle;
+
+extern func computeArea(s IShape) int;
+
+exported func main() int {
+  x IShape = Circle(1);
+  y IShape = Square(1);
+  z IShape = Triangle(1, 1);
+  return computeArea(Triangle(6, 14));
+}

@@ -1,0 +1,8 @@
+
+import printutils.*;
+
+exported func main() int {
+  // "%lf" format in the C helper produces 6 decimal places → "42.125000" (9 bytes).
+  a = 42.125;
+  return len(str(a));
+}

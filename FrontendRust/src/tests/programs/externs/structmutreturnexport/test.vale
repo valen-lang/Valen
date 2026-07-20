@@ -2,8 +2,8 @@ exported struct Thing {
   a str;
   b int;
 }
-exported func makeThing(a str, b int) Thing {
-  Thing(a, b)
+exported func makeHelloThing(b int) Thing {
+  Thing("hello", b)
 }
 
 extern func runExtCommand() Thing;

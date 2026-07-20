@@ -1,0 +1,12 @@
+// Isolates the auto-gen'd Foo_ref_eq primitive.
+// C receives three handles: two aliases of the same object, one different.
+// Verifies that _ref_eq returns true for same-object handles and false for
+// different-object handles.
+exported struct Widget imm { n int; }
+
+extern func testRefEq(a Widget, b Widget, c Widget) int;
+
+exported func main() int {
+  w = Widget(7);
+  return testRefEq(w, w, Widget(9));
+}
