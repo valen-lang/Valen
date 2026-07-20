@@ -4,6 +4,92 @@ Every addition to this doc should be 30 words of prose or less, plus a BEFORE ex
 
 The following rules are phrased in typing-pass terms but apply to every pass — postparser, typing, instantiator, hammer, backend. Whenever code branches on one of these proxy signals, the fix is to route on the honest attribute or flag instead.
 
+## Never discard an Err payload
+
+An error variant carries diagnostic detail (which candidates were tried, why each was rejected). Silently dropping it produces a bare error the user can't act on. Preserve it in the emitted error. Watch out for `Err(_)` and `Err(_something)`.
+
+BEFORE:
+```rust
+Err(_fff) => {
+    return Err(ICompileErrorT::MustExplicitlyMoveT { range, source_type, target_type });
+}
+```
+
+AFTER:
+```rust
+Err(fff) => {
+    return Err(ICompileErrorT::MustExplicitlyMoveT { range, source_type, target_type, underlying: fff });
+}
+```
+
+## No jargon soup in comments
+
+Write like Feynman: simple words in clear sentences, even for complex ideas. Comments strung from insider terms only help a reader who's already inside; the point of a comment is to help everyone else.
+
+BEFORE:
+```rust
+// Bare-use of an Own struct local at a Borrow target resolves without an
+// explicit `&` — bare-use produces a Borrow-flavored coord and the call
+// resolves against `func bork(&Struct)` directly.
+```
+
+AFTER:
+```rust
+// If you have `x: Ship` and call `bork(x)` where `bork` takes `&Ship`,
+// you don't need to write `bork(&x)` — the compiler treats `x` as a
+// borrow automatically.
+```
+
+## Define coined terms or drop them
+
+A coined term like "silent boundary", used as if the reader already knows it, is noise. Say it plainly, or define it in a doc and link there.
+
+BEFORE:
+```cpp
+// Silent boundary: the handle is a packed pointer, unpack it without
+// touching the RC.
+```
+
+AFTER:
+```cpp
+// The handle is a packed pointer. Unpack it without changing the
+// refcount — C-side alias/dealias is explicit via the auto-gen'd helpers.
+```
+
+## No "tombstones" comments; no historical "used to be" context in comments
+
+Don't preserve the pre-refactor shape or explain what a change simplified from. Nobody working with the system today needs to mentally filter that out. Describe only the current invariant.
+
+BEFORE:
+```rust
+// Simplified after Vale1's `ec53b65e7` retired ImmutableShare/ImmutableBorrow:
+// Share target → MutableShare; Borrow target → MutableBorrow; Own/Weak
+// pass-through. Immutable-region conditional flavoring was a dead branch.
+```
+
+AFTER:
+```rust
+// Share → MutableShare; Borrow → MutableBorrow; Own/Weak pass-through.
+```
+
+## No transient timeline references in comments
+
+Don't anchor comments to phase/slice/arc/era/plan/slab/project labels ("Phase 2 slice 4+6", "sub-arc a"). The label is meaningless a session later and actively confusing once the next timeline starts. Explain the invariant the code enforces, not when it was added.
+
+BEFORE:
+```rust
+/// Phase 2 slice 4+6: I-IR mirror of typing pass's AliasTE. Reflavors a
+/// reference expression's ownership.
+pub struct AliasIE<'s, 'i> { ... }
+```
+
+AFTER:
+```rust
+/// I-IR mirror of typing pass's AliasTE. Reflavors a reference expression's
+/// ownership without changing its underlying value.
+pub struct AliasIE<'s, 'i> { ... }
+```
+
 ## Don't gate on struct member count
 
 An empty Vale struct and an extern struct both have zero members but need opposite drop treatment. Gate on the honest attribute (extern, opaque), not the count.
@@ -110,4 +196,108 @@ AFTER:
 if has_unresolved_placeholders(&struct_def) {
     needs_instantiation_table(struct_def)
 }
+```
+
+## No `|` in a test's match pattern
+
+A test pins one exact shape. An or-pattern accepts several, so a wrong-but-listed variant passes silently. Match the single shape the code actually produces.
+
+BEFORE:
+```rust
+match slot {
+    None | Some(DestinationLocalP { decl: INameDeclarationP::IgnoredLocalNameDeclaration(_), .. }) => {}
+    other => panic!("got {:?}", other),
+}
+```
+
+AFTER:
+```rust
+match slot {
+    Some(DestinationLocalP { decl: INameDeclarationP::IgnoredLocalNameDeclaration(_), .. }) => {}
+    other => panic!("got {:?}", other),
+}
+```
+
+## No silent catch-all `else`
+
+A bare `else` silently swallows the next case added to the ladder. Give every real case its own condition and let the `else` assert unreachable, so additions fail loud.
+
+BEFORE:
+```cpp
+} else if (name == "__vbi_strcmp") {
+  emitStrcmp();
+} else {                      // silently the __vbi_strindexof case
+  emitStrindexof();
+}
+```
+
+AFTER:
+```cpp
+} else if (name == "__vbi_strcmp") {
+  emitStrcmp();
+} else if (name == "__vbi_strindexof") {
+  emitStrindexof();
+} else {
+  assert(false);              // unreachable
+}
+```
+
+## Avoid early-returns; keep equivalent branches together
+
+Sibling match arms read as analogous operations. Hoisting some into early-returns above the match signals they're different, losing that. Keep equivalent branches at the same indentation, not pulled out.
+
+BEFORE:
+```rust
+// ref layers hoisted above the match, reading as "special"
+if let Some(r) = as_ref_layer(t) {
+    return emit_ref_layer(r);
+}
+match t {
+    Call(c) => emit_call(c),
+    Array(a) => emit_array(a),
+}
+```
+
+AFTER:
+```rust
+match t {
+    Borrow(r) => emit_ref_layer(Borrow, r),
+    HeapOwn(r) => emit_ref_layer(HeapOwn, r),
+    Call(c) => emit_call(c),
+    Array(a) => emit_array(a),
+}
+```
+
+## Arrange the diff to be easy to review
+
+When you rewrite something, put the replacement where the original lived. A reviewer diffs old-against-new in place; code that moves across the file reads as an unrelated deletion plus addition.
+
+BEFORE:
+```diff
+@@ line 40 @@
+-fn translate(t) { /* old body */ }
+@@ line 380 @@
++fn translate(t) { /* new body */ }
+```
+
+AFTER:
+```diff
+@@ line 40 @@
+-fn translate(t) { /* old body */ }
++fn translate(t) { /* new body */ }
+```
+
+## Pointer-keyed maps need a deterministic hasher
+
+Pointer/address keys hash by their address, which varies run to run, so iteration order leaks nondeterminism. Give any pointer-keyed unordered_map/set an AddressHasher; value-keyed maps are already deterministic.
+
+BEFORE:
+```cpp
+std::unordered_map<InterfaceKind*, std::vector<Edge*>> edgesByInterface;
+```
+
+AFTER:
+```cpp
+std::unordered_map<InterfaceKind*, std::vector<Edge*>,
+    AddressHasher<InterfaceKind*>> edgesByInterface;
 ```

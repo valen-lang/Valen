@@ -331,7 +331,7 @@ regressions slipped in between your Step 6 run and your final state.
   the bug; you didn't fix it.
 - **Don't edit the MKRFA preprocessing sites.** Four places in the codebase now
   have the same fold-pattern. There's a queued refactor to consolidate them
-  into an `InferCompiler` helper (see `docs/refactor-thoughts/mkrfa-protocol-leak.md`).
+  into an `InferCompiler` helper (see `docs/historical/mkrfa-protocol-leak.md`).
   Don't do that as part of this work — it's a separate task. Focus.
 - **Don't touch `ResolveSR` or `CallSiteFuncSR`.** BRRZ (recently shipped)
   made careful choices about those rules; changing them affects every call

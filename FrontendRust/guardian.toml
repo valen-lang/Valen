@@ -45,6 +45,7 @@ include_shields = [
     { name = "NeverUseStaticLifetime-NUSLX.md" },
     { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
     { name = "MultiLineValeFixtures-MLVFX.md" },
+    { name = "AllowedFileExtensionsOnly-AFEOX.md" },
 
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
