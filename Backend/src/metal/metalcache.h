@@ -86,7 +86,6 @@ public:
 
     builtinPackageCoord = getPackageCoordinate(BUILTIN_PROJECT_NAME, {});
     rcImmRegionId = getRegionId(builtinPackageCoord, "rcimm");
-    linearRegionId = getRegionId(builtinPackageCoord, "linear");
     mutRegionId = getRegionId(builtinPackageCoord, "mut");
 
     // Primitive singletons are uniformly OWN+INLINE; Str stays Share+YONDER (RC'd at runtime).
@@ -272,7 +271,6 @@ public:
   LocalByReferenceByVariableIdMap locals;
 
   RegionId* rcImmRegionId = nullptr;
-  RegionId* linearRegionId = nullptr;
   RegionId* mutRegionId = nullptr;
 
 //  I8* i8 = new I8();

@@ -3,7 +3,6 @@
 #include "function/expressions/expressions.h"
 #include "globalstate.h"
 #include "translatetype.h"
-#include "region/linear/linear.h"
 #include "region/rcimm/rcimm.h"
 
 GlobalState::GlobalState(AddressNumberer* addressNumberer_) :
@@ -12,6 +11,7 @@ GlobalState::GlobalState(AddressNumberer* addressNumberer_) :
     interfaceExtraMethods(0, addressNumberer->makeHasher<InterfaceKind*>()),
     overridesBySubstructByInterface(0, addressNumberer->makeHasher<InterfaceKind*>()),
     extraFunctions(0, addressNumberer->makeHasher<Prototype*>()),
+    autoExportsByPackage(0, addressNumberer->makeHasher<PackageCoordinate*>()),
     regions(0, addressNumberer->makeHasher<RegionId*>()),
     regionIdByKind(0, addressNumberer->makeHasher<Kind*>())
 {}
@@ -122,21 +122,15 @@ IRegion* GlobalState::getRegion(Kind* kindM) {
 IRegion* GlobalState::getRegion(RegionId* regionId) {
   if (regionId == metalCache->rcImmRegionId) {
     return rcImm;
-  } else if (regionId == metalCache->linearRegionId) {
-    return linearRegion;
   } else if (regionId == metalCache->mutRegionId) {
     return mutRegion;
-//  } else if (regionId == metalCache->unsafeRegionId) {
-//    return unsafeRegion;
-//  } else if (regionId == metalCache->assistRegionId) {
-//    return assistRegion;
-//  } else if (regionId == metalCache->resilientV3RegionId) {
-//    return resilientV3Region;
-//  } else if (regionId == metalCache->resilientV4RegionId) {
-//    return resilientV4Region;
   } else {
     { assert(false); throw 1337; }
   }
+}
+
+LLVMTypeRef GlobalState::translateType(Reference* refM) {
+  return getRegion(refM)->translateType(refM);
 }
 
 ValeFuncPtrLE GlobalState::getFunction(Prototype* prototype) {
@@ -215,6 +209,8 @@ Name* GlobalState::getKindName(Kind* kind) {
     return ssaMT->name;
   } else if (auto rsaMT = dynamic_cast<RuntimeSizedArrayT*>(kind)) {
     return rsaMT->name;
+  } else if (dynamic_cast<Str*>(kind)) {
+    return metalCache->getName(metalCache->builtinPackageCoord, "str");
   } else { assert(false); throw 1337; }
   return nullptr;
 }

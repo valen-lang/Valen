@@ -458,15 +458,6 @@ public:
 
   LLVMTypeRef getExternalType(Reference* refMT) override;
 
-  std::pair<Ref, Ref> receiveUnencryptedAlienReference(
-      FunctionState* functionState,
-      LLVMBuilderRef builder,
-      Ref sourceRegionInstanceRef,
-      Ref targetRegionInstanceRef,
-      Reference* sourceRefMT,
-      Reference* targetRefMT,
-      Ref sourceRef) override;
-
   Ref receiveAndDecryptFamiliarReference(
       FunctionState* functionState,
       LLVMBuilderRef builder,

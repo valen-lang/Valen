@@ -5,7 +5,6 @@
 
 #include "../../../translatetype.h"
 #include "../../../region/common/controlblock.h"
-#include "../../../region/linear/linear.h"
 #include "../../../region/rcimm/rcimm.h"
 #include "../../../utils/branch.h"
 #include <region/common/migration.h>
@@ -287,44 +286,31 @@ Ref buildInterfaceCall(
 
   LLVMValueRef itablePtrLE = nullptr;
   LLVMValueRef newVirtualArgLE = nullptr;
+  auto virtualParamRegion = globalState->getRegion(virtualParamMT);
   std::tie(itablePtrLE, newVirtualArgLE) =
-      globalState->getRegion(virtualParamMT)
-          ->explodeInterfaceRef(
-              functionState, builder, virtualParamMT, virtualArgRef);
-
-  //buildFlare(FL(), globalState, functionState, builder, "Doing an interface call, objPtrLE: ", ptrToIntLE(globalState, builder, newVirtualArgLE), " itablePtrLE ", ptrToIntLE(globalState, builder, itablePtrLE));
+      virtualParamRegion->explodeInterfaceRef(
+          functionState, builder, virtualParamMT, virtualArgRef);
 
   // We can't represent these arguments as refs, because this new virtual arg is a void*, and we
   // can't represent that as a ref.
   std::vector<LLVMValueRef> argsLE;
   for (int i = 0; i < argRefs.size(); i++) {
+    auto paramMT = prototype->params[i];
     argsLE.push_back(
-        globalState->getRegion(prototype->params[i])
-            ->checkValidReference(FL(),
-                functionState, builder, false, prototype->params[i], argRefs[i]));
+        globalState->getRegion(paramMT)->checkValidReference(
+            FL(), functionState, builder, false, paramMT, argRefs[i]));
   }
   argsLE[virtualParamIndex] = newVirtualArgLE;
 
   buildFlare(FL(), globalState, functionState, builder);
-  //buildFlare(FL(), globalState, functionState, builder, interfaceKindM->fullName->name, " ", ptrToIntLE(globalState, builder, methodFunctionPtrLE));
 
-//  assert(LLVMGetTypeKind(LLVMTypeOf(itablePtrLE)) == LLVMPointerTypeKind);
-//  auto funcPtrPtrLE =
-//      unmigratedLLVMBuildStructGEP(
-//          builder, itablePtrLE, indexInEdge, "methodPtrPtr");
-
-//  auto funcPtrLE = unmigratedLLVMBuildLoad(builder, funcPtrPtrLE, "methodPtr");
-
-
-
-  assert(
-      LLVMTypeOf(newVirtualArgLE) ==
-      globalState->getRegion(virtualParamMT)
-          ->getInterfaceMethodVirtualParamAnyType(virtualParamMT));
+  assert(LLVMTypeOf(newVirtualArgLE) ==
+      virtualParamRegion->getInterfaceMethodVirtualParamAnyType(virtualParamMT));
   auto resultLE = methodFunctionPtrLE.call(builder, argsLE, "");
   assert(LLVMTypeOf(resultLE) == LLVMGetReturnType(methodFunctionPtrLE.inner.funcLT));
   buildFlare(FL(), globalState, functionState, builder);
-  return toRef(globalState->getRegion(prototype->returnType), prototype->returnType, resultLE);
+  auto returnMT = prototype->returnType;
+  return toRef(globalState->getRegion(returnMT), returnMT, resultLE);
 }
 
 LLVMValueRef makeConstExpr(FunctionState* functionState, LLVMBuilderRef builder, LLVMTypeRef type, LLVMValueRef constExpr) {
@@ -390,10 +376,10 @@ Ref buildCallV(
 
   std::vector<LLVMValueRef> argsLE;
   for (int i = 0; i < argRefs.size(); i++) {
+    auto paramMT = prototype->params[i];
     argsLE.push_back(
-        globalState->getRegion(prototype->params[i])
-            ->checkValidReference(FL(),
-                functionState, builder, false, prototype->params[i], argRefs[i]));
+        globalState->getRegion(paramMT)->checkValidReference(
+            FL(), functionState, builder, false, paramMT, argRefs[i]));
   }
 
   buildFlare(FL(), globalState, functionState, builder, "Doing call");
@@ -402,9 +388,11 @@ Ref buildCallV(
 
   buildFlare(FL(), globalState, functionState, builder, "Done with call");
 
-  auto resultRef = toRef(globalState->getRegion(prototype->returnType), prototype->returnType, resultLE);
-  globalState->getRegion(prototype->returnType)
-      ->checkValidReference(FL(), functionState, builder, false, prototype->returnType, resultRef);
+  auto returnMT = prototype->returnType;
+  auto returnRegion = globalState->getRegion(returnMT);
+  Ref resultRef = toRef(returnRegion, returnMT, resultLE);
+  returnRegion->checkValidReference(
+      FL(), functionState, builder, false, returnMT, resultRef);
 
   if (prototype->returnType->kind == globalState->metalCache->never) {
     buildFlare(FL(), globalState, functionState, builder, "Done calling function ", prototype->name->name);

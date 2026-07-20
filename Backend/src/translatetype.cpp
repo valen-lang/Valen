@@ -8,7 +8,8 @@ std::vector<LLVMTypeRef> translateTypes(
     std::vector<Reference*> referencesM) {
   std::vector<LLVMTypeRef> result;
   for (auto referenceM : referencesM) {
-    result.push_back(globalState->getRegion(referenceM)->translateType(referenceM));
+    result.push_back(
+        globalState->getRegion(referenceM)->translateType(referenceM));
   }
   return result;
 }
@@ -44,8 +45,9 @@ LLVMTypeRef translateInterfaceMethodToFunctionType(
   auto paramsMT = method->prototype->params;
   auto returnLT = globalState->getRegion(returnMT)->translateType(returnMT);
   auto paramsLT = translateTypes(globalState, paramsMT);
+  auto virtualParamMT = paramsMT[method->virtualParamIndex];
   paramsLT[method->virtualParamIndex] =
-      globalState->getRegion(paramsMT[method->virtualParamIndex])
-          ->getInterfaceMethodVirtualParamAnyType(paramsMT[method->virtualParamIndex]);
+      globalState->getRegion(virtualParamMT)
+          ->getInterfaceMethodVirtualParamAnyType(virtualParamMT);
   return LLVMFunctionType(returnLT, paramsLT.data(), paramsLT.size(), false);
 }

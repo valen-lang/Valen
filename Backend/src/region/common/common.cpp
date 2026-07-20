@@ -94,9 +94,10 @@ LoadResult loadInnerInnerStructMember(
   auto ptrToMemberLE =
       LLVMBuildStructGEP2(builder, innerStructLT, innerStructPtrLE, memberIndex, memberName.c_str());
 
-  auto memberLT = globalState->getRegion(expectedType)->translateType(expectedType);
+  auto memberRegion = globalState->getRegion(expectedType);
+  auto memberLT = memberRegion->translateType(expectedType);
   auto resultLE = LLVMBuildLoad2(builder, memberLT, ptrToMemberLE, memberName.c_str());
-  return LoadResult{toRef(globalState->getRegion(expectedType), expectedType, resultLE)};
+  return LoadResult{toRef(memberRegion, expectedType, resultLE)};
 }
 
 void storeInnerInnerStructMember(
@@ -1662,14 +1663,15 @@ Ref regularReceiveAndDecryptFamiliarReference(
 
   if (dynamic_cast<StructKind*>(sourceRefMT->kind) ||
       dynamic_cast<StaticSizedArrayT*>(sourceRefMT->kind) ||
-      dynamic_cast<RuntimeSizedArrayT*>(sourceRefMT->kind)) {
-    assert(LLVMTypeOf(sourceRefLE) == globalState->universalRefCompressedStructLT);
+      dynamic_cast<RuntimeSizedArrayT*>(sourceRefMT->kind) ||
+      dynamic_cast<Str*>(sourceRefMT->kind)) {
+    assert(LLVMTypeOf(sourceRefLE) == globalState->getFfiHandleStructs()->getConcreteHandleStructLT());
 
-    auto urefStructLT = globalState->getUniversalRefStructLT();
+    auto ffiHandleStructs = globalState->getFfiHandleStructs();
 
     auto refLT = globalState->getRegion(sourceRefMT)->translateType(sourceRefMT);
 
-    auto membersLE = urefStructLT->explodeForRegularConcrete(globalState, functionState, builder, sourceRefLE);
+    auto membersLE = ffiHandleStructs->explodeForRegularConcrete(globalState, functionState, builder, sourceRefLE);
     auto objPtrLE = LLVMBuildIntToPtr(builder, membersLE.objPtrI64LE, refLT, "refA");
 
     auto ref = toRef(globalState->getRegion(sourceRefMT), sourceRefMT, objPtrLE);
@@ -1682,15 +1684,15 @@ Ref regularReceiveAndDecryptFamiliarReference(
 
     return ref;
   } else if (auto interfaceMT = dynamic_cast<InterfaceKind*>(sourceRefMT->kind)) {
-    assert(LLVMTypeOf(sourceRefLE) == globalState->universalRefCompressedStructLT);
+    assert(LLVMTypeOf(sourceRefLE) == globalState->getFfiHandleStructs()->getInterfaceHandleStructLT());
 
-    auto urefStructLT = globalState->getUniversalRefStructLT();
+    auto ffiHandleStructs = globalState->getFfiHandleStructs();
 
     auto itablePtrLT = LLVMPointerType(kindStructs->getInterfaceTableStruct(interfaceMT), 0);
     auto objPtrLT = LLVMPointerType(kindStructs->getControlBlock(interfaceMT)->getStruct(), 0);
     auto refLT = globalState->getRegion(sourceRefMT)->translateType(sourceRefMT);
 
-    auto membersLE = urefStructLT->explodeForRegularInterface(globalState, functionState, builder, sourceRefLE);
+    auto membersLE = ffiHandleStructs->explodeForRegularInterface(globalState, functionState, builder, sourceRefLE);
     auto itablePtrLE = LLVMBuildIntToPtr(builder, membersLE.typeInfoPtrI64LE, itablePtrLT, "refC");
     auto objPtrLE = LLVMBuildIntToPtr(builder, membersLE.objPtrI64LE, objPtrLT, "refB");
 
@@ -1727,14 +1729,15 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
 
   if (dynamic_cast<StructKind*>(sourceRefMT->kind) ||
       dynamic_cast<StaticSizedArrayT*>(sourceRefMT->kind) ||
-      dynamic_cast<RuntimeSizedArrayT*>(sourceRefMT->kind)) {
+      dynamic_cast<RuntimeSizedArrayT*>(sourceRefMT->kind) ||
+      dynamic_cast<Str*>(sourceRefMT->kind)) {
     auto sourceRefLE =
         globalState->getRegion(sourceRefMT)
             ->checkValidReference(FL(), functionState, builder, false, sourceRefMT, sourceRef);
     auto objPtrI64LE = LLVMBuildPtrToInt(builder, sourceRefLE, LLVMInt64TypeInContext(globalState->context), "objPtrInt");
 
     auto handleLE =
-        globalState->universalRefStructLT->implodeForRegularConcrete(
+        globalState->getFfiHandleStructs()->implodeForRegularConcrete(
             globalState, functionState, builder, objPtrI64LE);
     return handleLE;
   } else if (dynamic_cast<InterfaceKind*>(sourceRefMT->kind)) {
@@ -1745,11 +1748,11 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
     auto objPtrI64LE = LLVMBuildPtrToInt(builder, objPtrLE, LLVMInt64TypeInContext(globalState->context), "objPtrInt");
     auto itablePtrI64LE = LLVMBuildPtrToInt(builder, itablePtrLE, LLVMInt64TypeInContext(globalState->context), "itablePtrInt");
 
-    auto urefLE =
-        globalState->getUniversalRefStructLT()->implodeForRegularInterface(
+    auto handleLE =
+        globalState->getFfiHandleStructs()->implodeForRegularInterface(
             globalState, functionState, builder,
             itablePtrI64LE, objPtrI64LE);
-    return urefLE;
+    return handleLE;
   } else {
     { assert(false); throw 1337; }
   }
@@ -1757,8 +1760,16 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
 }
 
 
-std::string generateUniversalRefStructDefC(Package* currentPackage, const std::string& name) {
-  return std::string() + "typedef struct " + name + "Ref { uint64_t unused0; uint64_t unused1; uint64_t unused2; uint32_t unused3; uint32_t unused4; } " + name + "Ref;\n";
+// Per @HTSLVBDTCZ, these emit the per-kind C typedefs (name+"Ref") that give
+// each mut class its own distinct C type, over the shared LLVM handle type.
+std::string generateConcreteHandleStructDefC(Package* currentPackage, const std::string& name) {
+  // Mut concrete handle: 8-byte { i64 obj }. See ffihandlestructs.h.
+  return std::string() + "typedef struct " + name + "Ref { uint64_t unused0; } " + name + "Ref;\n";
+}
+
+std::string generateInterfaceHandleStructDefC(Package* currentPackage, const std::string& name) {
+  // Mut interface handle: 16-byte { i64 obj, i64 typeinfo }. See ffihandlestructs.h.
+  return std::string() + "typedef struct " + name + "Ref { uint64_t unused0; uint64_t unused1; } " + name + "Ref;\n";
 }
 
 
@@ -1772,56 +1783,3 @@ void fastPanic(GlobalState* globalState, AreaAndFileAndLine from, LLVMBuilderRef
 }
 
 
-LLVMValueRef compressI64PtrToI56(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrI64LE) {
-  auto int56LT = LLVMIntTypeInContext(globalState->context, 56);
-  auto int64LT = LLVMInt64TypeInContext(globalState->context);
-  assert(LLVMTypeOf(ptrI64LE) == int64LT);
-  auto ptrI56LE = LLVMBuildTrunc(builder, ptrI64LE, int56LT, "ptrI56");
-
-  if (globalState->opt->census) {
-    auto decompressedLE = decompressI56PtrToI64(globalState, functionState, builder, ptrI56LE);
-    auto matchesLE = LLVMBuildICmp(builder, LLVMIntEQ, ptrI64LE, decompressedLE, "");
-    buildAssertV(globalState, functionState, builder, matchesLE, "Couldn't compress I64 to I56!");
-  }
-
-  return ptrI56LE;
-}
-
-LLVMValueRef compressI64PtrToI52(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrI64LE) {
-  auto int52LT = LLVMIntTypeInContext(globalState->context, 52);
-  auto int56LT = LLVMIntTypeInContext(globalState->context, 56);
-  auto int64LT = LLVMInt64TypeInContext(globalState->context);
-  assert(LLVMTypeOf(ptrI64LE) == int64LT);
-  auto ptrI56LE = compressI64PtrToI56(globalState, functionState, builder, ptrI64LE);
-  auto ptrI56ShiftedLE = LLVMBuildLShr(builder, ptrI56LE, LLVMConstInt(int56LT, 4, false), "ptrI56Shifted");
-  auto ptrI52LE = LLVMBuildTrunc(builder, ptrI56ShiftedLE, int52LT, "ptrI52");
-
-  if (globalState->opt->census) {
-    auto decompressedLE = decompressI52PtrToI64(globalState, functionState, builder, ptrI52LE);
-    auto matchesLE = LLVMBuildICmp(builder, LLVMIntEQ, ptrI64LE, decompressedLE, "");
-    buildAssertV(globalState, functionState, builder, matchesLE, "Couldn't compress I64 to I52!");
-  }
-
-  return ptrI52LE;
-}
-
-LLVMValueRef decompressI56PtrToI64(
-    GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrI56LE) {
-  auto int56LT = LLVMIntTypeInContext(globalState->context, 56);
-  auto int64LT = LLVMInt64TypeInContext(globalState->context);
-  assert(LLVMTypeOf(ptrI56LE) == int56LT);
-  auto ptrI64LE = LLVMBuildSExt(builder, ptrI56LE, int64LT, "ptrI64");
-  return ptrI64LE;
-}
-
-LLVMValueRef decompressI52PtrToI64(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrI52LE) {
-  auto int52LT = LLVMIntTypeInContext(globalState->context, 52);
-  auto int56LT = LLVMIntTypeInContext(globalState->context, 56);
-  assert(LLVMTypeOf(ptrI52LE) == int52LT);
-  // It starts out shifted, we're going to unshift it below.
-  auto ptrI56ShiftedLE = LLVMBuildZExt(builder, ptrI52LE, int56LT, "ptrI56Shifted");
-  auto ptrI56LE = LLVMBuildShl(builder, ptrI56ShiftedLE, LLVMConstInt(int56LT, 4, false), "ptrI56");
-  auto ptrI64LE = decompressI56PtrToI64(globalState, functionState, builder, ptrI56LE);
-
-  return ptrI64LE;
-}

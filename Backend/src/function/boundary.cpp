@@ -7,97 +7,62 @@ Ref receiveHostObjectIntoVale(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Ref hostRegionInstance,
-    Ref valeRegionInstance,
     Reference* hostRefMT,
     Reference* valeRefMT,
     LLVMValueRef hostRefLE) {
-  // - For example, in:
-  //     fn fly(ship 'hgm Spaceship) extern;
-  //   when we call it with an object from 'hgm, we're not moving/copying
-  //   it between regions, but we do need to encrypt it. So, we'll call
-  //   encryptAndSendFamiliarReference.
-  // - For example, in:
-  //     fn fly(ship 'hgm Spaceship) export { ... }
-  //   when the outside world calls it with an object from 'hgm, we're not
-  //   moving/copying between regions, but we do need to decrypt it. So,
-  //   we'll call receiveAndDecryptFamiliarReference.
-  // - For example, in:
-  //     fn fly(pattern Pattern) extern;
-  //   regardless of whether Pattern is a val or inst, we'll be moving/
-  //   copying between regions, so we'll call
-  //   receiveUnencryptedAlienReference. HOWEVER, we don't yet support
-  //   moving instances between regions, so this is only for vals for now.
-  if (hostRefMT->ownership == Ownership::MUTABLE_SHARE || hostRefMT->ownership == Ownership::IMMUTABLE_SHARE) {
-    buildFlare(FL(), globalState, functionState, builder);
-    auto hostRef =
-        toRef(globalState->getRegion(hostRefMT), hostRefMT, hostRefLE);
-    auto objRefAndSizeRef =
-        globalState->getRegion(valeRefMT)
-            ->receiveUnencryptedAlienReference(
-                functionState, builder, hostRegionInstance, valeRegionInstance, hostRefMT, valeRefMT, hostRef);
-    // Vale doesn't really care about the size of the thing, only the object.
-    return objRefAndSizeRef.first;
+  // Per @FRMACZ, this conversion does no reference counting — share refs arrive
+  // as right-sized handle structs (8B concrete / 16B interface) which we decrypt
+  // back into Vale refs, and the ref simply moves in. Primitives pass through
+  // unwrapped. (Under the opaque-handle FFI, hostRefMT === valeRefMT.)
+  auto kind = hostRefMT->kind;
+  bool isPrimitive =
+      dynamic_cast<Int*>(kind) || dynamic_cast<Bool*>(kind) ||
+      dynamic_cast<Float*>(kind) || dynamic_cast<Void*>(kind);
+  if (isPrimitive) {
+    if (dynamic_cast<Void*>(kind)) {
+      return toRef(globalState->getRegion(valeRefMT), valeRefMT, makeVoid(globalState));
+    }
+    if (dynamic_cast<Bool*>(kind)) {
+      auto asI1LE =
+          LLVMBuildTrunc(builder, hostRefLE, LLVMInt1TypeInContext(globalState->context), "boolAsI1");
+      return toRef(globalState->getRegion(valeRefMT), valeRefMT, asI1LE);
+    }
+    return toRef(globalState->getRegion(valeRefMT), valeRefMT, hostRefLE);
   } else {
-    // Universal refs should be 32 bytes
-    assert(LLVMABISizeOfType(globalState->dataLayout, LLVMTypeOf(hostRefLE)) == 32);
+    // The incoming handle must be exactly the region's external type for this
+    // kind (concrete 8B or interface 16B).
+    assert(LLVMTypeOf(hostRefLE) == globalState->getRegion(valeRefMT)->getExternalType(hostRefMT));
     return globalState->getRegion(valeRefMT)
         ->receiveAndDecryptFamiliarReference(functionState, builder, hostRefMT, hostRefLE);
   }
 }
 
-std::pair<LLVMValueRef, LLVMValueRef> sendValeObjectIntoHostAndDealias(
+LLVMValueRef sendValeObjectIntoHost(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Ref valeRegionInstanceRef,
-    Ref hostRegionInstanceRef,
     Reference* valeRefMT,
-    Reference* hostRefMT,
     Ref valeRef) {
-  // - For example, in:
-  //     fn fly(ship 'hgm Spaceship) extern;
-  //   when we call it with an object from 'hgm, we're not moving/copying
-  //   it between regions, but we do need to encrypt it. So, we'll call
-  //   encryptAndSendFamiliarReference.
-  // - For example, in:
-  //     fn fly(ship 'hgm Spaceship) export { ... }
-  //   when the outside world calls it with an object from 'hgm, we're not
-  //   moving/copying between regions, but we do need to decrypt it. So,
-  //   we'll call receiveAndDecryptFamiliarReference.
-  // - For example, in:
-  //     fn fly(pattern Pattern) extern;
-  //   regardless of whether Pattern is a val or inst, we'll be moving/
-  //   copying between regions, so we'll call
-  //   receiveUnencryptedAlienReference. HOWEVER, we don't yet support
-  //   moving instances between regions, so this is only for vals for now.
-  if (valeRefMT->ownership == Ownership::MUTABLE_SHARE || valeRefMT->ownership == Ownership::IMMUTABLE_SHARE) {
-    auto [hostArgRef, sizeRef] =
-        globalState->getRegion(hostRefMT)
-            ->receiveUnencryptedAlienReference(
-                functionState, builder, valeRegionInstanceRef, hostRegionInstanceRef, valeRefMT, hostRefMT, valeRef);
-    globalState->getRegion(valeRefMT)
-        ->dealias(FL(), functionState, builder, valeRefMT, valeRef);
-    auto hostArgLE =
-        globalState->getRegion(hostRefMT)
-            ->checkValidReference(FL(), functionState, builder, true, hostRefMT, hostArgRef);
-    auto sizeLE =
-        globalState->getRegion(hostRefMT)
-            ->checkValidReference(FL(), functionState, builder, true, globalState->metalCache->i32Ref, sizeRef);
-    return std::make_pair(hostArgLE, sizeLE);
-  } else {
-    auto encryptedValeRefLE =
+  // Under the opaque-handle FFI, share refs (struct/interface/RSA/SSA/Str)
+  // cross as right-sized handle structs (8B concrete / 16B interface) via
+  // encrypt/send. Primitives are passed through unwrapped — their LE value IS
+  // the C-ABI value.
+  auto kind = valeRefMT->kind;
+  bool isPrimitive =
+      dynamic_cast<Int*>(kind) || dynamic_cast<Bool*>(kind) ||
+      dynamic_cast<Float*>(kind) || dynamic_cast<Void*>(kind);
+  if (isPrimitive) {
+    auto valeArgLE =
         globalState->getRegion(valeRefMT)
-            ->encryptAndSendFamiliarReference(functionState, builder, valeRefMT, valeRef);
-
-//    auto encryptedValeRefLE =
-//        globalState->getRegion(valeRefMT)
-//            ->checkValidReference(FL(), functionState, builder, valeRefMT, encryptedValeRef);
-
-    int expectedSizeLE = 32;
-    assert(LLVMABISizeOfType(globalState->dataLayout, LLVMTypeOf(encryptedValeRefLE)) == expectedSizeLE);
-    auto sizeLE = constI32LE(globalState, expectedSizeLE);
-
-    return std::make_pair(encryptedValeRefLE, sizeLE);
+            ->checkValidReference(FL(), functionState, builder, true, valeRefMT, valeRef);
+    if (dynamic_cast<Bool*>(kind)) {
+      return LLVMBuildZExt(builder, valeArgLE, LLVMInt8TypeInContext(globalState->context), "boolAsI8");
+    }
+    return valeArgLE;
   }
+  auto encryptedValeRefLE =
+      globalState->getRegion(valeRefMT)
+          ->encryptAndSendFamiliarReference(functionState, builder, valeRefMT, valeRef);
+  assert(LLVMTypeOf(encryptedValeRefLE) == globalState->getRegion(valeRefMT)->getExternalType(valeRefMT));
+  return encryptedValeRefLE;
 }

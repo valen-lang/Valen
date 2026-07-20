@@ -106,40 +106,4 @@ private:
   StructLT<NumMembers, EnumType>* structLT;
 };
 
-LLVMValueRef buildCompressStructInner(
-    GlobalState* globalState,
-    const std::vector<LLVMTypeRef>& membersLT,
-    LLVMBuilderRef builder,
-    const std::vector<LLVMValueRef>& membersLE);
-
-template<int NumMembers, typename EnumType>
-inline LLVMValueRef buildCompressStruct(
-    GlobalState* globalState,
-    const StructLT<NumMembers, EnumType>& structLT,
-    LLVMBuilderRef builder,
-    LLVMValueRef structLE) {
-  const auto& membersArrLT = structLT.getMembersLT();
-  auto membersLT = std::vector<LLVMTypeRef>(membersArrLT.begin(), membersArrLT.end());
-  auto membersArrLE = structLT.explode(builder, structLE);
-  auto membersLE = std::vector<LLVMValueRef>(membersArrLE.begin(), membersArrLE.end());
-  return buildCompressStructInner(globalState, membersLT, builder, membersLE);
-}
-
-std::vector<LLVMValueRef> buildDecompressStructInner(
-    GlobalState* globalState,
-    const std::vector<LLVMTypeRef>& membersLT,
-    LLVMBuilderRef builder,
-    LLVMValueRef bigIntLE);
-
-template<int NumMembers, typename EnumType>
-inline LLVMValueRef buildDecompressStruct(
-    GlobalState* globalState,
-    const StructLT<NumMembers, EnumType>& structLT,
-    LLVMBuilderRef builder,
-    LLVMValueRef bigIntLE) {
-  auto membersLT = std::vector<LLVMTypeRef>(structLT.getMembersLT().begin(), structLT.getMembersLT().end());
-  auto membersLE = buildDecompressStructInner(globalState, membersLT, builder, bigIntLE);
-  return structLT.implode(builder, membersLE);
-}
-
 #endif //UTILS_STRUCTLT_H

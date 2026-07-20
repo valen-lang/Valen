@@ -86,7 +86,7 @@ set(BACKEND_LIB_SRCS
 		src/function/expressions/shared/string.cpp
 		src/region/common/heap.cpp
 		src/region/common/controlblock.cpp
-		src/region/urefstructlt.cpp
+		src/region/ffihandlestructs.cpp
 		src/function/expressions/shared/ref.cpp
 
 		src/region/common/common.cpp
@@ -96,21 +96,13 @@ set(BACKEND_LIB_SRCS
 		src/region/common/wrcweaks/wrcweaks.cpp
 		src/region/common/fatweaks/fatweaks.cpp
 		src/region/unsafe/unsafe.cpp
-		src/region/linear/linear.cpp
-		src/region/linear/linearstructs.cpp
 		src/region/regions.cpp
 
 		src/fileio.cpp
-		src/determinism/determinism.cpp
-		src/determinism/determinism.h
 		src/utils/definefunction.cpp
 		src/utils/definefunction.h
 		src/utils/flags.cpp
 		src/utils/flags.h
-		src/simplehash/cppsimplehashmap.cpp
-		src/simplehash/cppsimplehashmap.h
-		src/simplehash/llvmsimplehashmap.cpp
-		src/simplehash/llvmsimplehashmap.h
 		src/utils/llvm.cpp
 		src/utils/llvm.h
 		src/utils/structlt.h

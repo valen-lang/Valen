@@ -18,10 +18,13 @@ There are a handful of different subclasses:
     * The main mutable region, if --region-override=unsafe-fast.
  * RCImmRegion: A region for immutable objects.
     * Might not be in the final design, depending on how/whether we share iso regions around.
- * LinearRegion: A bump allocator, only used for:
-    * Sending objects to C
-    * Writing objects to a temporary buffer for a file.
-    * (maybe someday) Writing objects for network messages.
+    * Also the region behind the opaque-handle FFI: imm values cross to/from C
+      as handles, not linearized buffers.
+ * LinearRegion: RETIRED (2026-07). Was a bump allocator that linearized imm
+   values into buffers for C and for record/replay files. FFI moved to opaque
+   handles and record/replay was removed; see the PSBCBO/PRCBO appendix in
+   `todo/metaprogrammed-record-replay.md` for the retired scheme and its
+   successor design.
 
 With the IRegion interface, the backend stage can compile expressions against a common lower interface.
 

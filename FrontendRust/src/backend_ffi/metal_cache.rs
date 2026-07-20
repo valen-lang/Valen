@@ -97,7 +97,6 @@ extern "C" {
 
     fn metal_cache_builtin_package_coord(_: *mut MetalCacheHandleRaw) -> *mut c_void;
     fn metal_cache_rcimm_region_id(_: *mut MetalCacheHandleRaw) -> *mut c_void;
-    fn metal_cache_linear_region_id(_: *mut MetalCacheHandleRaw) -> *mut c_void;
     fn metal_cache_mut_region_id(_: *mut MetalCacheHandleRaw) -> *mut c_void;
 
     fn metal_cache_i32(_: *mut MetalCacheHandleRaw) -> *mut c_void;
@@ -419,9 +418,6 @@ impl MetalCache {
     }
     pub fn rcimm_region_id(&self) -> RegionId<'_> {
         unsafe { RegionId(NonNull::new(metal_cache_rcimm_region_id(self.raw)).unwrap(), PhantomData) }
-    }
-    pub fn linear_region_id(&self) -> RegionId<'_> {
-        unsafe { RegionId(NonNull::new(metal_cache_linear_region_id(self.raw)).unwrap(), PhantomData) }
     }
     pub fn mut_region_id(&self) -> RegionId<'_> {
         unsafe { RegionId(NonNull::new(metal_cache_mut_region_id(self.raw)).unwrap(), PhantomData) }

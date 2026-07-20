@@ -15,7 +15,6 @@ Externs::Externs(LLVMModuleRef mod, LLVMContextRef context, int ptrSizeBits) {
   auto int64LT = LLVMInt64TypeInContext(context);
   auto voidPtrLT = LLVMPointerType(int8LT, 0);
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
-  auto int256LT = LLVMIntTypeInContext(context, 256);
   // C `size_t` width — matches pointer width on every target we care
   // about. i64 on x86_64/arm64, i32 on wasm32. Used for libc functions
   // whose signatures take/return size_t (malloc, memcpy, strlen, etc.).
@@ -49,79 +48,18 @@ Externs::Externs(LLVMModuleRef mod, LLVMContextRef context, int ptrSizeBits) {
   fread = addExtern(mod, "fread", sizeTLT, {int8PtrLT, sizeTLT, sizeTLT, int8PtrLT});
   fwrite = addExtern(mod, "fwrite", sizeTLT, {int8PtrLT, sizeTLT, sizeTLT, int8PtrLT});
 
-  strHasherCallLF = addExtern(mod, "strHasherCall", int64LT, {emptyPtrLT, int8PtrLT});
-  strEquatorCallLF = addExtern(mod, "strEquatorCall", int1LT, {emptyPtrLT, int8PtrLT, int8PtrLT});
-
-  int256HasherCallLF =
-      addRawFunction(mod, "int256HasherCall", int64LT, {emptyPtrLT, int256LT});
-  defineRawFunctionBody(
-      context, int256HasherCallLF.ptrLE, int64LT, "int256HasherCall",
-      [int64LT, int256LT](FunctionState* functionState, LLVMBuilderRef builder) {
-        // Ignore 'this' arg 0
-        auto int256LE = LLVMGetParam(functionState->containingFuncL, 1);
-        auto maskLE = LLVMConstInt(int256LT, 0xFFFFFFFFFFFFFFFF, false);
-        auto firstI256 = LLVMBuildAnd(builder, int256LE, maskLE, "x1as256");
-        auto firstI64 = LLVMBuildTrunc(builder, firstI256, int64LT, "x1");
-
-        auto secondShiftLE = LLVMConstInt(int256LT, 64 * 1, false);
-        auto secondMaskLE = LLVMBuildShl(builder, maskLE, secondShiftLE, "m2");
-        auto unshiftedSecondI64LE = LLVMBuildAnd(builder, int256LE, secondMaskLE, "u2");
-        auto secondI256 = LLVMBuildLShr(builder, unshiftedSecondI64LE, secondShiftLE, "x2");
-        auto secondI64 = LLVMBuildTrunc(builder, secondI256, int64LT, "x1");
-
-        auto thirdShiftLE = LLVMConstInt(int256LT, 64 * 2, false);
-        auto thirdMaskLE = LLVMBuildShl(builder, maskLE, thirdShiftLE, "m3");
-        auto unshiftedThirdI64LE = LLVMBuildAnd(builder, int256LE, thirdMaskLE, "u3");
-        auto thirdI256 = LLVMBuildLShr(builder, unshiftedThirdI64LE, thirdShiftLE, "x3");
-        auto thirdI64 = LLVMBuildTrunc(builder, thirdI256, int64LT, "x1");
-
-        auto fourthShiftLE = LLVMConstInt(int256LT, 64 * 3, false);
-        auto fourthMaskLE = LLVMBuildShl(builder, maskLE, fourthShiftLE, "m4");
-        auto unshiftedFourthI64LE = LLVMBuildAnd(builder, int256LE, fourthMaskLE, "u4");
-        auto fourthI256 = LLVMBuildLShr(builder, unshiftedFourthI64LE, fourthShiftLE, "x4");
-        auto fourthI64 = LLVMBuildTrunc(builder, fourthI256, int64LT, "x1");
-
-        auto resultLE = firstI64;
-        resultLE = LLVMBuildXor(builder, resultLE, secondI64, "r2");
-        resultLE = LLVMBuildXor(builder, resultLE, thirdI64, "r3");
-        resultLE = LLVMBuildXor(builder, resultLE, fourthI64, "r4");
-        LLVMBuildRet(builder, resultLE);
-      });
-  int256EquatorCallLF =
-      addRawFunction(mod, "int256EquatorCall", int1LT, {emptyPtrLT, int256LT, int256LT});
-  defineRawFunctionBody(
-      context, int256EquatorCallLF.ptrLE, int1LT, "int256HasherCall",
-      [](FunctionState* functionState, LLVMBuilderRef builder) {
-        // Ignore 'this' arg 0
-        LLVMGetParam(functionState->containingFuncL, 0);
-        auto firstInt256LE = LLVMGetParam(functionState->containingFuncL, 1);
-        auto secondInt256LE = LLVMGetParam(functionState->containingFuncL, 2);
-        auto resultLE = LLVMBuildICmp(builder, LLVMIntEQ, firstInt256LE, secondInt256LE, "equal");
-        LLVMBuildRet(builder, resultLE);
-      });
+  // Runtime-support (__vale_rt_) helpers for __vbi_ string intrinsics — see
+  // Backend/builtins/strings.c.
+  valeRtI64ToAsciiLF   = addExtern(mod, "__vale_rt_i64_to_ascii",   int32LT, {int64LT, int8PtrLT, int32LT});
+  valeRtFloatToAsciiLF = addExtern(mod, "__vale_rt_float_to_ascii", int32LT, {LLVMDoubleTypeInContext(context), int8PtrLT, int32LT});
+  valeRtBytesFindLF    = addExtern(mod, "__vale_rt_bytes_find",     int32LT, {int8PtrLT, int32LT, int8PtrLT, int32LT});
+  valeRtWriteStdoutLF  = addExtern(mod, "__vale_rt_write_stdout",   voidLT,  {int8PtrLT, int32LT});
+  // Runtime-support helpers for __vbi_getMainArg — see Backend/builtins/mainargs.c.
+  valeRtGetMainArgLenLF = addExtern(mod, "__vale_rt_get_main_arg_len", int32LT,   {int64LT});
+  valeRtGetMainArgPtrLF = addExtern(mod, "__vale_rt_get_main_arg_ptr", int8PtrLT, {int64LT});
 
 //  initTwinPages = addExtern(mod, "__vale_initTwinPages", int8PtrLT, {});
 }
 
-bool hasEnding(std::string const &fullString, std::string const &ending) {
-  if (fullString.length() >= ending.length()) {
-    return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
-  } else {
-    return false;
-  }
-}
 
-bool includeSizeParam(GlobalState* globalState, Prototype* prototype, int paramIndex) {
-  // See SASP for what this is all about.
-  if (hasEnding(prototype->name->name, "_vasp")) {
-    auto paramMT = prototype->params[paramIndex];
-    if (dynamic_cast<StructKind*>(paramMT->kind) ||
-        dynamic_cast<InterfaceKind*>(paramMT->kind) ||
-        dynamic_cast<StaticSizedArrayT*>(paramMT->kind) ||
-        dynamic_cast<RuntimeSizedArrayT*>(paramMT->kind)) {
-      return true;
-    }
-  }
-  return false;
-}
 

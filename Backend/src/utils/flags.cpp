@@ -1,8 +1,8 @@
-#include <simplehash/llvmsimplehashmap.h>
-
 #include <utility>
 #include "flags.h"
 #include "branch.h"
+#include <globalstate.h>
+#include <function/expressions/expressions.h>
 #include <region/common/migration.h>
 
 LLVMValueRef processFlag(

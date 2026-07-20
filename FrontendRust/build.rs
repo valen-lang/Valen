@@ -67,13 +67,26 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib=stdc++");
     }
 
-    // Watch the entire Backend/src tree so any C++ edit triggers a cmake rebuild.
-    // Without this, only the three FFI files would be tracked and edits elsewhere
-    // in Backend would silently link a stale .a into the test binary.
-    println!("cargo:rerun-if-changed={}", backend_dir.join("src").display());
     println!("cargo:rerun-if-changed={}", backend_dir.join("CMakeLists.txt").display());
+    // Watch the entire Backend/src tree so any C++ edit triggers a rebuild.
+    // cmake-rs picks up the actual source changes and rebuilds only what's
+    // stale; cargo just needs to know *something* under Backend changed.
+    watch_dir_recursive(&backend_dir.join("src"));
     println!("cargo:rerun-if-env-changed=LLVM_CONFIG");
     println!("cargo:rerun-if-env-changed=LLVM_DIR");
+}
+
+fn watch_dir_recursive(dir: &std::path::Path) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                watch_dir_recursive(&path);
+            } else {
+                println!("cargo:rerun-if-changed={}", path.display());
+            }
+        }
+    }
 }
 
 fn locate_llvm_config() -> PathBuf {

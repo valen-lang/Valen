@@ -107,7 +107,14 @@ pub fn invoke_clang(
             args.push("clang_rt.asan_dynamic_runtime_thunk-x86_64.lib".to_string());
         } else {
             args.push("-fsanitize=address".to_string());
-            args.push("-fsanitize=leak".to_string());
+            // `-fsanitize=leak` is standalone-LSan (Linux). On Apple targets
+            // LSan integrates into ASan itself — enable at runtime via
+            // ASAN_OPTIONS=detect_leaks=1 (arm64-apple-darwin refuses the
+            // flag as unsupported).
+            let is_apple = target_triple.map_or(cfg!(target_vendor = "apple"), |t| t.contains("apple"));
+            if !is_apple {
+                args.push("-fsanitize=leak".to_string());
+            }
             args.push("-fno-omit-frame-pointer".to_string());
         }
     }

@@ -68,9 +68,6 @@ extern "C" VIS PackageCoordHandle* metal_cache_builtin_package_coord(MetalCacheH
 extern "C" VIS RegionIdHandle* metal_cache_rcimm_region_id(MetalCacheHandle* h) {
   return reinterpret_cast<RegionIdHandle*>(cache(h)->rcImmRegionId);
 }
-extern "C" VIS RegionIdHandle* metal_cache_linear_region_id(MetalCacheHandle* h) {
-  return reinterpret_cast<RegionIdHandle*>(cache(h)->linearRegionId);
-}
 extern "C" VIS RegionIdHandle* metal_cache_mut_region_id(MetalCacheHandle* h) {
   return reinterpret_cast<RegionIdHandle*>(cache(h)->mutRegionId);
 }

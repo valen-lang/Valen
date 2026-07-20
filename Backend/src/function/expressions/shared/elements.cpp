@@ -275,14 +275,14 @@ LoadResult loadElement(
       indexLE.refLE
   };
 
-  auto elementLT = globalState->getRegion(elementRefM)->translateType(elementRefM);
+  auto elementRegion = globalState->getRegion(elementRefM);
+  auto elementLT = elementRegion->translateType(elementRefM);
   auto elementPtrLE =
       LLVMBuildInBoundsGEP2(builder, LLVMArrayType(elementLT, 0), elemsPtrLE, indices, 2, "indexPtr");
   auto fromArrayLE = LLVMBuildLoad2(builder, elementLT, elementPtrLE, "index");
-
-  auto sourceRef = toRef(globalState->getRegion(elementRefM), elementRefM, fromArrayLE);
-  globalState->getRegion(elementRefM)
-      ->checkValidReference(FL(), functionState, builder, false, elementRefM, sourceRef);
+  auto sourceRef = toRef(elementRegion, elementRefM, fromArrayLE);
+  elementRegion->checkValidReference(
+      FL(), functionState, builder, false, elementRefM, sourceRef);
   return LoadResult{sourceRef};
 }
 

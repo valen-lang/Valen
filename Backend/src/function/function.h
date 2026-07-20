@@ -183,7 +183,7 @@ ValeFuncPtrLE declareFunction(
     GlobalState* globalState,
     Function* functionM);
 
-void exportFunction(GlobalState* globalState, Package* package, Function* functionM);
+void exportFunction(GlobalState* globalState, Package* package, const std::string& exportName, Prototype* prototypeM);
 
 RawFuncPtrLE declareExternFunction(
     GlobalState* globalState,

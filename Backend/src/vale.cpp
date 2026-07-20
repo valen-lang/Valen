@@ -25,7 +25,6 @@
 #include "metal/instructions.h"
 
 #include "function/function.h"
-#include "determinism/determinism.h"
 #include "error.h"
 #include "translatetype.h"
 #include "externs.h"
@@ -38,7 +37,6 @@
 #include "region/unsafe/unsafe.h"
 #include "function/expressions/shared/string.h"
 #include <sstream>
-#include "region/linear/linear.h"
 #include "function/expressions/shared/members.h"
 #include "function/expressions/expressions.h"
 
@@ -318,26 +316,6 @@ std::string generateFunctionC(
     }
     addedAnyParam = true;
   }
-  for (int i = 0; i < prototype->params.size(); i++) {
-    if (includeSizeParam(globalState, prototype, i)) {
-      if (addedAnyParam) {
-        s << ", ";
-      }
-      switch (lineMode) {
-        case CFuncLineMode::EXTERN_INTERMEDIATE_PROTOTYPE:
-        case CFuncLineMode::EXTERN_USER_PROTOTYPE:
-        case CFuncLineMode::EXPORT_INTERMEDIATE_PROTOTYPE:
-        case CFuncLineMode::EXPORT_USER_PROTOTYPE:
-          s << "ValeInt param" << i << "size";
-          break;
-        case CFuncLineMode::EXTERN_INTERMEDIATE_BODY:
-        case CFuncLineMode::EXPORT_INTERMEDIATE_BODY:
-          s << "param" << i << "size";
-          break;
-      }
-      addedAnyParam = true;
-    }
-  }
   s << ")";
 
   switch (lineMode) {
@@ -380,35 +358,17 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
 
       if (auto structMT = dynamic_cast<StructKind*>(kind)) {
         auto structDefM = program->getStruct(structMT);
-        // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-        if (structDefM->sharedness == Sharedness::SHARED) {
-          for (auto member : structDefM->members) {
-            auto kind = member->type->kind;
-            if (dynamic_cast<Int *>(kind) ||
-                dynamic_cast<Bool *>(kind) ||
-                dynamic_cast<Float *>(kind) ||
-                dynamic_cast<Str *>(kind)) {
-              // Do nothing, no need to include anything for these
-            } else {
-              auto paramTypeExportName = package->getKindExportName(kind, true);
-              if (ownershipToSharedness(member->type->ownership) == Sharedness::SINGLE) {
-                paramTypeExportName += "Ref";
-              }
-              resultC << "typedef struct " << paramTypeExportName << " " << paramTypeExportName << ";" << std::endl;
-            }
-          }
-        }
+        // Under the opaque-handle FFI, shared struct kinds don't expose their
+        // member layout to C, so no forward-decls needed. Mutable structs
+        // never emitted these here either (only exported members would show
+        // up in C-visible signatures anyway).
 
-        // can we think of this in terms of regions? it's kind of like we're
-        // generating some stuff for the outside to point inside.
-        // VCOORD: ternary backwards — Share→pointer (no linear); OwnInline+exported→linear.
-        auto region = (structDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
+        auto region = (structDefM->sharedness == Sharedness::SHARED ? (IRegion*)globalState->rcImm : globalState->mutRegion);
         auto defString = region->generateStructDefsC(package, structDefM);
         resultC << defString;
       } else if (auto interfaceMT = dynamic_cast<InterfaceKind*>(kind)) {
         auto interfaceDefM = globalState->program->getInterface(interfaceMT);
-        // VCOORD: ternary backwards — Share→pointer (no linear); OwnInline+exported→linear.
-        auto region = (interfaceDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
+        auto region = (interfaceDefM->sharedness == Sharedness::SHARED ? (IRegion*)globalState->rcImm : globalState->mutRegion);
         auto defString = region->generateInterfaceDefsC(package, interfaceDefM);
         resultC << defString;
       } else if (auto ssaMT = dynamic_cast<StaticSizedArrayT*>(kind)) {
@@ -437,6 +397,18 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
       makeExternOrExportFunction(globalState, headerC, sourceC, packageCoord, package, exportName, prototype, true);
     }
   }
+  // Backend-generated FFI accessor exports live in a backend-owned registry
+  // rather than the input AST's exportNameToFunction; emit their C the same way.
+  for (auto[packageCoord, package] : program->packages) {
+    auto autoIter = globalState->autoExportsByPackage.find(packageCoord);
+    if (autoIter == globalState->autoExportsByPackage.end())
+      continue;
+    for (auto[exportName, prototype] : autoIter->second) {
+      auto* headerC = &packageCoordToHeaderNameToC[packageCoord].emplace(exportName, std::stringstream()).first->second;
+      auto* sourceC = &packageCoordToSourceNameToC[packageCoord].emplace(exportName, std::stringstream()).first->second;
+      makeExternOrExportFunction(globalState, headerC, sourceC, packageCoord, package, exportName, prototype, true);
+    }
+  }
   for (auto[packageCoord, package] : program->packages) {
     for (auto[externName, prototype] : package->externNameToFunction) {
       if (prototype->name->name.rfind("__vbi_", 0) == 0) {
@@ -454,6 +426,18 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
   }
   auto outputDir = globalState->opt->outputDir;
 
+
+  // Emit a `str` opaque-handle typedef per package. Str is a compiler
+  // built-in kind so it doesn't come through exportNameToKind, but under the
+  // opaque-handle FFI it needs the same 8-byte concrete-handle typedef that
+  // user-authored shared structs get (str is a concrete kind). Includes the
+  // __vale builtin package because a handful of vale-side str primitives use
+  // it in their generated signatures.
+  for (auto[packageCoord, package] : program->packages) {
+    auto& strHeader = packageCoordToHeaderNameToC[packageCoord].emplace("str", std::stringstream()).first->second;
+    auto name = packageCoord->projectName + "_str";
+    strHeader << "typedef struct " << name << " { uint64_t _reserved; } " << name << ";\n";
+  }
 
   for (auto& [packageCoord, headerNameToC] : packageCoordToHeaderNameToC) {
     for (auto& [headerName, headerCode] : headerNameToC) {
@@ -490,9 +474,10 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
   builtinExportsCode << "#include <stdlib.h>" << std::endl;
   builtinExportsCode << "#include <string.h>" << std::endl;
   builtinExportsCode << "typedef int32_t ValeInt;" << std::endl;
-  builtinExportsCode << "typedef struct { ValeInt length; char chars[0]; } ValeStr;" << std::endl;
-  builtinExportsCode << "ValeStr* ValeStrNew(ValeInt length);" << std::endl;
-  builtinExportsCode << "ValeStr* ValeStrFrom(char* source);" << std::endl;
+  // ValeStr and its allocators (ValeStrNew/ValeStrFrom) were the old
+  // linear-region wire type. Under the opaque-handle FFI, str crosses as an
+  // opaque handle and there is no C-visible string layout, so they're no longer
+  // emitted. Kept in sync with the checked-in Backend/builtins/ValeBuiltins.h.
   builtinExportsCode << "#endif" << std::endl;
 
   std::string builtinsFilePath = makeIncludeDirectory(globalState) + "/ValeBuiltins.h";
@@ -515,8 +500,7 @@ void makeExternOrExportFunction(
     if (translatesToCVoid(globalState, param) ||
         dynamic_cast<Int *>(kind) ||
         dynamic_cast<Bool *>(kind) ||
-        dynamic_cast<Float *>(kind) ||
-        dynamic_cast<Str *>(kind)) {
+        dynamic_cast<Float *>(kind)) {
       // Do nothing, no need to include anything for these
     } else {
       auto paramTypeExportName = package->getKindExportName(kind, false);
@@ -531,8 +515,7 @@ void makeExternOrExportFunction(
     if (translatesToCVoid(globalState, prototype->returnType) ||
         dynamic_cast<Int *>(kind) ||
         dynamic_cast<Bool *>(kind) ||
-        dynamic_cast<Float *>(kind) ||
-        dynamic_cast<Str *>(kind)) {
+        dynamic_cast<Float *>(kind)) {
       // Do nothing, no need to include anything for these
     } else {
       // We need to include the actual header for interfaces, because the user func hands them around by value
@@ -618,18 +601,12 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   auto voidLT = LLVMVoidTypeInContext(globalState->context);
   auto int8LT = LLVMInt8TypeInContext(globalState->context);
   auto int64LT = LLVMInt64TypeInContext(globalState->context);
-  auto int256LT = LLVMIntTypeInContext(globalState->context, 256);
   auto int32LT = LLVMInt32TypeInContext(globalState->context);
   auto int32PtrLT = LLVMPointerType(int32LT, 0);
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
 
-  {
-    globalState->universalRefStructLT =
-        std::make_unique<UniversalRefStructLT>(globalState->context, globalState->dataLayout);
-    globalState->universalRefCompressedStructLT =
-        LLVMStructCreateNamed(globalState->context, "__UniversalRefCompressed");
-    LLVMStructSetBody(globalState->universalRefCompressedStructLT, &int256LT, 1, false);
-  }
+  globalState->ffiHandleStructs =
+      std::make_unique<FfiHandleStructs>(globalState->context);
 
   std::cout << "Region override: fast" << std::endl;
 
@@ -657,12 +634,20 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
 
   globalState->program = programPtr;
 
-  globalState->serializeName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_serialize");
-  globalState->serializeThunkName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_serialize_thunk");
-  globalState->unserializeName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_unserialize");
-  globalState->unserializeThunkName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_unserialize_thunk");
   globalState->freeName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_free");
   globalState->freeThunkName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_free_thunk");
+  globalState->aliasName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_alias");
+  globalState->dealiasName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_dealias");
+  globalState->refEqName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_ref_eq");
+  globalState->strLenName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_str_len");
+  globalState->strCharAtName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_str_char_at");
+  globalState->typeTagName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_type_tag");
+  globalState->asSubstructName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_as_substruct");
+  globalState->upcastName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_upcast");
+  globalState->arrLenName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_arr_len");
+  globalState->arrAtName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_arr_at");
+  globalState->structNewName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_struct_new");
+  globalState->ssaNewName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_ssa_new");
 
   Externs externs(globalState->mod, globalState->context, globalState->ptrSize);
   globalState->externs = &externs;
@@ -717,18 +702,8 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   globalState->rcImm = &rcImm;
   globalState->regions.emplace(globalState->rcImm->getRegionId(), globalState->rcImm);
 
-  // VCOORD: Every `if (sharedness == Sharedness::SHARED)` gate that mirrors types into linearRegion below is backwards under the new FFI model.
-  // Share is by-pointer now (no linearization); OwnInline+exported is the new bytes-linearized case. See vcoord-handoff.md §Replay/FFI mission.
-  globalState->linearRegion = new Linear(globalState);
-  globalState->regions.emplace(globalState->linearRegion->getRegionId(), globalState->linearRegion);
-
-
   globalState->mutRegion = new Unsafe(globalState);
   globalState->regions.emplace(globalState->mutRegion->getRegionId(), globalState->mutRegion);
-
-  Determinism determinism(globalState);
-  globalState->determinism = &determinism;
-
 
   assert(LLVMTypeOf(globalState->neverPtrLE) == globalState->getRegion(globalState->metalCache->neverRef)->translateType(globalState->metalCache->neverRef));
 
@@ -759,11 +734,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       // std::cout << "." << name;
       // std::cout << std::endl;
 
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (structM->sharedness == Sharedness::SHARED) {
-        // TODO: https://github.com/ValeLang/Vale/issues/479
-        globalState->linearRegion->declareStruct(structM);
-      }
     }
   }
 
@@ -773,11 +743,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->declareInterface(interfaceM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (interfaceM->sharedness == Sharedness::SHARED) {
-        // TODO: https://github.com/ValeLang/Vale/issues/479
-        globalState->linearRegion->declareInterface(interfaceM);
-      }
     }
   }
 
@@ -805,10 +770,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto structM = p.second;
       globalState->getRegion(structM->regionId)->declareStructExtraFunctions(structM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (structM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->declareStructExtraFunctions(structM);
-      }
     }
   }
 
@@ -817,10 +778,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->declareInterfaceExtraFunctions(interfaceM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (interfaceM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->declareInterfaceExtraFunctions(interfaceM);
-      }
     }
   }
 
@@ -851,10 +808,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       for (auto e : structM->edges) {
         globalState->getRegion(structM->regionId)->declareEdge(e);
-        // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-        if (structM->sharedness == Sharedness::SHARED) {
-          globalState->linearRegion->declareEdge(e);
-        }
       }
     }
   }
@@ -865,10 +818,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       assert(name == structM->name->name);
       globalState->getRegion(structM->regionId)->defineStruct(structM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (structM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->defineStruct(structM);
-      }
     }
   }
 
@@ -879,10 +828,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->defineInterface(interfaceM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (interfaceM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->defineInterface(interfaceM);
-      }
     }
   }
 
@@ -916,10 +861,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       assert(name == structM->name->name);
       globalState->getRegion(structM->regionId)->defineStructExtraFunctions(structM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (structM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->defineStructExtraFunctions(structM);
-      }
     }
   }
 
@@ -948,10 +889,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->defineInterfaceExtraFunctions(interfaceM);
-      // VCOORD: gate backwards — Share→pointer, OwnInline+exported→linear.
-      if (interfaceM->sharedness == Sharedness::SHARED) {
-        globalState->linearRegion->defineInterfaceExtraFunctions(interfaceM);
-      }
     }
   }
 
@@ -966,7 +903,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
         continue;
       }
       declareExternFunction(globalState, package, prototype);
-      determinism.registerFunction(prototype);
     }
   }
 
@@ -976,18 +912,117 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
     }
   }
 
+  // Register auto-generated per-share-type exports (alias/dealias/ref_eq).
+  // RCImm's declare/define*ExtraFunctions emitted the LLVM bodies during the
+  // earlier RCImm registration phase; here we record each accessor's export
+  // name + prototype in the backend-owned autoExportsByPackage registry (not
+  // the input AST), which the export loops below read to emit their C wrappers
+  // + headers.
+  for (auto[packageCoord, package] : program.packages) {
+    for (auto[exportName, kind] : package->exportNameToKind) {
+      auto structKind = dynamic_cast<StructKind*>(kind);
+      auto interfaceKind = dynamic_cast<InterfaceKind*>(kind);
+      auto rsaKind = dynamic_cast<RuntimeSizedArrayT*>(kind);
+      auto ssaKind = dynamic_cast<StaticSizedArrayT*>(kind);
+      // A kind is share exactly when it lives in the rcImm (share) region.
+      // VCOORD: make this more consistent
+      bool isShare = (structKind || interfaceKind || rsaKind || ssaKind)
+          && globalState->getRegion(kind) == globalState->rcImm;
+      if (isShare) {
+        auto& autoExports = globalState->autoExportsByPackage[packageCoord];
+        auto aliasP = globalState->rcImm->getAliasPrototype(kind);
+        auto dealiasP = globalState->rcImm->getDealiasPrototype(kind);
+        auto refEqP = globalState->rcImm->getRefEqPrototype(kind);
+        autoExports.emplace(exportName + "_alias", aliasP);
+        autoExports.emplace(exportName + "_dealias", dealiasP);
+        autoExports.emplace(exportName + "_ref_eq", refEqP);
+
+        // Per-field getters + per-implemented-interface upcasts for struct kinds.
+        if (structKind) {
+          auto structDefM = program.getStruct(structKind);
+          for (int i = 0; i < (int)structDefM->members.size(); i++) {
+            auto member = structDefM->members[i];
+            auto getterP = globalState->rcImm->getFieldGetterPrototype(structKind, i);
+            autoExports.emplace(exportName + "_" + member->name, getterP);
+          }
+          for (auto edge : structDefM->edges) {
+            auto interfaceExportName = package->getKindExportName(edge->interfaceName, false);
+            auto upcastP =
+                globalState->rcImm->getUpcastPrototype(structKind, edge->interfaceName);
+            autoExports.emplace(exportName + "_as" + interfaceExportName, upcastP);
+          }
+          auto newP = globalState->rcImm->getStructNewPrototype(structKind);
+          autoExports.emplace(exportName + "_new", newP);
+        }
+
+        // Length + at() for RSA/SSA kinds.
+        if (rsaKind) {
+          auto lenP = globalState->rcImm->getRsaLenPrototype(rsaKind);
+          auto atP = globalState->rcImm->getRsaAtPrototype(rsaKind);
+          autoExports.emplace(exportName + "_len", lenP);
+          autoExports.emplace(exportName + "_at", atP);
+        }
+        if (ssaKind) {
+          auto lenP = globalState->rcImm->getSsaLenPrototype(ssaKind);
+          auto atP = globalState->rcImm->getSsaAtPrototype(ssaKind);
+          auto newP = globalState->rcImm->getSsaNewPrototype(ssaKind);
+          autoExports.emplace(exportName + "_len", lenP);
+          autoExports.emplace(exportName + "_at", atP);
+          autoExports.emplace(exportName + "_new", newP);
+        }
+
+        // typeTag + per-edge downcasts for interface kinds.
+        if (interfaceKind) {
+          auto typeTagP = globalState->rcImm->getTypeTagPrototype(interfaceKind);
+          autoExports.emplace(exportName + "_typeTag", typeTagP);
+
+          auto edges = globalState->rcImm->getEdgesForInterface(interfaceKind);
+          if (edges != nullptr) {
+            for (auto edge : *edges) {
+              auto structExportName = package->getKindExportName(edge->structName, false);
+              auto asSubP =
+                  globalState->rcImm->getAsSubstructPrototype(interfaceKind, edge->structName);
+              autoExports.emplace(exportName + "_as" + structExportName, asSubP);
+            }
+          }
+        }
+      }
+    }
+  }
+  // Register str primitive auto-exports.
+  {
+    auto strKind = globalState->metalCache->str;
+    auto strLenP = globalState->rcImm->getStrLenPrototype();
+    auto strCharAtP = globalState->rcImm->getStrCharAtPrototype();
+    auto strAliasP = globalState->rcImm->getAliasPrototype(strKind);
+    auto strDealiasP = globalState->rcImm->getDealiasPrototype(strKind);
+    auto strRefEqP = globalState->rcImm->getRefEqPrototype(strKind);
+    for (auto[packageCoord, package] : program.packages) {
+      if (packageCoord == globalState->metalCache->builtinPackageCoord) continue;
+      (void)package;
+      auto& autoExports = globalState->autoExportsByPackage[packageCoord];
+      autoExports.emplace("str_len", strLenP);
+      autoExports.emplace("str_char_at", strCharAtP);
+      autoExports.emplace("str_alias", strAliasP);
+      autoExports.emplace("str_dealias", strDealiasP);
+      autoExports.emplace("str_ref_eq", strRefEqP);
+    }
+  }
+
   for (auto[packageCoord, package] : program.packages) {
     for (auto[exportName, prototype] : package->exportNameToFunction) {
       bool skipExporting = exportName == "main";
       if (!skipExporting) {
-        auto function = program.getFunction(prototype->name);
-        exportFunction(globalState, package, function);
-        determinism.registerFunction(prototype);
+        exportFunction(globalState, package, exportName, prototype);
+      }
+    }
+    auto autoIter = globalState->autoExportsByPackage.find(packageCoord);
+    if (autoIter != globalState->autoExportsByPackage.end()) {
+      for (auto[exportName, prototype] : autoIter->second) {
+        exportFunction(globalState, package, exportName, prototype);
       }
     }
   }
-
-  determinism.finalizeFunctionsMap();
 
   for (auto[packageCoord, package] : program.packages) {
     for (auto p : package->functions) {
@@ -1008,7 +1043,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
         // VCOORD: gate backwards — Share→pointer (no linear); OwnInline+exported→linear.
         if (structM->sharedness == Sharedness::SHARED) {
           globalState->rcImm->defineEdge(e);
-          globalState->linearRegion->defineEdge(e);
         } else {
           globalState->mutRegion->defineEdge(e);
         }
@@ -1035,10 +1069,9 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   Prototype* mainM = nullptr;
   for (auto[packageCoord, package] : program.packages) {
     for (auto[exportName, prototype] : package->exportNameToFunction) {
-      auto function = program.getFunction(prototype->name);
       bool isExportedMain = exportName == "main";
       if (isExportedMain) {
-        mainM = function->prototype;
+        mainM = prototype;
       }
     }
   }

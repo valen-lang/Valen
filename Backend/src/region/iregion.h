@@ -391,7 +391,7 @@ public:
       bool resultKnownLive) = 0;
 
   // For instance regions, this will return the handle's type.
-  // For value regions, we'll just be returning linear's translateType.
+  // The C-ABI type a ref of this region crosses the FFI boundary as.
   virtual LLVMTypeRef getExternalType(Reference* refMT) = 0;
 
   virtual LoadResult loadElementFromSSA(
@@ -402,17 +402,6 @@ public:
       StaticSizedArrayT* ssaMT,
       LiveRef structRef,
       InBoundsLE indexRef) = 0;
-
-  // Receives a regular reference to an object in another region, so we can move
-  // (or copy) it.
-  virtual std::pair<Ref, Ref> receiveUnencryptedAlienReference(
-      FunctionState* functionState,
-      LLVMBuilderRef builder,
-      Ref sourceRegionInstanceRef,
-      Ref targetRegionInstanceRef,
-      Reference* sourceRefMT,
-      Reference* targetRefMT,
-      Ref sourceRef) = 0;
 
   // Receives and decrypts a reference to an object in this region.
   virtual Ref receiveAndDecryptFamiliarReference(

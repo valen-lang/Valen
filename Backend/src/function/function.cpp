@@ -1,7 +1,6 @@
 #include <iostream>
 #include <utils/definefunction.h>
 #include "expressions/shared/shared.h"
-#include "../region/linear/linear.h"
 
 #include "../translatetype.h"
 
@@ -71,19 +70,19 @@ LLVMTypeRef translateExternReturnType(GlobalState* globalState, Reference* retur
   }
 }
 
-void exportFunction(GlobalState* globalState, Package* package, Function* functionM) {
-  LLVMTypeRef exportReturnLT = translateExternReturnType(globalState, functionM->prototype->returnType);
+void exportFunction(GlobalState* globalState, Package* package, const std::string& exportName, Prototype* prototypeM) {
+  LLVMTypeRef exportReturnLT = translateExternReturnType(globalState, prototypeM->returnType);
 
-  bool usingReturnOutParam = typeNeedsPointerParameter(globalState, functionM->prototype->returnType);
+  bool usingReturnOutParam = typeNeedsPointerParameter(globalState, prototypeM->returnType);
   std::vector<LLVMTypeRef> exportParamTypesL;
   if (usingReturnOutParam) {
     auto exportParamLT =
-        globalState->getRegion(functionM->prototype->returnType)->getExternalType(functionM->prototype->returnType);
+        globalState->getRegion(prototypeM->returnType)->getExternalType(prototypeM->returnType);
     exportParamTypesL.push_back(LLVMPointerType(exportParamLT, 0));
   }
   // We may have added an out-parameter above for the return.
   // Now add the actual parameters.
-  for (auto valeParamRefMT : functionM->prototype->params) {
+  for (auto valeParamRefMT : prototypeM->params) {
     auto hostParamRefLT = globalState->getRegion(valeParamRefMT)->getExternalType(valeParamRefMT);
     if (typeNeedsPointerParameter(globalState, valeParamRefMT)) {
       exportParamTypesL.push_back(LLVMPointerType(hostParamRefLT, 0));
@@ -95,14 +94,16 @@ void exportFunction(GlobalState* globalState, Package* package, Function* functi
   LLVMTypeRef exportFunctionTypeL =
       LLVMFunctionType(exportReturnLT, exportParamTypesL.data(), exportParamTypesL.size(), 0);
 
-  auto unprefixedExportName = package->getFunctionExportName(functionM->prototype);
-  auto exportName = std::string("vale_abi_") + unprefixedExportName;
+  auto fullExportName = package->packageCoordinate->projectName + "_" + exportName;
+  auto abiExportName = std::string("vale_abi_") + fullExportName;
 
   // The full name should end in _0, _1, etc. The exported name shouldnt.
-  assert(exportName != functionM->prototype->name->name);
-  // This is a thunk function that correctly aliases the objects that come in from the
-  // outside world, and dealiases the object that we're returning to the outside world.
-  LLVMValueRef exportFunctionL = LLVMAddFunction(globalState->mod, exportName.c_str(), exportFunctionTypeL);
+  assert(abiExportName != prototypeM->name->name);
+  // Per @FRMACZ, this export thunk is a silent shim: it receives the host args
+  // without touching their RC and forwards them to the real Vale function, which
+  // consumes them as a normal callee. The return is likewise handed to C without
+  // any RC adjustment, and C owns it.
+  LLVMValueRef exportFunctionL = LLVMAddFunction(globalState->mod, abiExportName.c_str(), exportFunctionTypeL);
   LLVMSetLinkage(exportFunctionL, LLVMExternalLinkage);
 
   LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(globalState->context, exportFunctionL, "entry");
@@ -113,20 +114,19 @@ void exportFunction(GlobalState* globalState, Package* package, Function* functi
   // should be fine.
   LLVMBuilderRef localsBuilder = builder;
 
-  FunctionState functionState(exportName, exportFunctionL, exportReturnLT, localsBuilder);
+  FunctionState functionState(abiExportName, exportFunctionL, exportReturnLT, localsBuilder);
   BlockState initialBlockState(globalState->addressNumberer, nullptr, std::nullopt);
   buildFlare(FL(), globalState, &functionState, builder, "Calling export function ", functionState.containingFuncName, " from native");
 
   std::vector<Ref> argsToActualFunction;
 
-  for (int logicalParamIndex = 0; logicalParamIndex < functionM->prototype->params.size(); logicalParamIndex++) {
+  for (int logicalParamIndex = 0; logicalParamIndex < prototypeM->params.size(); logicalParamIndex++) {
     auto cParamIndex = logicalParamIndex + (usingReturnOutParam ? 1 : 0);
 
-    auto valeParamRefMT = functionM->prototype->params[logicalParamIndex];
-    auto hostParamMT =
-        ((valeParamRefMT->ownership == Ownership::MUTABLE_SHARE || valeParamRefMT->ownership == Ownership::IMMUTABLE_SHARE) ?
-         globalState->linearRegion->linearizeReference(valeParamRefMT, true) :
-         valeParamRefMT);
+    auto valeParamRefMT = prototypeM->params[logicalParamIndex];
+    // Under the opaque-handle FFI, share refs cross as universal refs — no
+    // linearization, no separate host-side kind. hostParamMT === valeParamRefMT.
+    auto hostParamMT = valeParamRefMT;
     // Doesn't include the pointifying, this is just the pointee. It's what we'll have after the
     // below if-statement.
     auto hostParamRefLT = globalState->getRegion(valeParamRefMT)->getExternalType(valeParamRefMT);
@@ -140,50 +140,33 @@ void exportFunction(GlobalState* globalState, Package* package, Function* functi
       hostArgRefLE = cArgLE;
     }
 
-    auto valeRegionInstanceRef =
-        // At some point, look up the actual region instance, perhaps from the FunctionState?
-        globalState->getRegion(valeParamRefMT)->createRegionInstanceLocal(&functionState, builder);
-    auto hostRegionInstanceRef =
-        globalState->linearRegion->createRegionInstanceLocal(
-            &functionState, builder, constI1LE(globalState, 0), constI64LE(globalState, 0));
-
     auto valeRef =
         receiveHostObjectIntoVale(
-            globalState, &functionState, builder, hostRegionInstanceRef, valeRegionInstanceRef, hostParamMT, valeParamRefMT, hostArgRefLE);
+            globalState, &functionState, builder, hostParamMT, valeParamRefMT, hostArgRefLE);
 
     argsToActualFunction.push_back(valeRef);
 
-    // dont we have to free here
+    // No free here: per @FRMACZ the arg moves into the real Vale function called
+    // below, which consumes it like any callee.
   }
 
   buildFlare(FL(), globalState, &functionState, builder, "Suspending export function ", functionState.containingFuncName);
-  buildFlare(FL(), globalState, &functionState, builder, "Calling vale function ", functionM->prototype->name->name);
+  buildFlare(FL(), globalState, &functionState, builder, "Calling vale function ", prototypeM->name->name);
   auto valeReturnRefOrVoid =
-      buildCallV(globalState, &functionState, builder, functionM->prototype, argsToActualFunction);
-  buildFlare(FL(), globalState, &functionState, builder, "Done calling vale function ", functionM->prototype->name->name);
+      buildCallV(globalState, &functionState, builder, prototypeM, argsToActualFunction);
+  buildFlare(FL(), globalState, &functionState, builder, "Done calling vale function ", prototypeM->name->name);
   buildFlare(FL(), globalState, &functionState, builder, "Resuming export function ", functionState.containingFuncName);
 
-  if (functionM->prototype->returnType == globalState->metalCache->voidRef) {
+  if (prototypeM->returnType == globalState->metalCache->voidRef) {
     LLVMBuildRetVoid(builder);
   } else {
     auto valeReturnRef = valeReturnRefOrVoid;
 
-    auto valeReturnMT = functionM->prototype->returnType;
-    auto hostReturnMT =
-        ((valeReturnMT->ownership == Ownership::MUTABLE_SHARE || valeReturnMT->ownership == Ownership::IMMUTABLE_SHARE) ?
-         globalState->linearRegion->linearizeReference(valeReturnMT, true) :
-         valeReturnMT);
+    auto valeReturnMT = prototypeM->returnType;
 
-    auto valeRegionInstanceRef =
-        // At some point, look up the actual region instance, perhaps from the FunctionState?
-        globalState->getRegion(valeReturnMT)->createRegionInstanceLocal(&functionState, builder);
-    auto hostRegionInstanceRef =
-        globalState->linearRegion->createRegionInstanceLocal(
-            &functionState, builder, constI1LE(globalState, 0), constI64LE(globalState, 0));
-    auto [hostReturnRefLE, hostReturnSizeLE] =
-    sendValeObjectIntoHostAndDealias(
-        globalState, &functionState, builder, valeRegionInstanceRef, hostRegionInstanceRef, valeReturnMT, hostReturnMT,
-        valeReturnRef);
+    auto hostReturnRefLE =
+        sendValeObjectIntoHost(
+            globalState, &functionState, builder, valeReturnMT, valeReturnRef);
 
     buildFlare(FL(), globalState, &functionState, builder, "Done calling export function ", functionState.containingFuncName, " from native");
 
@@ -223,11 +206,6 @@ RawFuncPtrLE declareExternFunction(
     }
   }
 
-  for (int i = 0; i < prototypeM->params.size(); i++) {
-    if (includeSizeParam(globalState, prototypeM, i)) {
-      externParamTypesL.push_back(LLVMInt32TypeInContext(globalState->context));
-    }
-  }
 
   auto userFuncNameL = package->getFunctionExternName(prototypeM);
   auto abiFuncNameL = std::string("vale_abi_") + userFuncNameL;
@@ -271,13 +249,12 @@ void declareExtraFunction(
     GlobalState* globalState,
     Prototype* prototype,
     std::string llvmName) {
-  auto returnTypeLT =
-      globalState->getRegion(prototype->returnType)->translateType(prototype->returnType);
+  auto returnTypeLT = globalState->translateType(prototype->returnType);
 
   std::vector<LLVMTypeRef> paramsLT;
   for (int i = 0; i < prototype->params.size(); i++) {
     auto paramMT = prototype->params[i];
-    paramsLT.push_back(globalState->getRegion(paramMT)->translateType(paramMT));
+    paramsLT.push_back(globalState->translateType(paramMT));
   }
 
   auto functionL = addValeFunction(globalState, llvmName.c_str(), returnTypeLT, paramsLT);
@@ -290,11 +267,11 @@ void defineFunctionBodyV(
     Prototype* prototype,
     std::function<void(FunctionState*, LLVMBuilderRef)> definer) {
   auto functionL = globalState->lookupFunction(prototype);
-  auto retType = globalState->getRegion(prototype->returnType)->translateType(prototype->returnType);
+  auto retTypeLT = globalState->translateType(prototype->returnType);
   defineValeFunctionBody(
       globalState->context,
       functionL,
-      retType,
+      retTypeLT,
       prototype->name->name,
       definer);
 }

@@ -1,9 +1,9 @@
 #include <utils/branch.h>
 #include <utils/call.h>
+#include <utils/definefunction.h>
 #include <region/common/migration.h>
 #include "function/function.h"
 #include "function/expressions/expressions.h"
-#include "determinism/determinism.h"
 #include "globalstate.h"
 #include "translatetype.h"
 #include <region/common/migration.h>
@@ -157,7 +157,6 @@ LLVMValueRef makeEntryFunction(
   auto int64LT = LLVMInt64TypeInContext(globalState->context);
   auto voidPtrLT = LLVMPointerType(int8LT, 0);
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
-  auto int8PtrPtrLT = LLVMPointerType(int8PtrLT, 0);
 
   // This is the actual entry point for the binary. Uses the standard C
   // signature `int main(int argc, char** argv)` so wasi-libc's _start
@@ -189,22 +188,6 @@ LLVMValueRef makeEntryFunction(
   LLVMBuildStore(entryBuilder, numMainArgsLE, globalState->numMainArgsLE);
   LLVMBuildStore(entryBuilder, mainArgsLE, globalState->mainArgsLE);
 
-  if (globalState->opt->enableReplaying) {
-    auto numConsumedArgsLE =
-        globalState->determinism->buildMaybeStartDeterministicMode(
-            entryBuilder, numMainArgsLE, mainArgsLE);
-
-    // argv[numConsumed] = argv[0], to move the zeroth arg up.
-    LLVMBuildStore(
-        entryBuilder,
-        LLVMBuildLoad2(entryBuilder, int8PtrPtrLT, mainArgsLE, "zerothArg"),
-        LLVMBuildInBoundsGEP2(entryBuilder, int8PtrPtrLT, mainArgsLE, &numConsumedArgsLE, 1, "argv+numConsumed"));
-    // argv += numConsumed
-    mainArgsLE = LLVMBuildInBoundsGEP2(entryBuilder, int8PtrPtrLT, mainArgsLE, &numConsumedArgsLE, 1, "newMainArgs");
-    // argc -= numConsumed
-    numMainArgsLE = LLVMBuildSub(entryBuilder, numMainArgsLE, numConsumedArgsLE, "newMainArgsCount");
-  }
-
   auto calleeUserFunction = globalState->lookupFunction(valeMainPrototype);
   auto calleeUserFunctionReturnMT = valeMainPrototype->returnType;
   auto calleeUserFunctionReturnLT =
@@ -212,11 +195,6 @@ LLVMValueRef makeEntryFunction(
   auto resultLE =
       buildMaybeNeverCallV(
           globalState, entryBuilder, calleeUserFunction, {});
-
-  if (globalState->opt->enableReplaying) {
-    globalState->determinism->buildMaybeStopDeterministicMode(
-        entryFunctionL, entryBuilder);
-  }
 
   // Vale main returns i64 (Vale Int); C main returns i32. Truncate.
   // POSIX/wasi exit codes only use the low byte anyway.

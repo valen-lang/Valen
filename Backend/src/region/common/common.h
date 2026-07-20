@@ -557,15 +557,10 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
     Reference* sourceRefMT,
     Ref sourceRef);
 
-std::string generateUniversalRefStructDefC(Package* currentPackage, const std::string& name);
+std::string generateConcreteHandleStructDefC(Package* currentPackage, const std::string& name);
+std::string generateInterfaceHandleStructDefC(Package* currentPackage, const std::string& name);
 
 
 void fastPanic(GlobalState* globalState, AreaAndFileAndLine from, LLVMBuilderRef builder);
-
-LLVMValueRef compressI64PtrToI56(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrLE);
-LLVMValueRef compressI64PtrToI52(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrLE);
-LLVMValueRef decompressI56PtrToI64(
-    GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrI56LE);
-LLVMValueRef decompressI52PtrToI64(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrI52LE);
 
 #endif

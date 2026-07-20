@@ -476,7 +476,7 @@ When compiling an expression (like case 1) we'll preprocess the RuneParentEnvLoo
 
 This preprocessing is part of the per-call-site setup contract described by @ECSIIOSZ — every site that instantiates a solver (OverloadResolver, ArrayCompiler, ImplCompiler, etc.) has to do it individually, because the solver's own RuneParentEnvLookupSR handler is a no-op.
 
-**⚠ Known architectural smell — refactor soon.** MKRFA is a **recurring-bug pattern with no enforcement.** The contract lives in prose comments cross-referencing the "MKRFA" tag, not in types, and the value solver's handler for `RuneParentEnvLookupSR` is a silent no-op that conceals violations. Three `ArrayCompiler` methods sat in violation for ~4 years before the symptom surfaced (April 2026, via the `Borrowing toArray` AfterRegions test). Any new expression-compilation site that spawns its own solver is at risk of repeating the bug. A near-term fix — extract the preprocessing fold from `OverloadResolver.scala:311-325` into an `InferCompiler` helper and replace the no-op handler with `vwat()` — is queued in `docs/refactor-thoughts/mkrfa-protocol-leak.md`. Prefer honoring the contract via that helper over writing a new inline fold at every future site.
+**⚠ Known architectural smell — refactor soon.** MKRFA is a **recurring-bug pattern with no enforcement.** The contract lives in prose comments cross-referencing the "MKRFA" tag, not in types, and the value solver's handler for `RuneParentEnvLookupSR` is a silent no-op that conceals violations. Three `ArrayCompiler` methods sat in violation for ~4 years before the symptom surfaced (April 2026, via the `Borrowing toArray` AfterRegions test). Any new expression-compilation site that spawns its own solver is at risk of repeating the bug. A near-term fix — extract the preprocessing fold from `OverloadResolver.scala:311-325` into an `InferCompiler` helper and replace the no-op handler with `vwat()` — is queued in `docs/historical/mkrfa-protocol-leak.md`. Prefer honoring the contract via that helper over writing a new inline fold at every future site.
 
 
 # Can't Get All Descendants Of Interface (CGADOI)
@@ -912,9 +912,9 @@ The section "...but not return types" documented the HashMap regression and argu
 
 ## Canonical tests
 
-- `Frontend/TypingPass/test/dev/vale/typing/AfterRegionsTests.scala` — "Bound-driven return rune cannot be inferred from lambda (MSAE general)" (minimal repro), "BRRZ: nested bound-return inference through a lambda body", "BRRZ: two bound-return inferences in the same call".
-- `Frontend/IntegrationTests/test/dev/vale/AfterRegionsIntegrationTests.scala` — "Make array without type", "Call Array<> without element type".
-- `Frontend/TypingPass/test/dev/vale/typing/AfterRegionsErrorTests.scala` — "HashMap-style return-type inference must not skip caller bound args" (regression guard; must continue to fail-to-compile).
+- `FrontendRust/src/typing/test/after_regions_tests.rs` — "Bound-driven return rune cannot be inferred from lambda (MSAE general)" (minimal repro), "BRRZ: nested bound-return inference through a lambda body", "BRRZ: two bound-return inferences in the same call".
+- `FrontendRust/src/integration_tests/tests/after_regions_integration_tests.rs` — "Make array without type", "Call Array<> without element type".
+- `FrontendRust/src/typing/test/after_regions_error_tests.rs` — "HashMap-style return-type inference must not skip caller bound args" (regression guard; must continue to fail-to-compile).
 
 
 # Lambdas Can Call Parents' Generic Bounds (LCCPGB)

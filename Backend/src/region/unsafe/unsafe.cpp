@@ -811,35 +811,39 @@ void Unsafe::checkInlineStructType(
 std::string Unsafe::generateRuntimeSizedArrayDefsC(
     Package* currentPackage,
     RuntimeSizedArrayDefinitionT* rsaDefM) {
-  return generateUniversalRefStructDefC(currentPackage, currentPackage->getKindExportName(rsaDefM->kind, true));
+  return generateConcreteHandleStructDefC(currentPackage, currentPackage->getKindExportName(rsaDefM->kind, true));
 }
 
 std::string Unsafe::generateStaticSizedArrayDefsC(
     Package* currentPackage,
     StaticSizedArrayDefinitionT* ssaDefM) {
-  return generateUniversalRefStructDefC(currentPackage, currentPackage->getKindExportName(ssaDefM->kind, true));
+  return generateConcreteHandleStructDefC(currentPackage, currentPackage->getKindExportName(ssaDefM->kind, true));
 }
 
 std::string Unsafe::generateStructDefsC(
     Package* currentPackage, StructDefinition* structDefM) {
   assert(structDefM->sharedness == Sharedness::SINGLE);
-  return generateUniversalRefStructDefC(currentPackage, currentPackage->getKindExportName(structDefM->kind, true));
+  return generateConcreteHandleStructDefC(currentPackage, currentPackage->getKindExportName(structDefM->kind, true));
 }
 
 std::string Unsafe::generateInterfaceDefsC(
     Package* currentPackage, InterfaceDefinition* interfaceDefM) {
   assert(interfaceDefM->sharedness == Sharedness::SINGLE);
-  return generateUniversalRefStructDefC(currentPackage, currentPackage->getKindExportName(interfaceDefM->kind, true));
+  return generateInterfaceHandleStructDefC(currentPackage, currentPackage->getKindExportName(interfaceDefM->kind, true));
 }
 
 
 LLVMTypeRef Unsafe::getExternalType(Reference* refMT) {
+  // Per @HTSLVBDTCZ, all concretes share one handle type and all interfaces
+  // share one; kind distinctness lives in the C typedefs, not this type.
+  // Same right-sized handle structs the share region uses: mut concretes cross
+  // as 8-byte { i64 obj }, mut interfaces as 16-byte { i64 obj, i64 typeinfo }.
   if (dynamic_cast<StructKind*>(refMT->kind) ||
       dynamic_cast<StaticSizedArrayT*>(refMT->kind) ||
       dynamic_cast<RuntimeSizedArrayT*>(refMT->kind)) {
-    return globalState->universalRefCompressedStructLT;
+    return globalState->getFfiHandleStructs()->getConcreteHandleStructLT();
   } else if (dynamic_cast<InterfaceKind*>(refMT->kind)) {
-    return globalState->universalRefCompressedStructLT;
+    return globalState->getFfiHandleStructs()->getInterfaceHandleStructLT();
   } else {
     { assert(false); throw 1337; }
   }
@@ -868,18 +872,6 @@ LLVMTypeRef Unsafe::getInterfaceMethodVirtualParamAnyType(Reference* reference) 
     default:
       { assert(false); throw 1337; }
   }
-}
-
-std::pair<Ref, Ref> Unsafe::receiveUnencryptedAlienReference(
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    Ref sourceRegionInstanceRef,
-    Ref targetRegionInstanceRef,
-    Reference* sourceRefMT,
-    Reference* targetRefMT,
-    Ref sourceRef) {
-  { assert(false); throw 1337; }
-  exit(1);
 }
 
 LLVMValueRef Unsafe::encryptAndSendFamiliarReference(

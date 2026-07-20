@@ -408,15 +408,6 @@ public:
   LLVMTypeRef getExternalType(
       Reference* refMT) override;
 
-  std::pair<Ref, Ref> receiveUnencryptedAlienReference(
-      FunctionState* functionState,
-      LLVMBuilderRef builder,
-      Ref sourceRegionInstanceRef,
-      Ref targetRegionInstanceRef,
-      Reference* sourceRefMT,
-      Reference* targetRefMT,
-      Ref sourceRef) override;
-
   Ref receiveAndDecryptFamiliarReference(
       FunctionState* functionState,
       LLVMBuilderRef builder,
@@ -467,10 +458,6 @@ public:
       Ref virtualArgRef,
       int indexInEdge) override;
 
-  // This is public so that linear can get at it to stick it in a vtable.
-  Prototype* getUnserializePrototype(Kind* valeKind);
-  Prototype* getUnserializeThunkPrototype(StructKind* structKind, InterfaceKind* interfaceKind);
-
   Prototype* getFreePrototype(Kind* valeKind);
   Prototype* getFreeThunkPrototype(StructKind* structKind, InterfaceKind* interfaceKind);
 
@@ -515,35 +502,69 @@ public:
       Reference* targetRefMT) override;
 
 private:
-  void declareConcreteUnserializeFunction(Kind* valeKindM);
-  void defineConcreteUnserializeFunction(Kind* valeKindM);
-  void declareInterfaceUnserializeFunction(InterfaceKind* valeKind);
-  void defineEdgeUnserializeFunction(Edge* edge);
-
   void declareConcreteFreeFunction(Kind* valeKindM);
   void defineConcreteFreeFunction(Kind* valeKindM);
   void declareInterfaceFreeFunction(InterfaceKind* kind);
   void defineEdgeFreeFunction(Edge* edge);
 
-  InterfaceMethod* getUnserializeInterfaceMethod(Kind* valeKind);
+public:
+  Prototype* getAliasPrototype(Kind* valeKind);
+  Prototype* getDealiasPrototype(Kind* valeKind);
+  Prototype* getRefEqPrototype(Kind* valeKind);
 
-  Ref callUnserialize(
-      FunctionState *functionState,
-      LLVMBuilderRef builder,
-      Ref regionInstanceRef,
-      Ref sourceRegionInstanceRef,
-      Kind* valeKind,
-      Ref objectRef);
+  Prototype* getFieldGetterPrototype(StructKind* structKind, int memberIndex);
+  void declareConcreteFieldGetter(StructDefinition* structDefM, int memberIndex);
+  void defineConcreteFieldGetter(StructDefinition* structDefM, int memberIndex);
 
-  // Does the entire serialization process: measuring the length, allocating a buffer, and
-  // serializing into it.
-  Ref topLevelUnserialize(
-      FunctionState* functionState,
-      LLVMBuilderRef builder,
-      Ref regionInstanceRef,
-      Ref sourceRegionInstanceRef,
-      Kind* valeKind,
-      Ref ref);
+  Prototype* getStrLenPrototype();
+  Prototype* getStrCharAtPrototype();
+  void declareStrPrimitives();
+  void defineStrPrimitives();
+
+  Prototype* getTypeTagPrototype(InterfaceKind* interfaceKind);
+  Prototype* getAsSubstructPrototype(InterfaceKind* interfaceKind, StructKind* structKind);
+  Prototype* getUpcastPrototype(StructKind* structKind, InterfaceKind* interfaceKind);
+
+  Prototype* getStructNewPrototype(StructKind* structKind);
+  Prototype* getSsaNewPrototype(StaticSizedArrayT* ssaKind);
+
+  Prototype* getRsaLenPrototype(RuntimeSizedArrayT* rsaKind);
+  Prototype* getRsaAtPrototype(RuntimeSizedArrayT* rsaKind);
+  Prototype* getSsaLenPrototype(StaticSizedArrayT* ssaKind);
+  Prototype* getSsaAtPrototype(StaticSizedArrayT* ssaKind);
+
+  // Read-only view of the edges declared for a given interface, in the order
+  // they were seen at declareEdge time. Used by the auto-export loop and by
+  // RCImm::generateInterfaceDefsC to emit TAG_* constants.
+  const std::vector<Edge*>* getEdgesForInterface(InterfaceKind* interfaceKind);
+private:
+  void declareConcreteAliasFunction(Kind* valeKind);
+  void defineConcreteAliasFunction(Kind* valeKind);
+  void declareConcreteDealiasFunction(Kind* valeKind);
+  void defineConcreteDealiasFunction(Kind* valeKind);
+  void declareConcreteRefEqFunction(Kind* valeKind);
+  void defineConcreteRefEqFunction(Kind* valeKind);
+
+  void declareConcreteTypeTagFunction(InterfaceKind* interfaceKind);
+  void defineConcreteTypeTagFunction(InterfaceKind* interfaceKind);
+  void declareConcreteAsSubstructFunction(Edge* edge);
+  void defineConcreteAsSubstructFunction(Edge* edge);
+  void declareConcreteUpcastFunction(Edge* edge);
+  void defineConcreteUpcastFunction(Edge* edge);
+
+  void declareConcreteStructNewFunction(StructDefinition* structDefM);
+  void defineConcreteStructNewFunction(StructDefinition* structDefM);
+  void declareConcreteSsaNewFunction(StaticSizedArrayDefinitionT* ssaDef);
+  void defineConcreteSsaNewFunction(StaticSizedArrayDefinitionT* ssaDef);
+
+  void declareConcreteRsaLenFunction(RuntimeSizedArrayT* rsaKind);
+  void defineConcreteRsaLenFunction(RuntimeSizedArrayDefinitionT* rsaDef);
+  void declareConcreteRsaAtFunction(RuntimeSizedArrayT* rsaKind);
+  void defineConcreteRsaAtFunction(RuntimeSizedArrayDefinitionT* rsaDef);
+  void declareConcreteSsaLenFunction(StaticSizedArrayT* ssaKind);
+  void defineConcreteSsaLenFunction(StaticSizedArrayDefinitionT* ssaDef);
+  void declareConcreteSsaAtFunction(StaticSizedArrayT* ssaKind);
+  void defineConcreteSsaAtFunction(StaticSizedArrayDefinitionT* ssaDef);
 
   InterfaceMethod* getFreeInterfaceMethod(Kind* valeKind);
 
@@ -576,6 +597,16 @@ private:
 
   StructKind* regionKind = nullptr;
   Reference* regionRefMT = nullptr;
+
+  // Populated during declareEdge; maps interface kind -> ordered list of its
+  // edges. Used by the typeTag/asSubstruct emitters and by
+  // generateInterfaceDefsC to emit TAG_* constants in the same order the
+  // typeTag body returns.
+  // The AST provides edges per-struct (StructDefinition.edges) but not the
+  // inverse: InterfaceDefinition has no implementing-edge list, so we build the
+  // interface->edges index here. See todo/ffi-drop-followups.md for the frontend
+  // enhancement that would let this be read straight off the AST.
+  std::unordered_map<InterfaceKind*, std::vector<Edge*>, AddressHasher<InterfaceKind*>> edgesByInterface;
 };
 
 #endif

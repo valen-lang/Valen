@@ -186,7 +186,10 @@ public:
     } else if (dynamic_cast<Float *>(kind)) {
       return "double";
     } else if (dynamic_cast<Str *>(kind)) {
-      return "ValeStr*";
+      // VCOORD: revisit this
+      // Under the opaque-handle FFI, str crosses as a 32-byte handle typedef'd
+      // per package as `<projName>_str`. See generateStrHeaderPerPackage.
+      return (includeProjectName ? packageCoordinate->projectName + "_" : "") + "str";
     } else {
       auto iter = kindToExportName.find(kind);
       if (iter == kindToExportName.end()) {
