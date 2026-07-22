@@ -1909,7 +1909,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let SoftLoadTE { expr: original_inner, target_ownership: original_target_ownership } = **sl;
                 let (inner_it, inner_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &original_inner);
                 let target_ownership = match (original_target_ownership, inner_it.ownership) {
-                    (OwnershipT::Share, OwnershipI::ImmutableShare) => OwnershipI::ImmutableShare,
                     (OwnershipT::Share, OwnershipI::MutableShare) => OwnershipI::MutableShare,
                     (OwnershipT::Share, OwnershipI::Own) => {
                       // VCOORD: returning Own here is papering over the issue, we shouldnt
@@ -1923,18 +1922,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                       // Post-cut, Share should not be the target for non-share-flavored kinds.
                       OwnershipI::MutableBorrow
                     },
-                    (OwnershipT::Borrow, OwnershipI::ImmutableShare) => OwnershipI::ImmutableShare,
                     (OwnershipT::Borrow, OwnershipI::MutableShare) => OwnershipI::MutableShare,
-                    (OwnershipT::Borrow, OwnershipI::ImmutableBorrow) => OwnershipI::ImmutableBorrow,
                     (OwnershipT::Borrow, OwnershipI::MutableBorrow) | (OwnershipT::Borrow, OwnershipI::Own) => {
-                        // if (coordRegionIsMutable(substitutions, perspectiveRegionT, originalInner.result.coord)) {
                         OwnershipI::MutableBorrow
-                        // } else { ImmutableBorrowI }
                     }
-                    (OwnershipT::Weak, OwnershipI::ImmutableShare) => OwnershipI::ImmutableShare,
                     (OwnershipT::Weak, OwnershipI::MutableShare) => OwnershipI::MutableShare,
                     (OwnershipT::Weak, OwnershipI::Own) => OwnershipI::Weak,
-                    (OwnershipT::Weak, OwnershipI::ImmutableBorrow) => OwnershipI::Weak,
                     (OwnershipT::Weak, OwnershipI::MutableBorrow) => OwnershipI::Weak,
                     (OwnershipT::Weak, OwnershipI::Weak) => OwnershipI::Weak,
                     other => panic!("SoftLoad: vwat {:?}", other),
@@ -2005,8 +1998,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn compose_ownerships(outer_ownership: &OwnershipT, inner_ownership: &OwnershipI, _kind: &KindIT<'s, 'i>) -> OwnershipI {
         match (outer_ownership, inner_ownership) {
             (OwnershipT::Own, OwnershipI::Own) => OwnershipI::Own,
-            (OwnershipT::Own, OwnershipI::MutableShare) | (OwnershipT::Own, OwnershipI::ImmutableShare)
-            | (OwnershipT::Borrow, OwnershipI::MutableShare) | (OwnershipT::Borrow, OwnershipI::ImmutableShare) => {
+            (OwnershipT::Own, OwnershipI::MutableShare)
+            | (OwnershipT::Borrow, OwnershipI::MutableShare) => {
                 OwnershipI::MutableShare
             }
             (OwnershipT::Own, OwnershipI::MutableBorrow) => {

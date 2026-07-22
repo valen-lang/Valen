@@ -563,8 +563,8 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
         let ReferenceV { actual_kind, seen_as_kind: old_seen_as_type, ownership: old_ownership, location: _old_location, num: object_id, .. } = reference;
         assert_eq!(
-            old_ownership == OwnershipH::MutableShareH || old_ownership == OwnershipH::ImmutableShareH,
-            target_type.ownership == OwnershipH::MutableShareH || target_type.ownership == OwnershipH::ImmutableShareH,
+            old_ownership == OwnershipH::MutableShareH,
+            target_type.ownership == OwnershipH::MutableShareH,
         );
         if old_seen_as_type.hamut != expected_type.kind {
             panic!("wot");
@@ -818,15 +818,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::FloatHT(_) | KindHT::VoidHT(_) | KindHT::NeverHT(_),
         );
         if !kind_is_primitive {
-            if (match actual_reference.seen_as_coord().hamut.ownership {
-                OwnershipH::ImmutableShareH => OwnershipH::MutableShareH,
-                OwnershipH::ImmutableBorrowH => OwnershipH::MutableBorrowH,
-                other => other,
-            }) != (match expected_type.ownership {
-                OwnershipH::ImmutableShareH => OwnershipH::MutableShareH,
-                OwnershipH::ImmutableBorrowH => OwnershipH::MutableBorrowH,
-                other => other,
-            }) {
+            if actual_reference.seen_as_coord().hamut.ownership != expected_type.ownership {
                 panic!("Expected {:?} but was {:?}", expected_type, actual_reference.seen_as_coord().hamut);
             }
             if actual_reference.seen_as_coord().hamut.location != expected_type.location {

@@ -2,11 +2,11 @@ use bumpalo::Bump;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::utils::code_hierarchy::{self, IPackageResolver};
+use crate::pass_manager::{CodeSource, Source};
+use crate::tests::tests::new_test_code_map;
 use super::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::typing_interner::TypingInterner;
 use crate::builtins::builtins::get_embedded_modulized_code_map;
-use crate::tests::tests::get_package_to_resource_resolver;
 
 pub struct CompilerGenericsTests;
 impl CompilerGenericsTests {}
@@ -50,12 +50,13 @@ fn upcasting_with_generic_bounds() {
         "}\n",
         "\n",
     );
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }

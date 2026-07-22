@@ -2,12 +2,12 @@ use crate::compile_options::GlobalOptions;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::parser::ParserCompilation;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use crate::utils::fx::HashMap;
+use crate::pass_manager::CodeSource;
+use crate::utils::code_hierarchy::PackageCoordinate;
 pub fn test<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
-  resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  code_source: &'ctx CodeSource<'p>,
   test_package_coord: &'p PackageCoordinate<'p>,
 ) -> ParserCompilation<'p, 'ctx>
 where
@@ -24,8 +24,6 @@ where
     parse_arena,
     keywords,
     vec![test_package_coord],
-    resolver,
+    code_source,
   )
 }
-
-

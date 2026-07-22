@@ -9,9 +9,9 @@ use crate::parsing::parse_utils::{parse_region as parse_region_shared, try_skip_
 use crate::parsing::pattern_parser::PatternParser;
 use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
+use crate::pass_manager::CodeSource;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
-use crate::utils::code_hierarchy::{FileCoordinateMap, IPackageResolver};
-use crate::utils::fx::HashMap;
+use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::parsing::parse_and_explore;
 use crate::parse_arena::ParseArena;
 use crate::utils::fx::HashSet;
@@ -878,7 +878,7 @@ pub struct ParserCompilation<'p, 'ctx> {
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-  package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  code_source: &'ctx CodeSource<'p>,
   code_map_cache: Option<FileCoordinateMap<'p, String>>,
   vpst_map_cache: Option<FileCoordinateMap<'p, String>>,
   parseds_cache: Option<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>>,
@@ -887,21 +887,21 @@ impl<'p, 'ctx> ParserCompilation<'p, 'ctx>
 where
   'p: 'ctx,
 {
-  
+
 
   pub fn new(
     opts: GlobalOptions,
     parse_arena: &'ctx ParseArena<'p>,
     keywords: &'ctx Keywords<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+    code_source: &'ctx CodeSource<'p>,
   ) -> Self {
     ParserCompilation {
       opts,
       parse_arena,
       keywords,
       packages_to_build,
-      package_to_contents_resolver,
+      code_source,
       code_map_cache: None,
       vpst_map_cache: None,
       parseds_cache: None,
@@ -911,7 +911,7 @@ where
   fn load_and_parse(
     &self,
     needed_packages: &[&'p PackageCoordinate<'p>],
-    resolver: &dyn IPackageResolver<'p, HashMap<String, String>>,
+    source: &CodeSource<'p>,
   ) -> Result<
     (
       FileCoordinateMap<'p, String>,
@@ -931,14 +931,13 @@ where
       FileCoordinateMap::new();
 
     let parser = Parser::new(self.parse_arena, self.keywords);
-    let resolver_fn = |package_coord: &'p PackageCoordinate<'p>| resolver.resolve(package_coord);
     parse_and_explore::parse_and_explore(
             self.parse_arena,
             self.keywords,
             self.opts.clone(),
             &parser,
             needed_packages.to_vec(),
-            &resolver_fn,
+            source,
             |_file_coord, _code, _imports, denizen| denizen,
             |file_coord: &'p FileCoordinate<'p>, code, comment_ranges, denizens: Vec<IDenizenP<'p>>| {
                 found_code_map.put(file_coord, code.to_string());
@@ -978,7 +977,7 @@ where
 
     let packages = self.packages_to_build.clone();
     let (code_map, program_p_map) =
-      self.load_and_parse(&packages, self.package_to_contents_resolver)?;
+      self.load_and_parse(&packages, self.code_source)?;
 
     self.code_map_cache = Some(code_map);
     self.parseds_cache = Some(program_p_map);

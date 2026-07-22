@@ -213,11 +213,9 @@ where 's: 'i, 'i: 'h,
     let CoordI { ownership, kind, .. } = *value;
     let kind_id = simplify_kind(interner, scout_arena, &kind);
     match ownership {
-        OwnershipI::ImmutableShare => kind_id,
         OwnershipI::MutableShare => kind_id,
         OwnershipI::Own => kind_id,
         OwnershipI::Weak => panic!("simplify_coord: Weak"),
-        OwnershipI::ImmutableBorrow => panic!("simplify_coord: ImmutableBorrow"),
         OwnershipI::MutableBorrow => panic!("simplify_coord: MutableBorrow"),
     }
 }

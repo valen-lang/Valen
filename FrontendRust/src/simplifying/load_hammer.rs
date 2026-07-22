@@ -86,15 +86,13 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let array_access = array_result_line.expect_runtime_sized_array_access();
         let (index_expr_result_line, index_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(index_expr2));
         let index_access = index_expr_result_line.expect_int_access();
-        assert!(target_ownership == OwnershipH::MutableBorrowH || target_ownership == OwnershipH::ImmutableBorrowH || target_ownership == OwnershipH::ImmutableShareH || target_ownership == OwnershipH::MutableShareH || target_ownership == OwnershipH::OwnH);
+        assert!(target_ownership == OwnershipH::MutableBorrowH || target_ownership == OwnershipH::MutableShareH || target_ownership == OwnershipH::OwnH);
         let rsa = hamuts.get_runtime_sized_array(array_access.result_type().kind.expect_runtime_sized_array_ht());
         let expected_element_type = rsa.element_type;
         let location = match (target_ownership, expected_element_type.location) {
-            (OwnershipH::ImmutableBorrowH, _) => LocationH::YonderH,
             (OwnershipH::MutableBorrowH, _) => LocationH::YonderH,
             (OwnershipH::OwnH, location) => location,
             (OwnershipH::MutableShareH, location) => location,
-            (OwnershipH::ImmutableShareH, location) => location,
             _ => panic!("translate_mundane_runtime_sized_array_load: unexpected ownership"),
         };
         let result_type = CoordH::new(target_ownership, location, expected_element_type.kind);
@@ -128,14 +126,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let array_access = array_result_line.expect_static_sized_array_access();
         let (index_expr_result_line, index_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(index_expr2));
         let index_access = index_expr_result_line.expect_int_access();
-        assert!(target_ownership == OwnershipH::MutableBorrowH || target_ownership == OwnershipH::ImmutableBorrowH || target_ownership == OwnershipH::MutableShareH || target_ownership == OwnershipH::ImmutableShareH || target_ownership == OwnershipH::OwnH);
+        assert!(target_ownership == OwnershipH::MutableBorrowH || target_ownership == OwnershipH::MutableShareH || target_ownership == OwnershipH::OwnH);
         let ssa = hamuts.get_static_sized_array(array_access.result_type().kind.expect_static_sized_array_ht());
         let expected_element_type = ssa.element_type;
         // VCOORD: simplify this
         let location = match (target_ownership, expected_element_type.location) {
-            (OwnershipH::MutableBorrowH, _) | (OwnershipH::ImmutableBorrowH, _) => LocationH::YonderH,
+            (OwnershipH::MutableBorrowH, _) => LocationH::YonderH,
             (OwnershipH::OwnH, location) => location,
-            (OwnershipH::ImmutableShareH, location) | (OwnershipH::MutableShareH, location) => location,
+            (OwnershipH::MutableShareH, location) => location,
             _ => panic!("translate_mundane_static_sized_array_load: unexpected ownership"),
         };
         let result_type = CoordH::new(target_ownership, location, expected_element_type.kind);
@@ -189,8 +187,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         let target_ownership = evaluate_ownership(target_ownership_i);
         let result_location = match target_ownership {
-            OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH | OwnershipH::WeakH
-            | OwnershipH::MutableShareH | OwnershipH::ImmutableShareH => LocationH::YonderH,
+            OwnershipH::MutableBorrowH | OwnershipH::WeakH
+            | OwnershipH::MutableShareH => LocationH::YonderH,
             OwnershipH::OwnH => boxed_type_h.location,
         };
         let load_result_type = CoordH::new(target_ownership, result_location, boxed_type_h.kind);
@@ -229,8 +227,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let member_index = struct_def_i.members.iter().position(|m| m.name == *member_name).expect("memberIndex >= 0") as i32;
         let target_ownership = evaluate_ownership(target_ownership_i);
         let result_location = match target_ownership {
-            OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH | OwnershipH::WeakH
-            | OwnershipH::MutableShareH | OwnershipH::ImmutableShareH => LocationH::YonderH,
+            OwnershipH::MutableBorrowH | OwnershipH::WeakH
+            | OwnershipH::MutableShareH => LocationH::YonderH,
             OwnershipH::OwnH => expected_member_type_h.location,
         };
         let load_result_type = CoordH::new(target_ownership, result_location, expected_member_type_h.kind);
@@ -270,8 +268,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         let target_ownership = evaluate_ownership(target_ownership_i);
         let result_location = match target_ownership {
-            OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH | OwnershipH::WeakH
-            | OwnershipH::MutableShareH | OwnershipH::ImmutableShareH => LocationH::YonderH,
+            OwnershipH::MutableBorrowH | OwnershipH::WeakH
+            | OwnershipH::MutableShareH => LocationH::YonderH,
             OwnershipH::OwnH => local_type_h.location,
         };
         let load_result_type = CoordH::new(target_ownership, result_location, local_type_h.kind);

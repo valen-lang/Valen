@@ -9,38 +9,6 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result;
 
-pub struct OrResolver<P, F> {
-  primary: P,
-  fallback: F,
-}
-
-impl<'a, T, P, F> IPackageResolver<'a, T> for OrResolver<P, F>
-where
-  P: IPackageResolver<'a, T>,
-  F: IPackageResolver<'a, T>,
-{
-  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<T> {
-    self
-      .primary
-      .resolve(package_coord)
-      .or_else(|| self.fallback.resolve(package_coord))
-  }
-}
-
-
-/// Implement IPackageResolver for function pointers (for lambda-style resolvers)
-impl<'a, T, F> IPackageResolver<'a, T> for F
-where
-  F: Fn(&'a PackageCoordinate<'a>) -> Option<T>,
-{
-  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<T> {
-    self(package_coord)
-  }
-}
-
-
-
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FileCoordinate<'a> {
   pub package_coord: &'a PackageCoordinate<'a>,
@@ -138,56 +106,6 @@ impl<'a> Display for PackageCoordinate<'a> {
 
 const TEST_MODULE: &str = "test";
 
-pub fn simple<'a, T: Clone>(
-    file_coord: &'a FileCoordinate<'a>,
-    contents: T,
-  ) -> FileCoordinateMap<'a, T> {
-    let mut result = FileCoordinateMap::new();
-    result.put(file_coord, contents);
-    result
-  }
-
-
-pub fn test<'a, C: Clone>(
-    scout_arena: &ScoutArena<'a>,
-    contents: C,
-  ) -> FileCoordinateMap<'a, C> {
-    const TEST_MODULE: &str = "test";
-    let test_module = scout_arena.intern_str(TEST_MODULE);
-    let package_coord = scout_arena.intern_package_coordinate(test_module, &[]);
-    let file_coord = scout_arena.intern_file_coordinate(package_coord, "test.vale");
-    let mut result = FileCoordinateMap::new();
-    result.put(file_coord, contents);
-    result
-  }
-
-
-pub fn test_from_vec<'a, T: Clone>(
-    parse_arena: &ParseArena<'a>,
-    contents: Vec<T>,
-  ) -> FileCoordinateMap<'a, T> {
-    let mut map = HashMap::default();
-    for (index, code) in contents.into_iter().enumerate() {
-      map.insert(format!("{}.vale", index), code);
-    }
-    test_from_map(parse_arena, map)
-  }
-
-
-pub fn test_from_map<'a, T: Clone>(
-    parse_arena: &ParseArena<'a>,
-    contents: HashMap<String, T>,
-  ) -> FileCoordinateMap<'a, T> {
-    let mut result = FileCoordinateMap::new();
-    let package_coord = parse_arena.intern_package_coordinate(parse_arena.intern_str(TEST_MODULE), &[]);
-    for (filepath, file_contents) in contents {
-      let file_coord = parse_arena.intern_file_coordinate(package_coord, &filepath);
-      result.put(file_coord, file_contents);
-    }
-    result
-  }
-
-
 #[derive(Clone, Debug)]
 pub struct FileCoordinateMap<'a, Contents> {
   pub package_coord_to_file_coords: HashMap<&'a PackageCoordinate<'a>, Vec<&'a FileCoordinate<'a>>>,
@@ -201,12 +119,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
       file_coord_to_contents: HashMap::default(),
     }
   }
-
-  /// Companion-object style constructor for tests. Mirrors FileCoordinateMap.test(scout_arena, contents).
-  pub fn test(scout_arena: &ScoutArena<'a>, contents: Contents) -> Self {
-    super::code_hierarchy::test(scout_arena, contents)
-  }
-
 
   pub fn apply(&self, coord: &'a FileCoordinate<'a>) -> &Contents {
     self
@@ -297,93 +209,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
   }
 
 
-  pub fn resolve(
-    &self,
-    package_coord: &'a PackageCoordinate<'a>,
-  ) -> Option<HashMap<String, Contents>> {
-    self
-      .package_coord_to_file_coords
-      .get(package_coord)
-      .map(|file_coords| {
-        file_coords
-          .iter()
-          .map(|file_coord| {
-            let contents = self
-              .file_coord_to_contents
-              .get(file_coord)
-              .expect("FileCoordinateMap::resolve - file coord not found in contents");
-            (file_coord.filepath.as_str().to_string(), contents.clone())
-          })
-          .collect()
-      })
-  }
-
-}
-
-pub fn compose_resolvers<'a, Contents>(
-  resolver_a: impl Fn(&'a PackageCoordinate<'a>) -> Option<HashMap<String, Contents>>,
-  resolver_b: impl Fn(&'a PackageCoordinate<'a>) -> HashMap<String, Contents>,
-  package_coord: &'a PackageCoordinate<'a>,
-) -> HashMap<String, Contents> {
-  match resolver_a(package_coord) {
-    Some(result) => result,
-    None => resolver_b(package_coord),
-  }
-}
-
-
-pub fn compose_map_and_resolver<'a, Contents>(
-  files: &FileCoordinateMap<'a, Contents>,
-  then_resolver: impl Fn(&'a PackageCoordinate<'a>) -> HashMap<String, Contents>,
-  package_coord: &'a PackageCoordinate<'a>,
-) -> HashMap<String, Contents>
-where
-  Contents: Clone,
-{
-  match files.resolve(package_coord) {
-    Some(filename_to_contents) => filename_to_contents,
-    None => then_resolver(package_coord),
-  }
-}
-
-pub trait IPackageResolver<'a, T> {
-
-  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<T>;
-
-  fn or<F>(self, fallback: F) -> OrResolver<Self, F>
-  where
-    Self: Sized,
-    F: IPackageResolver<'a, T>,
-  {
-    OrResolver {
-      primary: self,
-      fallback,
-    }
-  }
-
-
-  fn inner_or(
-    &self,
-    fallback: &impl IPackageResolver<'a, T>,
-    package_coord: &'a PackageCoordinate<'a>,
-  ) -> Option<T>
-  where
-    Self: Sized,
-  {
-    match self.resolve(package_coord) {
-      Some(x) => Some(x),
-      None => fallback.resolve(package_coord),
-    }
-  }
-
-}
-
-impl<'a, Contents: Clone> IPackageResolver<'a, HashMap<String, Contents>>
-  for FileCoordinateMap<'a, Contents>
-{
-  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<HashMap<String, Contents>> {
-    FileCoordinateMap::resolve(self, package_coord)
-  }
 }
 
 #[derive(Clone, Debug)]

@@ -356,7 +356,7 @@ static ValeInt RemoveFile(const char* path) {
     switch (errno) {
       case ENOENT:
         return 1;
-      // DO NOT SUBMIT, remaining errors
+      // TODO: handle remaining errno values
       default:
         fprintf(stderr, "stdlib_RemoveFile: Unknown error code %d\n", errno);
         exit(1);
@@ -370,7 +370,7 @@ static ValeInt RemoveDir(const char* path) {
     switch (errno) {
       case ENOENT:
         return 1;
-      // DO NOT SUBMIT, remaining errors
+      // TODO: handle remaining errno values
       default:
         fprintf(stderr, "stdlib_RemoveDir: Unknown error code %d\n", errno);
         exit(1);

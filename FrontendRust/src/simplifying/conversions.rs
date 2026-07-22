@@ -22,9 +22,7 @@ pub fn evaluate_location(location: LocationI) -> LocationH {
 pub fn evaluate_ownership(ownership: OwnershipI) -> OwnershipH {
     match ownership {
         OwnershipI::Own => OwnershipH::OwnH,
-        OwnershipI::ImmutableBorrow => OwnershipH::ImmutableBorrowH,
         OwnershipI::MutableBorrow => OwnershipH::MutableBorrowH,
-        OwnershipI::ImmutableShare => OwnershipH::ImmutableShareH,
         OwnershipI::MutableShare => OwnershipH::MutableShareH,
         OwnershipI::Weak => OwnershipH::WeakH,
     }

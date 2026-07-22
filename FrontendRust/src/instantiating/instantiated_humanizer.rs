@@ -42,8 +42,6 @@ pub fn humanize_coord<'s, 'i>(
         OwnershipI::Own => "",
         OwnershipI::MutableShare => "",
         OwnershipI::MutableBorrow => "&",
-        OwnershipI::ImmutableShare => "#",
-        OwnershipI::ImmutableBorrow => "&#",
         OwnershipI::Weak => "weak&",
     };
     let kind_str = humanize_kind(code_map, &coord.kind);

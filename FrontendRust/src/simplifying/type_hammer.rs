@@ -75,10 +75,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
             (_, KindIT::StructIT(s)) if hinputs.kind_externs.contains_key(&s) => (OwnershipH::OwnH, LocationH::InlineH),
             (OwnershipI::Own, KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::FloatIT(_) | KindIT::VoidIT(_) | KindIT::NeverIT(_)) => (evaluate_ownership(ownership), LocationH::InlineH),
             (OwnershipI::Own, _) => (evaluate_ownership(ownership), LocationH::YonderH),
-            (OwnershipI::ImmutableBorrow | OwnershipI::MutableBorrow, _) => (evaluate_ownership(ownership), LocationH::YonderH),
+            (OwnershipI::MutableBorrow, _) => (evaluate_ownership(ownership), LocationH::YonderH),
             (OwnershipI::Weak, _) => (evaluate_ownership(ownership), LocationH::YonderH),
-            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, KindIT::StrIT(_)) => (evaluate_ownership(ownership), LocationH::YonderH),
-            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, _) => (evaluate_ownership(ownership), LocationH::YonderH),
+            (OwnershipI::MutableShare, KindIT::StrIT(_)) => (evaluate_ownership(ownership), LocationH::YonderH),
+            (OwnershipI::MutableShare, _) => (evaluate_ownership(ownership), LocationH::YonderH),
         };
         // /VCOORD
         let inner_h = self.translate_kind(hinputs, hamuts, inner_type);

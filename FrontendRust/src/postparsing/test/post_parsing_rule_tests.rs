@@ -1,4 +1,3 @@
-use crate::utils::fx::HashMap;
 use bumpalo::Bump;
 use crate::postparsing::ast::ProgramS;
 use crate::postparsing::itemplatatype::{
@@ -8,10 +7,12 @@ use crate::postparsing::itemplatatype::{
 use crate::postparsing::names::{CodeRuneS, IRuneValS};
 use crate::Keywords;
 use crate::parse_arena::ParseArena;
+use crate::pass_manager::CodeSource;
 use crate::scout_arena::ScoutArena;
 use crate::postparsing::post_parser::ICompileErrorS;
 use crate::postparsing::test::post_parser_test_compilation;
-use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
+use crate::tests::tests::new_test_code_map;
+use crate::utils::code_hierarchy::PackageCoordinate;
 
 
 fn compile<'s, 'ctx, 'p>(
@@ -19,13 +20,13 @@ fn compile<'s, 'ctx, 'p>(
   keywords: &'ctx Keywords<'s>,
   parser_keywords: &'ctx Keywords<'p>,
   parse_arena: &'ctx ParseArena<'p>,
-  package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  code_source: &'ctx CodeSource<'p>,
   code: &str,
 ) -> ProgramS<'s>
 where 'p: 's,
 {
   let mut compile = post_parser_test_compilation::test(
-    scout_arena, keywords, parser_keywords, parse_arena, package_to_contents_resolver, code,
+    scout_arena, keywords, parser_keywords, parse_arena, code_source, code,
   );
   match compile.get_scoutput() {
     // PostParserErrorHumanizer not yet ported; use unwrap() for now (documented gap).
@@ -39,13 +40,13 @@ fn compile_for_error<'s, 'ctx, 'p>(
   keywords: &'ctx Keywords<'s>,
   parser_keywords: &'ctx Keywords<'p>,
   parse_arena: &'ctx ParseArena<'p>,
-  package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  code_source: &'ctx CodeSource<'p>,
   code: &str,
 ) -> ICompileErrorS<'s>
 where 'p: 's,
 {
   let mut compile = post_parser_test_compilation::test(
-    scout_arena, keywords, parser_keywords, parse_arena, package_to_contents_resolver, code,
+    scout_arena, keywords, parser_keywords, parse_arena, code_source, code,
   );
   match compile.get_scoutput() {
     Err(e) => e,
@@ -62,14 +63,15 @@ fn predict_simple_templex() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = "func main(a int) {}";
-  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let code_source = CodeSource::new(vec![
+    new_test_code_map(&parse_arena, code),
+  ]);
   let program = compile(
     &scout_arena,
     &keywords,
     &parser_keywords,
     &parse_arena,
-    &resolver,
+    &code_source,
     code,
   );
   let main = program.lookup_function("main");
@@ -90,14 +92,15 @@ fn can_know_rune_type_from_simple_equals() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = "func main<T, Y>(a T) where Y = T {}";
-  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let code_source = CodeSource::new(vec![
+    new_test_code_map(&parse_arena, code),
+  ]);
   let program = compile(
     &scout_arena,
     &keywords,
     &parser_keywords,
     &parse_arena,
-    &resolver,
+    &code_source,
     code,
   );
   let main = program.lookup_function("main");
@@ -131,14 +134,15 @@ fn predict_knows_type_from_or_rule() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = "func main<M Ownership>(a int) where M = any(own, borrow) {}";
-  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let code_source = CodeSource::new(vec![
+    new_test_code_map(&parse_arena, code),
+  ]);
   let program = compile(
     &scout_arena,
     &keywords,
     &parser_keywords,
     &parse_arena,
-    &resolver,
+    &code_source,
     code,
   );
   let main = program.lookup_function("main");
@@ -170,14 +174,15 @@ fn predict_coord_component_types() {
   // Take out with regions
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = "func main<T>(a T) where T = Ref[O, K], O Ownership, K Kind {}";
-  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let code_source = CodeSource::new(vec![
+    new_test_code_map(&parse_arena, code),
+  ]);
   let program = compile(
     &scout_arena,
     &keywords,
     &parser_keywords,
     &parse_arena,
-    &resolver,
+    &code_source,
     code,
   );
   let main = program.lookup_function("main");
@@ -216,14 +221,15 @@ fn predict_call_types() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = "func main<A, B>(p1 A, p2 B) where A = T<B>, T = Option, A = int {}";
-  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let code_source = CodeSource::new(vec![
+    new_test_code_map(&parse_arena, code),
+  ]);
   let program = compile(
     &scout_arena,
     &keywords,
     &parser_keywords,
     &parse_arena,
-    &resolver,
+    &code_source,
     code,
   );
   let main = program.lookup_function("main");
@@ -259,14 +265,15 @@ fn predict_array_sequence_types() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = "func main<N Int, E>(t T) where T Ref = [#N]E {}";
-  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let code_source = CodeSource::new(vec![
+    new_test_code_map(&parse_arena, code),
+  ]);
   let program = compile(
     &scout_arena,
     &keywords,
     &parser_keywords,
     &parse_arena,
-    &resolver,
+    &code_source,
     code,
   );
   let main = program.lookup_function("main");
@@ -304,14 +311,15 @@ fn predict_for_is_interface() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = "func main<A Kind, B Kind>() where A = isInterface(B) {}";
-  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let code_source = CodeSource::new(vec![
+    new_test_code_map(&parse_arena, code),
+  ]);
   let program = compile(
     &scout_arena,
     &keywords,
     &parser_keywords,
     &parse_arena,
-    &resolver,
+    &code_source,
     code,
   );
   let main = program.lookup_function("main");

@@ -267,9 +267,7 @@ fn lower_ownership(o: OwnershipH) -> Ownership {
     match o {
         OwnershipH::OwnH => Ownership::Own,
         OwnershipH::MutableBorrowH => Ownership::MutableBorrow,
-        OwnershipH::ImmutableBorrowH => Ownership::ImmutableBorrow,
         OwnershipH::MutableShareH => Ownership::MutableShare,
-        OwnershipH::ImmutableShareH => Ownership::ImmutableShare,
         OwnershipH::WeakH => Ownership::Weak,
     }
 }

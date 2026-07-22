@@ -8,8 +8,9 @@ use crate::parsing::ast::FileP;
 // Simplifying pass unlinked during instantiating bring-up (Slabs 16a–16j).
 // use crate::simplifying::HammerCompilationOptions;
 use crate::typing::TypingPassCompilation;
+use crate::pass_manager::CodeSource;
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
+use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
 use std::sync::Arc;
 use crate::parse_arena::ParseArena;
@@ -67,7 +68,7 @@ where
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+    code_source: &'ctx CodeSource<'p>,
     global_options: GlobalOptions,
     options: InstantiatorCompilationOptions,
     instantiating_bump: &'i Bump,
@@ -83,7 +84,7 @@ where
       parser_keywords,
       parse_arena,
       packages_to_build,
-      package_to_contents_resolver,
+      code_source,
       global_options.clone(),
       typing_options,
     );

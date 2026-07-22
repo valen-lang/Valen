@@ -93,10 +93,10 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::LocalStoreH(s) => s.local.type_h,
         ExpressionH::LocalLoadH(l) => {
             let location = match (l.target_ownership, l.local.type_h.location) {
-                (OwnershipH::ImmutableBorrowH, _) | (OwnershipH::MutableBorrowH, _) => LocationH::YonderH,
+                (OwnershipH::MutableBorrowH, _) => LocationH::YonderH,
                 (OwnershipH::WeakH, _) => LocationH::YonderH,
                 (OwnershipH::OwnH, loc) => loc,
-                (OwnershipH::MutableShareH, _) | (OwnershipH::ImmutableShareH, _) => LocationH::YonderH,
+                (OwnershipH::MutableShareH, _) => LocationH::YonderH,
             };
             CoordH::new(l.target_ownership, location, l.local.type_h.kind)
         }
@@ -127,8 +127,8 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             CoordH::new(
                 match ownership {
                     OwnershipH::OwnH => OwnershipH::OwnH,
-                    OwnershipH::ImmutableBorrowH | OwnershipH::MutableBorrowH => OwnershipH::MutableBorrowH,
-                    OwnershipH::ImmutableShareH | OwnershipH::MutableShareH => OwnershipH::MutableShareH,
+                    OwnershipH::MutableBorrowH => OwnershipH::MutableBorrowH,
+                    OwnershipH::MutableShareH => OwnershipH::MutableShareH,
                     OwnershipH::WeakH => {
                         panic!("MutabilifyH::result_type: WeakH unimplemented (vimpl)");
                         // vimpl()
@@ -138,21 +138,8 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
                 kind,
             )
         }
-        ExpressionH::ImmutabilifyH(im) => {
-            let CoordH { ownership, location, kind, .. } = im.inner.result_type();
-            CoordH::new(
-                match ownership {
-                    OwnershipH::OwnH => OwnershipH::OwnH,
-                    OwnershipH::ImmutableBorrowH | OwnershipH::MutableBorrowH => OwnershipH::ImmutableBorrowH,
-                    OwnershipH::ImmutableShareH | OwnershipH::MutableShareH => OwnershipH::ImmutableShareH,
-                    OwnershipH::WeakH => {
-                        panic!("ImmutabilifyH::result_type: WeakH unimplemented (vimpl)");
-                        // vimpl()
-                    }
-                },
-                location,
-                kind,
-            )
+        ExpressionH::ImmutabilifyH(_im) => {
+            panic!("ImmutabilifyH::result_type: Immutable* ownership variants retired; ImmutabilifyH is never constructed post-cut");
         }
         ExpressionH::ReturnH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::NeverHT(NeverHT { from_break: false })),
         ExpressionH::NewRuntimeSizedArrayH(n) => n.result_type,

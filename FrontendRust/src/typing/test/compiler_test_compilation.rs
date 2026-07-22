@@ -5,9 +5,8 @@ use crate::instantiating::instantiated_compilation::InstantiatorCompilationOptio
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
+use crate::pass_manager::CodeSource;
 use crate::typing::compilation::TypingPassCompilation;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use crate::utils::fx::HashMap;
 use std::sync::Arc;
 use crate::typing::typing_interner::TypingInterner;
 
@@ -18,7 +17,7 @@ pub fn compiler_test_compilation<'s, 'ctx, 't, 'p>(
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
-    resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+    code_source: &'ctx CodeSource<'p>,
 ) -> TypingPassCompilation<'s, 'ctx, 't, 'p>
 where 's: 't,
 {
@@ -41,7 +40,7 @@ where 's: 't,
         parser_keywords,
         parse_arena,
         vec![test_tld],
-        resolver,
+        code_source,
         global_options,
         instantiator_options,
     )

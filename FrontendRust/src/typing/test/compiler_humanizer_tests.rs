@@ -8,15 +8,14 @@
 //! directly makes the test scope-tight and lifetime-independent of the
 //! backend/clang path.
 use bumpalo::Bump;
-use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
+use crate::pass_manager::{CodeSource, Source};
 use crate::scout_arena::ScoutArena;
-use crate::tests::tests::get_package_to_resource_resolver;
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::typing_interner::TypingInterner;
-use crate::utils::code_hierarchy::{self, IPackageResolver};
+use crate::tests::tests::new_test_code_map;
 use crate::utils::source_code_utils::{
     humanize_pos_code_map, line_containing, line_range_containing, lines_between,
 };
@@ -31,12 +30,12 @@ fn humanize_couldnt_find_function_no_function_with_that_name() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "exported func main() int { return nonexistent_function(0); }".to_string();
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let err = match compile.get_compiler_outputs() {
         Err(e) => e,

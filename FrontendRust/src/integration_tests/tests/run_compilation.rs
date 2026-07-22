@@ -1,5 +1,4 @@
-use crate::utils::code_hierarchy::IPackageResolver;
-use crate::builtins::builtins::get_code_map;
+use crate::pass_manager::{CodeSource, Source};
 use crate::builtins::builtins::get_modulized_code_map;
 use crate::compile_options::GlobalOptions;
 use crate::final_ast::ast::ProgramH;
@@ -16,7 +15,7 @@ use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_compilation::HammerCompilation;
 use crate::simplifying::hammer_compilation::HammerCompilationOptions;
 use crate::simplifying::hammer_interner::HammerInterner;
-use crate::tests::tests::get_package_to_resource_resolver;
+use crate::tests::tests::test_source_from_dir;
 use crate::testvm::heap::HeapV;
 use crate::testvm::values::PrimitiveKindV;
 use crate::testvm::values::ReferenceV;
@@ -32,7 +31,7 @@ use crate::typing::hinputs_t::HinputsT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::utils::code_hierarchy::test_from_vec;
+use crate::tests::tests::new_test_code_map;
 use crate::von::ast::IVonData;
 use crate::utils::fx::HashMap;
 use std::io::stdout;
@@ -57,12 +56,11 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
             PackageCoordinate::builtin(parse_arena, parser_keywords),
             PackageCoordinate::test_tld(parse_arena, parser_keywords),
         ];
-    let base_code_map = get_code_map(parse_arena, parser_keywords);
-    let resolver_concrete = base_code_map
-        .or(test_from_vec(parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
-    let resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>> =
-        compilation_bump.alloc(resolver_concrete);
+    let code_source: &'ctx CodeSource<'p> = compilation_bump.alloc(CodeSource::new(vec![
+        Source::builtins(parse_arena, parser_keywords),
+        new_test_code_map(parse_arena, code),
+        Source::Fn(test_source_from_dir),
+    ]));
     let options = HammerCompilationOptions {
         global_options: GlobalOptions {
             sanity_check: true,
@@ -77,7 +75,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
         interner: typing_interner,
         hammer_compilation: HammerCompilation::new(
             scout_arena, interner, typing_interner, keywords, parser_keywords, parse_arena,
-            packages_to_build, resolver, options, instantiating_bump,
+            packages_to_build, code_source, options, instantiating_bump,
         ),
     }
 }
@@ -104,11 +102,11 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
     let base_code_map =
         get_modulized_code_map(parse_arena, parser_keywords)
             .expect("Builtins code map failed to load");
-    let resolver_concrete = base_code_map
-        .or(test_from_vec(parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
-    let resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>> =
-        compilation_bump.alloc(resolver_concrete);
+    let code_source: &'ctx CodeSource<'p> = compilation_bump.alloc(CodeSource::new(vec![
+        Source::from_code_map(&base_code_map),
+        new_test_code_map(parse_arena, code),
+        Source::Fn(test_source_from_dir),
+    ]));
     let options = HammerCompilationOptions {
         global_options: GlobalOptions {
             sanity_check: true,
@@ -123,7 +121,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
         interner: typing_interner,
         hammer_compilation: HammerCompilation::new(
             scout_arena, interner, typing_interner, keywords, parser_keywords, parse_arena,
-            packages_to_build, resolver, options, instantiating_bump,
+            packages_to_build, code_source, options, instantiating_bump,
         ),
     }
 }

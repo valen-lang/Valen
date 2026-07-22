@@ -349,7 +349,7 @@ annotation of move-vs-clone intent.
    returns zero source-position hits (only in builtin definitions and as the intrinsic name).
 3. `git grep 'TSUGAR' FrontendRust/src/` — count roughly halved (only `&` / member-access markers
    remain).
-4. The 7 DO NOT SUBMIT markers in the cut's diff reduce to ≤1 (the `tup0.vale` design
+4. The 7 unresolved-marker comments in the cut's diff reduce to ≤1 (the `tup0.vale` design
    question if not resolved).
 5. `CoordT` / `CoordI` / `CoordH` constructors assert: kind is primitive ⇒ ownership ∈ {Own,
    Borrow, Weak}. Share+primitive becomes statically impossible to construct.

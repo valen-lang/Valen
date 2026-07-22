@@ -18,8 +18,9 @@ use crate::utils::source_code_utils::line_range_containing;
 use crate::utils::source_code_utils::lines_between;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::typing_interner::TypingInterner;
+use crate::pass_manager::CodeSource;
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
+use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
 use std::sync::Arc;
 use crate::parse_arena::ParseArena;
@@ -58,7 +59,7 @@ where 's: 't,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+    code_source: &'ctx CodeSource<'p>,
     global_options: GlobalOptions,
     instantiator_options: InstantiatorCompilationOptions,
   ) -> Self {
@@ -74,7 +75,7 @@ where 's: 't,
       parser_keywords,
       parse_arena,
       packages_to_build,
-      package_to_contents_resolver,
+      code_source,
       typing_options.global_options.clone(),
     );
 

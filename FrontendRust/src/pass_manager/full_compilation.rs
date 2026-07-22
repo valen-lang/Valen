@@ -7,9 +7,9 @@ use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::FileP;
+use crate::pass_manager::code_source::CodeSource;
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use crate::utils::fx::HashMap;
+use crate::utils::code_hierarchy::PackageCoordinate;
 use std::sync::Arc;
 use crate::parse_arena::ParseArena;
 use crate::simplifying::hammer_compilation::{HammerCompilation, HammerCompilationOptions};
@@ -56,7 +56,7 @@ where
     // VV: crate::
     parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+    code_source: &'ctx CodeSource<'p>,
     options: FullCompilationOptions,
     instantiating_bump: &'i Bump,
   ) -> Self {
@@ -72,7 +72,7 @@ where
       parser_keywords,
       parse_arena,
       packages_to_build,
-      package_to_contents_resolver,
+      code_source,
       hammer_options,
       instantiating_bump,
     );

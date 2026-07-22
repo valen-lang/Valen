@@ -5,46 +5,24 @@ use crate::lexing::ast::{IDenizenL, ImportL, RangeL};
 use crate::lexing::errors::FailedParse;
 use crate::lexing::lexer::Lexer;
 use crate::lexing::lexing_iterator::LexingIterator;
+use crate::pass_manager::CodeSource;
 use crate::utils::code_hierarchy::{
-  FileCoordinate, FileCoordinateMap, IPackageResolver, PackageCoordinate,
+  FileCoordinate, FileCoordinateMap, PackageCoordinate,
 };
 use crate::utils::fx::{HashMap, HashSet};
-use std::sync::Arc;
 
 
-/// Helper function that collects all denizens and files
-#[allow(dead_code)]
-pub fn lex_and_explore_and_collect<'p, R>(
-  _parse_arena: &ParseArena<'p>,
-  _keywords: &Keywords<'p>,
-  _packages: Vec<&'p PackageCoordinate<'p>>,
-  _resolver: &R,
-) -> Result<
-  (
-    Vec<(Arc<FileCoordinate<'p>>, String, Vec<ImportL<'p>>, IDenizenL<'p>)>,
-    Vec<(Arc<FileCoordinate<'p>>, String, Vec<RangeL>, Vec<IDenizenL<'p>>)>,
-  ),
-  FailedParse<'p>,
->
-where
-  R: IPackageResolver<'p, HashMap<String, String>>,
-{
-  panic!("lex_and_explore_and_collect: closure lifetime fix needed")
-}
-
-
-/// Main generic lexing function with import-driven package discovery
-pub fn lex_and_explore<'p, 'ctx, D, F, R>(
+/// Main lexing function with import-driven package discovery
+pub fn lex_and_explore<'p, 'ctx, D, F>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   packages: Vec<&'p PackageCoordinate<'p>>,
-  resolver: &R,
+  source: &CodeSource<'p>,
   mut denizen_handler: impl FnMut(&'p FileCoordinate<'p>, &str, &[ImportL<'p>], &IDenizenL<'p>) -> D,
   mut file_handler: impl FnMut(&'p FileCoordinate<'p>, &str, &[RangeL], Vec<D>) -> F,
 ) -> Result<Vec<F>, FailedParse<'p>>
 where
   'p: 'ctx,
-  R: IPackageResolver<'p, HashMap<String, String>>,
 {
   let mut unexplored_packages: HashSet<&'p PackageCoordinate<'p>> =
     packages.into_iter().collect();
@@ -58,7 +36,7 @@ where
     unexplored_packages.remove(&needed_package_coord);
     started_packages.insert(needed_package_coord.clone());
 
-    let filepaths_and_contents: Vec<(&'p FileCoordinate<'p>, String)> = match resolver.resolve(&needed_package_coord) {
+    let filepaths_and_contents: Vec<(&'p FileCoordinate<'p>, String)> = match source.resolve(&needed_package_coord) {
       None => {
         panic!("Couldn't find: {:?}", needed_package_coord);
       }
@@ -163,5 +141,3 @@ where
 
   Ok(files_acc)
 }
-
-

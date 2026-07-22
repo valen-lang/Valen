@@ -75,12 +75,15 @@ Instead, use the same file.
 
 ## SEE ALSO (auto)
 
+- **Read when writing an `r#"..."#` raw string containing embedded Vale source in a Rust test.** → FrontendRust/docs/shields/MultiLineValeFixtures-MLVFX.md
 - **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
 - **Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.** → docs/skills/bug-repro.md
+- **Read when the human asks to close, end, or shut down the current Claude Code session.** → docs/skills/close-session.md
 - **Read when investigating a compiler bug by tracing execution with debug printouts and narrowing the call graph.** → docs/skills/collapsed-call-tree.md
 - **Read when the user says "/diagnose" — dig for the root cause of a failure without proposing fixes.** → docs/skills/diagnose.md
 - **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → docs/skills/feature-development-flow.md
-- **Read when the architect says the literal phrase "fire commit" (or you're about to commit + sync as a TL).** → docs/skills/fire-commit.md
+- **Read when reviewing a diff for added code that doesn't serve the change's goal — dead helpers, redundant reinventions, unused flexibility, and the stale comments that hide them.** → docs/skills/find-deadweight.md
+- **Read when the architect says the literal phrase "fire commit" or "fire commit temporary" (or you're about to commit + sync as a TL).** → docs/skills/fire-commit.md
 - **Read when the architect says the literal phrase "fire rebase".** → docs/skills/fire-rebase.md
 - **Read when reviewing or critiquing a plan for testing correctness before implementation.** → docs/skills/good-testing.md
 - **Read when a Guardian shield just fired or failed at hook time and you need to diagnose it.** → docs/skills/guardian-diagnose.md
@@ -89,6 +92,7 @@ Instead, use the same file.
 - **Read when promoting an LLM-mode shield to Rust mode with a deterministic companion program.** → docs/skills/guardian-rustify.md
 - **Read when acting as or setting up the architect, TL, or JR in a Guardian-gated loop.** → docs/skills/guardian-tl.md
 - **Read when adding a new skill to docs/skills/ or Luz/skills/.** → docs/skills/luz-add-skill.md
+- **Read when a skill exists in Luz/skills/ (e.g. added upstream and pulled in) but isn't showing up as a usable skill in this repo.** → docs/skills/luz-import-skill.md
 - **Read when the architect asks what `experimental` has that `master` might want, or asks to pull specific commits from `experimental`.** → docs/skills/merging-from-experimental.md
 - **Read when the architect asks what `master` has that `experimental` might want, or asks to pull specific commits from `master`.** → docs/skills/merging-from-master.md
 - **Read when authoring or running any bulk-edit script (`./tmp/scripts/*.py`, shell loops over many files, or any per-file transform across more than a handful of files).** → docs/skills/scripting.md

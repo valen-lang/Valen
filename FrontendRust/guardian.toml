@@ -24,22 +24,42 @@ exclude_shields = [
     "PreferResultOverPanicForRecoverableCases-PROPRCX.md",
 
     "OutputAndLoggingZenDiscipline-OALZDX.md",
+
+    # Retired — replaced by VRBX's strict Python script content gate (any mutating
+    # Python invocation already fails to auto-allow and falls through to the
+    # normal Bash confirmation prompt; PSMX's hard-deny added no meaningful
+    # coverage under Guardian's any-approves model).
+    "PythonScriptMutation-PSMX.md",
+
+    # Retired — the "silently return a default" failure mode is rare in the
+    # current codebase and the LLM shield produced too many false positives to
+    # be worth the tokens.
+    "TodosAndUnimplementedCodeMustPanic-TUCMPX.md",
+
+    # Retired — the "is this type interned?" semantic check needs LLM judgment
+    # and the false-positive rate was too high in practice to be worth running
+    # at hook time.
+    "ImmediateInterningDiscipline-IIDX.md",
+
+    # Scala migration-era shields — no longer applicable now that the migration
+    # is done, but the .md files still live in Luz/shields/ (deleting them is a
+    # separate cleanup). Acknowledged here so Guardian's shield-coverage check
+    # passes at startup.
+    "MigrateAllCommentsToo-MACTX.md",
+    "NoChangesWithoutScalaReference-NCWSRX.md",
+    "ScalaSealedTraitsToRustEnums-SSTREX.md",
 ]
 
 [guard_mode]
 include_shields = [
-    { name = "ImmediateInterningDiscipline-IIDX.md" },
-    { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
-
     { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "NoNewDefinitions-NNDX.md" },
     { name = "NoAddingGuardianDirectives-NAGDX.md" },
+    { name = "NoRemovingVMarkers-NRVMX.md" },
     { name = "NoRenamedDefinitions-NRDX.md" },
     { name = "NoMovedDefinitions-NMDX.md" },
     { name = "TypesFitIntoTheseCategories-TFITCX.md" },
 
-    { name = "KeepInlineComparisonsInline-KICIX.md" },
-    { name = "NeverHaveConditionalsInTests-NHCITX.md" },
     { name = "NeverDowncastTraits-NEDCX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
     { name = "NeverUseStaticLifetime-NUSLX.md" },
@@ -47,7 +67,6 @@ include_shields = [
     { name = "MultiLineValeFixtures-MLVFX.md" },
     { name = "AllowedFileExtensionsOnly-AFEOX.md" },
 
-    { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
     { name = "MailboxWorkflow-MBXX.md" },
@@ -59,11 +78,11 @@ include_shields = [
     { name = "NoExpensiveClones-NECX.md" },
     { name = "SuffixWhenDealingWithMultipleStages-SWDWMSX.md" },
     { name = "EnumsShouldntContainComplexData-ESCCDX.md" },
-    { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
     { name = "NeverRecoverAlwaysFail-NRAFX.md" },
     { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "FailFastFailLoud-FFFLX.md" },
-    { name = "ImmediateInterningDiscipline-IIDX.md" },
+    { name = "KeepInlineComparisonsInline-KICIX.md" },
+    { name = "NeverHaveConditionalsInTests-NHCITX.md" },
     { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
     { name = "NeverRepeatImplementationCodeInTests-NRICITX.md" },
     { name = "NoConditionalsInTestsOneBranchProceedsAllOthersPanic-NCTOBPAOPX.md" },
@@ -73,8 +92,8 @@ include_shields = [
     { name = "UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
     { name = "NeverUseStaticLifetime-NUSLX.md" },
+    { name = "NoRemovingVMarkers-NRVMX.md" },
 
-    { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
     { name = "MailboxWorkflow-MBXX.md" },

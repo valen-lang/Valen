@@ -31,8 +31,9 @@ use crate::postparsing::rune_type_solver::{
 use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
 use crate::postparsing::post_parser::ICompileErrorS;
 use crate::postparsing::ScoutCompilation;
+use crate::pass_manager::CodeSource;
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate, PackageCoordinateMap};
+use crate::utils::code_hierarchy::{PackageCoordinate, PackageCoordinateMap};
 use crate::utils::range::RangeS;
 use crate::utils::range::CodeLocationS;
 use crate::utils::fx::IndexMap;
@@ -988,7 +989,7 @@ impl<'s, 'ctx, 'p> HigherTypingCompilation<'s, 'ctx, 'p>
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+    code_source: &'ctx CodeSource<'p>,
     global_options: GlobalOptions,
   ) -> Self {
     let scout_compilation = ScoutCompilation::new(
@@ -997,7 +998,7 @@ impl<'s, 'ctx, 'p> HigherTypingCompilation<'s, 'ctx, 'p>
       parser_keywords,
       parse_arena,
       packages_to_build,
-      package_to_contents_resolver,
+      code_source,
       global_options.clone(),
     );
 

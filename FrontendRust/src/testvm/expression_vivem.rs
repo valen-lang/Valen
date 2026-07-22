@@ -379,8 +379,6 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let source_expr = d.source_expression;
             match source_expr.result_type().ownership {
                 OwnershipH::MutableShareH => {}
-                OwnershipH::ImmutableShareH => {}
-                OwnershipH::ImmutableBorrowH => {}
                 OwnershipH::MutableBorrowH => {}
                 OwnershipH::WeakH => {}
                 OwnershipH::OwnH => {}
@@ -1023,7 +1021,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
                 INodeExecuteResultV::Continue(c) => c.result_ref,
             };
-            assert!(constraint_ref.ownership == OwnershipH::MutableBorrowH || constraint_ref.ownership == OwnershipH::ImmutableBorrowH);
+            assert!(constraint_ref.ownership == OwnershipH::MutableBorrowH);
 
             let weak_ref = heap.transmute(constraint_ref, source_expr.result_type(), ExpressionH::BorrowToWeakH(wa_h).result_type());
             heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), weak_ref);
@@ -1207,8 +1205,8 @@ pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &HammerIntern
             heap.deallocate_if_no_weak_refs(actual_reference)?;
             Ok(())
         }
-        OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH => Ok(()),
-        OwnershipH::OwnH | OwnershipH::MutableShareH | OwnershipH::ImmutableShareH => {
+        OwnershipH::MutableBorrowH => Ok(()),
+        OwnershipH::OwnH | OwnershipH::MutableShareH => {
             // Strong reference at refcount-zero: dispatch on kind. Own and Share share
             // the same cleanup shape — primitives/opaque/str deallocate inline; aggregates
             // destructure and recurse on members/elements.

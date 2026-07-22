@@ -4,31 +4,24 @@ use crate::lexing::errors::FailedParse;
 use crate::lexing::lex_and_explore;
 use crate::parsing::ast::IDenizenP;
 use crate::parsing::Parser;
-use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
+use crate::pass_manager::CodeSource;
+use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::Keywords;
-// V: can we put the Keywords struct into the arena? so it doesnt have to be a separate thing...
-// VA: Yes, with one fix: Keywords.tuple_human_name is Vec<StrI<'a>> (heap-allocated, AASSNCMCX
-// VA: violation). Change it to &'a [StrI<'a>] (arena slice), then arena-allocate via
-// VA: parse_arena.bump.alloc(Keywords::new_for_parse(...)). The result is &'p Keywords<'p> which
-// VA: coerces to &'ctx Keywords<'p> at all existing call sites — no signature changes needed.
-// VA: All other ~110 fields are StrI<'a> (Copy), so no other blockers.
-use crate::utils::fx::HashMap;
 use crate::parse_arena::ParseArena;
 
 
-pub fn parse_and_explore<'p, 'ctx, D, F, R, HandleParsedDenizen, FileHandler>(
+pub fn parse_and_explore<'p, 'ctx, D, F, HandleParsedDenizen, FileHandler>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   _opts: GlobalOptions,
   parser: &Parser<'p, 'ctx>,
   packages: Vec<&'p PackageCoordinate<'p>>,
-  resolver: &R,
+  source: &CodeSource<'p>,
   mut handle_parsed_denizen: HandleParsedDenizen,
   mut file_handler: FileHandler,
 ) -> Result<Vec<F>, FailedParse<'p>>
 where
   'p: 'ctx,
-  R: IPackageResolver<'p, HashMap<String, String>>,
   HandleParsedDenizen: FnMut(&'p FileCoordinate<'p>, &str, &[ImportL<'p>], IDenizenP<'p>) -> D,
   FileHandler: FnMut(&'p FileCoordinate<'p>, &str, &[RangeL], Vec<D>) -> F,
 {
@@ -36,7 +29,7 @@ where
     parse_arena,
     keywords,
     packages,
-    resolver,
+    source,
     |file_coord: &'p FileCoordinate<'p>,
      code: &str,
      imports: &[ImportL<'p>],
@@ -97,5 +90,3 @@ where
     },
   )
 }
-
-

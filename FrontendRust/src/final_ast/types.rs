@@ -37,9 +37,9 @@ impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
             (OwnershipH::OwnH, LocationH::YonderH,
                 KindHT::StructHT(_) | KindHT::InterfaceHT(_)
                 | KindHT::StaticSizedArrayHT(_) | KindHT::RuntimeSizedArrayHT(_)) => {}
-            (OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH | OwnershipH::WeakH,
+            (OwnershipH::MutableBorrowH | OwnershipH::WeakH,
                 LocationH::YonderH, _) => {}
-            (OwnershipH::MutableShareH | OwnershipH::ImmutableShareH, LocationH::YonderH,
+            (OwnershipH::MutableShareH, LocationH::YonderH,
                 KindHT::StrHT(_) | KindHT::StructHT(_) | KindHT::InterfaceHT(_)
                 | KindHT::StaticSizedArrayHT(_) | KindHT::RuntimeSizedArrayHT(_)) => {}
             _ => panic!(
@@ -282,9 +282,7 @@ pub struct CodeLocation<'s> {
 pub enum OwnershipH {
     OwnH,
     MutableBorrowH,
-    ImmutableBorrowH,
     MutableShareH,
-    ImmutableShareH,
     WeakH,
 }
 

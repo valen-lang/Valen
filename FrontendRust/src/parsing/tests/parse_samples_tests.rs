@@ -2,9 +2,10 @@ use bumpalo::Bump;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::tests::parser_test_compilation;
+use crate::pass_manager::{CodeSource, Source};
 use std::fs;
 use std::path::PathBuf;
-use crate::utils::code_hierarchy::{FileCoordinateMap, IPackageResolver, PackageCoordinate};
+use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate};
 use crate::utils::fx::HashMap;
 fn load_expected(path: &str) -> String {
   let full_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -18,31 +19,22 @@ fn parse<'p, 'ctx>(
   path: &str,
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
-  resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  code_source: &'ctx CodeSource<'p>,
   test_package_coord: &'p PackageCoordinate<'p>,
 )
 where
   'p: 'ctx,
 {
-  let mut compilation = parser_test_compilation::test(parse_arena, keywords, resolver, test_package_coord);
+  let mut compilation = parser_test_compilation::test(parse_arena, keywords, code_source, test_package_coord);
   compilation
     .get_parseds()
     .unwrap_or_else(|e| panic!("Failed to parse sample '{}': {:?}", path, e));
 }
 
-struct ParserTestResolver<'p> {
-  code_map: FileCoordinateMap<'p, String>,
-}
-impl<'p> IPackageResolver<'p, HashMap<String, String>> for ParserTestResolver<'p> {
-  fn resolve(&self, package_coord: &'p PackageCoordinate<'p>) -> Option<HashMap<String, String>> {
-    // For testing the parser, we dont want it to fetch things with import statements.
-    Some(
-      self
-        .code_map
-        .resolve(package_coord)
-        .unwrap_or_else(|| HashMap::from_iter([("".to_string(), "".to_string())])),
-    )
-  }
+// For testing the parser, we dont want it to fetch things with import statements —
+// return an empty file so the parser sees a valid package and moves on.
+fn empty_package_fallback(_c: &PackageCoordinate) -> Option<HashMap<String, String>> {
+  Some(HashMap::from_iter([("".to_string(), "".to_string())]))
 }
 
 macro_rules! parse_sample_test {
@@ -69,9 +61,12 @@ macro_rules! parse_sample_test {
         code_map.put(&file_coord, contents.clone());
       }
 
-      let resolver = ParserTestResolver { code_map };
+      let code_source = CodeSource::new(vec![
+        Source::from_code_map(&code_map),
+        Source::Fn(empty_package_fallback),
+      ]);
 
-      parse($path, &parse_arena, &keywords, &resolver, &test_package_coord);
+      parse($path, &parse_arena, &keywords, &code_source, &test_package_coord);
     }
   };
 }

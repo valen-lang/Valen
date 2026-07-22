@@ -1,10 +1,10 @@
-use crate::utils::fx::HashMap;
 use crate::Keywords;
 use crate::compile_options::GlobalOptions;
 use crate::parse_arena::ParseArena;
+use crate::pass_manager::CodeSource;
 use crate::scout_arena::ScoutArena;
 use crate::postparsing::ScoutCompilation;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
+use crate::utils::code_hierarchy::PackageCoordinate;
 
 
 
@@ -13,7 +13,7 @@ pub fn test<'s, 'ctx, 'p>(
   keywords: &'ctx Keywords<'s>,
   parser_keywords: &'ctx Keywords<'p>,
   parse_arena: &'ctx ParseArena<'p>,
-  package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  code_source: &'ctx CodeSource<'p>,
   code: &str,
 ) -> ScoutCompilation<'s, 'ctx, 'p>
 where 'p: 's,
@@ -33,9 +33,7 @@ where 'p: 's,
     parser_keywords,
     parse_arena,
     packages_to_build,
-    package_to_contents_resolver,
+    code_source,
     global_options,
   )
 }
-
-

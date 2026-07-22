@@ -9,14 +9,13 @@ use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::pass_manager::FullCompilation;
 use crate::pass_manager::FullCompilationOptions;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
+use crate::pass_manager::{CodeSource, Source};
+use crate::utils::code_hierarchy::PackageCoordinate;
 use bumpalo::Bump;
 use crate::utils::fx::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
-use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::builtins::builtins::get_code_map as get_builtins_code_map;
 use crate::final_ast::ast::PackageH;
 use crate::simplifying::hammer::Hammer;
 use crate::simplifying::hammer_interner::HammerInterner;
@@ -218,68 +217,7 @@ fn parse_opts_recursive<'a>(
 }
 
 
-pub struct FileSystemResolver<'a> {
-  module_roots: HashMap<String, PathBuf>,
-  direct_file_inputs: HashMap<&'a PackageCoordinate<'a>, PathBuf>,
-}
-
-impl<'a> FileSystemResolver<'a> {
-  pub fn new(
-    module_roots: HashMap<String, PathBuf>,
-    direct_file_inputs: HashMap<&'a PackageCoordinate<'a>, PathBuf>,
-  ) -> Self {
-    FileSystemResolver {
-      module_roots,
-      direct_file_inputs,
-    }
-  }
-}
-
-impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a> {
-  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<HashMap<String, String>> {
-    if let Some(file_path) = self.direct_file_inputs.get(package_coord) {
-      if let Ok(code) = fs::read_to_string(file_path) {
-        let filepath = file_path.to_string_lossy().to_string();
-        let mut result = HashMap::default();
-        result.insert(filepath, code);
-        return Some(result);
-      }
-    }
-
-    let module_name = package_coord.module.as_str();
-    let module_root = self.module_roots.get(module_name)?;
-
-    // Build path: module_root/package1/package2/...
-    let mut dir_path = module_root.clone();
-    for package_step in &package_coord.packages {
-      dir_path.push(package_step.as_str());
-    }
-
-    // Find all .vale files in this directory
-    let mut results = HashMap::default();
-
-    if let Ok(entries) = fs::read_dir(&dir_path) {
-      for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("vale") {
-          if let Ok(code) = fs::read_to_string(&path) {
-            let filepath = path.to_string_lossy().to_string();
-            results.insert(filepath, code);
-          }
-        }
-      }
-    }
-
-    if results.is_empty() {
-      None
-    } else {
-      Some(results)
-    }
-  }
-}
-
-fn resolve_package_contents<'a>(
-  parse_arena: &ParseArena<'a>,
+pub fn resolve_package_contents<'a>(
   inputs: &[IFrontendInput<'a>],
   package_coord: &PackageCoordinate<'a>,
 ) -> Option<HashMap<String, String>>
@@ -290,7 +228,12 @@ fn resolve_package_contents<'a>(
   let mut source_inputs: Vec<(String, String)> = Vec::new();
 
   for (index, input) in inputs.iter().enumerate() {
-    if input.package_coord(parse_arena).module != *module {
+    let input_module = match input {
+      IFrontendInput::SourceInput { package_coord, .. } => package_coord.module,
+      IFrontendInput::ModulePathInput { module, .. } => *module,
+      IFrontendInput::DirectFilePathInput { package_coord, .. } => package_coord.module,
+    };
+    if input_module != *module {
       continue;
     }
 
@@ -420,14 +363,13 @@ where
     .into_iter()
     .collect();
 
-  let builtins_code_map = get_builtins_code_map(parse_arena, keywords);
   let mut packages_to_build = vec![PackageCoordinate::builtin(parse_arena, keywords)];
   packages_to_build.extend(package_coords);
 
-  let all_inputs_clone = all_inputs.clone();
-  let resolver = builtins_code_map.or(move |package_coord: &'p PackageCoordinate<'p>| {
-    resolve_package_contents(parse_arena, &all_inputs_clone, &*package_coord)
-  });
+  let code_source = CodeSource::new(vec![
+    Source::builtins(parse_arena, keywords),
+    Source::Inputs(all_inputs.clone()),
+  ]);
 
   let options = FullCompilationOptions {
     global_options: GlobalOptions {
@@ -461,7 +403,7 @@ where
     &parser_keywords,
     parse_arena,
     packages_to_build,
-    &resolver,
+    &code_source,
     options,
     &instantiating_bump,
   );

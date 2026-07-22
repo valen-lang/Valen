@@ -10,11 +10,9 @@ use crate::instantiating::ast::templata::CoordTemplataI;
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum OwnershipI {
-  ImmutableShare,
   MutableShare,
   Own,
   Weak,
-  ImmutableBorrow,
   MutableBorrow,
 }
 
@@ -76,7 +74,7 @@ impl<'s, 'i> CoordI<'s, 'i> where 's: 'i {
             kind,
             KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::FloatIT(_) | KindIT::VoidIT(_) | KindIT::NeverIT(_),
         );
-        let is_share = matches!(ownership, OwnershipI::ImmutableShare | OwnershipI::MutableShare);
+        let is_share = matches!(ownership, OwnershipI::MutableShare);
         if is_share && is_primitive {
             panic!(
                 "Illegal CoordI combination: ownership={:?}, kind={:?}. Primitives are Own at I-IR post-cut.",

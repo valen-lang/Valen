@@ -1,11 +1,10 @@
-use crate::builtins::builtins::get_code_map;
 use crate::compile_options::GlobalOptions;
 use crate::instantiating::instantiated_compilation::InstantiatedCompilation;
 use crate::instantiating::instantiated_compilation::InstantiatorCompilationOptions;
-use crate::tests::tests::get_package_to_resource_resolver;
+use crate::pass_manager::{CodeSource, Source};
+use crate::tests::tests::test_source_from_dir;
 use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::utils::code_hierarchy::test_from_vec;
-use crate::utils::fx::HashMap;
+use crate::tests::tests::new_test_code_map;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use bumpalo::Bump;
@@ -13,7 +12,6 @@ use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::typing::typing_interner::TypingInterner;
-use crate::utils::code_hierarchy::IPackageResolver;
 
 pub fn test<'s, 'ctx, 't, 'i, 'p>(
     compilation_bump: &'ctx bumpalo::Bump,
@@ -29,12 +27,10 @@ where 's: 't, 's: 'i, 'p: 'ctx,
 {
     let packages_to_build: Vec<&'p PackageCoordinate<'p>> =
         vec![PackageCoordinate::test_tld(parse_arena, parser_keywords)];
-    let base_code_map = get_code_map(parse_arena, parser_keywords);
-    let resolver_concrete = base_code_map
-        .or(test_from_vec(parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
-    let resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>> =
-        compilation_bump.alloc(resolver_concrete);
+    let code_source: &'ctx CodeSource<'p> = compilation_bump.alloc(CodeSource::new(vec![
+        new_test_code_map(parse_arena, code),
+        Source::Fn(test_source_from_dir),
+    ]));
     let global_options = GlobalOptions {
         sanity_check: true,
         use_overload_index: true,
@@ -52,7 +48,7 @@ where 's: 't, 's: 'i, 'p: 'ctx,
         parser_keywords,
         parse_arena,
         packages_to_build,
-        resolver,
+        code_source,
         global_options,
         instantiator_options,
         instantiating_bump,

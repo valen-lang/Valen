@@ -8,7 +8,8 @@ use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::simplifying::hammer::Hammer;
 use crate::instantiating::instantiated_compilation::{InstantiatedCompilation, InstantiatorCompilationOptions};
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
+use crate::pass_manager::CodeSource;
+use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
 use std::sync::Arc;
 use crate::final_ast::ast::ProgramH;
@@ -55,7 +56,7 @@ where 's: 'h, 's: 'i,
   pub keywords: &'ctx Keywords<'s>,
   pub scout_arena: &'ctx ScoutArena<'s>,
   pub packages_to_build: Vec<&'ctx PackageCoordinate<'p>>,
-  pub package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  pub code_source: &'ctx CodeSource<'p>,
   pub options: HammerCompilationOptions,
   pub instantiated_compilation: InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>,
   pub hamuts_cache: Option<&'h ProgramH<'s, 'h>>,
@@ -74,7 +75,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+    code_source: &'ctx CodeSource<'p>,
     options: HammerCompilationOptions,
     instantiating_bump: &'i Bump,
   ) -> Self {
@@ -86,7 +87,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
         parser_keywords,
         parse_arena,
         packages_to_build.clone(),
-        package_to_contents_resolver,
+        code_source,
         options.global_options.clone(),
         InstantiatorCompilationOptions {
           debug_out: options.debug_out.clone(),
@@ -97,7 +98,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
       keywords,
       scout_arena,
       packages_to_build,
-      package_to_contents_resolver,
+      code_source,
       options,
       instantiated_compilation,
       hamuts_cache: None,

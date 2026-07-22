@@ -5,8 +5,8 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_compilation::{HammerCompilation, HammerCompilationOptions};
 use crate::simplifying::hammer_interner::HammerInterner;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use crate::utils::fx::HashMap;
+use crate::pass_manager::CodeSource;
+use crate::utils::code_hierarchy::PackageCoordinate;
 use std::sync::Arc;
 use crate::typing::typing_interner::TypingInterner;
 
@@ -17,7 +17,7 @@ pub fn test<'s, 'h, 'ctx, 't, 'i, 'p>(
   keywords: &'ctx Keywords<'s>,
   parser_keywords: &'ctx Keywords<'p>,
   parse_arena: &'ctx ParseArena<'p>,
-  resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  code_source: &'ctx CodeSource<'p>,
   instantiating_bump: &'i Bump,
 ) -> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
@@ -39,7 +39,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
     parser_keywords,
     parse_arena,
     vec![builtin, test_tld],
-    resolver,
+    code_source,
     HammerCompilationOptions {
       debug_out: Arc::new(|x: &str| println!("{}", x)),
       global_options,

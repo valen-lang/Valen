@@ -5,7 +5,7 @@ use crate::postparsing::post_parser::{
 };
 use crate::postparsing::post_parser_error_humanizer::humanize;
 use crate::postparsing::names::IVarNameS;
-use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::tests::tests::new_humanizer_test_code_map;
 use crate::utils::range::RangeS;
 use crate::utils::source_code_utils::{
   humanize_pos_code_map, line_containing, line_range_containing, lines_between,
@@ -39,7 +39,7 @@ fn compile_for_error<'s, 'ctx, 'p>(
 fn humanize_errors() {
   let scout_bump = Bump::new();
   let scout_arena = ScoutArena::new(&scout_bump);
-  let code_map = FileCoordinateMap::<'_, String>::test(&scout_arena, "blah blah blah\nblah blah blah".to_string());
+  let code_map = new_humanizer_test_code_map(&scout_arena, "blah blah blah\nblah blah blah");
   let tz = RangeS::test_zero(&scout_arena);
 
   let humanize_pos = |x: &_| humanize_pos_code_map(&code_map, x);

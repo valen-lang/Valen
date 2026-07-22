@@ -1,13 +1,15 @@
 use bumpalo::Bump;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
+use crate::pass_manager::{CodeSource, Source};
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::types::types::{CoordT, IntT, IRegionT, KindT, OwnershipT, RegionT};
-use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
+use crate::tests::tests::new_test_code_map;
+use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::names::names::CodeVarNameT;
@@ -17,7 +19,7 @@ use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::collect_only_tnode;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::names::names::{FunctionNameT, FunctionTemplateNameT, IdT, INameT};
-use crate::tests::tests::get_package_to_resource_resolver;
+use crate::tests::tests::new_test_package_source;
 
 pub struct CompilerLambdaTests;
 
@@ -38,11 +40,12 @@ fn simple_lambda() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nexported func main() int { return { 7 }(); }\n";
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let expected = CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, KindT::Int(IntT { bits: 32 }));
@@ -60,11 +63,12 @@ fn lambda_with_one_magic_arg() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nexported func main() int { return {^_}(3); }\n";
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let lambda = coutputs.lookup_lambda_in("main");
@@ -104,11 +108,12 @@ exported func main() {
   lam(7);
 }
 ";
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let lambdas = coutputs.lookup_lambdas_in("main");
@@ -131,11 +136,12 @@ exported func main() {
   lam(true);
 }
 ";
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let lambdas = coutputs.lookup_lambdas_in("main");
@@ -158,11 +164,12 @@ exported func main() {
   lam(true)("hello");
 }
 "#;
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let lambdas = coutputs.lookup_lambdas_in("main");
@@ -185,12 +192,13 @@ exported func main() int {
   return (a int) => {a + a}(3);
 }
 ";
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let lambda = coutputs.lookup_lambda_in("main");
@@ -224,11 +232,12 @@ fn lambda_emits_call_and_drop() {
 exported func main() int { return { 7 }(); }
 "#;
     // AFTERM: we should move away from the .or stuff for resolving
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -282,12 +291,12 @@ exported func main() {
   moo("hello", { print(_); });
 }
 "#;
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     compile.expect_compiler_outputs();
 }
@@ -316,12 +325,15 @@ exported func main() {
   helperFunc("bork");
 }
 "#;
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        new_test_code_map(&parse_arena, code),
+        new_test_package_source(&parse_arena, "printutils"),
+        new_test_package_source(&parse_arena, "castutils"),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     compile.expect_compiler_outputs();
 }
@@ -351,12 +363,12 @@ exported func main() {
   helperFunc("bork");
 }
 "#;
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     compile.expect_compiler_outputs();
 }
@@ -382,12 +394,13 @@ exported func main() {
   helper(&"bork");
 }
 "#;
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let lambdas = coutputs.lookup_lambdas_in("helper");
@@ -408,12 +421,13 @@ fn curried_lambda_inside_template_explicit_borrow_probe() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "import v.builtins.drop.*;\nfunc helper<T>(x &T) &T {\n  lam = a => b => x;\n  return lam(true)(7);\n}\nexported func main() {\n  helper(&4);\n  helper(&\"bork\");\n}\n";
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let lambdas = coutputs.lookup_lambdas_in("helper");

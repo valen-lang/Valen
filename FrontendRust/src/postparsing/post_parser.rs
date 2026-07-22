@@ -43,7 +43,8 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
+use crate::pass_manager::CodeSource;
+use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::utils::fx::HashMap;
@@ -1696,7 +1697,7 @@ mod scout_compilation {
       parser_keywords: &'ctx Keywords<'p>,
       parse_arena: &'ctx ParseArena<'p>,
       packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-      package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+      code_source: &'ctx CodeSource<'p>,
       global_options: GlobalOptions,
     ) -> Self {
       let parser_compilation = ParserCompilation::new(
@@ -1704,7 +1705,7 @@ mod scout_compilation {
         parse_arena,
         parser_keywords,
         packages_to_build,
-        package_to_contents_resolver,
+        code_source,
       );
 
       ScoutCompilation {

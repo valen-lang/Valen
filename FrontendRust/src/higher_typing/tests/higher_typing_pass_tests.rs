@@ -7,7 +7,9 @@ use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, PackTemplataType};
 use crate::postparsing::names::{CodeRuneS, IRuneValS};
-use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
+use crate::pass_manager::CodeSource;
+use crate::tests::tests::new_test_code_map;
+use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
 // TODO: rename
 
@@ -28,7 +30,7 @@ fn setup_test<'s, 'ctx, 'p>(
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
-    resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+    code_source: &'ctx CodeSource<'p>,
 ) -> HigherTypingCompilation<'s, 'ctx, 'p> {
     let options = GlobalOptions {
         sanity_check: true,
@@ -45,7 +47,7 @@ fn setup_test<'s, 'ctx, 'p>(
         parser_keywords,
         parse_arena,
         vec![test_tld_ref],
-        resolver,
+        code_source,
         options,
     )
 }
@@ -58,9 +60,10 @@ fn type_simple_main_function() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["exported func main() {\n}\n".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, "exported func main() {\n}\n"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let _astrouts = compilation.expect_astrouts();
 }
 
@@ -72,9 +75,10 @@ fn type_simple_generic_function() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["exported func moo<T>() where T Ref {\n}\n".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, "exported func moo<T>() where T Ref {\n}\n"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let _astrouts = compilation.expect_astrouts();
 }
 
@@ -86,9 +90,10 @@ fn infer_coord_type_from_parameters() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["exported func moo<T>(x T) {\n}\n".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, "exported func moo<T>(x T) {\n}\n"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let astrouts = compilation.expect_astrouts();
     let test_module_s = scout_arena.intern_str("test");
     let test_tld = *scout_arena.intern_package_coordinate(test_module_s, &[]);
@@ -110,9 +115,10 @@ fn type_simple_struct() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["struct Moo {\n}\n".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, "struct Moo {\n}\n"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let _astrouts = compilation.expect_astrouts();
 }
 
@@ -124,13 +130,14 @@ fn type_simple_generic_struct() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, r"
 struct Moo<T> {
   bork T;
 }
-".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let _astrouts = compilation.expect_astrouts();
 }
 
@@ -142,16 +149,17 @@ fn template_call_recursively_evaluate() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, r"
 struct Moo<T> {
   bork T;
 }
 struct Bork<T> {
   x Moo<T>;
 }
-".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let astrouts = compilation.expect_astrouts();
     let test_module_s = scout_arena.intern_str("test");
     let test_tld = *scout_arena.intern_package_coordinate(test_module_s, &[]);
@@ -173,9 +181,10 @@ fn type_simple_interface() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["interface Moo {\n}\n".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, "interface Moo {\n}\n"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let _astrouts = compilation.expect_astrouts();
 }
 
@@ -187,9 +196,10 @@ fn type_simple_generic_interface() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["interface Moo<T> where T Ref {\n}\n".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, "interface Moo<T> where T Ref {\n}\n"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let _astrouts = compilation.expect_astrouts();
 }
 
@@ -201,13 +211,14 @@ fn type_simple_generic_interface_method() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, r"
 interface Moo<T> where T Ref {
   func bork(virtual self &Moo<T>) int;
 }
-".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let _astrouts = compilation.expect_astrouts();
 }
 
@@ -219,15 +230,16 @@ fn infer_generic_type_through_param_type_template_call() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, r"
 struct List<T> {
   moo T;
 }
 exported func moo<T>(x List<T>) {
 }
-".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let astrouts = compilation.expect_astrouts();
     let test_module_s = scout_arena.intern_str("test");
     let test_tld = *scout_arena.intern_package_coordinate(test_module_s, &[]);
@@ -249,14 +261,15 @@ fn test_evaluate_pack() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, r"
 func moo<T RefList>()
 where T = Refs(int, bool)
 {
 }
-".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let astrouts = compilation.expect_astrouts();
     let test_module_s = scout_arena.intern_str("test");
     let test_tld = *scout_arena.intern_package_coordinate(test_module_s, &[]);
@@ -280,14 +293,15 @@ fn test_infer_pack_from_result() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, r"
 func moo<T>()
 where func moo(T, bool)str
 {
 }
-".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let astrouts = compilation.expect_astrouts();
     let test_module_s = scout_arena.intern_str("test");
     let test_tld = *scout_arena.intern_package_coordinate(test_module_s, &[]);
@@ -309,14 +323,15 @@ fn test_infer_pack_from_empty_result() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, r"
 func moo<P RefList>()
 where P = Refs(), Prot[P, str]
 {
 }
-".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let astrouts = compilation.expect_astrouts();
     let test_module_s = scout_arena.intern_str("test");
     let test_tld = *scout_arena.intern_package_coordinate(test_module_s, &[]);
@@ -343,15 +358,16 @@ fn type_simple_impl() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, r"
 interface IMoo {
 }
 struct Moo {
 }
 impl IMoo for Moo;
-".to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
+"),
+    ]);
+    let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &code_source);
     let _astrouts = compilation.expect_astrouts();
 }
 

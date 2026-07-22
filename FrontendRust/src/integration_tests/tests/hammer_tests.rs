@@ -1,5 +1,5 @@
-use crate::builtins::builtins::get_code_map;
 use crate::compile_options::GlobalOptions;
+use crate::pass_manager::{CodeSource, Source};
 use crate::final_ast::instructions::ExpressionH;
 use crate::final_ast::types::CoordH;
 use crate::final_ast::types::IntHT;
@@ -15,13 +15,11 @@ use crate::simplifying::hammer_compilation::HammerCompilation;
 use crate::simplifying::hammer_compilation::HammerCompilationOptions;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::simplifying::test::test_compilation::test;
-use crate::tests::tests::get_package_to_resource_resolver;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::utils::code_hierarchy::test_from_vec;
+use crate::tests::tests::new_test_code_map;
 use std::sync::Arc;
-use crate::utils::code_hierarchy::IPackageResolver;
 
 pub struct HammerTests;
 
@@ -39,11 +37,12 @@ pub fn simple_main() {
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported func main() int { return 3; }";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::builtins(&parse_arena, &parser_keywords),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
     let test_package = hamuts.lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
@@ -82,11 +81,11 @@ exported func main() {
   z MyOption<int> = x;
 }
 ";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     assert!(package_h.interfaces.iter().any(|i| i.id.fully_qualified_name.0 == "MyOption<i32>"));
@@ -119,11 +118,12 @@ exported func main() int {
   return a;
 }
 ";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::builtins(&parse_arena, &parser_keywords),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let main = package_h.lookup_function("main");
@@ -163,11 +163,11 @@ exported func main() int {
   return 3 + __vbi_panic();
 }
 ";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let main = package_h.lookup_function("main");
@@ -214,11 +214,12 @@ pub fn tests_export_function() {
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported func moo() int { return 42; }";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::builtins(&parse_arena, &parser_keywords),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let moo = package_h.lookup_function("moo");
@@ -242,11 +243,12 @@ pub fn tests_export_struct() {
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported struct Moo { }";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::builtins(&parse_arena, &parser_keywords),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let moo = package_h.lookup_struct("Moo");
@@ -271,11 +273,12 @@ pub fn tests_export_interface() {
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported interface Moo { }";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::builtins(&parse_arena, &parser_keywords),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let moo = package_h.lookup_interface("Moo");
@@ -310,9 +313,10 @@ pub fn tests_exports_from_two_modules_different_names() {
         parse_arena.intern_file_coordinate(module_b, "StructB.vale"),
         "exported struct StructB { a int; }".to_string(),
     );
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(map)
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::builtins(&parse_arena, &parser_keywords),
+        Source::from_code_map(&map),
+    ]);
     let builtin = PackageCoordinate::builtin(&parse_arena, &parser_keywords);
     let global_options = GlobalOptions {
         sanity_check: true,
@@ -329,7 +333,7 @@ pub fn tests_exports_from_two_modules_different_names() {
         &parser_keywords,
         &parse_arena,
         vec![builtin, module_a, module_b],
-        &resolver,
+        &code_source,
         HammerCompilationOptions {
             debug_out: Arc::new(|_x: &str| {}),
             global_options,
@@ -377,11 +381,11 @@ exported func main() int {
   return 42;
 }
 ";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
     let package_h = hamuts.lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
@@ -424,11 +428,11 @@ exported func main() int {
   return Foo<int>.bar<str>(\"hello\");
 }
 ";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
     let package_h = hamuts.lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
@@ -472,11 +476,11 @@ exported func main() int {
   return 42;
 }
 ";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
     let package_h = hamuts.lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));

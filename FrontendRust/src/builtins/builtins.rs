@@ -68,6 +68,8 @@ pub fn get_modulized_code_map<'a>(
     Ok(result)
 }
 
+// This gives us a FileCoordinateMap where each file is its own module, so that we can
+// pull in only files modules a certain test needs.
 pub fn get_embedded_modulized_code_map<'a>(
     parse_arena: &ParseArena<'a>,
     keywords: &Keywords<'a>,

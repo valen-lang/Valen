@@ -7,9 +7,9 @@ use crate::simplifying::hammer_interner::HammerInterner;
 use crate::simplifying::test::test_compilation::test;
 use crate::final_ast::test::traverse::NodeRefH;
 use crate::final_ast::instructions::StackifyH;
-use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-use crate::builtins::builtins::get_code_map;
-use crate::tests::tests::get_package_to_resource_resolver;
+use crate::tests::tests::new_test_code_map;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::pass_manager::{CodeSource, Source};
 use crate::utils::fx::HashMap;
 use crate::collect_where_hnode;
 use crate::typing::typing_interner::TypingInterner;
@@ -46,11 +46,12 @@ exported func main() {
   f = 11;
 }
 ";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::builtins(&parse_arena, &parser_keywords),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
     let paackage = hamuts.lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
@@ -82,10 +83,10 @@ fn returns_int() {
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported func main() int { return 7; }\n";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let _compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source, &instantiating_bump,
     );
 }
