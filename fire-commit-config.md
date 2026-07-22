@@ -11,7 +11,7 @@
 - When committing Guardian: `cargo nextest run --manifest-path Guardian/Cargo.toml` + each Guardian submodule's own tests.
 
 **Branch model:** rebase-and-fast-forward, two families:
-- `experimental` family — side-branches `experimental-1`, `experimental-2`, … feed local tip `experimental` (no origin mirror; ratcheted via `git fetch . <branch>:experimental`).
+- `experimental` family — side-branches `experimental-1`, `experimental-2`, … feed local tip `experimental`, ratcheted via `git fetch . <branch>:experimental`. That local ratchet **is** the sync step; `fire commit` stops there and pushes nothing. Note the family *is* mirrored on origin (`origin/experimental`, `origin/experimental-1`, …) and those mirrors run stale as a result — pushing any of them is a separate, explicitly-requested step, and a side-branch that has been rebased will need a force-push.
 - `master` family — side-branches (e.g. `repair-vale`) feed tip `master`, mirrored to `origin/master`.
 
 Pick the family matching the working branch; ask if ambiguous.
