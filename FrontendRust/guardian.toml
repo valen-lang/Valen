@@ -48,6 +48,10 @@ exclude_shields = [
     "MigrateAllCommentsToo-MACTX.md",
     "NoChangesWithoutScalaReference-NCWSRX.md",
     "ScalaSealedTraitsToRustEnums-SSTREX.md",
+
+    "NoAddingScalaComments-NASCX.md",
+    "ScalaCommentParity-SCPX.md",
+    "SliceInTheRightPlaces-SITRPX.md"
 ]
 
 [guard_mode]
@@ -55,8 +59,6 @@ include_shields = [
     { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "NoNewDefinitions-NNDX.md" },
     { name = "NoAddingGuardianDirectives-NAGDX.md" },
-    { name = "NoRemovingVMarkers-NRVMX.md" },
-    { name = "NoRenamedDefinitions-NRDX.md" },
     { name = "NoMovedDefinitions-NMDX.md" },
     { name = "TypesFitIntoTheseCategories-TFITCX.md" },
 
@@ -70,6 +72,8 @@ include_shields = [
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
     { name = "MailboxWorkflow-MBXX.md" },
+    { name = "MailboxWatcherGuard-MWGX.md" },
+    { name = "NoRemovingVMarkers-NRVMX.md" }
 ]
 
 [review_mode]
@@ -92,7 +96,6 @@ include_shields = [
     { name = "UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
     { name = "NeverUseStaticLifetime-NUSLX.md" },
-    { name = "NoRemovingVMarkers-NRVMX.md" },
 
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
