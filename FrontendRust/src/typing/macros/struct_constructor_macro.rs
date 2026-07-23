@@ -13,7 +13,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::postparsing::ast::*;
-use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ImplicitCoercionKindRuneValS, ICitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
+use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ICitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
 use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
 use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
 use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS, IStructMemberS};
@@ -71,36 +71,30 @@ where 's: 't,
             name: struct_imprecise_name,
         }));
 
-        let struct_kind_rune_s = self.scout_arena.intern_rune(IRuneValS::ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS {
-            range: struct_name_range,
-            original_kind_rune: struct_generic_rune_s,
-        }));
-        let struct_kind_rune = RuneUsage { range: struct_name_range, rune: struct_kind_rune_s };
+        // Instantiate the struct template; the resulting kind is the constructor's return type,
+        // since an owned value is a bare kind.
         let generic_param_runes: Vec<_> = struct_a.generic_params.iter().map(|p| p.rune).collect();
         let generic_param_runes_slice = self.scout_arena.alloc_slice_copy(&generic_param_runes);
         rules.push(IRulexSR::Call(CallSR {
             range: struct_name_range,
-            result_rune: struct_kind_rune,
+            result_rune: ret_rune,
             template_rune: struct_generic_rune,
             args: generic_param_runes_slice,
-        }));
-
-        rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
-            range: struct_name_range,
-            coord_rune: ret_rune,
-            kind_rune: struct_kind_rune,
         }));
 
         let params: Vec<ParameterS<'s>> = struct_a.members.iter().flat_map(|m| {
             match m {
                 IStructMemberS::NormalStructMember(member) => {
-                    let capture = CaptureS { name: IVarNameS::CodeVarName(member.name), mutate: false };
-                    vec![ParameterS::new(member.range, None, false, AtomSP {
-                        range: member.range,
-                        name: Some(capture),
-                        kind_rune: Some(member.type_rune),
-                        destructure: None,
-                    })]
+                    vec![ParameterS::new(
+                        member.range,
+                        None,
+                        false,
+                        IVarNameS::CodeVarName(member.name),
+                        member.type_rune,
+                        member.type_rune,
+                        self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+                        self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+                    )]
                 }
                 IStructMemberS::VariadicStructMember(_) => vec![],
             }
@@ -119,7 +113,7 @@ where 's: 't,
             params_slice,
             Some(ret_rune),
             rules_slice,
-            IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.struct_constructor_generator }),
+            self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.struct_constructor_generator })),
         ));
         let function_name_s = self.scout_arena.intern_name(INameValS::FunctionDeclaration(IFunctionDeclarationNameValS::ConstructorName(
             ConstructorNameS { tlcd: struct_name_as_citizen }
@@ -146,7 +140,7 @@ where 's: 't,
       maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
         let ret_coord = maybe_ret_coord.expect("vassertSome: maybeRetCoord");
-        let struct_tt = match ret_coord.kind {
+        let struct_tt = match ret_coord {
             KindT::Struct(s) => s,
             _ => panic!("Expected struct kind in generate_function_body_struct_constructor"),
         };
@@ -165,17 +159,7 @@ where 's: 't,
                 bound_arguments_source,
             );
             definition.members.iter().map(|member| {
-                match member {
-                    IStructMemberT::Normal(n) => {
-                        match &n.tyype {
-                            IMemberTypeT::Reference(r) => {
-                                (n.name, placeholder_substituter.substitute_for_coord(coutputs, r.reference))
-                            }
-                            IMemberTypeT::Address(_) => panic!("vcurious: AddressMemberTypeT in generate_function_body_struct_constructor"),
-                        }
-                    }
-                    IStructMemberT::Variadic(_) => panic!("vimpl: VariadicStructMemberT in generate_function_body_struct_constructor"),
-                }
+                (member.name, placeholder_substituter.substitute_for_kind(coutputs, member.tyype))
             }).collect()
         };
 
@@ -201,11 +185,13 @@ where 's: 't,
           *struct_tt,
           bound_arguments_source2,
         );
-        let constructor_return_ownership = match mutability {
-            SharednessT::Single => OwnershipT::Own,
-            SharednessT::Shared => OwnershipT::Share,
+        // A share citizen is only ever held ShareRef-wrapped; a single one is held bare.
+        let constructor_return_type = match mutability {
+            SharednessT::Single => KindT::Struct(struct_tt),
+            SharednessT::Shared =>
+                KindT::ShareRef(self.typing_interner.alloc(
+                    ShareRefT { inner: KindT::Struct(struct_tt) })),
         };
-        let constructor_return_type = KindT::new(constructor_return_ownership, RegionT::Default, KindT::Struct(struct_tt));
 
         let constructor_params_slice = self.typing_interner.alloc_slice_from_vec(constructor_params);
         let header = FunctionHeaderT {
@@ -221,11 +207,11 @@ where 's: 't,
         }).collect();
         let args_slice = self.typing_interner.alloc_slice_from_vec(args);
         let struct_tt_ref = self.typing_interner.alloc(struct_tt);
-        let construct_expr = ExpressionTE::Construct(self.typing_interner.alloc(ConstructTE {
-            struct_tt: struct_tt_ref,
-            result_reference: constructor_return_type,
-            args: args_slice,
-        }));
+        let construct_expr = ExpressionTE::Construct(self.typing_interner.alloc(ConstructTE::new(
+            struct_tt_ref,
+            constructor_return_type,
+            args_slice,
+        )));
         let return_expr = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(construct_expr)));
         let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(return_expr)));
         (header, body)

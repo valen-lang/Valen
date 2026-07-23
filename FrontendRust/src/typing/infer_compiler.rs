@@ -219,8 +219,9 @@ where 's: 't,
             }
             already_known.insert(known.rune.rune, known.templata);
         }
+        // VCOORD: look into this clone, callers probably shouldnt have an indexmap.
         self.make_solver_state_solver(
-            invocation_range.to_vec(), envs, state, rules, rune_to_type, already_known)
+            invocation_range.to_vec(), envs, state, rules.to_vec(), rune_to_type.clone(), already_known)
     }
 
     pub fn r#continue(
@@ -278,12 +279,6 @@ where 's: 't,
                             _ => None,
                         }
                     }
-                    ITemplataT::Coord(c) => {
-                        match c.coord.kind {
-                            KindT::Struct(_) | KindT::Interface(_) => Some(c.coord.kind),
-                            _ => None,
-                        }
-                    }
                     _ => None,
                 })
                 .collect();
@@ -295,12 +290,6 @@ where 's: 't,
                     ITemplataT::Kind(k) => {
                         match k.kind {
                             KindT::Struct(_) | KindT::Interface(_) => Some((rune, k.kind)),
-                            _ => None,
-                        }
-                    }
-                    ITemplataT::Coord(c) => {
-                        match c.coord.kind {
-                            KindT::Struct(_) | KindT::Interface(_) => Some((rune, c.coord.kind)),
                             _ => None,
                         }
                     }
@@ -412,16 +401,10 @@ where 's: 't,
             }
         }
 
-        let runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> =
-            rules.iter().filter_map(|rule| match rule {
-                // IRulexSR::CallSiteCoordIsa(r) => {
-                    // match self.resolve_impl_conclusion(env_with_conclusions_in_denizen, state, ranges, call_location, *r, &conclusions) {
-                        // Ok(x) => Some(x),
-                        // Err(e) => panic!("implement: ResolvingResolveConclusionError wrapping in checkResolvingConclusionsAndResolve"),
-                    // }
-                // }
-                _ => None,
-            }).collect();
+        // IRulexSR::CallSiteCoordIsa, the only rule that used to populate this, was
+        // retired with the coherent-collapse machinery; no live rule variant produces
+        // impl-bound conclusions anymore, so this is always empty under the onion.
+        let runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> = vec![];
         {
             let mut seen: HashSet<IRuneS<'s>> = HashSet::default();
             for (rune, _) in runes_and_impls.iter() {
@@ -493,7 +476,6 @@ where 's: 't,
                     let maybe_mentioned_kind =
                         match templata {
                             ITemplataT::Kind(KindTemplataT { kind }) => Some(*kind),
-                            ITemplataT::Coord(CoordTemplataT { coord: KindT { kind, .. } }) => Some(*kind),
                             _ => None,
                         };
                     let maybe_id_and_template_id: Option<(IdT<'s, 't>, IdT<'s, 't>)> =
@@ -732,13 +714,13 @@ where 's: 't,
         context_region: RegionT,
     ) -> Result<Result<(IRuneS<'s>, &'t PrototypeT<'s, 't>), IConclusionResolveError<'s, 't>>, ICompileErrorT<'s, 't>> {
         let return_coord = match conclusions.get(&c.return_rune.rune) {
-            Some(ITemplataT::Coord(ct)) => ct.coord,
+            Some(ITemplataT::Kind(ct)) => ct.kind,
             None => panic!("vwat: returnRune not in conclusions for ResolveSR"),
-            Some(other) => panic!("vwat: expected CoordTemplataT for returnRune, got {:?}", other),
+            Some(other) => panic!("vwat: expected KindTemplataT for returnRune, got {:?}", other),
         };
         let param_coords = match conclusions.get(&c.params_list_rune.rune) {
             None => panic!("vwat: paramsListRune not in conclusions for ResolveSR"),
-            Some(ITemplataT::CoordList(cl)) => cl.coords,
+            Some(ITemplataT::CoordList(cl)) => cl.kinds,
             Some(other) => panic!("vwat: expected CoordListTemplataT for paramsListRune, got {:?}", other),
         };
         let mut full_ranges = Vec::with_capacity(1 + ranges.len());
@@ -758,46 +740,46 @@ where 's: 't,
         Ok(Ok((c.result_rune.rune, func_success.prototype)))
     }
 
-    pub fn resolve_impl_conclusion(
-        &self,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        state: &mut CompilerOutputs<'s, 't>,
-        ranges: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        c: CallSiteCoordIsaSR<'s>,
-        conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
-    ) -> Result<(IRuneS<'s>, IdT<'s, 't>), IConclusionResolveError<'s, 't>> {
-        let CallSiteCoordIsaSR { range, result_rune, sub_rune, super_rune } = c;
-        let sub_coord = match conclusions.get(&sub_rune.rune) {
-            Some(ITemplataT::Coord(ct)) => ct.coord,
-            Some(other) => panic!("vwat: expected CoordTemplataT for subRune in resolveImplConclusion, got {:?}", other),
-            None => panic!("vwat: subRune not in conclusions for resolveImplConclusion"),
-        };
-        let sub_kind = match ISubKindTT::try_from(sub_coord.kind) {
-            Ok(k) => k,
-            Err(_) => panic!("vwat: sub_kind is not ISubKindTT in resolveImplConclusion: {:?}", sub_coord.kind),
-        };
-        let super_coord = match conclusions.get(&super_rune.rune) {
-            Some(ITemplataT::Coord(ct)) => ct.coord,
-            Some(other) => panic!("vwat: expected CoordTemplataT for superRune in resolveImplConclusion, got {:?}", other),
-            None => panic!("vwat: superRune not in conclusions for resolveImplConclusion"),
-        };
-        let super_kind = match ISuperKindTT::try_from(super_coord.kind) {
-            Ok(k) => k,
-            Err(_) => panic!("vwat: super_kind is not ISuperKindTT in resolveImplConclusion: {:?}", super_coord.kind),
-        };
-        let mut full_ranges = vec![range];
-        full_ranges.extend_from_slice(ranges);
-        let impl_success = match self.is_parent(state, calling_env, &full_ranges, call_location, sub_kind, super_kind) {
-            IsParentResult::IsntParent(x) => {
-                let ranges_slice = self.typing_interner.alloc_slice_from_vec(full_ranges);
-                return Err(IConclusionResolveError::CouldntFindImplForConclusionResolve { range: ranges_slice, fail: x });
-            }
-            IsParentResult::IsParent(x) => x,
-        };
-        let result_rune_s = result_rune.expect("vassertSome: resultRune in CallSiteCoordIsaSR resolveImplConclusion").rune;
-        Ok((result_rune_s, impl_success.impl_id))
-    }
+    // pub fn resolve_impl_conclusion(
+    //     &self,
+    //     calling_env: IInDenizenEnvironmentT<'s, 't>,
+    //     state: &mut CompilerOutputs<'s, 't>,
+    //     ranges: &[RangeS<'s>],
+    //     call_location: LocationInDenizen<'s>,
+    //     c: CallSiteCoordIsaSR<'s>,
+    //     conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    // ) -> Result<(IRuneS<'s>, IdT<'s, 't>), IConclusionResolveError<'s, 't>> {
+    //     let CallSiteCoordIsaSR { range, result_rune, sub_rune, super_rune } = c;
+    //     let sub_coord = match conclusions.get(&sub_rune.rune) {
+    //         Some(ITemplataT::Kind(ct)) => ct.coord,
+    //         Some(other) => panic!("vwat: expected KindTemplataT for subRune in resolveImplConclusion, got {:?}", other),
+    //         None => panic!("vwat: subRune not in conclusions for resolveImplConclusion"),
+    //     };
+    //     let sub_kind = match ISubKindTT::try_from(sub_coord.kind) {
+    //         Ok(k) => k,
+    //         Err(_) => panic!("vwat: sub_kind is not ISubKindTT in resolveImplConclusion: {:?}", sub_coord.kind),
+    //     };
+    //     let super_coord = match conclusions.get(&super_rune.rune) {
+    //         Some(ITemplataT::Kind(ct)) => ct.coord,
+    //         Some(other) => panic!("vwat: expected KindTemplataT for superRune in resolveImplConclusion, got {:?}", other),
+    //         None => panic!("vwat: superRune not in conclusions for resolveImplConclusion"),
+    //     };
+    //     let super_kind = match ISuperKindTT::try_from(super_coord.kind) {
+    //         Ok(k) => k,
+    //         Err(_) => panic!("vwat: super_kind is not ISuperKindTT in resolveImplConclusion: {:?}", super_coord.kind),
+    //     };
+    //     let mut full_ranges = vec![range];
+    //     full_ranges.extend_from_slice(ranges);
+    //     let impl_success = match self.is_parent(state, calling_env, &full_ranges, call_location, sub_kind, super_kind) {
+    //         IsParentResult::IsntParent(x) => {
+    //             let ranges_slice = self.typing_interner.alloc_slice_from_vec(full_ranges);
+    //             return Err(IConclusionResolveError::CouldntFindImplForConclusionResolve { range: ranges_slice, fail: x });
+    //         }
+    //         IsParentResult::IsParent(x) => x,
+    //     };
+    //     let result_rune_s = result_rune.expect("vassertSome: resultRune in CallSiteCoordIsaSR resolveImplConclusion").rune;
+    //     Ok((result_rune_s, impl_success.impl_id))
+    // }
 
     pub fn resolve_template_call_conclusion(
         &self,
@@ -829,8 +811,8 @@ where 's: 't,
         match template {
             ITemplataT::RuntimeSizedArrayTemplate(_) => {
                 let coord = match args[0] {
-                    ITemplataT::Coord(ct) => ct.coord,
-                    _ => panic!("Expected CoordTemplataT as first arg in resolve_template_call_conclusion RuntimeSizedArrayTemplate"),
+                    ITemplataT::Kind(ct) => ct.kind,
+                    _ => panic!("Expected KindTemplataT as first arg in resolve_template_call_conclusion RuntimeSizedArrayTemplate"),
                 };
                 let context_region = RegionT::Default;
                 let _rsa = self.resolve_runtime_sized_array(coord, context_region);
@@ -839,8 +821,8 @@ where 's: 't,
             ITemplataT::StaticSizedArrayTemplate(_) => {
                 let s = args[0];
                 let coord = match args[1] {
-                    ITemplataT::Coord(ct) => ct.coord,
-                    _ => panic!("Expected CoordTemplataT as second arg in resolve_template_call_conclusion StaticSizedArrayTemplate"),
+                    ITemplataT::Kind(ct) => ct.kind,
+                    _ => panic!("Expected KindTemplataT as second arg in resolve_template_call_conclusion StaticSizedArrayTemplate"),
                 };
                 let size = expect_integer(s);
                 let context_region = RegionT::Default;

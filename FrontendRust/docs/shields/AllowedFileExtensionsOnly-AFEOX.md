@@ -16,49 +16,49 @@ This project restricts AI-driven edits to a fixed set of file extensions: `.rs`,
 
 **DENY:**
 ```
-FILE: /Volumes/V/Vale1/scripts/build.py
+FILE: scripts/build.py
 
 +import subprocess
 ```
 
 **DENY:**
 ```
-FILE: /Volumes/V/Vale1/Cargo.toml
+FILE: Cargo.toml
 
 +[workspace]
 ```
 
 **DENY:**
 ```
-FILE: /Volumes/V/Vale1/Backend/src/foo.hpp
+FILE: Backend/src/foo.hpp
 
 +void foo();
 ```
 
 **ALLOW:**
 ```
-FILE: /Volumes/V/Vale1/Backend/src/externs.cpp
+FILE: Backend/src/externs.cpp
 
 +  fwrite = addExtern(mod, "fwrite", sizeTLT, {int8PtrLT, sizeTLT, sizeTLT, int8PtrLT});
 ```
 
 **ALLOW:**
 ```
-FILE: /Volumes/V/Vale1/FrontendRust/src/typing/mod.rs
+FILE: FrontendRust/src/typing/mod.rs
 
 +pub fn check_types() {}
 ```
 
 **ALLOW:**
 ```
-FILE: /Volumes/V/Vale1/docs/architecture/arenas.md
+FILE: docs/architecture/arenas.md
 
 +Arenas are immutable after construction.
 ```
 
 **ALLOW:**
 ```
-FILE: /Volumes/V/Vale1/FrontendRust/src/tests/programs/virtuals/interfaceimm.vale
+FILE: FrontendRust/src/tests/programs/virtuals/interfaceimm.vale
 
 +My
 ```

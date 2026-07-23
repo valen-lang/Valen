@@ -19,7 +19,6 @@ use crate::typing::compiler::Compiler;
 use crate::typing::typing_interner::MustIntern;
 use crate::typing::types::types::KindT;
 use crate::typing::ast::ast::AbstractT;
-use crate::typing::names::names::TypingIgnoredParamNameT;
 use std::iter::once;
 use std::marker::PhantomData;
 
@@ -282,18 +281,7 @@ where 's: 't,
             let maybe_virtuality = self.evaluate_maybe_virtuality(
                 env, coutputs, parent_ranges, &coord, param1.virtuality.as_ref())?;
 
-            //   val nameT = param1.pattern.name match {
-            //     case None => interner.intern(TypingIgnoredParamNameT(index))
-            //     case Some(x) => nameTranslator.translateVarNameStep(x.name)
-            //   }
-            let name_t: IVarNameT<'s, 't> = match &param1.pattern.name {
-                None => {
-                    IVarNameT::TypingIgnoredParam(self.typing_interner.intern_typing_ignored_param_name(TypingIgnoredParamNameT { num: index as i32}))
-                }
-                Some(x) => {
-                    self.translate_var_name_step(x.name)
-                }
-            };
+            let name_t: IVarNameT<'s, 't> = self.translate_var_name_step(param1.name);
 
             //   ParameterT(nameT, maybeVirtuality, param1.preChecked, coord)
             Ok(ParameterT {

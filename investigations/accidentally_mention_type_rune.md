@@ -28,7 +28,7 @@ Actual: `scala.MatchError: CoordTemplataT(...)` crash at `ExpressionCompiler.sca
     - ExpressionCompiler#evaluate(RuneLookupSE "Z"):
       Looks up rune `Z` in environment via lookupNearestWithImpreciseName.
       Gets CoordTemplataT(CoordT(own, RegionT(), KindPlaceholderT(...Z...)))
-      because Z is a type parameter rune that maps to a coord placeholder.
+      because Z is a type parameter rune that maps to ****a coord placeholder.
       - templata match { ... }:
         Only has cases for IntegerTemplataT, PlaceholderTemplataT(IntegerTemplataType),
         and PrototypeTemplataT.

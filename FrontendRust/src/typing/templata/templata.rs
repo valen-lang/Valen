@@ -56,8 +56,10 @@ fn expect_kind<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
 }
 
 pub fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'s, 't> {
-  panic!("Unimplemented: expect_kind_templata");
-  // templata match { case t @ KindTemplataT(_) => t; case _ => vfail() }
+  match templata {
+    ITemplataT::Kind(t) => *t,
+    other => panic!("vfail: {:?}", other),
+  }
 }
 
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
@@ -70,7 +72,7 @@ pub enum ITemplataT<'s, 't> {
   String(StrI<'s>),
   Prototype(&'t PrototypeTemplataT<'s, 't>),
   Isa(&'t IsaTemplataT<'s, 't>),
-  CoordList(&'t CoordListTemplataT<'s, 't>),
+  CoordList(&'t KindListTemplataT<'s, 't>),
   RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT),
   StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT),
   Function(&'t FunctionTemplataT<'s, 't>),
@@ -402,8 +404,8 @@ pub struct IsaTemplataT<'s, 't> {
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct CoordListTemplataT<'s, 't> {
-  pub coords: &'t [KindT<'s, 't>],
+pub struct KindListTemplataT<'s, 't> {
+  pub kinds: &'t [KindT<'s, 't>],
 }
 
 

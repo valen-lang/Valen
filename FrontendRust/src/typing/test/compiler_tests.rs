@@ -8,7 +8,7 @@ use crate::scout_arena::ScoutArena;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::HashMap;
-use crate::typing::types::types::{KindT, IntT, RegionT, OwnershipT, BorrowRefT};
+use crate::typing::types::types::{KindT, IntT, RegionT, BorrowRefT};
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
 use crate::typing::env::function_environment_t::LocalVariable;
@@ -50,17 +50,18 @@ use crate::typing::ast::expressions::UpcastTE;
 use crate::typing::names::names::InterfaceNameT;
 use crate::typing::types::types::ISuperKindTT;
 use crate::typing::types::types::InterfaceTT;
-use crate::typing::ast::expressions::SoftLoadTE;
 use crate::typing::ast::expressions::LetAndLendTE;
 use crate::typing::ast::citizens::StructDefinitionT;
 use crate::typing::ast::ast::FunctionHeaderT;
-use crate::builtins::builtins::{builtin_source_for_arith, builtin_source_for_arrays, builtin_source_for_as, builtin_source_for_opt, builtin_source_for_panicutils, builtin_source_for_weak, empty_v_builtins_stub};
+use crate::builtins::builtins::{builtin_source_for_arith, builtin_source_for_arrays, builtin_source_for_as, builtin_source_for_opt, builtin_source_for_panicutils, builtin_source_for_weak, empty_v_builtins_stub, get_embedded_modulized_code_map};
 use crate::collect_only_tnode;
 use crate::collect_where_tnode;
 use crate::tests::tests::new_test_package_source;
 use crate::tests::tests::load_expected;
 use std::iter::empty;
 use std::marker::PhantomData;
+use crate::utils::code_hierarchy;
+
 pub struct CompilerTests {}
 impl CompilerTests {}
 
@@ -88,7 +89,7 @@ fn simple_program_returning_an_int_explicit() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    assert!(main.header.return_type.kind == KindT::Int(IntT { bits: 32 }));
+    assert_eq!(main.header.return_type, KindT::Int(IntT { bits: 32 }));
 }
 
 #[test]
@@ -144,7 +145,7 @@ exported func main() int {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    assert!(main.header.return_type.kind == KindT::Int(IntT { bits: 32 }));
+    assert!(main.header.return_type == KindT::Int(IntT { bits: 32 }));
 }
 
 #[test]
@@ -176,10 +177,10 @@ exported func main() int {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
-            variable: LocalVariable::Reference(LocalVariable {
+            variable: LocalVariable {
                 tyype: KindT::Never(NeverT { from_break: false }),
                 ..
-            }),
+            },
             ..
         }) => Some(())
     );
@@ -216,11 +217,11 @@ fn taking_an_argument_and_returning_it() {
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LocalLookup(l) => Some(l)
     );
-    match lookup.local_variable.name() {
+    match lookup.local_variable.name {
         IVarNameT::CodeVar(c) => assert!(c.name.as_str() == "a"),
         _ => panic!("Expected CodeVarNameT"),
     }
-    match lookup.local_variable.tyype() {
+    match lookup.local_variable.tyype {
         KindT::Int(IntT { bits: 32 }) => {}
         other => panic!("Expected CoordT(Own, _, Int(32)), got {:?}", other),
     }
@@ -510,14 +511,14 @@ exported func main() void {
     let let_normal: &LetNormalTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(ln @ LetNormalTE {
-            variable: LocalVariable::Reference(LocalVariable {
+            variable: LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("b"), .. }),
                 ..
-            }),
+            },
             ..
         }) => Some(ln)
     );
-    assert!(matches!(let_normal.variable.tyype(), KindT::BorrowRef(_)));
+    assert!(matches!(let_normal.variable.tyype, KindT::BorrowRef(_)));
 }
 
 #[test]
@@ -1002,18 +1003,19 @@ fn reads_a_struct_member() {
     let coutputs = compile.expect_compiler_outputs();
 
     let main = coutputs.lookup_function_by_str("main");
-    // check for the member access (now nested inside a CopyPrimTE for the __copy_prim sugar)
-    collect_only_tnode!(
-        NodeRefT::FunctionDefinition(main),
-        NodeRefT::ReferenceMemberLookup(
-            ReferenceMemberLookupTE {
-                struct_expr: ExpressionTE::SoftLoad(SoftLoadTE { target_ownership: OwnershipT::Borrow, .. }),
-                member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
-                member_reference: KindT::Int(IntT { bits: 32 }),
-                ..
-            }
-        ) => Some(())
-    );
+    panic!("update");
+    // // check for the member access (now nested inside a CopyPrimTE for the __copy_prim sugar)
+    // collect_only_tnode!(
+    //     NodeRefT::FunctionDefinition(main),
+    //     NodeRefT::ReferenceMemberLookup(
+    //         ReferenceMemberLookupTE {
+    //             struct_expr: ExpressionTE::SoftLoad(SoftLoadTE { target_ownership: OwnershipT::Borrow, .. }),
+    //             member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+    //             member_reference: KindT::Int(IntT { bits: 32 }),
+    //             ..
+    //         }
+    //     ) => Some(())
+    // );
 }
 
 #[test]
@@ -1440,7 +1442,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
-            variable: LocalVariable::Reference(LocalVariable {
+            variable: LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
                 tyype: KindT::Interface(InterfaceTT {
                     id: IdT {
@@ -1452,7 +1454,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
                     },
                     ..
                 }),
-            }),
+            },
             ..
         }) => Some(())
     );
@@ -1462,7 +1464,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
         NodeRefT::Upcast(u) => Some(u)
     );
 
-    match upcast.result() {
+    match upcast.result {
         KindT::Interface(InterfaceTT {
             id: IdT {
                 package_coord: x,
@@ -1545,7 +1547,7 @@ fn tests_calling_a_virtual_function() {
                 }) => {}
                 other => panic!("inner expr kind: {:?}", other),
             }
-            match u.result() {
+            match u.result {
                 KindT::Interface(InterfaceTT {
                     id: IdT {
                         package_coord: pc,
@@ -1619,7 +1621,7 @@ fn tests_upcasting_has_the_right_stuff() {
         }) => {}
         other => panic!("inner expr kind: {:?}", other),
     }
-    match upcast.result() {
+    match upcast.result {
         KindT::Interface(InterfaceTT {
             id: IdT {
                 package_coord: x,
@@ -1638,7 +1640,7 @@ fn tests_upcasting_has_the_right_stuff() {
 
     let impl_edge = coutputs.lookup_edge(upcast.impl_name);
     assert!(impl_edge.sub_citizen.id() == upcast.inner_expr.result().expect_citizen().id());
-    assert!(impl_edge.super_interface == upcast.result().expect_citizen().id());
+    assert!(impl_edge.super_interface == upcast.result.expect_citizen().id());
 
 //    freePrototype.fullName.last.parameters.head shouldEqual up.result.reference
 }
@@ -1752,34 +1754,33 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
         NodeRefT::Destroy(_) => Some(())
     );
     assert_eq!(destroys.len(), 0);
-    collect_only_tnode!(
-        NodeRefT::FunctionDefinition(main),
-        NodeRefT::ReferenceMemberLookup(
-            ReferenceMemberLookupTE {
-                struct_expr: ExpressionTE::SoftLoad(
-                    SoftLoadTE {
-                        expr: ExpressionTE::LocalLookup(
-                            LocalLookupTE {
-                                local_variable: LocalVariable::Reference(
-                                    LocalVariable {
-                                                                tyype: KindT { kind: KindT::Struct(_), .. },
-                                        ..
-                                    }
-                                ),
-                                ..
-                            }
-                        ),
-                        target_ownership: OwnershipT::Borrow,
-                    }
-                ),
-                member_name: IVarNameT::CodeVar(
-                    CodeVarNameT { name: StrI("x"), .. }
-                ),
-                member_reference: KindT::Int(IntT { bits: 32 }),
-                ..
-            }
-        ) => Some(())
-    );
+    panic!("update");
+    // collect_only_tnode!(
+    //     NodeRefT::FunctionDefinition(main),
+    //     NodeRefT::ReferenceMemberLookup(
+    //         ReferenceMemberLookupTE {
+    //             struct_expr: ExpressionTE::SoftLoad(
+    //                 SoftLoadTE {
+    //                     expr: ExpressionTE::LocalLookup(
+    //                         LocalLookupTE {
+    //                             local_variable: LocalVariable {
+    //                                     tyype: KindT::Struct(_),
+    //                                     ..
+    //                                 },
+    //                             ..
+    //                         }
+    //                     ),
+    //                     target_ownership: OwnershipT::Borrow,
+    //                 }
+    //             ),
+    //             member_name: IVarNameT::CodeVar(
+    //                 CodeVarNameT { name: StrI("x"), .. }
+    //             ),
+    //             result: KindT::BorrowRef(BorrowRefT{ region: RegionT::Default, inner: KindT::Int(IntT { bits: 32 }) }),
+    //             ..
+    //         }
+    //     ) => Some(())
+    // );
 }
 
 #[test]
@@ -1895,7 +1896,7 @@ func main() () {
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
-            variable: LocalVariable::Reference(LocalVariable {
+            variable: LocalVariable {
                 name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
                 tyype: KindT::Struct(StructTT {
                     id: IdT {
@@ -1909,7 +1910,7 @@ func main() () {
                     },
                     ..
                 }),
-            }),
+            },
             ..
         }) => Some(())
     );
@@ -1932,47 +1933,49 @@ exported func main() int {
   return bork(x);
 }
 ";
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
 
-    // Ensures the resolved arg is a Borrow-targeted SoftLoad of an Own local, i.e.
-    // the bare-use produced the coercion at the call boundary rather than requiring
-    // `&` in source.
-    collect_only_tnode!(
-        NodeRefT::FunctionDefinition(main),
-        NodeRefT::FunctionCall(
-            FunctionCallTE {
-                callable: PrototypeT {
-                    id: IdT {
-                        local_name: INameT::Function(FunctionNameT {
-                            template: FunctionTemplateNameT { human_name: StrI("bork"), .. },
-                            ..
-                        }),
-                        ..
-                    },
-                    ..
-                },
-                args: [ExpressionTE::SoftLoad(SoftLoadTE {
-                    target_ownership: OwnershipT::Borrow,
-                    expr: ExpressionTE::LocalLookup(LocalLookupTE {
-                        local_variable: LocalVariable::Reference(LocalVariable {
-                            tyype: KindT::Struct(_),
-                            ..
-                        }),
-                        ..
-                    }),
-                    ..
-                })],
-                ..
-            }
-        ) => Some(())
-    );
+    panic!("update");
+    // // Ensures the resolved arg is a Borrow-targeted SoftLoad of an Own local, i.e.
+    // // the bare-use produced the coercion at the call boundary rather than requiring
+    // // `&` in source.
+    // collect_only_tnode!(
+    //     NodeRefT::FunctionDefinition(main),
+    //     NodeRefT::FunctionCall(
+    //         FunctionCallTE {
+    //             callable: PrototypeT {
+    //                 id: IdT {
+    //                     local_name: INameT::Function(FunctionNameT {
+    //                         template: FunctionTemplateNameT { human_name: StrI("bork"), .. },
+    //                         ..
+    //                     }),
+    //                     ..
+    //                 },
+    //                 ..
+    //             },
+    //             args: [ExpressionTE::SoftLoad(SoftLoadTE {
+    //                 target_ownership: OwnershipT::Borrow,
+    //                 expr: ExpressionTE::LocalLookup(LocalLookupTE {
+    //                     local_variable: LocalVariable::Reference(LocalVariable {
+    //                         tyype: KindT::Struct(_),
+    //                         ..
+    //                     }),
+    //                     ..
+    //                 }),
+    //                 ..
+    //             })],
+    //             ..
+    //         }
+    //     ) => Some(())
+    // );
 }
 
 // Ensures that when a callsite passes a bare Own local to a parameter that expects
@@ -1999,12 +2002,13 @@ exported func main() int {
   return consume(s);
 }
 ";
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let err = compile.get_compiler_outputs().err()
         .unwrap_or_else(|| panic!("expected Err(NoImplicitCloneDefinedT), got Ok"));
@@ -2045,12 +2049,13 @@ exported func main() int {
   return consume(s);
 }
 ";
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
+    let code_source = CodeSource::new(vec![
+        Source::from_code_map(&get_embedded_modulized_code_map(&parse_arena, &parser_keywords)),
+        new_test_code_map(&parse_arena, code),
+    ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let err = compile.get_compiler_outputs().err()
         .unwrap_or_else(|| panic!("expected Err(ImplicitCloneRejectedT), got Ok"));
@@ -2820,15 +2825,16 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    collect_only_tnode!(
-        NodeRefT::FunctionDefinition(main),
-        NodeRefT::LetAndLend(
-            LetAndLendTE {
-                target_ownership: OwnershipT::Borrow,
-                ..
-            }
-        ) => Some(())
-    );
+    panic!("update");
+    // collect_only_tnode!(
+    //     NodeRefT::FunctionDefinition(main),
+    //     NodeRefT::LetAndLend(
+    //         LetAndLendTE {
+    //             target_ownership: OwnershipT::Borrow,
+    //             ..
+    //         }
+    //     ) => Some(())
+    // );
 }
 
 
@@ -4316,7 +4322,7 @@ fn downcast_function_rrbfs() {
         );
         let source_expr = as_.source_expr;
         let target_subtype = as_.target_type;
-        let result_opt_type = as_.result_result_type;
+        let result_opt_type = as_.result;
         let ok_constructor = as_.ok_constructor;
         let err_constructor = as_.err_constructor;
 
@@ -4336,7 +4342,7 @@ fn downcast_function_rrbfs() {
             }) => {}
             other => panic!("sourceExpr.result: {:?}", other),
         }
-        match target_subtype.kind {
+        match target_subtype {
             KindT::KindPlaceholder(KindPlaceholderT {
                 id: IdT {
                     init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
@@ -4609,7 +4615,7 @@ fn downcast_with_as() {
         );
         let source_expr = as_.source_expr;
         let target_subtype = as_.target_type;
-        let result_opt_type = as_.result_result_type;
+        let result_opt_type = as_.result;
         let ok_constructor = as_.ok_constructor;
         let err_constructor = as_.err_constructor;
 
@@ -4629,7 +4635,7 @@ fn downcast_with_as() {
             }) => {}
             other => panic!("sourceExpr.result: {:?}", other),
         }
-        match target_subtype.kind {
+        match target_subtype {
             KindT::KindPlaceholder(KindPlaceholderT {
                 id: IdT {
                     init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
@@ -4760,7 +4766,7 @@ fn test_struct_default_generic_argument_in_call() {
         NodeRefT::FunctionDefinition(moo),
         NodeRefT::LetNormal(let_normal) => Some(let_normal.variable)
     );
-    match variable.tyype() {
+    match variable.tyype {
         KindT::Struct(StructTT {
             id: IdT {
                 local_name: INameT::Struct(StructNameT {

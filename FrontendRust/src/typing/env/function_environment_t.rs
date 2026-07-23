@@ -946,7 +946,7 @@ where 's: 't,
 {
   pub name: IVarNameT<'s, 't>,
   pub closured_vars_struct_type: &'t StructTT<'s, 't>,
-  pub coord: KindT<'s, 't>,
+  pub kind: KindT<'s, 't>,
 }
 
 impl<'s, 't> From<LocalVariable<'s, 't>> for IVariableT<'s, 't> {

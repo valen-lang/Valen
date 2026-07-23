@@ -436,6 +436,7 @@ impl<'s> ScoutArena<'s> {
       InterfaceNameRune(p) => { let c = IRuneS::InterfaceNameRune(self.bump.alloc(p.clone())); (IRuneValS::InterfaceNameRune(p), c) }
       SelfRune(p) => { let c = IRuneS::SelfRune(self.bump.alloc(p.clone())); (IRuneValS::SelfRune(p), c) }
       SelfKindRune(p) => { let c = IRuneS::SelfKindRune(self.bump.alloc(p.clone())); (IRuneValS::SelfKindRune(p), c) }
+      SelfFullTypeRune(p) => { let c = IRuneS::SelfFullTypeRune(self.bump.alloc(p.clone())); (IRuneValS::SelfFullTypeRune(p), c) }
       SelfKindTemplateRune(p) => { let c = IRuneS::SelfKindTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::SelfKindTemplateRune(p), c) }
       MacroVoidKindRune(p) => { let c = IRuneS::MacroVoidKindRune(self.bump.alloc(p.clone())); (IRuneValS::MacroVoidKindRune(p), c) }
       MacroSelfKindRune(p) => { let c = IRuneS::MacroSelfKindRune(self.bump.alloc(p.clone())); (IRuneValS::MacroSelfKindRune(p), c) }

@@ -72,7 +72,7 @@ The following ten areas of change land as one coherent refactor. The Rust source
   - `WeakRef` around non-share citizen → reject.
 - `CoordT::new` validity checks (Share+primitive, Share+OverloadSet) delete; replaced by the interner-side validity table.
 - `type Coord = Kind` migration alias added (per A16); marked `// TEMP: retire at end of arc alongside AliasTE deletion`.
-- `ITemplataT::Coord`, `ITemplataI::Coord`, `ITemplataType::Coord` collapse into `Kind` variant (or the `Coord` variant becomes a transitional alias per A16).
+- `ITemplataT::Kind`, `ITemplataI::Coord`, `ITemplataType::Coord` collapse into `Kind` variant (or the `Coord` variant becomes a transitional alias per A16).
 - `expect_coord_templata` (`templata.rs:45`) survives as a smart-view during the alias transition; retired at end of arc.
 
 **Atomic sub-commit invariant:** the interner payload family + `StructTT.share_flavored` + `ValT` companion updates must land together to avoid intern-key drift.
@@ -131,7 +131,7 @@ The following ten areas of change land as one coherent refactor. The Rust source
 
 **Files:** `FrontendRust/src/typing/templata/templata.rs`, `FrontendRust/src/typing/rune_type_solver.rs`, `FrontendRust/src/postparsing/ast.rs`. (Formerly also `FrontendRust/src/higher_typing/*` — since retired outright.)
 
-- `ITemplataT::Coord` variant collapses into `Kind` (or aliased via A16 shim). Every match arm on `Coord(ct) => ct.coord` becomes a single Kind arm.
+- `ITemplataT::Kind` variant collapses into `Kind` (or aliased via A16 shim). Every match arm on `Coord(ct) => ct.coord` becomes a single Kind arm.
 - Same for `ITemplataI::Coord` and `ITemplataType::Coord`.
 - `CoerceToCoordSR` handler deleted (C.3).
 - `coerce_kind_lookup_to_coord`, `coerce_kind_template_lookup_to_coord` deleted.
@@ -164,7 +164,7 @@ The following ten areas of change land as one coherent refactor. The Rust source
 
 **`assemble_placeholder_map_inner`** (`:873-896`):
 - Peel logic added to reach `KindPlaceholder` under ref variants. The `panic!("unimplemented arm")` at `:892` gets real arms for the four ref variants (peel and recurse into inner).
-- `(ITemplataT::Coord, ITemplataI::Coord)` arm collapses into single Kind→Kind arm.
+- `(ITemplataT::Kind, ITemplataI::Coord)` arm collapses into single Kind→Kind arm.
 
 **I-IR field cascade** (all these `CoordI` fields become `KindT`/`KindIT`):
 - `ast/types.rs:65-86` — `CoordI` struct deleted.

@@ -3,7 +3,7 @@ use crate::postparsing::ast::{IBodyS, LocationInDenizen, ParameterS};
 use crate::postparsing::expressions::{BodySE, IExpressionSE};
 use crate::postparsing::patterns::patterns::AtomSP;
 use crate::typing::ast::ast::{LocationInFunctionEnvironmentT, ParameterT};
-use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ExpressionTE, ReturnTE};
+use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ExpressionTE, LetNormalTE, ReturnTE, VoidLiteralTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::function_environment_t::{FunctionEnvironmentT, NodeEnvironmentBox};
@@ -105,7 +105,7 @@ where 's: 't,
                         // Let it through, it returns the expected type.
                     }
                     // VCOORD: doublecheck this: post-cut Share+Never is rejected by CoordT::new, so this guard should be unreachable.
-                    (Some(coord), _) if coord.ownership == OwnershipT::Share && coord.kind == KindT::Never(NeverT { from_break: false }) => {
+                    (Some(KindT::Never(NeverT { from_break: false })), _) => {
                         // Let it through, it returns a never but we expect something else, that's fine
                     }
                     (None, KindT::Never(NeverT { from_break: false })) => {
@@ -250,30 +250,24 @@ where 's: 't,
                 )))
             }).collect();
 
-        let param_lookups_2_refs: &'t [ExpressionTE<'s, 't>] =
-            self.typing_interner.alloc_slice_from_vec(param_lookups_2);
-        let patterns: &'t [&'s AtomSP<'s>] = self.typing_interner.alloc_slice_copy(
-            &params_1.iter().map(|p| &p.pattern).collect::<Vec<_>>());
-        let let_exprs_2 = self.translate_pattern_list(
-            coutputs, nenv, life, range, call_location,
-            patterns, param_lookups_2_refs, region);
+        // A param's name is its binding: bind each one to its argument. A destructuring param
+        // additionally gets a `<destructure> = <name>;` let at the body head, synthesized during
+        // postparse, so no pattern is translated here. Synthetic DesugaredParamNames are bound too,
+        // since that body-head let loads them by name (see @PFVSZ).
+        let mut let_exprs: Vec<ExpressionTE<'s, 't>> = Vec::new();
+        for (param_1, param_lookup_2) in params_1.iter().zip(param_lookups_2.into_iter()) {
+            let local = self.make_user_local_variable(
+                coutputs, nenv, range, param_1.name, param_lookup_2.result());
+            let_exprs.push(ExpressionTE::LetNormal(self.typing_interner.alloc(
+                LetNormalTE::new(local, param_lookup_2))));
+        }
 
         // todo: at this point, to allow for recursive calls, add a callable type to the environment
         // for everything inside the body to use
 
-        for param in params_1.iter() {
-            match (&param.pattern.name, param.pattern.name.as_ref().map(|c| c.mutate)) {
-                (Some(capture), Some(false)) => {
-                    let translated_name = self.translate_var_name_step(capture.name);
-                    if !nenv.declared_locals.iter().any(|l| l.name() == translated_name) {
-                        panic!("wot couldnt find {:?}", capture.name);
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        let_exprs_2
+        let_exprs.push(ExpressionTE::VoidLiteral(self.typing_interner.alloc(
+            VoidLiteralTE::new(nenv.default_region()))));
+        self.consecutive(&let_exprs)
     }
 
 }

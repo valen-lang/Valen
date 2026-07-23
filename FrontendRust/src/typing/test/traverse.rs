@@ -13,7 +13,7 @@ use crate::typing::ast::expressions::{
     AsSubtypeTE, BlockTE, BorrowToWeakTE, BreakTE, ConsecutorTE, ConstantBoolTE, ConstantFloatTE,
     ConstantIntTE, ConstantStrTE, ConstructTE, DeferTE,
     DestroyRuntimeSizedArrayTE, DestroyStaticSizedArrayIntoFunctionTE,
-    DestroyStaticSizedArrayIntoLocalsTE, DestroyTE, DiscardTE, ExpressionTE, ExternFunctionCallTE,
+    DestroyStaticSizedArrayIntoLocalsTE, DestroyTE, DerefTE, DiscardTE, ExpressionTE, ExternFunctionCallTE,
     FunctionCallTE, IfTE, InterfaceFunctionCallTE, InterfaceToInterfaceUpcastTE,
     IsSameInstanceTE, LetAndLendTE, LetNormalTE, LocalLookupTE, LockWeakTE, MutateTE,
     NewRuntimeSizedArrayTE, PopRuntimeSizedArrayTE,
@@ -27,9 +27,9 @@ use crate::typing::env::function_environment_t::LocalVariable;
 use crate::typing::hinputs_t::{HinputsT, InstantiationBoundArgumentsT};
 use crate::typing::names::names::{INameT, IVarNameT, IdT};
 use crate::typing::templata::templata::{
-    CoordListTemplataT, ExternFunctionTemplataT, FunctionTemplataT, ITemplataT,
-    ImplDefinitionTemplataT, InterfaceDefinitionTemplataT, IsaTemplataT, KindTemplataT,
-    PlaceholderTemplataT, PrototypeTemplataT, StructDefinitionTemplataT,
+  KindListTemplataT, ExternFunctionTemplataT, FunctionTemplataT, ITemplataT,
+  ImplDefinitionTemplataT, InterfaceDefinitionTemplataT, IsaTemplataT, KindTemplataT,
+  PlaceholderTemplataT, PrototypeTemplataT, StructDefinitionTemplataT,
 };
 use crate::typing::types::types::{
   KindT, InterfaceTT, KindPlaceholderT, OverloadSetT, RuntimeSizedArrayTT,
@@ -60,6 +60,7 @@ pub enum NodeRefT<'s, 't> {
     LetNormal(&'t LetNormalTE<'s, 't>),
     Unlet(&'t UnletTE<'s, 't>),
     Discard(&'t DiscardTE<'s, 't>),
+    Deref(&'t DerefTE<'s, 't>),
     Defer(&'t DeferTE<'s, 't>),
     If(&'t IfTE<'s, 't>),
     While(&'t WhileTE<'s, 't>),
@@ -111,7 +112,7 @@ pub enum NodeRefT<'s, 't> {
     PlaceholderTemplata(&'t PlaceholderTemplataT<'s, 't>),
     PrototypeTemplata(&'t PrototypeTemplataT<'s, 't>),
     IsaTemplata(&'t IsaTemplataT<'s, 't>),
-    CoordListTemplata(&'t CoordListTemplataT<'s, 't>),
+    CoordListTemplata(&'t KindListTemplataT<'s, 't>),
     FunctionTemplata(&'t FunctionTemplataT<'s, 't>),
     StructDefinitionTemplata(&'t StructDefinitionTemplataT<'s, 't>),
     InterfaceDefinitionTemplata(&'t InterfaceDefinitionTemplataT<'s, 't>),
@@ -559,6 +560,7 @@ fn visit_expression_te<'s, 't, T, F>(
         }
         ExpressionTE::ReferenceMemberLookup(x) => visit_reference_member_lookup(pred, out, x),
         ExpressionTE::AddressMemberLookup(x) => visit_address_member_lookup(pred, out, x),
+        ExpressionTE::Deref(x) => visit_deref(pred, out, x),
     }
 }
 
@@ -623,6 +625,15 @@ where
 {
     collect_if(pred, out, NodeRefT::Discard(x));
     visit_expression_te(pred, out, x.expr);
+}
+
+fn visit_deref<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t DerefTE<'s, 't>)
+where
+    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
+    's: 't,
+{
+    collect_if(pred, out, NodeRefT::Deref(x));
+    visit_expression_te(pred, out, x.inner);
 }
 
 fn visit_defer<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t DeferTE<'s, 't>)
@@ -1202,15 +1213,15 @@ where
 }
 
 fn visit_coord_list_templata<'s, 't, T, F>(
-    pred: &F,
-    out: &mut Vec<T>,
-    x: &'t CoordListTemplataT<'s, 't>,
+  pred: &F,
+  out: &mut Vec<T>,
+  x: &'t KindListTemplataT<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     collect_if(pred, out, NodeRefT::CoordListTemplata(x));
-    for c in x.coords {
+    for c in x.kinds {
         visit_kind(pred, out, *c);
     }
 }
@@ -1297,7 +1308,7 @@ where
         KindT::KindPlaceholder(p) => visit_kind_placeholder(pred, out, p),
         KindT::OverloadSet(o) => visit_overload_set(pred, out, o),
         KindT::BorrowRef(b) => visit_kind(pred, out, b.inner),
-        KindT::HeapOwnRef(h) => visit_kind(pred, out, h.inner),
+        KindT::OwnRef(h) => visit_kind(pred, out, h.inner),
         KindT::ShareRef(s) => visit_kind(pred, out, s.inner),
         KindT::WeakRef(w) => visit_kind(pred, out, w.inner),
     }

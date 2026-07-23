@@ -50,7 +50,7 @@ where 's: 't,
             s.insert(ILookupContext::TemplataLookupContext);
             s
         }, self.typing_interner).expect("vassertSome: E rune") {
-            ITemplataT::Coord(ct) => ct.coord,
+            ITemplataT::Kind(ct) => ct.kind,
             _ => panic!("vwat"),
         };
 

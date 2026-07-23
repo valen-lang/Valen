@@ -40,7 +40,7 @@ where 's: 't,
             self.typing_interner.alloc(header.to_signature()),
             header.return_type,
         );
-        let len = match param_coords[0].tyype.kind {
+        let len = match param_coords[0].tyype {
             KindT::StaticSizedArray(ssa) => ssa.size(),
             other => panic!("SSALenMacro received non-SSA param: {:?}", other),
         };

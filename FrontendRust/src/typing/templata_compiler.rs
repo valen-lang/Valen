@@ -47,7 +47,7 @@ use crate::typing::rune_typing::rune_type_solver::RuneTypingCouldntFindType;
 use crate::utils::fx::HashSet;
 use std::iter::empty;
 use std::marker::PhantomData;
-
+use crate::parsing::SharednessP;
 
 #[derive(Copy, Clone)]
 pub enum IBoundArgumentsSource<'s, 't> {
@@ -58,6 +58,68 @@ pub enum IBoundArgumentsSource<'s, 't> {
     },
 }
 
+// V: ideas for where to put this?
+pub fn is_ref(kind: KindT) -> bool {
+    match kind {
+        KindT::BorrowRef(b) => true,
+        KindT::OwnRef(h) => true,
+        KindT::ShareRef(s) => true,
+        KindT::WeakRef(w) => true,
+        _ => false,
+    }
+}
+
+// Strips one reference layer, yielding what the reference points at (which may itself be a
+// reference). Returns None for a bare kind, since there is nothing to dereference.
+pub fn peel_one_reference<'x, 's, 't>(kind: &'x KindT<'s, 't>) -> Option<KindT<'s, 't>> {
+    match kind {
+        KindT::BorrowRef(b) => Some(b.inner),
+        KindT::OwnRef(h) => Some(h.inner),
+        KindT::ShareRef(s) => Some(s.inner),
+        KindT::WeakRef(w) => Some(w.inner),
+        _ => None,
+    }
+}
+
+// Strips every reference layer, yielding the underlying citizen or primitive regardless of
+// how it is referenced. Total: a bare kind is returned unchanged.
+pub fn peel_all_references<'s, 't>(kind: KindT<'s, 't>) -> KindT<'s, 't> {
+    let mut current = kind;
+    while let Some(inner) = peel_one_reference(&current) {
+        current = inner;
+    }
+    current
+}
+
+// Rebuilds `full_type_with_refs`'s chain of reference layers around `new_value_type`, so the result
+// refers to the new value type exactly the way the original referred to its own. Borrow regions
+// carry over layer for layer. A bare `full_type_with_refs` has no layers to rebuild, so the new value
+// type is returned as-is.
+//
+// Used where a type's shape is fixed but the citizen inside it changes: an override's parameter
+// against the abstract one it implements, or an upcast's result against the expression it wraps.
+pub fn replace_value_type_in_ref<'s, 't>(
+    interner: &TypingInterner<'s, 't>,
+    full_type_maybe_with_refs: KindT<'s, 't>,
+    new_value_type: KindT<'s, 't>,
+) -> KindT<'s, 't> {
+    match full_type_maybe_with_refs {
+        KindT::BorrowRef(b) => KindT::BorrowRef(interner.alloc(BorrowRefT {
+            inner: replace_value_type_in_ref(interner, b.inner, new_value_type),
+            region: b.region,
+        })),
+        KindT::OwnRef(o) => KindT::OwnRef(interner.alloc(OwnRefT {
+            inner: replace_value_type_in_ref(interner, o.inner, new_value_type),
+        })),
+        KindT::ShareRef(s) => KindT::ShareRef(interner.alloc(ShareRefT {
+            inner: replace_value_type_in_ref(interner, s.inner, new_value_type),
+        })),
+        KindT::WeakRef(w) => KindT::WeakRef(interner.alloc(WeakRefT {
+            inner: replace_value_type_in_ref(interner, w.inner, new_value_type),
+        })),
+        _ => new_value_type,
+    }
+}
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -90,10 +152,6 @@ where 's: 't,
             ITemplataT::Kind(kt) => match kt.kind {
                 KindT::KindPlaceholder(kp) => kp.id,
                 _ => panic!("vwat: get_placeholder_templata_id unexpected kind: {:?}", kt.kind),
-            },
-            ITemplataT::Coord(ct) => match ct.coord.kind {
-                KindT::KindPlaceholder(kp) => kp.id,
-                _ => panic!("vwat: get_placeholder_templata_id unexpected coord kind: {:?}", ct.coord.kind),
             },
             other => panic!("vwat: get_placeholder_templata_id unexpected templata: {:?}", other),
         }
@@ -385,43 +443,6 @@ where 's: 't,
         result
     }
 
-    pub fn substitute_templatas_in_coord(
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        sanity_check: bool,
-        interner: &'ctx TypingInterner<'s, 't>,
-        keywords: &'ctx Keywords<'s>,
-        original_calling_denizen_id: IdT<'s, 't>,
-        needle_template_name: IdT<'s, 't>,
-        new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
-        coord: KindT<'s, 't>,
-    ) -> KindT<'s, 't> {
-        let KindT { ownership, region: original_region, kind, .. } = coord;
-        let result_region = original_region;
-        match Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, kind) {
-            ITemplataT::Kind(k) => KindT::new(ownership, result_region, k.kind),
-            ITemplataT::Coord(c) => {
-                // VCOORD: revisit
-                // Composition of substituted ownership. `Borrow + share-kind` is distinct
-                // from `Share T` — Borrow-over-Share preserves the Borrow flavor (`&Share T`),
-                // Share-over-anything stays Share, Own-over-Share stays Share (no way to Own
-                // a shared kind).
-                let result_ownership = match (ownership, c.coord.ownership) {
-                    (OwnershipT::Share, _) => OwnershipT::Share,
-                    (OwnershipT::Own, OwnershipT::Share) => OwnershipT::Share,
-                    (OwnershipT::Borrow, OwnershipT::Share) => OwnershipT::Borrow,
-                    (OwnershipT::Own, OwnershipT::Own) => OwnershipT::Own,
-                    (OwnershipT::Own, OwnershipT::Borrow) => OwnershipT::Borrow,
-                    (OwnershipT::Borrow, OwnershipT::Own) => OwnershipT::Borrow,
-                    (OwnershipT::Borrow, OwnershipT::Borrow) => OwnershipT::Borrow,
-                    _ => unreachable!("remaining Weak-on-substituting-side ownership pairs are degenerate"),
-                };
-                KindT::new(result_ownership, result_region, c.coord.kind)
-            }
-            _ => unreachable!("exhaustive over KindTemplataT/CoordTemplataT only"),
-        }
-    }
-
     pub fn substitute_templatas_in_kind(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -432,18 +453,18 @@ where 's: 't,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         kind: KindT<'s, 't>,
-    ) -> ITemplataT<'s, 't> {
+    ) -> KindT<'s, 't> {
         match kind {
-            KindT::Int(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
-            KindT::Bool(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
-            KindT::Str(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
-            KindT::Float(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
-            KindT::Void(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
-            KindT::Never(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
+            KindT::Int(_) => kind,
+            KindT::Bool(_) => kind,
+            KindT::Str(_) => kind,
+            KindT::Float(_) => kind,
+            KindT::Void(_) => kind,
+            KindT::Never(_) => kind,
             KindT::RuntimeSizedArray(rsa) => {
                 let INameT::RuntimeSizedArray(rsa_name) = rsa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
-                    element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.element_type),
+                    element_type: Self::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.element_type),
                     self_region: RegionT::Default,
                 });
                 let new_rsa_name = interner.intern_runtime_sized_array_name(RuntimeSizedArrayNameT {
@@ -456,12 +477,12 @@ where 's: 't,
                     local_name: INameT::RuntimeSizedArray(new_rsa_name),
                 });
                 let new_rsa = interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: new_id });
-                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(new_rsa) }))
+                KindT::RuntimeSizedArray(new_rsa)
             }
             KindT::StaticSizedArray(ssa) => {
                 let INameT::StaticSizedArray(ssa_name) = ssa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
-                    element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.element_type),
+                    element_type: Self::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.element_type),
                     self_region: RegionT::Default,
                 });
                 let new_ssa_name = interner.intern_static_sized_array_name(StaticSizedArrayNameT {
@@ -475,7 +496,7 @@ where 's: 't,
                     local_name: INameT::StaticSizedArray(new_ssa_name),
                 });
                 let new_ssa = interner.intern_static_sized_array_tt(StaticSizedArrayTTValT { name: new_id });
-                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::StaticSizedArray(new_ssa) }))
+                KindT::StaticSizedArray(new_ssa)
             }
             KindT::KindPlaceholder(p) => {
                 let index = match p.id.local_name {
@@ -483,20 +504,42 @@ where 's: 't,
                     _ => panic!("KindPlaceholderT has non-KindPlaceholder local_name"),
                 };
                 if p.id.init_id(interner) == needle_template_name {
-                    new_substituting_templatas[index as usize]
+                    unimplemented!();
+                    // new_substituting_templatas[index as usize]
                 } else {
-                    ITemplataT::Kind(interner.alloc(KindTemplataT { kind }))
+                    kind
                 }
             }
             KindT::Struct(s) => {
                 let new_struct = Compiler::substitute_templatas_in_struct(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, s);
-                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::Struct(new_struct) }))
+                KindT::Struct(new_struct)
             }
             KindT::Interface(i) => {
                 let new_interface = Compiler::substitute_templatas_in_interface(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, i);
-                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::Interface(new_interface) }))
+                KindT::Interface(new_interface)
             }
             KindT::OverloadSet(_) => unreachable!("an OverloadSet cannot appear as a substantive kind here"),
+            KindT::BorrowRef(_) => unimplemented!(),
+            KindT::OwnRef(_) => unimplemented!(),
+            KindT::ShareRef(_) => unimplemented!(),
+            KindT::WeakRef(_) => unimplemented!(),
+
+            // // VCOORD: revisit
+            // // Composition of substituted ownership. `Borrow + share-kind` is distinct
+            // // from `Share T` — Borrow-over-Share preserves the Borrow flavor (`&Share T`),
+            // // Share-over-anything stays Share, Own-over-Share stays Share (no way to Own
+            // // a shared kind).
+            // let result_ownership = match (ownership, c.coord.ownership) {
+            //     (OwnershipT::Share, _) => OwnershipT::Share,
+            //     (OwnershipT::Own, OwnershipT::Share) => OwnershipT::Share,
+            //     (OwnershipT::Borrow, OwnershipT::Share) => OwnershipT::Borrow,
+            //     (OwnershipT::Own, OwnershipT::Own) => OwnershipT::Own,
+            //     (OwnershipT::Own, OwnershipT::Borrow) => OwnershipT::Borrow,
+            //     (OwnershipT::Borrow, OwnershipT::Own) => OwnershipT::Borrow,
+            //     (OwnershipT::Borrow, OwnershipT::Borrow) => OwnershipT::Borrow,
+            //     _ => unreachable!("remaining Weak-on-substituting-side ownership pairs are degenerate"),
+            // };
+            // KindT::new(result_ownership, result_region, c.coord.kind)
         }
     }
 
@@ -754,8 +797,7 @@ where 's: 't,
         templata: ITemplataT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
         match templata {
-            ITemplataT::Coord(c) => ITemplataT::Coord(interner.alloc(CoordTemplataT { coord: Compiler::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, c.coord) })),
-            ITemplataT::Kind(k) => Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, k.kind),
+            ITemplataT::Kind(c) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind: Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, c.kind) })),
             ITemplataT::Placeholder(p) => {
                 let pn = IPlaceholderNameT::try_from(p.id.local_name).unwrap();
                 if p.id.init_id(interner) == needle_template_name {
@@ -793,10 +835,10 @@ where 's: 't,
         }).collect();
         let substituted_template_args = interner.alloc_slice_from_vec(substituted_template_args_vec);
         let substituted_params_vec: Vec<KindT<'s, 't>> = func_name.parameters().iter().map(|coord| {
-            Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *coord)
+            Self::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *coord)
         }).collect();
         let substituted_params = interner.alloc_slice_from_vec(substituted_params_vec);
-        let substituted_return_type = Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, original_prototype.return_type);
+        let substituted_return_type = Self::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, original_prototype.return_type);
         let substituted_func_name = func_name.template().make_function_name(interner, keywords, substituted_template_args, substituted_params);
         let tentative_id = *interner.intern_id(IdValT { package_coord, init_steps, local_name: substituted_func_name });
         let perhaps_imported_id = match tentative_id.local_name {
@@ -868,12 +910,12 @@ pub struct IPlaceholderSubstituter<'s, 'ctx, 't> {
 }
 impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
     
-    pub fn substitute_for_coord(
+    pub fn substitute_for_kind(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         coord_t: KindT<'s, 't>,
     ) -> KindT<'s, 't> {
-        Compiler::substitute_templatas_in_coord(
+        Compiler::substitute_templatas_in_kind(
             coutputs,
             self.sanity_check,
             self.interner,
@@ -1145,11 +1187,11 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        source_pointer_type: KindT<'s, 't>,
-        target_pointer_type: KindT<'s, 't>,
+        source_type: KindT<'s, 't>,
+        target_type: KindT<'s, 't>,
     ) -> bool {
-        let KindT { ownership: target_ownership, region: target_region, kind: target_type, .. } = target_pointer_type;
-        let KindT { ownership: source_ownership, region: source_region, kind: source_type, .. } = source_pointer_type;
+        // let KindT { ownership: target_ownership, region: target_region, kind: target_type, .. } = target_pointer_type;
+        // let KindT { ownership: source_ownership, region: source_region, kind: source_type, .. } = source_pointer_type;
 
         match (&source_type, &target_type) {
             (KindT::Never(_), _) => return true,
@@ -1171,16 +1213,18 @@ where 's: 't,
                     IsParentResult::IsntParent(_) => return false,
                 }
             }
+
+
+            // if source_region != target_region {
+            //     return false;
+            // }
             _ => {
+
                 panic!("vfail: Dont know if we can convert from {:?} to {:?}", source_type, target_type);
             }
         }
 
-        if source_region != target_region {
-            return false;
-        }
-
-        unimplemented!()
+        unimplemented!();
         // match (source_ownership, target_ownership) {
         //     (a, b) if a == b => {}
         //     // VCOORD: revisit
@@ -1303,11 +1347,11 @@ where 's: 't,
     // ) -> ITemplataT<'s, 't> {
     //     match templata {
     //         ITemplataT::Kind(kind_templata) => {
-    //             ITemplataT::Coord(self.typing_interner.alloc(
+    //             ITemplataT::Kind(self.typing_interner.alloc(
     //                 CoordTemplataT { coord: self.coerce_kind_to_coord(coutputs, kind_templata.kind, region) }
     //             ))
     //         }
-    //         ITemplataT::Coord(_) => { panic!("vcurious"); }
+    //         ITemplataT::Kind(_) => { panic!("vcurious"); }
     //         ITemplataT::StructDefinition(_) => { panic!("vcurious"); }
     //         ITemplataT::InterfaceDefinition(_) => { panic!("vcurious"); }
     //         _ => {
@@ -1386,14 +1430,8 @@ where 's: 't,
         let rune = generic_param.rune.rune;
         match rune_type {
             ITemplataType::KindTemplataType(_) => {
-                let (kind_mutable, _region_mutable) = match &generic_param.tyype {
-                    // IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS { kind_mutable, region_mutable, .. }) => {
-                        // (if *kind_mutable { OwnershipT::Own } else { OwnershipT::Share }, *region_mutable)
-                    // }
-                    _ => (OwnershipT::Own, false),
-                };
                 ITemplataT::Kind(self.typing_interner.alloc(self.create_kind_placeholder_inner(
-                    coutputs, env, name_prefix, index, rune, kind_mutable, register_with_compiler_outputs)))
+                    coutputs, env, name_prefix, index, rune, register_with_compiler_outputs)))
             }
             // ITemplataType::KindTemplataType(_) => {
                 // let (kind_mutable, region_mutability) = match &generic_param.tyype {
@@ -1403,39 +1441,13 @@ where 's: 't,
                     // }
                     // _ => (OwnershipT::Own, IRegionMutabilityS::ReadOnlyRegion),
                 // };
-                // ITemplataT::Coord(self.typing_interner.alloc(self.create_coord_placeholder_inner(
+                // ITemplataT::Kind(self.typing_interner.alloc(self.create_coord_placeholder_inner(
                     // coutputs, env, name_prefix, index, rune, current_height,
                     // region_mutability, kind_mutable, register_with_compiler_outputs)))
             // }
             other_type => {
                 self.create_non_kind_non_region_placeholder_inner(name_prefix, index, rune, other_type)
             }
-        }
-    }
-
-    pub fn create_coord_placeholder_inner(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: IInDenizenEnvironmentT<'s, 't>,
-        name_prefix: IdT<'s, 't>,
-        index: i32,
-        rune: IRuneS<'s>,
-        current_height: Option<i32>,
-        kind_ownership: OwnershipT,
-        register_with_compiler_outputs: bool,
-    ) -> CoordTemplataT<'s, 't> {
-        // val regionPlaceholderTemplata = RegionT(DefaultRegionT)
-        let region_placeholder_templata = RegionT::Default;
-
-        // val kindPlaceholderT =
-        //   createKindPlaceholderInner(
-        //     coutputs, env, namePrefix, index, rune, sharedness, registerWithCompilerOutputs)
-        let kind_placeholder_t = self.create_kind_placeholder_inner(
-            coutputs, env, name_prefix, index, rune, kind_ownership, register_with_compiler_outputs);
-
-        // CoordTemplataT(CoordT(sharedness, regionPlaceholderTemplata, kindPlaceholderT.kind))
-        CoordTemplataT {
-            coord: KindT::new(kind_ownership, region_placeholder_templata, kind_placeholder_t.kind)
         }
     }
 
@@ -1446,7 +1458,6 @@ where 's: 't,
         name_prefix: IdT<'s, 't>,
         index: i32,
         rune: IRuneS<'s>,
-        kind_ownership: OwnershipT,
         register_with_compiler_outputs: bool,
     ) -> KindTemplataT<'s, 't> {
         // val kindPlaceholderId =
@@ -1473,17 +1484,6 @@ where 's: 't,
         if register_with_compiler_outputs {
             // coutputs.declareType(kindPlaceholderTemplateId)
             coutputs.declare_type(kind_placeholder_template_id);
-
-            // val mutability = SharednessTemplataT(sharedness match {
-            //   case OwnT => MutableT
-            //   case ShareT => ImmutableT
-            // })
-            let sharedness = match kind_ownership {
-                OwnershipT::Own => SharednessT::Single,
-                OwnershipT::Share => SharednessT::Shared,
-                _ => unreachable!("create_kind_placeholder_inner is exhaustive over Own/Share — Borrow/Weak not valid kind ownerships"),
-            };
-            coutputs.declare_type_sharedness(kind_placeholder_template_id, sharedness);
 
             // Per @BDPFWDZ: the placeholder env stays empty. Bound declarations
             // (IsaTemplataT, FunctionBoundNameT) live in the introducing function's near-env, not
@@ -1533,4 +1533,11 @@ where 's: 't,
         }))
     }
 
+}
+
+pub fn translate_sharedness(sharedness_p: SharednessP) -> SharednessT {
+    match sharedness_p {
+        SharednessP::Single => SharednessT::Single,
+        SharednessP::Shared => SharednessT::Shared,
+    }
 }

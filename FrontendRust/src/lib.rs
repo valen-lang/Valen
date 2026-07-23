@@ -25,16 +25,14 @@ pub mod parsing;
 pub mod pass_manager;
 pub mod postparsing;
 // pub mod simplifying;
-// pub mod typing;   // Unlinked to get a clean parsing+postparsing baseline before the held-region changes.
+pub mod typing;
 pub mod tests;
 // #[cfg(test)]
 // pub mod testvm;
 pub mod utils;
 // pub mod von;
-// Unlinked alongside typing for the parsing+postparsing baseline: only typing used it, and its
-// test build is independently RED on this branch (unrelated to parsing/postparsing).
-// #[path = "solver/lib.rs"]
-// pub mod solver;
+#[path = "solver/lib.rs"]
+pub mod solver;
 
 pub use interner::StrI;
 pub use keywords::Keywords;

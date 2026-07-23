@@ -54,13 +54,6 @@ where 's: 't,
             rune: use_(-64002, void_kind_rune_s),
             name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
         }));
-        let void_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidCoordRune(MacroVoidCoordRuneS {}));
-        rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
-            range: range(-1672147),
-            coord_rune: use_(-64002, void_coord_rune_s),
-            kind_rune: use_(-64002, void_kind_rune_s),
-        }));
-
         let self_kind_template_rune_s = self.scout_arena.intern_rune(IRuneValS::SelfKindTemplateRune(SelfKindTemplateRuneS { loc: struct_a.range.begin }));
         rules.push(IRulexSR::Lookup(LookupSR {
             range: struct_a.name.range(),
@@ -76,13 +69,6 @@ where 's: 't,
             result_rune: use_(-64002, self_kind_rune_s),
             template_rune: RuneUsage { range: struct_a.name.range(), rune: self_kind_template_rune_s },
             args: generic_param_runes_slice,
-        }));
-
-        let self_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::SelfCoordRune(SelfCoordRuneS {}));
-        rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
-            range: struct_a.name.range(),
-            coord_rune: RuneUsage { range: struct_a.name.range(), rune: self_coord_rune_s },
-            kind_rune: RuneUsage { range: struct_a.name.range(), rune: self_kind_rune_s },
         }));
 
         // Use the same generic parameters as the struct
@@ -110,16 +96,15 @@ where 's: 't,
                 range(-1340),
                 None,
                 false,
-                AtomSP {
-                    range: range(-1340),
-                    name: Some(CaptureS { name: IVarNameS::CodeVarName(self.keywords.thiss), mutate: false }),
-                    kind_rune: Some(use_(-64002, self_coord_rune_s)),
-                    destructure: None,
-                },
+                IVarNameS::CodeVarName(self.keywords.thiss),
+                use_(-64002, self_kind_rune_s),
+                use_(-64002, self_kind_rune_s),
+                self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+                self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
             )]),
-            Some(use_(-64002, void_coord_rune_s)),
+            Some(use_(-64002, void_kind_rune_s)),
             rules_slice,
-            IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.drop_generator }),
+            self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.drop_generator })),
         ));
         let drop_name_local = match self.translate_generic_function_name(drop_function_a.name) {
             IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
@@ -147,25 +132,23 @@ where 's: 't,
             RangeS::new(loc, loc)
         };
 
-        let drop_p1_rune = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: self.keywords.drop_p1 }));
         let drop_p1k_rune = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: self.keywords.drop_p1k }));
         let drop_vk_rune = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: self.keywords.drop_vk }));
-        let drop_v_rune = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: self.keywords.drop_v }));
 
         let params = self.scout_arena.alloc_slice_from_vec(vec![
             ParameterS::new(
                 internal_range(-1342),
                 None,
                 false,
-                AtomSP {
-                    range: internal_range(-1342),
-                    name: Some(CaptureS { name: IVarNameS::CodeVarName(self.keywords.x), mutate: false }),
-                    kind_rune: Some(RuneUsage { range: internal_range(-64002), rune: drop_p1_rune }),
-                    destructure: None,
-                }),
+                IVarNameS::CodeVarName(self.keywords.x),
+                RuneUsage { range: internal_range(-64002), rune: drop_p1k_rune },
+                RuneUsage { range: internal_range(-64002), rune: drop_p1k_rune },
+                self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+                self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+            ),
         ]);
 
-        let maybe_ret_coord_rune = Some(RuneUsage { range: internal_range(-64002), rune: drop_v_rune });
+        let maybe_ret_coord_rune = Some(RuneUsage { range: internal_range(-64002), rune: drop_vk_rune });
 
         let self_name_s = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::SelfName(SelfNameS {}));
         let void_name_s = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void }));
@@ -181,16 +164,6 @@ where 's: 't,
                 rune: RuneUsage { range: internal_range(-64002), rune: drop_vk_rune },
                 name: void_name_s,
             }),
-            IRulexSR::CoerceToCoord(CoerceToCoordSR {
-                range: internal_range(-1672162),
-                coord_rune: RuneUsage { range: internal_range(-64002), rune: drop_v_rune },
-                kind_rune: RuneUsage { range: internal_range(-64002), rune: drop_vk_rune },
-            }),
-            IRulexSR::CoerceToCoord(CoerceToCoordSR {
-                range: internal_range(-1672162),
-                coord_rune: RuneUsage { range: internal_range(-64002), rune: drop_p1_rune },
-                kind_rune: RuneUsage { range: internal_range(-64002), rune: drop_p1k_rune },
-            }),
         ]);
 
         FunctionS::new(
@@ -205,7 +178,7 @@ where 's: 't,
             params,
             maybe_ret_coord_rune,
             rules,
-            IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.drop_generator }),
+            self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.drop_generator })),
         )
     }
 
@@ -223,18 +196,20 @@ where 's: 't,
     ) -> Result<(FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         let body_env = IInDenizenEnvironmentT::Function(env);
 
-        let struct_tt = match params2[0].tyype.kind {
+        let struct_tt = match params2[0].tyype {
             KindT::Struct(s) => s,
             _ => panic!("struct drop: first param is not a struct"),
         };
         let struct_def = coutputs.lookup_struct(struct_tt.id, self);
-        let struct_ownership = match struct_def.sharedness {
-            SharednessT::Single => OwnershipT::Own,
-            SharednessT::Shared => OwnershipT::Share,
+        // A share citizen is only ever held ShareRef-wrapped; a single one is held bare.
+        let struct_type = match struct_def.sharedness {
+            SharednessT::Single => KindT::Struct(struct_tt),
+            SharednessT::Shared =>
+                KindT::ShareRef(self.typing_interner.alloc(
+                    ShareRefT { inner: KindT::Struct(struct_tt) })),
         };
-        let struct_type = KindT::new(struct_ownership, RegionT::Default, KindT::Struct(struct_tt));
 
-        let ret = KindT::new(OwnershipT::Own, RegionT::Default, KindT::Void(VoidT {}));
+        let ret = KindT::Void(VoidT {});
         let params_arena: &'t [ParameterT<'s, 't>] = self.typing_interner.alloc_slice_from_vec(params2.to_vec());
         let header = FunctionHeaderT {
             id: env.id,
@@ -260,25 +235,15 @@ where 's: 't,
             }
             SharednessT::Single => {
                 let member_local_variables: Vec<LocalVariable<'s, 't>> =
-                    struct_def.members.iter().flat_map(|member| {
-                        match member {
-                            IStructMemberT::Normal(n) => {
-                                match &n.tyype {
-                                    IMemberTypeT::Reference(r) => {
-                                        let substituter = self.get_placeholder_substituter(
-                                            self.opts.global_options.sanity_check,
-                                            env.template_id,
-                                            struct_tt.id,
-                                            IBoundArgumentsSource::InheritBoundsFromTypeItself,
-                                        );
-                                        let reference = substituter.substitute_for_coord(coutputs, r.reference);
-                                        vec![LocalVariable { name: n.name, tyype: reference }]
-                                    }
-                                    IMemberTypeT::Address(_) => vec![],
-                                }
-                            }
-                            IStructMemberT::Variadic(_) => panic!("vimpl: VariadicStructMemberT in struct drop"),
-                        }
+                    struct_def.members.iter().map(|member| {
+                        let substituter = self.get_placeholder_substituter(
+                            self.opts.global_options.sanity_check,
+                            env.template_id,
+                            struct_tt.id,
+                            IBoundArgumentsSource::InheritBoundsFromTypeItself,
+                        );
+                        let reference = substituter.substitute_for_kind(coutputs, member.tyype);
+                        LocalVariable { name: member.name, tyype: reference }
                     }).collect();
                 let member_local_variables_slice = self.typing_interner.alloc_slice_from_vec(member_local_variables.clone());
                 let arg_lookup = ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(0, struct_type)));

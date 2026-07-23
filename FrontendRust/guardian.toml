@@ -68,7 +68,6 @@ include_shields = [
     { name = "MultiLineValeFixtures-MLVFX.md" },
     { name = "AllowedFileExtensionsOnly-AFEOX.md" },
 
-    { name = "AllowedFileExtensionsOnly-AFEOX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
     { name = "MailboxWorkflow-MBXX.md" },

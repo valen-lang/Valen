@@ -4,7 +4,7 @@ Read `vcoord-handoff.md` first for the design; this doc synthesizes what a 10-in
 
 **Blast radius (rough numbers surfaced across investigations):**
 
-- ~40 files with pattern-match sites on `ITemplataT::Coord` / `CoordT` fields — highest densities in `compiler_solver.rs` (63 refs), `compiler_error_humanizer.rs` (49), `templata_compiler.rs` (39), `rune_type_solver.rs` (39). (Formerly also `higher_typing_pass.rs` (29 refs) — since retired.)
+- ~40 files with pattern-match sites on `ITemplataT::Kind` / `CoordT` fields — highest densities in `compiler_solver.rs` (63 refs), `compiler_error_humanizer.rs` (49), `templata_compiler.rs` (39), `rune_type_solver.rs` (39). (Formerly also `higher_typing_pass.rs` (29 refs) — since retired.)
 - ~200 pattern-match sites on the `(ownership, region, kind)` triple.
 - ~400 region-threading argument sites disappear from typing (functions taking `context_region: RegionT`).
 - ~120 `RegionT { region: IRegionT::Default }` literals evaporate.
@@ -56,15 +56,15 @@ Two systems retire in tandem:
 
 Every intermediate state that still constructs `CoordT` trips today's checks. Either use the migration alias `type Coord = Kind` (handoff §Q4 tactical) or delete `CoordT` construction in the same slice that adds `BorrowRef`.
 
-### 1.4 `ITemplataT::Coord` collapses into `ITemplataT::Kind`
+### 1.4 `ITemplataT::Kind` collapses into `ITemplataT::Kind`
 
-Under onion, the `Coord` / `Kind` variant split in `ITemplataT`, `ITemplataI`, and `ITemplataType` collapses to a single `Kind` variant. Every match arm that pattern-matches `ITemplataT::Coord(ct) => ct.coord` / `ITemplataT::Kind(kt) => kt.kind` in the resolver collapses to a single arm — no more ownership+region unpacking.
+Under onion, the `Coord` / `Kind` variant split in `ITemplataT`, `ITemplataI`, and `ITemplataType` collapses to a single `Kind` variant. Every match arm that pattern-matches `ITemplataT::Kind(ct) => ct.coord` / `ITemplataT::Kind(kt) => kt.kind` in the resolver collapses to a single arm — no more ownership+region unpacking.
 
 - `CoerceToCoordSR` + `coerce_kind_lookup_to_coord` + `coerce_kind_template_lookup_to_coord` + the Kind→Coord "will convert, so is fine" auto-legal in `rune_type_solver.rs:486` — all become no-ops and delete.
 - Surface-syntax `Ref` (→`ITypePR::CoordType`) and `Kind` (→`ITypePR::KindType`) merge (architect's call which keyword survives).
 - `expect_coord_templata` (`templata.rs:45`) survives semantically as a smart-view (or is renamed `expect_kind_templata`).
 
-**Landmine (critic):** If migration alias is used, `HashMap<CoordT, X>` becomes `HashMap<KindT, X>` transparently. But if `ITemplataT::Coord(x) == ITemplataT::Kind(y)` merges its equality semantics, callers comparing `ITemplataT` values in maps or in the identifiability solver may silently change behavior. Sequencing matters.
+**Landmine (critic):** If migration alias is used, `HashMap<CoordT, X>` becomes `HashMap<KindT, X>` transparently. But if `ITemplataT::Kind(x) == ITemplataT::Kind(y)` merges its equality semantics, callers comparing `ITemplataT` values in maps or in the identifiability solver may silently change behavior. Sequencing matters.
 
 ### 1.5 `ISubKindTT` / `ISuperKindTT` / `ICitizenTT` — a design decision blocks isa work
 
@@ -201,11 +201,11 @@ This already resembles "every arg's namespace" — but the per-file/parameter-me
 
 Kind and Coord collapse into a single templata at all three IR layers (T / I / H). Concretely:
 
-- `ITemplataT::Coord` / `ITemplataT::Kind` variants collapse to single `Kind` variant. Same for `ITemplataI` and `ITemplataType`.
+- `ITemplataT::Kind` / `ITemplataT::Kind` variants collapse to single `Kind` variant. Same for `ITemplataI` and `ITemplataType`.
 - Every match arm pattern-matching on the two variants collapses.
 - `CoerceToCoordSR` + `coerce_kind_lookup_to_coord` + `coerce_kind_template_lookup_to_coord` retire.
 - Surface `Ref` / `Kind` keywords merge (architect's call which survives).
-- Generic bounds like `where clone(&T) T` change signature — today `CoordSendSR` and `ResolveSR` conclude `ITemplataT::Coord(...)`; under onion they conclude `ITemplataT::Kind(...)` where the Kind may include a `BorrowRef` layer.
+- Generic bounds like `where clone(&T) T` change signature — today `CoordSendSR` and `ResolveSR` conclude `ITemplataT::Kind(...)`; under onion they conclude `ITemplataT::Kind(...)` where the Kind may include a `BorrowRef` layer.
 - **AtomSP `coord_rune: Option<RuneUsage>`** field is threaded through the entire scout→postparse→typing pipeline. Under onion this becomes `kind_rune` semantically. Rename vs semantic-shift-without-rename is a decision (50+ sites; rename is bigger diff, more grep-able for the future reader).
 
 ---
@@ -475,7 +475,7 @@ Branches on `OwnershipH` but does NOT render to strings that tests assert on —
 8. **Manual PartialEq/Hash on `IEnvEntryT` dedupe assumption** (`env/i_env_entry.rs:26-55`) — `ITemplataT` variant uses derived Hash. Under onion the `Coord` variant collapses into `Kind`; verify `ITemplataT` still hashes cleanly through the migration alias transition.
 9. **`RegionT` vanishing from non-Borrow layers breaks region-propagation code path counts** — ~120 `RegionT { region: IRegionT::Default }` literals thread a region through EVERY call site regardless of whether that call site's Coord will end up as a BorrowRef. If ambient `context_region` is dropped at intermediate levels, a later coercion that wraps in BorrowRef has no region to use.
 10. **Parser surface `&&` collision requires atomic flip** — templex parser (`templex_parser.rs:271`) and expression parser (`expression_parser.rs:1937`) both parse `&&` as `OwnershipP::Weak`. Under onion `&&` becomes double-borrow. Must land parser flip + all 13 weak fixtures + humanizer swap + `weak` keyword in **one atomic commit** — no incremental slice possible.
-11. **Migration alias `type Coord = Kind` interacts with `expect_coord_templata`** (`templata.rs:45`) — with the alias, `Coord = Kind` at the type level but `ITemplataT::Coord` and `ITemplataT::Kind` remain distinct enum variants (or merge). Sequence carefully around `ITemplataT`.
+11. **Migration alias `type Coord = Kind` interacts with `expect_coord_templata`** (`templata.rs:45`) — with the alias, `Coord = Kind` at the type level but `ITemplataT::Kind` and `ITemplataT::Kind` remain distinct enum variants (or merge). Sequence carefully around `ITemplataT`.
 12. **`KindPlaceholderT` (`types.rs:413`) has NO ref-layer arm and no ownership axis.** Under onion, does a placeholder itself have an implicit shape? Does `func foo<T>(x T)` mean T ranges over any Kind including BorrowRef, or bare non-ref Kinds only? Handoff doesn't say. Blocks the trip's blanket — implies T ranges over all shapes, but then `func drop<T>(self T)` may resolve for T=BorrowRef which is nonsense.
 
 ---

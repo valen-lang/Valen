@@ -16,7 +16,7 @@ use crate::typing::types::types::FloatT;
 use crate::typing::typing_interner::TypingInterner;
 use std::any::Any;
 use std::marker::PhantomData;
-
+use crate::typing::templata_compiler::{is_ref, peel_one_reference};
 
 /// Arena-allocated (see @TFITCX)
 //
@@ -80,6 +80,7 @@ pub enum ExpressionTE<'s, 't> {
     RuntimeSizedArrayLookup(&'t RuntimeSizedArrayLookupTE<'s, 't>),
     ReferenceMemberLookup(&'t ReferenceMemberLookupTE<'s, 't>),
     AddressMemberLookup(&'t AddressMemberLookupTE<'s, 't>),
+    Deref(&'t DerefTE<'s, 't>),
 }
 
 impl<'s, 't> ExpressionTE<'s, 't> where 's: 't {
@@ -134,6 +135,7 @@ impl<'s, 't> ExpressionTE<'s, 't> where 's: 't {
             ExpressionTE::RuntimeSizedArrayLookup(e) => KindT::BorrowRef(e.result),
             ExpressionTE::ReferenceMemberLookup(e) => KindT::BorrowRef(e.result),
             ExpressionTE::AddressMemberLookup(e) => KindT::BorrowRef(e.result),
+            ExpressionTE::Deref(e) => e.result,
         }
     }
     
@@ -791,6 +793,33 @@ impl<'s, 't> AddressMemberLookupTE<'s, 't> where 's: 't, {
         AddressMemberLookupTE { range, struct_expr, member_name, result, _sealed: () }
     }
 }
+
+/// Arena-allocated (see @TFITCX)
+#[derive(Debug)]
+pub struct DerefTE<'s, 't>
+where 's: 't,
+{
+    pub range: RangeS<'s>,
+    pub inner: ExpressionTE<'s, 't>,
+    pub result: KindT<'s, 't>,
+    _sealed: (),
+}
+
+impl<'s, 't> DerefTE<'s, 't> where 's: 't, {
+    pub fn new(
+        interner: &TypingInterner<'s, 't>,
+        range: RangeS<'s>,
+        inner: ExpressionTE<'s, 't>,
+    ) -> DerefTE<'s, 't> {
+        let result =
+            if let Some(result) = peel_one_reference(&inner.result()) {
+                result
+            } else {
+                panic!("DerefTE inner isnt a reference");
+            };
+        DerefTE { range, inner, result, _sealed: () }
+    }
+}
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct InterfaceFunctionCallTE<'s, 't>
@@ -1104,6 +1133,8 @@ impl<'s, 't> UpcastTE<'s, 't> where 's: 't, {
         impl_name: IdT<'s, 't>,
     ) -> UpcastTE<'s, 't> {
         // VCOORD: preserve the inner wrap and swap the innermost citizen to target_super_kind.
+        // ZHERE: replace_value_type_in_ref(interner, inner_expr.result(), target_super_kind.into())
+        // gives that result. Needs an `interner` parameter, which this constructor doesn't take yet.
         unimplemented!("UpcastTE onion result")
     }
 }

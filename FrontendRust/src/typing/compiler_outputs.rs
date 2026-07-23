@@ -531,16 +531,6 @@ where 's: 't,
         panic!("Unimplemented: Slab 10");
     }
     
-    pub fn lookup_mutability(
-        &self,
-        template_name: IdT<'s, 't>,
-    ) -> SharednessT {
-        match self.type_name_to_sharedness.get(&template_name) {
-            None => panic!("Still figuring out mutability for struct: {:?}", template_name),
-            Some(s) => *s,
-        }
-    }
-    
     pub fn lookup_sealed(
         &self,
         template_name: IdT<'s, 't>,

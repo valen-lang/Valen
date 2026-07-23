@@ -28,7 +28,7 @@ pub struct BorrowRefT<'s, 't> {
 
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct HeapOwnRefT<'s, 't> {
+pub struct OwnRefT<'s, 't> {
   pub inner: KindT<'s, 't>,
 }
 
@@ -63,7 +63,7 @@ pub enum KindT<'s, 't> {
   KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
   OverloadSet(&'t OverloadSetT<'s, 't>),
   BorrowRef(&'t BorrowRefT<'s, 't>),
-  HeapOwnRef(&'t HeapOwnRefT<'s, 't>),
+  OwnRef(&'t OwnRefT<'s, 't>),
   ShareRef(&'t ShareRefT<'s, 't>),
   WeakRef(&'t WeakRefT<'s, 't>),
 }
@@ -109,7 +109,7 @@ impl<'s, 't> KindT<'s, 't> {
       KindT::KindPlaceholder(_) => false,
       KindT::OverloadSet(_) => true,
       KindT::BorrowRef(_) => false,
-      KindT::HeapOwnRef(_) => false,
+      KindT::OwnRef(_) => false,
       KindT::ShareRef(_) => false,
       KindT::WeakRef(_) => false,
     }

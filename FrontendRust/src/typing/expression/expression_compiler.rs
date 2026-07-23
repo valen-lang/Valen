@@ -1,5 +1,5 @@
 use crate::typing::compiler::Compiler;
-use crate::postparsing::ast::{LocationInDenizen, FunctionS, IFunctionAttributeS, UserFunctionS, IExpressionSE as IExpressionSETrait};
+use crate::postparsing::ast::{LocationInDenizen, FunctionS, IExpressionSE as IExpressionSETrait};
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
@@ -17,7 +17,7 @@ use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
 use crate::utils::fx::IndexMap;
 use crate::utils::fx::{HashMap, HashSet};
-use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::typing::templata_compiler::{is_ref, IBoundArgumentsSource};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::ast::citizens::{StructMemberT};
 use crate::typing::env::environment::ILookupContext;
@@ -82,33 +82,63 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        range: &[RangeS<'s>],
+        ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         name: IVarNameT<'s, 't>,
         target_ownership: LoadAsP,
     ) -> Result<Option<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
-        match self.evaluate_addressible_lookup(coutputs, nenv, range, region, name)? {
-            Some(x) => {
-                // VCOORD: revisit
-                // Bare-use (LoadAsP::Use) of an Own non-primitive local produces a
-                // Borrow-flavored SoftLoad; auto-coercion (implicit_clone, alias,
-                // MustExplicitlyMove) lives target-side in convert(). Primitives still
-                // fire wrap_in_implicit_clone because get_borrow_ownership returns Share
-                // for Int/Bool/Float/Str/Void — borrow_soft_load would construct an
-                // illegal Share+primitive CoordT.
-                let thing = match (target_ownership, x.result().ownership) {
-                    (LoadAsP::Use, OwnershipT::Own) if !self.is_primitive(x.result()) => {
-                        self.borrow_soft_load(coutputs, x)
-                    }
-                    (LoadAsP::Use, OwnershipT::Own) => {
-                        // VCOORD: retire — this is the primitive Own bare-use path still
-                        // going through wrap_in_implicit_clone.
-                        self.wrap_in_implicit_clone(coutputs, nenv, range, call_location, region, x)?
-                    }
-                    _ => self.soft_load(nenv, range, x, target_ownership, region),
+        match nenv.get_variable(name, self.typing_interner) {
+            Some(IVariableT::Local(rlv)) => {
+                if nenv.unstackifieds().contains(&rlv.name) {
+                    return Err(ICompileErrorT::CantUseUnstackifiedLocal {
+                        range: self.typing_interner.alloc_slice_copy(ranges),
+                        local_id: rlv.name,
+                    });
+                }
+                // We want to decay any &&Ship to &Ship, but that hasn't happened yet.
+                let lookup_te_undecayed =
+                    ExpressionTE::LocalLookup(self.typing_interner.alloc(
+                        LocalLookupTE::new(self.typing_interner, ranges[0], rlv)));
+                // Now, decay any &&Ship to &Ship.
+                let lookup_te_decayed =
+                    match lookup_te_undecayed.result() {
+                        KindT::BorrowRef(BorrowRefT { region: _, inner: KindT::BorrowRef(BorrowRefT { region: _, inner: inner_kind }) }) => {
+                            ExpressionTE::Deref(self.typing_interner.alloc(
+                                DerefTE::new(self.typing_interner, ranges[0], lookup_te_undecayed)))
+                        }
+                        _ => {
+                            lookup_te_undecayed
+                        }
+                    };
+                // ZHERE: EAGER auto-deref (read/load path only). After building the lookup, if its
+                // result is BorrowRef(inner) with `inner` a reference kind (Borrow/Share/Weak/Own),
+                // wrap it in a new DerefTE that peels exactly ONE layer -> the stored reference, so a
+                // `&Ship` local mentions as `&Ship`, not `&&Ship`. Factor as a shared read helper and
+                // call it from the member/array lookup read paths too. convert() stays unchanged.
+                panic!();
+                Ok(Some(lookup_te_decayed))
+            }
+            Some(IVariableT::Capture(rcv)) => {
+                let closured_vars_struct_ref = *rcv.closured_vars_struct_type;
+                let closured_vars_struct_template_id = self.get_struct_template(closured_vars_struct_ref.id);
+                let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
+                    INameT::LambdaCitizenTemplate(n) => n,
+                    _ => panic!("evaluate_addressible_lookup ReferenceClosure: expected LambdaCitizenTemplateNameT"),
                 };
-                Ok(Some(ExpressionTE::Reference(thing)))
+                // VCOORD: this might need to go away
+                // ZHERE: implement closure-var mention (a member-lookup into the closure struct); currently unwired.
+                panic!("unimplemented!");
+                // let closured_vars_struct_ref_coord = KindT::new(ownership, RegionT::Default, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)));
+                // let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
+                // assert!(closured_vars_struct_def.members.iter().any(|m| m.name == rcv.name));
+                // let borrow_expr = self.borrow_soft_load(coutputs, ExpressionTE::LocalLookup(self.typing_interner.alloc(
+                //     LocalLookupTE::new(self.typing_interner, ranges[0], LocalVariable::Reference(LocalVariable {
+                //         name: IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location})),
+                //         tyype: closured_vars_struct_ref_coord,
+                //     })))));
+                // Ok(Some(ExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(
+                //     ReferenceMemberLookupTE::new(self.typing_interner, ranges[0], borrow_expr, rcv.name, rcv.coord)))))
             }
             None => {
                 let name_as_name_t: INameT<'s, 't> = name.into();
@@ -116,18 +146,46 @@ where 's: 't,
                     [ILookupContext::TemplataLookupContext].into_iter().collect();
                 match nenv.lookup_nearest_with_name(name_as_name_t, &lookup_filter) {
                     Some(ITemplataT::Integer(num)) => {
-                        Ok(Some(ExpressionTE::Reference(ExpressionTE::ConstantInt(self.typing_interner.alloc(
-                            ConstantIntTE::new(ITemplataT::Integer(num), 32, region))))))
+                        Ok(Some(ExpressionTE::ConstantInt(self.typing_interner.alloc(
+                            ConstantIntTE::new(ITemplataT::Integer(num), 32, region)))))
                     }
                     Some(ITemplataT::Boolean(b)) => {
-                        Ok(Some(ExpressionTE::Reference(ExpressionTE::ConstantBool(self.typing_interner.alloc(
-                            ConstantBoolTE::new(b, region))))))
+                        Ok(Some(ExpressionTE::ConstantBool(self.typing_interner.alloc(
+                            ConstantBoolTE::new(b, region)))))
                     }
                     None => Ok(None),
                     _ => unreachable!("evaluateLookupForLoad None-branch is exhaustive over IntegerTemplataT/BooleanTemplataT/None"),
                 }
-            }
+            },
+            #[allow(unreachable_patterns)]
+            _ => panic!("evaluate_addressible_lookup: unexpected variable type"),
         }
+
+        // match self.evaluate_addressible_lookup(coutputs, nenv, range, region, name)? {
+        //     Some(x) => {
+        //         // VCOORD: revisit
+        //         // Bare-use (LoadAsP::Use) of an Own non-primitive local produces a
+        //         // Borrow-flavored SoftLoad; auto-coercion (implicit_clone, alias,
+        //         // MustExplicitlyMove) lives target-side in convert(). Primitives still
+        //         // fire wrap_in_implicit_clone because get_borrow_ownership returns Share
+        //         // for Int/Bool/Float/Str/Void — borrow_soft_load would construct an
+        //         // illegal Share+primitive CoordT.
+        //         let thing = match (target_ownership, x.result().ownership) {
+        //             (LoadAsP::Use, OwnershipT::Own) if !self.is_primitive(x.result()) => {
+        //                 self.borrow_soft_load(coutputs, x)
+        //             }
+        //             (LoadAsP::Use, OwnershipT::Own) => {
+        //                 // VCOORD: retire — this is the primitive Own bare-use path still
+        //                 // going through wrap_in_implicit_clone.
+        //                 self.wrap_in_implicit_clone(coutputs, nenv, range, call_location, region, x)?
+        //             }
+        //             _ => self.soft_load(nenv, range, x, target_ownership, region),
+        //         };
+        //         Ok(Some(ExpressionTE::Reference(thing)))
+        //     }
+        //     None => {
+        //     }
+        // }
     }
 
     pub fn evaluate_addressible_lookup_for_mutate(
@@ -141,34 +199,27 @@ where 's: 't,
     ) -> Option<ExpressionTE<'s, 't>> {
         let name_2 = self.translate_var_name_step(name_a);
         match nenv.get_variable(name_2, self.typing_interner) {
-            Some(IVariableT::Local(alv)) => {
-                Some(ExpressionTE::LocalLookup(self.typing_interner.alloc(
-                    LocalLookupTE::new(self.typing_interner, load_range, LocalVariable::Addressible(alv)))))
-            }
             Some(IVariableT::Local(rlv)) => {
                 Some(ExpressionTE::LocalLookup(self.typing_interner.alloc(
-                    LocalLookupTE::new(self.typing_interner, load_range, LocalVariable::Reference(rlv)))))
+                    LocalLookupTE::new(self.typing_interner, load_range, rlv))))
             }
             Some(IVariableT::Capture(acv)) => {
-                let closured_vars_struct_ref = *acv.closured_vars_struct_type;
-                let closured_vars_struct_template_id = self.get_struct_template(closured_vars_struct_ref.id);
-                let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
-                    INameT::LambdaCitizenTemplate(n) => n,
-                    _ => panic!("evaluate_addressible_lookup_for_mutate AddressibleClosure: expected LambdaCitizenTemplateNameT"),
-                };
-                // VCOORD: this might need to go away
-                let ownership = match self.get_sharedness(coutputs, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref))) {
-                    SharednessT::Single => OwnershipT::Borrow,
-                    SharednessT::Shared => OwnershipT::Share,
-                };
-                let closured_vars_struct_ref_coord = KindT::new(ownership, RegionT::Default, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)));
-                let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location}));
-                let borrow_expr = self.borrow_soft_load(coutputs, ExpressionTE::LocalLookup(self.typing_interner.alloc(
-                    LocalLookupTE::new(self.typing_interner, load_range, LocalVariable::Reference(LocalVariable { name: closure_param_var_name_2, tyype: closured_vars_struct_ref_coord })))));
-                let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
-                assert!(closured_vars_struct_def.members.iter().any(|m| m.name == acv.name));
-                Some(ExpressionTE::AddressMemberLookup(self.typing_interner.alloc(
-                    AddressMemberLookupTE::new(self.typing_interner, load_range, borrow_expr, acv.name, acv.coord))))
+                // let closured_vars_struct_ref = *acv.closured_vars_struct_type;
+                // let closured_vars_struct_template_id = self.get_struct_template(closured_vars_struct_ref.id);
+                // let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
+                //     INameT::LambdaCitizenTemplate(n) => n,
+                //     _ => panic!("evaluate_addressible_lookup_for_mutate AddressibleClosure: expected LambdaCitizenTemplateNameT"),
+                // };
+                // // VCOORD: this might need to go away
+                // let closured_vars_struct_ref_coord = KindT::BorrowRef(BorrowRefT{ region: RegionT::Default, inner: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) });
+                // let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location}));
+                // let borrow_expr = self.borrow_soft_load(coutputs, ExpressionTE::LocalLookup(self.typing_interner.alloc(
+                //     LocalLookupTE::new(self.typing_interner, load_range, LocalVariable { name: closure_param_var_name_2, tyype: closured_vars_struct_ref_coord }))));
+                // let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
+                // assert!(closured_vars_struct_def.members.iter().any(|m| m.name == acv.name));
+                // Some(ExpressionTE::AddressMemberLookup(self.typing_interner.alloc(
+                //     AddressMemberLookupTE::new(self.typing_interner, load_range, borrow_expr, acv.name, acv.coord))))
+                panic!("unimplemented!");
             }
             Some(IVariableT::Capture(_)) => {
                 panic!("implement: evaluate_addressible_lookup_for_mutate — ReferenceClosureVariableT");
@@ -204,80 +255,6 @@ where 's: 't,
         }
     }
 
-    pub fn evaluate_addressible_lookup(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        ranges: &[RangeS<'s>],
-        region: RegionT,
-        name_2: IVarNameT<'s, 't>,
-    ) -> Result<Option<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
-        match nenv.get_variable(name_2, self.typing_interner) {
-            Some(IVariableT::Local(alv)) => {
-                assert!(!nenv.unstackifieds().contains(&alv.name));
-                Ok(Some(ExpressionTE::LocalLookup(self.typing_interner.alloc(
-                    LocalLookupTE::new(self.typing_interner, ranges[0], LocalVariable::Addressible(alv))))))
-            }
-            Some(IVariableT::Local(rlv)) => {
-                if nenv.unstackifieds().contains(&rlv.name) {
-                    return Err(ICompileErrorT::CantUseUnstackifiedLocal {
-                        range: self.typing_interner.alloc_slice_copy(ranges),
-                        local_id: rlv.name,
-                    });
-                }
-                Ok(Some(ExpressionTE::LocalLookup(self.typing_interner.alloc(
-                    LocalLookupTE::new(self.typing_interner, ranges[0], LocalVariable::Reference(rlv))))))
-            }
-            Some(IVariableT::Capture(acv)) => {
-                let closured_vars_struct_ref = *acv.closured_vars_struct_type;
-                let closured_vars_struct_template_id = self.get_struct_template(closured_vars_struct_ref.id);
-                let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
-                    INameT::LambdaCitizenTemplate(n) => n,
-                    _ => panic!("evaluate_addressible_lookup AddressibleClosure: expected LambdaCitizenTemplateNameT"),
-                };
-                // VCOORD: this might need to go away
-                let ownership = match self.get_sharedness(coutputs, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref))) {
-                    SharednessT::Single => OwnershipT::Borrow,
-                    SharednessT::Shared => OwnershipT::Share,
-                };
-                let closured_vars_struct_ref_coord = KindT::new(ownership, RegionT::Default, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)));
-                let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location}));
-                let borrow_expr = self.borrow_soft_load(coutputs, ExpressionTE::LocalLookup(self.typing_interner.alloc(
-                    LocalLookupTE::new(self.typing_interner, ranges[0], LocalVariable::Reference(LocalVariable { name: closure_param_var_name_2, tyype: closured_vars_struct_ref_coord })))));
-                let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
-                assert!(closured_vars_struct_def.members.iter().any(|m| m.name == acv.name));
-                Ok(Some(ExpressionTE::AddressMemberLookup(self.typing_interner.alloc(
-                    AddressMemberLookupTE::new(self.typing_interner, ranges[0], borrow_expr, acv.name, acv.coord)))))
-            }
-            Some(IVariableT::Capture(rcv)) => {
-                let closured_vars_struct_ref = *rcv.closured_vars_struct_type;
-                let closured_vars_struct_template_id = self.get_struct_template(closured_vars_struct_ref.id);
-                let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
-                    INameT::LambdaCitizenTemplate(n) => n,
-                    _ => panic!("evaluate_addressible_lookup ReferenceClosure: expected LambdaCitizenTemplateNameT"),
-                };
-                // VCOORD: this might need to go away
-                let ownership = match self.get_sharedness(coutputs, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref))) {
-                    SharednessT::Single => OwnershipT::Borrow,
-                    SharednessT::Shared => OwnershipT::Share,
-                };
-                let closured_vars_struct_ref_coord = KindT::new(ownership, RegionT::Default, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)));
-                let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
-                assert!(closured_vars_struct_def.members.iter().any(|m| m.name == rcv.name));
-                let borrow_expr = self.borrow_soft_load(coutputs, ExpressionTE::LocalLookup(self.typing_interner.alloc(
-                    LocalLookupTE::new(self.typing_interner, ranges[0], LocalVariable::Reference(LocalVariable {
-                        name: IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location})),
-                        tyype: closured_vars_struct_ref_coord,
-                    })))));
-                Ok(Some(ExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(
-                    ReferenceMemberLookupTE::new(self.typing_interner, ranges[0], borrow_expr, rcv.name, rcv.coord)))))
-            }
-            None => Ok(None),
-            #[allow(unreachable_patterns)]
-            _ => panic!("evaluate_addressible_lookup: unexpected variable type"),
-        }
-    }
-
     pub fn make_closure_struct_construct_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -297,47 +274,27 @@ where 's: 't,
         // Note, this is where the unordered closuredNames set becomes ordered.
         let lookup_expressions2: Vec<ExpressionTE<'s, 't>> =
             closure_struct_def.members.iter().map(|member| {
-                match member {
-                    IStructMemberT::Variadic(_) => {
-                        panic!("implement: make_closure_struct_construct_expression — VariadicStructMemberT (closures cant contain variadic members)");
-                        // vwat() // closures cant contain variadic members
-                    }
-                    IStructMemberT::Normal(StructMemberT { name: member_name, tyype, .. }) => {
-                        let lookup = self.evaluate_addressible_lookup(coutputs, nenv, range, region, *member_name)
-                            .unwrap_or_else(|_| panic!("evaluate_addressible_lookup error"))
-                            .unwrap_or_else(|| panic!("Couldn't find {:?}", member_name));
-                        match tyype {
-                            IMemberTypeT::Reference(ReferenceMemberTypeT { reference: unsubstituted_coord }) => {
-                                let coord = substituter.substitute_for_coord(coutputs, *unsubstituted_coord);
-                                assert_eq!(coord.kind, lookup.result());
-                                // Closures never contain owning references.
-                                // If we're capturing an own, then on the inside of the closure
-                                // it's a borrow or a weak. See "Captured own is borrow" test for more.
-                                assert!(coord.ownership != OwnershipT::Own);
-                                let borrow_loaded = self.borrow_soft_load(coutputs, lookup);
-                                ExpressionTE::Reference(borrow_loaded)
-                            }
-                            IMemberTypeT::Address(AddressMemberTypeT { reference: unsubstituted_coord }) => {
-                                let coord = substituter.substitute_for_coord(coutputs, *unsubstituted_coord);
-                                assert_eq!(coord, lookup.result());
-                                ExpressionTE::Address(lookup)
-                            }
-                        }
-                    }
-                }
+                let StructMemberT { name: member_name, tyype, .. } = member;
+                // let lookup = self.evaluate_addressible_lookup(coutputs, nenv, range, region, *member_name)
+                //     .unwrap_or_else(|_| panic!("evaluate_addressible_lookup error"))
+                //     .unwrap_or_else(|| panic!("Couldn't find {:?}", member_name));
+                // let coord = substituter.substitute_for_coord(coutputs, *tyype);
+                // assert_eq!(coord, lookup.result());
+                // // Closures never contain owned objects.
+                // // If we're capturing an own, then on the inside of the closure
+                // // it's a borrow or a weak. See "Captured own is borrow" test for more.
+                // assert!(is_ref(coord));
+                // panic!("unimplemented");
+                // // let borrow_loaded = self.borrow_soft_load(coutputs, lookup);
+                // // borrow_loaded
+                panic!("unimplemented!");
             }).collect();
-        let ownership =
-            // VCOORD: this might need to go away
-            match closure_struct_def.sharedness {
-                SharednessT::Single => OwnershipT::Own,
-                SharednessT::Shared => OwnershipT::Share,
-            };
         let struct_ref = self.typing_interner.alloc(closure_struct_ref);
-        let result_pointer_type = KindT::new(ownership, region, KindT::Struct(struct_ref));
+        let result_type = KindT::Struct(struct_ref);
 
         let construct_expr2 = ConstructTE::new(
             struct_ref,
-            result_pointer_type,
+            result_type,
             self.typing_interner.alloc_slice_from_vec(lookup_expressions2),
         );
         ExpressionTE::Construct(self.typing_interner.alloc(construct_expr2))
@@ -363,51 +320,29 @@ where 's: 't,
         region: RegionT,
         addr: ExpressionTE<'s, 't>,
     ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        let addr_coord = addr.result();
-        let borrow_coord = KindT::new(OwnershipT::Borrow, addr_coord.region, addr_coord.kind);
-        let borrow_te = ExpressionTE::SoftLoad(
-            self.typing_interner.alloc(SoftLoadTE { expr: addr, target_ownership: OwnershipT::Borrow }));
-        let calling_env = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
-        let stamp = self.resolve_function(
-            calling_env, coutputs, range, call_location,
-            self.keywords.implicit_clone,
-            &[borrow_coord],
-            region, true,
-        )?.map_err(|fff| ICompileErrorT::CouldntFindFunctionToCallT {
-            range: self.typing_interner.alloc_slice_copy(range),
-            fff,
-        })?;
-        assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp.prototype.id).is_some());
-        let args_te = self.typing_interner.alloc_slice_from_vec(vec![borrow_te]);
-        Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(
-            FunctionCallTE::new(stamp.prototype, args_te, stamp.prototype.return_type))))
+        panic!("implement");
+        // let addr_coord = addr.result();
+        // let borrow_coord = KindT::BorrowRef(&BorrowRefT{ region: RegionT::Default, inner: addr_coord });
+        // let borrow_te = ExpressionTE::SoftLoad(
+        //     self.typing_interner.alloc(SoftLoadTE { expr: addr, target_ownership: OwnershipT::Borrow }));
+        // let calling_env = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
+        // let stamp = self.resolve_function(
+        //     calling_env, coutputs, range, call_location,
+        //     self.keywords.implicit_clone,
+        //     &[borrow_coord],
+        //     region, true,
+        // )?.map_err(|fff| ICompileErrorT::CouldntFindFunctionToCallT {
+        //     range: self.typing_interner.alloc_slice_copy(range),
+        //     fff,
+        // })?;
+        // assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp.prototype.id).is_some());
+        // let args_te = self.typing_interner.alloc_slice_from_vec(vec![borrow_te]);
+        // Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(
+        //     FunctionCallTE::new(stamp.prototype, args_te, stamp.prototype.return_type))))
     }
 
-    pub fn evaluate_expected_address_expression(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        parent_ranges: &'t [RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        region: RegionT,
-        expr_1: &'s IExpressionSE<'s>,
-    ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>), ICompileErrorT<'s, 't>> {
-        let (expr_2, returns) =
-            self.evaluate_expression(coutputs, nenv, life, parent_ranges, call_location, region, expr_1)?;
-        let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-            &once(expr_1.range()).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
-        match expr_2 {
-            ExpressionTE::Address(a) => Ok((a, returns)),
-            ExpressionTE::Reference(_) => {
-                Err(ICompileErrorT::RangedInternalErrorT {
-                    range: range_with_parent,
-                    message: "Expected reference expression!",
-                })
-            }
-        }
-    }
-
+    // VCOORD: think about bringing back AddressibleExpression,
+    // so we can have more guarantees about things getting references
     pub fn evaluate_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -420,14 +355,12 @@ where 's: 't,
     ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>), ICompileErrorT<'s, 't>> {
         match expr_1 {
             IExpressionSE::Void(_) => {
-                Ok((ExpressionTE::Reference(
-                    ExpressionTE::VoidLiteral(self.typing_interner.alloc(
-                        VoidLiteralTE::new(region)))), HashSet::default()))
+                Ok((ExpressionTE::VoidLiteral(self.typing_interner.alloc(
+                        VoidLiteralTE::new(region))), HashSet::default()))
             }
             IExpressionSE::ConstantInt(c) => {
-                Ok((ExpressionTE::Reference(
-                    ExpressionTE::ConstantInt(self.typing_interner.alloc(
-                        ConstantIntTE::new(ITemplataT::Integer(c.value), c.bits, region)))), HashSet::default()))
+                Ok((ExpressionTE::ConstantInt(self.typing_interner.alloc(
+                        ConstantIntTE::new(ITemplataT::Integer(c.value), c.bits, region))), HashSet::default()))
             }
             IExpressionSE::Return(ret) => {
                 let (uncasted_inner_expr_2, returns_from_inner_expr) =
@@ -481,7 +414,7 @@ where 's: 't,
                 };
                 let result_let =
                     ExpressionTE::LetNormal(self.typing_interner.alloc(
-                        LetNormalTE::new(LocalVariable::Reference(result_variable), inner_expr_2)));
+                        LetNormalTE::new(result_variable, inner_expr_2)));
                 nenv.add_variable(IVariableT::Local(result_variable));
 
                 let range_list: Vec<RangeS<'s>> =
@@ -492,7 +425,7 @@ where 's: 't,
                         &reversed_variables_to_destruct)?;
 
                 let get_result_expr = self.unlet_local_without_dropping(
-                    nenv, &LocalVariable::Reference(result_variable));
+                    nenv, &result_variable);
                 let get_result_expr_ref =
                     ExpressionTE::Unlet(self.typing_interner.alloc(get_result_expr));
 
@@ -506,7 +439,7 @@ where 's: 't,
                 let return_te =
                     ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(consecutor)));
 
-                Ok((ExpressionTE::Reference(return_te), returns))
+                Ok((return_te, returns))
             }
             IExpressionSE::Let(let_se) => {
                 let (source_expr_2, returns_from_source) =
@@ -553,7 +486,7 @@ where 's: 't,
                     },
                 );
 
-                Ok((ExpressionTE::Reference(result_te), returns_from_source))
+                Ok((result_te, returns_from_source))
             }
             IExpressionSE::Consecutor(consecutor_se) => {
                 assert!(region == nenv.default_region());
@@ -591,7 +524,7 @@ where 's: 't,
                 init_returns.extend(last_returns);
 
                 let result = self.consecutive(&init_exprs_te);
-                Ok((ExpressionTE::Reference(result), init_returns))
+                Ok((result, init_returns))
             }
             IExpressionSE::LocalLoad(local_load) => {
                 let name = self.translate_var_name_step(local_load.name);
@@ -665,19 +598,20 @@ where 's: 't,
                                 &template_arg_runes,
                                 &container_receiving_rune_to_explicit_template_arg_rune,
                                 &args_exprs_2)?;
-                        Ok((ExpressionTE::Reference(call_expr_2), returns_from_args))
+                        Ok((call_expr_2, returns_from_args))
                     }
                     _ => {
                         let (undecayed_callable_expr_2, returns_from_callable) =
                             self.evaluate_expression(
                                 coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, fc.location, region, fc.callable_expr)?;
-                        let decayed_callable_expr_2_ref =
-                            self.maybe_borrow_soft_load(coutputs, &ExpressionTE::Reference(undecayed_callable_expr_2));
-                        let decayed_callable_reference_expr_2 =
-                            self.coerce_to_reference_expression(
-                                coutputs, nenv, life.add(self.typing_interner, 1),
-                                parent_ranges, fc.location,
-                                ExpressionTE::Reference(decayed_callable_expr_2_ref), region)?;
+                        // let decayed_callable_expr_2_ref =
+                        //     self.maybe_borrow_soft_load(coutputs, &undecayed_callable_expr_2);
+                        // let decayed_callable_reference_expr_2 =
+                        //     self.coerce_to_reference_expression(
+                        //         coutputs, nenv, life.add(self.typing_interner, 1),
+                        //         parent_ranges, fc.location,
+                        //         decayed_callable_expr_2_ref, region)?;
+                        let decayed_callable_reference_expr_2 = undecayed_callable_expr_2;
                         let (args_exprs_2, returns_from_args) =
                             self.evaluate_and_coerce_to_reference_expressions(
                                 coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, fc.location,
@@ -702,7 +636,7 @@ where 's: 't,
                                 &args_exprs_2)?;
                         let mut all_returns = returns_from_callable;
                         all_returns.extend(returns_from_args);
-                        Ok((ExpressionTE::Reference(function_pointer_call_2), all_returns))
+                        Ok((function_pointer_call_2, all_returns))
                     }
                 }
             }
@@ -712,7 +646,7 @@ where 's: 't,
                     &once(function_s.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                 let call_expr_2 = self.evaluate_closure(
                     coutputs, nenv, range_list, outer_call_location, region, function_s.name, function_s)?;
-                Ok((ExpressionTE::Reference(call_expr_2), HashSet::default()))
+                Ok((call_expr_2, HashSet::default()))
             }
             IExpressionSE::CopyPrim(cp) => {
                 // TEMP: typing-pass handler for source-level `__copy_prim(x)` syntax.
@@ -729,119 +663,115 @@ where 's: 't,
                 // VCOORD: eventually put here something that checks if it's Copyable.
                 // or maybe thisll just go away? we might not even be able to do this from source someday.
                 // /VCOORD
-                let result_coord = KindT::new(OwnershipT::Own, inner_coord.region, inner_coord.kind);
+                let result_coord = inner_coord;
                 let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(inner_te, result_coord));
-                Ok((ExpressionTE::Reference(ExpressionTE::CopyPrim(copy_prim_te)), returns_from_inner))
+                Ok((ExpressionTE::CopyPrim(copy_prim_te), returns_from_inner))
             }
             IExpressionSE::Ownershipped(ownershipped) => {
                 // VCOORD: clean this all up
                 let (inner_expr_2, returns_from_inner) =
                     self.evaluate_expression(
                         coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, ownershipped.inner_expr)?;
-                match inner_expr_2 {
-                    ExpressionTE::Address(addr) => {
-                        let range_with_parent: Vec<RangeS<'s>> =
-                            once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
-                        let result = self.soft_load(nenv, &range_with_parent, addr, ownershipped.target_ownership, region);
-                        return Ok((ExpressionTE::Reference(result), returns_from_inner));
+
+                match inner_expr_2.result() {
+                    KindT::BorrowRef(BorrowRefT { inner, region }) => { // source is borrow
+                        match ownershipped.target_ownership {
+                            LoadAsP::Move => { // want to move a borrow source
+                                // V: this can happen if ...
+                                match inner_expr_2 {
+                                    ExpressionTE::LocalLookup(LocalLookupTE { local_variable, .. }) => {
+                                        // VCOORD: it's weird that we' previously allocated an LocalLookupTE but now we're discarding it.
+                                        Ok((ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE::new(*local_variable))), returns_from_inner))
+                                    }
+                                    _ => {
+                                        // V: put an error here
+                                        unimplemented!()
+                                    }
+                                }
+                            }
+                            LoadAsP::LoadAsBorrow => { // want to borrow a borrow source
+                                Ok((inner_expr_2, returns_from_inner))
+                            },
+                            LoadAsP::LoadAsWeak => { // want to weak-borrow a borrow source
+                                let range_with_parent: Vec<RangeS<'s>> =
+                                    once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
+                                Ok((self.weak_alias(coutputs, self.typing_interner.alloc_slice_copy(&range_with_parent), inner_expr_2)?, returns_from_inner))
+                            }
+                            LoadAsP::Use => Ok((inner_expr_2, returns_from_inner)),
+                        }
                     }
-                    ExpressionTE::Reference(r) => {
-                        let source_te = r;
-                        let result_expr_2 =
-                            match source_te.result().ownership {
-                                OwnershipT::Own => { // source is own
-                                    match ownershipped.target_ownership {
-                                        LoadAsP::Move => { // want to move an owning source
-                                            // this can happen if we put a ^ on an owning reference. No harm, let it go.
-                                            source_te
-                                        }
-                                        LoadAsP::LoadAsBorrow => { // want to borrow an owning source
-                                            let range_with_parent: Vec<RangeS<'s>> =
-                                                once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
-                                            let defer_te = self.make_temporary_local_defer(
-                                                coutputs, nenv, &range_with_parent, outer_call_location,
-                                                life.add(self.typing_interner, 1), region,
-                                                source_te, OwnershipT::Borrow)?;
-                                            ExpressionTE::Defer(defer_te)
-                                        }
-                                        LoadAsP::LoadAsWeak => { // want to weak-borrow a owning source
-                                            let range_with_parent: Vec<RangeS<'s>> =
-                                                once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
-                                            let defer_te = self.make_temporary_local_defer(
-                                                coutputs, nenv, &range_with_parent, outer_call_location,
-                                                life.add(self.typing_interner, 3), region,
-                                                source_te, OwnershipT::Borrow)?;
-                                            let expr = ExpressionTE::Defer(defer_te);
-                                            self.weak_alias(coutputs, self.typing_interner.alloc_slice_copy(&range_with_parent), expr)?
-                                        }
-                                        LoadAsP::Use => {
-                                            panic!("vcurious");
-                                        },
-                                        LoadAsP::LoadAsShare => todo!()
-                                    }
-                                }
-                                OwnershipT::Borrow => { // source is borrow
-                                    match ownershipped.target_ownership {
-                                        LoadAsP::Move => { // want to move a borrow source
-                                            panic!("implement: Ownershipped BorrowT MoveP (vcurious)");
-                                            // vcurious() // Can we even coerce to an owning reference?
-                                        }
-                                        LoadAsP::LoadAsBorrow => { // want to borrow a borrow source
-                                            source_te
-                                        },
-                                        LoadAsP::LoadAsWeak => { // want to weak-borrow a borrow source
-                                            let range_with_parent: Vec<RangeS<'s>> =
-                                                once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
-                                            self.weak_alias(coutputs, self.typing_interner.alloc_slice_copy(&range_with_parent), source_te)?
-                                        }
-                                        LoadAsP::Use => source_te,
-                                        LoadAsP::LoadAsShare => unimplemented!()
-                                    }
-                                }
-                                OwnershipT::Weak => { // source is weak
-                                    panic!("implement: Ownershipped WeakT");
-                                    // loadAsP match {
-                                    //   case MoveP => vcurious() // Can we even coerce to an owning reference?
-                                    //   case LoadAsBorrowP => vimpl()
-                                    //   case LoadAsWeakP => sourceTE
-                                    //   case UseP => sourceTE
-                                    // }
-                                }
-                                OwnershipT::Share => { // source is share
-                                    match ownershipped.target_ownership {
-                                        LoadAsP::Move => { // want to move a share source
-                                            // Allow this, we can do ^ on a share ref, itll just give us a share ref.
-                                            source_te
-                                        }
-                                        LoadAsP::LoadAsBorrow => { // want to borrow a share source
-                                            // This is basically the same case as borrowing an own source.
-                                            // Allow this, store it in a local for the duration of the borrow.
-                                            // This happens if the user wants to do e.g.:
-                                            //   func foo_string() str { "foo" }
-                                            //   func bar_string() str { "bar" }
-                                            //   func main() { foo_string() + bar_string() }
-                                            // + borrows its inputs, they want to borrow it for
-                                            // the duration of the +.
-                                            let range_with_parent = [&[ownershipped.range][..], parent_ranges].concat();
-                                            let defer_te = self.make_temporary_local_defer(
-                                                coutputs, nenv, &range_with_parent, outer_call_location,
-                                                life.add(self.typing_interner, 1), region,
-                                                source_te, OwnershipT::Borrow)?;
-                                            ExpressionTE::Defer(defer_te)
-                                        }
-                                        LoadAsP::LoadAsWeak => { // want to weak-borrow a share source
-                                            panic!("implement: Ownershipped ShareT LoadAsWeakP");
-                                            // vfail()
-                                        }
-                                        LoadAsP::Use => { // want to use a share source, no mention of how
-                                            source_te
-                                        },
-                                        LoadAsP::LoadAsShare => unimplemented!(),
-                                    }
-                                }
-                            };
-                        Ok((ExpressionTE::Reference(result_expr_2), returns_from_inner))
-                        // /VCOORD
+                    KindT::WeakRef(WeakRefT { inner }) => { // source is weak
+                        panic!("implement: Ownershipped WeakT");
+                        // loadAsP match {
+                        //   case MoveP => vcurious() // Can we even coerce to an owning reference?
+                        //   case LoadAsBorrowP => vimpl()
+                        //   case LoadAsWeakP => sourceTE
+                        //   case UseP => sourceTE
+                        // }
+                    }
+                    KindT::ShareRef(ShareRefT { inner }) => { // source is share
+                        match ownershipped.target_ownership {
+                            LoadAsP::Move => { // want to move a share source
+                                // Allow this, we can do ^ on a share ref, itll just give us a share ref.
+                                Ok((inner_expr_2, returns_from_inner))
+                            }
+                            LoadAsP::LoadAsBorrow => { // want to borrow a share source
+                                // This is basically the same case as borrowing an own source.
+                                // Allow this, store it in a local for the duration of the borrow.
+                                // This happens if the user wants to do e.g.:
+                                //   func foo_string() str { "foo" }
+                                //   func bar_string() str { "bar" }
+                                //   func main() { foo_string() + bar_string() }
+                                // + borrows its inputs, they want to borrow it for
+                                // the duration of the +.
+                                let range_with_parent = [&[ownershipped.range][..], parent_ranges].concat();
+                                let defer_te = self.make_temporary_local_defer(
+                                    coutputs, nenv, &range_with_parent, outer_call_location,
+                                    life.add(self.typing_interner, 1), region,
+                                    inner_expr_2)?;
+                                Ok((ExpressionTE::Defer(defer_te), returns_from_inner))
+                            }
+                            LoadAsP::LoadAsWeak => { // want to weak-borrow a share source
+                                // ZHERE: implement `weak x` (LoadAsWeak) — WeakRef of the source.
+                                panic!("implement: Ownershipped ShareT LoadAsWeakP");
+                                // vfail()
+                            }
+                            LoadAsP::Use => { // want to use a share source, no mention of how
+                                Ok((inner_expr_2, returns_from_inner))
+                            },
+                        }
+                    }
+                    _ => { // Not a ref
+                        match ownershipped.target_ownership {
+                            LoadAsP::Move => { // want to move an owning source
+                                // this can happen if we put a ^ on an owning reference. No harm, let it go.
+                                panic!("vcurious");
+                                // source_te
+                            }
+                            LoadAsP::LoadAsBorrow => { // want to borrow an owning source
+                                let range_with_parent: Vec<RangeS<'s>> =
+                                    once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
+                                let defer_te = self.make_temporary_local_defer(
+                                    coutputs, nenv, &range_with_parent, outer_call_location,
+                                    life.add(self.typing_interner, 1), region,
+                                    inner_expr_2)?;
+                                Ok((ExpressionTE::Defer(defer_te), returns_from_inner))
+                            }
+                            LoadAsP::LoadAsWeak => { // want to weak-borrow a owning source
+                                let range_with_parent: Vec<RangeS<'s>> =
+                                    once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
+                                let defer_te = self.make_temporary_local_defer(
+                                    coutputs, nenv, &range_with_parent, outer_call_location,
+                                    life.add(self.typing_interner, 3), region,
+                                    inner_expr_2)?;
+                                let expr = ExpressionTE::Defer(defer_te);
+                                panic!("unimplemented");
+                                // self.weak_alias(coutputs, self.typing_interner.alloc_slice_copy(&range_with_parent), expr)?
+                            }
+                            LoadAsP::Use => {
+                                panic!("vcurious");
+                            },
+                        }
                     }
                 }
             }
@@ -875,7 +805,7 @@ where 's: 't,
                                     instantiation_bound_params: struct_def.instantiation_bound_params,
                                     instantiation_bound_arguments: instantiation_bounds,
                                 })
-                            .substitute_for_coord(coutputs, unsubstituted_member_type);
+                            .substitute_for_kind(coutputs, unsubstituted_member_type);
                         assert!(struct_def.members.iter().any(|m| m.name == member_name));
                         ExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(
                             ReferenceMemberLookupTE::new(self.typing_interner, dot.range, container_expr_2, member_name, member_type)))
@@ -938,7 +868,7 @@ where 's: 't,
                     }
                     _ => {}
                 }
-                Ok((ExpressionTE::Address(expr_2), returns_from_container_expr))
+                Ok((expr_2, returns_from_container_expr))
             }
             IExpressionSE::If(if_se) => {
                 // We make a block for the if-statement which contains its condition (the "if block"),
@@ -950,8 +880,7 @@ where 's: 't,
                     self.evaluate_expression(
                         coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, nenv.default_region(), if_se.condition)?;
                 match condition_expr.result() {
-                    KindT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
-                    KindT { ownership: OwnershipT::Borrow, kind: KindT::Bool(_), .. } => {}
+                    KindT::Bool(_) => {}
                     actual_type => {
                         let range_with_parent: Vec<RangeS<'s>> =
                             once(if_se.condition.range()).chain(parent_ranges.iter().copied()).collect();
@@ -1006,11 +935,6 @@ where 's: 't,
                     _ => true,
                 };
 
-                if then_continues && else_continues && uncoerced_then_block_2.result.ownership != uncoerced_else_block_2.result.ownership {
-                    panic!("implement: evaluate_expression If — CantReconcileBranchesResults ownership mismatch");
-                    // throw CompileErrorExceptionT(CantReconcileBranchesResults(range :: parentRanges, uncoercedThenBlock2.result.coord, uncoercedElseBlock2.result.coord))
-                }
-
                 let common_type = match (uncoerced_then_block_2.result, uncoerced_else_block_2.result) {
                     // If one side has a return-never, use the other side.
                     (KindT::Never(NeverT { from_break: false }), _) => uncoerced_else_block_2.result,
@@ -1032,14 +956,6 @@ where 's: 't,
                                     self.get_parents(coutputs, parent_ranges, outer_call_location, nenv_snap, ISubKindTT::try_from(b).unwrap()).into_iter().collect();
                                 let common_ancestors: Vec<ISuperKindTT<'s, 't>> = a_ancestors.intersection(&b_ancestors).copied().collect();
 
-                                if uncoerced_else_block_2.result.ownership != uncoerced_else_block_2.result.ownership {
-                                    let range_with_parent: Vec<RangeS<'s>> =
-                                        once(if_se.range).chain(parent_ranges.iter().copied()).collect();
-                                    let _ = range_with_parent;
-                                    panic!("CompileErrorExceptionT RangedInternalErrorT: Two branches of if have different ownerships!\n{:?}\n{:?}", a_c, b_c);
-                                }
-                                let ownership = uncoerced_else_block_2.result.ownership;
-
                                 if common_ancestors.is_empty() {
                                     let range_with_parent: Vec<RangeS<'s>> =
                                         once(if_se.range).chain(parent_ranges.iter().copied()).collect();
@@ -1051,7 +967,7 @@ where 's: 't,
                                     let _ = range_with_parent;
                                     panic!("CompileErrorExceptionT RangedInternalErrorT: More than one common ancestor of two branches of if:\n{:?}\n{:?}", a_c, b_c);
                                 } else {
-                                    KindT::new(ownership, RegionT::Default, KindT::from(common_ancestors[0]))
+                                    KindT::from(common_ancestors[0])
                                 }
                             }
                             _ => {
@@ -1137,7 +1053,7 @@ where 's: 't,
                 let mut all_returns = returns_from_condition;
                 all_returns.extend(then_returns_from_exprs);
                 all_returns.extend(else_returns_from_exprs);
-                Ok((ExpressionTE::Reference(if_expr_2), all_returns))
+                Ok((if_expr_2, all_returns))
             }
             IExpressionSE::Break(b) => {
                 // See BEAFB, we need to find the nearest while to see local since then.
@@ -1153,7 +1069,7 @@ where 's: 't,
                         let drops_te = self.drop_since(coutputs, while_nenv, nenv, &range_with_parent, outer_call_location, life, region, void_literal)?;
                         let break_te = ExpressionTE::Break(self.typing_interner.alloc(BreakTE::new(region)));
                         let drops_and_break_te = self.consecutive(&[drops_te, break_te]);
-                        Ok((ExpressionTE::Reference(drops_and_break_te), HashSet::default()))
+                        Ok((drops_and_break_te, HashSet::default()))
                     }
                 }
             }
@@ -1214,150 +1130,152 @@ where 's: 't,
                 }
 
                 let loop_expr_2 = ExpressionTE::While(self.typing_interner.alloc(WhileTE::new(uncoerced_body_block_2)));
-                Ok((ExpressionTE::Reference(loop_expr_2), body_returns_from_exprs))
+                Ok((loop_expr_2, body_returns_from_exprs))
             }
             IExpressionSE::Map(m) => {
-                // Preprocess the entire loop once, to predict what its result type
-                // will be.
-                // We can't just use this, because any returns inside won't drop
-                // the temporary list.
-                let element_ref_t = {
-                    // See BEAFB for why we make a new environment for the While
-                    let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
-                    let body_se_as_expr: &'s IExpressionSE<'s> =
-                        self.scout_arena.alloc(IExpressionSE::Block(m.body));
-                    let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
-                    let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
-                    let (body_expressions_with_result, _) =
-                        self.evaluate_block_statements(
-                            coutputs,
-                            loop_block_fate_starting,
-                            &mut loop_block_fate,
-                            life.add(self.typing_interner, 1),
-                            parent_ranges,
-                            outer_call_location,
-                            nenv.default_region(),
-                            m.body)?;
-                    body_expressions_with_result.result()
-                };
-
-                // Now that we know the result type, let's make a temporary list.
-
-                let self_rune_irune = self.scout_arena.intern_rune(IRuneValS::SelfRune(SelfRuneS {}));
-                let self_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: self_rune_irune}));
-                let element_coord_templata: &'t CoordTemplataT<'s, 't> = self.typing_interner.alloc(CoordTemplataT { coord: element_ref_t });
-                let snap = nenv.snapshot(self.typing_interner);
-                let call_env_node = snap.add_entries(
-                    self.typing_interner,
-                    self.scout_arena,
-                    &[(self_rune_name_t, IEnvEntryT::Templata(ITemplataT::Coord(element_coord_templata)))]);
-                let call_env = IInDenizenEnvironmentT::Node(call_env_node);
-                let make_list_callable = self.new_global_function_group_expression(
-                    call_env, coutputs, RegionT::Default,
-                    self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.list })));
-                let range_with_parent_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                    &once(m.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
-                let rune_parent_env_lookup_rule = IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
-                    range: m.range,
-                    rune: RuneUsage { range: m.range, rune: self_rune_irune },
-                });
-                let make_list_te = self.evaluate_prefix_call(
-                    coutputs,
-                    nenv,
-                    life.add(self.typing_interner, 1),
-                    range_with_parent_t,
-                    outer_call_location,
-                    region,
-                    make_list_callable,
-                    &[rune_parent_env_lookup_rule],
-                    &[self_rune_irune],
-                    &[],
-                    &[])?;
-
-                let list_local = self.make_temporary_local(
-                    nenv, life.add(self.typing_interner, 2), make_list_te.result());
-                let let_list_te = ExpressionTE::LetNormal(self.typing_interner.alloc(
-                    LetNormalTE::new(LocalVariable::Reference(list_local), make_list_te)));
-
-                let (loop_te, returns_from_loop) = {
-                    // See BEAFB for why we make a new environment for the While
-                    let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
-                    let body_se_as_expr: &'s IExpressionSE<'s> =
-                        self.scout_arena.alloc(IExpressionSE::Block(m.body));
-                    let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
-                    let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
-                    let (user_body_te, body_returns_from_exprs) =
-                        self.evaluate_block_statements(
-                            coutputs,
-                            loop_block_fate_starting,
-                            &mut loop_block_fate,
-                            life.add(self.typing_interner, 1),
-                            parent_ranges,
-                            outer_call_location,
-                            nenv.default_region(),
-                            m.body)?;
-
-                    // We store the iteration result in a local because the loop body will have
-                    // breaks, and we can't have a BreakTE inside a FunctionCallTE, see BRCOBS.
-                    let iteration_result_local = self.make_temporary_local(
-                        nenv, life.add(self.typing_interner, 3), user_body_te.result());
-                    let let_iteration_result_te = ExpressionTE::LetNormal(self.typing_interner.alloc(
-                        LetNormalTE::new(LocalVariable::Reference(iteration_result_local), user_body_te)));
-
-                    let add_callable = self.new_global_function_group_expression(
-                        call_env, coutputs, RegionT::Default,
-                        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.add })));
-                    let local_lookup_te = ExpressionTE::LocalLookup(self.typing_interner.alloc(
-                        LocalLookupTE::new(self.typing_interner, m.range, LocalVariable::Reference(list_local))));
-                    let borrow_load = self.borrow_soft_load(coutputs, local_lookup_te);
-                    let unlet_iter = ExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, &LocalVariable::Reference(iteration_result_local))));
-                    let add_call = self.evaluate_prefix_call(
-                        coutputs,
-                        nenv,
-                        life.add(self.typing_interner, 4),
-                        range_with_parent_t,
-                        outer_call_location,
-                        region,
-                        add_callable,
-                        &[],
-                        &[],
-                        &[],
-                        &[borrow_load, unlet_iter])?;
-                    let body_te = BlockTE::new(self.consecutive(&[let_iteration_result_te, add_call]));
-
-                    let (body_unstackified_ancestor_locals, body_restackified_ancestor_locals) =
-                        loop_block_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
-                    if !body_unstackified_ancestor_locals.is_empty() {
-                        return Err(ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
-                            range: range_with_parent_t,
-                            local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
-                        });
-                    }
-                    if !body_restackified_ancestor_locals.is_empty() {
-                        return Err(ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile {
-                            range: range_with_parent_t,
-                            local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
-                        });
-                    }
-
-                    let while_te = ExpressionTE::While(self.typing_interner.alloc(WhileTE::new(body_te)));
-                    (while_te, body_returns_from_exprs)
-                };
-
-                let unlet_list_te = ExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, &LocalVariable::Reference(list_local))));
-
-                let combined_te = self.consecutive(&[let_list_te, loop_te, unlet_list_te]);
-
-                Ok((ExpressionTE::Reference(combined_te), returns_from_loop))
+                // // Preprocess the entire loop once, to predict what its result type
+                // // will be.
+                // // We can't just use this, because any returns inside won't drop
+                // // the temporary list.
+                // let element_ref_t = {
+                //     // See BEAFB for why we make a new environment for the While
+                //     let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
+                //     let body_se_as_expr: &'s IExpressionSE<'s> =
+                //         self.scout_arena.alloc(IExpressionSE::Block(m.body));
+                //     let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
+                //     let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
+                //     let (body_expressions_with_result, _) =
+                //         self.evaluate_block_statements(
+                //             coutputs,
+                //             loop_block_fate_starting,
+                //             &mut loop_block_fate,
+                //             life.add(self.typing_interner, 1),
+                //             parent_ranges,
+                //             outer_call_location,
+                //             nenv.default_region(),
+                //             m.body)?;
+                //     body_expressions_with_result.result()
+                // };
+                //
+                // // Now that we know the result type, let's make a temporary list.
+                //
+                // let self_rune_irune = self.scout_arena.intern_rune(IRuneValS::SelfRune(SelfRuneS {}));
+                // let self_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: self_rune_irune}));
+                // let element_coord_templata: &'t KindTemplataT<'s, 't> = self.typing_interner.alloc(KindTemplataT { kind: element_ref_t });
+                // let snap = nenv.snapshot(self.typing_interner);
+                // let call_env_node = snap.add_entries(
+                //     self.typing_interner,
+                //     self.scout_arena,
+                //     &[(self_rune_name_t, IEnvEntryT::Templata(ITemplataT::Kind(element_coord_templata)))]);
+                // let call_env = IInDenizenEnvironmentT::Node(call_env_node);
+                // let make_list_callable = self.new_global_function_group_expression(
+                //     call_env, coutputs, RegionT::Default,
+                //     self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.list })));
+                // let range_with_parent_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                //     &once(m.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                // let rune_parent_env_lookup_rule = IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
+                //     range: m.range,
+                //     rune: RuneUsage { range: m.range, rune: self_rune_irune },
+                // });
+                // let make_list_te = self.evaluate_prefix_call(
+                //     coutputs,
+                //     nenv,
+                //     life.add(self.typing_interner, 1),
+                //     range_with_parent_t,
+                //     outer_call_location,
+                //     region,
+                //     make_list_callable,
+                //     &[rune_parent_env_lookup_rule],
+                //     &[self_rune_irune],
+                //     &[],
+                //     &[])?;
+                //
+                // let list_local = self.make_temporary_local(
+                //     nenv, life.add(self.typing_interner, 2), make_list_te.result());
+                // let let_list_te = ExpressionTE::LetNormal(self.typing_interner.alloc(
+                //     LetNormalTE::new(LocalVariable::Reference(list_local), make_list_te)));
+                //
+                // let (loop_te, returns_from_loop) = {
+                //     // See BEAFB for why we make a new environment for the While
+                //     let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
+                //     let body_se_as_expr: &'s IExpressionSE<'s> =
+                //         self.scout_arena.alloc(IExpressionSE::Block(m.body));
+                //     let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
+                //     let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
+                //     let (user_body_te, body_returns_from_exprs) =
+                //         self.evaluate_block_statements(
+                //             coutputs,
+                //             loop_block_fate_starting,
+                //             &mut loop_block_fate,
+                //             life.add(self.typing_interner, 1),
+                //             parent_ranges,
+                //             outer_call_location,
+                //             nenv.default_region(),
+                //             m.body)?;
+                //
+                //     // We store the iteration result in a local because the loop body will have
+                //     // breaks, and we can't have a BreakTE inside a FunctionCallTE, see BRCOBS.
+                //     let iteration_result_local = self.make_temporary_local(
+                //         nenv, life.add(self.typing_interner, 3), user_body_te.result());
+                //     let let_iteration_result_te = ExpressionTE::LetNormal(self.typing_interner.alloc(
+                //         LetNormalTE::new(LocalVariable::Reference(iteration_result_local), user_body_te)));
+                //
+                //     let add_callable = self.new_global_function_group_expression(
+                //         call_env, coutputs, RegionT::Default,
+                //         self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.add })));
+                //     let local_lookup_te = ExpressionTE::LocalLookup(self.typing_interner.alloc(
+                //         LocalLookupTE::new(self.typing_interner, m.range, LocalVariable::Reference(list_local))));
+                //     let borrow_load = self.borrow_soft_load(coutputs, local_lookup_te);
+                //     let unlet_iter = ExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, &LocalVariable::Reference(iteration_result_local))));
+                //     let add_call = self.evaluate_prefix_call(
+                //         coutputs,
+                //         nenv,
+                //         life.add(self.typing_interner, 4),
+                //         range_with_parent_t,
+                //         outer_call_location,
+                //         region,
+                //         add_callable,
+                //         &[],
+                //         &[],
+                //         &[],
+                //         &[borrow_load, unlet_iter])?;
+                //     let body_te = BlockTE::new(self.consecutive(&[let_iteration_result_te, add_call]));
+                //
+                //     let (body_unstackified_ancestor_locals, body_restackified_ancestor_locals) =
+                //         loop_block_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
+                //     if !body_unstackified_ancestor_locals.is_empty() {
+                //         return Err(ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
+                //             range: range_with_parent_t,
+                //             local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
+                //         });
+                //     }
+                //     if !body_restackified_ancestor_locals.is_empty() {
+                //         return Err(ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile {
+                //             range: range_with_parent_t,
+                //             local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
+                //         });
+                //     }
+                //
+                //     let while_te = ExpressionTE::While(self.typing_interner.alloc(WhileTE::new(body_te)));
+                //     (while_te, body_returns_from_exprs)
+                // };
+                //
+                // let unlet_list_te = ExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, &LocalVariable::Reference(list_local))));
+                //
+                // let combined_te = self.consecutive(&[let_list_te, loop_te, unlet_list_te]);
+                //
+                // Ok((ExpressionTE::Reference(combined_te), returns_from_loop))
+                unimplemented!();
             }
             IExpressionSE::ExprMutate(em) => {
                 let (unconverted_source_expr_2, returns_from_source) =
                     self.evaluate_expression(
                         coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), em.expr)?;
                 let (destination_expr_2, returns_from_destination) =
-                    self.evaluate_expected_address_expression(
+                    self.evaluate_expression(
                         coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, region, em.mutatee)?;
-                // Variability removed: all members/elements are uniformly mutable; no CantMutateFinal* checks.
+                assert!(is_ref(destination_expr_2.result()));
+
                 let range_with_parent: Vec<RangeS<'s>> =
                     once(em.range).chain(parent_ranges.iter().copied()).collect();
                 let is_convertible =
@@ -1373,11 +1291,12 @@ where 's: 't,
                 let converted_source_expr_2 =
                     self.convert(nenv, life, coutputs, &range_with_parent, outer_call_location,
                         region, unconverted_source_expr_2, destination_expr_2.result())?;
+                // VCOORD: lets rename all the _2 to _te etc.
                 let mutate_2 = ExpressionTE::Mutate(self.typing_interner.alloc(
                     MutateTE::new(destination_expr_2, converted_source_expr_2)));
                 let mut returns = returns_from_source;
                 returns.extend(returns_from_destination);
-                Ok((ExpressionTE::Reference(mutate_2), returns))
+                Ok((mutate_2, returns))
             }
             IExpressionSE::LocalMutate(lm) => {
                 let (unconverted_source_expr_2, returns_from_source) =
@@ -1416,7 +1335,7 @@ where 's: 't,
                             MutateTE::new(destination_expr_2, converted_source_expr_2)))
                     }
                 };
-                Ok((ExpressionTE::Reference(expr_te), returns_from_source))
+                Ok((expr_te, returns_from_source))
             }
             IExpressionSE::Tuple(t) => {
                 let (exprs_2, returns_from_elements) =
@@ -1429,7 +1348,7 @@ where 's: 't,
                     outer_call_location,
                     exprs_2,
                 );
-                Ok((ExpressionTE::Reference(expr_2), returns_from_elements))
+                Ok((expr_2, returns_from_elements))
             }
             IExpressionSE::StaticArrayFromValues(sav) => {
                 let (exprs_2, returns_from_elements) =
@@ -1448,7 +1367,7 @@ where 's: 't,
                     exprs_2,
                     region,
                 )?;
-                Ok((ExpressionTE::Reference(ExpressionTE::StaticArrayFromValues(self.typing_interner.alloc(expr_2))), returns_from_elements))
+                Ok((ExpressionTE::StaticArrayFromValues(self.typing_interner.alloc(expr_2)), returns_from_elements))
             }
             IExpressionSE::StaticArrayFromCallable(sa) => {
                 let (callable_te, returns_from_callable) =
@@ -1467,7 +1386,7 @@ where 's: 't,
                     sa.size_st.rune,
                     callable_te,
                 )?;
-                Ok((ExpressionTE::Reference(ExpressionTE::StaticArrayFromCallable(self.typing_interner.alloc(expr_2))), returns_from_callable))
+                Ok((ExpressionTE::StaticArrayFromCallable(self.typing_interner.alloc(expr_2)), returns_from_callable))
             }
             IExpressionSE::NewRuntimeSizedArray(nrsa) => {
                 let (size_te, returns_from_size) = self.evaluate_expression(
@@ -1495,7 +1414,7 @@ where 's: 't,
                 )?;
                 let mut returns = returns_from_size;
                 returns.extend(returns_from_callable);
-                Ok((ExpressionTE::Reference(expr_2), returns))
+                Ok((expr_2, returns))
             }
             IExpressionSE::Block(b) => {
                 let mut child_environment = NodeEnvironmentBox::new(nenv.make_child(self.typing_interner, expr_1, None));
@@ -1519,7 +1438,7 @@ where 's: 't,
                 for local in restackified_ancestor_locals {
                     nenv.mark_local_restackified(local);
                 }
-                Ok((ExpressionTE::Reference(block_2), returns_from_exprs))
+                Ok((block_2, returns_from_exprs))
             }
             // IExpressionSE::Pure(_) => {
                 // panic!("implement: evaluate_expression — Pure");
@@ -1529,18 +1448,23 @@ where 's: 't,
             IExpressionSE::ConstantStr(c) => {
                 let result = ExpressionTE::ConstantStr(self.typing_interner.alloc(
                     ConstantStrTE::new(self.typing_interner, c.value, region)));
-                Ok((ExpressionTE::Reference(result), HashSet::default()))
+                Ok((result, HashSet::default()))
             }
             IExpressionSE::ConstantFloat(c) => {
                 let result = ExpressionTE::ConstantFloat(self.typing_interner.alloc(
                     ConstantFloatTE::new(c.value, region)));
-                Ok((ExpressionTE::Reference(result), HashSet::default()))
+                Ok((result, HashSet::default()))
             }
             IExpressionSE::Destruct(destruct_se) => {
                 let (inner_expr_2, returns_from_array_expr) =
                     self.evaluate_expression(
                         coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, destruct_se.inner)?;
-                assert!(inner_expr_2.result().ownership == OwnershipT::Own, "can only destruct own");
+                if is_ref(inner_expr_2.result()) {
+                    // V: implement this
+                    // return Err();
+                    panic!("unimplemented");
+                }
+
                 let destroy_2 = match inner_expr_2.result() {
                     KindT::Struct(struct_tt) => {
                         let struct_def = coutputs.lookup_struct(struct_tt.id, self);
@@ -1551,18 +1475,8 @@ where 's: 't,
                             IBoundArgumentsSource::InheritBoundsFromTypeItself,
                         );
                         let destination_locals: Vec<LocalVariable<'s, 't>> = struct_def.members.iter().enumerate().map(|(index, m)| {
-                            let unsubstituted_coord = match m {
-                                IStructMemberT::Normal(StructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => *reference,
-                                IStructMemberT::Normal(StructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
-                                    panic!("implement: Destruct — AddressMemberTypeT");
-                                    // vimpl()
-                                }
-                                IStructMemberT::Variadic(_) => {
-                                    panic!("implement: Destruct — VariadicStructMemberT");
-                                    // vimpl()
-                                }
-                            };
-                            let reference = substituter.substitute_for_coord(coutputs, unsubstituted_coord);
+                            let unsubstituted_coord = m.tyype;
+                            let reference = substituter.substitute_for_kind(coutputs, unsubstituted_coord);
                             self.make_temporary_local(nenv, life.add(self.typing_interner, 1 + index as i32), reference)
                         }).collect();
                         ExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE::new(
@@ -1576,26 +1490,14 @@ where 's: 't,
                     }
                     _ => panic!("vfail: Can't destruct type: {:?}", inner_expr_2.result()),
                 };
-                Ok((ExpressionTE::Reference(destroy_2), returns_from_array_expr))
+                Ok((destroy_2, returns_from_array_expr))
             }
             IExpressionSE::Unlet(unlet_se) => {
                 let name = self.translate_var_name_step(unlet_se.name);
                 let local = match nenv.get_variable(name, self.typing_interner) {
-                    Some(IVariableT::Local(rlv)) => LocalVariable::Reference(rlv),
-                    Some(IVariableT::Local(_)) => {
-                        panic!("implement: Unlet — AddressibleLocal");
-                        // throw CompileErrorExceptionT(RangedInternalErrorT(
-                        //   range ::
-                        //     parentRanges, "Can't unlet local: " + name))
-                    }
+                    Some(IVariableT::Local(rlv)) => rlv,
                     Some(IVariableT::Capture(_)) => {
                         panic!("implement: Unlet — AddressibleClosure (not a local)");
-                        // throw CompileErrorExceptionT(RangedInternalErrorT(
-                        //   range ::
-                        //     parentRanges, "Can't unlet local: " + name))
-                    }
-                    Some(IVariableT::Capture(_)) => {
-                        panic!("implement: Unlet — ReferenceClosure (not a local)");
                         // throw CompileErrorExceptionT(RangedInternalErrorT(
                         //   range ::
                         //     parentRanges, "Can't unlet local: " + name))
@@ -1611,7 +1513,7 @@ where 's: 't,
                 // This will likely be dropped, as theyre probably not doing anything with it.
                 // But who knows, maybe they'll do something with it, like pass it as a parameter
                 // to something.
-                Ok((ExpressionTE::Reference(ExpressionTE::Unlet(self.typing_interner.alloc(result_expr))), HashSet::default()))
+                Ok((ExpressionTE::Unlet(self.typing_interner.alloc(result_expr)), HashSet::default()))
             }
             IExpressionSE::Index(index_se) => {
                 let (unborrowed_container_expr_2, returns_from_container_expr) =
@@ -1626,11 +1528,11 @@ where 's: 't,
                 let expr_templata = match container_expr_2.result() {
                     KindT::RuntimeSizedArray(rsa) => {
                         let lookup = self.lookup_in_unknown_sized_array(&range_with_parent, index_se.range, container_expr_2, index_expr_2, rsa)?;
-                        ExpressionTE::Address(ExpressionTE::RuntimeSizedArrayLookup(self.typing_interner.alloc(lookup)))
+                        ExpressionTE::RuntimeSizedArrayLookup(self.typing_interner.alloc(lookup))
                     }
                     KindT::StaticSizedArray(at) => {
                         let lookup = self.lookup_in_static_sized_array(index_se.range, container_expr_2, index_expr_2, *at);
-                        ExpressionTE::Address(ExpressionTE::StaticSizedArrayLookup(self.typing_interner.alloc(lookup)))
+                        ExpressionTE::StaticSizedArrayLookup(self.typing_interner.alloc(lookup))
                     }
                     _ => {
                         return Err(ICompileErrorT::CannotSubscriptT {
@@ -1655,12 +1557,12 @@ where 's: 't,
                     ITemplataT::Integer(value) => {
                         let result = ExpressionTE::ConstantInt(self.typing_interner.alloc(
                             ConstantIntTE::new(ITemplataT::Integer(value), 32, region)));
-                        Ok((ExpressionTE::Reference(result), HashSet::default()))
+                        Ok((result, HashSet::default()))
                     }
                     ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::IntegerTemplataType(_)) => {
                         let result = ExpressionTE::ConstantInt(self.typing_interner.alloc(
                             ConstantIntTE::new(ITemplataT::Placeholder(p), 32, region)));
-                        Ok((ExpressionTE::Reference(result), HashSet::default()))
+                        Ok((result, HashSet::default()))
                     }
                     ITemplataT::Prototype(_pt) => {
                         let mut tiny_env = nenv.function_environment().make_child_node_environment(
@@ -1675,7 +1577,7 @@ where 's: 't,
                         let expr = self.new_global_function_group_expression(
                             IInDenizenEnvironmentT::Node(tiny_env_snapshot),
                             coutputs, RegionT::Default, arbitrary_imprecise);
-                        Ok((ExpressionTE::Reference(expr), HashSet::default()))
+                        Ok((expr, HashSet::default()))
                     }
                     _ => {
                         let mut ranges: Vec<RangeS<'s>> = vec![r.range.clone()];
@@ -1690,7 +1592,7 @@ where 's: 't,
             IExpressionSE::ConstantBool(c) => {
                 let result = ExpressionTE::ConstantBool(self.typing_interner.alloc(
                     ConstantBoolTE::new(c.value, region)));
-                Ok((ExpressionTE::Reference(result), HashSet::default()))
+                Ok((result, HashSet::default()))
             }
             IExpressionSE::OverloadSet(overload_set) => {
                 // Per canonical: vassert(rules.isEmpty); val name = parts.head.name
@@ -1733,8 +1635,7 @@ where 's: 't,
                     }
                     _ => unreachable!("OverloadSet match is exhaustive; over-matched for slice-pattern exhaustiveness"),
                 };
-                #[allow(unreachable_code)] // unreachable until the panic!-placeholder match arms above get real bodies
-                Ok((ExpressionTE::Reference(templata_from_env), HashSet::default()))
+                Ok((templata_from_env, HashSet::default()))
             }
         }
     }
@@ -1799,13 +1700,13 @@ where 's: 't,
             call_range_t,
             call_location,
             interface_templata,
-            &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
+            &[ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_coord }))],
         ) {
             IResolveOutcome::ResolveSuccess(s) => s.kind,
             _ => panic!("vfail"),
         };
         let opt_interface_ref = self.typing_interner.intern_interface_tt(InterfaceTTValT { id: opt_interface_val.id });
-        let own_opt_coord = KindT::new(OwnershipT::Own, context_region, KindT::Interface(opt_interface_ref));
+        let own_opt_coord = KindT::Interface(opt_interface_ref);
 
         let some_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.some }));
@@ -1823,7 +1724,7 @@ where 's: 't,
             call_location,
             IInDenizenEnvironmentT::from(nenv),
             some_constructor_templata,
-            &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
+            &[ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_coord }))],
             context_region,
             &[contained_coord],
             &[],
@@ -1850,7 +1751,7 @@ where 's: 't,
             call_location,
             IInDenizenEnvironmentT::from(nenv),
             none_constructor_templata,
-            &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
+            &[ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_coord }))],
             context_region,
             &[],
             &[],
@@ -1866,7 +1767,7 @@ where 's: 't,
             IInDenizenEnvironmentT::from(nenv),
             range,
             call_location,
-            ISubKindTT::from(some_constructor.return_type.kind.expect_citizen()),
+            ISubKindTT::from(some_constructor.return_type.expect_citizen()),
             ISuperKindTT::Interface(opt_interface_ref),
         ) {
             IsParentResult::IsParent(p) => p.impl_id,
@@ -1878,7 +1779,7 @@ where 's: 't,
             IInDenizenEnvironmentT::from(nenv),
             range,
             call_location,
-            ISubKindTT::from(none_constructor.return_type.kind.expect_citizen()),
+            ISubKindTT::from(none_constructor.return_type.expect_citizen()),
             ISuperKindTT::Interface(opt_interface_ref),
         ) {
             IsParentResult::IsParent(p) => p.impl_id,
@@ -1918,15 +1819,15 @@ where 's: 't,
             call_location,
             interface_templata,
             &[
-                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_success_coord })),
-                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_fail_coord })),
+                ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_success_coord })),
+                ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_fail_coord })),
             ],
         ) {
             IResolveOutcome::ResolveSuccess(s) => s.kind,
             _ => panic!("vfail"),
         };
         let result_interface_ref = self.typing_interner.intern_interface_tt(InterfaceTTValT { id: result_interface_val.id });
-        let own_result_coord = KindT::new(OwnershipT::Own, region, KindT::Interface(result_interface_ref));
+        let own_result_coord = KindT::Interface(result_interface_ref);
 
         let ok_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.ok }));
@@ -1945,8 +1846,8 @@ where 's: 't,
             IInDenizenEnvironmentT::from(nenv),
             ok_constructor_templata,
             &[
-                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_success_coord })),
-                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_fail_coord })),
+                ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_success_coord })),
+                ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_fail_coord })),
             ],
             region,
             &[contained_success_coord],
@@ -1957,7 +1858,7 @@ where 's: 't,
             }
             IResolveFunctionResult::ResolveFunctionSuccess(p) => p.prototype.prototype,
         };
-        let ok_kind = ok_constructor.return_type.kind;
+        let ok_kind = ok_constructor.return_type;
         let ok_result_impl = match self.is_parent(
             coutputs,
             IInDenizenEnvironmentT::from(nenv),
@@ -1987,8 +1888,8 @@ where 's: 't,
             IInDenizenEnvironmentT::from(nenv),
             err_constructor_templata,
             &[
-                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_success_coord })),
-                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_fail_coord })),
+                ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_success_coord })),
+                ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_fail_coord })),
             ],
             region,
             &[contained_fail_coord],
@@ -1999,7 +1900,7 @@ where 's: 't,
             }
             IResolveFunctionResult::ResolveFunctionSuccess(p) => p.prototype.prototype,
         };
-        let err_kind = err_constructor.return_type.kind;
+        let err_kind = err_constructor.return_type;
         let err_result_impl = match self.is_parent(
             coutputs,
             IInDenizenEnvironmentT::from(nenv),
@@ -2037,8 +1938,8 @@ where 's: 't,
             _ => panic!("vfail"),
         }
 
-        match expr.result().ownership {
-            OwnershipT::Borrow => Ok(ExpressionTE::BorrowToWeak(self.typing_interner.alloc(BorrowToWeakTE::new(self.typing_interner, expr)))),
+        match expr.result() {
+            KindT::BorrowRef(_) => Ok(ExpressionTE::BorrowToWeak(self.typing_interner.alloc(BorrowToWeakTE::new(self.typing_interner, expr)))),
             other => panic!("vwat: {:?}", other),
         }
     }
@@ -2051,31 +1952,23 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         life: LocationInFunctionEnvironmentT<'t>,
         context_region: RegionT,
-        undecayed_unborrowed_container_expr_2: ExpressionTE<'s, 't>,
+        unborrowed_container_expr_2: ExpressionTE<'s, 't>,
     ) -> ExpressionTE<'s, 't> {
-        match undecayed_unborrowed_container_expr_2 {
-            ExpressionTE::Address(a) => {
-                panic!("implement: dot_borrow — AddressExpressionTE arm (borrow_soft_load)");
-                // localHelper.borrowSoftLoad(coutputs, a)
-            }
-            ExpressionTE::Reference(r) => {
-                let unborrowed_container_expr_2 = r; // decaySoloPack(nenv, life + 0, r)
-                match unborrowed_container_expr_2.result().ownership {
-                    OwnershipT::Own => {
-                        panic!("implement: dot_borrow — OwnT arm (makeTemporaryLocal)");
-                        // localHelper.makeTemporaryLocal(
-                        //   coutputs,
-                        //   nenv,
-                        //   range,
-                        //   callLocation,
-                        //   life + 1,
-                        //   contextRegion,
-                        //   unborrowedContainerExpr2,
-                        //   BorrowT)
-                    }
-                    OwnershipT::Borrow | OwnershipT::Share => unborrowed_container_expr_2,
-                    OwnershipT::Weak => unreachable!("dotBorrow has no WeakT arm — only OwnT and BorrowT|ShareT"),
-                }
+        match unborrowed_container_expr_2.result() {
+            KindT::BorrowRef(_) => panic!("unimplemented"),
+            KindT::ShareRef(_) => panic!("unimplemented"),
+            KindT::WeakRef(_) => panic!("unimplemented"),
+            _ => {
+                panic!("implement: dot_borrow — OwnT arm (makeTemporaryLocal)");
+                // localHelper.makeTemporaryLocal(
+                //   coutputs,
+                //   nenv,
+                //   range,
+                //   callLocation,
+                //   life + 1,
+                //   contextRegion,
+                //   unborrowedContainerExpr2,
+                //   BorrowT)
             }
         }
     }
@@ -2095,14 +1988,14 @@ where 's: 't,
         let snapshot_env = nenv.snapshot(self.typing_interner);
         let closure_struct_tt =
             self.evaluate_closure_struct(coutputs, snapshot_env, parent_ranges, call_location, name, function_a, true)?;
-        // let closure_coord =
-        //     self.pointify_kind(coutputs, KindT::Struct(self.typing_interner.alloc(closure_struct_tt)), region, OwnershipT::Own);
+        let closure_kind =
+            KindT::Struct(self.typing_interner.alloc(closure_struct_tt));
 
         let mut range_list = vec![function_a.range];
         range_list.extend_from_slice(parent_ranges);
         let construct_expr_2 =
             self.make_closure_struct_construct_expression(coutputs, nenv, &range_list, region, closure_struct_tt);
-        assert!(construct_expr_2.result() == closure_coord);
+        assert_eq!(construct_expr_2.result(), closure_kind);
 
         Ok(construct_expr_2)
     }
@@ -2121,7 +2014,7 @@ where 's: 't,
             ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(region)));
         ExpressionTE::Reinterpret(self.typing_interner.alloc(ReinterpretTE::new(
             void_expr,
-            KindT::new(OwnershipT::Own, region, KindT::OverloadSet(overload_set)))))
+            KindT::OverloadSet(overload_set))))
     }
 
     pub fn evaluate_block_statements(
@@ -2140,26 +2033,6 @@ where 's: 't,
             life, region, block)
     }
 
-    pub fn translate_pattern_list(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        parent_ranges: &'t [RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        patterns_1: &'t [&'s AtomSP<'s>],
-        pattern_input_exprs_2: &'t [ExpressionTE<'s, 't>],
-        region: RegionT,
-    ) -> ExpressionTE<'s, 't> {
-        self.translate_pattern_list_pattern(
-            coutputs, nenv, life, parent_ranges, call_location,
-            patterns_1, pattern_input_exprs_2, region,
-            |compiler, _coutputs, nenv, _live_capture_locals| {
-                ExpressionTE::VoidLiteral(compiler.typing_interner.alloc(
-                    VoidLiteralTE::new(nenv.default_region())))
-            })
-    }
-
     pub fn astronomize_lambda(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -2174,7 +2047,6 @@ where 's: 't,
         let tyype = &function_s.tyype;
         let params_s = function_s.params;
         let maybe_ret_coord_rune = &function_s.maybe_ret_kind_rune;
-        let rules_with_implicitly_coercing_lookups_s = function_s.rules;
         let body_s = function_s.body;
 
         let mut rune_s_to_pre_known_type_a: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
@@ -2193,50 +2065,33 @@ where 's: 't,
         };
         let mut range_list = vec![range_s];
         range_list.extend_from_slice(parent_ranges);
-        let rune_a_to_type_with_implicitly_coercing_lookups_s =
-            match rune_type_solver.solve_rune_types(
-                self.opts.global_options.sanity_check,
-                &rune_type_solve_env,
-                range_list.clone(),
-                rules_with_implicitly_coercing_lookups_s,
-                &identifying_runes_s.iter().map(|gp| gp.rune.rune).collect::<Vec<_>>(),
-                true,
-                rune_s_to_pre_known_type_a,
-            ) {
-                Ok(t) => t,
-                Err(_e) => panic!("CouldntSolveRuneTypesT"),
-            };
-
-        let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            rune_a_to_type_with_implicitly_coercing_lookups_s;
-        // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
-        // loose. We intentionally ignored the types of the things they're looking up, so we could know
-        // what types we *expect* them to be, so we could coerce.
-        // That coercion is good, but lets make it more explicit.
-        let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-        match explicify_lookups(
+        // Run the solve only to check the rune types are solvable. Its result isn't used here.
+        // explicify_lookups was the only consumer of that map, and it is retired.
+        // The rules are already explicit Lookup/Call. The lambda's runes get solved again when it is typed.
+        match rune_type_solver.solve_rune_types(
+            self.opts.global_options.sanity_check,
             &rune_type_solve_env,
-            self.scout_arena,
-            &mut rune_a_to_type,
-            &mut rule_builder,
-            rules_with_implicitly_coercing_lookups_s.to_vec(),
+            range_list.clone(),
+            function_s.rules,
+            &identifying_runes_s.iter().map(|gp| gp.rune.rune).collect::<Vec<_>>(),
+            true,
+            rune_s_to_pre_known_type_a,
         ) {
-            Err(_e) => panic!("explicify_lookups failed in astronomize_lambda"),
-            Ok(()) => {}
+            Ok(_) => {}
+            Err(_e) => panic!("CouldntSolveRuneTypesT"),
         }
 
-        let mut attributes: Vec<IFunctionAttributeS<'s>> = attributes_s.to_vec();
-        attributes.push(IFunctionAttributeS::UserFunction(UserFunctionS));
-
+        // The UserFunction attribute is stamped in postparse (function_scout), so attributes_s
+        // already carries it — pass it through unchanged.
         self.scout_arena.alloc(FunctionS::new(
             range_s,
             name_s,
-            self.scout_arena.alloc_slice_from_vec(attributes),
+            attributes_s,
             identifying_runes_s,
             tyype.clone(),
             params_s,
             maybe_ret_coord_rune.clone(),
-            self.scout_arena.alloc_slice_from_vec(rule_builder),
+            function_s.rules,
             body_s,
         ))
     }
@@ -2286,7 +2141,7 @@ where 's: 't,
                     let mut exprs: Vec<ExpressionTE<'s, 't>> = Vec::new();
                     exprs.push(resultified_expr);
                     exprs.extend(destroy_expressions);
-                    let result_ilocal_variable = LocalVariable::Reference(result_local_variable);
+                    let result_ilocal_variable = result_local_variable;
                     let unlet_te = self.unlet_local_without_dropping(nenv, &result_ilocal_variable);
                     exprs.push(ExpressionTE::Unlet(self.typing_interner.alloc(unlet_te)));
                     Ok(self.consecutive(&exprs))
@@ -2304,7 +2159,7 @@ where 's: 't,
         let result_var_ref = self.typing_interner.intern_typing_pass_block_result_var_name(TypingPassBlockResultVarNameT { life });
         let result_var_name: IVarNameT<'s, 't> = result_var_ref.into();
         let result_variable = LocalVariable { name: result_var_name, tyype: expr.result() };
-        let result_let = LetNormalTE::new(LocalVariable::Reference(result_variable), expr);
+        let result_let = LetNormalTE::new(result_variable, expr);
         nenv.add_variable(IVariableT::Local(result_variable));
         (ExpressionTE::LetNormal(self.typing_interner.alloc(result_let)), result_variable)
     }

@@ -299,7 +299,6 @@ where 's: 't,
             V::TypingPassFunctionResultVar(p) => (V::TypingPassFunctionResultVar(p), T::TypingPassFunctionResultVar(self.bump.alloc(p))),
             V::TypingPassTemporaryVar(p) => (V::TypingPassTemporaryVar(p), T::TypingPassTemporaryVar(self.bump.alloc(p))),
             V::TypingPassPatternMember(p) => (V::TypingPassPatternMember(p), T::TypingPassPatternMember(self.bump.alloc(p))),
-            V::TypingIgnoredParam(p) => (V::TypingIgnoredParam(p), T::TypingIgnoredParam(self.bump.alloc(p))),
             V::TypingPassPatternDestructuree(p) => (V::TypingPassPatternDestructuree(p), T::TypingPassPatternDestructuree(self.bump.alloc(p))),
             V::UnnamedLocal(p) => (V::UnnamedLocal(p), T::UnnamedLocal(self.bump.alloc(p))),
             V::ClosureParam(p) => (V::ClosureParam(p), T::ClosureParam(self.bump.alloc(p))),
@@ -502,7 +501,6 @@ where 's: 't,
     impl_intern_name_wrapper_simple_none!(intern_typing_pass_function_result_var_name, TypingPassFunctionResultVar, TypingPassFunctionResultVarNameT);
     impl_intern_name_wrapper_simple_t_only!(intern_typing_pass_temporary_var_name, TypingPassTemporaryVar, TypingPassTemporaryVarNameT);
     impl_intern_name_wrapper_simple_t_only!(intern_typing_pass_pattern_member_name, TypingPassPatternMember, TypingPassPatternMemberNameT);
-    impl_intern_name_wrapper_simple_none!(intern_typing_ignored_param_name, TypingIgnoredParam, TypingIgnoredParamNameT);
     impl_intern_name_wrapper_simple_t_only!(intern_typing_pass_pattern_destructuree_name, TypingPassPatternDestructuree, TypingPassPatternDestructureeNameT);
     impl_intern_name_wrapper_simple_s_only!(intern_unnamed_local_name, UnnamedLocal, UnnamedLocalNameT);
     impl_intern_name_wrapper_simple_s_only!(intern_closure_param_name, ClosureParam, ClosureParamNameT);

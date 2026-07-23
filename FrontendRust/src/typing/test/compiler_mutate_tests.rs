@@ -5,10 +5,10 @@ use crate::parse_arena::ParseArena;
 use crate::code_source::{CodeSource, Source};
 use crate::postparsing::names::{CodeNameS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameValS};
 use crate::scout_arena::ScoutArena;
-use crate::typing::ast::expressions::{ExpressionTE, ConstantIntTE, LocalLookupTE, MutateTE, ExpressionTE, ReferenceMemberLookupTE};
+use crate::typing::ast::expressions::{ExpressionTE, ConstantIntTE, LocalLookupTE, MutateTE, ReferenceMemberLookupTE};
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::typing::env::function_environment_t::{LocalVariable, LocalVariable};
+use crate::typing::env::function_environment_t::{LocalVariable};
 use crate::typing::names::names::{CodeVarNameT, FunctionNameValT, FunctionTemplateNameT, IdT, IdValT, INameT, IStructTemplateNameT, IVarNameT, RawArrayNameT, StaticSizedArrayNameT, StructNameValT, StructTemplateNameT};
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
@@ -58,16 +58,17 @@ exported func main() {a = 3; set a = 4; }
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Mutate(MutateTE {
             destination_expr: ExpressionTE::LocalLookup(LocalLookupTE {
-                local_variable: LocalVariable::Reference(LocalVariable {
+                local_variable: LocalVariable {
                     name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                     ..
-                }),
+                },
                 ..
             }),
             source_expr: ExpressionTE::ConstantInt(ConstantIntTE {
                 value: ITemplataT::Integer(4),
                 ..
             }),
+            ..
         }) => Some(())
     );
 
@@ -75,8 +76,8 @@ exported func main() {a = 3; set a = 4; }
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LocalLookup(l) => Some(l)
     );
-    let result_coord = lookup.result();
-    assert_eq!(result_coord, KindT::Int(IntT { bits: 32 }));
+    // The lookup is a borrow of the local's storage, so the int is what it points at.
+    assert_eq!(lookup.result.inner, KindT::Int(IntT { bits: 32 }));
 }
 
 #[test]
@@ -110,9 +111,8 @@ exported func main() {
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ReferenceMemberLookup(l) => Some(l)
     );
-    let result_coord = lookup.result();
-    // See RMLRMO, it should result in the same type as the member.
-    match result_coord {
+    // The lookup is a borrow of the member, so the struct is what it points at.
+    match lookup.result.inner {
         KindT::Struct(_) => {}
         x => panic!("{:?}", x),
     }

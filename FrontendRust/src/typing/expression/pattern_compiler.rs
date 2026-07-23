@@ -29,77 +29,6 @@ use std::marker::PhantomData;
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't, 't: 'ctx, 's: 'ctx,
 {
-    pub fn translate_pattern_list_pattern(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        parent_ranges: &'t [RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        patterns_a: &'t [&'s AtomSP<'s>],
-        pattern_inputs_te: &'t [ExpressionTE<'s, 't>],
-        region: RegionT,
-        after_patterns_success_continuation: impl FnOnce(
-            &Compiler<'s, 'ctx, 't>,
-            &mut CompilerOutputs<'s, 't>,
-            &mut NodeEnvironmentBox<'s, 't>,
-            &[LocalVariable<'s, 't>],
-        ) -> ExpressionTE<'s, 't> + 'ctx,
-    ) -> ExpressionTE<'s, 't> {
-        self.iterate_translate_list_and_maybe_continue(
-            coutputs, nenv, life, parent_ranges, call_location,
-            self.typing_interner.alloc_slice_copy(&[]), patterns_a, pattern_inputs_te, region,
-            after_patterns_success_continuation)
-    }
-
-    pub fn iterate_translate_list_and_maybe_continue(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        parent_ranges: &'t [RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        live_capture_locals: &'t [LocalVariable<'s, 't>],
-        patterns_a: &'t [&'s AtomSP<'s>],
-        pattern_inputs_te: &'t [ExpressionTE<'s, 't>],
-        region: RegionT,
-        after_patterns_success_continuation: impl FnOnce(
-            &Compiler<'s, 'ctx, 't>,
-            &mut CompilerOutputs<'s, 't>,
-            &mut NodeEnvironmentBox<'s, 't>,
-            &[LocalVariable<'s, 't>],
-        ) -> ExpressionTE<'s, 't> + 'ctx,
-    ) -> ExpressionTE<'s, 't> {
-        let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
-        let distinct: HashSet<_> = names.iter().collect();
-        assert!(names.len() == distinct.len());
-
-        match (patterns_a.is_empty(), pattern_inputs_te.is_empty()) {
-            (true, true) => after_patterns_success_continuation(self, coutputs, nenv, live_capture_locals),
-            (false, false) => {
-                let head_pattern_a = patterns_a[0];
-                let head_pattern_input_te = pattern_inputs_te[0];
-                let tail_patterns_a: &'t [&'s AtomSP<'s>] = &patterns_a[1..];
-                let tail_pattern_inputs_te: &'t [ExpressionTE<'s, 't>] = &pattern_inputs_te[1..];
-                self.inner_translate_sub_pattern_and_maybe_continue(
-                    coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, call_location,
-                    head_pattern_a, live_capture_locals, head_pattern_input_te, region,
-                    move |compiler, coutputs, nenv, _life, live_capture_locals_raw| {
-                        let live_capture_locals: &'t [LocalVariable<'s, 't>] = compiler.typing_interner.alloc_slice_copy(live_capture_locals_raw);
-                        let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
-                        let distinct: HashSet<_> = names.iter().collect();
-                        assert!(names.len() == distinct.len());
-
-                        compiler.iterate_translate_list_and_maybe_continue(
-                            coutputs, nenv, life.add(compiler.typing_interner, 1), parent_ranges, call_location,
-                            live_capture_locals, tail_patterns_a, tail_pattern_inputs_te, region,
-                            after_patterns_success_continuation)
-                    })
-            }
-            _ => panic!("mismatched patterns and inputs"),
-        }
-    }
-
     pub fn infer_and_translate_pattern(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -107,7 +36,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         life: LocationInFunctionEnvironmentT<'t>,
         parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+        rules_s: &[IRulexSR<'s>],
         rune_a_to_type_with_implicitly_coercing_lookups_s: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         pattern: &'s AtomSP<'s>,
         unconverted_input_expr: ExpressionTE<'s, 't>,
@@ -127,31 +56,13 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 unconverted_input_expr
             }
             Some(receiver_rune) => {
-                let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+                let rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
                     rune_a_to_type_with_implicitly_coercing_lookups_s.clone();
-                // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
-                // loose. We intentionally ignored the types of the things they're looking up, so we could know
-                // what types we *expect* them to be, so we could coerce.
-                // That coercion is good, but lets make it more explicit.
-                let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
                 let snapshot = nenv.snapshot(self.typing_interner);
                 let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
-                let rune_type_solve_env = self.create_rune_type_solver_env(snapshot_env);
-                match explicify_lookups(
-                    &rune_type_solve_env,
-                    self.scout_arena,
-                    &mut rune_a_to_type,
-                    &mut rule_builder,
-                    rules_with_implicitly_coercing_lookups_s.to_vec(),
-                ) {
-                    Err(_e) => {
-                        panic!("implement: infer_and_translate_pattern — explicifyLookups error");
-                        // case Err(RuneTypingTooManyMatchingTypes(range, name)) => throw CompileErrorExceptionT(TooManyTypesWithNameT(range :: parentRanges, name))
-                        // case Err(RuneTypingCouldntFindType(range, name)) => throw CompileErrorExceptionT(CouldntFindTypeT(range :: parentRanges, name))
-                    }
-                    Ok(()) => {}
-                }
-                let rules_a = rule_builder;
+                // The rules are already explicit Lookup/Call, so nothing rewrites them here (explicify_lookups is retired).
+                // Name-resolution failures (CouldntFindType/TooManyMatchingTypes) still surface from solve_rune_types above.
+                let rules_a = rules_s.to_vec();
 
                 // We preprocess out the rune parent env lookups, see MKRFA.
                 let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
@@ -298,7 +209,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                             .find(|l| l.var_name == capture_s.name)
                             .expect("Expected local");
                         let local_t = self.make_user_local_variable(
-                            coutputs, nenv, &range_list, local_s, input_expr.result());
+                            coutputs, nenv, &range_list, local_s.var_name, input_expr.result());
                         current_instructions.push(
                             ExpressionTE::LetNormal(self.typing_interner.alloc(
                                 LetNormalTE::new(local_t, input_expr))));
@@ -371,7 +282,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                             region,
                             after_sub_pattern_success_continuation)]
                     }
-                    KindT::HeapOwnRef(_) => {
+                    KindT::OwnRef(_) => {
                         panic!("implement: destructure a heap-owned value");
                     }
                     KindT::WeakRef(_) => {
@@ -426,7 +337,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         }
         let expected_container_kind = match input_expr.result() {
             // Only a bare value is owned, and destructure_owning destroys what it's given.
-            KindT::BorrowRef(_) | KindT::HeapOwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) =>
+            KindT::BorrowRef(_) | KindT::OwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) =>
                 panic!("destructure_owning: expected a bare value"),
             bare_kind => bare_kind,
         };
@@ -671,7 +582,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         let member_locals: Vec<LocalVariable<'s, 't>> = struct_def_t.members.iter()
             .enumerate()
             .map(|(i, member)| {
-                let member_type = substituter.substitute_for_coord(coutputs, member.tyype);
+                let member_type = substituter.substitute_for_kind(coutputs, member.tyype);
                 self.make_temporary_local(nenv, life.add(self.typing_interner, 1 + i as i32), member_type)
             })
             .collect();
@@ -797,7 +708,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 instantiation_bound_params: struct_def_t.instantiation_bound_params,
                 instantiation_bound_arguments: instantiation_bounds,
             },
-        ).substitute_for_coord(coutputs, member.tyype);
+        ).substitute_for_kind(coutputs, member.tyype);
         ExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(
             ReferenceMemberLookupTE::new(
                 self.typing_interner, load_range, container_alias, member.name, member_type)))

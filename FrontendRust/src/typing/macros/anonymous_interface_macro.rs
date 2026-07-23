@@ -30,11 +30,12 @@ use crate::postparsing::names::{
     IRuneValS,
     IStructDeclarationNameS,
     IVarNameS,
+    SelfFullTypeRuneS,
     SelfKindRuneS,
     SelfKindTemplateRuneS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
-use crate::postparsing::rules::rules::{BorrowRefSR, CallSR, CallSiteFuncSR, DefinitionFuncSR, IRulexSR, KindListSR, LookupSR, ResolveSR, RuneUsage};
+use crate::postparsing::rules::rules::{BorrowRefSR, CallSR, CallSiteFuncSR, DefinitionFuncSR, EqualsSR, IRulexSR, KindListSR, LiteralSR, LookupSR, OwnRefSR, RegionSR, ResolveSR, RuneParentEnvLookupSR, RuneUsage, WeakRefSR};
 use crate::parsing::ast::ast::LoadAsP;
 use crate::typing::compiler::Compiler;
 use crate::typing::env::i_env_entry::*;
@@ -153,16 +154,6 @@ where 's: 't,
             }),
         ];
 
-        // let mut rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>> = self.scout_arena.alloc_index_map();
-        // for gp in struct_a.generic_params.iter() {
-        //     let tyype = *struct_a.header_rune_to_type.get(&gp.rune.rune).unwrap();
-        //     rune_to_type.insert(gp.rune.rune, tyype);
-        // }
-        // rune_to_type.insert(anon_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {}));
-        // rune_to_type.insert(anon_template_rune, ITemplataType::TemplateTemplataType(struct_a.tyype));
-        // rune_to_type.insert(parent_interface_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {}));
-        // rune_to_type.insert(parent_interface_template_rune, ITemplataType::TemplateTemplataType(interface_a.tyype));
-
         let struct_kind_rune_s = RuneUsage { range: interface_a.range, rune: anon_kind_rune };
         let interface_kind_rune_s = RuneUsage { range: interface_a.range, rune: parent_interface_kind_rune };
 
@@ -186,7 +177,6 @@ where 's: 't,
             struct_a.generic_params,
             rules_slice,
             impl_tyype,
-            // rune_to_type,
             struct_kind_rune_s,
             struct_imprecise_name,
             interface_kind_rune_s,
@@ -225,14 +215,15 @@ where 's: 't,
                 // panic!("implement: map_runes_anonymous_interface MaybeCoercingLookup");
                 // LookupSR(range, RuneUsage(a, func(rune)), name)
             // }
-            IRulexSR::RuneParentEnvLookup(_) => {
-                panic!("implement: map_runes_anonymous_interface RuneParentEnvLookup");
-                // RuneParentEnvLookupSR(range, RuneUsage(a, func(rune)))
-            }
-            IRulexSR::Equals(_) => {
-                panic!("implement: map_runes_anonymous_interface Equals");
-                // EqualsSR(range, RuneUsage(a, func(left)), RuneUsage(b, func(right)))
-            }
+            IRulexSR::RuneParentEnvLookup(x) => IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
+                range: x.range,
+                rune: RuneUsage { range: x.rune.range, rune: func(x.rune.rune) },
+            }),
+            IRulexSR::Equals(x) => IRulexSR::Equals(EqualsSR {
+                range: x.range,
+                left: RuneUsage { range: x.left.range, rune: func(x.left.rune) },
+                right: RuneUsage { range: x.right.range, rune: func(x.right.rune) },
+            }),
             // IRulexSR::DefinitionCoordIsa(_) => {
                 // panic!("implement: map_runes_anonymous_interface DefinitionCoordIsa");
                 // DefinitionCoordIsaSR(range, RuneUsage(z, func(result)), RuneUsage(a, func(sub)), RuneUsage(b, func(suuper)))
@@ -253,18 +244,27 @@ where 's: 't,
                 // panic!("implement: map_runes_anonymous_interface PrototypeComponents");
                 // PrototypeComponentsSR(range, RuneUsage(a, func(resultRune)), RuneUsage(b, func(paramsRune)), RuneUsage(c, func(returnRune)))
             // }
-            IRulexSR::Resolve(_) => {
-                panic!("implement: map_runes_anonymous_interface Resolve");
-                // ResolveSR(range, RuneUsage(a, func(resultRune)), name, RuneUsage(b, func(paramsListRune)), RuneUsage(c, func(returnRune)))
-            }
-            IRulexSR::CallSiteFunc(_) => {
-                panic!("implement: map_runes_anonymous_interface CallSiteFunc");
-                // CallSiteFuncSR(range, RuneUsage(a, func(resultRune)), name, RuneUsage(b, func(paramsListRune)), RuneUsage(c, func(returnRune)))
-            }
-            IRulexSR::DefinitionFunc(_) => {
-                panic!("implement: map_runes_anonymous_interface DefinitionFunc");
-                // DefinitionFuncSR(range, RuneUsage(a, func(resultRune)), name, RuneUsage(b, func(paramsListRune)), RuneUsage(c, func(returnRune)))
-            }
+            IRulexSR::Resolve(x) => IRulexSR::Resolve(ResolveSR {
+                range: x.range,
+                result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
+                name: x.name,
+                params_list_rune: RuneUsage { range: x.params_list_rune.range, rune: func(x.params_list_rune.rune) },
+                return_rune: RuneUsage { range: x.return_rune.range, rune: func(x.return_rune.rune) },
+            }),
+            IRulexSR::CallSiteFunc(x) => IRulexSR::CallSiteFunc(CallSiteFuncSR {
+                range: x.range,
+                prototype_rune: RuneUsage { range: x.prototype_rune.range, rune: func(x.prototype_rune.rune) },
+                name: x.name,
+                params_list_rune: RuneUsage { range: x.params_list_rune.range, rune: func(x.params_list_rune.rune) },
+                return_rune: RuneUsage { range: x.return_rune.range, rune: func(x.return_rune.rune) },
+            }),
+            IRulexSR::DefinitionFunc(x) => IRulexSR::DefinitionFunc(DefinitionFuncSR {
+                range: x.range,
+                result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
+                name: x.name,
+                params_list_rune: RuneUsage { range: x.params_list_rune.range, rune: func(x.params_list_rune.rune) },
+                return_rune: RuneUsage { range: x.return_rune.range, rune: func(x.return_rune.rune) },
+            }),
             // IRulexSR::OneOf(_) => {
                 // panic!("implement: map_runes_anonymous_interface OneOf");
                 // OneOfSR(range, RuneUsage(a, func(rune)), literals)
@@ -281,15 +281,11 @@ where 's: 't,
                 // panic!("implement: map_runes_anonymous_interface IsStruct");
                 // IsStructSR(range, RuneUsage(a, func(rune)))
             // }
-            // IRulexSR::CoerceToCoord(x) => IRulexSR::CoerceToCoord(CoerceToCoordSR {
-                // range: x.range,
-                // kind_rune: RuneUsage { range: x.kind_rune.range, rune: func(x.kind_rune.rune) },
-                // kind_rune: RuneUsage { range: x.kind_rune.range, rune: func(x.kind_rune.rune) },
-            // }),
-            IRulexSR::Literal(_) => {
-                panic!("implement: map_runes_anonymous_interface Literal");
-                // LiteralSR(range, RuneUsage(a, func(rune)), literal)
-            }
+            IRulexSR::Literal(x) => IRulexSR::Literal(LiteralSR {
+                range: x.range,
+                rune: RuneUsage { range: x.rune.range, rune: func(x.rune.rune) },
+                literal: x.literal,
+            }),
             // IRulexSR::Augment(x) => {
                 // IRulexSR::Augment(AugmentSR {
                     // range: x.range,
@@ -321,7 +317,35 @@ where 's: 't,
                 // panic!("implement: map_runes_anonymous_interface RefListCompoundMutability");
                 // RefListCompoundMutabilitySR(range, RuneUsage(a, func(resultRune)), RuneUsage(b, func(coordListRune)))
             // }
-            other => panic!("vimpl: map_runes_anonymous_interface {:?}", other),
+            IRulexSR::BorrowRef(x) => IRulexSR::BorrowRef(BorrowRefSR {
+                range: x.range,
+                result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
+                inner_rune: RuneUsage { range: x.inner_rune.range, rune: func(x.inner_rune.rune) },
+                region: match x.region {
+                    RegionSR::Rune(r) => RegionSR::Rune(RuneUsage { range: r.range, rune: func(r.rune) }),
+                    other_region => other_region,
+                },
+            }),
+            IRulexSR::WeakRef(x) => IRulexSR::WeakRef(WeakRefSR {
+                range: x.range,
+                result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
+                inner_rune: RuneUsage { range: x.inner_rune.range, rune: func(x.inner_rune.rune) },
+            }),
+            IRulexSR::OwnRef(x) => IRulexSR::OwnRef(OwnRefSR {
+                range: x.range,
+                result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
+                inner_rune: RuneUsage { range: x.inner_rune.range, rune: func(x.inner_rune.rune) },
+            }),
+            IRulexSR::KindList(x) => {
+                let new_members: Vec<RuneUsage<'s>> = x.members.iter()
+                    .map(|ru| RuneUsage { range: ru.range, rune: func(ru.rune) })
+                    .collect();
+                IRulexSR::KindList(KindListSR {
+                    range: x.range,
+                    result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
+                    members: self.scout_arena.alloc_slice_from_vec(new_members),
+                })
+            }
         }
     }
 
@@ -351,21 +375,12 @@ where 's: 't,
         let use_rune = |n: i32, rune: IRuneS<'s>| RuneUsage { range: range(n), rune };
 
         let mut rules_builder: Vec<IRulexSR<'s>> = Vec::new();
-        // let mut rune_to_type: Vec<(IRuneS<'s>, ITemplataType<'s>)> = Vec::new();
 
         for rule in interface_a.rules.iter() {
             rules_builder.push(*rule);
         }
 
-        // for (rune, tyype) in interface_a.rune_to_type.iter() {
-        //     rune_to_type.push((*rune, *tyype));
-        // }
-        // for mr in member_runes.iter() {
-        //     rune_to_type.push((mr.rune, ITemplataType::KindTemplataType(KindTemplataType {})));
-        // }
-
         let void_kind_rune = self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructVoidKindRune(AnonymousSubstructVoidKindRuneS {}));
-        // rune_to_type.push((void_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {})));
         let void_imprecise_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void }));
         rules_builder.push(IRulexSR::Lookup(LookupSR {
             range: range(-1672147),
@@ -374,7 +389,6 @@ where 's: 't,
         }));
 
         let void_kind_rune = self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructVoidKindRune(AnonymousSubstructVoidKindRuneS {}));
-        // rune_to_type.push((void_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {})));
 
         let mut struct_generic_params: Vec<&'s GenericParameterS<'s>> = Vec::new();
         for gp in interface_a.generic_params.iter() {
@@ -393,10 +407,6 @@ where 's: 't,
         for ((internal_method, member_rune), _method_index) in
             interface_a.internal_methods.iter().zip(member_runes.iter()).zip(0i32..) {
             let internal_method = *internal_method;
-            // for (method_rune, tyype) in internal_method.rune_to_type.iter() {
-            //     let inherited = self.inherited_method_rune_anonymous_interface(interface_a, internal_method, *method_rune);
-            //     rune_to_type.push((inherited, *tyype));
-            // }
             for rule in internal_method.rules.iter() {
                 let mapped = self.map_runes_anonymous_interface(*rule, |method_rune| {
                     self.inherited_method_rune_anonymous_interface(interface_a, internal_method, method_rune)
@@ -417,12 +427,11 @@ where 's: 't,
                         interface: *interface_a.name,
                         method: internal_method.name,
                     }));
-                // rune_to_type.push((self_borrow_kind_rune_s, ITemplataType::KindTemplataType(KindTemplataType {})));
                 rules_builder.push(IRulexSR::BorrowRef(BorrowRefSR {
                     range: internal_method.range,
                     result_rune: RuneUsage { range: internal_method.range, rune: self_borrow_kind_rune_s },
                     inner_rune: *member_rune,
-                    region_rune: None,
+                    region: RegionSR::Unspecified,
                 }));
 
                 let mut param_runes: Vec<RuneUsage<'s>> = Vec::new();
@@ -430,14 +439,14 @@ where 's: 't,
                     match param.virtuality {
                         None => {
                             param_runes.push(RuneUsage {
-                                range: param.pattern.range,
+                                range: param.range,
                                 rune: self.inherited_method_rune_anonymous_interface(
-                                    interface_a, internal_method, param.pattern.kind_rune.unwrap().rune),
+                                    interface_a, internal_method, param.value_type_rune.rune),
                             });
                         }
                         Some(_) => {
                             param_runes.push(RuneUsage {
-                                range: param.pattern.range,
+                                range: param.range,
                                 rune: self_borrow_kind_rune_s,
                             });
                         }
@@ -458,22 +467,20 @@ where 's: 't,
                     members: param_runes_slice,
                 }));
                 let coord_type_ref = self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {}));
-                // rune_to_type.push((method_params_list_rune.rune, ITemplataType::PackTemplataType(PackTemplataType { element_type: coord_type_ref })));
 
                 let interface_params: Vec<&'s ParameterS<'s>> = internal_method.params.iter()
                     .filter(|p| p.virtuality.is_some())
                     .collect();
                 assert_eq!(interface_params.len(), 1, "vassertOne");
                 let interface_param = interface_params[0];
-                let original_interface_kind_rune = interface_param.pattern.kind_rune.unwrap().rune;
+                let original_interface_kind_rune = interface_param.value_type_rune.rune;
                 let interface_kind_rune = RuneUsage {
                     range: interface_param.range,
                     rune: self.inherited_method_rune_anonymous_interface(
-                        interface_a, internal_method, interface_param.pattern.kind_rune.unwrap().rune),
+                        interface_a, internal_method, interface_param.value_type_rune.rune),
                 };
-                // rune_to_type.push((interface_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {})));
 
-                let mut collected: Vec<IRuneS<'s>> = Vec::new();
+                let collected: Vec<IRuneS<'s>> = Vec::new();
                 for rule in internal_method.rules.iter() {
                     match rule {
                         // IRulexSR::Augment(a) if a.result_rune.rune.ptr_eq(&original_interface_kind_rune) => {
@@ -496,7 +503,6 @@ where 's: 't,
                             method: internal_method.name,
                         })),
                 };
-                // rune_to_type.push((method_interface_template_rune.rune, ITemplataType::TemplateTemplataType(interface_a.tyype)));
 
                 let method_interface_kind_rune = RuneUsage {
                     range: interface_param.range,
@@ -506,7 +512,6 @@ where 's: 't,
                             method: internal_method.name,
                         })),
                 };
-                // rune_to_type.push((method_interface_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {})));
 
                 rules_builder.push(IRulexSR::Lookup(LookupSR {
                     range: interface_param.range,
@@ -551,7 +556,6 @@ where 's: 't,
                     params_list_rune: method_params_list_rune,
                     return_rune,
                 }));
-                // rune_to_type.push((method_prototype_rune.rune, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})));
             }
 
             // drop bound block
@@ -574,7 +578,6 @@ where 's: 't,
                     members: drop_params_slice,
                 }));
                 let coord_type_ref2 = self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {}));
-                // rune_to_type.push((drop_params_list_rune.rune, ITemplataType::PackTemplataType(PackTemplataType { element_type: coord_type_ref2 })));
 
                 let drop_prototype_rune = RuneUsage {
                     range: internal_method.range,
@@ -606,7 +609,6 @@ where 's: 't,
                     params_list_rune: drop_params_list_rune,
                     return_rune: void_coord_ru,
                 }));
-                // rune_to_type.push((drop_prototype_rune.rune, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})));
             }
         }
 
@@ -622,9 +624,7 @@ where 's: 't,
             return_type: kind_type,
         };
 
-        // let header_rune_to_type = self.scout_arena.alloc_index_map_from_iter(rune_to_type);
         let header_rules_slice = self.scout_arena.alloc_slice_from_vec(rules_builder);
-        let members_rune_to_type = self.scout_arena.alloc_index_map::<IRuneS<'s>, ITemplataType<'s>>();
         let member_rules_slice: &'s [IRulexSR<'s>] = self.scout_arena.alloc_slice_from_vec(vec![]);
         let generic_params_slice = self.scout_arena.alloc_slice_from_vec(struct_generic_params);
         let attributes_slice: &'s [ICitizenAttributeS<'s>] = self.scout_arena.alloc_slice_from_vec(vec![]);
@@ -640,9 +640,7 @@ where 's: 't,
           generic_params_slice,
           interface_a.sharedness,
           tyype,
-          // header_rune_to_type,
           header_rules_slice,
-          // members_rune_to_type,
           member_rules_slice,
           members_slice,
           &[],
@@ -684,13 +682,8 @@ where 's: 't,
             }));
         }
 
-        // let mut rune_to_type: Vec<(IRuneS<'s>, ITemplataType<'s>)> = Vec::new();
         let mut rules: Vec<IRulexSR<'s>> = Vec::new();
 
-        // for (method_rune, tyype) in method.rune_to_type.iter() {
-        //     let inherited = self.inherited_method_rune_anonymous_interface(interface, method, *method_rune);
-        //     rune_to_type.push((inherited, *tyype));
-        // }
         for rule in method_original_rules.iter() {
             let mapped = self.map_runes_anonymous_interface(*rule, |method_rune| {
                 self.inherited_method_rune_anonymous_interface(interface, method, method_rune)
@@ -703,19 +696,9 @@ where 's: 't,
             rune: self.inherited_method_rune_anonymous_interface(interface, method, original_ret_rune.rune),
         };
 
-        // for param in struct_.generic_params.iter() {
-        //     let inh = self.inherited_method_rune_anonymous_interface(interface, method, param.rune.rune);
-        //     rune_to_type.push((inh, param.tyype.tyype()));
-        // }
-
-        let interface_kind_rune = self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructParentInterfaceTemplateRune(AnonymousSubstructParentInterfaceTemplateRuneS {}));
-        // rune_to_type.push((interface_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {})));
         let self_kind_rune = self.scout_arena.intern_rune(IRuneValS::SelfKindRune(SelfKindRuneS {}));
-        // rune_to_type.push((self_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {})));
-        let self_kind_rune = self.scout_arena.intern_rune(IRuneValS::SelfKindRune(SelfKindRuneS {}));
-        // rune_to_type.push((self_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {})));
+        let self_full_type_rune = self.scout_arena.intern_rune(IRuneValS::SelfFullTypeRune(SelfFullTypeRuneS {}));
         let self_kind_template_rune = self.scout_arena.intern_rune(IRuneValS::SelfKindTemplateRune(SelfKindTemplateRuneS { loc: struct_.range.begin }));
-        // rune_to_type.push((self_kind_template_rune, ITemplataType::TemplateTemplataType(struct_type)));
 
         let mut abstract_param_index: i32 = -1;
         for (i, param) in original_params.iter().enumerate() {
@@ -730,21 +713,34 @@ where 's: 't,
         }
         assert!(abstract_param_index >= 0, "vassert: abstractParamIndex >= 0");
         let abstract_param = &original_params[abstract_param_index as usize];
-        let abstract_param_range = abstract_param.pattern.range;
+        let abstract_param_range = abstract_param.range;
         let abstract_param_kind_rune = RuneUsage {
             range: abstract_param_range,
             rune: self.inherited_method_rune_anonymous_interface(
-                interface, method, abstract_param.pattern.kind_rune.unwrap().rune),
+                interface, method, abstract_param.value_type_rune.rune),
         };
-        // rune_to_type.push((abstract_param_kind_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {})));
 
-        let destructuring_interface_rule = IRulexSR::CoordComponents(CoordComponentsSR {
-            range: abstract_param_range,
-            result_rune: abstract_param_kind_rune,
-            ownership_rune: RuneUsage { range: abstract_param_range, rune: self_ownership_rune },
-            kind_rune: RuneUsage { range: abstract_param_range, rune: interface_kind_rune },
-        });
-        rules.push(destructuring_interface_rule);
+        // The forwarder overrides the abstract method, so its self param wears the same reference
+        // wraps the abstract param declared — around the anonymous struct instead of the interface.
+        // Inherit the wrap chain into this function's rune namespace, then repoint its two endpoints:
+        // the outermost result becomes self's full type, the innermost inner becomes the struct kind.
+        // Intermediate runes keep their inherited identities (see @PFVSZ).
+        let inherited_abstract_full_rune = self.inherited_method_rune_anonymous_interface(
+            interface, method, abstract_param.full_type_rune.rune);
+        let inherited_abstract_value_rune = self.inherited_method_rune_anonymous_interface(
+            interface, method, abstract_param.value_type_rune.rune);
+        let self_outer_ref_rules_vec: Vec<IRulexSR<'s>> = abstract_param.type_outer_ref_rules.iter()
+            .map(|rule| self.map_runes_anonymous_interface(*rule, |rune| {
+                let inherited = self.inherited_method_rune_anonymous_interface(interface, method, rune);
+                if inherited.ptr_eq(&inherited_abstract_full_rune) { self_full_type_rune }
+                else if inherited.ptr_eq(&inherited_abstract_value_rune) { self_kind_rune }
+                else { inherited }
+            }))
+            .collect();
+        // With no wraps the two runes must be the same one, per ParameterS::new's invariant.
+        let self_full_rune =
+            if self_outer_ref_rules_vec.is_empty() { self_kind_rune } else { self_full_type_rune };
+        let self_outer_ref_rules = self.scout_arena.alloc_slice_from_vec(self_outer_ref_rules_vec);
 
         let struct_interface_imprecise = struct_name_s.interface_name.get_imprecise_name(self.scout_arena);
         let lookup_struct_template_rule = IRulexSR::Lookup(LookupSR {
@@ -765,46 +761,45 @@ where 's: 't,
         });
         rules.push(lookup_struct_rule);
 
-        let assembling_struct_rule = IRulexSR::CoordComponents(CoordComponentsSR {
-            range: abstract_param_range,
-            result_rune: RuneUsage { range: abstract_param_range, rune: self_kind_rune },
-            ownership_rune: RuneUsage { range: abstract_param_range, rune: self_ownership_rune },
-            kind_rune: RuneUsage { range: abstract_param_range, rune: self_kind_rune },
-        });
-        rules.push(assembling_struct_rule);
-
         let mut new_params_vec: Vec<ParameterS<'s>> = Vec::new();
         for param in original_params.iter() {
             match param.virtuality {
                 Some(_) => {
+                    // The struct kind itself is bound by the Call rule above, so the value-type
+                    // rules are empty; the wraps come from the abstract param.
                     new_params_vec.push(ParameterS::new(
                         abstract_param_range,
                         None,
                         false,
-                        AtomSP {
-                            range: abstract_param_range,
-                            name: Some(CaptureS { name: IVarNameS::SelfName, mutate: false }),
-                            kind_rune: Some(RuneUsage { range: abstract_param_kind_rune.range, rune: self_kind_rune }),
-                            destructure: None,
-                        },
+                        IVarNameS::SelfName,
+                        RuneUsage { range: abstract_param_kind_rune.range, rune: self_full_rune },
+                        RuneUsage { range: abstract_param_kind_rune.range, rune: self_kind_rune },
+                        self_outer_ref_rules,
+                        self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
                     ));
                 }
                 None => {
-                    let old_rune_usage = param.pattern.kind_rune.unwrap();
-                    let new_rune = RuneUsage {
-                        range: old_rune_usage.range,
-                        rune: self.inherited_method_rune_anonymous_interface(interface, method, old_rune_usage.rune),
+                    let remap = |rune_usage: RuneUsage<'s>| RuneUsage {
+                        range: rune_usage.range,
+                        rune: self.inherited_method_rune_anonymous_interface(interface, method, rune_usage.rune),
+                    };
+                    let remap_rules = |rules: &'s [IRulexSR<'s>]| {
+                        let mapped: Vec<IRulexSR<'s>> = rules.iter()
+                            .map(|r| self.map_runes_anonymous_interface(*r, |rune| {
+                                self.inherited_method_rune_anonymous_interface(interface, method, rune)
+                            }))
+                            .collect();
+                        self.scout_arena.alloc_slice_from_vec(mapped)
                     };
                     new_params_vec.push(ParameterS::new(
                         param.range,
                         param.virtuality,
                         param.pre_checked,
-                        AtomSP {
-                            range: param.pattern.range,
-                            name: param.pattern.name,
-                            kind_rune: Some(new_rune),
-                            destructure: param.pattern.destructure,
-                        },
+                        param.name,
+                        remap(param.full_type_rune),
+                        remap(param.value_type_rune),
+                        remap_rules(param.type_outer_ref_rules),
+                        remap_rules(param.value_type_rules),
                     ));
                 }
             }
@@ -831,7 +826,7 @@ where 's: 't,
         let mut call_args: Vec<&'s IExpressionSE<'s>> = Vec::new();
         for (i, param) in new_params_vec.iter().enumerate() {
             if (i as i32) == abstract_param_index { continue; }
-            let nm = param.pattern.name.unwrap().name;
+            let nm = param.name;
             call_args.push(self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
                 range: method_range,
                 name: nm,
@@ -848,7 +843,7 @@ where 's: 't,
         }));
 
         let locals_vec: Vec<LocalS<'s>> = new_params_vec.iter().map(|p| {
-            let nm = p.pattern.name.unwrap().name;
+            let nm = p.name;
             LocalS {
                 var_name: nm,
                 self_borrowed: IVariableUseCertainty::NotUsed,
@@ -894,7 +889,6 @@ where 's: 't,
         let new_params_slice = self.scout_arena.alloc_slice_from_vec(new_params_vec);
         let rules_slice = self.scout_arena.alloc_slice_from_vec(rules);
         let generic_params_slice = self.scout_arena.alloc_slice_from_vec(generic_params_vec);
-        // let rune_to_type_map = self.scout_arena.alloc_index_map_from_iter(rune_to_type);
 
         self.scout_arena.alloc(FunctionS::new(
             method_range,
@@ -902,7 +896,6 @@ where 's: 't,
             attributes,
             generic_params_slice,
             new_tyype,
-            // rune_to_type_map,
             new_params_slice,
             Some(inherited_return_rune),
             rules_slice,

@@ -42,13 +42,6 @@ where 's: 't,
             rune: use_(-64002, void_kind_rune_s),
             name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
         }));
-        let void_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidCoordRune(MacroVoidCoordRuneS {}));
-        rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
-            range: range(-1672147),
-            coord_rune: use_(-64002, void_coord_rune_s),
-            kind_rune: use_(-64002, void_kind_rune_s),
-        }));
-
         let interface_name_range = interface_a.name.range;
         let interface_citizen_name = TopLevelCitizenDeclarationNameS::from(interface_a.name);
         let interface_imprecise_name = interface_citizen_name.get_imprecise_name(self.scout_arena);
@@ -68,13 +61,6 @@ where 's: 't,
             result_rune: use_(-64002, self_kind_rune_s),
             template_rune: RuneUsage { range: interface_name_range, rune: self_kind_template_rune_s },
             args: generic_param_runes_slice,
-        }));
-
-        let self_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroSelfCoordRune(MacroSelfCoordRuneS {}));
-        rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
-            range: interface_name_range,
-            coord_rune: RuneUsage { range: interface_name_range, rune: self_coord_rune_s },
-            kind_rune: RuneUsage { range: interface_name_range, rune: self_kind_rune_s },
         }));
 
         // Use the same generic parameters as the interface, see MDSFONARFO.
@@ -102,16 +88,15 @@ where 's: 't,
                 range(-1340),
                 Some(AbstractSP { range: range(-64002), is_internal_method: true }),
                 false,
-                AtomSP {
-                    range: range(-1340),
-                    name: Some(CaptureS { name: IVarNameS::CodeVarName(self.keywords.thiss), mutate: false }),
-                    kind_rune: Some(use_(-64002, self_coord_rune_s)),
-                    destructure: None,
-                },
+                IVarNameS::CodeVarName(self.keywords.thiss),
+                use_(-64002, self_kind_rune_s),
+                use_(-64002, self_kind_rune_s),
+                self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+                self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
             )]),
-            Some(use_(-64002, void_coord_rune_s)),
+            Some(use_(-64002, void_kind_rune_s)),
             rules_slice,
-            IBodyS::AbstractBody(AbstractBodyS {}),
+            self.scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),
         ));
         let drop_name_local = match self.translate_generic_function_name(drop_function_a.name) {
             IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),

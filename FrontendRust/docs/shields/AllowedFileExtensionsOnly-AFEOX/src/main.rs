@@ -56,32 +56,32 @@ mod tests {
 
     #[test]
     fn allow_rs_file() {
-        assert!(run(&make_input("/Volumes/V/Vale1/FrontendRust/src/lib.rs")).is_empty());
+        assert!(run(&make_input("FrontendRust/src/lib.rs")).is_empty());
     }
 
     #[test]
     fn allow_md_file() {
-        assert!(run(&make_input("/Volumes/V/Vale1/docs/README.md")).is_empty());
+        assert!(run(&make_input("docs/README.md")).is_empty());
     }
 
     #[test]
     fn allow_cpp_file() {
-        assert!(run(&make_input("/Volumes/V/Vale1/Backend/src/externs.cpp")).is_empty());
+        assert!(run(&make_input("Backend/src/externs.cpp")).is_empty());
     }
 
     #[test]
     fn allow_c_file() {
-        assert!(run(&make_input("/Volumes/V/Vale1/Backend/builtins/strings.c")).is_empty());
+        assert!(run(&make_input("Backend/builtins/strings.c")).is_empty());
     }
 
     #[test]
     fn allow_h_file() {
-        assert!(run(&make_input("/Volumes/V/Vale1/Backend/builtins/ValeBuiltins.h")).is_empty());
+        assert!(run(&make_input("Backend/builtins/ValeBuiltins.h")).is_empty());
     }
 
     #[test]
     fn allow_vale_file() {
-        assert!(run(&make_input("/Volumes/V/Vale1/FrontendRust/src/tests/programs/virtuals/interfaceimm.vale")).is_empty());
+        assert!(run(&make_input("FrontendRust/src/tests/programs/virtuals/interfaceimm.vale")).is_empty());
     }
 
     #[test]
@@ -91,29 +91,29 @@ mod tests {
 
     #[test]
     fn deny_py_file() {
-        let v = run(&make_input("/Volumes/V/Vale1/scripts/build.py"));
+        let v = run(&make_input("scripts/build.py"));
         assert_eq!(v.len(), 1);
     }
 
     #[test]
     fn deny_toml_file() {
-        assert!(!run(&make_input("/Volumes/V/Vale1/Cargo.toml")).is_empty());
+        assert!(!run(&make_input("Cargo.toml")).is_empty());
     }
 
     #[test]
     fn deny_sh_file() {
-        assert!(!run(&make_input("/Volumes/V/Vale1/scripts/deploy.sh")).is_empty());
+        assert!(!run(&make_input("scripts/deploy.sh")).is_empty());
     }
 
     #[test]
     fn deny_hpp_file_not_in_allowlist() {
         // .hpp is a distinct extension from .h and must not slip through
-        assert!(!run(&make_input("/Volumes/V/Vale1/Backend/src/foo.hpp")).is_empty());
+        assert!(!run(&make_input("Backend/src/foo.hpp")).is_empty());
     }
 
     #[test]
     fn deny_violation_message_contains_path() {
-        let violations = run(&make_input("/Volumes/V/Vale1/scripts/build.py"));
-        assert!(violations[0].contains("/Volumes/V/Vale1/scripts/build.py"));
+        let violations = run(&make_input("scripts/build.py"));
+        assert!(violations[0].contains("scripts/build.py"));
     }
 }

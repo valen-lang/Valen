@@ -14,7 +14,7 @@ use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::utils::range::RangeS;
 use std::marker::PhantomData;
-
+use crate::typing::templata_compiler::is_ref;
 
 pub struct ResultTypeMismatchError<'s, 't> {
     pub expected_type: KindT<'s, 't>,
@@ -47,7 +47,7 @@ where 's: 't,
         // val isDestructor = params2.nonEmpty && params2.head.tyype.ownership == OwnT && ...
         let is_destructor =
             !params2.is_empty() &&
-            params2[0].tyype.ownership == OwnershipT::Own &&
+            !is_ref(params2[0].tyype) &&
             match full_env.id.local_name {
                 INameT::Function(func_name) if func_name.template.human_name == self.keywords.drop => true,
                 _ => false,
@@ -83,8 +83,8 @@ where 's: 't,
         let maybe_ret_coord =
             match maybe_ret_templata {
                 None => None,
-                Some(ITemplataT::Coord(coord_templata)) => {
-                    let ret_coord = coord_templata.coord;
+                Some(ITemplataT::Kind(coord_templata)) => {
+                    let ret_coord = coord_templata.kind;
                     coutputs.declare_function_return_type(signature2, ret_coord);
                     Some(ret_coord)
                 }

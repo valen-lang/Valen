@@ -49,7 +49,7 @@ where 's: 't,
     ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let result_coord = undestructed_expr_2.result();
         let result_expr_2 = match result_coord {
-            KindT::Never(_) | KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Float(_)| KindT::OverloadSet(_) | KindT::BorrowRef(_) | KindT::HeapOwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) => {
+            KindT::Never(_) | KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Float(_)| KindT::OverloadSet(_) | KindT::BorrowRef(_) | KindT::OwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) => {
                 // Just discard
                 ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(undestructed_expr_2)))
             }

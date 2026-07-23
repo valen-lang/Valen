@@ -19,7 +19,6 @@ use crate::typing::infer_compiler::InitialKnown;
 use crate::postparsing::ast::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
-use crate::typing::ast::citizens::StructMemberT;
 use crate::typing::env::function_environment_t::{IVariableT, CapturedVariableT};
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
@@ -279,26 +278,11 @@ where 's: 't,
         );
         let variables: Vec<IVariableT<'s, 't>> =
             closure_struct_def.members.iter().map(|member| {
-                match member {
-                    IStructMemberT::Normal(StructMemberT { name: var_name, tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }) }) => {
-                        IVariableT::Capture(CapturedVariableT {
-                            name: *var_name,
-                            closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
-                            coord: substituter.substitute_for_coord(coutputs, *reference),
-                        })
-                    }
-                    IStructMemberT::Normal(StructMemberT { name: var_name, tyype: IMemberTypeT::Address(AddressMemberTypeT { reference }) }) => {
-                        IVariableT::Capture(CapturedVariableT {
-                            name: *var_name,
-                            closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
-                            coord: substituter.substitute_for_coord(coutputs, *reference),
-                        })
-                    }
-                    IStructMemberT::Variadic(_) => {
-                        panic!("implement: make_closure_variables_and_entries — VariadicStructMemberT");
-                        // vimpl()
-                    }
-                }
+                IVariableT::Capture(CapturedVariableT {
+                    name: member.name,
+                    closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
+                    kind: substituter.substitute_for_kind(coutputs, member.tyype),
+                })
             }).collect();
         let entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = vec![
             (closure_struct_ref.id.local_name, IEnvEntryT::Templata(ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(self.typing_interner.alloc(closure_struct_ref)) })))),

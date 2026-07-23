@@ -741,6 +741,7 @@ pub enum IRuneS<'s> {
   InterfaceNameRune(&'s InterfaceNameRuneS<'s>),
   SelfRune(&'s SelfRuneS),
   SelfKindRune(&'s SelfKindRuneS),
+  SelfFullTypeRune(&'s SelfFullTypeRuneS),
   SelfKindTemplateRune(&'s SelfKindTemplateRuneS<'s>),
   MacroVoidKindRune(&'s MacroVoidKindRuneS),
   MacroSelfKindRune(&'s MacroSelfKindRuneS),
@@ -803,6 +804,7 @@ impl<'s> IRuneS<'s> {
       IRuneS::InterfaceNameRune(r) => *r as *const _ as *const (),
       IRuneS::SelfRune(r) => *r as *const _ as *const (),
       IRuneS::SelfKindRune(r) => *r as *const _ as *const (),
+      IRuneS::SelfFullTypeRune(r) => *r as *const _ as *const (),
       IRuneS::SelfKindTemplateRune(r) => *r as *const _ as *const (),
       IRuneS::MacroVoidKindRune(r) => *r as *const _ as *const (),
       IRuneS::MacroSelfKindRune(r) => *r as *const _ as *const (),
@@ -937,6 +939,7 @@ pub enum IRuneValS<'s, 'tmp> {
   InterfaceNameRune(InterfaceNameRuneS<'s>),
   SelfRune(SelfRuneS),
   SelfKindRune(SelfKindRuneS),
+  SelfFullTypeRune(SelfFullTypeRuneS),
   SelfKindTemplateRune(SelfKindTemplateRuneS<'s>),
   MacroVoidKindRune(MacroVoidKindRuneS),
   MacroSelfKindRune(MacroSelfKindRuneS),
@@ -1017,6 +1020,7 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
       (InterfaceNameRune(a), InterfaceNameRune(b)) => a == b,
       (SelfRune(a), SelfRune(b)) => a == b,
       (SelfKindRune(a), SelfKindRune(b)) => a == b,
+      (SelfFullTypeRune(a), SelfFullTypeRune(b)) => a == b,
       (SelfKindTemplateRune(a), SelfKindTemplateRune(b)) => a == b,
       (MacroVoidKindRune(a), MacroVoidKindRune(b)) => a == b,
       (MacroSelfKindRune(a), MacroSelfKindRune(b)) => a == b,
@@ -1163,6 +1167,11 @@ pub struct SelfRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SelfKindRuneS {}
+
+/// Self's full type: the value type of `SelfKindRuneS` inside whatever reference
+/// wraps the abstract method's self parameter declared (see @PFVSZ).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct SelfFullTypeRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SelfKindTemplateRuneS<'s> {

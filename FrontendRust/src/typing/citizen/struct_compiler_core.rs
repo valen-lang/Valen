@@ -38,8 +38,7 @@ use crate::postparsing::ast::MacroCallS;
 use crate::postparsing::names::IStructDeclarationNameS;
 use crate::typing::ast::ast::PrototypeT;
 use std::iter::once;
-
-
+use crate::typing::templata_compiler::translate_sharedness;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -80,7 +79,7 @@ where 's: 't,
                 }
             }).copied().collect();
 
-        let sharedness: SharednessT = evaluate_mutability(struct_a.sharedness);
+        let sharedness: SharednessT = translate_sharedness(struct_a.sharedness);
 
         let is_extern = struct_a.attributes.iter().any(|attr|
             matches!(attr, ICitizenAttributeS::Extern(_)));
@@ -225,7 +224,7 @@ where 's: 't,
             }).copied().collect();
         let _maybe_export = interface_a.attributes.iter().find(|attr| matches!(attr, ICitizenAttributeS::Export(_)));
 
-        let sharedness: SharednessT = evaluate_mutability(interface_a.sharedness);
+        let sharedness: SharednessT = translate_sharedness(interface_a.sharedness);
 
         let mut internal_methods: Vec<(PrototypeT<'s, 't>, usize)> = Vec::new();
         for (_name, entry) in outer_env.templatas().name_to_entry.iter() {
@@ -274,7 +273,7 @@ where 's: 't,
         env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         members: &[IStructMemberS<'s>],
-    ) -> Vec<IStructMemberT<'s, 't>> {
+    ) -> Vec<StructMemberT<'s, 't>> {
         members.iter().map(|m| self.make_struct_member(env, coutputs, *m)).collect()
     }
 
@@ -283,7 +282,7 @@ where 's: 't,
         env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         member: IStructMemberS<'s>,
-    ) -> IStructMemberT<'s, 't> {
+    ) -> StructMemberT<'s, 't> {
         let type_rune_s = (*member.type_rune()).rune;
         let type_templata = match env.lookup_nearest_with_imprecise_name(
             self.scout_arena.intern_imprecise_name(
@@ -305,16 +304,16 @@ where 's: 't,
         match member {
             IStructMemberS::NormalStructMember(n) => {
                 let coord = match type_templata {
-                    ITemplataT::Coord(c) => c.coord,
+                    ITemplataT::Kind(c) => c.kind,
                     _ => {
                         panic!("Unimplemented: make_struct_member non-coord type for NormalStructMemberS");
                         // val CoordTemplataT(coord) = typeTemplata  // pattern-destructure that vfails otherwise
                     }
                 };
-                IStructMemberT::Normal(StructMemberT {
+                StructMemberT {
                     name: IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(CodeVarNameT { name: n.name})),
-                    tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
-                })
+                    tyype: coord,
+                }
             }
             IStructMemberS::VariadicStructMember(_) => {
                 panic!("Unimplemented: make_struct_member VariadicStructMemberS");
@@ -459,11 +458,8 @@ where 's: 't,
             weakable: false,
             sharedness,
             members: self.typing_interner.alloc_slice_from_vec(members.iter().map(|m| {
-                let tyype = match &m.tyype {
-                    IMemberTypeT::Address(a) => IMemberTypeT::Address(AddressMemberTypeT { reference: a.reference }),
-                    IMemberTypeT::Reference(r) => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: r.reference }),
-                };
-                IStructMemberT::Normal(StructMemberT { name: m.name, tyype })
+                let tyype = m.tyype;
+                StructMemberT { name: m.name, tyype }
             }).collect::<Vec<_>>()),
             is_closure: true,
             instantiation_bound_params: self.typing_interner.alloc(InstantiationBoundArgumentsT {

@@ -15,7 +15,7 @@ use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::names::names::{IFunctionNameT, INameT};
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::types::types::{KindT, OwnershipT, BorrowRefT};
+use crate::typing::types::types::{KindT, BorrowRefT};
 use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::ConstantIntTE;
 use crate::typing::types::types::IntT;
@@ -45,7 +45,6 @@ use crate::typing::names::names::KindPlaceholderNameT;
 use crate::typing::names::names::KindPlaceholderTemplateNameT;
 use crate::typing::names::names::StructNameValT;
 use crate::typing::names::names::StructTemplateNameT;
-use crate::typing::templata::templata::OwnershipTemplataT;
 use crate::typing::types::types::InterfaceTTValT;
 use crate::typing::types::types::{RegionT};
 use crate::typing::types::types::StructTTValT;
@@ -333,9 +332,9 @@ exported func main() {
     let coutputs = compile.expect_compiler_outputs();
     let bork = coutputs.lookup_function_by_str("main");
     let prototype = match bork.body {
-        ExpressionTE::Block(BlockTE { inner }) => match inner {
-            ExpressionTE::Return(ReturnTE { source_expr }) => match source_expr {
-                ExpressionTE::Consecutor(ConsecutorTE { exprs }) => match exprs {
+        ExpressionTE::Block(BlockTE { inner, .. }) => match inner {
+            ExpressionTE::Return(ReturnTE { source_expr, .. }) => match source_expr {
+                ExpressionTE::Consecutor(ConsecutorTE { exprs, .. }) => match exprs {
                     [ExpressionTE::FunctionCall(call), ExpressionTE::VoidLiteral(VoidLiteralTE { .. })] => call.callable,
                     _ => panic!("expected Vector(FunctionCallTE, VoidLiteralTE)"),
                 },
@@ -466,22 +465,21 @@ fn humanize_errors() {
     let mut lid_builder = LocationInDenizenBuilder::new(vec![7]);
     let implicit_rune = scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lid_builder.borrow_val())));
 
-    let unsolved_rules: Vec<IRulexSR> = vec![
-        IRulexSR::CoordComponents(CoordComponentsSR {
-            range: make_range(0, code_str.len() as i32),
-            result_rune: RuneUsage { range: make_range(6, 7), rune: rune_i },
-            ownership_rune: RuneUsage { range: make_range(11, 12), rune: rune_a },
-            kind_rune: RuneUsage { range: make_range(33, 52), rune: implicit_rune },
-        }),
-        IRulexSR::KindComponents(KindComponentsSR {
-            range: make_range(33, 52),
-            kind_rune: RuneUsage { range: make_range(33, 52), rune: implicit_rune },
-        }),
-    ];
+    let unsolved_rules: Vec<IRulexSR> = vec![panic!("update")];
+    //     IRulexSR::CoordComponents(CoordComponentsSR {
+    //         range: make_range(0, code_str.len() as i32),
+    //         result_rune: RuneUsage { range: make_range(6, 7), rune: rune_i },
+    //         ownership_rune: RuneUsage { range: make_range(11, 12), rune: rune_a },
+    //         kind_rune: RuneUsage { range: make_range(33, 52), rune: implicit_rune },
+    //     }),
+    //     IRulexSR::KindComponents(KindComponentsSR {
+    //         range: make_range(33, 52),
+    //         kind_rune: RuneUsage { range: make_range(33, 52), rune: implicit_rune },
+    //     }),
+    // ];
 
     let step1 = {
-        let mut conclusions = HashMap::default();
-        conclusions.insert(rune_a, ITemplataT::Ownership(OwnershipTemplataT { ownership: OwnershipT::Own }));
+        let conclusions = HashMap::default();
         Step { complex: false, solved_rules: vec![], added_rules: vec![], conclusions }
     };
 
@@ -499,8 +497,7 @@ fn humanize_errors() {
         ICompileErrorT::TypingPassSolverError { range: typing_bump.alloc_slice_copy(&tz), failed_solve: failed_solve_1 });
     assert!(!text1.is_empty());
 
-    let mut conclusions2 = HashMap::default();
-    conclusions2.insert(rune_a, ITemplataT::Ownership(OwnershipTemplataT { ownership: OwnershipT::Own }));
+    let conclusions2 = HashMap::default();
     let failed_solve_2 = FailedSolve {
         steps: vec![step1],
         conclusions: conclusions2,
@@ -784,7 +781,7 @@ exported func main() {
     );
     let arg = call.args[0];
     match arg.result() {
-        KindT { kind: KindT::Struct(_), .. } => {}
+        KindT::Struct(_) => {}
         _ => panic!("expected Struct arg"),
     }
 }

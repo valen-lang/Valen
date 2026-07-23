@@ -36,18 +36,18 @@ where 's: 't,
             return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
             maybe_origin_function_templata: Some(env.templata()),
         };
-        let borrow_coord = KindT::new(OwnershipT::Borrow, param_coords[0].tyype.region, param_coords[0].tyype.kind);
+        let borrow_coord = unimplemented!();//KindT::new(OwnershipT::Borrow, param_coords[0].tyype.region, param_coords[0].tyype.kind);
         let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
             self.get_option(coutputs, env, call_range, call_location, RegionT::Default, borrow_coord)?;
-        let lock_expr = ExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE {
-            inner_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(
+        let lock_expr = ExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE::new(
+            ExpressionTE::ArgLookup(self.typing_interner.alloc(
                 ArgLookupTE::new(0, param_coords[0].tyype))),
-            result_opt_borrow_type: opt_coord,
-            some_constructor: self.typing_interner.alloc(some_constructor),
-            none_constructor: self.typing_interner.alloc(none_constructor),
-            some_impl_name: some_impl_id,
-            none_impl_name: none_impl_id,
-        }));
+            opt_coord,
+            self.typing_interner.alloc(some_constructor),
+            self.typing_interner.alloc(none_constructor),
+            some_impl_id,
+            none_impl_id,
+        )));
         let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
             ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
                 lock_expr,

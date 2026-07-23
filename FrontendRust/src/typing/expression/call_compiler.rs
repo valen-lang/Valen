@@ -172,21 +172,30 @@ where 's: 't,
       given_callable_unborrowed_expr_2: ExpressionTE<'s, 't>,
       given_args_exprs_2: &[ExpressionTE<'s, 't>],
     ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        // Whether we're given a borrow or an own, the call itself will be given a borrow.
+        // A borrowed or shared callable is already a reference to call through. An owned one is
+        // given a temporary local to live in, and we lend that.
         let given_callable_borrow_expr_2: ExpressionTE<'s, 't> =
             match given_callable_unborrowed_expr_2.result() {
-                KindT { ownership: OwnershipT::Borrow | OwnershipT::Share, .. } => given_callable_unborrowed_expr_2,
-                KindT { ownership: OwnershipT::Own, .. } => {
-                    panic!("Unimplemented: evaluate_custom_call OwnT makeTemporaryLocal");
-                    // localHelper.makeTemporaryLocal(coutputs, nenv, range, callLocation, life, contextRegion, givenCallableUnborrowedExpr2, BorrowT)
+                KindT::BorrowRef(_) | KindT::ShareRef(_) => given_callable_unborrowed_expr_2,
+                _ => {
+                    let defer = self.make_temporary_local_defer(
+                        coutputs, nenv, range, call_location, life, context_region,
+                        given_callable_unborrowed_expr_2)?;
+                    ExpressionTE::Defer(defer)
                 }
-                _ => { panic!("Unimplemented: evaluate_custom_call unexpected ownership"); }
             };
 
         let env = nenv.snapshot(self.typing_interner);
 
         let args_types_2: Vec<KindT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result()).collect();
-        let closure_param_type = KindT::new(given_callable_borrow_expr_2.result().ownership, RegionT::Default, kind);
+        // The `__call` function takes the callable the same way we're holding it.
+        let closure_param_type = match given_callable_borrow_expr_2.result() {
+            KindT::ShareRef(_) =>
+                KindT::ShareRef(self.typing_interner.alloc(ShareRefT { inner: kind })),
+            _ =>
+                KindT::BorrowRef(self.typing_interner.alloc(
+                    BorrowRefT { inner: kind, region: RegionT::Default })),
+        };
         let mut param_filters = vec![closure_param_type];
         param_filters.extend_from_slice(&args_types_2);
 
@@ -209,7 +218,8 @@ where 's: 't,
             Ok(x) => x,
         };
 
-        assert!(given_callable_borrow_expr_2.result().ownership == OwnershipT::Borrow);
+        assert!(matches!(given_callable_borrow_expr_2.result(),
+                         KindT::BorrowRef(_) | KindT::ShareRef(_)));
         let actual_callable_expr_2 = given_callable_borrow_expr_2;
 
         let mut actual_args_exprs_2: Vec<ExpressionTE<'s, 't>> = vec![actual_callable_expr_2];

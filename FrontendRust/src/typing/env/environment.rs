@@ -377,7 +377,7 @@ pub fn entry_matches_filter<'s, 't>(
       match templata {
         ITemplataT::Placeholder(..) => contexts.contains(&ILookupContext::TemplataLookupContext),
         ITemplataT::Isa(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::Coord(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
+        ITemplataT::Kind(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
         ITemplataT::CoordList(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
         ITemplataT::Prototype(_) => true,
         ITemplataT::Kind(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
@@ -390,8 +390,6 @@ pub fn entry_matches_filter<'s, 't>(
         ITemplataT::ImplDefinition(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
         ITemplataT::Integer(_) => true,
         ITemplataT::String(_) => true,
-        ITemplataT::Location(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::Ownership(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
         ITemplataT::ExternFunction(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
       }
     }

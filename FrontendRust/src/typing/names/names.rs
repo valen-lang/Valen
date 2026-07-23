@@ -169,7 +169,6 @@ pub enum INameT<'s, 't> {
     TypingPassFunctionResultVar(&'t TypingPassFunctionResultVarNameT),
     TypingPassTemporaryVar(&'t TypingPassTemporaryVarNameT<'t>),
     TypingPassPatternMember(&'t TypingPassPatternMemberNameT<'t>),
-    TypingIgnoredParam(&'t TypingIgnoredParamNameT),
     TypingPassPatternDestructuree(&'t TypingPassPatternDestructureeNameT<'t>),
     UnnamedLocal(&'t UnnamedLocalNameT<'s>),
     ClosureParam(&'t ClosureParamNameT<'s>),
@@ -1094,7 +1093,6 @@ pub enum IVarNameT<'s, 't> {
     TypingPassFunctionResultVar(&'t TypingPassFunctionResultVarNameT),
     TypingPassTemporaryVar(&'t TypingPassTemporaryVarNameT<'t>),
     TypingPassPatternMember(&'t TypingPassPatternMemberNameT<'t>),
-    TypingIgnoredParam(&'t TypingIgnoredParamNameT),
     TypingPassPatternDestructuree(&'t TypingPassPatternDestructureeNameT<'t>),
     UnnamedLocal(&'t UnnamedLocalNameT<'s>),
     ClosureParam(&'t ClosureParamNameT<'s>),
@@ -1130,12 +1128,6 @@ pub struct TypingPassTemporaryVarNameT<'t> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassPatternMemberNameT<'t> {
     pub life: LocationInFunctionEnvironmentT<'t>,
-}
-
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct TypingIgnoredParamNameT {
-    pub num: i32,
 }
 
 /// Interned (see @TFITCX)
@@ -1551,9 +1543,6 @@ impl<'s, 't> From<&'t TypingPassTemporaryVarNameT<'t>> for INameT<'s, 't> {
 }
 impl<'s, 't> From<&'t TypingPassPatternMemberNameT<'t>> for INameT<'s, 't> {
     fn from(x: &'t TypingPassPatternMemberNameT<'t>) -> Self { INameT::TypingPassPatternMember(x) }
-}
-impl<'s, 't> From<&'t TypingIgnoredParamNameT> for INameT<'s, 't> {
-    fn from(x: &'t TypingIgnoredParamNameT) -> Self { INameT::TypingIgnoredParam(x) }
 }
 impl<'s, 't> From<&'t TypingPassPatternDestructureeNameT<'t>> for INameT<'s, 't> {
     fn from(x: &'t TypingPassPatternDestructureeNameT<'t>) -> Self { INameT::TypingPassPatternDestructuree(x) }
@@ -2062,9 +2051,6 @@ impl<'s, 't> From<&'t TypingPassTemporaryVarNameT<'t>> for IVarNameT<'s, 't> {
 impl<'s, 't> From<&'t TypingPassPatternMemberNameT<'t>> for IVarNameT<'s, 't> {
     fn from(x: &'t TypingPassPatternMemberNameT<'t>) -> Self { IVarNameT::TypingPassPatternMember(x) }
 }
-impl<'s, 't> From<&'t TypingIgnoredParamNameT> for IVarNameT<'s, 't> {
-    fn from(x: &'t TypingIgnoredParamNameT) -> Self { IVarNameT::TypingIgnoredParam(x) }
-}
 impl<'s, 't> From<&'t TypingPassPatternDestructureeNameT<'t>> for IVarNameT<'s, 't> {
     fn from(x: &'t TypingPassPatternDestructureeNameT<'t>) -> Self { IVarNameT::TypingPassPatternDestructuree(x) }
 }
@@ -2302,7 +2288,6 @@ impl<'s, 't> From<IVarNameT<'s, 't>> for INameT<'s, 't> {
             IVarNameT::TypingPassFunctionResultVar(x) => x.into(),
             IVarNameT::TypingPassTemporaryVar(x) => x.into(),
             IVarNameT::TypingPassPatternMember(x) => x.into(),
-            IVarNameT::TypingIgnoredParam(x) => x.into(),
             IVarNameT::TypingPassPatternDestructuree(x) => x.into(),
             IVarNameT::UnnamedLocal(x) => x.into(),
             IVarNameT::ClosureParam(x) => x.into(),
@@ -2703,7 +2688,6 @@ impl<'s, 't> TryFrom<INameT<'s, 't>> for IVarNameT<'s, 't> {
             INameT::TypingPassFunctionResultVar(x) => Ok(IVarNameT::TypingPassFunctionResultVar(x)),
             INameT::TypingPassTemporaryVar(x) => Ok(IVarNameT::TypingPassTemporaryVar(x)),
             INameT::TypingPassPatternMember(x) => Ok(IVarNameT::TypingPassPatternMember(x)),
-            INameT::TypingIgnoredParam(x) => Ok(IVarNameT::TypingIgnoredParam(x)),
             INameT::TypingPassPatternDestructuree(x) => Ok(IVarNameT::TypingPassPatternDestructuree(x)),
             INameT::UnnamedLocal(x) => Ok(IVarNameT::UnnamedLocal(x)),
             INameT::ClosureParam(x) => Ok(IVarNameT::ClosureParam(x)),
@@ -3142,7 +3126,6 @@ where 's: 't, 't: 'tmp,
     TypingPassFunctionResultVar(TypingPassFunctionResultVarNameT),
     TypingPassTemporaryVar(TypingPassTemporaryVarNameT<'t>),
     TypingPassPatternMember(TypingPassPatternMemberNameT<'t>),
-    TypingIgnoredParam(TypingIgnoredParamNameT),
     TypingPassPatternDestructuree(TypingPassPatternDestructureeNameT<'t>),
     UnnamedLocal(UnnamedLocalNameT<'s>),
     ClosureParam(ClosureParamNameT<'s>),
@@ -3246,7 +3229,6 @@ where 's: 't, 't: 'tmp,
             (TypingPassFunctionResultVar(a), TypingPassFunctionResultVar(b)) => a == b,
             (TypingPassTemporaryVar(a), TypingPassTemporaryVar(b)) => a == b,
             (TypingPassPatternMember(a), TypingPassPatternMember(b)) => a == b,
-            (TypingIgnoredParam(a), TypingIgnoredParam(b)) => a == b,
             (TypingPassPatternDestructuree(a), TypingPassPatternDestructuree(b)) => a == b,
             (UnnamedLocal(a), UnnamedLocal(b)) => a == b,
             (ClosureParam(a), ClosureParam(b)) => a == b,

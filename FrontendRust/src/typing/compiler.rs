@@ -30,7 +30,7 @@ use crate::typing::templata::templata::{
     FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, PlaceholderTemplataT,
     PrototypeTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
 };
-use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, SharednessT, NeverT, StrT, VoidT};
+use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, SharednessT, NeverT, StrT, VoidT, BorrowRefT, OwnRefT, WeakRefT, ShareRefT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::types::types::{RegionT};
 use crate::typing::function::function_compiler::StampFunctionSuccess;
@@ -140,14 +140,12 @@ where 's: 't,
     pub fn get_placeholders_in_templata(&self, accum: &mut Vec<IdT<'s, 't>>, templata: ITemplataT<'s, 't>) {
         match templata {
             ITemplataT::Kind(KindTemplataT { kind }) => self.get_placeholders_in_kind(accum, *kind),
-            ITemplataT::Coord(CoordTemplataT { coord: KindT { kind, .. } }) => self.get_placeholders_in_kind(accum, *kind),
             ITemplataT::Placeholder(PlaceholderTemplataT { id, .. }) => accum.push(*id),
             ITemplataT::Integer(_) => {}
             ITemplataT::Boolean(_) => {}
             ITemplataT::String(_) => {}
             ITemplataT::RuntimeSizedArrayTemplate(_) => {}
             ITemplataT::StaticSizedArrayTemplate(_) => {}
-            ITemplataT::Ownership(_) => {}
             ITemplataT::InterfaceDefinition(_) => {}
             ITemplataT::StructDefinition(_) => {}
             ITemplataT::ImplDefinition(_) => {}
@@ -179,11 +177,11 @@ where 's: 't,
             KindT::Never(_) => {}
             KindT::Str(_) => {}
             KindT::RuntimeSizedArray(rsa) => {
-                self.get_placeholders_in_kind(accum, rsa.element_type().kind);
+                self.get_placeholders_in_kind(accum, rsa.element_type());
             }
             KindT::StaticSizedArray(ssa) => {
                 self.get_placeholders_in_templata(accum, ssa.size());
-                self.get_placeholders_in_kind(accum, ssa.element_type().kind);
+                self.get_placeholders_in_kind(accum, ssa.element_type());
             }
             KindT::Struct(s) => {
                 let inst_name = IInstantiationNameT::try_from(s.id.local_name).expect(
@@ -201,6 +199,18 @@ where 's: 't,
             }
             KindT::KindPlaceholder(p) => accum.push(p.id),
             KindT::OverloadSet(_) => {}
+            KindT::BorrowRef(BorrowRefT { region, inner }) => {
+                self.get_placeholders_in_kind(accum, *inner);
+            }
+            KindT::OwnRef(OwnRefT { inner }) => {
+                self.get_placeholders_in_kind(accum, *inner);
+            }
+            KindT::ShareRef(ShareRefT { inner }) => {
+                self.get_placeholders_in_kind(accum, *inner);
+            }
+            KindT::WeakRef(WeakRefT { inner }) => {
+                self.get_placeholders_in_kind(accum, *inner);
+            }
         }
     }
 
@@ -263,6 +273,10 @@ where 's: 't,
                     ISubKindTT::Interface(i))
             }
             KindT::Int(_) | KindT::Bool(_) | KindT::Float(_) | KindT::Str(_) | KindT::Void(_) => false,
+            KindT::BorrowRef(_) => unimplemented!(),
+            KindT::OwnRef(_) => unimplemented!(),
+            KindT::ShareRef(_) => unimplemented!(),
+            KindT::WeakRef(_) => unimplemented!(),
         }
     }
 
@@ -521,7 +535,7 @@ where 's: 't,
     pub fn evaluate<'p>(
         &self,
         _code_map: &FileCoordinateMap<'p, String>,
-        package_to_program_a: &PackageCoordinateMap<'s, ProgramS<'s>>,
+        file_to_program_s: &FileCoordinateMap<'s, ProgramS<'s>>,
     ) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
         let name_to_struct_defined_macro: HashMap<StrI<'s>, OnStructDefinedMacro> = {
             let mut m = HashMap::default();
@@ -536,7 +550,10 @@ where 's: 't,
             m
         };
         let mut id_and_env_entry: Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
-        for (coord, program_a) in &package_to_program_a.package_coord_to_contents {
+        // A package's denizens can be spread across several files; each is registered under its
+        // own file's package coord, so the same package is simply visited once per file.
+        for (file_coord, program_a) in &file_to_program_s.file_coord_to_contents {
+            let coord = file_coord.package_coord;
             let pkg_top_level_name =
                 self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { });
             let pkg_top_level = INameT::PackageTopLevel(pkg_top_level_name);
@@ -591,7 +608,7 @@ where 's: 't,
                 let impl_name_t = package_name.add_step(self.typing_interner, impl_name_local);
                 id_and_env_entry.push((impl_name_t, IEnvEntryT::Impl(impl_a)));
             }
-            for function_a in program_a.functions.iter() {
+            for function_a in program_a.implemented_functions.iter() {
                 let function_template_name =
                     self.translate_generic_function_name(function_a.name);
                 let function_name_local: INameT<'s, 't> = match function_template_name {
@@ -1074,8 +1091,8 @@ where 's: 't,
         }
 
         // Export compile phase
-        // packageToProgramA.flatMap({ case (packageCoord, ProgramS) => ... ProgramS.exports.foreach(...) })
-        for (coord, program_a) in &package_to_program_a.package_coord_to_contents {
+        for (file_coord, program_a) in &file_to_program_s.file_coord_to_contents {
+            let coord = file_coord.package_coord;
             for export in program_a.exports.iter() {
 
                 let package_top_level_name = self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { });
@@ -1087,7 +1104,7 @@ where 's: 't,
                 });
                 let package_env = make_top_level_environment(global_env, package_id, self.typing_interner);
 
-                let type_rune_t = export.type_rune.clone();
+                let type_rune_t = export.rune.clone();
 
                 let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
                     code_loc: export.range.begin,
@@ -1472,14 +1489,14 @@ where 's: 't,
             let exported_kind_to_export = package_to_kind_to_export.get(func_export.export_id.package_coord).unwrap_or(&empty_kind_map);
             let all_types: Vec<KindT<'s, 't>> = once(func_export.prototype.return_type).chain(func_export.prototype.param_types().iter().copied()).collect();
             for param_type in all_types {
-                if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
+                if !self.is_primitive(param_type) && !exported_kind_to_export.contains_key(&param_type) {
                     let range_t = self.typing_interner.alloc_slice_copy(&[func_export.range]);
                     let signature_t = self.typing_interner.alloc(func_export.prototype.to_signature());
                     return Err(ICompileErrorT::ExportedFunctionDependedOnNonExportedKind {
                         range: range_t,
                         paackage: *func_export.export_id.package_coord,
                         signature: signature_t,
-                        non_exported_kind: param_type.kind,
+                        non_exported_kind: param_type,
                     });
                 }
             }
@@ -1489,14 +1506,14 @@ where 's: 't,
             let exported_kind_to_export = package_to_kind_to_export.get(function_extern.extern_placeholdered_id.package_coord).unwrap_or(&empty_kind_map);
             let all_types: Vec<KindT<'s, 't>> = once(function_extern.prototype.return_type).chain(function_extern.prototype.param_types().iter().copied()).collect();
             for param_type in all_types {
-                if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
+                if !self.is_primitive(param_type) && !exported_kind_to_export.contains_key(&param_type) {
                     // Method-own and container-inherited template params surface here as
                     // placeholders at definition time (e.g. `extern func bar<C>(c C)` inside
                     // `extern struct Foo<A>` has C and A as KindPlaceholderTs in the wrapper
                     // prototype). Placeholders are substitution slots, not concrete types; the
                     // actual concrete kind for each monomorphization is what matters for ABI,
                     // and gets checked at instantiation.
-                    let kind_is_fine_in_extern_func = match param_type.kind {
+                    let kind_is_fine_in_extern_func = match param_type {
                         KindT::Struct(s) => coutputs.lookup_struct(s.id, self).attributes.iter().any(|a| matches!(a, ICitizenAttributeT::Extern(_))),
                         KindT::KindPlaceholder(_) => true,
                         _ => false,
@@ -1508,7 +1525,7 @@ where 's: 't,
                             range: range_t,
                             paackage: *function_extern.extern_placeholdered_id.package_coord,
                             signature: signature_t,
-                            non_exported_kind: param_type.kind,
+                            non_exported_kind: param_type,
                         });
                     }
                 }
@@ -1531,36 +1548,24 @@ where 's: 't,
                                 IBoundArgumentsSource::InheritBoundsFromTypeItself,
                             );
                         for member in struct_def.members.iter() {
-                            match member {
-                                IStructMemberT::Variadic(_) => {
-                                    panic!("implement: ensure_deep_exports — VariadicStructMemberT");
-                                    // vimpl()
-                                }
-                                IStructMemberT::Normal(StructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
-                                    panic!("implement: ensure_deep_exports — AddressMemberTypeT");
-                                    // vimpl()
-                                }
-                                IStructMemberT::Normal(StructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: unsubstituted_member_coord }), .. }) => {
-                                    let member_coord = substituter.substitute_for_coord(coutputs, *unsubstituted_member_coord);
-                                    let member_kind = member_coord.kind;
-                                    if struct_def.sharedness == SharednessT::Shared
-                                        && !self.is_primitive(member_kind)
-                                        && !exported_kind_to_export.contains_key(&member_kind)
-                                    {
-                                        let range_t = self.typing_interner.alloc_slice_copy(&[export.range]);
-                                        return Err(ICompileErrorT::ExportedKindDependedOnNonExportedKind {
-                                            range: range_t,
-                                            paackage: **package_coord,
-                                            exported_kind: *exported_kind,
-                                            non_exported_kind: member_kind,
-                                        });
-                                    }
-                                }
+                            let member_coord = substituter.substitute_for_kind(coutputs, member.tyype);
+                            let member_kind = member_coord;
+                            if struct_def.sharedness == SharednessT::Shared
+                                && !self.is_primitive(member_kind)
+                                && !exported_kind_to_export.contains_key(&member_kind)
+                            {
+                                let range_t = self.typing_interner.alloc_slice_copy(&[export.range]);
+                                return Err(ICompileErrorT::ExportedKindDependedOnNonExportedKind {
+                                    range: range_t,
+                                    paackage: **package_coord,
+                                    exported_kind: *exported_kind,
+                                    non_exported_kind: member_kind,
+                                });
                             }
                         }
                     }
                     KindT::StaticSizedArray(as_tt) => {
-                        let element_kind = as_tt.element_type().kind;
+                        let element_kind = as_tt.element_type();
                         if !self.is_primitive(element_kind)
                             && !exported_kind_to_export.contains_key(&element_kind)
                         {
@@ -1575,7 +1580,7 @@ where 's: 't,
                     }
                     KindT::RuntimeSizedArray(rsa) => {
                         let element_kind = match rsa.name.local_name {
-                            INameT::RuntimeSizedArray(rsan) => rsan.arr.element_type.kind,
+                            INameT::RuntimeSizedArray(rsan) => rsan.arr.element_type,
                             _ => panic!("vwat"),
                         };
                         if !self.is_primitive(element_kind)
@@ -1595,6 +1600,10 @@ where 's: 't,
                     KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_) | KindT::Never(_) => {
                         panic!("vwat: unexpected kind in exportedKindToExport");
                     }
+                    KindT::BorrowRef(_) => unimplemented!(),
+                    KindT::OwnRef(_) => unimplemented!(),
+                    KindT::ShareRef(_) => unimplemented!(),
+                    KindT::WeakRef(_) => unimplemented!(),
                 }
             }
         }
@@ -1683,6 +1692,10 @@ where 's: 't,
             KindT::StaticSizedArray(_) => false,
             KindT::RuntimeSizedArray(_) => false,
             KindT::OverloadSet(_) => false,
+            KindT::BorrowRef(_) => unimplemented!(),
+            KindT::OwnRef(_) => unimplemented!(),
+            KindT::ShareRef(_) => unimplemented!(),
+            KindT::WeakRef(_) => unimplemented!(),
         }
     }
     
@@ -1693,27 +1706,6 @@ where 's: 't,
     ) -> Vec<ITemplataT<'s, 't>> {
         panic!("Unimplemented: Slab 15");
         // concreteValues2.map(concreteValue2 => getMutability(coutputs, concreteValue2))
-    }
-
-    pub fn get_sharedness(
-        &self,
-        coutputs: &CompilerOutputs<'s, 't>,
-        concrete_value2: KindT<'s, 't>,
-    ) -> SharednessT {
-        match concrete_value2 {
-            KindT::Never(_) => SharednessT::Single,
-            KindT::Int(_) => SharednessT::Single,
-            KindT::Float(_) => SharednessT::Single,
-            KindT::Bool(_) => SharednessT::Single,
-            KindT::Str(_) => SharednessT::Shared,
-            KindT::Void(_) => SharednessT::Single,
-            KindT::KindPlaceholder(kp) => coutputs.lookup_mutability(self.get_placeholder_template(kp.id)),
-            KindT::RuntimeSizedArray(_) => SharednessT::Single,
-            KindT::StaticSizedArray(_) => SharednessT::Single,
-            KindT::Struct(s) => coutputs.lookup_mutability(self.get_struct_template(s.id)),
-            KindT::Interface(i) => coutputs.lookup_mutability(self.get_interface_template(i.id)),
-            KindT::OverloadSet(_) => SharednessT::Single,
-        }
     }
     
 }

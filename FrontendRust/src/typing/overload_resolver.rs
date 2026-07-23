@@ -346,23 +346,11 @@ where 's: 't,
                             return Ok(Err(IFindFunctionFailureReason::RuleTypeSolveFailure { reason: e }));
                         }
                         Ok(rune_a_to_type_with_implicitly_coercing_lookups_s) => {
-                            let rune_type_solve_env = self.create_rune_type_solver_env(calling_env);
-                            let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+                            let rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
                                 IndexMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
-                            let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-                            match explicify_lookups(
-                                &rune_type_solve_env,
-                                self.scout_arena,
-                                &mut rune_a_to_type,
-                                &mut rule_builder,
-                                rules_s_deref.clone(),
-                            ) {
-                                Err(_e) => {
-                                    panic!("implement: attemptCandidateBanner explicifyLookups error path");
-                                }
-                                Ok(()) => {}
-                            }
-                            let rules_without_implicit_coercions_a = rule_builder;
+                            // The rules are already explicit Lookup/Call, so nothing rewrites them here (explicify_lookups is retired).
+                            // Name-resolution failures still surface from the rune-type solve above.
+                            let rules_without_implicit_coercions_a = rules_s_deref.clone();
 
                             // We preprocess out the rune parent env lookups, see MKRFA.
                             let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
@@ -492,7 +480,7 @@ where 's: 't,
                 );
                 let func_name = IFunctionNameT::try_from(prototype_t.id.local_name).unwrap_or_else(|_| panic!("attemptCandidateBanner PrototypeTemplata: local_name not IFunctionNameT"));
                 let params: Vec<KindT<'s, 't>> = func_name.parameters().iter().map(|param_type| {
-                    substituter.substitute_for_coord(coutputs, *param_type)
+                    substituter.substitute_for_kind(coutputs, *param_type)
                 }).collect();
                 match self.params_match(coutputs, calling_env, call_range, call_location, args, &params, exact) {
                     Err(rejection_reason) => Ok(Err(rejection_reason)),
@@ -512,7 +500,7 @@ where 's: 't,
         param_filters: &[KindT<'s, 't>],
     ) -> Vec<IInDenizenEnvironmentT<'s, 't>> {
         param_filters.iter().flat_map(|tyype| {
-            match tyype.kind {
+            match tyype {
                 KindT::Struct(sr) => { vec![coutputs.get_outer_env_for_type(range, self.get_struct_template(sr.id))] }
                 KindT::Interface(ir) => { vec![coutputs.get_outer_env_for_type(range, self.get_interface_template(ir.id))] }
                 KindT::KindPlaceholder(kp) => { vec![coutputs.get_outer_env_for_type(range, self.get_placeholder_template(kp.id))] }
@@ -533,7 +521,7 @@ where 's: 't,
         // Look through each parameter, and if it's a placeholder that impls an interface, grab
         // the interface env so that callers can look inside them for methods too (see @BDPFWDZ).
         for tyype in param_filters.iter() {
-            match tyype.kind {
+            match tyype {
                 KindT::KindPlaceholder(kp) => {
                     let placeholder_imprecise = match get_imprecise_name(self.scout_arena, kp.id.local_name) {
                         None => panic!("Placeholder localName had no imprecise name: {:?}", kp.id.local_name),
@@ -754,12 +742,8 @@ where 's: 't,
         let func_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
         let param_filters = vec![
-            callable_te.result().underlying_coord(),
-            KindT::new(
-                OwnershipT::Own,
-                RegionT::Default,
-                KindT::Int(IntT { bits: 32 }),
-            ),
+            callable_te.result(),
+            KindT::Int(IntT { bits: 32 }),
         ];
         match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], &[], context_region, &param_filters, &[], false)? {
             Err(e) => Err(ICompileErrorT::CouldntFindFunctionToCallT {
@@ -783,7 +767,7 @@ where 's: 't,
     ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
         let func_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
-        let param_filters = vec![callable_te.result().underlying_coord(), element_type];
+        let param_filters = vec![callable_te.result(), element_type];
         let calling_env = IInDenizenEnvironmentT::from(fate);
         match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], &[], context_region, &param_filters, &[], false)?
         {
@@ -791,5 +775,4 @@ where 's: 't,
             Ok(sfs) => Ok(sfs.prototype),
         }
     }
-
 }

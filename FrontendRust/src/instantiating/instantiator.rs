@@ -876,7 +876,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             .zip(IInstantiationNameI::try_from(id.local_name).unwrap().template_args(self.interner).iter())
             .flat_map(|(template_arg_t, template_arg_i)| -> Vec<(IdT<'s, 't>, ITemplataI<'s, 'i>)> {
                 match (template_arg_t, template_arg_i) {
-                    (ITemplataT::Coord(ct), c @ ITemplataI::Coord(_)) => {
+                    (ITemplataT::Kind(ct), c @ ITemplataI::Coord(_)) => {
                         match ct.coord.kind {
                             KindT::KindPlaceholder(kp) => vec![(kp.id, *c)],
                             _ => vec![],
@@ -2406,7 +2406,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 panic!("Unimplemented: translate_templata String");
                 // case StringTemplataT(value) => StringTemplataI(value)
             }
-            ITemplataT::Coord(c) => ITemplataI::Coord(self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &c.coord)),
+            ITemplataT::Kind(c) => ITemplataI::Coord(self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &c.coord)),
             ITemplataT::Kind(_) => {
                 panic!("Unimplemented: translate_templata Kind");
                 // case KindTemplataT(kind) => KindTemplataI(translateKind(...))

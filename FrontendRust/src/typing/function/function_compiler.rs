@@ -265,7 +265,7 @@ where 's: 't,
         // Note, this is where the unordered closuredNames set becomes ordered.
         let closured_var_names_and_types: Vec<&'t StructMemberT<'s, 't>> =
             closured_names.iter().map(|name| {
-                self.determine_closure_variable_member(containing_node_env, coutputs, *name)
+                self.determine_closure_variable_member(containing_node_env, *name)
             }).collect();
 
         let (struct_tt, _, _function_templata) =
@@ -279,37 +279,19 @@ where 's: 't,
     pub fn determine_closure_variable_member(
         &self,
         env: &'t NodeEnvironmentT<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
         name: IVarNameS<'s>,
     ) -> &'t StructMemberT<'s, 't> {
         let translated_name = self.translate_var_name_step(name);
-        let tyype = match env.get_variable(translated_name).unwrap() {
-            IVariableT::Local(LocalVariable { tyype: coord, .. }) => {
-                // See "Captured own is borrow" test for why we do this
-                match coord.ownership {
-                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: KindT::new(OwnershipT::Borrow, coord.region, coord.kind) }),
-                    OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
-                    OwnershipT::Weak => {
-                        unreachable!("ReferenceLocalVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
-                    }
-                }
-            }
-            IVariableT::Local(LocalVariable { tyype: reference, .. }) => {
-                IMemberTypeT::Address(AddressMemberTypeT { reference })
-            }
-            IVariableT::Capture(CapturedVariableT { coord, .. }) => {
-                // See "Captured own is borrow" test for why we do this
-                match coord.ownership {
-                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: KindT::new(OwnershipT::Borrow, coord.region, coord.kind) }),
-                    OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
-                    OwnershipT::Weak => {
-                        unreachable!("ReferenceClosureVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
-                    }
-                }
-            }
-            IVariableT::Capture(CapturedVariableT { coord: reference, .. }) => {
-                IMemberTypeT::Address(AddressMemberTypeT { reference })
-            }
+        let captured = match env.get_variable(translated_name).unwrap() {
+            IVariableT::Local(LocalVariable { tyype, .. }) => tyype,
+            IVariableT::Capture(CapturedVariableT { kind, .. }) => kind,
+        };
+        // A closure holds a borrow of what it captures, never the owned value.
+        // See the "Captured own is borrow" test.
+        let tyype = match captured {
+            KindT::BorrowRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) => captured,
+            _ => KindT::BorrowRef(self.typing_interner.alloc(
+                BorrowRefT { inner: captured, region: RegionT::Default })),
         };
         self.typing_interner.alloc(StructMemberT { name: translated_name, tyype })
     }

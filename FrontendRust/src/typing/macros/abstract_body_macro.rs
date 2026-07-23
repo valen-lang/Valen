@@ -82,12 +82,12 @@ where 's: 't,
                     ArgLookupTE::new(index as i32, *param_type)))
             }).collect();
         let args_slice = self.typing_interner.alloc_slice_from_vec(args);
-        let ifc = InterfaceFunctionCallTE {
-            super_function_prototype: self.typing_interner.alloc(prototype),
-            virtual_param_index: virtual_index,
-            result_reference: prototype.return_type,
-            args: args_slice,
-        };
+        let ifc = InterfaceFunctionCallTE::new(
+            self.typing_interner.alloc(prototype),
+            virtual_index,
+            prototype.return_type,
+            args_slice,
+        );
         let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
             ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
                 ExpressionTE::InterfaceFunctionCall(self.typing_interner.alloc(ifc)),

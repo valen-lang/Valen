@@ -76,8 +76,6 @@ Instead, use the same file.
 ## SEE ALSO (auto)
 
 - **Read when writing an `r#"..."#` raw string containing embedded Vale source in a Rust test.** → FrontendRust/docs/shields/MultiLineValeFixtures-MLVFX.md
-- **Read when reviewing or writing FrontendRust compiler code in any pass.** → FrontendRust/docs/skills/valec-reviewer.md
-- **Read when reviewing or writing code in the typing pass (FrontendRust/src/typing/).** → FrontendRust/src/typing/docs/skills/typing-reviewer.md
 - **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
 - **Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.** → docs/skills/bug-repro.md
 - **Read when the human asks to close, end, or shut down the current Claude Code session.** → docs/skills/close-session.md
@@ -102,4 +100,7 @@ Instead, use the same file.
 - **Read when authoring or running any bulk-edit script (`./tmp/scripts/*.py`, shell loops over many files, or any per-file transform across more than a handful of files).** → docs/skills/scripting.md
 - **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → docs/skills/tdd.md
 - **Read when reviewing or writing typing-pass tests (or other tests that walk the AST with collect_ macros).** → docs/skills/test-review.md
+- **Read when an API has obligations callers must remember (call X before Y, don't forget Z), when the same construction is hand-rolled across many call sites, or when runtime assertions guard "did you do this yet".** → docs/skills/type-enforced-apis.md
+- **Read when reviewing or writing code in the typing pass (FrontendRust/src/typing/).** → docs/skills/typing-reviewer.md
 - **Read when a human asks you to use the mailbox, or to coordinate with another Claude Code session via messages.** → docs/skills/use-mailbox.md
+- **Read when reviewing or writing FrontendRust compiler code in any pass.** → docs/skills/valec-reviewer.md

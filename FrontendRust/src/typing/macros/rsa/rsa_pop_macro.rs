@@ -46,7 +46,7 @@ where 's: 't,
                         KindT::RuntimeSizedArray(rsa) => rsa.element_type(),
                         other => panic!("vwat: {:?}", other),
                     };
-                    self.typing_interner.alloc(PopRuntimeSizedArrayTE { array_expr, element_type })
+                    self.typing_interner.alloc(PopRuntimeSizedArrayTE::new(array_expr, element_type))
                 }),
             ))),
         )));

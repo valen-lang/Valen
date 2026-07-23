@@ -229,11 +229,11 @@ where 's: 't,
         _range: Vec<RangeS<'s>>,
         env: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
-        rules: &[IRulexSR<'s>],
-        rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
-        initially_known_rune_to_templata: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        rules: Vec<IRulexSR<'s>>,
+        rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>>,
+        initially_known_rune_to_templata: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
-        for rule in rules {
+        for rule in &rules {
             for rune_usage in rule.rune_usages() {
                 assert!(rune_to_type.contains_key(&rune_usage.rune));
             }
@@ -244,7 +244,7 @@ where 's: 't,
             rules.iter().all(|r| !matches!(r, IRulexSR::CallSiteFunc(_))) ||
             rules.iter().all(|r| !matches!(r, IRulexSR::DefinitionFunc(_))));
 
-        for (rune, templata) in initially_known_rune_to_templata {
+        for (rune, templata) in &initially_known_rune_to_templata {
             if self.opts.global_options.sanity_check {
                 self.sanity_check_conclusion(&env, state, *rune, *templata);
             }
@@ -481,7 +481,7 @@ where 's: 't,
                             // SharednessT::Shared => CoordT::new(OwnershipT::Share, RegionT { region: IRegionT::Default }, kind),
                             // SharednessT::Single => CoordT::new(ownership, RegionT { region: IRegionT::Default }, kind),
                         // };
-                        // let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
+                        // let new_templata = ITemplataT::Kind(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
                         // let mut conclusions = IndexMap::default();
                         // conclusions.insert(cc.result_rune.rune, new_templata);
                         // match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
@@ -496,7 +496,7 @@ where 's: 't,
                     // }
                     // Some(coord_templata) => {
                         // let coord = match coord_templata {
-                            // ITemplataT::Coord(ct) => ct.coord,
+                            // ITemplataT::Kind(ct) => ct.coord,
                             // _ => panic!("Expected CoordTemplataT in CoordComponentsSR result"),
                         // };
                         // let mut conclusions = IndexMap::default();
@@ -527,7 +527,7 @@ where 's: 't,
                 // The function (or struct) can either supply a default resolve rule (usually
                 // via the `func moo(int)void` syntax) or let the caller pass it in.
                 let param_coords = match solver_state.get_conclusion(&resolve.params_list_rune.rune).expect("paramListRune not solved in ResolveSR") {
-                    ITemplataT::CoordList(cl) => cl.coords,
+                    ITemplataT::CoordList(cl) => cl.kinds,
                     _ => panic!("Expected CoordListTemplataT in ResolveSR paramListRune"),
                 };
                 //       solverState.getConclusion(returnRune.rune) match {
@@ -552,7 +552,7 @@ where 's: 't,
                             }
                         }
                     }
-                    Some(_) => panic!("Expected CoordTemplataT in ResolveSR returnRune"),
+                    Some(_) => panic!("Expected KindTemplataT in ResolveSR returnRune"),
                     //         case None => {
                     None => {
                         let ranges = once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -591,7 +591,7 @@ where 's: 't,
                     ITemplataT::Prototype(proto_templata) => {
                         let prototype = proto_templata.prototype;
                         let mut conclusions = IndexMap::default();
-                        conclusions.insert(csf.params_list_rune.rune, ITemplataT::CoordList(self.typing_interner.alloc(CoordListTemplataT { coords: prototype.param_types() })));
+                        conclusions.insert(csf.params_list_rune.rune, ITemplataT::CoordList(self.typing_interner.alloc(KindListTemplataT { kinds: prototype.param_types() })));
                         conclusions.insert(csf.return_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: prototype.return_type })));
                         match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
@@ -613,7 +613,7 @@ where 's: 't,
             //     case DefinitionFuncSR(range, resultRune, name, paramListRune, returnRune) => {
             IRulexSR::DefinitionFunc(def_func) => {
                 let param_coords = match solver_state.get_conclusion(&def_func.params_list_rune.rune).expect("DefinitionFunc paramListRune has no conclusion") {
-                    ITemplataT::CoordList(cl) => cl.coords,
+                    ITemplataT::CoordList(cl) => cl.kinds,
                     _ => unreachable!("DefinitionFunc: paramListRune is statically typed CoordList"),
                 };
                 let return_type = match solver_state.get_conclusion(&def_func.return_rune.rune).expect("DefinitionFunc returnRune has no conclusion") {
@@ -637,13 +637,13 @@ where 's: 't,
                 // let sub_templata = solver_state.get_conclusion(&csia.sub_rune.rune)
                     // .expect("vassertSome: subRune not solved in CallSiteCoordIsaSR");
                 // let sub_coord = match sub_templata {
-                    // ITemplataT::Coord(ct) => ct.coord,
+                    // ITemplataT::Kind(ct) => ct.coord,
                     // _ => panic!("Expected CoordTemplataT for subRune in CallSiteCoordIsaSR"),
                 // };
                 // let super_templata = solver_state.get_conclusion(&csia.super_rune.rune)
                     // .expect("vassertSome: superRune not solved in CallSiteCoordIsaSR");
                 // let super_coord = match super_templata {
-                    // ITemplataT::Coord(ct) => ct.coord,
+                    // ITemplataT::Kind(ct) => ct.coord,
                     // _ => panic!("Expected CoordTemplataT for superRune in CallSiteCoordIsaSR"),
                 // };
 
@@ -700,13 +700,13 @@ where 's: 't,
                 // let sub_templata = solver_state.get_conclusion(&dcia.sub_rune.rune)
                     // .expect("vassertSome: subRune not solved in DefinitionCoordIsaSR");
                 // let sub_kind_unchecked = match sub_templata {
-                    // ITemplataT::Coord(ct) => ct.coord.kind,
+                    // ITemplataT::Kind(ct) => ct.coord.kind,
                     // _ => panic!("Expected CoordTemplataT for subRune in DefinitionCoordIsaSR"),
                 // };
                 // let super_templata = solver_state.get_conclusion(&dcia.super_rune.rune)
                     // .expect("vassertSome: superRune not solved in DefinitionCoordIsaSR");
                 // let super_kind_unchecked = match super_templata {
-                    // ITemplataT::Coord(ct) => ct.coord.kind,
+                    // ITemplataT::Kind(ct) => ct.coord.kind,
                     // _ => panic!("Expected CoordTemplataT for superRune in DefinitionCoordIsaSR"),
                 // };
                 // let sub_kind = match ISubKindTT::try_from(sub_kind_unchecked) {
@@ -771,7 +771,7 @@ where 's: 't,
                     // None => {
                         // let sender_templata = solver_state.get_conclusion(&coord_send.sender_rune.rune).expect("Neither receiverRune nor senderRune solved in CoordSendSR");
                         // let coord = match sender_templata {
-                            // ITemplataT::Coord(ct) => ct.coord,
+                            // ITemplataT::Kind(ct) => ct.coord,
                             // _ => panic!("Expected CoordTemplataT in CoordSendSR sender"),
                         // };
                         // if self.is_descendant_kind(&env, state, coord.kind) {
@@ -792,7 +792,7 @@ where 's: 't,
                             // }
                         // } else {
                             // let mut conclusions = IndexMap::default();
-                            // conclusions.insert(coord_send.receiver_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
+                            // conclusions.insert(coord_send.receiver_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(CoordTemplataT { coord })));
                             // match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                 // Ok(_) => Ok(()),
                                 // Err(e) => {
@@ -804,7 +804,7 @@ where 's: 't,
                             // }
                         // }
                     // }
-                    // Some(ITemplataT::Coord(receiver_coord_templata)) => {
+                    // Some(ITemplataT::Kind(receiver_coord_templata)) => {
                         // let coord = receiver_coord_templata.coord;
                         // if self.is_ancestor_kind(&env, state, coord.kind) {
                             // let new_rule = IRulexSR::CallSiteCoordIsa(CallSiteCoordIsaSR {
@@ -832,7 +832,7 @@ where 's: 't,
                             // isn't a valid coercion pair.
                             // let sender_already = solver_state.get_conclusion(&coord_send.sender_rune.rune);
                             // let should_conclude = match sender_already {
-                                // Some(ITemplataT::Coord(sender_ct)) => {
+                                // Some(ITemplataT::Kind(sender_ct)) => {
                                     // let sender_coord = sender_ct.coord;
                                     // if sender_coord == coord {
                                         // false
@@ -863,7 +863,7 @@ where 's: 't,
                                 // }
                             // } else {
                                 // let mut conclusions = IndexMap::default();
-                                // conclusions.insert(coord_send.sender_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
+                                // conclusions.insert(coord_send.sender_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(CoordTemplataT { coord })));
                                 // match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     // Ok(_) => Ok(()),
                                     // Err(e) => {
@@ -955,7 +955,7 @@ where 's: 't,
                 // match solver_state.get_conclusion(&r.kind_rune.rune) {
                     // None => {
                         // let coord_templata = solver_state.get_conclusion(&r.coord_rune.rune).expect("vassertSome: CoerceToCoord coordRune unsolved");
-                        // let coord = match coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => unreachable!("CoerceToCoord: coordRune is statically typed Coord") };
+                        // let coord = match coord_templata { ITemplataT::Kind(ct) => ct.coord, _ => unreachable!("CoerceToCoord: coordRune is statically typed Coord") };
                         // match coord.ownership {
                             // OwnershipT::Own | OwnershipT::Share => {
                                 // let mut conclusions = IndexMap::default();
@@ -1028,7 +1028,7 @@ where 's: 't,
             // IRulexSR::Augment(augment) => {
                 // match solver_state.get_conclusion(&augment.result_rune.rune) {
                     // Some(outer_coord_templata) => {
-                        // let outer_coord = match outer_coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => unreachable!("Augment: outerCoordRune is statically typed Coord") };
+                        // let outer_coord = match outer_coord_templata { ITemplataT::Kind(ct) => ct.coord, _ => unreachable!("Augment: outerCoordRune is statically typed Coord") };
                         // let inner_ownership = match augment.ownership {
                             // None => outer_coord.ownership,
                             // Some(augment_ownership) => {
@@ -1067,7 +1067,7 @@ where 's: 't,
                         // let ranges: Vec<RangeS<'s>> = once(augment.range).chain(env.parent_ranges.iter().copied()).collect();
                         // let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         // let mut conclusions = IndexMap::default();
-                        // conclusions.insert(augment.inner_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: inner_coord })));
+                        // conclusions.insert(augment.inner_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(CoordTemplataT { coord: inner_coord })));
                         // match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             // Ok(_) => Ok(()),
                             // Err(e) => {
@@ -1079,7 +1079,7 @@ where 's: 't,
                     // None => {
                         // let inner_templata = solver_state.get_conclusion(&augment.inner_rune.rune).expect("Neither outerCoordRune nor innerRune solved in AugmentSR");
                         // let inner_coord = match inner_templata {
-                            // ITemplataT::Coord(ct) => ct.coord,
+                            // ITemplataT::Kind(ct) => ct.coord,
                             // _ => panic!("Expected CoordTemplataT in AugmentSR inner"),
                         // };
                         // let new_region = RegionT { region: IRegionT::Default };
@@ -1099,7 +1099,7 @@ where 's: 't,
                             // }
                         // };
                         // let new_coord = CoordT::new(new_ownership, new_region, inner_coord.kind);
-                        // let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
+                        // let new_templata = ITemplataT::Kind(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
                         // let mut conclusions = IndexMap::default();
                         // conclusions.insert(augment.result_rune.rune, new_templata);
                         // match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
@@ -1118,7 +1118,7 @@ where 's: 't,
                     // None => {
                         // let members: Vec<CoordT<'s, 't>> = pack.members.iter().map(|member_rune| {
                             // match solver_state.get_conclusion(&member_rune.rune).expect("Pack member rune has no conclusion") {
-                                // ITemplataT::Coord(ct) => ct.coord,
+                                // ITemplataT::Kind(ct) => ct.coord,
                                 // _ => unreachable!("Pack: each member rune is statically typed Coord"),
                             // }
                         // }).collect();
@@ -1138,7 +1138,7 @@ where 's: 't,
                         // let members = coord_list_templata.coords;
                         // assert_eq!(members.len(), pack.members.len());
                         // let conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = pack.members.iter().zip(members.iter()).map(|(rune, coord)| {
-                            // (rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: *coord })))
+                            // (rune.rune, ITemplataT::Kind(self.typing_interner.alloc(CoordTemplataT { coord: *coord })))
                         // }).collect();
                         // match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             // Ok(_) => Ok(()),
@@ -1305,7 +1305,7 @@ where 's: 't,
                         }).collect();
                         let coord = match args[0] {
                             ITemplataT::Kind(ct) => ct.kind,
-                            _ => panic!("Expected CoordTemplataT as first arg in solve_call_rule RuntimeSizedArrayTemplate"),
+                            _ => panic!("Expected KindTemplataT as first arg in solve_call_rule RuntimeSizedArrayTemplate"),
                         };
                         let context_region = RegionT::Default;
                         let rsa_kind = self.predict_runtime_sized_array_kind(*env, state, coord, context_region);
@@ -1328,7 +1328,7 @@ where 's: 't,
                         let s = args[0];
                         let coord = match args[1] {
                             ITemplataT::Kind(ct) => ct.kind,
-                            _ => panic!("Expected CoordTemplataT as second arg in solve_call_rule StaticSizedArrayTemplate"),
+                            _ => panic!("Expected KindTemplataT as second arg in solve_call_rule StaticSizedArrayTemplate"),
                         };
                         let context_region = RegionT::Default;
                         let size = expect_integer(s);

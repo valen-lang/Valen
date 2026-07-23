@@ -27,6 +27,7 @@ pub struct ProgramS<'s> {
   pub structs: &'s [&'s StructS<'s>],
   pub interfaces: &'s [&'s InterfaceS<'s>],
   pub impls: &'s [&'s ImplS<'s>],
+  // VCOORD: why is this called implemented_functions?
   pub implemented_functions: &'s [&'s FunctionS<'s>],
   pub exports: &'s [&'s ExportAsS<'s>],
   pub imports: &'s [&'s ImportS<'s>],
@@ -594,7 +595,7 @@ impl<'s> FunctionS<'s> {
   pub fn is_light(&self) -> bool {
     match &self.body {
       IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => false,
-      IBodyS::CodeBody(body) => !body.body.closured_names.is_empty(),
+      IBodyS::CodeBody(body) => body.body.closured_names.is_empty(),
     }
   }
 

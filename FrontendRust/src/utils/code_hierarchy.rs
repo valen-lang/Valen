@@ -109,14 +109,16 @@ const TEST_MODULE: &str = "test";
 #[derive(Clone, Debug)]
 pub struct FileCoordinateMap<'a, Contents> {
   pub package_coord_to_file_coords: HashMap<&'a PackageCoordinate<'a>, Vec<&'a FileCoordinate<'a>>>,
-  pub file_coord_to_contents: HashMap<&'a FileCoordinate<'a>, Contents>,
+  // Per @IIIOZ, the typing pass iterates this to seed its environment, so it is an IndexMap:
+  // insertion-ordered iteration keeps the resulting denizen order stable across runs.
+  pub file_coord_to_contents: IndexMap<&'a FileCoordinate<'a>, Contents>,
 }
 impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
 
   pub fn new() -> Self {
     FileCoordinateMap {
       package_coord_to_file_coords: HashMap::default(),
-      file_coord_to_contents: HashMap::default(),
+      file_coord_to_contents: IndexMap::default(),
     }
   }
 
@@ -177,7 +179,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     F: Fn(&'a FileCoordinate<'a>, &Contents) -> T,
     T: Clone,
   {
-    let mut result_file_coord_to_contents: HashMap<&'a FileCoordinate<'a>, T> = HashMap::default();
+    let mut result_file_coord_to_contents: IndexMap<&'a FileCoordinate<'a>, T> = IndexMap::default();
     for (file_coord, contents) in &self.file_coord_to_contents {
       result_file_coord_to_contents.insert(file_coord, func(file_coord, contents));
     }

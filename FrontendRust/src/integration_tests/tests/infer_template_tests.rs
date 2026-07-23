@@ -17,7 +17,7 @@ use crate::typing::names::names::IVarNameT;
 use crate::typing::names::names::IdT;
 use crate::typing::names::names::StructNameT;
 use crate::typing::names::names::StructTemplateNameT;
-use crate::typing::templata::templata::CoordTemplataT;
+use crate::typing::templata::templata::KindTemplataT;
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::CoordT;
@@ -77,7 +77,7 @@ exported func main() int {
                     id: IdT {
                         local_name: INameT::Function(FunctionNameT {
                             template: FunctionTemplateNameT { human_name: StrI("moo"), .. },
-                            template_args: &[ITemplataT::Coord(CoordTemplataT {
+                            template_args: &[ITemplataT::Kind(KindTemplataT {
                                 coord: CoordT {
                                     ownership: OwnershipT::Own,
                                     kind: KindT::Struct(StructTT {

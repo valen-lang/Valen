@@ -135,7 +135,7 @@ where 's: 't,
             call_location,
             &rune_to_type,
             &call_site_rules,
-            &[impl_a.sub_citizen_rune.rune],
+            &[impl_a.struct_kind_rune.rune],
             &mut solver_state,
         ).unwrap_or_else(|_e| {
             panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in resolve_impl")
@@ -259,7 +259,7 @@ where 's: 't,
                 impl_a.user_specified_identifying_runes, impl_a.rules, impl_self_runes);
 
         let impl_placeholders: Vec<InitialKnown<'s, 't>> =
-            impl_a.generic_params.iter().enumerate().map(|(index, generic_param)| {
+            impl_a.user_specified_identifying_runes.iter().enumerate().map(|(index, generic_param)| {
                 let placeholder = self.create_placeholder(
                     coutputs, impl_outer_env_iden, *impl_template_id, generic_param, index as i32, &rune_to_type,
                     None, true);
@@ -285,7 +285,7 @@ where 's: 't,
             &[impl_a.range],
             call_location,
             &impl_placeholders,
-            &[impl_a.sub_citizen_rune.rune],
+            &[impl_a.struct_kind_rune.rune],
         ) {
             Ok(c) => c,
             Err(_e) => {
@@ -296,8 +296,8 @@ where 's: 't,
         let inferences = complete_define_solve.conclusions;
         let reachable_bounds_from_sub_citizen = &complete_define_solve.rune_to_bound.rune_to_citizen_rune_to_reachable_prototype;
 
-        let sub_citizen: ICitizenTT<'s, 't> = match inferences.get(&impl_a.sub_citizen_rune.rune) {
-            None => panic!("vwat: sub_citizen_rune not in inferences"),
+        let sub_citizen: ICitizenTT<'s, 't> = match inferences.get(&impl_a.struct_kind_rune.rune) {
+            None => panic!("vwat: struct_kind_rune not in inferences"),
             Some(ITemplataT::Kind(k)) => match k.kind {
                 KindT::Struct(s) => ICitizenTT::Struct(s),
                 KindT::Interface(i) => ICitizenTT::Interface(i),
@@ -341,7 +341,7 @@ where 's: 't,
         }
 
         let template_args: Vec<ITemplataT<'s, 't>> =
-            impl_a.generic_params.iter().map(|p| *inferences.get(&p.rune.rune).expect("rune in inferences")).collect();
+            impl_a.user_specified_identifying_runes.iter().map(|p| *inferences.get(&p.rune.rune).expect("rune in inferences")).collect();
         let instantiated_id: IdT<'s, 't> = self.assemble_impl_name(*impl_template_id, &template_args, sub_citizen);
         let instantiated_id_ref: &'t IdT<'s, 't> = self.typing_interner.alloc(instantiated_id);
 
@@ -436,7 +436,7 @@ where 's: 't,
             Ok(c) => c,
             Err(_e) => panic!("CouldntEvaluatImpl from calculate_runes_independence"),
         };
-        impl_templata.impl_.generic_params.iter()
+        impl_templata.impl_.user_specified_identifying_runes.iter()
             .map(|p| !partial_case_conclusions.contains_key(&p.rune.rune))
             .collect()
     }
@@ -484,7 +484,7 @@ where 's: 't,
 
         let initial_knowns = vec![
             InitialKnown {
-                rune: impl_templata.impl_.sub_citizen_rune,
+                rune: impl_templata.impl_.struct_kind_rune,
                 templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::from(child) })),
             }
         ];
@@ -628,7 +628,7 @@ where 's: 't,
         let results: Vec<Result<(ImplDefinitionTemplataT<'s, 't>, CompleteResolveSolve<'s, 't>), IResolvingError<'s, 't>>> =
             impl_defs.iter().map(|impl_def| {
                 let initial_knowns = vec![
-                    InitialKnown { rune: impl_def.impl_.sub_citizen_rune, templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::from(sub_kind_tt) })) },
+                    InitialKnown { rune: impl_def.impl_.struct_kind_rune, templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::from(sub_kind_tt) })) },
                     InitialKnown { rune: impl_def.impl_.interface_kind_rune, templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::from(super_kind_tt) })) },
                 ];
                 self.resolve_impl(coutputs, parent_ranges, call_location, calling_env, &initial_knowns, *impl_def)
@@ -640,7 +640,7 @@ where 's: 't,
         match oks.into_iter().next() {
             Some(Ok((impl_templata, CompleteResolveSolve { conclusions, rune_to_bound }))) => {
                 let template_args: Vec<ITemplataT<'s, 't>> =
-                    impl_templata.impl_.generic_params.iter().map(|p| *conclusions.get(&p.rune.rune).unwrap()).collect();
+                    impl_templata.impl_.user_specified_identifying_runes.iter().map(|p| *conclusions.get(&p.rune.rune).unwrap()).collect();
                 let impl_template_name: INameT<'s, 't> = match self.translate_impl_name(impl_templata.impl_.name) {
                     IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
                     IImplTemplateNameT::ImplBoundTemplate(_) => {

@@ -44,18 +44,22 @@ where 's: 't,
 
         let local_name: IFunctionNameT<'s, 't> = env.id.local_name.try_into().expect("vassertSome: local_name as IFunctionNameT");
         let target_kind = match local_name.template_args().first().expect("vassertSome: templateArgs.headOption") {
-            ITemplataT::Coord(c) => c.coord.kind,
+            ITemplataT::Kind(c) => c.kind,
             _ => panic!("vwat"),
         };
-        let incoming_ownership = local_name.parameters().first().expect("vassertSome: parameters.headOption").ownership;
+        // let incoming_ownership = local_name.parameters().first().expect("vassertSome: parameters.headOption").ownership;
 
         let incoming_coord = param_coords[0].tyype;
-        let incoming_kind = incoming_coord.kind;
+        let incoming_kind = incoming_coord;
 
         // Because we dont yet put borrows in structs
-        let result_ownership = incoming_ownership;
-        let success_coord = KindT::new(result_ownership, RegionT::Default, target_kind);
-        let fail_coord = KindT::new(result_ownership, RegionT::Default, incoming_kind);
+        // let result_ownership = incoming_ownership;
+        // ZHERE: both of these — replace_value_type_in_ref(interner, <the declared param's type>,
+        // target_kind) and the same over incoming_kind, so each result refers to its citizen the
+        // way the signature's param refers to its own. `incoming_ownership` at :50 goes away with
+        // them, since the shape comes from the param type itself rather than a read-off ownership.
+        let success_coord = unimplemented!();//KindT::new(result_ownership, RegionT::Default, target_kind);
+        let fail_coord = unimplemented!();//KindT::new(result_ownership, RegionT::Default, incoming_kind);
         let (result_coord, ok_constructor, ok_result_impl, err_constructor, err_result_impl) =
             self.get_result(coutputs, env, call_range, call_location, RegionT::Default, success_coord, fail_coord)?;
         if result_coord != maybe_ret_coord.expect("vassertSome: maybeRetCoord") {
@@ -83,17 +87,17 @@ where 's: 't,
             IsParentResult::IsntParent(_) => panic!("vwat"),
         };
 
-        let as_subtype_expr = ExpressionTE::AsSubtype(self.typing_interner.alloc(AsSubtypeTE {
-            source_expr: ExpressionTE::ArgLookup(self.typing_interner.alloc(
+        let as_subtype_expr = ExpressionTE::AsSubtype(self.typing_interner.alloc(AsSubtypeTE::new(
+            ExpressionTE::ArgLookup(self.typing_interner.alloc(
                 ArgLookupTE::new(0, incoming_coord))),
-            target_type: success_coord,
-            result_result_type: result_coord,
-            ok_constructor: self.typing_interner.alloc(ok_constructor),
-            err_constructor: self.typing_interner.alloc(err_constructor),
-            impl_name: impl_id,
-            ok_impl_name: ok_result_impl,
-            err_impl_name: err_result_impl,
-        }));
+            success_coord,
+            result_coord,
+            self.typing_interner.alloc(ok_constructor),
+            self.typing_interner.alloc(err_constructor),
+            impl_id,
+            ok_result_impl,
+            err_result_impl,
+        )));
 
         let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
             ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(

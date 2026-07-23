@@ -788,8 +788,8 @@ where 's: 't,
                         Some(InitialSend {
                             sender_rune,
                             receiver_rune: param_rune,
-                            send_templata: ITemplataT::Coord(
-                                self.typing_interner.alloc(CoordTemplataT { coord: *arg_templata })),
+                            send_templata: ITemplataT::Kind(
+                                self.typing_interner.alloc(KindTemplataT { kind: *arg_templata })),
                         })
                     }
                 }

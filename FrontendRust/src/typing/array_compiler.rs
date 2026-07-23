@@ -48,7 +48,7 @@ where 's: 't,
         region: RegionT,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+        rules_s: &[IRulexSR<'s>],
         maybe_element_type_rune_a: Option<IRuneS<'s>>,
         size_rune_a: IRuneS<'s>,
         callable_te: ExpressionTE<'s, 't>,
@@ -67,7 +67,7 @@ where 's: 't,
                 self.opts.global_options.sanity_check,
                 &rune_typing_env,
                 parent_ranges.to_vec(),
-                rules_with_implicitly_coercing_lookups_s,
+                &rules_s,
                 &[],
                 true,
                 initially_known_runes,
@@ -76,24 +76,11 @@ where 's: 't,
                 err: e,
             })?;
 
-        let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             IndexMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
-        let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-        match explicify_lookups(
-            &rune_typing_env,
-            self.scout_arena,
-            &mut rune_a_to_type,
-            &mut rule_builder,
-            rules_with_implicitly_coercing_lookups_s.to_vec(),
-        ) {
-            Err(_e) => {
-                panic!("implement: evaluate_static_sized_array_from_callable — TooManyTypesWithNameT/CouldntFindTypeT");
-                // case Err(RuneTypingTooManyMatchingTypes(range, name)) => throw CompileErrorExceptionT(TooManyTypesWithNameT(range :: parentRanges, name))
-                // case Err(RuneTypingCouldntFindType(range, name)) => throw CompileErrorExceptionT(CouldntFindTypeT(range :: parentRanges, name))
-            }
-            Ok(()) => {}
-        }
-        let rules_a = rule_builder;
+        // The rules are already explicit Lookup/Call, so nothing rewrites them here (explicify_lookups is retired).
+        // Name-resolution failures (CouldntFindType/TooManyMatchingTypes) still surface from solve_rune_types above.
+        let rules_a = rules_s.to_vec();
         // We preprocess out the rune parent env lookups, see MKRFA.
         let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
             rules_a.iter().fold(
@@ -171,7 +158,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
-        rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+        rules_s: &[IRulexSR<'s>],
         maybe_element_type_rune: Option<IRuneS<'s>>,
         size_te: ExpressionTE<'s, 't>,
         maybe_callable_te: Option<ExpressionTE<'s, 't>>,
@@ -187,7 +174,7 @@ where 's: 't,
                 self.opts.global_options.sanity_check,
                 &rune_typing_env,
                 parent_ranges.to_vec(),
-                rules_with_implicitly_coercing_lookups_s,
+                &rules_s,
                 &[],
                 true,
                 initially_known_runes,
@@ -195,24 +182,11 @@ where 's: 't,
                 range: self.typing_interner.alloc_slice_copy(parent_ranges),
                 err: e,
             })?;
-        let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             IndexMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
-        let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-        match explicify_lookups(
-            &rune_typing_env,
-            self.scout_arena,
-            &mut rune_a_to_type,
-            &mut rule_builder,
-            rules_with_implicitly_coercing_lookups_s.to_vec(),
-        ) {
-            Err(_e) => {
-                panic!("implement: evaluate_runtime_sized_array_from_callable — TooManyTypesWithNameT/CouldntFindTypeT");
-                // case Err(RuneTypingTooManyMatchingTypes(range, name)) => throw CompileErrorExceptionT(TooManyTypesWithNameT(range :: parentRanges, name))
-                // case Err(RuneTypingCouldntFindType(range, name)) => throw CompileErrorExceptionT(CouldntFindTypeT(range :: parentRanges, name))
-            }
-            Ok(()) => {}
-        }
-        let rules_a = rule_builder;
+        // The rules are already explicit Lookup/Call, so nothing rewrites them here (explicify_lookups is retired).
+        // Name-resolution failures (CouldntFindType/TooManyMatchingTypes) still surface from solve_rune_types above.
+        let rules_a = rules_s.to_vec();
         // We preprocess out the rune parent env lookups, see MKRFA.
         let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
             rules_a.iter().fold(
@@ -264,7 +238,7 @@ where 's: 't,
         if let Some(e) = maybe_element_type_rune {
             let e_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: e }));
             let element_type = self.get_array_element_type(&templatas, e);
-            entries.push((e_rune_name_t, IEnvEntryT::Templata(ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: element_type })))));
+            entries.push((e_rune_name_t, IEnvEntryT::Templata(ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: element_type })))));
         }
         let extended_env = calling_env.add_entries(self.typing_interner, self.scout_arena, &entries);
         let head_range = parent_ranges[0];
@@ -305,7 +279,7 @@ where 's: 't,
                 fff: e,
             })?;
         let prototype = stamp.prototype;
-        let element_type = match prototype.return_type.kind {
+        let element_type = match prototype.return_type {
             KindT::RuntimeSizedArray(rsa) => match rsa.name.local_name {
                 INameT::RuntimeSizedArray(name) => {
                     name.arr.element_type
@@ -327,11 +301,11 @@ where 's: 't,
         if let Some(c) = maybe_callable_te {
             args_te.push(c);
         }
-        let call_te = ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
-            callable: prototype,
-            args: self.typing_interner.alloc_slice_from_vec(args_te),
-            return_type: result_te,
-        }));
+        let call_te = ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+            prototype,
+            self.typing_interner.alloc_slice_from_vec(args_te),
+            result_te,
+        )));
         Ok(call_te)
     }
 
@@ -341,7 +315,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+        rules_s: &[IRulexSR<'s>],
         maybe_element_type_rune_a: Option<IRuneS<'s>>,
         size_rune_a: IRuneS<'s>,
         exprs_2: Vec<ExpressionTE<'s, 't>>,
@@ -362,7 +336,7 @@ where 's: 't,
                 self.opts.global_options.sanity_check,
                 &rune_typing_env,
                 parent_ranges.to_vec(),
-                rules_with_implicitly_coercing_lookups_s,
+                &rules_s,
                 &[],
                 true,
                 initially_known_runes,
@@ -380,21 +354,11 @@ where 's: 't,
         }
         let member_type = *member_types.iter().next().expect("vassert: memberTypes is empty");
 
-        // VIOLATES @IIIOZ: still HashMap because explicify_lookups takes &mut HashMap.
-        let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             IndexMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
-        let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-        match explicify_lookups(
-            &rune_typing_env,
-            self.scout_arena,
-            &mut rune_a_to_type,
-            &mut rule_builder,
-            rules_with_implicitly_coercing_lookups_s.to_vec(),
-        ) {
-            Err(_e) => panic!("implement: evaluate_static_sized_array_from_values — TooManyTypesWithNameT/CouldntFindTypeT"),
-            Ok(()) => {}
-        }
-        let rules_a = rule_builder;
+        // The rules are already explicit Lookup/Call, so nothing rewrites them here (explicify_lookups is retired).
+        // Name-resolution failures (CouldntFindType/TooManyMatchingTypes) still surface from solve_rune_types above.
+        let rules_a = rules_s.to_vec();
         // We preprocess out the rune parent env lookups, see MKRFA.
         let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
             rules_a.iter().fold(
@@ -457,12 +421,12 @@ where 's: 't,
         let static_sized_array_type = self.resolve_static_sized_array(
             ITemplataT::Integer(exprs_2.len() as i64), member_type, region);
         let ssa_ref = self.typing_interner.alloc(static_sized_array_type);
-        let ssa_coord = KindT::new(OwnershipT::Own, region, KindT::StaticSizedArray(ssa_ref));
-        Ok(StaticArrayFromValuesTE {
-            elements: self.typing_interner.alloc_slice_from_vec(exprs_2),
-            result_reference: ssa_coord,
-            array_type: ssa_ref,
-        })
+        let ssa_coord = KindT::StaticSizedArray(ssa_ref);
+        Ok(StaticArrayFromValuesTE::new(
+            self.typing_interner.alloc_slice_from_vec(exprs_2),
+            ssa_coord,
+            ssa_ref,
+        ))
     }
 
     pub fn evaluate_destroy_static_sized_array_into_callable(
@@ -551,14 +515,13 @@ where 's: 't,
         let rune_e = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
             name: self.scout_arena.intern_str("E"),
         }));
-        let element_placeholder = self.create_coord_placeholder_inner(
+        let element_placeholder = self.create_kind_placeholder_inner(
             coutputs,
             array_outer_env_ref,
-            *template_id, 1, rune_e, None,
-            IRegionMutabilityS::ReadOnlyRegion, OwnershipT::Own, true,
+            *template_id, 1, rune_e, true,
         );
 
-        let element_placeholder_templata = ITemplataT::Coord(
+        let element_placeholder_templata = ITemplataT::Kind(
             self.typing_interner.alloc(element_placeholder));
         let placeholders = [
             size_placeholder, element_placeholder_templata,
@@ -672,15 +635,14 @@ where 's: 't,
         let rune_e = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
             name: self.scout_arena.intern_str("E"),
         }));
-        let element_placeholder = self.create_coord_placeholder_inner(
+        let element_placeholder = self.create_kind_placeholder_inner(
             coutputs,
             array_outer_env_ref,
-            *template_id, 0, rune_e, None,
-            IRegionMutabilityS::ReadOnlyRegion, OwnershipT::Own, true,
+            *template_id, 0, rune_e, true,
         );
 
         // val placeholders = Vector(elementPlaceholder)
-        let element_placeholder_templata = ITemplataT::Coord(
+        let element_placeholder_templata = ITemplataT::Kind(
             self.typing_interner.alloc(element_placeholder));
         let placeholders = [element_placeholder_templata];
         // val id = templateId.copy(localName = templateId.localName.makeCitizenName(interner, placeholders))
@@ -751,14 +713,13 @@ where 's: 't,
         index_expr_2: ExpressionTE<'s, 't>,
         at: StaticSizedArrayTT<'s, 't>,
     ) -> StaticSizedArrayLookupTE<'s, 't> {
-        let member_type = at.element_type();
-        StaticSizedArrayLookupTE {
+        StaticSizedArrayLookupTE::new(
+            self.typing_interner,
             range,
-            array_expr: container_expr_2,
-            array_type: self.typing_interner.alloc(at),
-            index_expr: index_expr_2,
-            element_type: member_type,
-        }
+            container_expr_2,
+            self.typing_interner.alloc(at),
+            index_expr_2,
+        )
     }
 
     pub fn lookup_in_unknown_sized_array(
@@ -777,7 +738,7 @@ where 's: 't,
                 types: index_expr_2.result(),
             });
         }
-        Ok(RuntimeSizedArrayLookupTE::new(range, container_expr_2, rsa, index_expr_2))
+        Ok(RuntimeSizedArrayLookupTE::new(self.typing_interner, range, container_expr_2, rsa, index_expr_2))
     }
 
 }

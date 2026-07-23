@@ -70,14 +70,13 @@ where 's: 't,
         }).collect()
     }
 
-    pub fn make_user_local_variable(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], local_variable_a: &'s LocalS<'s>, reference_type2: KindT<'s, 't>) -> LocalVariable<'s, 't> {
-        let var_id = self.translate_var_name_step(local_variable_a.var_name);
+    pub fn make_user_local_variable(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], var_name: IVarNameS<'s>, reference_type2: KindT<'s, 't>) -> LocalVariable<'s, 't> {
+        let var_id = self.translate_var_name_step(var_name);
 
         if nenv.get_variable(var_id, self.typing_interner).is_some() {
             panic!("There's already a variable named {:?}", var_id);
         }
 
-        let mutable = self.get_sharedness(coutputs, reference_type2);
         let local_var =
             LocalVariable {
                 name: var_id,

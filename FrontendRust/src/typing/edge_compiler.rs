@@ -24,7 +24,7 @@ use crate::typing::types::types::{RegionT, KindPlaceholderT, KindT};
 use crate::typing::templata::templata::PlaceholderTemplataT;
 use crate::typing::env::environment::child_of;
 use crate::typing::infer_compiler::InitialKnown;
-use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::typing::templata_compiler::{replace_value_type_in_ref, IBoundArgumentsSource};
 use crate::postparsing::rules::rules::RuneUsage;
 use crate::utils::range::CodeLocationS;
 use crate::postparsing::names::{IRuneValS, DispatcherRuneFromImplValS};
@@ -239,30 +239,12 @@ where 's: 't,
                 ITemplataT::Placeholder(self.typing_interner.alloc(PlaceholderTemplataT { id: placeholder_id, tyype: pt.tyype }))
             }
             ITemplataT::Kind(kt) => match kt.kind {
-                KindT::KindPlaceholder(kp) => {
-                    let original_placeholder_template_id = self.get_placeholder_template(kp.id);
-                    let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
-                    coutputs.declare_type_sharedness(placeholder_template_id_ref, mutability);
+                KindT::KindPlaceholder(_) => {
                     ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
                         kind: KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
                     }))
                 }
                 _ => panic!("vwat: create_override_placeholder_mimicking unexpected kind"),
-            },
-            ITemplataT::Coord(ct) => match ct.coord.kind {
-                KindT::KindPlaceholder(kp) => {
-                    let original_placeholder_template_id = self.get_placeholder_template(kp.id);
-                    let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
-                    coutputs.declare_type_sharedness(placeholder_template_id_ref, mutability);
-                    ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT {
-                        coord: KindT::new(
-                            ct.coord.ownership,
-                            RegionT::Default,
-                            KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
-                        ),
-                    }))
-                }
-                _ => panic!("vwat: create_override_placeholder_mimicking unexpected coord kind"),
             },
             other => panic!("vwat: create_override_placeholder_mimicking unexpected templata: {:?}", other),
         }
@@ -369,16 +351,13 @@ where 's: 't,
                 IBoundArgumentsSource::InheritBoundsFromTypeItself,
                 KindT::Interface(super_interface_ref),
             );
-            match substituted {
-                ITemplataT::Kind(k) => k.kind.expect_interface(),
-                _ => panic!("expected KindTemplataT from substituteTemplatasInKind"),
-            }
+            substituted.expect_interface()
         };
-        let dispatcher_placeholdered_abstract_param_type = KindT::new(
-            abstract_param_unsubstituted_type.ownership,
-            abstract_param_unsubstituted_type.region,
-            KindT::Interface(dispatcher_placeholdered_interface),
-        );
+        let dispatcher_placeholdered_abstract_param_type =
+            replace_value_type_in_ref(
+                self.typing_interner,
+                abstract_param_unsubstituted_type,
+                KindT::Interface(dispatcher_placeholdered_interface));
 
         // Step 2: Compile Dispatcher Function Given Interface, see CDFGI
 
@@ -428,10 +407,9 @@ where 's: 't,
             origin_function_templata.function.generic_params.iter()
                 .filter_map(|gp| {
                     dispatcher_inner_inferences.get(&gp.rune.rune).and_then(|templata| match *templata {
-                        ITemplataT::Coord(&CoordTemplataT { coord: KindT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }), .. } }) =>
-                            if existing_dispatcher_placeholder_ids.contains(&id) { None } else { Some(*templata) },
-                        ITemplataT::Kind(&KindTemplataT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }) }) =>
-                            if existing_dispatcher_placeholder_ids.contains(&id) { None } else { Some(*templata) },
+                        ITemplataT::Kind(&KindTemplataT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }), .. }) => {
+                            if existing_dispatcher_placeholder_ids.contains(&id) { None } else { Some(*templata) }
+                        }
                         _ => None,
                     })
                 })
@@ -468,7 +446,7 @@ where 's: 't,
         // Step 3: Figure Out Dependent And Independent Runes, see FODAIR.
 
         let impl_independent_rune_to_impl_placeholder_and_case_placeholder: Vec<(IRuneS<'s>, IdT<'s, 't>, ITemplataT<'s, 't>)> =
-            impl_t.templata.impl_.generic_params.iter()
+            impl_t.templata.impl_.user_specified_identifying_runes.iter()
                 .map(|p| p.rune.rune)
                 .zip(instantiated_local.template_args().iter())
                 .zip(impl_t.rune_index_to_independence.iter())
@@ -520,10 +498,9 @@ where 's: 't,
         let dispatcher_and_case_placeholdered_impl_reachable_prototypes:
                 Vec<(IRuneS<'s>, IRuneS<'s>, PrototypeTemplataT<'s, 't>)> =
             partial_resolve_conclusions.iter()
-                .filter(|(rune_in_impl, _)| **rune_in_impl == impl_t.templata.impl_.sub_citizen_rune.rune)
+                .filter(|(rune_in_impl, _)| **rune_in_impl == impl_t.templata.impl_.struct_kind_rune.rune)
                 .filter_map(|(rune_in_impl, templata)| match templata {
                     ITemplataT::Kind(kt)  => ICitizenTT::try_from(kt.kind).ok().map(|c| (*rune_in_impl, c)),
-                    ITemplataT::Coord(ct) => ICitizenTT::try_from(ct.coord.kind).ok().map(|c| (*rune_in_impl, c)),
                     _ => None,
                 })
                 .flat_map(|(rune_in_impl, c)| {
@@ -617,7 +594,7 @@ where 's: 't,
         // Step 4: Figure Out Struct For Case, see FOSFC.
 
         let dispatcher_case_placeholdered_sub_citizen: ICitizenTT<'s, 't> = {
-            let templata = impl_conclusions.get(&impl_t.templata.impl_.sub_citizen_rune.rune)
+            let templata = impl_conclusions.get(&impl_t.templata.impl_.struct_kind_rune.rune)
                 .expect("vassertSome: implConclusions.get(subCitizenRune)");
             match templata {
                 ITemplataT::Kind(k) => k.kind.expect_citizen(),
@@ -651,11 +628,15 @@ where 's: 't,
 
         // Step 6: Use Case Environment to Find Override, see UCEFO.
 
-        let overriding_param_coord = KindT::new(
-            dispatcher_placeholdered_abstract_param_type.ownership,
-            dispatcher_placeholdered_abstract_param_type.region,
-            KindT::from(dispatcher_case_placeholdered_sub_citizen),
-        );
+        // ZHERE: replace_value_type_in_ref(interner, dispatcher_placeholdered_abstract_param_type,
+        // KindT::from(dispatcher_case_placeholdered_sub_citizen)) — the override's param has to
+        // refer to the sub-citizen the same way the abstract param refers to the interface.
+        let overriding_param_coord =
+            replace_value_type_in_ref(
+                self.typing_interner,
+                dispatcher_placeholdered_abstract_param_type,
+                KindT::from(dispatcher_case_placeholdered_sub_citizen));
+            
         let mut override_function_param_types: Vec<KindT<'s, 't>> =
             dispatching_func_prototype.prototype.param_types().to_vec();
         override_function_param_types[abstract_index as usize] = overriding_param_coord;

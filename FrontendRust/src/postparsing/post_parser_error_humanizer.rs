@@ -142,6 +142,7 @@ pub fn humanize_rune<'s>(
     IRuneS::CodeRune(r) => r.name.0.to_string(),
     IRuneS::ArgumentRune(r) => "(arg ".to_string() + &r.arg_index.to_string() + ")",
     IRuneS::SelfKindRune(_) => "(self kind)".to_string(),
+    IRuneS::SelfFullTypeRune(_) => "(self full type)".to_string(),
     IRuneS::SelfKindTemplateRune(_) => "(self kind template)".to_string(),
     IRuneS::PatternInputRune(_) => panic!("implement: humanize_rune PatternInputRune"),
     IRuneS::SelfRune(_) => panic!("implement: humanize_rune SelfRune"),
