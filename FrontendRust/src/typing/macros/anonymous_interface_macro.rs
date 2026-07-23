@@ -1,5 +1,5 @@
 use crate::postparsing::ast::*;
-use crate::postparsing::expressions::{BlockSE, BodySE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LocalLoadSE, LocalS, OwnershippedSE};
+use crate::postparsing::expressions::{BlockSE, BodySE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LocalLoadSE, LocalS, OwnershippedSE, UnletSE};
 use crate::postparsing::itemplatatype::{FunctionTemplataType, ITemplataType, KindTemplataType, PackTemplataType, PrototypeTemplataType, TemplateTemplataType};
 use crate::postparsing::names::{
     AnonymousSubstructDropBoundParamsListRuneS,
@@ -808,7 +808,6 @@ where 's: 't,
         let self_local_load = self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
             range: method_range,
             name: IVarNameS::SelfName,
-            target_ownership: LoadAsP::Use,
         }));
         let dot_member = self.scout_arena.intern_str(&method_index.to_string());
         let dot_expr = self.scout_arena.alloc(IExpressionSE::Dot(DotSE {
@@ -827,10 +826,9 @@ where 's: 't,
         for (i, param) in new_params_vec.iter().enumerate() {
             if (i as i32) == abstract_param_index { continue; }
             let nm = param.name;
-            call_args.push(self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
+            call_args.push(self.scout_arena.alloc(IExpressionSE::Unlet(UnletSE {
                 range: method_range,
                 name: nm,
-                target_ownership: LoadAsP::Move,
             })));
         }
         let call_args_slice = self.scout_arena.alloc_slice_from_vec(call_args);

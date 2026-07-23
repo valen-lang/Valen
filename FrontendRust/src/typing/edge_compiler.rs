@@ -628,9 +628,6 @@ where 's: 't,
 
         // Step 6: Use Case Environment to Find Override, see UCEFO.
 
-        // ZHERE: replace_value_type_in_ref(interner, dispatcher_placeholdered_abstract_param_type,
-        // KindT::from(dispatcher_case_placeholdered_sub_citizen)) — the override's param has to
-        // refer to the sub-citizen the same way the abstract param refers to the interface.
         let overriding_param_coord =
             replace_value_type_in_ref(
                 self.typing_interner,

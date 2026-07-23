@@ -756,7 +756,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           let load_expr = self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
             range: extras.range.clone(),
             name: extras.abi_name.clone(),
-            target_ownership: LoadAsP::Use,
           }));
           &*self.scout_arena.alloc(IExpressionSE::Let(LetSE {
             range: extras.range.clone(),

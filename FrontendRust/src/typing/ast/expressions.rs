@@ -1133,8 +1133,7 @@ impl<'s, 't> UpcastTE<'s, 't> where 's: 't, {
         impl_name: IdT<'s, 't>,
     ) -> UpcastTE<'s, 't> {
         // VCOORD: preserve the inner wrap and swap the innermost citizen to target_super_kind.
-        // ZHERE: replace_value_type_in_ref(interner, inner_expr.result(), target_super_kind.into())
-        // gives that result. Needs an `interner` parameter, which this constructor doesn't take yet.
+        // perhaps: replace_value_type_in_ref(interner, inner_expr.result(), target_super_kind.into())
         unimplemented!("UpcastTE onion result")
     }
 }

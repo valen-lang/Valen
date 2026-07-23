@@ -243,7 +243,7 @@ fn get_rune_typing_puzzles<'s>(
     IRulexSR::Literal(_) => vec![vec![]],
     // IRulexSR::Augment(_) => vec![vec![]],
     // IRulexSR::RefListCompoundMutability(_) => vec![vec![]],
-    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in get_rune_typing_puzzles"),
+    IRulexSR::Call(x) => vec![vec![x.template_rune.rune.clone()]],
     // IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in get_rune_typing_puzzles"),
     // IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in get_rune_typing_puzzles"),
     IRulexSR::KindList(_) => vec![vec![]],
@@ -451,7 +451,23 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
     // }
     // IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type solve_rule"),
-    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet implemented in rune_type solve_rule"),
+    // ZHERE: fill this Call arm from the template's rune-type (the commented MaybeCoercingCall
+    // at :307 is the model). Read template_rune's conclusion (a TemplateTemplataType); stamp each
+    // arg from param_types AND derive result_rune = return_type — the latter is the onion change
+    // vs the old MaybeCoercingCall, which treated result as a precondition. return_type is just a
+    // Kind now (no Kind/Coord split):
+    IRulexSR::Call(x) => {
+      match solver_state.get_conclusion(&x.template_rune.rune)
+          .expect("Call: template rune unsolved") {
+        ITemplataType::TemplateTemplataType(TemplateTemplataType { param_types, return_type }) => {
+          let mut conclusions = x.args.iter().map(|a| a.rune.clone())
+            .zip(param_types.iter().cloned()).collect::<IndexMap<_, _>>();
+          conclusions.insert(x.result_rune.rune.clone(), *return_type);
+          solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
+        }
+        other => panic!("Call: unexpected template type {:?}", other),
+      }
+    }
     // IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet implemented in rune_type solve_rule"),
     IRulexSR::KindList(KindListSR { result_rune, members, .. }) => {
       let mut conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = members.iter()

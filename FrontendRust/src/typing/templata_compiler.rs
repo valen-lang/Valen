@@ -1193,6 +1193,23 @@ where 's: 't,
         // let KindT { ownership: target_ownership, region: target_region, kind: target_type, .. } = target_pointer_type;
         // let KindT { ownership: source_ownership, region: source_region, kind: source_type, .. } = source_pointer_type;
 
+        // TEMP tripwire (remove when is_type_convertible is unified with convert()): these are the
+        // two shapes convert() converts but the match below would silently return `false` — which in
+        // overload resolution drops a valid candidate or flips the exact-vs-coercion tiebreak. Panic
+        // loudly rather than miscompile. `&X -> X` (borrow read-out) and `X -> &X` (bare to borrow).
+        // Identity is handled by the `a == b` arm below and never reaches here; `&Cat -> &Dog` and
+        // other genuinely-unconvertible ref pairs have no matching inner and fall to the `_` panic.
+        if let KindT::BorrowRef(sb) = source_type {
+            if sb.inner == target_type {
+                panic!("is_type_convertible: unhandled borrow read-out {:?} -> {:?} (needs convert() unification)", source_type, target_type);
+            }
+        }
+        if let KindT::BorrowRef(tb) = target_type {
+            if source_type == tb.inner {
+                panic!("is_type_convertible: bare-to-borrow {:?} -> {:?} not yet handled (needs convert() unification)", source_type, target_type);
+            }
+        }
+
         match (&source_type, &target_type) {
             (KindT::Never(_), _) => return true,
             (a, b) if a == b => {}
@@ -1224,7 +1241,6 @@ where 's: 't,
             }
         }
 
-        unimplemented!();
         // match (source_ownership, target_ownership) {
         //     (a, b) if a == b => {}
         //     // VCOORD: revisit

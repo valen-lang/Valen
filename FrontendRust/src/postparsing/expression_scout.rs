@@ -1581,15 +1581,34 @@ pub(crate) fn coerce(
           LoadAsP::LoadAsWeak => self_uses_before.mark_borrowed(name.clone()),
           LoadAsP::Use | LoadAsP::Move => self_uses_before.mark_moved(name.clone()),
         };
-        Ok((
-          stack_frame,
-          &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
+        // A bare mention lowers to a plain LocalLoad, which already IS a reference
+        // (mention = reference). A borrow of a local is therefore the same thing — `&x`
+        // and a plain use both lower to LocalLoad, no wrapper needed. `^x` moves the local
+        // out, the same operation as the `unlet x` statement, so it lowers straight to
+        // Unlet. `weak x` genuinely produces a weak reference (distinct from a borrow), so
+        // it wraps the LocalLoad in Ownershipped to route through typing's weak-alias path.
+        let expr: &'s IExpressionSE<'s> = match load_as_p {
+          LoadAsP::Use | LoadAsP::LoadAsBorrow => &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
             range,
             name,
-            target_ownership: load_as_p,
           })),
-          self_uses_after,
-        ))
+          LoadAsP::Move => &*self.scout_arena.alloc(IExpressionSE::Unlet(UnletSE {
+            range,
+            name,
+          })),
+          LoadAsP::LoadAsWeak => {
+            let local_load = &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
+              range,
+              name,
+            }));
+            &*self.scout_arena.alloc(IExpressionSE::Ownershipped(OwnershippedSE {
+              range,
+              inner_expr: local_load,
+              target_ownership: load_as_p,
+            }))
+          }
+        };
+        Ok((stack_frame, expr, self_uses_after))
       }
       IScoutResult::OutsideLookupResult(OutsideLookupResultS { range, name: _, template_args: _ }) => {
         // When we have globals, here's where we'd check that the user declared they're accessing a global.

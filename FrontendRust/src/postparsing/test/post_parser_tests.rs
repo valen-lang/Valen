@@ -362,9 +362,7 @@ fn moving_method_call() {
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
-              name: IVarNameS::CodeVarName(StrI("x")),
-              target_ownership: LoadAsP::Use,
-              ..
+              name: IVarNameS::CodeVarName(StrI("x")),              ..
             })],
           ..
         }),
@@ -539,14 +537,10 @@ fn constructing_members() {
           }),
         arg_exprs: [
           IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IVarNameS::ConstructingMemberName(StrI("x")),
-            target_ownership: LoadAsP::Use,
-            ..
+            name: IVarNameS::ConstructingMemberName(StrI("x")),            ..
           }),
           IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IVarNameS::ConstructingMemberName(StrI("y")),
-            target_ownership: LoadAsP::Use,
-            ..
+            name: IVarNameS::ConstructingMemberName(StrI("y")),            ..
           }),
         ],
         ..
@@ -669,7 +663,6 @@ fn test_loading_from_member() {
           left:
             IExpressionSE::LocalLoad(LocalLoadSE {
               name: IVarNameS::CodeVarName(StrI("moo")),
-              target_ownership: LoadAsP::LoadAsBorrow,
               ..
             }),
           member: StrI("x"),
@@ -709,9 +702,7 @@ fn test_loading_from_member_2() {
             IExpressionSE::Dot(DotSE {
               left:
                 IExpressionSE::LocalLoad(LocalLoadSE {
-                  name: IVarNameS::CodeVarName(StrI("moo")),
-                  target_ownership: LoadAsP::LoadAsBorrow,
-                  ..
+                  name: IVarNameS::CodeVarName(StrI("moo")),                  ..
                 }),
               borrow_container: true,
               ..
@@ -794,9 +785,7 @@ fn constructing_members_borrowing_another_member() {
         ..
       },
       expr: IExpressionSE::LocalLoad(LocalLoadSE {
-        name: IVarNameS::ConstructingMemberName(StrI("x")),
-        target_ownership: LoadAsP::LoadAsBorrow,
-        ..
+        name: IVarNameS::ConstructingMemberName(StrI("x")),        ..
       }),
       ..
     })) => Some(())
@@ -815,14 +804,10 @@ fn constructing_members_borrowing_another_member() {
       }),
       arg_exprs: [
         IExpressionSE::LocalLoad(LocalLoadSE {
-          name: IVarNameS::ConstructingMemberName(StrI("x")),
-          target_ownership: LoadAsP::Use,
-          ..
+          name: IVarNameS::ConstructingMemberName(StrI("x")),          ..
         }),
         IExpressionSE::LocalLoad(LocalLoadSE {
-          name: IVarNameS::ConstructingMemberName(StrI("y")),
-          target_ownership: LoadAsP::Use,
-          ..
+          name: IVarNameS::ConstructingMemberName(StrI("y")),          ..
         }),
       ],
       ..
@@ -914,9 +899,7 @@ fn foreach() {
       },
       expr:
         IExpressionSE::LocalLoad(LocalLoadSE {
-          name: IVarNameS::CodeVarName(StrI("myList")),
-          target_ownership: LoadAsP::Use,
-          ..
+          name: IVarNameS::CodeVarName(StrI("myList")),          ..
         }),
       ..
     })) => Some(())
@@ -951,7 +934,6 @@ fn foreach() {
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
               name: IVarNameS::IterableName(_),
-              target_ownership: LoadAsP::LoadAsBorrow,
               ..
             })],
           ..
@@ -993,7 +975,6 @@ fn foreach() {
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
               name: IVarNameS::IteratorName(_),
-              target_ownership: LoadAsP::LoadAsBorrow,
               ..
             })],
           ..
@@ -1019,7 +1000,6 @@ fn foreach() {
       arg_exprs:
         [IExpressionSE::LocalLoad(LocalLoadSE {
           name: IVarNameS::IterationOptionName(_),
-          target_ownership: LoadAsP::LoadAsBorrow,
           ..
         })],
       ..
@@ -1058,9 +1038,7 @@ fn foreach() {
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
-              name: IVarNameS::IterationOptionName(_),
-              target_ownership: LoadAsP::Use,
-              ..
+              name: IVarNameS::IterationOptionName(_),              ..
             })],
           ..
         }),
@@ -1070,9 +1048,7 @@ fn foreach() {
   let iteration_option_uses = collect_where_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::LocalLoad(LocalLoadSE {
-      name: IVarNameS::IterationOptionName(_),
-      target_ownership: LoadAsP::Use,
-      ..
+      name: IVarNameS::IterationOptionName(_),      ..
     })) => Some(())
   );
   assert!(!iteration_option_uses.is_empty());
@@ -1109,7 +1085,6 @@ fn this_isnt_special_if_was_explicit_param() {
   let local_load = cast!(dot.left, IExpressionSE::LocalLoad);
   let code_var_name = cast!(&local_load.name, IVarNameS::CodeVarName);
   assert_eq!(code_var_name.as_str(), "self");
-  assert_eq!(local_load.target_ownership, LoadAsP::LoadAsBorrow);
 
   let function_calls = collect_where_snode!(
     NodeRefS::Program(&program),

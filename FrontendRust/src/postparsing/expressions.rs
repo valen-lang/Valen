@@ -308,7 +308,6 @@ pub struct FunctionCallSE<'s> {
 pub struct LocalLoadSE<'s> {
   pub range: RangeS<'s>,
   pub name: IVarNameS<'s>,
-  pub target_ownership: LoadAsP,
 }
 // One step in a OutsideLoadSE. See OutsideLoadSE comments.
 #[derive(Debug, PartialEq)]

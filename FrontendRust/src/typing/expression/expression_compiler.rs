@@ -86,7 +86,6 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         name: IVarNameT<'s, 't>,
-        target_ownership: LoadAsP,
     ) -> Result<Option<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         match nenv.get_variable(name, self.typing_interner) {
             Some(IVariableT::Local(rlv)) => {
@@ -96,7 +95,7 @@ where 's: 't,
                         local_id: rlv.name,
                     });
                 }
-                // We want to decay any &&Ship to &Ship, but that hasn't happened yet.
+                // "undecayed": We want to decay any &&Ship to &Ship, that happens later.
                 let lookup_te_undecayed =
                     ExpressionTE::LocalLookup(self.typing_interner.alloc(
                         LocalLookupTE::new(self.typing_interner, ranges[0], rlv)));
@@ -111,12 +110,6 @@ where 's: 't,
                             lookup_te_undecayed
                         }
                     };
-                // ZHERE: EAGER auto-deref (read/load path only). After building the lookup, if its
-                // result is BorrowRef(inner) with `inner` a reference kind (Borrow/Share/Weak/Own),
-                // wrap it in a new DerefTE that peels exactly ONE layer -> the stored reference, so a
-                // `&Ship` local mentions as `&Ship`, not `&&Ship`. Factor as a shared read helper and
-                // call it from the member/array lookup read paths too. convert() stays unchanged.
-                panic!();
                 Ok(Some(lookup_te_decayed))
             }
             Some(IVariableT::Capture(rcv)) => {
@@ -530,7 +523,7 @@ where 's: 't,
                 let name = self.translate_var_name_step(local_load.name);
                 let range_list = vec![local_load.range];
                 let lookup_expr_1 =
-                    self.evaluate_lookup_for_load(coutputs, nenv, &range_list, outer_call_location, region, name, local_load.target_ownership)?;
+                    self.evaluate_lookup_for_load(coutputs, nenv, &range_list, outer_call_location, region, name)?;
                 match lookup_expr_1 {
                     None => unreachable!("scout pass intercepts unknown names with CouldntFindVarToMutateS before typing runs"),
                     Some(x) => Ok((x, HashSet::default())),
@@ -677,6 +670,13 @@ where 's: 't,
                     KindT::BorrowRef(BorrowRefT { inner, region }) => { // source is borrow
                         match ownershipped.target_ownership {
                             LoadAsP::Move => { // want to move a borrow source
+                                // ZHERE: the `ExpressionTE::LocalLookup => Unlet` case here is now
+                                // DEAD — `^<local>` is lowered to IExpressionSE::Unlet at scout and
+                                // never reaches Ownershipped, and a LocalLookupTE is only ever built
+                                // from a bare LocalLoad. So the only Moves that reach here are
+                                // `^<non-local>` (a member/element → CantMoveOutOfMember, or an owned
+                                // rvalue → no-op). Delete the LocalLookup sub-arm and put the real
+                                // move-out-of-place error in its place.
                                 // V: this can happen if ...
                                 match inner_expr_2 {
                                     ExpressionTE::LocalLookup(LocalLookupTE { local_variable, .. }) => {

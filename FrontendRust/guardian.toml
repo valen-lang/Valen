@@ -52,7 +52,6 @@ exclude_shields = [
     "NoNewDefinitions-NNDX.md",
     "NoRenamedDefinitions-NRDX.md",
     "NoMovedDefinitions-NMDX.md",
-
 ]
 
 [guard_mode]

@@ -594,7 +594,7 @@ impl<'s> FunctionS<'s> {
 
   pub fn is_light(&self) -> bool {
     match &self.body {
-      IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => false,
+      IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => true,
       IBodyS::CodeBody(body) => body.body.closured_names.is_empty(),
     }
   }
