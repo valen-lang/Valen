@@ -16,7 +16,7 @@ use crate::postparsing::expressions::{
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::names::{CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS, IVarNameS};
 use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
-use crate::postparsing::rules::rules::{ILiteralSL, LiteralSR, LookupSR};
+use crate::postparsing::rules::rules::{CallSR, ILiteralSL, LiteralSR, LookupSR};
 use crate::postparsing::test::traverse::NodeRefS;
 use crate::parsing::tests::utils::compile_file;
 use crate::parsing::tests::utils::{expect_1, expect_2, expect_3};
@@ -148,15 +148,21 @@ fn test_struct() {
   assert_eq!(imoo.sharedness, SharednessP::Single);
 
   let only_member = expect_1(&imoo.members);
+  // `int` (a bare type-name) lowers to Lookup(int) + Call([]); the member's type is the
+  // saturated Call result, not the raw Lookup rune.
   collect_only_snode!(
     NodeRefS::Struct(imoo),
     NodeRefS::LookupRule(
       LookupSR {
         name: IImpreciseNameS::CodeName(code_name),
-        rune,
         ..
       }
-    ) if code_name.name.as_str() == "int" && *rune == *only_member.type_rune() => Some(())
+    ) if code_name.name.as_str() == "int" => Some(())
+  );
+  collect_only_snode!(
+    NodeRefS::Struct(imoo),
+    NodeRefS::CallRule(CallSR { result_rune, args, .. })
+      if result_rune.rune == only_member.type_rune().rune && args.is_empty() => Some(())
   );
 
   let normal_member = cast!(only_member, IStructMemberS::NormalStructMember);
@@ -273,27 +279,31 @@ fn impl_() {
   let program = compile(&scout_arena, &keywords, &parse_arena, "impl IMoo for Moo;");
   let impl_ = expect_1(program.impls);
 
+  // Each of `Moo` / `IMoo` (bare type-names) lowers to Lookup(name) + Call([]); the kind runes
+  // are the saturated Call results, not the raw Lookup runes.
   collect_only_snode!(
     NodeRefS::Impl(impl_),
     NodeRefS::LookupRule(LookupSR {
-      name: IImpreciseNameS::CodeName(CodeNameS {
-        name: StrI("Moo"),
-        ..
-      }),
-      rune,
+      name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("Moo"), .. }),
       ..
-    }) if *rune == impl_.struct_kind_rune => Some(())
+    }) => Some(())
   );
   collect_only_snode!(
     NodeRefS::Impl(impl_),
     NodeRefS::LookupRule(LookupSR {
-      name: IImpreciseNameS::CodeName(CodeNameS {
-        name: StrI("IMoo"),
-        ..
-      }),
-      rune,
+      name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("IMoo"), .. }),
       ..
-    }) if *rune == impl_.interface_kind_rune => Some(())
+    }) => Some(())
+  );
+  collect_only_snode!(
+    NodeRefS::Impl(impl_),
+    NodeRefS::CallRule(CallSR { result_rune, args, .. })
+      if result_rune.rune == impl_.struct_kind_rune.rune && args.is_empty() => Some(())
+  );
+  collect_only_snode!(
+    NodeRefS::Impl(impl_),
+    NodeRefS::CallRule(CallSR { result_rune, args, .. })
+      if result_rune.rune == impl_.interface_kind_rune.rune && args.is_empty() => Some(())
   );
 }
 
@@ -1348,15 +1358,22 @@ fn test_param_no_outer_wrap_routing() {
     "exported func foo(x int) void { }",
   );
   let foo = program.lookup_function("foo");
+  // A bare type-name is a zero-arg application: `int` lowers to Lookup(int) + Call([]) (and the
+  // explicit `void` return likewise). value_type_rune is the saturated Call result.
   match (foo.params, foo.rules) {
     ([ParameterS {
         type_outer_ref_rules: [],
-        value_type_rules: [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. })],
+        value_type_rules: [
+          IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. }),
+          IRulexSR::Call(CallSR { result_rune: value_call_result, args: [], .. }),
+        ],
         full_type_rune, value_type_rune, .. }],
-     [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. }), .. })]) => {
+     [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. }), .. }),
+      IRulexSR::Call(CallSR { args: [], .. })]) => {
       assert_eq!(full_type_rune.rune, value_type_rune.rune, "full == value when there's no outer wrap");
+      assert_eq!(value_type_rune.rune, value_call_result.rune, "value type is the saturated Call result");
     }
-    other => panic!("expected `x int` param (no outer wraps, value [Lookup(int)]) and fn rules [Lookup(void)]; got {:?}", other),
+    other => panic!("expected `x int` param (no outer wraps, value [Lookup(int), Call([])]) and fn rules [Lookup(void), Call([])]; got {:?}", other),
   }
 }
 
@@ -1378,7 +1395,10 @@ fn test_param_single_ref_wrap_routing() {
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS {
-        value_type_rules: [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. })],
+        value_type_rules: [
+          IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. }),
+          IRulexSR::Call(CallSR { args: [], .. }),
+        ],
         type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
         full_type_rune, value_type_rune, .. }] => {
       assert_ne!(full_type_rune.rune, value_type_rune.rune, "full != value when there IS an outer wrap");
@@ -1409,7 +1429,10 @@ exported func foo(x held int) int { return 0; }
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS {
-        value_type_rules: [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. })],
+        value_type_rules: [
+          IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. }),
+          IRulexSR::Call(CallSR { args: [], .. }),
+        ],
         type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
         full_type_rune, value_type_rune, .. }] => {
       assert_eq!(br.region, RegionSR::Held);
@@ -1441,7 +1464,10 @@ exported func foo(x own int) int { return 0; }
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS {
-        value_type_rules: [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. })],
+        value_type_rules: [
+          IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. }),
+          IRulexSR::Call(CallSR { args: [], .. }),
+        ],
         type_outer_ref_rules: [IRulexSR::OwnRef(or)],
         full_type_rune, value_type_rune, .. }] => {
       assert_ne!(full_type_rune.rune, value_type_rune.rune, "full != value when there IS an outer wrap");
@@ -1482,8 +1508,9 @@ fn test_param_nested_ref_wrap_routing() {
 
 #[test]
 fn test_function_rules_no_longer_contains_param_rules() {
-  // Param type Lookups live on their params, not on FunctionS.rules: for `foo(x int, y bool) void`,
-  // FunctionS.rules is exactly the void Lookup, with no int or bool Lookup leaking in.
+  // Param type rules live on their params, not on FunctionS.rules: for `foo(x int, y bool) void`,
+  // FunctionS.rules is exactly the void return type's rules (Lookup(void) + Call([]) — the bare
+  // type-name zero-arg application), with no int or bool rules leaking in.
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -1497,8 +1524,9 @@ fn test_function_rules_no_longer_contains_param_rules() {
   );
   let foo = program.lookup_function("foo");
   match foo.rules {
-    [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. }), .. })] => {}
-    other => panic!("FunctionS.rules should be exactly [Lookup(void)]; got {:?}", other),
+    [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. }), .. }),
+     IRulexSR::Call(CallSR { args: [], .. })] => {}
+    other => panic!("FunctionS.rules should be exactly [Lookup(void), Call([])]; got {:?}", other),
   }
 }
 

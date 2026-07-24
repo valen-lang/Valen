@@ -4,7 +4,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::function::function_compiler::*;
 use crate::typing::compilation::TypingPassOptions;
 use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::typing::infer_compiler::{include_rule_in_definition_solve, InitialKnown, InitialSend, InferEnv, CompleteResolveSolve, CompleteDefineSolve, IResolvingError, IDefiningError};
+use crate::typing::infer_compiler::{include_rule_in_definition_solve, include_rule_in_call_site_solve, InitialKnown, InitialSend, InferEnv, CompleteResolveSolve, CompleteDefineSolve, IResolvingError, IDefiningError};
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::postparsing::itemplatatype::ITemplataType;
@@ -392,7 +392,19 @@ where 's: 't,
         let function = outer_env.function;
         self.check_closure_concerns_handled(outer_env);
 
-        let call_site_rules = self.assemble_call_site_rules(function.rules);
+        // A user param's type-binding rules live per-param (value_type_rules + type_outer_ref_rules),
+        // not in function.rules, so both the call-site solve and rune-typing must fold them in or the
+        // param runes are never bound (@PFVSZ produced-but-not-consumed). This is the call-site twin
+        // of the defining-path wiring at :671. Return-type rules already ride in function.rules. Both
+        // call_site_rules and derive_rune_to_type (below) use all_rules. // VCOORD: rewrite comment
+        let all_rules: Vec<IRulexSR<'s>> =
+            function.rules.iter().copied()
+                .chain(function.params.iter().flat_map(|p|
+                    p.value_type_rules.iter().copied().chain(p.type_outer_ref_rules.iter().copied())))
+                .collect();
+        let call_site_rules: Vec<IRulexSR<'s>> = all_rules.iter().copied()
+            .filter(|r| include_rule_in_call_site_solve(r))
+            .collect();
 
         let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, args);
 
@@ -407,7 +419,7 @@ where 's: 't,
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             self.derive_rune_to_type(
                 calling_env, call_range.to_vec(),
-                function.generic_params, function.rules, IndexMap::default());
+                function.generic_params, &all_rules, IndexMap::default());
         let invocation_range = call_range;
         let initial_knowns: Vec<InitialKnown<'s, 't>> = {
             let mut v = self.assemble_known_templatas(function, explicit_template_args);
@@ -416,7 +428,7 @@ where 's: 't,
         };
         let include_reachable_bounds_for_runes: Vec<IRuneS<'s>> =
             function.params.iter()
-                .map(|p| p.full_type_rune.rune)
+                .map(|p| p.value_type_rune.rune)
                 .chain(function.maybe_ret_kind_rune.map(|ru| ru.rune))
                 .collect();
 
@@ -653,14 +665,23 @@ where 's: 't,
         };
         let function_template_id = near_env.parent_env.id().add_step(self.typing_interner, function_name_local);
 
-        let definition_rules: Vec<IRulexSR<'s>> = function.rules.iter().copied()
+        // A user param's type-binding rules live per-param (value_type_rules + type_outer_ref_rules),
+        // not in function.rules, so the solve must fold them in or the param runes are never bound
+        // (@PFVSZ produced-but-not-consumed). Return-type rules already ride in function.rules. Both
+        // the value solve (definition_rules) and rune-typing (derive_rune_to_type below) use all_rules. VCOORD: rewrite this comment
+        let all_rules: Vec<IRulexSR<'s>> =
+            function.rules.iter().copied()
+                .chain(function.params.iter().flat_map(|p|
+                    p.value_type_rules.iter().copied().chain(p.type_outer_ref_rules.iter().copied())))
+                .collect();
+        let definition_rules: Vec<IRulexSR<'s>> = all_rules.iter().copied()
             .filter(|r| include_rule_in_definition_solve(r))
             .collect();
 
         let mut seen = HashSet::default();
         let mut param_and_return_runes: Vec<IRuneS<'s>> = Vec::new();
         for param in function.params.iter() {
-            let coord_rune = param.full_type_rune;
+            let coord_rune = param.value_type_rune;
             if seen.insert(coord_rune.rune) {
                 param_and_return_runes.push(coord_rune.rune);
             }
@@ -685,7 +706,7 @@ where 's: 't,
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             self.derive_rune_to_type(
                 near_env_as_in_denizen, range.clone(),
-                function.generic_params, function.rules, IndexMap::default());
+                function.generic_params, &all_rules, IndexMap::default());
         let mut solver = self.make_solver_state(
             envs, coutputs, &definition_rules, &rune_to_type, &range, &[]);
 

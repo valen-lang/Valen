@@ -33,7 +33,6 @@ use crate::typing::templata::templata::expect_integer;
 use std::iter::once;
 use std::marker::PhantomData;
 
-
 #[derive(Copy, Clone, Debug)]
 pub enum ITypingPassSolverError<'s, 't> {
     KindIsNotConcrete { kind: KindT<'s, 't> },
@@ -135,6 +134,30 @@ where 's: 't,
                     //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(resultRune, coordListRune)
                     // IRulexSR::RefListCompoundMutability(r) => vec![r.result_rune, r.coord_list_rune],
                     //     case other => vimpl(other)
+                    // Each arm must list the same runes, in the same order, as rune_usages() (which
+                    // produced `result` on line 74) — the assert below compares them position by
+                    // position. A BorrowRef also carries its region rune, but only when the region
+                    // is itself a rune.
+                    IRulexSR::BorrowRef(r) => {
+                        let mut runes = vec![r.result_rune, r.inner_rune];
+                        match r.region {
+                            RegionSR::Unspecified => { }
+                            RegionSR::Held => { }
+                            RegionSR::Rune(ru) => runes.push(ru.clone()),
+                        }
+                        runes
+                    },
+                    IRulexSR::WeakRef(r)   => vec![r.result_rune, r.inner_rune],
+                    IRulexSR::OwnRef(r)    => vec![r.result_rune, r.inner_rune],
+                    IRulexSR::KindList(r)  => {
+                        let mut things = Vec::new();
+                        things.push(r.result_rune);
+                        things.extend_from_slice(r.members);
+                        things
+                    } ,
+                    // This whole sanity_checked block is a debug-mode hand-duplicate of
+                    // rune_usages(); it could be deleted outright, leaving rune_usages() the single
+                    // source of truth.
                     other => panic!("get_runes sanity check: unhandled rule {:?}", other),
                 };
             //   vassert(result sameElements sanityChecked.map(_.rune))
@@ -216,6 +239,10 @@ pub fn get_puzzles<'s>(rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
             // IRulexSR::CallSiteCoordIsa(r) => vec![vec![r.sub_rune.rune, r.super_rune.rune]],
             //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(Vector(coordListRune.rune))
             // IRulexSR::RefListCompoundMutability(r) => vec![vec![r.coord_list_rune.rune]],
+            IRulexSR::BorrowRef(r) => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
+            IRulexSR::WeakRef(r)   => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
+            IRulexSR::OwnRef(r)    => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
+            IRulexSR::KindList(r)  => vec![vec![r.result_rune.rune], r.members.iter().map(|m| m.rune).collect()],
             other => panic!("get_puzzles: unhandled rule {:?}", other),
         }
     }
@@ -1164,6 +1191,39 @@ where 's: 't,
                 // val mutability = if (coords.forall(_.ownership == ShareT)) MutabilityTemplataT(ImmutableT) else MutabilityTemplataT(MutableT)
                 // solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> mutability), Vector(), Set.empty) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
             // }
+            // Construct the onion KindT value. The rule is bidirectional: with the inner kind
+            // known, wrap it and stamp the result; with the result known, peel it and stamp the
+            // inner.
+              IRulexSR::BorrowRef(r) => {
+                  let mut conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = IndexMap::default();
+                let inner =
+                    match (solver_state.get_conclusion(&r.result_rune.rune), solver_state.get_conclusion(&r.inner_rune.rune)) {
+                        (Some(ITemplataT::Kind(KindTemplataT { kind: result_kind })), _) => {
+                            match result_kind {
+                                KindT::BorrowRef(BorrowRefT { inner: result_inner_rune, region: result_region }) => {
+                                    conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT{ kind: *result_inner_rune})));
+                                }
+                                _ => unimplemented!()
+                            }
+                        },
+                        (_, Some(ITemplataT::Kind(KindTemplataT { kind: inner }))) => {
+                            let wrap = KindT::BorrowRef(self.typing_interner.alloc(BorrowRefT { inner: *inner, region: RegionT::Default }));
+                            conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: wrap })));
+                        },
+                        _ => panic!("Neither result nor inner rune solved in BorrowRef"),
+                    };
+                  match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
+                      Ok(_) => Ok(()),
+                      Err(_e) => {
+                          panic!("Unimplemented: solve_rule Literal InternalSolverError wrapping");
+                          // Err(InternalSolverError(range :: env.parentRanges, e))
+                      }
+                  }
+              }
+            // TODO: WeakRef and OwnRef need the same bidirectional wrap/peel as BorrowRef, minus the
+            // region: KindT::WeakRef(WeakRefT { inner }) and KindT::OwnRef(OwnRefT { inner }).
+            // KindList builds a KindListTemplataT from its member kinds and stamps the result, per
+            // the commented Pack model above.
             other => unreachable!("solve_rule: {:?} — MaybeCoercingLookup/MaybeCoercingCall/IndexList are desugared before reaching the typing-pass solver", other),
         }
     }
@@ -1380,9 +1440,14 @@ where 's: 't,
                             }
                         }
                     }
-                    ITemplataT::Kind(_kt) => {
-                        panic!("Unimplemented: solve_call_rule None Kind");
-                        // solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> kt), Vector(), Set.empty) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+                    ITemplataT::Kind(kt) => {
+                        match solver_state.commit_step(false, vec![rule_index], [(result_rune.rune, ITemplataT::Kind(kt))].into_iter().collect(), vec![], IndexSet::default()) {
+                            Ok(_) => return Ok(()),
+                            Err(e) => {
+                                let error = self.typing_interner.alloc(e);
+                                return Err(ITypingPassSolverError::InternalSolverError { range: env.parent_ranges, err: error });
+                            }
+                        }
                     }
                     other => panic!("vimpl: solve_call_rule None {:?}", other),
                 }

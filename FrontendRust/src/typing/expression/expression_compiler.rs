@@ -17,7 +17,7 @@ use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
 use crate::utils::fx::IndexMap;
 use crate::utils::fx::{HashMap, HashSet};
-use crate::typing::templata_compiler::{is_ref, IBoundArgumentsSource};
+use crate::typing::templata_compiler::{is_ref, peel_one_reference, IBoundArgumentsSource};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::ast::citizens::{StructMemberT};
 use crate::typing::env::environment::ILookupContext;
@@ -656,7 +656,12 @@ where 's: 't,
                 // VCOORD: eventually put here something that checks if it's Copyable.
                 // or maybe thisll just go away? we might not even be able to do this from source someday.
                 // /VCOORD
-                let result_coord = inner_coord;
+                let result_coord =
+                    match peel_one_reference(&inner_coord) {
+                        // &int -> int, &bool -> bool, ...
+                        Some(inner) if inner.is_primitive() => inner,
+                        _ => panic!("__copy_prim expects &primitive, got {:?}", inner_coord),
+                    };
                 let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(inner_te, result_coord));
                 Ok((ExpressionTE::CopyPrim(copy_prim_te), returns_from_inner))
             }

@@ -3,7 +3,7 @@
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
 use crate::postparsing::ast::GenericParameterS;
-use crate::postparsing::rules::rules::{BorrowRefSR, IRulexSR, KindListSR, OwnRefSR, RuneUsage, WeakRefSR};
+use crate::postparsing::rules::rules::{BorrowRefSR, IRulexSR, KindListSR, OwnRefSR, RegionSR, RuneUsage, WeakRefSR};
 use crate::scout_arena::ScoutArena;
 use crate::solver::{FailedSolve, ISolverError, SimpleSolverState, SolveIncomplete, RuleError, make_solver_state};
 use crate::utils::range::RangeS;
@@ -13,8 +13,6 @@ use crate::utils::fx::HashMap;
 use crate::postparsing::itemplatatype::ImplTemplataType;
 use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
-
-
 
 #[derive(Debug)]
 pub struct RuneTypeSolveError<'s> {
@@ -465,6 +463,20 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
           conclusions.insert(x.result_rune.rune.clone(), *return_type);
           solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
         }
+        // A bare type-name like `int` scouts to a zero-arg Call whose template looks up as a Kind
+        // rather than a Template. Applying zero args to a Kind is the identity; a non-empty arg list
+        // on something that isn't a template is a real error.
+        // TODO: with the Kind saturation front-loaded here, delete the Template->Kind coercion in
+        // lookup_rune_type and its two-pass predicting machinery.
+        ITemplataType::KindTemplataType(KindTemplataType { }) => {
+          if x.args.is_empty() {
+            let mut conclusions = IndexMap::default();
+            conclusions.insert(x.result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType { }));
+            solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
+          } else {
+            panic!("Bad template call")
+          }
+        }
         other => panic!("Call: unexpected template type {:?}", other),
       }
     }
@@ -485,6 +497,9 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
         (result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
         (inner_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
       ].into_iter().collect();
+      if let RegionSR::Rune(region_rune) = region {
+        conclusions.insert(region_rune.rune.clone(), ITemplataType::RegionTemplataType(RegionTemplataType {}));
+      }
       // V: i removed this because its not really a templata so it cant be a conclusion, sound right?
       // conclusions.insert(region.rune.clone(), ITemplataType::RegionTemplataType(RegionTemplataType {}));
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(

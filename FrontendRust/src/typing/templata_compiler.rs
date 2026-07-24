@@ -1190,18 +1190,24 @@ where 's: 't,
         source_type: KindT<'s, 't>,
         target_type: KindT<'s, 't>,
     ) -> bool {
-        // let KindT { ownership: target_ownership, region: target_region, kind: target_type, .. } = target_pointer_type;
-        // let KindT { ownership: source_ownership, region: source_region, kind: source_type, .. } = source_pointer_type;
+        // Both borrow refs: convertibility is decided entirely by the referents (convert() row 4 /
+        // the &Dog -> &Animal upcast at convert_helper.rs:86). Regions are ignored for now — every
+        // borrow is RegionT::Default. Recursing also handles nested upcasts (&&Dog -> &&Animal).
+        // VCOORD: when genuine double-borrows land (generics only, decision 3), this must refuse a
+        // depth mismatch — `&&X -> &X` should be the row-d error, but recursing here would peel it to
+        // the legal `&X -> X` read-out and wrongly accept it. // VCOORD: rewrite this comment
+        if let (KindT::BorrowRef(s), KindT::BorrowRef(t)) = (source_type, target_type) {
+            return self.is_type_convertible(coutputs, calling_env, parent_ranges, call_location, s.inner, t.inner);
+        }
 
-        // TEMP tripwire (remove when is_type_convertible is unified with convert()): these are the
-        // two shapes convert() converts but the match below would silently return `false` — which in
-        // overload resolution drops a valid candidate or flips the exact-vs-coercion tiebreak. Panic
-        // loudly rather than miscompile. `&X -> X` (borrow read-out) and `X -> &X` (bare to borrow).
-        // Identity is handled by the `a == b` arm below and never reaches here; `&Cat -> &Dog` and
-        // other genuinely-unconvertible ref pairs have no matching inner and fall to the `_` panic.
+        // VCOORD: revisit this
         if let KindT::BorrowRef(sb) = source_type {
             if sb.inner == target_type {
-                panic!("is_type_convertible: unhandled borrow read-out {:?} -> {:?} (needs convert() unification)", source_type, target_type);
+                if sb.inner.is_primitive() {
+                    return true;
+                } else {
+                    panic!("is_type_convertible: unhandled borrow read-out {:?} -> {:?} (needs convert() unification)", source_type, target_type);
+                }
             }
         }
         if let KindT::BorrowRef(tb) = target_type {
@@ -1209,6 +1215,7 @@ where 's: 't,
                 panic!("is_type_convertible: bare-to-borrow {:?} -> {:?} not yet handled (needs convert() unification)", source_type, target_type);
             }
         }
+        // /VCOORD
 
         match (&source_type, &target_type) {
             (KindT::Never(_), _) => return true,

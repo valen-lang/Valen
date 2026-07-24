@@ -85,6 +85,31 @@ fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
   rune_s
 }
 
+// Emit a template application: mint a fresh result rune, push a Call of `template_rune` over
+// `arg_runes`, and return the result rune. `arg_runes` may be empty — a bare type-name is a
+// zero-arg application, which saturates a nullary template to a Kind (see the NameOrRune and
+// empty-tuple sites). Mirrors the ITemplexPT::Call arm's Call construction.
+fn add_call_rule<'s>(scout_arena: &ScoutArena<'s>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  range_s: RangeS<'s>,
+  template_rune: RuneUsage<'s>,
+  arg_runes: Vec<RuneUsage<'s>>,
+) -> RuneUsage<'s> {
+  let mut child_lidb = lidb.child();
+  let result_rune_s = RuneUsage {
+    range: range_s.clone(),
+    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+  };
+  rule_builder.push(Call(CallSR {
+    range: range_s,
+    result_rune: result_rune_s.clone(),
+    template_rune,
+    args: scout_arena.alloc_slice_from_vec(arg_runes),
+  }));
+  result_rune_s
+}
+
 pub fn translate_value_templex<'s, 'p>(
   scout_arena: &ScoutArena<'s>,
   templex: &ITemplexPT<'p>,
@@ -262,19 +287,24 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
             )
           }
         } else {
-          // e.g. "int"
+          // e.g. "int", or a citizen like "Moo". A bare type-name is a zero-arg application:
+          // emit the name Lookup (the template), then a Call([]) so the returned rune is a Kind
+          // (saturated), uniform with how `Moo<int>` lowers. This front-loads the "a type-position
+          // name is a Kind" decision so the rune-type solver never coerces Template->Kind.
           let name = scout_arena.intern_imprecise_name(CodeName(CodeNameS {
             name: scout_arena.intern_str(name_or_rune.str().as_str()),
           }));
+          let range_s = PostParser::eval_range(file, name_or_rune.range());
           let mut child_lidb = lidb.child();
-          add_lookup_rule(scout_arena,
+          let template_rune = add_lookup_rule(scout_arena,
             &mut child_lidb,
             rule_builder,
-            PostParser::eval_range(file, name_or_rune.range()),
+            range_s.clone(),
             context_region,
             name,
-          )
+          );
           // For lookups like these, we bring them into the current region.
+          add_call_rule(scout_arena, &mut child_lidb, rule_builder, range_s, template_rune, vec![])
         }
       }
 
@@ -430,19 +460,19 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           name: keywords.tuple_human_name[tuple.elements.len()],
         }));
         if tuple.elements.is_empty() {
-          // Zero-arg case: lower directly to a single LookupSR, matching how any
-          // other zero-arg kind template (e.g., `Spaceship`) is handled.
+          // Zero-arg tuple `()`: a zero-arg application like any bare zero-arg kind — Lookup the
+          // template, then Call([]) to saturate to a Kind (matching the NameOrRune site above).
           let mut child_lidb = lidb.child();
-          let result_rune_s = RuneUsage {
+          let template_rune_s = RuneUsage {
             range: range_s.clone(),
             rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
           };
           rule_builder.push(Lookup(LookupSR {
-            range: range_s,
-            rune: result_rune_s.clone(),
+            range: range_s.clone(),
+            rune: template_rune_s.clone(),
             name: tuple_name,
           }));
-          result_rune_s
+          add_call_rule(scout_arena, &mut child_lidb, rule_builder, range_s, template_rune_s, vec![])
         } else {
           let mut child_lidb = lidb.child();
           let result_rune_s = RuneUsage {

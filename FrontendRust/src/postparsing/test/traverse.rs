@@ -17,7 +17,7 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
-  BoolLiteralSL, EqualsSR, ILiteralSL, IntLiteralSL,
+  BoolLiteralSL, CallSR, EqualsSR, ILiteralSL, IntLiteralSL,
   IRulexSR, LiteralSR, LookupSR, RegionSR, StringLiteralSL,
 };
 use crate::postparsing::rules::RuneUsage;
@@ -78,6 +78,7 @@ pub enum NodeRefS<'s> {
   EqualsRule(&'s EqualsSR<'s>),
   LiteralRule(&'s LiteralSR<'s>),
   LookupRule(&'s LookupSR<'s>),
+  CallRule(&'s CallSR<'s>),
   RuneUsage(&'s RuneUsage<'s>),
   Literal(&'s ILiteralSL<'s>),
   IntLiteral(&'s IntLiteralSL),
@@ -727,6 +728,7 @@ where
       visit_rune_usage(pred, out, &x.rune);
     }
     IRulexSR::Call(x) => {
+      collect_if(pred, out, NodeRefS::CallRule(x));
       visit_rune_usage(pred, out, &x.result_rune);
       visit_rune_usage(pred, out, &x.template_rune);
       for arg in x.args {
