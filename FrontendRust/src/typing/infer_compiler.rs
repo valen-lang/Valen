@@ -472,9 +472,6 @@ where 's: 't,
             include_reachable_bounds_for_runes
                 .iter()
                 .map(|rune| {
-                    // Every rune whose bounds we're harvesting was concluded during the solve, so a
-                    // missing conclusion here is a bug in how the rules were assembled, not a case to
-                    // tolerate.
                     let templata = conclusions.get(rune).unwrap();
                     let maybe_mentioned_kind =
                         match templata {

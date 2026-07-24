@@ -149,7 +149,7 @@ fn test_struct() {
 
   let only_member = expect_1(&imoo.members);
   // `int` (a bare type-name) lowers to Lookup(int) + Call([]); the member's type is the
-  // saturated Call result, not the raw Lookup rune.
+  // Call's result rune, not the raw Lookup rune.
   collect_only_snode!(
     NodeRefS::Struct(imoo),
     NodeRefS::LookupRule(
@@ -280,7 +280,7 @@ fn impl_() {
   let impl_ = expect_1(program.impls);
 
   // Each of `Moo` / `IMoo` (bare type-names) lowers to Lookup(name) + Call([]); the kind runes
-  // are the saturated Call results, not the raw Lookup runes.
+  // are the Call results, not the raw Lookup runes.
   collect_only_snode!(
     NodeRefS::Impl(impl_),
     NodeRefS::LookupRule(LookupSR {
@@ -1358,8 +1358,8 @@ fn test_param_no_outer_wrap_routing() {
     "exported func foo(x int) void { }",
   );
   let foo = program.lookup_function("foo");
-  // A bare type-name is a zero-arg application: `int` lowers to Lookup(int) + Call([]) (and the
-  // explicit `void` return likewise). value_type_rune is the saturated Call result.
+  // A bare type-name is a zero-arg call: `int` lowers to Lookup(int) + Call([]) (and the
+  // explicit `void` return likewise). value_type_rune is the Call's result rune.
   match (foo.params, foo.rules) {
     ([ParameterS {
         type_outer_ref_rules: [],
@@ -1371,7 +1371,7 @@ fn test_param_no_outer_wrap_routing() {
      [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. }), .. }),
       IRulexSR::Call(CallSR { args: [], .. })]) => {
       assert_eq!(full_type_rune.rune, value_type_rune.rune, "full == value when there's no outer wrap");
-      assert_eq!(value_type_rune.rune, value_call_result.rune, "value type is the saturated Call result");
+      assert_eq!(value_type_rune.rune, value_call_result.rune, "value type is the Call's result rune");
     }
     other => panic!("expected `x int` param (no outer wraps, value [Lookup(int), Call([])]) and fn rules [Lookup(void), Call([])]; got {:?}", other),
   }

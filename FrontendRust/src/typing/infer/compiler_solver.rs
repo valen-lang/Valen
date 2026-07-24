@@ -134,10 +134,6 @@ where 's: 't,
                     //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(resultRune, coordListRune)
                     // IRulexSR::RefListCompoundMutability(r) => vec![r.result_rune, r.coord_list_rune],
                     //     case other => vimpl(other)
-                    // Each arm must list the same runes, in the same order, as rune_usages() (which
-                    // produced `result` on line 74) — the assert below compares them position by
-                    // position. A BorrowRef also carries its region rune, but only when the region
-                    // is itself a rune.
                     IRulexSR::BorrowRef(r) => {
                         let mut runes = vec![r.result_rune, r.inner_rune];
                         match r.region {
@@ -1191,9 +1187,6 @@ where 's: 't,
                 // val mutability = if (coords.forall(_.ownership == ShareT)) MutabilityTemplataT(ImmutableT) else MutabilityTemplataT(MutableT)
                 // solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> mutability), Vector(), Set.empty) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
             // }
-            // Construct the onion KindT value. The rule is bidirectional: with the inner kind
-            // known, wrap it and stamp the result; with the result known, peel it and stamp the
-            // inner.
               IRulexSR::BorrowRef(r) => {
                   let mut conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = IndexMap::default();
                 let inner =
@@ -1220,7 +1213,7 @@ where 's: 't,
                       }
                   }
               }
-            // TODO: WeakRef and OwnRef need the same bidirectional wrap/peel as BorrowRef, minus the
+            // VCOORD: WeakRef and OwnRef need the same bidirectional wrap/peel as BorrowRef, minus the
             // region: KindT::WeakRef(WeakRefT { inner }) and KindT::OwnRef(OwnRefT { inner }).
             // KindList builds a KindListTemplataT from its member kinds and stamps the result, per
             // the commented Pack model above.

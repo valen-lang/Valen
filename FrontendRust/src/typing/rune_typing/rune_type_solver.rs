@@ -465,9 +465,9 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
         }
         // A bare type-name like `int` scouts to a zero-arg Call whose template looks up as a Kind
         // rather than a Template. Applying zero args to a Kind is the identity; a non-empty arg list
-        // on something that isn't a template is a real error.
-        // TODO: with the Kind saturation front-loaded here, delete the Template->Kind coercion in
-        // lookup_rune_type and its two-pass predicting machinery.
+        // on something that isn't a template is a real error. VCOORD: arcana instead
+        // VCOORD: now that the scout lowers bare names to zero-arg Calls, delete the Template->Kind
+        // coercion in lookup_rune_type and its two-pass predicting machinery.
         ITemplataType::KindTemplataType(KindTemplataType { }) => {
           if x.args.is_empty() {
             let mut conclusions = IndexMap::default();
