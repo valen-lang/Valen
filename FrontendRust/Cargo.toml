@@ -5,6 +5,20 @@ edition = "2021"
 build = "build.rs"
 links = "vale_backend"
 
+# Without this, rust-analyzer cannot resolve the `rustc_private` crates and every line that
+# touches them shows as an error in the editor.
+[package.metadata.rust-analyzer]
+rustc_private = true
+
+[features]
+# Rust interop: links rustc's internals and compiles the `typing::rust_interop` module.
+#
+# A cargo feature rather than a bare `--cfg`, because build.rs must know the mode too — it
+# skips the C++ backend's static LLVM-16 link, which would otherwise sit in one process with
+# rustc's own libLLVM — and a build script cannot see a RUSTFLAGS cfg. One switch means the
+# half-configured combinations, which compile cleanly and fail silently, cannot happen.
+rust_interop = []
+
 [build-dependencies]
 cmake = "0.1"
 
@@ -26,6 +40,17 @@ path = "src/lib.rs"
 [[bin]]
 name = "valec"
 path = "src/bin/valec/main.rs"
+
+# The rustc-hosted driver. `required-features` keeps it out of a plain `cargo build`
+# entirely — it links rustc's internals, so it only exists in the interop configuration.
+#
+# Its source deliberately lives under `typing/rust_interop/` rather than the conventional
+# `src/bin/`, so that every line of interop code sits in one directory. It is a separate
+# crate root, not a module of the lib — `rust_interop/mod.rs` does not declare it.
+[[bin]]
+name = "valec-rs"
+path = "src/typing/rust_interop/driver/main.rs"
+required-features = ["rust_interop"]
 
 
 [profile.profiling]

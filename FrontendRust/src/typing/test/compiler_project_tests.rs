@@ -1,4 +1,4 @@
-use super::compiler_test_compilation::compiler_test_compilation;
+use super::compiler_test_compilation::{compiler_test_compilation, typing_pass_compilation_for_test};
 use bumpalo::Bump;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
@@ -11,7 +11,6 @@ use crate::builtins::builtins::get_code_map;
 use crate::compile_options::GlobalOptions;
 use crate::typing::TypingPassOptions;
 use crate::tests::tests::new_test_package_source;
-use crate::typing::compilation::TypingPassCompilation;
 use std::sync::Arc;
 use crate::utils::range::CodeLocationS;
 use crate::typing::names::names::FunctionTemplateNameT;
@@ -245,7 +244,7 @@ exported func main() {
         tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = TypingPassCompilation::new(
+    let mut compile = typing_pass_compilation_for_test(
         &typing_interner,
         &scout_arena,
         &keywords,
@@ -302,7 +301,7 @@ exported func main() bool {
         tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = TypingPassCompilation::new(
+    let mut compile = typing_pass_compilation_for_test(
         &typing_interner,
         &scout_arena,
         &keywords,
@@ -358,7 +357,7 @@ exported func main() int {
         tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = TypingPassCompilation::new(
+    let mut compile = typing_pass_compilation_for_test(
         &typing_interner,
         &scout_arena,
         &keywords,
@@ -417,7 +416,7 @@ exported func main() {
         tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = TypingPassCompilation::new(
+    let mut compile = typing_pass_compilation_for_test(
         &typing_interner,
         &scout_arena,
         &keywords,
@@ -470,7 +469,7 @@ exported func main() {
         tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = TypingPassCompilation::new(
+    let mut compile = typing_pass_compilation_for_test(
         &typing_interner,
         &scout_arena,
         &keywords,
@@ -525,7 +524,7 @@ exported func main() {
         tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = TypingPassCompilation::new(
+    let mut compile = typing_pass_compilation_for_test(
         &typing_interner,
         &scout_arena,
         &keywords,
@@ -578,7 +577,7 @@ fn typing_pass_on_roguelike() {
         tree_shaking_enabled: true,
     };
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = TypingPassCompilation::new(
+    let mut compile = typing_pass_compilation_for_test(
         &typing_interner,
         &scout_arena,
         &keywords,

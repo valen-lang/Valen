@@ -16,6 +16,7 @@ use crate::utils::source_code_utils::line_range_containing;
 use crate::utils::source_code_utils::lines_between;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::typing_interner::TypingInterner;
+use crate::typing::oracles::Oracles;
 use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
@@ -45,6 +46,9 @@ where 's: 't,
   keywords: &'ctx Keywords<'s>,
   options: TypingPassOptions,
   pub typing_interner: &'ctx TypingInterner<'s, 't>,
+  // Answers questions about Rust items for the typing pass. Supplied by the caller so
+  // a test can hand in a fixture; production supplies the TyCtxt-backed one.
+  oracles: Oracles<'ctx, 's, 't>,
 }
 
 impl<'s, 'ctx, 't, 'p> TypingPassCompilation<'s, 'ctx, 't, 'p>
@@ -59,6 +63,7 @@ where 's: 't,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     code_source: &'ctx CodeSource<'p>,
     typing_options: TypingPassOptions,
+    oracles: Oracles<'ctx, 's, 't>,
   ) -> Self {
     let scout_compilation = ScoutCompilation::new(
       scout_arena,
@@ -77,6 +82,7 @@ where 's: 't,
       keywords,
       options: typing_options,
       typing_interner,
+      oracles,
     }
   }
   
@@ -107,7 +113,8 @@ pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErro
   }
   let code_map = self.get_code_map().expect("getCodeMap failed");
   let astrouts = self.scout_compilation.expect_scoutput();
-  let compiler = Compiler::new(self.scout_arena, &self.typing_interner, self.keywords, &self.options);
+  let compiler = Compiler::new(
+    self.scout_arena, &self.typing_interner, self.keywords, &self.options, self.oracles);
   match compiler.evaluate(&code_map, astrouts) {
     Err(e) => Err(e),
     Ok(hinputs) => {

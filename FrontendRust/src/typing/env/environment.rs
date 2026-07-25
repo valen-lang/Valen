@@ -485,6 +485,10 @@ pub fn get_imprecise_name<'s, 't>(
         }
     }
     INameT::AnonymousSubstruct(a) => get_imprecise_name(scout_arena, INameT::AnonymousSubstructTemplate(a.template)),
+    INameT::ExternFunction(f) => {
+        Some(scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: f.human_name })))
+    }
     _ => {
         panic!("Unimplemented: get_imprecise_name for {:?}", name_t);
         // vimpl(other.toString)

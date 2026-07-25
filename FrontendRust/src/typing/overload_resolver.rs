@@ -26,6 +26,8 @@ use crate::typing::rune_typing::rune_type_solver::TemplataLookupResult;
 use crate::typing::rune_typing::rune_type_solver::RuneTypingCouldntFindType;
 use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
 use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
+#[cfg(feature = "rust_interop")]
+use crate::typing::rust_interop::push_rust_call_candidates;
 use crate::postparsing::names::CodeNameS;
 use crate::typing::env::environment::{IInDenizenEnvironmentT};
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;
@@ -162,6 +164,20 @@ where 's: 't,
         for e in self.get_placeholder_extra_call_envs(env, coutputs, range, param_filters) {
             self.get_candidate_banners_inner(e, coutputs, range, function_name, searched_envs, results);
         }
+        // VRI: this push_rust_call_candidates should go away
+        // A fourth candidate source: Rust callees — either a method on a Rust-backed
+        // receiver, or a free function imported from the `rust` package. They join the same
+        // pool as everything above and are scored the same way.
+        //
+        // TEMPORARY. Rust callees have no Vale environment *yet*, but that is a gap rather
+        // than a property: nothing currently registers one. Once the importer declares a per-
+        // type outer env for a Rust type, methods are found through the param envs like any
+        // Vale method; once the reserved `rust` package has a top-level store, free functions
+        // are found by ordinary ambient name lookup. Each of those retires one of this
+        // function's two triggers, and when both have landed this call and its `use` are the
+        // last interop lines in this file.
+        #[cfg(feature = "rust_interop")]
+        push_rust_call_candidates(self, coutputs, env, function_name, param_filters, results);
         // VCOORD: doublecheck this
         // Empirically dead on the current Vale corpus (verified 2026-06-08 by reverting
         // to a no-op shape and running the full suite — 1064/1064 still passed). Only

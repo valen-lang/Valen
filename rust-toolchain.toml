@@ -20,4 +20,12 @@ channel = "nightly-2025-12-09"
 #     it by default), prints "Unknown binary", and the LSP client hangs until
 #     opencode's 45 s initialize timeout fires — making every Edit on a Rust
 #     file fail-closed.
+#
+# NOT listed here on purpose: `rustc-dev`, which the `rust_interop` cargo feature needs
+# (it links rustc's internals via `#![feature(rustc_private)]`). Listing it would make
+# rustup fetch several hundred MB for everyone on every branch and in every CI job, for a
+# feature that is off by default and that nobody else builds. Interop developers install it
+# themselves:
+#
+#     rustup component add rustc-dev --toolchain nightly-2025-12-09
 components = ["rust-src", "rust-docs-json", "rust-analyzer"]

@@ -12,5 +12,7 @@ mod compiler_virtual_tests;
 mod after_regions_tests;
 mod after_regions_error_tests;
 mod compiler_humanizer_tests;
+#[cfg(feature = "rust_interop")]
+mod rust_interop;
 mod in_progress_tests;
 mod todo_tests;

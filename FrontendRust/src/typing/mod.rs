@@ -43,6 +43,15 @@ pub mod infer;
 pub mod macros;
 pub mod rune_typing;
 
+// The query services the typing pass can consult. Always compiled: it is what keeps the
+// interop `#[cfg]` out of `Compiler` and its constructors.
+pub mod oracles;
+
+// Rust interop. Only present in the rustc-linked binary; under the standalone
+// binary this module doesn't exist and every seam hook compiles out with it.
+#[cfg(feature = "rust_interop")]
+pub mod rust_interop;
+
 // Tests
 #[cfg(test)]
 pub mod test;

@@ -9,6 +9,29 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
+    // Interop builds skip the C++ backend entirely.
+    //
+    // This script statically links ~20 LLVM 16 component libraries into every artifact.
+    // An interop build also loads rustc's own libLLVM (~21) through rustc_driver's dylibs,
+    // and two LLVMs in one process is duplicate-symbol UB — LLVM keeps process-global
+    // state (pass registries, command-line option registration). See
+    // docs/convos/rust_interop/vale-rust-interop-architecture.md §3.6 / §5.7.
+    //
+    // TEMPORARY, and specifically NOT the backend becoming optional: Vale's C++ Backend
+    // owns every byte of Vale-emitted LLVM IR (arch §1.7) and is required in both
+    // binaries. This gate expires when the backend is ported from LLVM 16 to rustc's
+    // pinned LLVM (~21) and switched to dynamic linking, which §3.6 mandates and which is
+    // what makes one shared libLLVM possible. Until then an interop build can typecheck
+    // but cannot reach codegen.
+    //
+    // Read from the cargo feature rather than a cfg because a build script cannot see
+    // RUSTFLAGS. Absent the feature this is unset and the backend builds exactly as before.
+    println!("cargo:rerun-if-env-changed=CARGO_FEATURE_RUST_INTEROP");
+    if env::var_os("CARGO_FEATURE_RUST_INTEROP").is_some() {
+        emit_rustc_private_rpath();
+        return;
+    }
+
     let backend_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
         .parent()
         .expect("FrontendRust must live next to Backend/")
@@ -74,6 +97,33 @@ fn main() {
     watch_dir_recursive(&backend_dir.join("src"));
     println!("cargo:rerun-if-env-changed=LLVM_CONFIG");
     println!("cargo:rerun-if-env-changed=LLVM_DIR");
+}
+
+/// Bakes the rustc sysroot's lib dir into the artifact as an `LC_RPATH` / `-rpath`.
+///
+/// With `extern crate rustc_driver`, rustc emits a reference to
+/// `@rpath/librustc_driver-<hash>.dylib` but does **not** emit a matching rpath load
+/// command, so the artifact cannot find the dylib on its own and dies in dyld before
+/// `main`. The usual workaround is `DYLD_LIBRARY_PATH` (or `DYLD_FALLBACK_LIBRARY_PATH` —
+/// they are interchangeable here, because `@rpath` resolution always fails and so the
+/// fallback is always reached). Baking the rpath in is better: the artifact runs standalone,
+/// tests need no environment, and it survives code signing, which strips `DYLD_*`.
+///
+/// Measured and reported by the toylang/Sky prototype on this machine.
+fn emit_rustc_private_rpath() {
+    let rustc = env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
+    let out = Command::new(&rustc).args(["--print", "sysroot"]).output();
+    let sysroot = match out {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+        _ => {
+            println!("cargo:warning=could not determine rustc sysroot; rustc_private artifacts \
+                      will need DYLD_LIBRARY_PATH set to <sysroot>/lib");
+            return;
+        }
+    };
+    let lib_dir = PathBuf::from(&sysroot).join("lib");
+    println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_dir.display());
+    println!("cargo:rerun-if-env-changed=RUSTC");
 }
 
 fn watch_dir_recursive(dir: &std::path::Path) {

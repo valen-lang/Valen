@@ -32,6 +32,9 @@ use crate::typing::templata::templata::{
 };
 use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, SharednessT, NeverT, StrT, VoidT, BorrowRefT, OwnRefT, WeakRefT, ShareRefT};
 use crate::typing::typing_interner::TypingInterner;
+use crate::typing::oracles::Oracles;
+#[cfg(feature = "rust_interop")]
+use crate::typing::rust_interop::import_rust_types;
 use crate::typing::types::types::{RegionT};
 use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::overload_resolver::FindFunctionFailure;
@@ -114,6 +117,11 @@ where 's: 't,
     pub typing_interner: &'ctx TypingInterner<'s, 't>,
     pub keywords: &'ctx Keywords<'s>,
     pub opts: &'ctx TypingPassOptions,
+    // The Rust-interop oracle: a borrowed query service, alongside the other borrowed
+    // services above. Present only in the rustc-linked binary. It answers questions;
+    // it never accumulates anything, so it lives here and not on CompilerOutputs
+    // (which exists to be drained into HinputsT).
+    pub oracles: Oracles<'ctx, 's, 't>,
 }
 
 
@@ -125,8 +133,9 @@ where 's: 't,
         typing_interner: &'ctx TypingInterner<'s, 't>,
         keywords: &'ctx Keywords<'s>,
         opts: &'ctx TypingPassOptions,
+        oracles: Oracles<'ctx, 's, 't>,
     ) -> Self {
-        Compiler { scout_arena, typing_interner, keywords, opts }
+        Compiler { scout_arena, typing_interner, keywords, opts, oracles }
     }
     
     pub fn get_placeholders_in_id(&self, accum: &mut Vec<IdT<'s, 't>>, id: IdT<'s, 't>) {
@@ -740,6 +749,13 @@ where 's: 't,
         });
 
         let mut coutputs = CompilerOutputs::new();
+
+        // Declare the imported Rust types: intern a `rust`-packaged name for each, and give
+        // it an outer environment holding its methods. After this, every later pass can treat
+        // a Rust-backed citizen as an ordinary declared citizen — which is what lets method
+        // resolution, and drop, go through the normal paths instead of a Rust-specific one.
+        #[cfg(feature = "rust_interop")]
+        import_rust_types(self, global_env, &mut coutputs);
 
         self.compile_static_sized_array(global_env, &mut coutputs);
         self.compile_runtime_sized_array(global_env, &mut coutputs);
