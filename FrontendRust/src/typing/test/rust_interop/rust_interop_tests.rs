@@ -54,9 +54,12 @@ exported func main() int {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
 
-    // The call resolved to a prototype the oracle described, not to anything Vale-side:
-    // it lives in the reserved `rust` package and its name carries the params, because
-    // PrototypeT::param_types is name-derived.
+    // The call resolves to an ordinary Vale function — the extern *wrapper* that
+    // `make_extern_function` builds — living in the reserved `rust` package. That it is an
+    // ordinary `Function` rather than a bare `ExternFunction` prototype is the point of the
+    // synthesized-declaration design: the oracle produced a declaration, and the ordinary
+    // machinery compiled it. The `ExternFunctionNameT` prototype still exists, one level down,
+    // as the target of the `ExternFunctionCallTE` in this wrapper's body.
     let callee: &PrototypeT = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(call) => Some(call.callable)
@@ -64,10 +67,12 @@ exported func main() int {
     assert!(is_rust_backed(&callee.id));
     assert_eq!(callee.return_type, int);
     match callee.id.local_name {
-        INameT::ExternFunction(name) => {
-            assert_eq!(name.human_name.0, "add_two_numbers");
+        INameT::Function(name) => {
+            assert_eq!(name.template.human_name.0, "add_two_numbers");
+            // Params ride the name, because PrototypeT::param_types is name-derived — a name
+            // that disagreed with the signature would report wrong types at every call site.
             assert_eq!(name.parameters, &[int, int]);
         }
-        other => panic!("expected an ExternFunction name, got {:?}", other),
+        other => panic!("expected a Function name, got {:?}", other),
     }
 }

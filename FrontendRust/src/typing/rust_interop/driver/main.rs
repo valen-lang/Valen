@@ -39,7 +39,7 @@ use frontend_rust::scout_arena::ScoutArena;
 use frontend_rust::tests::tests::new_test_code_map;
 use frontend_rust::typing::compilation::{TypingPassCompilation, TypingPassOptions};
 use frontend_rust::typing::oracles::Oracles;
-use frontend_rust::typing::rust_interop::{LoggingOracle, RustOracle, TyCtxtOracle};
+use frontend_rust::typing::rust_interop::{LoggingOracle, TyCtxtOracle};
 use frontend_rust::typing::typing_interner::TypingInterner;
 
 /// Runs inside rustc, with a real `TyCtxt` in hand.
@@ -99,11 +99,20 @@ fn check(callbacks: &ValeCallbacks) {
         "the importer never discovered Counter's methods:\n{}",
         log.join("\n")
     );
-    // A Rust struct crossed as a *return type* — which is how the type reaches Vale at all,
-    // by inference from a signature rather than by name.
+    // Free functions are materialized into the reserved `rust` package's store up front, so
+    // they are found by ordinary ambient name lookup. Note what is NOT here: no
+    // `resolve_function` per call site. Nothing asks the oracle when a Vale call is resolved
+    // — the store either holds the name or it doesn't.
     assert!(
-        log.iter().any(|l| l.contains(r#"resolve_function("make_counter")"#)),
-        "the free function that produces the Rust type never resolved:\n{}",
+        log.iter().any(|l| l.contains(r#"importable_functions -> ["#)
+            && l.contains(r#""add_two_numbers""#)),
+        "the free function the Vale program calls was never made importable:\n{}",
+        log.join("\n")
+    );
+    assert!(
+        !log.iter().any(|l| l.contains("resolve_function(")),
+        "resolve_function was still called per call site; the package store should have \
+         retired it:\n{}",
         log.join("\n")
     );
     assert!(
@@ -118,7 +127,10 @@ fn check(callbacks: &ValeCallbacks) {
         "the program compiled with an empty allowlist, so resolution did not come from Rust"
     );
 
-    println!("OK: a Rust type and its method resolved from a real TyCtxt");
+    println!(
+        "OK: a synthesized Vale declaration for a Rust function, compiled by the ordinary \
+         machinery, resolved a call against a real TyCtxt"
+    );
     println!("--- oracle log ---");
     for line in log {
         println!("{line}");
@@ -144,9 +156,14 @@ fn compile_vale(tcx: TyCtxt<'_>, allowed: &[&str]) -> Result<Vec<String>, String
     // The program itself carries most of the assertions. If the return type were not `int`,
     // `main() int` would not typecheck; if the params were not `[int, int]`, the call would
     // not match; if the function did not resolve, this is `CouldntFindFunctionToCallT`.
+    // `add_two_numbers` rather than the `Counter` method, because this milestone proves the
+    // synthesized-declaration path and that path is primitives-only so far: a declaration names
+    // its types the way source does, and a Rust-backed citizen has no Vale source-level name
+    // until the qualified-name work lands. `make_counter` is therefore skipped at synthesis and
+    // is not importable; the `Counter` fixture stays in place for that next step.
     let code = r"
 exported func main() int {
-  return (make_counter()).get();
+  return add_two_numbers(3, 4);
 }";
     let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
 

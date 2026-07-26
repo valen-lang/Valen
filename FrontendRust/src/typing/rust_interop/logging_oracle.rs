@@ -141,6 +141,12 @@ impl<'a, 's, 't> RustOracle<'s, 't> for LoggingOracle<'a, 's, 't> {
         answer
     }
 
+    fn importable_functions(&self) -> Vec<(String, RustItemId)> {
+        let answer = self.inner.importable_functions();
+        self.record(format!("importable_functions -> {answer:?}"));
+        answer
+    }
+
     fn methods(&self, item: RustItemId) -> Vec<(String, RustItemId)> {
         let answer = self.inner.methods(item);
         self.record(format!("methods({item:?}) -> {answer:?}"));

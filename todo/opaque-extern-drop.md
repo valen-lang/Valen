@@ -1,5 +1,43 @@
 # Opaque extern-struct drop — target design
 
+> ## ⚠ SUPERSEDED FOR THE RUST PATH (2026-07-25)
+>
+> Everything below about **`extern(c)`** stands. The **`extern(rust)`** rows do not: they specify a
+> per-symbol drop name plus a user-written `#[no_mangle] extern "C" fn drop(x: X)` shim per
+> monomorphization, which **contradicts the architecture doc** (`vale-rust-interop-architecture.md`
+> §1.7, §1.2) and reintroduces a shape Sky shipped and reverted the same day.
+>
+> The architecture already specifies a single generic wrapper emitted into the stub crate, with
+> scope-end calls synthesized as ordinary AST nodes (Sky §F.22):
+>
+> ```rust
+> #[inline(always)]
+> pub unsafe fn __vale_drop<T>(x: *mut T) { core::ptr::drop_in_place(x) }
+> ```
+>
+> rustc resolves `DropGlue` while walking that wrapper's MIR. Consequences, which answer both
+> questions this document defers to the Rust-interop TL:
+>
+> - **Q1 (generics + naming)** — `Vec<i32>` and `Vec<str>` need neither a shared symbol nor
+>   per-monomorphization mangling. One generic wrapper; rustc monomorphizes it. There is no naming
+>   decision to make, so `#!DeriveExternStructDrop` is not needed on generic Rust externs.
+> - **Q2 (Rust-side shim requirement)** — the user obligation disappears. One wrapper covers every
+>   `T`, and Vale generates the stub crate that carries it.
+> - **By-pointer, not by-value.** This document's proposed
+>   `extern "C" fn drop(x: X) { std::mem::drop(x) }` is the by-value shape. Sky tried it and reverted
+>   within a day: by-value materializes a drop through a stack copy for every `let`, including
+>   moved-out ones, and `Vec<Vec<Widget>>` double-frees. `drop_in_place` preserves post-move state.
+> - **Do not write a `needs_drop` predicate.** `drop_in_place::<T>` is already a no-op for trivially
+>   droppable `T` and `#[inline(always)]` erases the wrapper. Sky wrote such a predicate and deleted
+>   it — it cannot answer correctly for a bare type parameter `let x: T`, where the answer depends on
+>   the substitution.
+> - **Unwinding is settled**: global `panic = "abort"` (arch §1.7, §16), ratified 2026-07-25. No
+>   abort shim is needed at the drop boundary.
+>
+> Rewrite the `extern(rust)` rows against arch §1.7 before implementing from this document. See
+> `docs/convos/rust_interop/synthesized-declarations-plan.md` §8 for the full reasoning and the
+> verified `file:line` references.
+
 ## Context
 
 Extern structs (declared via `extern struct X { ... }`) have opaque layout from Vale's PoV. The compiler can't `Destroy` them — it doesn't know the members — and the simplifier's `translate_destroy` panics at `expect_struct_access: not a struct` if we try. Historically the `struct_drop_macro` special-cased `SharednessT::Single if struct_def.members.is_empty()` (a rough proxy for "extern") and emitted a `Discard` — which silently leaks any C-side resources the extern struct owns. Item #17 in the 26-item review flagged this as a wrong-shaped special case.

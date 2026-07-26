@@ -1,5 +1,21 @@
 # Rust interop — where the compiler calls out to the Rust-handling code
 
+> **⚠ PARTIALLY SUPERSEDED (2026-07-25).** The **inventory stands** — these are still the places the
+> compiler asks a question about a type, and it is still the reference for which sites exist. What no
+> longer holds is the **seam** several sections prescribe: answering those questions from an oracle at
+> the call site. That design was abandoned (see `synthesized-declarations-plan.md`); Rust items now
+> become ordinary synthesized declarations, so most of these sites are answered by the ordinary
+> machinery rather than by a Rust-specific hook. Read the "where" as current and the "fix" as
+> historical.
+>
+> Two specific corrections carried over from earlier sessions and still unapplied below: **§5.2 is
+> wrong** that `IEnvEntryT` has no arm for a definition-less type (`IEnvEntryT::Templata(ITemplataT)`
+> exists, and `entry_to_templata` handles it as a pure identity round-trip), and **§4.3 conflates**
+> two different animals — absence that is a *legitimate state* and must become a diagnosable error
+> (`lookup_struct`, `CouldntFindMemberT`) versus absence that is an *invariant violation* where a
+> panic is correct and only the message should improve (`get_outer_env_for_type`,
+> `get_inner_env_for_type`).
+
 Companion to `rust-interop-frontend-plan.md` and `vale-rust-interop-architecture.md` §8.10.
 
 This document is the **exhaustive map of call-out points**: every place the existing Vale compiler

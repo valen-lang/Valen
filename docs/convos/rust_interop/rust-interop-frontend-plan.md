@@ -1,5 +1,17 @@
 # Rust interop — frontend implementation plan (typing pass + oracle seam)
 
+> **⚠ LARGELY SUPERSEDED (2026-07-25).** The oracle-answers-per-call-site seam this plan describes
+> was abandoned: it builds a fully-resolved `PrototypeT` at environment-build time from
+> `fn_sig(item, &[])`, which cannot represent a generic Rust function, and which @ECSIIOSZ and
+> @BDPFWDZ already forbid. The replacement synthesizes ordinary `FunctionS`/`StructS` declarations
+> with `IBodyS::ExternBody`, and mints the prototype per instantiation inside `make_extern_function`.
+> See `synthesized-declarations-plan.md`.
+>
+> What still holds from this document: §0's name-property refinement (Rust-backed-ness is a property
+> of the reserved `rust` package coordinate over the *existing* kinds — no new kind, no new name
+> type), and the toolchain/build-config decisions. What does not: the seam shape, the candidate
+> source, the per-call oracle queries, and §9.2's step list.
+
 Companion to `vale-rust-interop-architecture.md` §8.10 (the ratified Option A representation). This
 plan covers **only** the Vale compiler frontend slice: representing a Rust type in the typing pass
 and resolving its facts through an oracle. Codegen / `per_instance_mir` / stub-gen, the parser

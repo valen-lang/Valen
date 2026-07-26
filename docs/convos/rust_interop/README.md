@@ -9,8 +9,9 @@ compiler, and an agent can be pointed at this directory alone.
 | doc | what it is |
 |---|---|
 | `vale-rust-interop-architecture.md` | The master design — 30 chapters, ~3,540 lines. Locked decisions with rejected alternatives recorded. §8.10 holds the ratified Option A representation; §3–§5 the two-binary split, the fork, and codegen; §19–§20 the rustc-side pipeline. |
-| `rust-interop-frontend-plan.md` | The implementation plan for the frontend slice. §3a is the landed edit set, §9 the next milestone. |
-| `rust-interop-callout-map.md` | Every place the existing compiler asks a question about a type that a Rust-backed type can't answer — ~30 live sites plus ~20 in the currently-unlinked passes, with the model mismatches that need decisions rather than code. |
+| `synthesized-declarations-plan.md` | **Start here for current work.** The 2026-07-25 pivot: Rust items become ordinary synthesized `FunctionS`/`StructS` declarations with `IBodyS::ExternBody`, and the prototype is minted per instantiation. Carries the naming/resolution design, the identity hazard, the extern-drop gate, and the near-term plan. |
+| `rust-interop-frontend-plan.md` | ⚠ Largely superseded by the above — it describes the abandoned per-call-site oracle seam. Its name-property refinement (§0) and build-config decisions still hold. |
+| `rust-interop-callout-map.md` | ⚠ Partially superseded. Every place the existing compiler asks a question about a type that a Rust-backed type can't answer — ~30 live sites plus ~20 in the currently-unlinked passes. The **inventory stands**; the per-site *fixes* assume the abandoned seam. |
 
 **If you are looking for "what do we still need to change in the core compiler", it is the callout
 map, and specifically its §9 site index.** For a period those sites carried `// ZRI:` comments in the

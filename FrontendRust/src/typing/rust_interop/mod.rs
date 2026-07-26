@@ -7,6 +7,7 @@
 // See docs/convos/rust_interop/rust-interop-frontend-plan.md and
 // docs/convos/rust_interop/rust-interop-callout-map.md.
 
+pub mod declarations;
 pub mod fixture;
 pub mod importer;
 pub mod logging_oracle;
@@ -16,7 +17,7 @@ pub mod seam;
 pub mod tyctxt_oracle;
 
 pub use fixture::{FixtureFunction, FixtureOracle};
-pub use importer::import_rust_types;
+pub use importer::{import_rust_types, rust_package_stores};
 pub use logging_oracle::{LoggingOracle, OracleCall};
 pub use oracle::{RustFieldInfo, RustItemId, RustKind, RustOracle, ValeSig};
 pub use tyctxt_oracle::TyCtxtOracle;

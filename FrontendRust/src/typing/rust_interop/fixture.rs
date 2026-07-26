@@ -75,6 +75,14 @@ impl<'s, 't> RustOracle<'s, 't> for FixtureOracle<'s, 't> {
         self.function(item).map(|_| self.package_coord)
     }
 
+    fn importable_functions(&self) -> Vec<(String, RustItemId)> {
+        self.functions
+            .iter()
+            .enumerate()
+            .map(|(index, f)| (f.name.to_string(), RustItemId(index as u32)))
+            .collect()
+    }
+
     fn fn_sig(
         &self,
         item: RustItemId,

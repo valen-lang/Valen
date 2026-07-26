@@ -104,6 +104,15 @@ pub trait RustOracle<'s, 't> {
         Vec::new()
     }
 
+    /// Every importable Rust free function, with its human name.
+    ///
+    /// The enumerable counterpart to `resolve_function`. Needed because free functions are
+    /// materialized into the reserved `rust` package's store up front, rather than answered
+    /// one name at a time — the same reason `importable_types` exists.
+    fn importable_functions(&self) -> Vec<(String, RustItemId)> {
+        Vec::new()
+    }
+
     /// The methods of a Rust type, by name.
     ///
     /// The whole list, not one lookup at a time, because an environment's store is built

@@ -62,6 +62,29 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     /// `crate_name` and `def_path` are the safe accessors — `def_path_str` ICEs outside
     /// diagnostic contexts, and its panic blames rustc internals rather than the call site,
     /// which is what makes it expensive to diagnose (@DPSFDOZ).
+    ///
+    /// VCOORD: retire the up-front walk and every linear name scan in this file. Both are
+    /// scaffolding for a flat single-crate fixture and neither generalizes:
+    ///
+    /// - **The walk is insufficient, not just slow.** `module_children` on a crate root yields
+    ///   only that root's *direct* children, so a nested item — `std::vec::Vec` lives under
+    ///   `std::vec`, not under the `std` root — is never seen. Today's fixture works solely
+    ///   because its items sit at the crate root. Recursing to fix that is what would make the
+    ///   walk expensive, and it would widen name collisions from crate roots to every visible
+    ///   item in every loaded crate.
+    /// - **Short names are not identity.** `resolve_function`, `resolve_method`, and this walk
+    ///   all decide by string equality; `resolve_method` matches a method's *owner* by human
+    ///   name. Rust has no uniqueness rule for short names — `new`, `len`, `Error`, `Box` recur
+    ///   across crates — and `tcx.crates(())` hands us every loaded crate, so first-match-wins
+    ///   silently picks a stranger. Since the matched `DefId` ultimately drives the mangled
+    ///   symbol, the failure surfaces as a link error against a plausible-looking symbol, far
+    ///   from the mistake.
+    ///
+    /// The end state enumerates nothing: an `import rust.std.vec.Vec` resolves that one path
+    /// segment by segment to exactly one item, keyed by `DefId` thereafter. Cost becomes
+    /// O(imports) rather than O(crate graph), and ambiguity stops existing because the user
+    /// wrote the full path. Until then, any walk over a rustc-global collection needs a
+    /// provenance filter (is this from a crate we control?) rather than a name comparison.
     pub fn new(
         tcx: TyCtxt<'tcx>,
         scout_arena: &ScoutArena<'s>,
@@ -317,6 +340,15 @@ where
             .iter()
             .enumerate()
             .filter(|(_, i)| i.kind == ItemKind::Type)
+            .map(|(idx, i)| (i.name.clone(), RustItemId(idx as u32)))
+            .collect()
+    }
+
+    fn importable_functions(&self) -> Vec<(String, RustItemId)> {
+        self.items
+            .iter()
+            .enumerate()
+            .filter(|(_, i)| i.kind == ItemKind::Function)
             .map(|(idx, i)| (i.name.clone(), RustItemId(idx as u32)))
             .collect()
     }

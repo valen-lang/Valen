@@ -28,11 +28,12 @@ use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::{
     make_top_level_environment, CitizenEnvironmentT, GlobalEnvironmentT, IEnvironmentT,
-    IInDenizenEnvironmentT, TemplatasStoreBuilder,
+    IInDenizenEnvironmentT, TemplatasStoreBuilder, TemplatasStoreT,
 };
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::names::names::*;
+use crate::typing::rust_interop::declarations::synthesize_extern_function;
 use crate::typing::templata::templata::{ITemplataT, PrototypeTemplataT};
 use crate::typing::types::types::*;
 
@@ -158,6 +159,90 @@ pub fn import_rust_types<'s, 'ctx, 't>(
         });
         coutputs.declare_type_outer_env(template_id, IInDenizenEnvironmentT::Citizen(outer_env));
     }
+}
+
+/// Build the reserved `rust` package's top-level store: every importable free function, as a
+/// prototype entry.
+///
+/// This is what retires the overload-resolution hook. With these names in
+/// `name_to_top_level_environment`, a Rust free function is found by ordinary ambient name
+/// lookup — the same path that finds any Vale function — instead of by a Rust-specific
+/// candidate source. Nothing asks the oracle per call site any more: the store either has the
+/// name or it doesn't, at ordinary lookup cost.
+///
+/// Scoping is membership in this store. That is not a weaker guarantee than an import check —
+/// it *is* the import list, materialized.
+///
+/// Returns one store per distinct package coordinate, since imported items may come from more
+/// than one Rust crate. Empty when there is no oracle, which is every ordinary compilation.
+pub fn rust_package_stores<'s, 'ctx, 't>(
+    compiler: &Compiler<'s, 'ctx, 't>,
+) -> Vec<(&'t IdT<'s, 't>, &'t TemplatasStoreT<'s, 't>)>
+where
+    's: 't,
+{
+    let Some(oracle) = compiler.oracles.rust else { return Vec::new() };
+    let interner = compiler.typing_interner;
+
+    // Group by package coord: one top-level store per Rust crate.
+    let mut per_package: Vec<(
+        &'s crate::utils::code_hierarchy::PackageCoordinate<'s>,
+        Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
+    )> = Vec::new();
+
+    for (function_name, item) in oracle.importable_functions() {
+        let Some(package_coord) = oracle.item_package(item) else { continue };
+        let Some(sig) = oracle.fn_sig(item, &[], interner) else { continue };
+
+        // A declaration, not a resolved prototype. The function-compile phase in
+        // `Compiler::evaluate` walks the top-level stores and calls
+        // `evaluate_generic_function_from_non_call` on every `IEnvEntryT::Function` it finds, so
+        // putting the declaration here is all it takes for a Rust function to be compiled by the
+        // ordinary path — and `make_extern_function` mints the prototype at the end of that,
+        // once the solver has concrete types.
+        // Skipped when the signature mentions a type with no Vale source-level name yet — today
+        // that means a Rust-backed citizen, which needs the qualified-name work. Dropping the whole
+        // declaration is deliberate: it makes the function un-importable rather than importable
+        // with a wrong type.
+        let Some(function_s) = synthesize_extern_function(
+            compiler,
+            package_coord,
+            compiler.scout_arena.intern_str(&function_name),
+            item,
+            &sig,
+        ) else {
+            continue;
+        };
+        let local_name = match compiler.translate_generic_function_name(function_s.name) {
+            IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
+            other => panic!(
+                "synthesized extern declaration got an unexpected template name shape: {:?}",
+                other
+            ),
+        };
+        let entry = (local_name, IEnvEntryT::Function(function_s));
+
+        match per_package.iter_mut().find(|(c, _)| std::ptr::eq(*c, package_coord)) {
+            Some((_, entries)) => entries.push(entry),
+            None => per_package.push((package_coord, vec![entry])),
+        }
+    }
+
+    per_package
+        .into_iter()
+        .map(|(package_coord, entries)| {
+            let package_id = interner.intern_id(IdValT {
+                package_coord,
+                init_steps: &[],
+                local_name: INameT::PackageTopLevel(
+                    interner.intern_package_top_level_name(PackageTopLevelNameT {}),
+                ),
+            });
+            let mut store = TemplatasStoreBuilder::new(package_id);
+            store.add_entries(compiler.scout_arena, entries);
+            (package_id, store.build_in(interner))
+        })
+        .collect()
 }
 
 /// Build an interned prototype for a Rust callee and wrap it as an environment entry.
