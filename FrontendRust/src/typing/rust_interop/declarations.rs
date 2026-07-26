@@ -177,6 +177,11 @@ where
         scout_arena.alloc_slice_from_vec(params),
         Some(ret_usage),
         scout_arena.alloc_slice_from_vec(rules),
+        // No impl bounds, and that is the truth rather than a placeholder. A Rust function's trait
+        // obligations are discharged by rustc, never by Vale — and we read no predicates at all,
+        // which is why a signature that *needs* one (`first<I: Iterator> -> I::Item`) is declined
+        // outright rather than imported with a bound nothing could satisfy.
+        &[],
         scout_arena.alloc(IBodyS::ExternBody(ExternBodyS {})),
     )))
 }

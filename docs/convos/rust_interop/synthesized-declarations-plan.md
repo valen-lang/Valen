@@ -258,15 +258,21 @@ All green. Nothing committed since `8d40eff9d`.
 
 | | |
 |---|---|
-| default suite | **573** passed / 175 failed / 8 ignored |
-| interop suite | **582** passed / 175 / 8 |
+| default suite | **577** passed / 170 failed / 8 ignored |
+| interop suite | **586** passed / 170 / 8 |
 | driver (`valec-rs`) | exit 0 |
 | warnings | 8, all pre-existing |
 | **core diff** | **empty** — everything lives in `rust_interop/` and the interop test tree |
 
 The 175 failures are the onion arc's known state, ratified twice as the commit bar ("typing pass
-builds, some typing tests pass"). **Treat 573/175/8 and 582/175/8 as the fixed baseline; movement in
+builds, some typing tests pass"). **Treat 577/170/8 and 586/170/8 as the fixed baseline; movement in
 either direction is a stop, not a footnote.**
+
+Five of the old 175 cleared on 2026-07-26 when `experimental` brought in the `where implements(T,
+IShip)` postparse restoration and the parse/solver error-discarding fixes — upstream's work, not
+ours. That rebase also added an `impl_bounds` parameter to `FunctionS::new`; a synthesized Rust
+declaration passes `&[]`, which is the truth rather than a placeholder, since rustc discharges a Rust
+function's trait obligations and we read no predicates at all.
 
 The interop delta is the 9-case corpus in `typing/test/rust_interop/cases.rs`, all running against a
 real `TyCtxt` inside `cargo test --lib`.
