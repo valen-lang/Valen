@@ -389,3 +389,15 @@ rather than types.** Other examples worth watching for:
 Every one of these is a future version of the MKRFA bug waiting to happen.
 The most durable protection is to express the invariants in types and
 crash-on-violation asserts rather than comments and cross-reference tags.
+
+// VCOORD: update this
+- **The ⚠ URGENCY header is stale, and that is the costly part.** The doc's central claim — "the
+  value solver's `RuneParentEnvLookupSR` handler is a silent no-op" — is false. It is
+  `panic!("vwat: RuneParentEnvLookupSR should have been MKRFA-preprocessed…")` at
+  `compiler_solver.rs:1053`, which was this doc's own queued remediation. So the crash-on-violation
+  half of the closing recommendation has landed; only the extract-a-helper half is outstanding.
+- The same false claim is repeated in `ECSIIOSZ`'s ⚠ block.
+- The "other examples worth watching" list has partly resolved on its own: `explicifyLookups` and
+  `MaybeCoercingLookupSR` are both **deleted** (higher_typing retirement, and `MaybeCoercing*` was
+  never an `IRulexSR` variant in the Rust tree).
+- Scala spellings throughout, and `MKRFA` itself has no arcana file.

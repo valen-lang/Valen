@@ -103,6 +103,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                         },
                         coutputs,
                         &rules_without_rune_parent_env_lookups,
+                        &[], // A pattern is not a denizen and declares no bounds.
                         &rune_a_to_type,
                         &invocation_range,
                         call_location,

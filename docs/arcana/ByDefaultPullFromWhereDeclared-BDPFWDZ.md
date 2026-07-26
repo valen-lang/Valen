@@ -27,3 +27,14 @@ A `where` clause is not an import. Imports carry copy-semantics in most language
 - [`EachCallSiteIsItsOwnSolve-ECSIIOSZ.md`](./EachCallSiteIsItsOwnSolve-ECSIIOSZ.md) — per-call-site solve substrate; pulls bounds at solve time.
 - [`BoundReturnResolution-BRRZ.md`](./BoundReturnResolution-BRRZ.md) — mid-solve real lookup, a pull operation across def-time/callsite boundaries.
 - [`LambdasAreGenericTemplatesNotGenerics-LAGTNGZ.md`](./LambdasAreGenericTemplatesNotGenerics-LAGTNGZ.md) — per-call-site lambda specialization; lambda bodies stay in their lambda env.
+
+// VCOORD: update this
+- The impl-bound positive instance cites `OverloadResolver.getPlaceholderImplBoundEnvs`, which
+  exists nowhere in the Rust tree — the only trace is a comment in the gated `integration_tests/`.
+- `conjure_impl_bounds_for_defining` (`function_compiler_solving_layer.rs`) writes a `where implements(..)` `Isa`
+  into the declaring function's own near-env. Assessed as NOT a push exception, on the first
+  pillar: a where-clause declares callable surface *in* that near-env, so the near-env is the
+  introducing scope rather than a scope being copied into. Worth stating here, since a reader
+  meeting the write will otherwise re-derive it.
+- The cataloged exception is live in substance; only its spelling is stale
+  (`addRunedDataToNearEnv` → `add_runed_data_to_near_env`).

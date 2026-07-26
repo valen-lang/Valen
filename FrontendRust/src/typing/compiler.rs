@@ -46,8 +46,6 @@ use crate::typing::names::names::{PredictedFunctionTemplateNameT, PredictedFunct
 use crate::typing::ast::ast::PrototypeValT;
 use crate::typing::names::names::FunctionBoundTemplateNameT;
 use crate::typing::names::names::FunctionBoundNameValT;
-use crate::typing::names::names::{ImplBoundTemplateNameT, ImplBoundNameValT};
-use crate::typing::templata::templata::IsaTemplataT;
 use crate::typing::names::names::ExportTemplateNameT;
 use crate::typing::names::names::ExportNameT;
 use crate::typing::env::environment::ExportEnvironmentT;
@@ -441,22 +439,6 @@ where 's: 't,
         });
         state.add_instantiation_bounds(self.opts.global_options.sanity_check, self.typing_interner, envs.original_calling_env.denizen_template_id(), result.id, empty_bounds);
         result
-    }
-    
-    pub fn assemble_impl(
-        &self,
-        env: InferEnv<'s, 't>,
-        range: RangeS<'s>,
-        sub_kind: KindT<'s, 't>,
-        super_kind: KindT<'s, 't>,
-    ) -> IsaTemplataT<'s, 't> {
-        let tmpl = self.typing_interner.intern_impl_bound_template_name(
-            ImplBoundTemplateNameT { code_location: range.begin});
-        let bound_name = self.typing_interner.intern_impl_bound_name(
-            ImplBoundNameValT { template: tmpl, template_args: &[] });
-        let id = *env.original_calling_env.denizen_id().add_step(
-            self.typing_interner, INameT::ImplBound(bound_name));
-        IsaTemplataT { declaration_range: range, impl_name: id, sub_kind, super_kind }
     }
     
     pub fn resolve_function(
@@ -1190,6 +1172,7 @@ where 's: 't,
                     },
                     &mut coutputs,
                     export.rules,
+                    &[], // An export has no where-clause, so no bounds to conjure.
                     &rune_to_type,
                     parent_ranges_t,
                     LocationInDenizen { path: &[] },

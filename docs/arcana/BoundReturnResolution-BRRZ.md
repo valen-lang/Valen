@@ -27,3 +27,14 @@ The long-form reasoning, safety analysis, and canonical tests are in `docs/Gener
 - `docs/arcana/DefaultRulesShouldBeIncrementalNotInitial-DRSINI.md` — DRSINI uses the same `incrementallySolve` callback pattern but for a different trigger (generic param defaults, not bound return runes).
 - `docs/historical/thoughts-on-origin-tracking.md` — the rejected alternative and why it was rejected.
 - `docs/arcana/ByDefaultPullFromWhereDeclared-BDPFWDZ.md` — BRRZ is a pull operation: the mid-solve real lookup reaches across to the callee's definition env rather than pre-harvesting bound info. BDPFWDZ is the broader principle.
+
+// VCOORD: update this
+- Drifted against the corpus. The `where func(&G, int)E` bound is at `arrays.vale:48`, not `:36,52`;
+  the builtin is `Array<E, G>`, not `Array<M, E, G>` (the mutability param is gone); and the
+  user-level example `Array<imm>(3, lambda)` is retired syntax.
+- The safety argument turns on "Per SROACSD, `ResolveSR` and `DefinitionFuncSR` never coexist in the
+  same rule set" — **SROACSD has no file anywhere**, so the load-bearing citation is unresolvable.
+- Scala spellings (`findFunction`, `solveForDefining`/`solveForResolving`).
+- Worth a pointer to its sibling family: this covers *function* bounds
+  (`rune_to_bound_prototype`); impl bounds (`rune_to_bound_impl`, from `where implements(..)`) are
+  not rules at all and are minted post-solve. Nothing here applies to them.

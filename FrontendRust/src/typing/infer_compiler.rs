@@ -103,11 +103,17 @@ pub struct InitialKnown<'s, 't> {
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    /// `impl_bounds` are the denizen's `where implements(..)` declarations, empty for anything that
+    /// declares none. Only a denizen being *defined* supplies them: the definition side conjures an
+    /// `Isa` asserting each declared relation so the body typechecks against it, whereas a call site
+    /// must prove the relation instead. Several callers here resolve a call through this function
+    /// (see DBDAR) and so pass empty.
     pub fn solve_for_defining(
         &self,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         rules: &[IRulexSR<'s>],
+        impl_bounds: &[ImplBoundS<'s>],
         rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -120,11 +126,12 @@ where 's: 't,
             Ok(()) => {}
             Err(e) => return Err(IDefiningError::DefiningSolveFailedOrIncomplete(e)),
         }
-        let conclusions =
+        let mut conclusions =
             match self.interpret_results(rune_to_type, &mut solver) {
                 Ok(conclusions) => conclusions,
                 Err(f) => return Err(IDefiningError::DefiningSolveFailedOrIncomplete(f)),
             };
+        self.conjure_impl_bounds_for_defining(envs, impl_bounds, &mut conclusions);
         match self.check_defining_conclusions_and_resolve(
             envs, coutputs, invocation_range, call_location, rules, include_reachable_bounds_for_runes, &conclusions,
         ) {

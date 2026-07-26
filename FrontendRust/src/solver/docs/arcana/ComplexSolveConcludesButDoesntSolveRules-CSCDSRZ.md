@@ -24,3 +24,16 @@ This means:
 Complex solve works by finding patterns across multiple unsolved rules simultaneously (e.g., "these three senders all send to the same receiver, and they're all subtypes of interface X, so the receiver must be X"). It doesn't "solve" any single rule — it synthesizes information from several rules to produce a conclusion. The individual rules that contributed to this inference still need to be processed by simple solve to verify their constraints and mark themselves complete.
 
 If complex solve tried to mark rules as solved, it would need to know which specific rules were "consumed" by the inference — but the inference draws from overlapping sets of rules, and each rule may still have additional constraints to verify once the conclusion is known.
+
+// VCOORD: update this
+- Needs scoping to the solver framework, not deletion. At framework level the mechanism is live and
+  tested (`complex_solve_impl` in `solver/test/test_rule_solver.rs`, three passing tests). **The
+  typing-pass consumer is gone**: `compiler_solver.rs` has no complex solve at all, and typing's
+  only remaining one is `rune_type_solver.rs:826`, an unimplemented panic. So the "Where" list's
+  `CompilerRuleSolver.complexSolve` names something that no longer exists.
+- That death is load-bearing elsewhere: it is why `where implements(..)` came back as a *bound*
+  rather than a rule. Complex solve walking sender→receiver edges for common ancestors was the only
+  thing that ever read an `Isa` mid-solve, so with it gone the relation can be minted after the
+  solve instead.
+- Scala spellings throughout (`SimpleSolverState.commitStep`, `advanceInfer`,
+  `TestRuleSolver.complexSolveInner`).

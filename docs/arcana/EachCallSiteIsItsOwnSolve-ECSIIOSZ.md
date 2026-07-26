@@ -30,3 +30,16 @@ The rule vector is self-contained *except* for "portal" rules that only make sen
 - `docs/arcana/LambdasAreGenericTemplatesNotGenerics-LAGTNGZ.md` — the per-call-site lambda specialization that rides on this substrate.
 - `docs/arcana/BoundReturnResolution-BRRZ.md` — mid-solve real lookup operates within a per-call-site solve.
 - `docs/arcana/DefaultRulesShouldBeIncrementalNotInitial-DRSINI.md` — defaults are added incrementally per call site, not pre-baked into the shared rule vector.
+
+// VCOORD: update this
+- **The ⚠ block warns about something already fixed.** It calls the value solver's
+  `RuneParentEnvLookupSR` handler "a silent no-op that conceals violations" and queues "replace the
+  no-op with `vwat()`" — that landed: `compiler_solver.rs:1053` is
+  `panic!("vwat: RuneParentEnvLookupSR should have been MKRFA-preprocessed…")`. The same false claim
+  sits under a "⚠ URGENCY" header in `docs/historical/mkrfa-protocol-leak.md`.
+- Cites `CompilerSolver.scala:852` — a Scala path, in a tree with no Scala.
+- Four of the codes carrying this doc's actual content have **no file anywhere**: DBDAR, SROACSD,
+  MKRFA, CSSNCE. The setup contract is stated by reference to SROACSD and MKRFA in particular.
+- `where implements(..)` is now a **bound rather than a rule**, so it is absent from every rule
+  vector this doc describes and rides neither solve mode. The definition side mints its `Isa` after
+  `interpret_results` and before the env is built; the call site is the half that checks.

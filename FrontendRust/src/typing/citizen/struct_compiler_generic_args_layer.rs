@@ -417,7 +417,7 @@ where 's: 't,
             Ok(true) => {}
             Ok(false) => {}
         }
-        let inferences = match self.interpret_results(&all_rune_to_type, &mut solver) {
+        let mut inferences = match self.interpret_results(&all_rune_to_type, &mut solver) {
             Err(e) => {
                 let mut r = vec![struct_a.range];
                 r.extend_from_slice(parent_ranges);
@@ -428,6 +428,7 @@ where 's: 't,
             }
             Ok(conclusions) => conclusions,
         };
+        self.conjure_impl_bounds_for_defining(envs, struct_a.impl_bounds, &mut inferences);
         let unchecked_defining_conclusions = UncheckedDefiningConclusions {
             envs,
             ranges: all_ranges,
@@ -528,13 +529,14 @@ where 's: 't,
             }
             Ok(_) => {}
         }
-        let inferences = match self.interpret_results(&rune_to_type, &mut solver) {
+        let mut inferences = match self.interpret_results(&rune_to_type, &mut solver) {
             Err(_e) => {
                 panic!("Unimplemented: TypingPassSolverError in compile_interface_layer interpretResults");
                 // throw CompileErrorExceptionT(typing.TypingPassSolverError(interfaceA.range :: parentRanges, e))
             }
             Ok(conclusions) => conclusions,
         };
+        self.conjure_impl_bounds_for_defining(envs, interface_a.impl_bounds, &mut inferences);
         let unchecked_defining_conclusions = UncheckedDefiningConclusions {
             envs,
             ranges: all_ranges,
