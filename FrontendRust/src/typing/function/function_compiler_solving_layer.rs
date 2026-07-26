@@ -491,7 +491,8 @@ where 's: 't,
 
         let CompleteResolveSolve { conclusions: inferred_templatas, rune_to_bound: rune_to_function_bound } =
             match self.check_resolving_conclusions_and_resolve(
-                envs, coutputs, invocation_range, call_location, &rune_to_type, &call_site_rules, &include_reachable_bounds_for_runes, &mut solver,
+                envs, coutputs, invocation_range, call_location, &rune_to_type, &call_site_rules,
+                function.impl_bounds, &include_reachable_bounds_for_runes, &mut solver,
             )? {
                 Err(e) => {
                     return Ok(IResolveFunctionResult::ResolveFunctionFailure(ResolveFunctionFailure {

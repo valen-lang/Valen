@@ -391,6 +391,8 @@ where 's: 't,
                                 },
                                 coutputs,
                                 &rules_without_rune_parent_env_lookups,
+                                // No bounds to solve because we're just evaluating the explicit generic args here.
+                                &[],
                                 &combined_rune_to_type,
                                 call_range,
                                 call_location,

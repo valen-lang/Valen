@@ -77,7 +77,7 @@ where 's: 't,
 
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
-            envs, coutputs, &call_site_rules, &header_rune_to_type_map,
+            envs, coutputs, &call_site_rules, struct_a.impl_bounds, &header_rune_to_type_map,
             call_range, call_location, struct_a.generic_params, &initial_knowns,
         ).unwrap_or_else(|_e| {
             panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveStruct")
@@ -308,7 +308,7 @@ where 's: 't,
 
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
-            envs, coutputs, &call_site_rules, &rune_to_type_map,
+            envs, coutputs, &call_site_rules, interface_a.impl_bounds, &rune_to_type_map,
             call_range, call_location, interface_a.generic_params, &initial_knowns,
         ).unwrap_or_else(|_e| {
             panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveInterface")

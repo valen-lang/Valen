@@ -117,6 +117,7 @@ where 's: 't,
                 },
                 coutputs,
                 &rules_without_rune_parent_env_lookups,
+                &[], // An array is not a denizen and declares no bounds.
                 &rune_a_to_type,
                 parent_ranges,
                 call_location,
@@ -231,7 +232,9 @@ where 's: 't,
         }
         let CompleteResolveSolve { conclusions: templatas, .. } =
             self.check_resolving_conclusions_and_resolve(
-                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_without_rune_parent_env_lookups, &[], &mut solver_state)
+                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_without_rune_parent_env_lookups,
+                &[], // An array is not a denizen and declares no bounds.
+                &[], &mut solver_state)
             .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in evaluate_runtime_sized_array_from_callable"))
             .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — TypingPassResolvingError"));
         let mut entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
@@ -403,7 +406,9 @@ where 's: 't,
         }
         let CompleteResolveSolve { conclusions: templatas, .. } =
             self.check_resolving_conclusions_and_resolve(
-                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_without_rune_parent_env_lookups, &[], &mut solver_state)
+                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_without_rune_parent_env_lookups,
+                &[], // An array is not a denizen and declares no bounds.
+                &[], &mut solver_state)
             .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in evaluate_static_sized_array_from_values"))
             .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_static_sized_array_from_values — TypingPassResolvingError"));
 

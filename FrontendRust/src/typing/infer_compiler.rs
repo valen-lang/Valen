@@ -103,11 +103,8 @@ pub struct InitialKnown<'s, 't> {
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    /// `impl_bounds` are the denizen's `where implements(..)` declarations, empty for anything that
-    /// declares none. Only a denizen being *defined* supplies them: the definition side conjures an
-    /// `Isa` asserting each declared relation so the body typechecks against it, whereas a call site
-    /// must prove the relation instead. Several callers here resolve a call through this function
-    /// (see DBDAR) and so pass empty.
+    /// `impl_bounds` are the denizen's `where implements(..)` declarations. We conjure an
+    /// `Isa` for each declared relation so the body typechecks against it.
     pub fn solve_for_defining(
         &self,
         envs: InferEnv<'s, 't>,
@@ -141,11 +138,14 @@ where 's: 't,
     }
 
     // Per @DRSINI, defaults are added incrementally for unsolved runes rather than eagerly.
+    /// `impl_bounds` are the callee's `where implements(..)` declarations, that we check at
+    /// the callsite.
     pub fn solve_for_resolving(
         &self,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         rules: &[IRulexSR<'s>],
+        impl_bounds: &[ImplBoundS<'s>],
         rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -178,7 +178,8 @@ where 's: 't,
             Ok(false) => {}
         }
         self.check_resolving_conclusions_and_resolve(
-            envs, coutputs, invocation_range, call_location, rune_to_type, rules, &[], &mut solver)
+            envs, coutputs, invocation_range, call_location, rune_to_type, rules, impl_bounds, &[],
+            &mut solver)
     }
 
     pub fn partial_solve(
@@ -241,6 +242,22 @@ where 's: 't,
         self.continue_solver(envs, state, solver)
     }
 
+    /// Wraps a rule-level failure discovered *after* the solve finished, so it reads the same as
+    /// one the solver itself raised.
+    fn resolving_rule_error(
+        &self,
+        solver_state: &SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+        err: ITypingPassSolverError<'s, 't>,
+    ) -> IResolvingError<'s, 't> {
+        IResolvingError::ResolvingSolveFailedOrIncomplete(FailedSolve {
+            steps: solver_state.get_steps(),
+            conclusions: solver_state.get_conclusions().into_iter().collect(),
+            unsolved_rules: solver_state.get_unsolved_rules(),
+            unsolved_runes: solver_state.get_unsolved_runes(),
+            error: ISolverError::RuleError(RuleError { err, _phantom: PhantomData }),
+        })
+    }
+
     pub fn check_resolving_conclusions_and_resolve(
         &self,
         envs: InferEnv<'s, 't>,
@@ -249,11 +266,12 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         rules: &[IRulexSR<'s>],
+        impl_bounds: &[ImplBoundS<'s>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>>, ICompileErrorT<'s, 't>> {
         let _steps_stream = solver_state.get_steps();
-        let conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> =
+        let mut conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> =
             solver_state.userify_conclusions().into_iter().collect();
 
         let all_runes: HashSet<IRuneS<'s>> =
@@ -408,10 +426,37 @@ where 's: 't,
             }
         }
 
-        // IRulexSR::CallSiteCoordIsa, the only rule that used to populate this, was
-        // retired with the coherent-collapse machinery; no live rule variant produces
-        // impl-bound conclusions anymore, so this is always empty under the onion.
-        let runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> = vec![];
+        // Check that all the impl bounds are satisfied.
+        let mut runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> = vec![];
+        for impl_bound in impl_bounds {
+            let sub_kind = expect_kind_templata(
+                *conclusions.get(&impl_bound.sub_rune.rune)
+                    .expect("vassertSome: implements() sub operand not in conclusions")).kind;
+            let super_kind = expect_kind_templata(
+                *conclusions.get(&impl_bound.super_rune.rune)
+                    .expect("vassertSome: implements() super operand not in conclusions")).kind;
+            let sub_kind_tt = match ISubKindTT::try_from(sub_kind) {
+                Ok(k) => k,
+                Err(()) => return Ok(Err(self.resolving_rule_error(
+                    solver_state, ITypingPassSolverError::BadIsaSubKind { kind: sub_kind }))),
+            };
+            let super_kind_tt = match ISuperKindTT::try_from(super_kind) {
+                Ok(k) => k,
+                Err(()) => return Ok(Err(self.resolving_rule_error(
+                    solver_state, ITypingPassSolverError::BadIsaSuperKind { kind: super_kind }))),
+            };
+            match self.is_parent(
+                state, envs.original_calling_env, ranges, call_location, sub_kind_tt, super_kind_tt,
+            ) {
+                IsParentResult::IsntParent(_) => return Ok(Err(self.resolving_rule_error(
+                    solver_state,
+                    ITypingPassSolverError::IsaFailed { sub: sub_kind, suuper: super_kind }))),
+                IsParentResult::IsParent(is_parent) => {
+                    conclusions.insert(impl_bound.result_rune.rune, is_parent.templata);
+                    runes_and_impls.push((impl_bound.result_rune.rune, is_parent.impl_id));
+                }
+            }
+        }
         {
             let mut seen: HashSet<IRuneS<'s>> = HashSet::default();
             for (rune, _) in runes_and_impls.iter() {

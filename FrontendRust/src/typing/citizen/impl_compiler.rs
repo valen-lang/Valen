@@ -135,6 +135,7 @@ where 's: 't,
             call_location,
             &rune_to_type,
             &call_site_rules,
+            impl_a.impl_bounds,
             &[impl_a.struct_kind_rune.rune],
             &mut solver_state,
         ).unwrap_or_else(|_e| {
