@@ -4,7 +4,7 @@
 
 use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
-use crate::parsing::ast::{ComponentsPR, EqualsPR, IRulexPR, ITypePR};
+use crate::parsing::ast::{BuiltinCallPR, EqualsPR, IRulexPR, ITypePR};
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
@@ -12,19 +12,20 @@ use crate::postparsing::itemplatatype::{
 };
 use crate::postparsing::names::{CodeRuneS, IRuneS, IRuneValS, ImplicitRuneValS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
-use crate::postparsing::rules::rules::{EqualsSR, IRulexSR, RuneUsage};
+use crate::postparsing::rules::rules::{EqualsSR, ImplBoundS, IRulexSR, RuneUsage};
 use crate::postparsing::rules::templex_scout::translate_templex;
 
 
-// Returns:
-// - new rules produced on the side while translating the given rules
-// - the translated versions of the given rules
+/// Returns the translated versions of the given rules. Two things exit through out-params instead:
+/// `builder` collects rules produced on the side, and `impl_bounds` collects `implements(..)`
+/// clauses, which are declared bounds rather than rules — see ImplBoundS.
 pub fn translate_rulexes<'s, 'p>(
   scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
   builder: &mut Vec<IRulexSR<'s>>,
+  impl_bounds: &mut Vec<ImplBoundS<'s>>,
   context_region: IRuneS<'s>,
   rules_p: &[IRulexPR<'p>],
 ) -> Vec<RuneUsage<'s>> {
@@ -38,6 +39,7 @@ pub fn translate_rulexes<'s, 'p>(
         env.clone(),
         &mut child_lidb,
         builder,
+        impl_bounds,
         context_region.clone(),
         rule_p,
       )
@@ -51,6 +53,7 @@ fn translate_rulex<'s, 'p>(
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
   builder: &mut Vec<IRulexSR<'s>>,
+  impl_bounds: &mut Vec<ImplBoundS<'s>>,
   context_region: IRuneS<'s>,
   rulex: &IRulexPR<'p>,
 ) -> RuneUsage<'s> {
@@ -94,6 +97,7 @@ fn translate_rulex<'s, 'p>(
           env.clone(),
           &mut child_lidb,
           builder,
+          impl_bounds,
           context_region.clone(),
           left,
         )
@@ -105,6 +109,7 @@ fn translate_rulex<'s, 'p>(
           env.clone(),
           &mut child_lidb,
           builder,
+          impl_bounds,
           context_region.clone(),
           right,
         )
@@ -119,37 +124,44 @@ fn translate_rulex<'s, 'p>(
         rune,
       }
     }
-    IRulexPR::Components(ComponentsPR {
-      range,
-      container: tyype,
-      components,
-    }) => {
-      let mut rune_child_lidb = lidb.child();
-      let rune = RuneUsage {
-        range: PostParser::eval_range(file, *range),
-        rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(rune_child_lidb.borrow_val()))),
-      };
-      match tyype {
-        ITypePR::KindType => {
-          if components.len() != 1 {
-            panic!("Kind rule should have one component! Found: {}", components.len())
-          }
-          let mut translate_child_lidb = lidb.child();
-          let _component_usages = translate_rulexes(
-            scout_arena,
-            keywords,
-            env,
-            &mut translate_child_lidb,
-            builder,
-            context_region,
-            components,
-          );
-        }
-        _ => panic!("POSTPARSER_COMPONENTS_INVALID_TYPE_FOR_COMPONENTS_RULE"),
+    IRulexPR::Or(r) => panic!("POSTPARSER_TRANSLATE_RULEX_NOT_YET_IMPLEMENTED: Or at {:?}", r.range),
+    IRulexPR::Dot(r) => panic!("POSTPARSER_TRANSLATE_RULEX_NOT_YET_IMPLEMENTED: Dot at {:?}", r.range),
+    IRulexPR::BuiltinCall(BuiltinCallPR { range, name, args }) => {
+      // Compare on content, not identity: `name` is interned in the parse arena while
+      // `keywords` here is the scout one, so a StrI comparison across them never matches.
+      if name.str().as_str() != "implements" {
+        panic!(
+          "POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_NOT_YET_IMPLEMENTED: {} at {:?}",
+          name.str().as_str(), range);
       }
-      rune
+      assert_eq!(args.len(), 2, "POSTPARSER_IMPLEMENTS_ARGS_LEN");
+      let sub_rune = translate_rulex(
+        scout_arena, keywords, env.clone(), &mut lidb.child(), builder, impl_bounds,
+        context_region.clone(), &args[0]);
+      let super_rune = translate_rulex(
+        scout_arena, keywords, env, &mut lidb.child(), builder, impl_bounds,
+        context_region, &args[1]);
+
+      // The result rune joins this declared bound to the impl a caller supplies; the instantiator
+      // zips the two maps by it. Nothing solves it — the post-solve pass fills it in, which is why
+      // it is deliberately absent from every rune-usage list.
+      let mut result_child_lidb = lidb.child();
+      let result_rune = RuneUsage {
+        range: PostParser::eval_range(file, *range),
+        rune: scout_arena.intern_rune(
+          IRuneValS::ImplicitRune(ImplicitRuneValS::new(result_child_lidb.borrow_val()))),
+      };
+
+      impl_bounds.push(ImplBoundS {
+        range: PostParser::eval_range(file, *range),
+        sub_rune,
+        super_rune,
+        result_rune,
+      });
+
+      sub_rune
     }
-    _ => panic!("POSTPARSER_TRANSLATE_RULEX_NOT_YET_IMPLEMENTED"),
+    IRulexPR::Pack(r) => panic!("POSTPARSER_TRANSLATE_RULEX_NOT_YET_IMPLEMENTED: Pack at {:?}", r.range),
   }
 }
 
@@ -161,7 +173,6 @@ pub fn translate_type<'s>(scout_arena: &ScoutArena<'s>, tyype: ITypePR) -> ITemp
     ITypePR::CoordListType => ITemplataType::PackTemplataType(PackTemplataType {
       element_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
     }),
-    ITypePR::KindType => ITemplataType::KindTemplataType(KindTemplataType {}),
     ITypePR::RegionType => ITemplataType::RegionTemplataType(RegionTemplataType {}),
     ITypePR::CitizenTemplateType => {
       panic!("POSTPARSER_TRANSLATE_TYPE_CITIZEN_TEMPLATE_NOT_YET_IMPLEMENTED")

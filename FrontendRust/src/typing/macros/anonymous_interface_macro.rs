@@ -181,6 +181,7 @@ where 's: 't,
             struct_imprecise_name,
             interface_kind_rune_s,
             interface_imprecise_name,
+            &[],
         ));
 
         let impl_local_name = self.translate_name_step(impl_a.name.to_i_name_s(self.scout_arena));
@@ -644,6 +645,7 @@ where 's: 't,
           member_rules_slice,
           members_slice,
           &[],
+          &[],
         );
         self.scout_arena.alloc(struct_a)
     }
@@ -897,6 +899,7 @@ where 's: 't,
             new_params_slice,
             Some(inherited_return_rune),
             rules_slice,
+            &[],
             body,
         ))
     }

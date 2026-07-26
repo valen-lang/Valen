@@ -731,6 +731,7 @@ fn scout_impl(
   let _user_specified_runes_implicit_region_runes_s =
     maybe_region_generic_param.as_ref().map(|_x| Vec::<GenericParameterS<'s>>::new());
 
+  let mut impl_bounds = Vec::new();
   {
     let mut child_lidb = lidb.child();
     translate_rulexes(self.scout_arena,
@@ -738,6 +739,7 @@ fn scout_impl(
       impl_env.clone(),
       &mut child_lidb,
       &mut rule_builder,
+      &mut impl_bounds,
       default_region_rune_s.clone(),
       template_rules_p,
     );
@@ -888,6 +890,7 @@ fn scout_impl(
     sub_citizen_imprecise_name,
     interface_rune,
     super_interface_imprecise_name,
+    self.scout_arena.alloc_slice_from_vec(impl_bounds),
   ))
 }
 
@@ -1076,11 +1079,13 @@ fn scout_import(
     // let generic_parameters_s = struct_user_specified_generic_parameters_s ++ maybe_region_generic_param ++ user_specified_runes_implicit_region_runes_s;
     let generic_parameters_s = struct_user_specified_generic_parameters_s;
 
+    let mut header_impl_bounds = Vec::new();
     translate_rulexes(self.scout_arena,
       self.keywords,
       struct_env.clone(),
       &mut lidb.child(),
       &mut header_rule_builder,
+      &mut header_impl_bounds,
       default_region_rune_s.clone(),
       &template_rules_p,
     );
@@ -1194,6 +1199,7 @@ fn scout_import(
       self.scout_arena.alloc_slice_from_vec(member_rules_s),
       self.scout_arena.alloc_slice_from_vec(members_s),
       self.scout_arena.alloc_slice_from_vec(internal_methods_s_vec),
+      self.scout_arena.alloc_slice_from_vec(header_impl_bounds),
     ))
   }
 
@@ -1340,11 +1346,13 @@ fn translate_citizen_attributes(
       })
       .collect::<Vec<_>>();
 
+    let mut impl_bounds = Vec::new();
     translate_rulexes(self.scout_arena,
       self.keywords,
       interface_env.clone(),
       &mut lidb.child(),
       &mut rule_builder,
+      &mut impl_bounds,
       default_region_rune_s.clone(),
       &rules_p,
     );
@@ -1382,6 +1390,7 @@ fn translate_citizen_attributes(
       tyype,
       self.scout_arena.alloc_slice_from_vec(rules_s),
       self.scout_arena.alloc_slice_from_vec(internal_methods),
+      self.scout_arena.alloc_slice_from_vec(impl_bounds),
     ))
   }
 

@@ -441,6 +441,7 @@ where 's: 't,
         all_runes.extend(solver_state.get_all_runes());
         // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
         // Caller should remember to do that!
+        // VCOORD: function refactor should enforce that
         if all_runes.iter().any(|r| !conclusions.contains_key(r)) {
             Err(
                 FailedSolve {

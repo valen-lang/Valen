@@ -8,7 +8,6 @@ pub enum IRulexPR<'p> {
   Equals(EqualsPR<'p>),
   Or(OrPR<'p>),
   Dot(DotPR<'p>),
-  Components(ComponentsPR<'p>),
   Typed(TypedPR<'p>),
   Templex(ITemplexPT<'p>),
   BuiltinCall(BuiltinCallPR<'p>),
@@ -36,14 +35,6 @@ pub struct DotPR<'p> {
   pub range: RangeL,
   pub container: &'p IRulexPR<'p>,
   pub member_name: NameP<'p>,
-}
-
-
-#[derive(Debug, PartialEq)]
-pub struct ComponentsPR<'p> {
-  pub range: RangeL,
-  pub container: ITypePR,
-  pub components: &'p [IRulexPR<'p>],
 }
 
 
@@ -76,7 +67,6 @@ impl IRulexPR<'_> {
       IRulexPR::Equals(inner) => inner.range,
       IRulexPR::Or(inner) => inner.range,
       IRulexPR::Dot(inner) => inner.range,
-      IRulexPR::Components(inner) => inner.range,
       IRulexPR::Typed(inner) => inner.range,
       IRulexPR::Templex(t) => t.range(),
       IRulexPR::BuiltinCall(inner) => inner.range,
@@ -90,7 +80,6 @@ pub enum ITypePR {
   IntType,
   BoolType,
   CoordListType,
-  KindType,
   RegionType,
   CitizenTemplateType,
 }
@@ -118,9 +107,6 @@ pub fn get_ordered_rune_declarations_from_rulex_with_duplicates<'p>(
     }
     IRulexPR::Or(or) => get_ordered_rune_declarations_from_rulexes_with_duplicates(or.possibilities),
     IRulexPR::Dot(dot) => get_ordered_rune_declarations_from_rulex_with_duplicates(dot.container),
-    IRulexPR::Components(components) => {
-      get_ordered_rune_declarations_from_rulexes_with_duplicates(components.components)
-    }
     IRulexPR::Typed(typed) => typed.rune.iter().cloned().collect(),
     IRulexPR::Templex(templex) => get_ordered_rune_declarations_from_templex_with_duplicates(templex),
     IRulexPR::BuiltinCall(builtin_call) => {

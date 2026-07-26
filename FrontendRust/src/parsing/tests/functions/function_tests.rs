@@ -268,18 +268,17 @@ fn simple_function_with_identifying_rune() {
 }
 
 #[test]
-fn simple_function_with_kind_typed_identifying_rune() {
+fn simple_function_with_unannotated_identifying_rune() {
+  // An unannotated rune carries no explicit type; postparse defaults it to Kind
+  // (post_parser.rs, `None => KindTemplataType`), so `A Kind` has no spelling of its own.
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func sum<A Kind>(a A){a}");
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func sum<A>(a A){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "A");
-  assert_eq!(
-    generic_param.maybe_type.as_ref().unwrap().tyype,
-    ITypePR::KindType
-  );
+  assert!(generic_param.maybe_type.is_none());
   assert!(generic_param.coord_region.is_none());
   assert!(generic_param.attributes.is_empty());
   assert!(generic_param.maybe_default.is_none());

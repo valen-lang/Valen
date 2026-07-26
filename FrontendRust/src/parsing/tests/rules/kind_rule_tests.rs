@@ -20,40 +20,6 @@ where
 }
 
 #[test]
-fn empty_kind_rule() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let rule = compile(&parse_arena, &keywords, "_ Kind");
-  let typed = cast!(rule, IRulexPR::Typed);
-  assert!(typed.rune.is_none());
-  assert_eq!(typed.tyype, ITypePR::KindType);
-}
-
-#[test]
-fn kind_with_rune() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let rule = compile(&parse_arena, &keywords, "T Kind");
-  let typed = cast!(rule, IRulexPR::Typed);
-  assert_eq!(typed.rune.as_ref().unwrap().as_str(), "T");
-  assert_eq!(typed.tyype, ITypePR::KindType);
-}
-
-#[test]
-fn kind_with_destructure_only() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let rule = compile(&parse_arena, &keywords, "Kind[_]");
-  let components = cast!(rule, IRulexPR::Components);
-  assert_eq!(components.container, ITypePR::KindType);
-  let only_component = cast!(expect_1(&components.components), IRulexPR::Templex);
-  cast!(only_component, ITemplexPT::AnonymousRune);
-}
-
-#[test]
 fn kind_matches_plain_int() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -64,29 +30,27 @@ fn kind_matches_plain_int() {
 }
 
 #[test]
-fn kind_with_value() {
+fn rune_with_value() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let rule = compile(&parse_arena, &keywords, "T Kind = int");
+  let rule = compile(&parse_arena, &keywords, "T = int");
   let equals = cast!(rule, IRulexPR::Equals);
-  let left = cast!(equals.left, IRulexPR::Typed);
-  assert_eq!(left.rune.as_ref().unwrap().as_str(), "T");
-  assert_eq!(left.tyype, ITypePR::KindType);
+  let left = cast!(equals.left, IRulexPR::Templex);
+  assert_templex_name(left, "T");
   let right = cast!(equals.right, IRulexPR::Templex);
   assert_templex_name(right, "int");
 }
 
 #[test]
-fn kind_with_sequence_in_value_spot() {
+fn rune_with_sequence_in_value_spot() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let rule = compile(&parse_arena, &keywords, "T Kind = (int, bool)");
+  let rule = compile(&parse_arena, &keywords, "T = (int, bool)");
   let equals = cast!(rule, IRulexPR::Equals);
-  let left = cast!(equals.left, IRulexPR::Typed);
-  assert_eq!(left.rune.as_ref().unwrap().as_str(), "T");
-  assert_eq!(left.tyype, ITypePR::KindType);
+  let left = cast!(equals.left, IRulexPR::Templex);
+  assert_templex_name(left, "T");
   let right = cast!(equals.right, IRulexPR::Templex);
   let tuple = cast!(right, ITemplexPT::Tuple);
   let (int_, bool_) = expect_2(&tuple.elements);

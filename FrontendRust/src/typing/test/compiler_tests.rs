@@ -447,7 +447,7 @@ fn custom_destructor() {
     let code = concat!(
         "#!DeriveStructDrop\n",
         "exported struct Moo { hp int; }\n",
-        "func drop(self ^Moo) {\n",
+        "func drop(self Moo) {\n",
         "  [_] = ^self;\n",
         "}\n",
         "exported func main() int {\n",
@@ -555,7 +555,11 @@ fn test_overloads() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = load_expected("programs/functions/overloads.vale");
     let code_source = CodeSource::new(vec![
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "str"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -790,7 +794,7 @@ fn calls_destructor_on_local_var() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = concat!(
         "struct Muta { }\n",
-        "func destructor(m ^Muta) {\n",
+        "func destructor(m Muta) {\n",
         "  Muta[ ] = ^m;\n",
         "}\n",
         "exported func main() {\n",
@@ -4109,7 +4113,7 @@ fn reports_when_exported_ssa_depends_on_non_exported_element() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "export [#5]Raza as RazaArray;\nstruct Raza share { }";
+    let code = "export StaticArray<5, Raza> as RazaArray;\nstruct Raza share { }";
     let code_source = CodeSource::new(vec![
         new_test_code_map(&parse_arena, code),
     ]);

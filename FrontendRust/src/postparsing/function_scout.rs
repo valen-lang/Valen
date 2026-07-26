@@ -34,7 +34,7 @@ use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, transl
 use crate::postparsing::rules::rule_scout::translate_rulexes;
 use crate::postparsing::rules::templex_scout::{translate_maybe_type_into_maybe_rune, translate_signature_templex};
 use crate::postparsing::rules::rules::{
-  BorrowRefSR, IRulexSR, LookupSR, RegionSR, RuneUsage,
+  BorrowRefSR, ImplBoundS, IRulexSR, LookupSR, RegionSR, RuneUsage,
 };
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::range::RangeS;
@@ -176,6 +176,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     }
     let mut lidb = LocationInDenizenBuilder::new(vec![]);
     let mut rules: Vec<IRulexSR<'s>> = Vec::new();
+    let mut impl_bounds: Vec<ImplBoundS<'s>> = Vec::new();
     let function_declaration_name = match (&maybe_parent, function_name) {
       (IFunctionParent::ParentFunction { .. }, Some(_)) => {
         panic!("POSTPARSER_SCOUT_LAMBDA_WITH_NAME_NOT_YET_IMPLEMENTED");
@@ -295,6 +296,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           IEnvironmentS::FunctionEnvironment(function_environment.clone()),
           &mut child_lidb,
           &mut rules,
+          &mut impl_bounds,
           default_region_rune.clone(),
           template_rules_p,
         );
@@ -313,6 +315,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           interface_env.clone(),
           &mut child_lidb,
           &mut rules,
+          &mut impl_bounds,
           default_region_rune.clone(),
           template_rules_p,
         );
@@ -869,6 +872,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           self.scout_arena.alloc_slice_from_vec(total_params_s),
           maybe_ret_kind_rune,
           rules_array,
+          self.scout_arena.alloc_slice_from_vec(impl_bounds),
           body_s,
         )),
       variable_uses,

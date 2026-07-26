@@ -96,6 +96,7 @@ where 's: 't,
             )]),
             Some(use_(-64002, void_kind_rune_s)),
             rules_slice,
+            &[],
             self.scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),
         ));
         let drop_name_local = match self.translate_generic_function_name(drop_function_a.name) {

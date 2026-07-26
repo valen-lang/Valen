@@ -2097,6 +2097,7 @@ where 's: 't,
             params_s,
             maybe_ret_coord_rune.clone(),
             function_s.rules,
+            function_s.impl_bounds,
             body_s,
         ))
     }

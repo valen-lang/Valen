@@ -35,7 +35,7 @@ pub use pattern::{
 
 // Re-export everything from rules.rs
 pub use rules::{
-  BuiltinCallPR, ComponentsPR, DotPR, EqualsPR, IRulexPR, ITypePR, OrPR, PackPR, TypedPR,
+  BuiltinCallPR, DotPR, EqualsPR, IRulexPR, ITypePR, OrPR, PackPR, TypedPR,
 };
 
 // Re-export everything from templex.rs

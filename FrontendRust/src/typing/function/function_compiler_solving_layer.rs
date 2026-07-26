@@ -753,6 +753,27 @@ where 's: 't,
             Ok(conclusions) => conclusions,
         };
 
+        // ZHERE: mint `where implements(..)` here. For each of `function.impl_bounds`, read its
+        // sub/super runes out of `inferences`, call `assemble_impl` (compiler.rs:446), and insert
+        // `result_rune -> ITemplataT::Isa(..)`. `inferences` is `let`, not `let mut`. Everything
+        // downstream is already live — add_entries indexes an Isa by its sub/super imprecise names
+        // (environment.rs:582-600) and get_parents finds it.
+        //
+        // Must land before the next statement, which builds the env from these conclusions
+        // (infer_compiler.rs:528) and then resolves against it — a citizen carrying its own bounds
+        // is checked there and needs our Isa already present. Need not precede the solve: per
+        // SFWPRL (docs/Generics.md:355) the solve postpones citizen resolution, and nothing
+        // mid-solve reads an Isa. This rules out resolve_conclusions_for_define, which runs at
+        // :531 — after the env is built.
+        //
+        // Three sibling define sites need the same mint: struct_compiler_generic_args_layer.rs:420
+        // (closes at :431) and :531, plus solve_for_defining at infer_compiler.rs:124. Open whether
+        // that is four calls or a wrapper — forgetting one is silent, not a compile error.
+        //
+        // Call sites are the other half: they CHECK via is_parent in
+        // check_resolving_conclusions_and_resolve, replacing the hardcoded `vec![]` at
+        // infer_compiler.rs:407. Until both halves land the whole impl-bound family is inert, so
+        // nothing here is reproducible yet.
         let instantiation_bound_params = match self.check_defining_conclusions_and_resolve(
             envs, coutputs, &range, call_location, &definition_rules, &param_and_return_runes, &inferences,
         ) {

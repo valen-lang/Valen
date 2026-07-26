@@ -699,15 +699,6 @@ where
       visit_rulex(pred, out, container);
       visit_name(pred, out, member_name);
     }
-    IRulexPR::Components(ComponentsPR {
-      range: _range,
-      container: _container,
-      components,
-    }) => {
-      for component in *components {
-        visit_rulex(pred, out, component);
-      }
-    }
     IRulexPR::Typed(TypedPR {
       range: _range,
       rune,

@@ -104,6 +104,7 @@ where 's: 't,
             )]),
             Some(use_(-64002, void_kind_rune_s)),
             rules_slice,
+            &[],
             self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.drop_generator })),
         ));
         let drop_name_local = match self.translate_generic_function_name(drop_function_a.name) {
@@ -178,6 +179,7 @@ where 's: 't,
             params,
             maybe_ret_coord_rune,
             rules,
+            &[],
             self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.drop_generator })),
         )
     }

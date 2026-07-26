@@ -1095,6 +1095,7 @@ fn scout_expression(
           parent_env,
           &mut rule_lidb,
           &mut rule_builder,
+          &mut Vec::new(),
           stack_frame1.context_region.clone(),
           &[],
         );

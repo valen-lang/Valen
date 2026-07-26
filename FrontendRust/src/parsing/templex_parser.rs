@@ -611,50 +611,6 @@ where
   }
   
 
-  /// Parse a rule destructure
-  pub fn parse_rule_destructure(
-    &self,
-    original_iter: &mut ScrambleIterator<'p, '_>,
-  ) -> ParseResult<Option<IRulexPR<'p>>> {
-    // Extract data from peek2() before mutating
-    let (begin, end, components_l) = match original_iter.peek2_cloned() {
-      (
-        Some(INodeLEEnum::Word(WordLE {
-                                 range: word_range, ..
-                               })),
-        Some(INodeLEEnum::Squared(SquaredLE {
-                                    range: squared_range,
-                                    contents: components_l,
-                                  })),
-      ) => (word_range.begin(), squared_range.end(), components_l.clone()),
-      _ => return Ok(None),
-    };
-
-    // Parse the rune type
-    let rune_type = match self.parse_rune_type(original_iter)? {
-      None => panic!("Expected rune type"),
-      Some(x) => x,
-    };
-
-    original_iter.advance();
-
-    // Parse the components
-    let mut components_p = Vec::new();
-    let components_iter = ScrambleIterator::new(&components_l);
-    let component_iters = components_iter.split_on_symbol(',', false);
-
-    for component_iter in component_iters {
-      let mut iter = component_iter.clone();
-      components_p.push(self.parse_rule(&mut iter)?);
-    }
-
-    Ok(Some(IRulexPR::Components(ComponentsPR {
-      range: RangeL::new(begin, end),
-      container: rune_type,
-      components: self.parse_arena.alloc_slice_from_vec(components_p),
-    })))
-  }
-  
 
   /// Parse a rule atom
   pub fn parse_rule_atom(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<IRulexPR<'p>> {
@@ -662,11 +618,6 @@ where
 
     // Try parsing a rule call (lines 637-641)
     if let Some(x) = self.parse_rule_call(iter)? {
-      return Ok(x);
-    }
-
-    // Try parsing a rule destructure (lines 643-647)
-    if let Some(x) = self.parse_rule_destructure(iter)? {
       return Ok(x);
     }
 
@@ -731,10 +682,6 @@ where
       Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.int_capitalized => {
         iter.advance();
         Ok(Some(ITypePR::IntType))
-      }
-      Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.kind => {
-        iter.advance();
-        Ok(Some(ITypePR::KindType))
       }
       Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.region => {
         iter.advance();

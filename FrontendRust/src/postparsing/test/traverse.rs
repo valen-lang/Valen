@@ -20,7 +20,7 @@ use crate::postparsing::rules::rules::{
   BoolLiteralSL, CallSR, EqualsSR, ILiteralSL, IntLiteralSL,
   IRulexSR, LiteralSR, LookupSR, RegionSR, StringLiteralSL,
 };
-use crate::postparsing::rules::RuneUsage;
+use crate::postparsing::rules::{ImplBoundS, RuneUsage};
 
 pub enum NodeRefS<'s> {
   Program(&'s ProgramS<'s>),
@@ -80,6 +80,7 @@ pub enum NodeRefS<'s> {
   LookupRule(&'s LookupSR<'s>),
   CallRule(&'s CallSR<'s>),
   RuneUsage(&'s RuneUsage<'s>),
+  ImplBound(&'s ImplBoundS<'s>),
   Literal(&'s ILiteralSL<'s>),
   IntLiteral(&'s IntLiteralSL),
   StringLiteral(&'s StringLiteralSL<'s>),
@@ -315,6 +316,9 @@ where
   for member in strukt.members {
     visit_struct_member(pred, out, member);
   }
+  for impl_bound in strukt.impl_bounds {
+    visit_impl_bound(pred, out, impl_bound);
+  }
 }
 
 fn visit_interface<'s, T, F>(pred: &F, out: &mut Vec<T>, interface: &'s InterfaceS<'s>)
@@ -341,6 +345,9 @@ where
   for method in interface.internal_methods {
     visit_function(pred, out, method);
   }
+  for impl_bound in interface.impl_bounds {
+    visit_impl_bound(pred, out, impl_bound);
+  }
 }
 
 fn visit_impl<'s, T, F>(pred: &F, out: &mut Vec<T>, impl_: &'s ImplS<'s>)
@@ -359,6 +366,9 @@ where
   visit_imprecise_name(pred, out, &impl_.sub_citizen_imprecise_name);
   visit_rune_usage(pred, out, &impl_.interface_kind_rune);
   visit_imprecise_name(pred, out, &impl_.super_interface_imprecise_name);
+  for impl_bound in impl_.impl_bounds {
+    visit_impl_bound(pred, out, impl_bound);
+  }
 }
 
 fn visit_export_as<'s, T, F>(pred: &F, out: &mut Vec<T>, export: &'s ExportAsS<'s>)
@@ -400,6 +410,9 @@ where
   }
   for rule in function.rules {
     visit_rulex(pred, out, rule);
+  }
+  for impl_bound in function.impl_bounds {
+    visit_impl_bound(pred, out, impl_bound);
   }
   visit_body(pred, out, &function.body);
 }
@@ -852,6 +865,16 @@ where
   visit_rune(pred, out, &rune_usage.rune);
 }
 
+fn visit_impl_bound<'s, T, F>(pred: &F, out: &mut Vec<T>, impl_bound: &'s ImplBoundS<'s>)
+where
+  F: Fn(NodeRefS<'s>) -> Option<T>,
+{
+  collect_if(pred, out, NodeRefS::ImplBound(impl_bound));
+  visit_rune_usage(pred, out, &impl_bound.sub_rune);
+  visit_rune_usage(pred, out, &impl_bound.super_rune);
+  visit_rune_usage(pred, out, &impl_bound.result_rune);
+}
+
 fn visit_rune<'s, T, F>(pred: &F, out: &mut Vec<T>, rune: &'s IRuneS<'s>)
 where
   F: Fn(NodeRefS<'s>) -> Option<T>,
@@ -899,11 +922,17 @@ where
       visit_function(predicate, &mut out, function);
       out
     }
+    NodeRefS::Interface(interface) => {
+      let mut out = Vec::new();
+      visit_interface(predicate, &mut out, interface);
+      out
+    }
     NodeRefS::Impl(impl_) => {
       let mut out = Vec::new();
       visit_impl(predicate, &mut out, impl_);
       out
     }
+    NodeRefS::Rulex(rulex) => collect_in_srulex(rulex, predicate),
     NodeRefS::Expression(expression) => collect_in_sexpression(expression, predicate),
     _ => panic!("POSTPARSING_TEST_COLLECT_IN_SNODE_NODE_KIND_NOT_YET_IMPLEMENTED"),
   }

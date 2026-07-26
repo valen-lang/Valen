@@ -11,7 +11,7 @@ use crate::postparsing::names::{
   TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS, ImplDeclarationNameS,
 };
 use crate::postparsing::patterns::AtomSP;
-use crate::postparsing::rules::{IRulexSR, RuneUsage};
+use crate::postparsing::rules::{ImplBoundS, IRulexSR, RuneUsage};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
 use crate::scout_arena::ScoutArena;
@@ -176,6 +176,8 @@ pub struct StructS<'s> {
   pub member_rules: &'s [IRulexSR<'s>],
   pub members: &'s [IStructMemberS<'s>],
   pub internal_methods: &'s [&'s FunctionS<'s>],
+  /// `where implements(Sub, Super)` clauses; see ImplBoundS.
+  pub impl_bounds: &'s [ImplBoundS<'s>],
   _sealed: (),
 }
 
@@ -192,6 +194,7 @@ impl<'s> StructS<'s> {
     member_rules: &'s [IRulexSR<'s>],
     members: &'s [IStructMemberS<'s>],
     internal_methods: &'s [&'s FunctionS<'s>],
+    impl_bounds: &'s [ImplBoundS<'s>],
   ) -> Self {
     assert!(
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
@@ -201,7 +204,7 @@ impl<'s> StructS<'s> {
       range, name, attributes, weakable, generic_params, sharedness,
       tyype,
       header_rules,
-      member_rules, members, internal_methods,
+      member_rules, members, internal_methods, impl_bounds,
       _sealed: (),
     }
   }
@@ -258,6 +261,8 @@ pub struct InterfaceS<'s> {
   pub tyype: TemplateTemplataType<'s>,
   pub rules: &'s [IRulexSR<'s>],
   pub internal_methods: &'s [&'s FunctionS<'s>],
+  /// `where implements(Sub, Super)` clauses; see ImplBoundS.
+  pub impl_bounds: &'s [ImplBoundS<'s>],
   _sealed: (),
 }
 impl<'s> InterfaceS<'s> {
@@ -271,6 +276,7 @@ impl<'s> InterfaceS<'s> {
     tyype: TemplateTemplataType<'s>,
     rules: &'s [IRulexSR<'s>],
     internal_methods: &'s [&'s FunctionS<'s>],
+    impl_bounds: &'s [ImplBoundS<'s>],
   ) -> Self {
     assert!(
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
@@ -285,7 +291,7 @@ impl<'s> InterfaceS<'s> {
     Self {
       range, name, attributes, weakable, generic_params,
       sharedness,
-      tyype, rules, internal_methods,
+      tyype, rules, internal_methods, impl_bounds,
       _sealed: (),
     }
   }
@@ -302,6 +308,8 @@ pub struct ImplS<'s> {
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
   pub interface_kind_rune: RuneUsage<'s>,
   pub super_interface_imprecise_name: IImpreciseNameS<'s>,
+  /// `where implements(Sub, Super)` clauses; see ImplBoundS.
+  pub impl_bounds: &'s [ImplBoundS<'s>],
   _sealed: (),
 }
 
@@ -316,12 +324,14 @@ impl<'s> ImplS<'s> {
     sub_citizen_imprecise_name: IImpreciseNameS<'s>,
     interface_kind_rune: RuneUsage<'s>,
     super_interface_imprecise_name: IImpreciseNameS<'s>,
+    impl_bounds: &'s [ImplBoundS<'s>],
   ) -> Self {
     Self {
       range, name, user_specified_identifying_runes, rules,
       tyype,
       struct_kind_rune, sub_citizen_imprecise_name,
       interface_kind_rune, super_interface_imprecise_name,
+      impl_bounds,
       _sealed: (),
     }
   }
@@ -550,6 +560,9 @@ pub struct FunctionS<'s> {
   pub params: &'s [ParameterS<'s>],
   pub maybe_ret_kind_rune: Option<RuneUsage<'s>>,
   pub rules: &'s [IRulexSR<'s>],
+  /// `where implements(Sub, Super)` clauses. Kept out of `rules` because they are checked after
+  /// the solve rather than solved; see ImplBoundS.
+  pub impl_bounds: &'s [ImplBoundS<'s>],
   pub body: &'s IBodyS<'s>,
   _sealed: (),
 }
@@ -563,6 +576,7 @@ impl<'s> FunctionS<'s> {
     params: &'s [ParameterS<'s>],
     maybe_ret_kind_rune: Option<RuneUsage<'s>>,
     rules: &'s [IRulexSR<'s>],
+    impl_bounds: &'s [ImplBoundS<'s>],
     body: &'s IBodyS<'s>,
   ) -> Self {
     assert!(
@@ -587,7 +601,7 @@ impl<'s> FunctionS<'s> {
     }
     Self {
       range, name, attributes, generic_params,
-      tyype, params, maybe_ret_kind_rune, rules, body,
+      tyype, params, maybe_ret_kind_rune, rules, impl_bounds, body,
       _sealed: (),
     }
   }

@@ -524,7 +524,10 @@ func foo<T>(f T) void where func drop(T)void, func moo(bool)void { }
 func main() { foo("hello"); }
 "#;
     let code_source = CodeSource::new(vec![
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);

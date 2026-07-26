@@ -16,7 +16,7 @@ use crate::postparsing::expressions::{
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::names::{CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS, IVarNameS};
 use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
-use crate::postparsing::rules::rules::{CallSR, ILiteralSL, LiteralSR, LookupSR};
+use crate::postparsing::rules::rules::{CallSR, ILiteralSL, ImplBoundS, LiteralSR, LookupSR};
 use crate::postparsing::test::traverse::NodeRefS;
 use crate::parsing::tests::utils::compile_file;
 use crate::parsing::tests::utils::{expect_1, expect_2, expect_3};
@@ -32,7 +32,7 @@ use crate::collect_only_snode;
 use crate::collect_only_snodes;
 use crate::collect_where_snode;
 use crate::collect_where_snodes;
-use crate::postparsing::test::utils::expect_code_body_expr;
+use crate::postparsing::test::utils::{assert_rune_absent_from_rules, assert_rune_resolves_to, expect_code_body_expr};
 
 
 fn compile<'s, 'ctx, 'p>(
@@ -1528,6 +1528,130 @@ fn test_function_rules_no_longer_contains_param_rules() {
      IRulexSR::Call(CallSR { args: [], .. })] => {}
     other => panic!("FunctionS.rules should be exactly [Lookup(void), Call([])]; got {:?}", other),
   }
+}
+
+#[test]
+fn test_function_where_implements_becomes_an_impl_bound() {
+  // `where implements(T, IShip)` is a declared bound, not a rule: it never deduces anything, so it
+  // is recorded on the denizen for the post-solve pass rather than pushed into FunctionS.rules.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "interface IShip { }\nfunc launch<T>(x T) void where implements(T, IShip) { }",
+  );
+  let launch = program.lookup_function("launch");
+  let bound = expect_1(launch.impl_bounds);
+
+  // The sub side is the declared generic param. The super side is a bare name, so it resolves to
+  // a fresh rune that a Lookup rule constrains — the bound points at that rune, not at the name.
+  match bound {
+    ImplBoundS {
+      sub_rune: RuneUsage { rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }), .. },
+      super_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
+      result_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
+      ..
+    } => {}
+    other => panic!("expected implements(T, <lookup>) with an implicit result rune; got {:?}", other),
+  }
+
+  assert_rune_resolves_to(launch.rules, bound.super_rune.rune, "IShip");
+  assert_rune_absent_from_rules(launch.rules, bound.result_rune.rune);
+}
+
+#[test]
+fn test_struct_where_implements_becomes_an_impl_bound() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "interface IShip { }\nstruct Fleet<T> where implements(T, IShip) { }",
+  );
+  let fleet = program.lookup_struct("Fleet");
+  let bound = expect_1(fleet.impl_bounds);
+  match bound {
+    ImplBoundS {
+      sub_rune: RuneUsage { rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }), .. },
+      super_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
+      result_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
+      ..
+    } => {}
+    other => panic!("expected implements(T, <lookup>) on the struct; got {:?}", other),
+  }
+  // A struct's where-clause rules land in header_rules, so that is where IShip's lookup goes.
+  assert_rune_resolves_to(fleet.header_rules, bound.super_rune.rune, "IShip");
+  assert_rune_absent_from_rules(fleet.header_rules, bound.result_rune.rune);
+}
+
+#[test]
+fn test_interface_where_implements_becomes_an_impl_bound() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "interface IShip { }\ninterface IFleet<T> where implements(T, IShip) { }",
+  );
+  let fleet = program.lookup_interface("IFleet");
+  let bound = expect_1(fleet.impl_bounds);
+  match bound {
+    ImplBoundS {
+      sub_rune: RuneUsage { rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }), .. },
+      super_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
+      result_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
+      ..
+    } => {}
+    other => panic!("expected implements(T, <lookup>) on the interface; got {:?}", other),
+  }
+  assert_rune_resolves_to(fleet.rules, bound.super_rune.rune, "IShip");
+  assert_rune_absent_from_rules(fleet.rules, bound.result_rune.rune);
+}
+
+#[test]
+fn test_impl_where_implements_becomes_an_impl_bound() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    concat!(
+      "interface IShip { }\n",
+      "interface IFleet { }\n",
+      "struct Fleet<T> { }\n",
+      "impl<T> IFleet for Fleet<T> where implements(T, IShip);",
+    ),
+  );
+  let impl_ = expect_1(program.impls);
+  let bound = expect_1(impl_.impl_bounds);
+  match bound {
+    ImplBoundS {
+      sub_rune: RuneUsage { rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }), .. },
+      super_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
+      result_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
+      ..
+    } => {}
+    other => panic!("expected implements(T, <lookup>) on the impl; got {:?}", other),
+  }
+  assert_rune_resolves_to(impl_.rules, bound.super_rune.rune, "IShip");
+  assert_rune_absent_from_rules(impl_.rules, bound.result_rune.rune);
 }
 
 #[test]

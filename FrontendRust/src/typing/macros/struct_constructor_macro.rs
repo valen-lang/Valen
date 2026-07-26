@@ -113,6 +113,7 @@ where 's: 't,
             params_slice,
             Some(ret_rune),
             rules_slice,
+            &[],
             self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.struct_constructor_generator })),
         ));
         let function_name_s = self.scout_arena.intern_name(INameValS::FunctionDeclaration(IFunctionDeclarationNameValS::ConstructorName(

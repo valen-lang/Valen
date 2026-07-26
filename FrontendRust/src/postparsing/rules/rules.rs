@@ -14,6 +14,29 @@ pub struct RuneUsage<'s> {
 }
 
 
+/// A `where implements(Sub, Super)` clause. The bound itself is not a rule — it deduces nothing,
+/// so it is recorded on the denizen and judged after the solve rather than during it.
+///
+/// Its operands are ordinary runes, though: translating `Sub` and `Super` pushes their rules into
+/// the denizen's normal rule list, the same as any other where-clause operand. That is load-bearing
+/// rather than incidental — `sub_rune` and `super_rune` must be *concluded* by the time the
+/// post-solve pass reads them, and they only get conclusions if the solver sees the rules defining
+/// them. Moving those rules onto this struct would leave both runes unsolved.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ImplBoundS<'s> {
+  pub range: RangeS<'s>,
+  pub sub_rune: RuneUsage<'s>,
+  pub super_rune: RuneUsage<'s>,
+  /// Joins the callee's declared bound to the caller's supplied impl. Instantiator
+  /// uses this to look up the actual vtable/edge to use.
+  ///
+  /// Unlike the other two, this rune has no rules and nothing solves it — the post-solve pass
+  /// fills it in. So it must stay out of every `rune_usages()` list, or the completeness check
+  /// would demand a conclusion that never arrives.
+  pub result_rune: RuneUsage<'s>,
+}
+
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IRulexSR<'s> {
