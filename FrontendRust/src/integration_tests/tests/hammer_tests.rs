@@ -68,11 +68,11 @@ pub fn two_templated_structs_make_it_into_hamuts() {
     let code = "
 func __pretend<T>() T { __vbi_panic() }
 
-interface MyOption<T Ref> share { }
-struct MyNone<T Ref> share { }
-impl<T Ref> MyOption<T> for MyNone<T>;
-struct MySome<T Ref> share { value T; }
-impl<T Ref> MyOption<T> for MySome<T>;
+interface MyOption<T> share { }
+struct MyNone<T> share { }
+impl<T> MyOption<T> for MyNone<T>;
+struct MySome<T> share { value T; }
+impl<T> MyOption<T> for MySome<T>;
 
 exported func main() {
   x = __pretend<MySome<int>>();

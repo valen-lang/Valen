@@ -100,7 +100,7 @@ fn nested_anonymous_substruct_captures_outer() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = r"
-interface IF<R Ref, P Ref> {
+interface IF<R, P> {
   func __call(virtual this &IF<R, P>, p P) R;
 }
 exported func main() int {

@@ -3,13 +3,13 @@ import v.builtins.panicutils.*;
 import v.builtins.drop.*;
 
 #!DeriveInterfaceDrop
-sealed interface Opt<T> where T Kind { }
+sealed interface Opt<T> { }
 #!DeriveStructDrop
-struct Some<T> where T Kind { value T; }
+struct Some<T> { value T; }
 
 impl<T> Opt<T> for Some<T>;
 #!DeriveStructDrop
-struct None<T> where T Kind { }
+struct None<T> { }
 
 impl<T> Opt<T> for None<T>;
 

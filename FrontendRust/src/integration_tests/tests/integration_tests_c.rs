@@ -435,8 +435,8 @@ fn test_narrowing_between_borrow_and_owning_overloads() {
         r"
 import panicutils.*;
 
-sealed interface XOpt<T> where T Ref { }
-struct XNone<T> where T Ref { }
+sealed interface XOpt<T> { }
+struct XNone<T> { }
 impl<T> XOpt<T> for XNone<T>;
 
 abstract func get<T>(virtual opt XOpt<T>) int;

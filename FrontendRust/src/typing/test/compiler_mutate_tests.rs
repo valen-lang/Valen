@@ -130,11 +130,11 @@ fn local_set_upcasts() {
     let code = r"
 import v.builtins.drop.*;
 
-interface IXOption<T Ref> where func drop(T)void { }
-struct XSome<T Ref> where func drop(T)void { value T; }
-impl<T Ref> IXOption<T> for XSome<T> where func drop(T)void;
-struct XNone<T Ref> where func drop(T)void { }
-impl<T Ref> IXOption<T> for XNone<T> where func drop(T)void;
+interface IXOption<T> where func drop(T)void { }
+struct XSome<T> where func drop(T)void { value T; }
+impl<T> IXOption<T> for XSome<T> where func drop(T)void;
+struct XNone<T> where func drop(T)void { }
+impl<T> IXOption<T> for XNone<T> where func drop(T)void;
 
 exported func main() {
   m IXOption<int> = XNone<int>();
@@ -173,11 +173,11 @@ fn expr_set_upcasts() {
     let code = r"
 import v.builtins.drop.*;
 
-interface IXOption<T Ref> where func drop(T)void { }
-struct XSome<T Ref> where func drop(T)void { value T; }
-impl<T Ref> IXOption<T> for XSome<T>;
-struct XNone<T Ref> where func drop(T)void { }
-impl<T Ref> IXOption<T> for XNone<T>;
+interface IXOption<T> where func drop(T)void { }
+struct XSome<T> where func drop(T)void { value T; }
+impl<T> IXOption<T> for XSome<T>;
+struct XNone<T> where func drop(T)void { }
+impl<T> IXOption<T> for XNone<T>;
 
 struct Marine {
   weapon IXOption<int>;

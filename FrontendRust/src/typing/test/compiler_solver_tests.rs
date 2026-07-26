@@ -286,11 +286,9 @@ fn test_single_parameter_function() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     // TSUGAR: imm → share (post-kind-mutability-cut keyword)
     let code = r"
-struct Functor1<F Prot = func(P1)R> share
-where P1 Ref, R Ref { }
+struct Functor1<F Prot = func(P1)R> share { }
 
-func __call<F Prot = func(P1)R>(self &Functor1<F>, param1 P1) R
-where P1 Ref, R Ref {
+func __call<F Prot = func(P1)R>(self &Functor1<F>, param1 P1) R {
   F(param1)
 }
 
@@ -848,8 +846,8 @@ fn descendant_satisfying_call() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-interface IShip<T> where T Ref {}
-struct Firefly<T> where T Ref {}
+interface IShip<T> {}
+struct Firefly<T> {}
 impl<T> IShip<T> for Firefly<T>;
 func moo<T>(a IShip<T>) { }
 exported func main() {
@@ -973,9 +971,9 @@ fn stamps_an_interface_template_via_a_function_return() {
     let code = r"
 import v.builtins.drop.*;
 
-interface MyInterface<X Ref> { }
+interface MyInterface<X> { }
 
-struct SomeStruct<X Ref> where func drop(X)void { x X; }
+struct SomeStruct<X> where func drop(X)void { x X; }
 impl<X> MyInterface<X> for SomeStruct<X> where func drop(X)void;
 
 func doAThing<T>(t T) SomeStruct<T>
@@ -1044,7 +1042,7 @@ fn detects_conflict_between_types() {
     let code = r"
 struct ShipA {}
 struct ShipB {}
-exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
+exported func main<N>() where N = ShipA, N = ShipB {
 }
 ";
     let code_source = CodeSource::new(vec![
@@ -1068,11 +1066,11 @@ exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
         r##"At test:0.vale:4:1:
-exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
+exported func main<N>() where N = ShipA, N = ShipB {
 At test:0.vale:4:1:
-exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
+exported func main<N>() where N = ShipA, N = ShipB {
 Solver conflict on rune _123111: was ShipB but now concluding ShipA
-exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
+exported func main<N>() where N = ShipA, N = ShipB {
                                                             ^^^^^ _123111: ShipA
                                                    ^^^^^^ N: ShipA
                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ _3: (unknown)
@@ -1120,8 +1118,8 @@ fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
 struct SomeStruct<T>
 { x T; }
 
-func bork<X Kind, Z>() Z
-where X Kind = SomeStruct<int>, X = SomeStruct<Z> {
+func bork<X, Z>() Z
+where X = SomeStruct<int>, X = SomeStruct<Z> {
   return 9;
 }
 

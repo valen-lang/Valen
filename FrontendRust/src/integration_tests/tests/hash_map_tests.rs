@@ -90,12 +90,12 @@ struct IntHasher { }
 func __call(this &IntHasher, x &int) int { return __copy_prim(&x); }
 
 #!DeriveStructDrop
-struct HashMap<K Ref, V Ref, H Ref>
+struct HashMap<K, V, H>
 where func(&H, &K)int {
   hasher H;
 }
 
-func add<K Ref, V, H>(map &HashMap<K, V, H>) void {
+func add<K, V, H>(map &HashMap<K, V, H>) void {
   Array<int>(2, {_});
 }
 
@@ -379,21 +379,21 @@ extern("vale_runtime_sized_array_len")
 func len<E>(arr &[]E) int;
 
 extern("vale_runtime_sized_array_new")
-func Array<E Ref>(size int) []E;
+func Array<E>(size int) []E;
 
 func __pretend<T>() T { __vbi_panic() }
 
 #!DeriveStructDrop
-struct HashMapNode<K Ref> {
+struct HashMapNode<K> {
   key K;
 }
 
 #!DeriveStructDrop
-struct HashMap<K Ref> {
+struct HashMap<K> {
   table Array<HashMapNode<K>>;
 }
 
-func keys<K Ref>(self &HashMap<K>) {
+func keys<K>(self &HashMap<K>) {
   (&self.table).len();
 }
 
@@ -442,19 +442,19 @@ extern("vale_runtime_sized_array_len")
 func len<E>(arr &[]E) int;
 
 extern("vale_runtime_sized_array_new")
-func Array<E Ref>(size int) []E;
+func Array<E>(size int) []E;
 
 func __pretend<T>() T { __vbi_panic() }
 
 #!DeriveStructDrop
-interface HashMapNode<K Ref> { }
+interface HashMapNode<K> { }
 
 #!DeriveStructDrop
-struct HashMap<K Ref> {
+struct HashMap<K> {
   table Array<HashMapNode<K>>;
 }
 
-func keys<K Ref>(self &HashMap<K>) {
+func keys<K>(self &HashMap<K>) {
   (&self.table).len();
 }
 

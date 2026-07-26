@@ -84,7 +84,7 @@ fn lambda_body_type_mismatches_anonymous_interface_return_type() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-interface AFunction1<P Ref> {
+interface AFunction1<P> {
   func __call(virtual this &AFunction1<P>, a P) int;
 }
 exported func main() {

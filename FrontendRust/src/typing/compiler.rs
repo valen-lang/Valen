@@ -30,7 +30,7 @@ use crate::typing::templata::templata::{
     FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, PlaceholderTemplataT,
     PrototypeTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
 };
-use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, SharednessT, NeverT, StrT, VoidT, BorrowRefT, OwnRefT, WeakRefT, ShareRefT};
+use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, NeverT, StrT, VoidT, BorrowRefT, OwnRefT, WeakRefT, ShareRefT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::oracles::Oracles;
 #[cfg(feature = "rust_interop")]
@@ -1574,8 +1574,7 @@ where 's: 't,
                         for member in struct_def.members.iter() {
                             let member_coord = substituter.substitute_for_kind(coutputs, member.tyype);
                             let member_kind = member_coord;
-                            if struct_def.sharedness == SharednessT::Shared
-                                && !self.is_primitive(member_kind)
+                            if !self.is_primitive(member_kind)
                                 && !exported_kind_to_export.contains_key(&member_kind)
                             {
                                 let range_t = self.typing_interner.alloc_slice_copy(&[export.range]);
@@ -1619,6 +1618,14 @@ where 's: 't,
                             });
                         }
                     }
+                    // VCOORD: an exported interface's dependencies are checked nowhere. Structs and
+                    // both array kinds walk their contents above; this arm walks nothing, so an
+                    // interface whose method signatures mention a non-exported kind exports clean.
+                    // Whether that is right turns on what an exported interface *is*: upstream ruled
+                    // that design-2's class-tier `interface` gets no Rust projection at all and
+                    // crosses as an opaque handle, which would need no check — but our interfaces are
+                    // ~86.5% struct-tier, and the struct tier does project. Decide the tier question
+                    // before filling this in.
                     KindT::Interface(_) => {}
                     KindT::KindPlaceholder(_) | KindT::OverloadSet(_) |
                     KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_) | KindT::Never(_) => {

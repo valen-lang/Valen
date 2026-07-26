@@ -262,11 +262,11 @@ fn simple_override_with_param_and_bound() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+sealed interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
-struct Serenity<A Ref, B Ref, C Ref> { }
+struct Serenity<A, B, C> { }
 impl<H, I, J> ISpaceship<H, I, J> for Serenity<H, I, J>;
 func launch<M, N, P>(self &Serenity<M, N, P>, bork M)
     where func drop(M)void { }
@@ -302,11 +302,11 @@ fn struct_with_different_ordered_runes() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+sealed interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
-struct Firefly<A Ref, B Ref, C Ref> { }
+struct Firefly<A, B, C> { }
 impl<H, I, J> ISpaceship<H, I, J> for Firefly<J, I, H>;
 func launch<M, N, P>(self &Firefly<M, N, P>, bork P)
     where func drop(P)void { }
@@ -342,11 +342,11 @@ fn struct_with_less_generic_params_than_interface() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+sealed interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
-struct Raza<B Ref, C Ref> { }
+struct Raza<B, C> { }
 impl<I, J> ISpaceship<int, I, J> for Raza<I, J>;
 func launch<N, P>(self &Raza<N, P>, bork int) { }
 
@@ -381,11 +381,11 @@ fn struct_with_more_generic_params_than_interface() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+sealed interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
-struct Milano<A Ref, B Ref, C Ref, D Ref> { }
+struct Milano<A, B, C, D> { }
 impl<H, I, J, K> ISpaceship<H, I, J> for Milano<H, I, J, K>;
 func launch<H, I, J, K>(self &Milano<H, I, J, K>, bork H) where func drop(H)void { }
 
@@ -420,11 +420,11 @@ fn struct_repeating_generic_params_for_interface() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+sealed interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
-struct Enterprise<A Ref> { }
+struct Enterprise<A> { }
 impl<H> ISpaceship<H, H, H> for Enterprise<H>;
 func launch<H>(self &Enterprise<H>, bork H) where func drop(H)void { }
 
@@ -525,7 +525,7 @@ fn interface_with_method_with_param_of_substruct() {
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
-struct List<T Ref> { }
+struct List<T> { }
 
 sealed interface SectionMember {}
 struct Header {}
@@ -557,7 +557,7 @@ fn feeding_instantiation_bounds_for_something_created_in_same_function() {
         &instantiating_bump,
         r"
 #!DeriveStructDrop
-struct Spork<T Ref, Y>
+struct Spork<T, Y>
 where func splork(Y)void {
   lam Y;
 }
@@ -599,13 +599,13 @@ fn generic_interface_forwarder_with_bound() {
         &instantiating_bump,
         r"
 #!DeriveInterfaceDrop
-sealed interface Bork<T Ref>
+sealed interface Bork<T>
 where func threeify(T)T {
   func bork(virtual self &Bork<T>) int;
 }
 
 #!DeriveStructDrop
-struct BorkForwarder<T Ref, Lam>
+struct BorkForwarder<T, Lam>
 where func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {
   lam Lam;
 }
@@ -648,12 +648,12 @@ fn generic_interface_forwarder_with_drop_bound() {
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
-sealed interface Bork<T Ref>
+sealed interface Bork<T>
 where func threeify(T)T {
   func bork(virtual self &Bork<T>) int;
 }
 
-struct BorkForwarder<T Ref, Lam>
+struct BorkForwarder<T, Lam>
 where func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {
   lam Lam;
 }
@@ -957,7 +957,7 @@ fn lambda_is_compatible_anonymous_interface() {
         r"
 import castutils.*;
 
-interface AFunction2<R Ref, P1 Ref, P2 Ref> {
+interface AFunction2<R, P1, P2> {
   func __call(virtual this &AFunction2<R, P1, P2>, a P1, b P2) R;
 }
 exported func main() str {

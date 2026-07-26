@@ -176,7 +176,7 @@ fn templated_interface_and_struct() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-sealed interface Opt<T Ref>
+sealed interface Opt<T>
 where func drop(T)void
 { }
 
@@ -213,7 +213,7 @@ fn custom_drop_with_concept_function() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
 #!DeriveInterfaceDrop
-sealed interface Opt<T Ref> { }
+sealed interface Opt<T> { }
 
 abstract func drop<T>(virtual opt Opt<T>)
 where func drop(T)void;
@@ -379,12 +379,12 @@ fn generic_interface_forwarder() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
 #!DeriveInterfaceDrop
-sealed interface Bork<T Ref> {
+sealed interface Bork<T> {
   func bork(virtual self &Bork<T>) int;
 }
 
 #!DeriveStructDrop
-struct BorkForwarder<T Ref, Lam>
+struct BorkForwarder<T, Lam>
 where func drop(Lam)void, func __call(&Lam)T {
   lam Lam;
 }
@@ -421,13 +421,13 @@ fn generic_interface_forwarder_with_bound() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
 #!DeriveInterfaceDrop
-sealed interface Bork<T Ref>
+sealed interface Bork<T>
 where func threeify(T)T {
   func bork(virtual self &Bork<T>) int;
 }
 
 #!DeriveStructDrop
-struct BorkForwarder<T Ref, Lam>
+struct BorkForwarder<T, Lam>
 where func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {
   lam Lam;
 }
@@ -494,7 +494,7 @@ fn integer_is_compatible_with_interface_anonymous_substruct() {
     // TSUGAR: x6 int → x6 &int — anonymous-interface-macro forwarder accesses captured `6` as a borrowed field
     let code = r#"
 import v.builtins.drop.*;
-interface AFunction2<R Ref, P1 Ref> {
+interface AFunction2<R, P1> {
   func doCall(virtual this &AFunction2<R, P1>, a P1) R;
 }
 func __call(x6 &int, x42 int)str { "hi" }
@@ -525,7 +525,7 @@ fn lambda_is_compatible_with_interface_anonymous_substruct() {
     let code = r"
 import v.builtins.str.*;
 
-interface AFunction2<R Ref, P1 Ref> {
+interface AFunction2<R, P1> {
   func __call(virtual this &AFunction2<R, P1>, a P1) R;
 }
 exported func main() str {
@@ -556,7 +556,7 @@ fn implementing_a_non_generic_interface_call() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
 #!DeriveInterfaceDrop
-interface IObserver<T Ref> { }
+interface IObserver<T> { }
 
 #!DeriveStructDrop
 struct MyThing { }

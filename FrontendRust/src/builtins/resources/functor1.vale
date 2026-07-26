@@ -1,5 +1,5 @@
 
-func __call<P1 Kind, R Kind>(v void, param P1) R
+func __call<P1, R>(v void, param P1) R
 where func drop(P1)R {
   drop(^param)
 }

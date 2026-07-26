@@ -10,11 +10,11 @@ struct IntEquator { }
 pure func __call<'r imm>(this 'r &IntEquator, a int, b int) bool { return a == b; }
 
 #!DeriveStructDrop
-struct RHashMapNode<K Kind, V> {
+struct RHashMapNode<K, V> {
   key K;
   value V;
 }
-func drop<K Kind, V>(self RHashMapNode<K, V>)
+func drop<K, V>(self RHashMapNode<K, V>)
 where func drop(V)void {
   destruct self;
 }
@@ -24,7 +24,7 @@ trait Hasher<K> {
 }
 
 #!DeriveStructDrop
-struct RHashMap<K Kind, V, H, E>
+struct RHashMap<K, V, H, E>
 where pure func<'x>('x &H, 'x &K)int, func(&E, &K, &K)bool {
   hasher H;
   equator E;
@@ -32,17 +32,17 @@ where pure func<'x>('x &H, 'x &K)int, func(&E, &K, &K)bool {
   size int;
 }
 
-func drop<K Kind, V, H, E>(self RHashMap<K Kind, V, H, E>)
+func drop<K, V, H, E>(self RHashMap<K, V, H, E>)
 where func drop(V)void, func drop(H)void, func drop(E)void {
   destruct self;
 }
 
-func RHashMap<K Kind, V, H, E>(hasher H, equator E) RHashMap<K, V, H, E>
+func RHashMap<K, V, H, E>(hasher H, equator E) RHashMap<K, V, H, E>
 where func(&H, &K)int, func(&E, &K, &K)bool {
   return RHashMap<K, V, H, E>(hasher, equator, 0);
 }
 
-func RHashMap<K Kind, V, H, E>(hasher H, equator E, capacity int) RHashMap<K, V, H, E>
+func RHashMap<K, V, H, E>(hasher H, equator E, capacity int) RHashMap<K, V, H, E>
 where func(&H, &K)int, func(&E, &K, &K)bool {
   return RHashMap<K, V>(
       hasher,
@@ -51,9 +51,9 @@ where func(&H, &K)int, func(&E, &K, &K)bool {
       0);
 }
 
-pure func len<'r imm, K Kind, V, H, E>(self 'r &RHashMap<K, V, H, E>) int { return self.size; }
+pure func len<'r imm, K, V, H, E>(self 'r &RHashMap<K, V, H, E>) int { return self.size; }
 
-func update<K Kind, V, H, E>(self &RHashMap<K, V, H, E>, key K, value V) V {
+func update<K, V, H, E>(self &RHashMap<K, V, H, E>, key K, value V) V {
   hash int = (&self.hasher)(key);
   startIndex = abs(hash mod self.table.len());
   maybeIndex = findIndexOfKey(&self.table, self.equator, startIndex, key);
@@ -65,7 +65,7 @@ func update<K Kind, V, H, E>(self &RHashMap<K, V, H, E>, key K, value V) V {
   return set node.value = value;
 }
 
-func add<K Kind, V, H, E>(map &RHashMap<K, V, H, E>, key K, value V) void {
+func add<K, V, H, E>(map &RHashMap<K, V, H, E>, key K, value V) void {
   if (map.has(&key)) {
     panic("Map already has given key!");
   }
@@ -104,7 +104,7 @@ func panicVoid<T>(x T) {
   __vbi_panic();
 }
 
-func addNodeToTable<K Kind, V, H>(
+func addNodeToTable<K, V, H>(
     table &Array<Opt<RHashMapNode<K, V>>>,
     hasher &H,
     node RHashMapNode<K, V>)
@@ -118,7 +118,7 @@ where func(&H, &K)int
   (set table[index] = opt).expect_none();
 }
 
-func findEmptyIndexForKey<K Kind, V>(table &Array<Opt<RHashMapNode<K, V>>>, startIndex int, key &K) int {
+func findEmptyIndexForKey<K, V>(table &Array<Opt<RHashMapNode<K, V>>>, startIndex int, key &K) int {
   i = 0;
   while (i < table.len()) {
     index = (startIndex + i) mod table.len();
@@ -132,7 +132,7 @@ func findEmptyIndexForKey<K Kind, V>(table &Array<Opt<RHashMapNode<K, V>>>, star
   return panic("findEmptyIndexForKey went past end of table!");
 }
 
-func findIndexOfKey<K Kind, V, E>(table &Array<Opt<RHashMapNode<K, V>>>, equator &E, startIndex int, key K)
+func findIndexOfKey<K, V, E>(table &Array<Opt<RHashMapNode<K, V>>>, equator &E, startIndex int, key K)
 Opt<int>
 where func(&E, &K, &K)bool {
   i = 0;
@@ -152,7 +152,7 @@ where func(&E, &K, &K)bool {
   return panic("findIndexOfKey went past end of table! len " + str(table.len()) + " and i " + str(i));
 }
 
-func get<K Kind, V, H, E>(self &RHashMap<K, V, H, E>, key &K) Opt<&V> {
+func get<K, V, H, E>(self &RHashMap<K, V, H, E>, key &K) Opt<&V> {
   if (self.table.len() == 0) {
     return None<&V>();
   }
@@ -168,11 +168,11 @@ func get<K Kind, V, H, E>(self &RHashMap<K, V, H, E>, key &K) Opt<&V> {
   return opt;
 }
 
-func has<K Kind, V, H, E>(self &RHashMap<K, V, H, E>, key &K) bool {
+func has<K, V, H, E>(self &RHashMap<K, V, H, E>, key &K) bool {
   return not(self.get(key).isEmpty());
 }
 
-func keys<K Kind, V, H, E>(self &RHashMap<K, V, H, E>) []K {
+func keys<K, V, H, E>(self &RHashMap<K, V, H, E>) []K {
   list = List<K>();
   index = 0;
   while (index < self.table.len()) {
@@ -186,7 +186,7 @@ func keys<K Kind, V, H, E>(self &RHashMap<K, V, H, E>) []K {
   return arr;
 }
 
-func values<K Kind, V, H, E>(self &RHashMap<K, V, H, E>) []&V {
+func values<K, V, H, E>(self &RHashMap<K, V, H, E>) []&V {
   list = List<&V>();
   index = 0;
   while (index < self.table.len()) {
@@ -200,7 +200,7 @@ func values<K Kind, V, H, E>(self &RHashMap<K, V, H, E>) []&V {
   return arr;
 }
 
-func innerRemove<K Kind, V, H, E>(
+func innerRemove<K, V, H, E>(
   table &Array<Opt<RHashMapNode<K, V>>>,
   hasher &H,
   equator &E,
@@ -216,7 +216,7 @@ where func(&H, &K)int, func(&E, &K, &K)bool
   return (index, oldElement);
 }
 
-func remove<K Kind, V, H, E>(
+func remove<K, V, H, E>(
   map &RHashMap<K, V, H, E>,
   key K)
 V {

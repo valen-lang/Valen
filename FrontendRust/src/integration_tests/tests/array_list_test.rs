@@ -39,7 +39,7 @@ fn simple_array_list_no_optionals() {
 import v.builtins.migrate.*;
 
 #!DeriveStructDrop
-struct List<E Ref> {
+struct List<E> {
   array []E;
 }
 func drop<E>(self List<E>)

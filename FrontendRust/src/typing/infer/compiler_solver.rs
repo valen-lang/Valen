@@ -649,9 +649,11 @@ where 's: 't,
                 conclusions.insert(def_func.result_rune.rune, new_templata);
                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
-                    Err(_e) => {
-                        panic!("implement: solve_rule DefinitionFunc InternalSolverError wrapping");
-                        // Err(InternalSolverError(range :: env.parentRanges, e))
+                    Err(e) => {
+                        let ranges = once(def_func.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        let error = self.typing_interner.alloc(e);
+                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
                     }
                 }
             }
@@ -1018,9 +1020,11 @@ where 's: 't,
                 conclusions.insert(r.rune.rune, templata);
                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
-                    Err(_e) => {
-                        panic!("Unimplemented: solve_rule Literal InternalSolverError wrapping");
-                        // Err(InternalSolverError(range :: env.parentRanges, e))
+                    Err(e) => {
+                        let ranges = once(r.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        let error = self.typing_interner.alloc(e);
+                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
                     }
                 }
             }
@@ -1035,9 +1039,10 @@ where 's: 't,
                 conclusions.insert(r.rune.rune, result);
                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
-                    Err(_e) => {
-                        panic!("Unimplemented: solve_rule Lookup InternalSolverError wrapping");
-                        // Err(InternalSolverError(range :: env.parentRanges, e))
+                    Err(e) => {
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        let error = self.typing_interner.alloc(e);
+                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
                     }
                 }
             }
@@ -1207,9 +1212,11 @@ where 's: 't,
                     };
                   match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                       Ok(_) => Ok(()),
-                      Err(_e) => {
-                          panic!("Unimplemented: solve_rule Literal InternalSolverError wrapping");
-                          // Err(InternalSolverError(range :: env.parentRanges, e))
+                      Err(e) => {
+                          let ranges = once(r.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                          let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                          let error = self.typing_interner.alloc(e);
+                          Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
                       }
                   }
               }

@@ -58,7 +58,7 @@ fn tests_calling_a_templated_struct_constructor() {
         &instantiating_bump,
         r"
 #!DeriveStructDrop
-struct MySome<T Ref> { value T; }
+struct MySome<T> { value T; }
 
 exported func main() int {
   [x] = MySome<int>(4);
@@ -485,7 +485,7 @@ fn tests_making_a_variable_with_a_pattern() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\ninterface MyOption<T> where T Ref { }\n\nstruct MySome<T> where T Ref {}\nimpl<T> MyOption<T> for MySome<T>;\n\nfunc doSomething(opt MyOption<int>) int {\n  return 9;\n}\n\nexported func main() int {\n\t x MyOption<int> = MySome<int>();\n\t return doSomething(^x);\n}\n      ",
+        "\ninterface MyOption<T> { }\n\nstruct MySome<T> {}\nimpl<T> MyOption<T> for MySome<T>;\n\nfunc doSomething(opt MyOption<int>) int {\n  return 9;\n}\n\nexported func main() int {\n\t x MyOption<int> = MySome<int>();\n\t return doSomething(^x);\n}\n      ",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}

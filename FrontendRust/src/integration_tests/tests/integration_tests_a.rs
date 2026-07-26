@@ -980,10 +980,10 @@ fn stamps_an_interface_template_via_a_function_parameter() {
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
-interface MyInterface<T Ref> { }
+interface MyInterface<T> { }
 func doAThing<T>(i MyInterface<T>) { }
 
-struct SomeStruct<T Ref> { }
+struct SomeStruct<T> { }
 func doAThing<T>(s SomeStruct<T>) { }
 impl<T> MyInterface<T> for SomeStruct<T>;
 

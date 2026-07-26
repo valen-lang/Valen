@@ -222,10 +222,10 @@ fn opt_with_undroppable_contents() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
 #!DeriveInterfaceDrop
-sealed interface Opt<T> where T Ref { }
+sealed interface Opt<T> { }
 
 #!DeriveStructDrop
-struct Some<T> where T Ref { value T; }
+struct Some<T> { value T; }
 
 impl<T> Opt<T> for Some<T>;
 
@@ -274,10 +274,10 @@ fn opt_with_undroppable_mutable_ref_contents() {
 import v.builtins.drop.*;
 
 #!DeriveInterfaceDrop
-sealed interface Opt<T Ref> { }
+sealed interface Opt<T> { }
 
 #!DeriveStructDrop
-struct Some<T Ref> { value T; }
+struct Some<T> { value T; }
 
 impl<T> Opt<T> for Some<T>;
 

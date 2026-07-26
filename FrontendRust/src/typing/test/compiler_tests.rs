@@ -947,9 +947,9 @@ fn stamps_an_interface_template_via_a_function_return() {
     let code = concat!(
         "import v.builtins.drop.*;\n",
         "\n",
-        "sealed interface MyInterface<X Ref> where func drop(X)void { }\n",
+        "sealed interface MyInterface<X> where func drop(X)void { }\n",
         "\n",
-        "struct SomeStruct<X Ref> where func drop(X)void { x X; }\n",
+        "struct SomeStruct<X> where func drop(X)void { x X; }\n",
         "impl<X> MyInterface<X> for SomeStruct<X>;\n",
         "\n",
         "func doAThing<T>(t T) SomeStruct<T>\n",
@@ -1089,7 +1089,7 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = concat!(
-        "interface MyOption<T Ref> { }\n",
+        "interface MyOption<T> { }\n",
         "func main(a &MyOption<int>) { }\n",
     );
     let code_source = CodeSource::new(vec![
@@ -1303,7 +1303,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
     // TSUGAR: line below was: "  return MySome<int>(4).value;\n"
     let code = concat!(
         "import v.builtins.drop.*;\n",
-        "struct MySome<T Ref> where func drop(T)void { value T; }\n",
+        "struct MySome<T> where func drop(T)void { value T; }\n",
         "exported func main() int {\n",
         "  return __copy_prim(&MySome<int>(4).value);\n",
         "}\n",
@@ -1701,7 +1701,7 @@ fn tests_calling_a_templated_function_with_explicit_template_args() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = concat!(
-        "func moo<T> () where T Ref { }\n",
+        "func moo<T> () { }\n",
         "exported func main() {\n",
         "  moo<int>();\n",
         "}\n",
@@ -1795,9 +1795,9 @@ fn tests_making_a_variable_with_a_pattern() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = concat!(
         "\n",
-        "sealed interface MyOption<T> where T Ref { }\n",
+        "sealed interface MyOption<T> { }\n",
         "\n",
-        "struct MySome<T> where T Ref {}\n",
+        "struct MySome<T> {}\n",
         "impl<T> MyOption<T> for MySome<T>;\n",
         "\n",
         "func doSomething(opt MyOption<int>) int {\n",
@@ -2151,8 +2151,8 @@ fn tests_calling_a_templated_function_with_an_upcast() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = concat!(
-        "interface ISpaceship<T> where T Ref {}\n",
-        "struct Firefly<T> where T Ref {}\n",
+        "interface ISpaceship<T> {}\n",
+        "struct Firefly<T> {}\n",
         "impl<T> ISpaceship<T> for Firefly<T>;\n",
         "func launch<T>(ship &ISpaceship<T>) { }\n",
         "func main() {\n",
@@ -2198,8 +2198,8 @@ fn tests_upcast_with_generics_has_the_right_stuff() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = concat!(
-        "interface ISpaceship<T> where T Ref {}\n",
-        "struct Firefly<T> where T Ref {}\n",
+        "interface ISpaceship<T> {}\n",
+        "struct Firefly<T> {}\n",
         "impl<T> ISpaceship<T> for Firefly<T>;\n",
         "func launch<T>(ship &ISpaceship<T>) { }\n",
         "func main() {\n",
@@ -2412,7 +2412,7 @@ fn templated_imm_struct() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = concat!(
-        "struct ListNode<T Ref> share {\n",
+        "struct ListNode<T> share {\n",
         "  tail ListNode<T>;\n",
         "}\n",
         "func main(a ListNode<int>) {}\n",
@@ -2798,6 +2798,38 @@ exported struct Firefly share {
 Exported kind Firefly depends on kind Raza that wasn't exported from package test
 "#,
     );
+}
+
+// The transitive-export check at `ensure_deep_exports` guards its member walk on
+// `sharedness == Shared`, so a non-shared exported struct's members go unchecked. This
+// pins whether that silence is real, and which way it should be resolved: either a
+// non-shared struct crosses as an opaque handle and needs no member export (in which
+// case the guard is right and wants a comment saying so), or the guard is an
+// under-approximation that passes a program it should reject.
+#[test]
+fn reports_when_exported_nonshared_struct_depends_on_non_exported_member() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = r"
+exported struct Firefly {
+  raza Raza;
+}
+struct Raza { }";
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
+        ICompileErrorT::ExportedKindDependedOnNonExportedKind { .. } => {}
+        _other => panic!("expected ExportedKindDependedOnNonExportedKind"),
+    }
 }
 
 #[test]
@@ -3820,8 +3852,8 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
         "import v.builtins.panicutils.*;\n",
         "import v.builtins.drop.*;\n",
         "import panicutils.*;\n",
-        "sealed interface MyOption<T Ref> where func drop(T)void { }\n",
-        "struct MySome<T Ref> where func drop(T)void { value T; }\n",
+        "sealed interface MyOption<T> where func drop(T)void { }\n",
+        "struct MySome<T> where func drop(T)void { value T; }\n",
         "impl<T> MyOption<T> for MySome<T> where func drop(T)void;\n",
         "func moo(a MySome<int>) { }\n",
         "exported func main() { moo(__pretend<MySome<int>>()); }\n",
@@ -3902,7 +3934,7 @@ fn test_struct_default_generic_argument_in_type() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = concat!(
-        "struct MyHashSet<K Ref, H Int = 5> { }\n",
+        "struct MyHashSet<K, H Int = 5> { }\n",
         "struct MyStruct {\n",
         "  x MyHashSet<bool>();\n",
         "}\n",
@@ -4282,21 +4314,21 @@ fn downcast_function_rrbfs() {
     let code = concat!(
         "\n",
         "#!DeriveInterfaceDrop\n",
-        "sealed interface Result<OkType Ref, ErrType Ref> { }\n",
+        "sealed interface Result<OkType, ErrType> { }\n",
         "\n",
         "#!DeriveStructDrop\n",
-        "struct Ok<OkType Ref, ErrType Ref> { value OkType; }\n",
+        "struct Ok<OkType, ErrType> { value OkType; }\n",
         "\n",
         "impl<OkType, ErrType> Result<OkType, ErrType> for Ok<OkType, ErrType>;\n",
         "\n",
         "#!DeriveStructDrop\n",
-        "struct Err<OkType Ref, ErrType Ref> { value ErrType; }\n",
+        "struct Err<OkType, ErrType> { value ErrType; }\n",
         "\n",
         "impl<OkType, ErrType> Result<OkType, ErrType> for Err<OkType, ErrType>;\n",
         "\n",
         "\n",
         "extern(\"vale_as_subtype\")\n",
-        "func as<SubType Ref, SuperType Ref>(left &SuperType) Result<&SubType, &SuperType>\n",
+        "func as<SubType, SuperType>(left &SuperType) Result<&SubType, &SuperType>\n",
         "where implements(SubType, SuperType);\n",
     );
     let code_source = CodeSource::new(vec![
@@ -4748,7 +4780,7 @@ fn test_struct_default_generic_argument_in_call() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = concat!(
-        "struct MyHashSet<K Ref, H Int = 5> { }\n",
+        "struct MyHashSet<K, H Int = 5> { }\n",
         "func moo() {\n",
         "  x = MyHashSet<bool>();\n",
         "}\n",

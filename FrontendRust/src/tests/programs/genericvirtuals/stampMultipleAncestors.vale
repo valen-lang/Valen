@@ -1,13 +1,13 @@
 
-interface I<T> share where T Kind { }
+interface I<T> share { }
 
-interface J<T> share where T Kind { }
+interface J<T> share { }
 impl<T> I<T> for J<T>;
 
-interface K<T> share where T Kind { }
+interface K<T> share { }
 impl<T> J<T> for K<T>;
 
-struct L<T> share where T Kind { }
+struct L<T> share { }
 impl<T> K<T> for L<T>;
 
 exported func main() int {

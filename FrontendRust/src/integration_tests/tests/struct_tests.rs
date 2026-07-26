@@ -376,12 +376,12 @@ fn panic_function() {
 import v.builtins.panic.*;
 import v.builtins.drop.*;
 
-sealed interface XOpt<T Ref>
+sealed interface XOpt<T>
 where func drop(T)void {
   func get(virtual opt &XOpt<T>) &T;
 }
 
-struct XNone<T Ref> where func drop(T)void  { }
+struct XNone<T> where func drop(T)void  { }
 impl<T> XOpt<T> for XNone<T>;
 
 func get<T>(opt &XNone<T>) &T {

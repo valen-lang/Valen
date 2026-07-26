@@ -5,7 +5,7 @@ import v.builtins.logic.*;
 import v.builtins.drop.*;
 import printutils.*;
 
-struct MyList<T Kind> where func drop(T)void {
+struct MyList<T> where func drop(T)void {
   value T;
   next Opt<MyList<T>>;
 }
