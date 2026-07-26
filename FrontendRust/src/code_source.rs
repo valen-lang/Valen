@@ -8,8 +8,6 @@ use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate};
 use crate::utils::fx::HashMap;
-#[cfg(feature = "rust_interop")]
-use crate::typing::rust_interop::RUST_MODULE;
 
 pub type SourceFn = for<'r, 's> fn(&'r PackageCoordinate<'s>) -> Option<HashMap<String, String>>;
 
@@ -58,15 +56,6 @@ impl<'a> Source<'a> {
     Source::CodeMap(flatten_code_map(&map))
   }
 
-  /// The slice of package-coord space owned by the reserved `rust` package.
-  ///
-  /// Add this layer to a `CodeSource` when the program being compiled contains
-  /// `import rust.X.Y`; leave it out otherwise. Like every other layer it is the
-  /// caller's to declare, a project with no Rust dependencies should not carry it.
-  #[cfg(feature = "rust_interop")]
-  pub fn rust() -> Self {
-    Source::Fn(resolve_rust_package)
-  }
 }
 
 pub struct CodeSource<'a> {
@@ -92,26 +81,6 @@ impl<'a> CodeSource<'a> {
   }
 }
 
-/// Resolves any package in the reserved `rust` module to an empty file set.
-///
-/// A Rust package contributes no `.vale` files, so there is nothing to lex, but
-/// resolution still has to succeed, or `lex_and_explore` panics on the import long
-/// before typing runs. Which *items* live in the package is a separate question,
-/// answered later and lazily by the oracle rather than by reading source here.
-///
-/// An empty file set is an already-exercised shape: `flatten_code_map` produces one
-/// for any package with no files, and `integration_tests/tests/import_tests.rs`
-/// covers importing a package that has none.
-#[cfg(feature = "rust_interop")]
-fn resolve_rust_package<'r, 's>(
-  package_coord: &'r PackageCoordinate<'s>,
-) -> Option<HashMap<String, String>> {
-  if package_coord.module.0 == RUST_MODULE {
-    Some(HashMap::default())
-  } else {
-    None
-  }
-}
 
 fn flatten_code_map<'a>(
   map: &FileCoordinateMap<'a, String>,

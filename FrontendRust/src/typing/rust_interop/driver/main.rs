@@ -6,11 +6,16 @@
 // inside `Callbacks::after_expansion`**. That is the architecture doc's §20.3 shape, so this
 // binary is a miniature of the real thing rather than a detour.
 //
-// Why a binary rather than a `#[test]`: `run_compiler` effectively owns the process. It
-// installs its own panic hook and its fatal-error paths exit rather than return, so hosting
-// it inside libtest risks taking the whole suite down on one bad compile. The test spawns
-// this binary and checks its output — which is also the only canary shape that catches a
-// wrong artifact rather than merely a successful build.
+// **This binary carries no assertions.** It used to: hosting rustc was believed to require a
+// binary, because `run_compiler` installs a process-global panic hook and its fatal paths exit
+// rather than return, so a `#[test]` looked like a way to lose the whole suite. Measurement
+// (arch §26b.2) says otherwise — a fatal rustc error costs exactly one test — so the interop
+// corpus lives in `typing/test/rust_interop/` where it can also reach `collect_*` and assert on
+// the typed AST. What is left here is a compiler: it compiles, it reports, it exits.
+//
+// It stays because it is the seed of the real `valec-rs` (arch §3.2), not because anything
+// tests it. The next step for it is taking the Vale source from argv rather than holding a
+// built-in program.
 
 #![feature(rustc_private)]
 
@@ -22,14 +27,13 @@ extern crate rustc_session;
 extern crate rustc_span;
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{exit, Command};
+use std::sync::Arc;
 
 use bumpalo::Bump;
 use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::interface::Compiler;
 use rustc_middle::ty::TyCtxt;
-
-use std::sync::Arc;
 
 use frontend_rust::code_source::CodeSource;
 use frontend_rust::compile_options::GlobalOptions;
@@ -42,23 +46,20 @@ use frontend_rust::typing::oracles::Oracles;
 use frontend_rust::typing::rust_interop::{LoggingOracle, TyCtxtOracle};
 use frontend_rust::typing::typing_interner::TypingInterner;
 
+/// The Rust items this driver's built-in program is allowed to see.
+///
+/// Scoping is membership in this list — the same mechanism an `import rust.X.Y` will populate
+/// later, from a different source.
+const ALLOWED: &[&str] = &["add_two_numbers", "make_counter", "Counter", "pick", "first"];
+
 /// Runs inside rustc, with a real `TyCtxt` in hand.
 ///
-/// **Records only — never asserts.** `install_ice_hook` installs a process-global panic hook,
-/// so a panic raised in here gets caught by rustc and reported as "the compiler unexpectedly
-/// panicked, this is a bug" with an ICE dump, burying the real message above a backtrace. So
-/// the callback accumulates results into `self`, and the assertions run in `main` after
-/// `run_compiler` returns — outside rustc's panic-catching region.
-///
-/// That keeps ICE reporting meaning what it says, which matters more rather than less once we
-/// start overriding queries and genuine ICEs become possible. Scoping the hook isn't the
-/// alternative: it is global, so there is no region to scope it to.
+/// Records only. The outcome has to be pulled out here because everything the typing pass
+/// borrows — the arenas, the oracle, the log — lives in this frame and dies with it, nested
+/// inside `'tcx`.
 #[derive(Default)]
 struct ValeCallbacks {
-    /// Oracle log from the run where the Rust function is importable.
-    positive: Option<Result<Vec<String>, String>>,
-    /// Result of the same program with nothing importable — the negative control.
-    negative: Option<Result<Vec<String>, String>>,
+    outcome: Option<Result<Vec<String>, String>>,
 }
 
 impl Callbacks for ValeCallbacks {
@@ -67,78 +68,13 @@ impl Callbacks for ValeCallbacks {
         // ADT defs and module children are all queryable here, but rustc has not yet
         // typechecked bodies — which is everything a read-only typing pass needs and nothing
         // it doesn't.
-        //
-        // The log has to be pulled out here, because it lives in the oracle, which lives in
-        // this frame and dies with it — same `'tcx` nesting as the arenas.
-        self.positive = Some(compile_vale(tcx, &["add_two_numbers", "make_counter", "Counter"]));
-        self.negative = Some(compile_vale(tcx, &[]));
+        self.outcome = Some(compile_vale(tcx, ALLOWED));
         Compilation::Stop
     }
 }
 
-/// Checks what the callback recorded. Runs after `run_compiler` has returned, so a failure
-/// here is an ordinary assertion failure rather than a counterfeit rustc ICE.
-fn check(callbacks: &ValeCallbacks) {
-    let log = match callbacks.positive.as_ref().expect("the callback never ran") {
-        Ok(log) => log,
-        Err(e) => panic!("the Vale program failed to typecheck with Rust items importable: {e}"),
-    };
-
-    // "It compiled" is weak evidence on its own — this program would compile just as happily
-    // if a Vale function of that name were in scope and the oracle were never consulted. The
-    // log is what makes consultation an observed fact rather than an inference.
-    // The type was imported and declared as a Vale citizen.
-    assert!(
-        log.iter().any(|l| l.contains(r#"importable_types -> [("Counter""#)),
-        "the importer never asked for the importable types:\n{}",
-        log.join("\n")
-    );
-    // Its method was discovered from the Rust side, not declared in Vale.
-    assert!(
-        log.iter().any(|l| l.contains(r#"methods"#) && l.contains(r#"("get""#)),
-        "the importer never discovered Counter's methods:\n{}",
-        log.join("\n")
-    );
-    // Free functions are materialized into the reserved `rust` package's store up front, so
-    // they are found by ordinary ambient name lookup. Note what is NOT here: no
-    // `resolve_function` per call site. Nothing asks the oracle when a Vale call is resolved
-    // — the store either holds the name or it doesn't.
-    assert!(
-        log.iter().any(|l| l.contains(r#"importable_functions -> ["#)
-            && l.contains(r#""add_two_numbers""#)),
-        "the free function the Vale program calls was never made importable:\n{}",
-        log.join("\n")
-    );
-    assert!(
-        !log.iter().any(|l| l.contains("resolve_function(")),
-        "resolve_function was still called per call site; the package store should have \
-         retired it:\n{}",
-        log.join("\n")
-    );
-    assert!(
-        log.iter().any(|l| l.contains("fn_sig") && l.contains("ret Struct(StructTT")),
-        "no signature ever lowered a Rust struct to a Vale kind:\n{}",
-        log.join("\n")
-    );
-
-    // If this compiled too, the positive case proves nothing about where resolution came from.
-    assert!(
-        callbacks.negative.as_ref().expect("the callback never ran").is_err(),
-        "the program compiled with an empty allowlist, so resolution did not come from Rust"
-    );
-
-    println!(
-        "OK: a synthesized Vale declaration for a Rust function, compiled by the ordinary \
-         machinery, resolved a call against a real TyCtxt"
-    );
-    println!("--- oracle log ---");
-    for line in log {
-        println!("{line}");
-    }
-}
-
-/// Runs Vale's typing pass over a program that calls a Rust function, with `allowed` naming
-/// the importable Rust paths. Returns the oracle log on success.
+/// Runs Vale's typing pass over a program that uses Rust items, with `allowed` naming the
+/// importable Rust paths. Returns the oracle log on success.
 fn compile_vale(tcx: TyCtxt<'_>, allowed: &[&str]) -> Result<Vec<String>, String> {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -150,25 +86,21 @@ fn compile_vale(tcx: TyCtxt<'_>, allowed: &[&str]) -> Result<Vec<String>, String
     let typing_interner = TypingInterner::new(&typing_bump);
 
     // The arenas are created *inside* the callback on purpose: `'tcx` outlives them, so the
-    // nesting is sound and the reverse would not be. Nothing built here survives the
-    // callback, which is the containment property the design depends on.
+    // nesting is sound and the reverse would not be. Nothing built here survives the callback,
+    // which is the containment property the design depends on.
     //
-    // The program itself carries most of the assertions. If the return type were not `int`,
-    // `main() int` would not typecheck; if the params were not `[int, int]`, the call would
-    // not match; if the function did not resolve, this is `CouldntFindFunctionToCallT`.
-    // `add_two_numbers` rather than the `Counter` method, because this milestone proves the
-    // synthesized-declaration path and that path is primitives-only so far: a declaration names
-    // its types the way source does, and a Rust-backed citizen has no Vale source-level name
-    // until the qualified-name work lands. `make_counter` is therefore skipped at synthesis and
-    // is not importable; the `Counter` fixture stays in place for that next step.
+    // The program exercises the whole seam at once — a generic call, a free function, a Rust
+    // type reaching Vale by inference from a signature, a method, and a value that needs a
+    // scope-end drop. The corpus splits these apart so a failure localizes; here they are
+    // together on purpose, because this is a smoke run rather than a test.
     let code = r"
 exported func main() int {
-  return add_two_numbers(3, 4);
+  x = pick<int, bool>(add_two_numbers(3, 4), true);
+  c = make_counter();
+  return (make_counter()).get();
 }";
     let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
 
-    // Scoping is membership in this list — the same mechanism an `import rust.X.Y` will
-    // populate later, from a different source.
     let module = scout_arena.intern_str("rust");
     let package = scout_arena.intern_str("mycrate");
     let coord = scout_arena.intern_package_coordinate(module, &[package]);
@@ -180,9 +112,6 @@ exported func main() int {
     let logging = LoggingOracle::new(&real, &compiling);
 
     let mut global_options = GlobalOptions::apply();
-    // `apply()` defaults this off; the typing-pass test harness runs with it on, and this
-    // driver replaces one of those tests — so it should not be checking less than the test
-    // it stands in for.
     global_options.sanity_check = true;
     let options = TypingPassOptions {
         global_options,
@@ -190,8 +119,7 @@ exported func main() int {
         tree_shaking_enabled: true,
     };
     // The package the source lives in. An empty list here compiles nothing at all and still
-    // returns `Ok` — which is exactly the silent-success the oracle log exists to catch, and
-    // did.
+    // returns `Ok` — which is the silent-success the oracle log exists to catch, and did.
     let test_module = parse_arena.intern_str("test");
     let test_tld = parse_arena.intern_package_coordinate(test_module, &[]);
 
@@ -208,7 +136,7 @@ exported func main() int {
     );
 
     match compilation.get_compiler_outputs() {
-        Ok(_) => Ok(logging.calls().into_iter().map(|c| c.0).collect()),
+        Ok(_) => Ok(logging.calls().into_iter().map(|c| c.rendered).collect()),
         Err(e) => Err(format!("{e:?}")),
     }
 }
@@ -243,6 +171,9 @@ fn main() {
     // would be writing before we know its shape.
     build_dep_rlib(&fixture_dir, &out_dir);
 
+    // Appropriate here, unlike in the test corpus: this process is rustc's, so an ICE really
+    // is rustc breaking and should say so. It matters more rather than less once we start
+    // overriding queries and genuine ICEs become possible.
     rustc_driver::install_ice_hook("https://github.com/verdagon/Vale/issues", |_| {});
 
     let stub = fixture_dir.join("stub.rs");
@@ -259,23 +190,31 @@ fn main() {
     ];
 
     let mut callbacks = ValeCallbacks::default();
-    let exit = rustc_driver::catch_with_exit_code(|| {
+    let rustc_exit = rustc_driver::catch_with_exit_code(|| {
         rustc_driver::run_compiler(&rustc_args, &mut callbacks);
     });
-    if exit != 0 {
-        // rustc itself failed. Nothing of ours to check.
-        std::process::exit(exit);
+    if rustc_exit != 0 {
+        // rustc itself failed. Nothing of ours to report.
+        exit(rustc_exit);
     }
 
-    // Restore plain panic reporting before asserting. Moving the assertions out of the
-    // callback is necessary but not sufficient: `install_ice_hook` sets a *process-global*
-    // hook and never restores it, so a panic here would still be reported as "the compiler
-    // unexpectedly panicked, this is a bug" with an ICE dump, even though rustc has already
-    // finished. Putting the default back is what makes our failures read as ours.
-    std::panic::set_hook(Box::new(|info| eprintln!("{info}")));
-
-    // Outside rustc's panic-catching region, with our own hook: a failure here is ours.
-    check(&callbacks);
+    match callbacks.outcome {
+        None => {
+            eprintln!("valec-rs: rustc returned without ever reaching after_expansion");
+            exit(1);
+        }
+        Some(Err(e)) => {
+            eprintln!("valec-rs: the Vale program failed to typecheck: {e}");
+            exit(1);
+        }
+        Some(Ok(log)) => {
+            println!("OK: typechecked against a real TyCtxt");
+            println!("--- oracle log ---");
+            for line in log {
+                println!("{line}");
+            }
+        }
+    }
 }
 
 fn build_dep_rlib(fixture_dir: &Path, out_dir: &Path) {

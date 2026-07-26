@@ -13,21 +13,11 @@
 // See docs/convos/rust_interop/vale-rust-interop-architecture.md §8.10 and
 // docs/convos/rust_interop/rust-interop-frontend-plan.md §5.
 
+use crate::interner::StrI;
 use crate::typing::names::names::IdT;
 use crate::typing::types::types::*;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
-
-/// Which Vale kind a Rust item maps onto. A Rust `struct` is a struct-kind; a Rust
-/// `enum` is a closed-interface-kind (a closed sum type *is* a Vale closed trait);
-/// a Rust `trait` is an open interface. `union` is deferred.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum RustKind {
-    Struct,
-    Enum,
-    Trait,
-    Union,
-}
 
 /// An opaque handle to a resolved Rust item. Valid only within one invocation —
 /// never serialized, never stored in `HinputsT`. The durable identity of a Rust item
@@ -35,65 +25,81 @@ pub enum RustKind {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RustItemId(pub u32);
 
-/// A Rust function signature, lowered to Vale kinds.
+/// One position in a Rust signature: either a settled type, or a reference to one of the
+/// function's own generic parameters.
+///
+/// The second arm is what makes a generic Rust function representable at all. A signature is read
+/// **once**, structurally, and a `fn pick<A, B>(a: A, b: B) -> A` comes back as
+/// `[Generic(0), Generic(1)] -> Generic(0)` rather than as any particular instantiation. Vale's own
+/// solver does the substituting afterwards, so there is never a per-instantiation query back to
+/// rustc — which is precisely what the previous design could not express, since a resolved
+/// prototype has to pick one instantiation and a generic function has none.
+#[derive(Copy, Clone, Debug)]
+pub enum ValeSigType<'s, 't> {
+    /// A type that needs no substitution — a primitive, or an imported citizen.
+    Kind(KindT<'s, 't>),
+    /// The function's own generic parameter at this index.
+    ///
+    /// The index is into **this item's own** parameters, with any parent (impl) parameters already
+    /// subtracted, so a caller can use it directly against the declaration it is building. Getting
+    /// that subtraction wrong yields a well-formed reference to the wrong slot, which is invisible
+    /// at a glance — hence `pick<A, B>` at `<int, bool>` as the canary: a swapped index produces a
+    /// plausible wrong concrete type rather than an obvious placeholder.
+    Generic(u32),
+}
+
+/// A Rust function signature, lowered to Vale terms.
 ///
 /// Note this is expressed over `KindT`, not `CoordT`: the onion refactor dissolved
 /// `CoordT` into the reference wraps inside `KindT` itself, so a Rust `&self` /
 /// `&mut self` receiver arrives here already wrapped as a `BorrowRef`.
 #[derive(Copy, Clone, Debug)]
 pub struct ValeSig<'s, 't> {
-    pub params: &'t [KindT<'s, 't>],
-    pub ret: KindT<'s, 't>,
+    /// The item's own generic parameter names, in declaration order. Empty for a non-generic
+    /// function, which is the degenerate case rather than a separate one. `ValeSigType::Generic`
+    /// indexes into this.
+    pub generic_params: &'t [StrI<'s>],
+    pub params: &'t [ValeSigType<'s, 't>],
+    pub ret: ValeSigType<'s, 't>,
 }
 
-/// A `pub` field of a Rust struct, lowered to Vale terms.
+/// The questions the typing pass asks about Rust items.
 ///
-/// Only `pub` fields are answerable. Vale is an external consumer of a Rust type, so
-/// its private internals are opaque — but its public fields are as readable as they
-/// are to any downstream Rust crate.
-#[derive(Copy, Clone, Debug)]
-pub struct RustFieldInfo<'s, 't> {
-    pub tyype: KindT<'s, 't>,
-    pub index: usize,
-}
-
+/// **Every query here is asked once per *item*, never once per call site.** That is the whole
+/// shape of the design: the oracle is a binding generator consulted while declarations are being
+/// synthesized, not a service the resolver calls while compiling a body.
+///
+/// Five methods lived here under the previous design and are now gone, having lost their last
+/// callers when the per-call-site seam was retired: `resolve_path`, `kind`, `resolve_method`,
+/// `resolve_function`, and `field`. They are deleted rather than parked because two of them
+/// (`resolve_method`, `resolve_function`) matched Rust items by **human name string** — the
+/// @ATAFLBZ hazard (arch §26.13.5), where a short name is not identity and a wrong `DefId`
+/// eventually drives a wrong mangled symbol. Keeping a dead-but-callable name matcher is how that
+/// comes back. The removal also makes "nothing queries the oracle per call site" unrepresentable
+/// rather than merely tested.
 pub trait RustOracle<'s, 't> {
-    /// Resolve a `rust`-packaged path (e.g. `rust.std.vec.Vec`) to an item handle.
-    fn resolve_path(&self, id: &IdT<'s, 't>) -> Option<RustItemId>;
-
-    /// Which Vale kind should this Rust item be interned as?
-    fn kind(&self, item: RustItemId) -> Option<RustKind>;
-
-    /// Find a method by name on a Rust-backed receiver type.
-    fn resolve_method(&self, receiver: &IdT<'s, 't>, method_name: &str) -> Option<RustItemId>;
-
-    /// Find a free function by name among the Rust items currently in scope.
-    ///
-    /// Unlike `resolve_method` there is no receiver to key on, so "in scope" is the
-    /// oracle's to define — it is the side that knows which Rust paths were imported.
-    /// Answering `None` for an unknown name is the common case and must stay cheap:
-    /// every Vale call whose args have no Rust-backed receiver reaches this.
-    fn resolve_function(&self, function_name: &str) -> Option<RustItemId>;
-
     /// The package coordinate a Rust item lives in, for building its Vale id.
     ///
     /// Only needed for free functions; a method nests under its receiver's id instead.
     fn item_package(&self, item: RustItemId) -> Option<&'s PackageCoordinate<'s>>;
 
-    /// The signature of a Rust function, instantiated at `args` and lowered to Vale kinds.
+    /// The signature of a Rust function, read **structurally** and lowered to Vale terms.
     ///
-    /// @EarlyBinder: the implementation must instantiate with the call's concrete
-    /// args BEFORE lowering. Lowering out of the `EarlyBinder` first and reusing the
-    /// result across monomorphizations silently substitutes wrong types.
+    /// @EarlyBinder: this deliberately does *not* instantiate. It reads the signature with its
+    /// generic parameters intact and hands back `ValeSigType::Generic(i)` where one appears, so a
+    /// single reading serves every instantiation and Vale's solver does the substituting. That
+    /// inverts the previous contract, which demanded instantiation with a call's concrete args
+    /// before lowering — a rule that could only ever be honoured by minting one prototype per call
+    /// site, which is exactly what a generic function makes impossible.
+    ///
+    /// Consequently `instantiate_identity()` is the *correct* accessor here, where it was wrong
+    /// before: discarding the binder to inspect `ty::Param`s is the whole point, rather than an
+    /// oversight that silently reads placeholders as if they were types.
     fn fn_sig(
         &self,
         item: RustItemId,
-        args: &[KindT<'s, 't>],
         interner: &TypingInterner<'s, 't>,
     ) -> Option<ValeSig<'s, 't>>;
-
-    /// A `pub` field of a Rust-backed struct. `None` for a private or absent field.
-    fn field(&self, owner: &IdT<'s, 't>, field_name: &str) -> Option<RustFieldInfo<'s, 't>>;
 
     /// Every Rust type that should be declared as a Vale citizen, with its human name.
     ///

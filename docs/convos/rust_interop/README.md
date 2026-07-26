@@ -9,7 +9,7 @@ compiler, and an agent can be pointed at this directory alone.
 | doc | what it is |
 |---|---|
 | `vale-rust-interop-architecture.md` | The master design — 30 chapters, ~3,540 lines. Locked decisions with rejected alternatives recorded. §8.10 holds the ratified Option A representation; §3–§5 the two-binary split, the fork, and codegen; §19–§20 the rustc-side pipeline. |
-| `synthesized-declarations-plan.md` | **Start here for current work.** The 2026-07-25 pivot: Rust items become ordinary synthesized `FunctionS`/`StructS` declarations with `IBodyS::ExternBody`, and the prototype is minted per instantiation. Carries the naming/resolution design, the identity hazard, the extern-drop gate, and the near-term plan. |
+| `synthesized-declarations-plan.md` | **Start here.** State, plan, and handoff for the Rust-interop arc — the design in one page, what's in the tree, decisions locked, verified facts worth not rediscovering, the testing plan, known defects, and what's blocked on whom. |
 | `rust-interop-frontend-plan.md` | ⚠ Largely superseded by the above — it describes the abandoned per-call-site oracle seam. Its name-property refinement (§0) and build-config decisions still hold. |
 | `rust-interop-callout-map.md` | ⚠ Partially superseded. Every place the existing compiler asks a question about a type that a Rust-backed type can't answer — ~30 live sites plus ~20 in the currently-unlinked passes. The **inventory stands**; the per-site *fixes* assume the abandoned seam. |
 
@@ -33,6 +33,8 @@ Verbatim transcripts, oldest first. `convo-0` through `convo-3` are the architec
 | 5 | `convo-5-primitive-interop.md` | primitive interop (a parallel thread, from `experimental`) |
 | 6 | `convo-6-option-a-frontend-plan.md` | Option A ratified; §8.10 written; frontend plan authored |
 | 7 | `convo-7-callout-map-and-seam.md` | the twelve surveys, the callout map, the oracle seam landing |
+| 8 | `convo-8.md` | Milestone 2 against a real `TyCtxt`; the pivot away from the per-call-site oracle |
+| 9 | `convo-9-generics-seam-collapse-and-test-tiers.md` | generics via structural signature reading; methods/drop/free functions collapsed to one declaration path; a real `StructDefinitionT`; the two test tiers and the in-process-rustc experiment |
 
 ## A caveat on paths inside the transcripts
 

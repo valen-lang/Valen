@@ -16,11 +16,30 @@ use crate::interner::StrI;
 use crate::scout_arena::ScoutArena;
 use crate::typing::names::names::*;
 use crate::typing::rust_interop::oracle::{
-    RustFieldInfo, RustItemId, RustKind, RustOracle, ValeSig,
+    RustItemId, RustOracle, ValeSig, ValeSigType,
 };
 use crate::typing::types::types::*;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
+
+/// An item's own generic parameter names, in declaration order.
+///
+/// `own_params` rather than the full list: a method on `impl<T> Foo<T>` sees the impl's
+/// parameters at the low indices of its parent-inclusive list, and Vale's declaration names only
+/// what the item itself declares. Resolving by name later means that offset never has to be
+/// computed — and names are safe to key on because Rust forbids an item from shadowing a generic
+/// parameter name declared by its parent impl (E0403).
+fn own_generic_param_names<'s>(
+    tcx: TyCtxt<'_>,
+    scout_arena: &ScoutArena<'s>,
+    def_id: DefId,
+) -> Vec<StrI<'s>> {
+    tcx.generics_of(def_id)
+        .own_params
+        .iter()
+        .map(|p| scout_arena.intern_str(p.name.as_str()))
+        .collect()
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 enum ItemKind {
@@ -38,6 +57,16 @@ struct RustItem<'s> {
     def_id: DefId,
     package: &'s PackageCoordinate<'s>,
     kind: ItemKind,
+    /// The item's **own** generic parameter names, in declaration order.
+    ///
+    /// Interned here rather than on demand because the oracle cannot hold the scout arena: a
+    /// `&'s ScoutArena<'s>` field would force the arena to outlive `'s`, which is `'s` itself.
+    /// Construction is the one place the arena is in hand, and these names never change, so
+    /// computing them once is both simpler and the only shape that borrows.
+    ///
+    /// Names rather than a count because `lower_sig_ty` resolves a `ty::Param` against this list
+    /// by name, sidestepping the parent-inclusive index arithmetic entirely.
+    generic_params: Vec<StrI<'s>>,
 }
 
 pub struct TyCtxtOracle<'tcx, 's> {
@@ -114,6 +143,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                     def_id,
                     package: package_coord,
                     kind,
+                    generic_params: own_generic_param_names(tcx, scout_arena, def_id),
                 });
             }
         }
@@ -142,6 +172,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                         def_id: assoc.def_id,
                         package,
                         kind: ItemKind::Method(owner_idx),
+                        generic_params: own_generic_param_names(tcx, scout_arena, assoc.def_id),
                     });
                 }
             }
@@ -184,6 +215,56 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     /// The long-term answer is to grow the IR (signedness on `IntT`, a width on `FloatT`, an
     /// unsized concept); until then a panic stating which fact is missing beats a `None` that
     /// would surface as "no such function" for a function that plainly exists.
+    /// Lower one position of a signature, keeping a generic parameter *as* a parameter.
+    ///
+    /// **Keyed on the parameter's name, deliberately, not on its index.** A `ty::Param`'s `index`
+    /// is into the item's *parent-inclusive* generic list — for a method on `impl<T> Foo<T>` the
+    /// impl's parameters occupy the low indices and the item's own follow — so using it directly
+    /// against a declaration that names only the item's own parameters is an off-by-`parent_count`
+    /// waiting to happen. Names sidestep the arithmetic entirely, and they are safe to key on
+    /// because **Rust forbids an item from reusing a generic parameter name declared by its parent
+    /// impl** (E0403), so within an item plus its parents the names are unique.
+    ///
+    /// (`Generics::param_at(index, tcx)` does the subtraction properly, including for nesting
+    /// deeper than one level, and is the right tool if an index ever has to be used. It is
+    /// mentioned here so the next reader doesn't hand-roll `index - parent_count`.)
+    ///
+    /// Getting this wrong would be quiet — a well-formed reference to the wrong slot surfaces at a
+    /// call site as a plausible *concrete* type rather than anything resembling a placeholder.
+    /// Hence the `pick<A, B>` fixture instantiated at two different types: a swap yields `bool`
+    /// where `int` belongs, which a test can see.
+    ///
+    /// `None` for anything not representable, which drops the whole declaration rather than
+    /// importing it with a hole.
+    fn lower_sig_ty<'t>(
+        &self,
+        ty: Ty<'tcx>,
+        own_param_names: &[StrI<'s>],
+        def_id: DefId,
+        interner: &TypingInterner<'s, 't>,
+    ) -> Option<ValeSigType<'s, 't>>
+    where
+        's: 't,
+    {
+        match ty.kind() {
+            TyKind::Param(param) => {
+                let name = param.name.as_str();
+                match own_param_names.iter().position(|p| p.0 == name) {
+                    Some(index) => Some(ValeSigType::Generic(index as u32)),
+                    // Not among the item's own parameters, so it was inherited from a parent impl.
+                    // Vale's declaration has no slot for it until the container is declared too.
+                    None => None,
+                }
+            }
+            // A projection — `<I as Iterator>::Item` and friends. Not merely unbounded: resolving
+            // it *requires* the `I: Iterator` predicate to find the impl, and we deliberately read
+            // no predicates at all. So the type isn't unreadable-for-now, it's un-normalizable, and
+            // importing it would put an alias in the declaration that nothing can resolve.
+            TyKind::Alias(..) => None,
+            _ => Some(ValeSigType::Kind(self.lower_ty(ty, interner))),
+        }
+    }
+
     fn lower_ty<'t>(&self, ty: Ty<'tcx>, interner: &TypingInterner<'s, 't>) -> KindT<'s, 't>
     where
         's: 't,
@@ -249,43 +330,6 @@ impl<'tcx, 's, 't> RustOracle<'s, 't> for TyCtxtOracle<'tcx, 's>
 where
     's: 't,
 {
-    fn resolve_path(&self, _id: &IdT<'s, 't>) -> Option<RustItemId> {
-        None
-    }
-
-    fn kind(&self, item: RustItemId) -> Option<RustKind> {
-        match self.items.get(item.0 as usize)?.kind {
-            ItemKind::Type => Some(RustKind::Struct),
-            _ => None,
-        }
-    }
-
-    fn resolve_method(&self, receiver: &IdT<'s, 't>, method_name: &str) -> Option<RustItemId> {
-        // The receiver's human name identifies which imported type this is; a Rust method
-        // hangs off exactly one.
-        let INameT::Struct(struct_name) = receiver.local_name else { return None };
-        let IStructTemplateNameT::StructTemplate(template) = struct_name.template else {
-            return None;
-        };
-        let owner_name = template.human_name.0;
-        self.items
-            .iter()
-            .position(|i| match i.kind {
-                ItemKind::Method(owner) => {
-                    i.name == method_name && self.items[owner].name == owner_name
-                }
-                _ => false,
-            })
-            .map(|i| RustItemId(i as u32))
-    }
-
-    fn resolve_function(&self, function_name: &str) -> Option<RustItemId> {
-        self.items
-            .iter()
-            .position(|i| i.kind == ItemKind::Function && i.name == function_name)
-            .map(|i| RustItemId(i as u32))
-    }
-
     fn item_package(&self, item: RustItemId) -> Option<&'s PackageCoordinate<'s>> {
         Some(self.items.get(item.0 as usize)?.package)
     }
@@ -293,46 +337,38 @@ where
     fn fn_sig(
         &self,
         item: RustItemId,
-        args: &[KindT<'s, 't>],
         interner: &TypingInterner<'s, 't>,
     ) -> Option<ValeSig<'s, 't>> {
-        let def_id = self.items.get(item.0 as usize)?.def_id;
+        let rust_item = self.items.get(item.0 as usize)?;
+        let def_id = rust_item.def_id;
 
-        // `instantiate_identity` is a no-op unwrap: it discards the `EarlyBinder` and hands
-        // back the signature with `ty::Param` placeholders still in it. That is correct only
-        // for a function with no generics, where there is nothing to substitute — and it is
-        // silently wrong for anything else, because lowering would read placeholders and
-        // produce a plausible-looking result.
+        // @EarlyBinder: deliberately NOT instantiating. `instantiate_identity` discards the
+        // binder and leaves `ty::Param`s standing, which is exactly what structural reading
+        // wants — one reading serves every instantiation. (This same call was a defect under
+        // the previous design, where the result was lowered as though the params were types.)
         //
-        // Substituting properly needs the call's Vale `args` rebuilt as rustc `GenericArgs`
-        // (`generics_of` + `mk_args` + `re_erased`), which is the lossy-args problem the
-        // architecture doc records as Option A's sharpest weakness (§8.10, callout map §5.3).
-        // Until that is settled, refuse loudly rather than read placeholders.
-        let generics = self.tcx.generics_of(def_id);
-        if generics.count() > 0 {
-            panic!(
-                "cannot lower generic Rust function {:?}: it has {} generic parameter(s), and \
-                 instantiating at the call's args requires rebuilding rustc GenericArgs from \
-                 Vale's arg list — see arch §8.10 / callout map §5.3. Vale args at this call \
-                 site were {args:?}",
-                self.tcx.def_path(def_id),
-                generics.count()
-            );
-        }
-        // @EarlyBinder: with no generic parameters this is the identity, so lowering after it
-        // is sound. When generics land, this must instantiate at `args` BEFORE lowering —
-        // doing it in the other order silently reuses one lowering across every
-        // monomorphization.
+        // Only the outer `EarlyBinder` is opened. The inner `Binder` holds late-bound
+        // *lifetimes* and nothing else — type and const parameters are always early-bound — so
+        // there is no type information hiding behind `skip_binder`.
         let binder = self.tcx.fn_sig(def_id).instantiate_identity();
         let sig = binder.skip_binder();
-        let params: Vec<KindT<'s, 't>> =
-            sig.inputs().iter().map(|ty| self.lower_ty(*ty, interner)).collect();
-        let ret = self.lower_ty(sig.output(), interner);
-        Some(ValeSig { params: interner.alloc_slice_from_vec(params), ret })
-    }
 
-    fn field(&self, _owner: &IdT<'s, 't>, _field_name: &str) -> Option<RustFieldInfo<'s, 't>> {
-        None
+        // Interned at construction; see `RustItem::generic_params` for why the arena cannot be
+        // held here.
+        let generic_params = &rust_item.generic_params;
+
+        let params: Vec<ValeSigType<'s, 't>> = sig
+            .inputs()
+            .iter()
+            .map(|ty| self.lower_sig_ty(*ty, generic_params, def_id, interner))
+            .collect::<Option<Vec<_>>>()?;
+        let ret = self.lower_sig_ty(sig.output(), generic_params, def_id, interner)?;
+
+        Some(ValeSig {
+            generic_params: interner.alloc_slice_copy(generic_params),
+            params: interner.alloc_slice_from_vec(params),
+            ret,
+        })
     }
 
     fn importable_types(&self) -> Vec<(String, RustItemId)> {

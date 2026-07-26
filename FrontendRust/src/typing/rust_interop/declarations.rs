@@ -22,16 +22,18 @@
 
 use crate::interner::StrI;
 use crate::postparsing::ast::{
-    ExternBodyS, ExternS, FunctionS, IBodyS, IFunctionAttributeS, ParameterS,
+    ExternBodyS, ExternS, FunctionS, GenericParameterS, IBodyS, IFunctionAttributeS,
+    IGenericParameterTypeS, KindGenericParameterTypeS, ParameterS,
 };
 use crate::postparsing::itemplatatype::{FunctionTemplataType, ITemplataType, TemplateTemplataType};
 use crate::postparsing::names::{
-    ArgumentRuneS, CodeNameS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameValS,
-    IRuneValS, IVarNameS, ReturnRuneS,
+    ArgumentRuneS, CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS,
+    IImpreciseNameValS, IRuneValS, IVarNameS, ReturnRuneS,
 };
 use crate::postparsing::rules::rules::{IRulexSR, LookupSR, RuneUsage};
 use crate::typing::compiler::Compiler;
-use crate::typing::rust_interop::oracle::{RustItemId, ValeSig};
+use crate::typing::names::names::{INameT, IStructTemplateNameT};
+use crate::typing::rust_interop::oracle::{RustItemId, ValeSig, ValeSigType};
 use crate::typing::types::types::*;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
@@ -78,25 +80,56 @@ where
     let loc = CodeLocationS::internal(scout_arena, offset);
     let range = RangeS::new(loc, loc);
 
-    let mut rules: Vec<IRulexSR<'s>> = Vec::new();
-
-    // Each param and the return get a rune bound by an ordinary `LookupSR` to the Vale name of
-    // its type. A primitive resolves straight to a kind — the builtins store holds `int` as
-    // `IEnvEntryT::Templata(ITemplataT::Kind(..))` — so no `CallSR` is needed to apply a template
-    // to arguments, which is the extra rule the citizen-shaped macros have to emit.
-    let mut params: Vec<ParameterS<'s>> = Vec::new();
-    for (index, param_kind) in sig.params.iter().enumerate() {
-        let rune = scout_arena.intern_rune(IRuneValS::ArgumentRune(ArgumentRuneS {
-            arg_index: index as i32,
-        }));
+    // The item's own generic parameters, declared before anything refers to them. A generic
+    // position then references its rune *directly*, with no rule at all — which is exactly what
+    // the postparser emits for a hand-written `func foo<T>(x T) T`, because `templex_scout` uses a
+    // locally-declared rune by reference and only reaches for a rule when the name comes from
+    // somewhere else. Empty for a concrete function: the degenerate case, not a separate path.
+    let mut generic_params: Vec<&'s GenericParameterS<'s>> = Vec::new();
+    let mut generic_runes: Vec<RuneUsage<'s>> = Vec::new();
+    for name in sig.generic_params.iter() {
+        let rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: *name }));
         let usage = RuneUsage { range, rune };
-        rules.push(IRulexSR::Lookup(LookupSR {
+        generic_runes.push(usage);
+        generic_params.push(scout_arena.alloc(GenericParameterS {
             range,
             rune: usage,
-            name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-                name: vale_type_name(compiler, param_kind)?,
-            })),
+            tyype: IGenericParameterTypeS::KindGenericParameterType(KindGenericParameterTypeS {}),
+            default: None,
         }));
+    }
+
+    let mut rules: Vec<IRulexSR<'s>> = Vec::new();
+
+    // A concrete position gets a rune bound by an ordinary `LookupSR` to the Vale name of its
+    // type. A primitive resolves straight to a kind — the builtins store holds `int` as
+    // `IEnvEntryT::Templata(ITemplataT::Kind(..))` — so no `CallSR` is needed to apply a template
+    // to arguments, which is the extra rule the citizen-shaped macros have to emit.
+    let mut bind = |sig_type: &ValeSigType<'s, 't>, own_rune: RuneUsage<'s>| -> Option<RuneUsage<'s>> {
+        match sig_type {
+            ValeSigType::Generic(index) => generic_runes.get(*index as usize).copied(),
+            ValeSigType::Kind(kind) => {
+                rules.push(IRulexSR::Lookup(LookupSR {
+                    range,
+                    rune: own_rune,
+                    name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(
+                        CodeNameS { name: vale_type_name(compiler, kind)? },
+                    )),
+                }));
+                Some(own_rune)
+            }
+        }
+    };
+
+    let mut params: Vec<ParameterS<'s>> = Vec::new();
+    for (index, sig_type) in sig.params.iter().enumerate() {
+        let own_rune = RuneUsage {
+            range,
+            rune: scout_arena.intern_rune(IRuneValS::ArgumentRune(ArgumentRuneS {
+                arg_index: index as i32,
+            })),
+        };
+        let usage = bind(sig_type, own_rune)?;
         params.push(ParameterS::new(
             range,
             None,
@@ -111,22 +144,19 @@ where
         ));
     }
 
-    let ret_rune = scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {}));
-    let ret_usage = RuneUsage { range, rune: ret_rune };
-    rules.push(IRulexSR::Lookup(LookupSR {
+    let ret_own_rune = RuneUsage {
         range,
-        rune: ret_usage,
-        name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-            name: vale_type_name(compiler, &sig.ret)?,
-        })),
-    }));
+        rune: scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {})),
+    };
+    let ret_usage = bind(&sig.ret, ret_own_rune)?;
 
-    // Non-generic for now, so the template takes no arguments. When generics land, these become
-    // the Rust item's own type parameters and the rules above refer to them by rune instead of
-    // looking up a concrete type by name — which is what lets one declaration serve every
-    // instantiation.
+    // One template parameter per declared generic, typed as a kind. Empty for a concrete
+    // function, which is what makes `make_extern_function` — which reads its template arguments
+    // off the *solved* environment — work identically for both.
     let tyype = TemplateTemplataType {
-        param_types: scout_arena.alloc_slice_from_vec::<ITemplataType<'s>>(Vec::new()),
+        param_types: scout_arena.alloc_slice_from_vec::<ITemplataType<'s>>(
+            generic_params.iter().map(|p| p.tyype.tyype()).collect(),
+        ),
         return_type: scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
     };
 
@@ -142,7 +172,7 @@ where
         scout_arena.alloc_slice_from_vec(vec![IFunctionAttributeS::Extern(ExternS {
             package_coord,
         })]),
-        scout_arena.alloc_slice_from_vec(Vec::new()),
+        scout_arena.alloc_slice_from_vec(generic_params),
         tyype,
         scout_arena.alloc_slice_from_vec(params),
         Some(ret_usage),
@@ -155,19 +185,14 @@ where
 ///
 /// A declaration's rules name their types the way source does, so a lowered `KindT` has to be
 /// mapped back to the name that resolves to it. Primitives are in the builtins store under their
-/// keyword, so they resolve directly.
+/// keyword; a Rust-backed citizen is in the reserved `rust` package's top-level store under its own
+/// human name (see `rust_package_stores`). Both resolve by ordinary ambient lookup, which is what
+/// lets a Rust type appear in a signature at all.
 ///
-/// `None` means "not nameable yet", and it is deliberately narrow. A **Rust-backed citizen** is the
-/// live case: `import_rust_types` registers it in a per-type outer env keyed by template id, not in
-/// any ambient namespace, so there is no name a `LookupSR` could resolve to it — and inventing a
-/// bare `CodeName("Counter")` would resolve against Vale's global namespace, which concatenates
-/// every package and hard-panics on two hits with no precedence rule. That is the qualified-name
-/// work, and it is deferred; see the plan doc §5.
-///
-/// The caller drops the whole declaration when this returns `None`, so an unnameable signature
-/// means the function is not importable rather than silently importable with a wrong type. The
-/// visible cost is that a call to it reports "couldn't find function to call" for a function that
-/// does exist — misleading, but strictly better than resolving to a neighbouring type.
+/// `None` means "not nameable", and it stays deliberately narrow — an associated-type projection,
+/// an un-imported ADT, a type Vale's IR cannot express. The caller drops the whole declaration,
+/// so an unnameable signature makes the function un-importable rather than importable with a wrong
+/// type.
 fn vale_type_name<'s, 't>(
     compiler: &Compiler<'s, '_, 't>,
     kind: &KindT<'s, 't>,
@@ -179,6 +204,17 @@ where
         KindT::Int(i) if i.bits == 32 => Some(compiler.keywords.int),
         KindT::Bool(_) => Some(compiler.keywords.bool),
         KindT::Void(_) => Some(compiler.keywords.void),
+        // A Rust citizen, named by the same human name its store entry is keyed under. The id
+        // carries the reserved `rust` package coordinate, so this cannot collide with a Vale type
+        // of the same name *within* the store — but it can collide across global namespaces at
+        // lookup time, which is the deferred precedence question (plan doc §5).
+        KindT::Struct(struct_tt) => match struct_tt.id.local_name {
+            INameT::Struct(name) => match name.template {
+                IStructTemplateNameT::StructTemplate(t) => Some(t.human_name),
+                _ => None,
+            },
+            _ => None,
+        },
         _ => None,
     }
 }
