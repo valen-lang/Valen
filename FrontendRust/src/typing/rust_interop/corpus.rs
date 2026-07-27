@@ -239,6 +239,214 @@ exported func main() int {
     expect: Expect::Returns(6),
 };
 
+/// An unsigned integer declines for the same reason an alias does, and by the same exit.
+///
+/// This one is about **signedness**, which `IntT` does not carry — so importing it would hand back
+/// a plausible `i32` rather than failing, which is the silent-wrong-answer shape this whole arc
+/// keeps meeting (§0.2). Until 2026-07-27 it *panicked* instead, which is a different failure with
+/// the same cause; the exits are unified now.
+pub const DECLINES_AN_UNSIGNED_INTEGER: Case = Case {
+    fixture: "fixtures",
+    name: "declined-unsigned",
+    vale: r#"
+exported func main() int {
+  return add_two_numbers(3, 4);
+}
+"#,
+    allowed: &["add_two_numbers", "unsigned_count"],
+    expect: Expect::Returns(7),
+};
+
+/// A float declines because `FloatT` is a unit struct with no width, so `f32` and `f64` would
+/// intern identically.
+///
+/// The fixture takes *and* returns `f32` so the decline is reachable from either the parameter loop
+/// or the return lowering — whichever runs first, the declaration is dropped and the case cannot
+/// pass for the wrong reason.
+pub const DECLINES_A_FLOAT: Case = Case {
+    fixture: "fixtures",
+    name: "declined-float",
+    vale: r#"
+exported func main() int {
+  return add_two_numbers(4, 4);
+}
+"#,
+    allowed: &["add_two_numbers", "half_of"],
+    expect: Expect::Returns(8),
+};
+
+/// @RTMEIZ, from the side that is easy to miss: a type reached **only** through another item's
+/// signature is not thereby imported.
+///
+/// `takes_hidden` is allowed and `Hidden` is not, so the parameter lowers to an ADT that is not in
+/// the item table. Declining keeps the allowlist meaning *"what Vale may use"* rather than quietly
+/// becoming *"what Vale may reach"* — the latter would make the scoping cases (27–30) assert
+/// something weaker than they claim.
+pub const DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE: Case = Case {
+    fixture: "fixtures",
+    name: "declined-unimported-type",
+    vale: r#"
+exported func main() int {
+  return add_two_numbers(4, 5);
+}
+"#,
+    allowed: &["add_two_numbers", "takes_hidden"],
+    expect: Expect::Returns(9),
+};
+
+/// An item in a **nested module**, named by a dotted path.
+///
+/// This is the shape `Vec` needs: `std::vec::Vec` lives under `std::vec`, not under the `std` root,
+/// so a walk that only reads a crate root's direct children cannot reach it — the item is not
+/// merely unimported, it is invisible. Every other case in this corpus sits at a crate root, which
+/// is the degenerate path (one segment, nothing to descend), so all of them pass under a root-only
+/// walk and none of them would ever catch this.
+///
+/// The separator is `.`, matching what Vale source will write — `import rust.std.vec.Vec`.
+pub const IMPORTS_AN_ITEM_FROM_A_NESTED_MODULE: Case = Case {
+    fixture: "fixtures",
+    name: "nested-module",
+    vale: r#"
+exported func main() int {
+  return depth_reading();
+}
+"#,
+    allowed: &["instruments.depth_reading"],
+    expect: Expect::Returns(31),
+};
+
+/// A **type** in a nested module, reached by path, with its method.
+///
+/// A different `DefKind` from the function case and therefore a different arm — a walk could
+/// plausibly descend correctly for one and not the other. The method is expected to come for free:
+/// discovery runs off the owner's `inherent_impls`, which knows nothing about how the owner was
+/// reached.
+pub const IMPORTS_A_TYPE_FROM_A_NESTED_MODULE: Case = Case {
+    fixture: "fixtures",
+    name: "nested-module-type",
+    vale: r#"
+exported func main() int {
+  return (make_sonar()).depth_of();
+}
+"#,
+    allowed: &["instruments.Sonar", "instruments.make_sonar"],
+    // `Sonar { depth: 33 }`.
+    expect: Expect::Returns(33),
+};
+
+/// An item reached through a **re-exported name**, which is how `std::vec::Vec` actually works.
+///
+/// `std::vec` is `pub use alloc_crate::vec`, so a user's path and the definition's path differ.
+/// `module_children` reports a re-export with its `Res` naming the definition, so a segment walk
+/// that takes the `DefId` off the `Res` follows the re-export without knowing it did.
+pub const IMPORTS_THROUGH_A_RE_EXPORTED_ITEM: Case = Case {
+    fixture: "fixtures",
+    name: "re-export-item",
+    vale: r#"
+exported func main() int {
+  return depth_reading();
+}
+"#,
+    allowed: &["readouts.depth_reading"],
+    expect: Expect::Returns(31),
+};
+
+/// The other re-export shape: descending **through** a re-exported module rather than landing on a
+/// re-exported item. A walk could plausibly handle the destination and not the intermediate hop.
+pub const IMPORTS_THROUGH_A_RE_EXPORTED_MODULE: Case = Case {
+    fixture: "fixtures",
+    name: "re-export-module",
+    vale: r#"
+exported func main() int {
+  return (make_sonar()).depth_of();
+}
+"#,
+    allowed: &["gear.instruments.Sonar", "gear.instruments.make_sonar"],
+    // `Sonar { depth: 33 }`.
+    expect: Expect::Returns(33),
+};
+
+/// **Everything at once** — the composition case.
+///
+/// Every other case is deliberately narrow, so that a failure localizes to one capability. That is
+/// the right shape for diagnosis and the wrong shape for answering *"can Vale actually use a Rust
+/// crate?"*, because a corpus of narrow cases proves each mechanism in isolation and nothing about
+/// them coexisting. Interference between them is a real failure class — a shared name resolving to
+/// the wrong item, an import order dependency, a drop that only works when it is the only drop —
+/// and none of the others can see it.
+///
+/// What this composes, in one program and one import list: free functions, a zero-arg function, a
+/// Rust type inferred from a signature and bound to a local, scope-end drops on three distinct Rust
+/// types, methods, a same-named method on a second type resolving by receiver, a method carrying its
+/// own type parameter, an associated function with no receiver, a citizen flowing through two calls,
+/// a generic function at concrete types and at a Rust type, a generic Rust type at two different
+/// arguments, an item and a type reached through a **nested module path**, one reached through a
+/// **re-export**, and three items whose signatures Vale **declines** sitting in the allowlist
+/// without disturbing anything.
+///
+/// Deliberately absent: a second crate (a case names one fixture, and case 24 covers it) and
+/// arithmetic (the harness supplies no builtins — a Vale-side harness gap, not an interop one).
+pub const A_PROGRAM_USING_EVERYTHING_AT_ONCE: Case = Case {
+    fixture: "fixtures",
+    name: "everything",
+    vale: r#"
+exported func main() int {
+  held_counter = make_counter();
+  held_gauge = make_gauge();
+  held_sonar = make_sonar();
+
+  from_zero_arg = seven();
+  from_free_fn = add_two_numbers(20, 22);
+  from_generic_fn = pick<int, bool>(add_two_numbers(10, 5), true);
+  from_generic_at_citizen = id<Counter>(make_counter());
+
+  from_second_type = (make_gauge()).get();
+  from_second_method = (make_counter()).doubled();
+  from_generic_method = (make_counter()).or_else<int>(19);
+  from_chained_calls = value_of_counter(bump(new()));
+
+  from_int_holder = holder_ignore<int>(make_holder());
+  from_bool_holder = bool_holder_flag(make_bool_holder());
+
+  from_nested_type = (make_sonar()).depth_of();
+
+  return depth_reading();
+}
+"#,
+    allowed: &[
+        // Free functions and a zero-arg one.
+        "add_two_numbers",
+        "seven",
+        // A type, its methods, and free functions over it.
+        "Counter",
+        "make_counter",
+        "value_of_counter",
+        "bump",
+        // A second type whose `get` collides with the first's by name.
+        "Gauge",
+        "make_gauge",
+        // Generic functions.
+        "pick",
+        "id",
+        // A generic type at two instantiations.
+        "Holder",
+        "make_holder",
+        "make_bool_holder",
+        "holder_ignore",
+        "bool_holder_flag",
+        // Nested module: an item and a type by path, plus one reached through a re-export.
+        "instruments.depth_reading",
+        "instruments.Sonar",
+        "readouts.make_sonar",
+        // Three declined signatures, present but unusable. Nothing else here may notice.
+        "first",
+        "unsigned_count",
+        "half_of",
+    ],
+    // `instruments::depth_reading` returns 31.
+    expect: Expect::Returns(31),
+};
+
 // ---------------------------------------------------------------------------
 // B. Item kinds
 // ---------------------------------------------------------------------------
@@ -291,6 +499,92 @@ exported func main() int {
     allowed: &["make_counter", "Counter"],
     // `Counter { value: 7 }`, doubled.
     expect: Expect::Returns(14),
+};
+
+/// Two types' methods coexist, and each resolves to its own receiver.
+///
+/// `Counter::get` and `Gauge::get` share a name on purpose. There is no per-type method table under
+/// this design — every method is a top-level function whose first parameter is the receiver — so
+/// what could actually break is the importer pairing a method with the wrong type. It would show up
+/// here as a resolution failure rather than a wrong answer, since no `Gauge` would satisfy a
+/// `Counter` receiver.
+pub const CALLS_METHODS_ON_TWO_DIFFERENT_RUST_TYPES: Case = Case {
+    fixture: "fixtures",
+    name: "two-types-methods",
+    vale: r#"
+exported func main() int {
+  x = (make_counter()).get();
+  return (make_gauge()).get();
+}
+"#,
+    allowed: &["make_counter", "Counter", "make_gauge", "Gauge"],
+    // `Gauge { reading: 20 }`.
+    expect: Expect::Returns(20),
+};
+
+/// A value returned and immediately discarded still gets dropped.
+///
+/// A different path from the bound-local case: there is no local to hang the scope-end drop on, so
+/// the drop attaches to a temporary. If only the bound path worked, this leaks silently — the
+/// program still compiles and still returns the right number, which is why it needs its own case
+/// rather than being assumed to follow from case 20.
+pub const A_RUST_VALUE_RETURNED_AND_DISCARDED_GETS_DROPPED: Case = Case {
+    fixture: "fixtures",
+    name: "discarded-temporary",
+    vale: r#"
+exported func main() int {
+  make_counter();
+  return 4;
+}
+"#,
+    allowed: &["make_counter", "Counter"],
+    expect: Expect::Returns(4),
+};
+
+/// Two Rust types imported in one compilation — the importer is a loop, not a single-item path.
+///
+/// Deliberately free-function-only, so it does not also depend on method discovery; case 19 covers
+/// the method half. One type alone would pass under an importer that handled exactly one.
+pub const IMPORTS_TWO_RUST_TYPES_AT_ONCE: Case = Case {
+    fixture: "fixtures",
+    name: "two-types",
+    vale: r#"
+exported func main() int {
+  x = value_of_counter(make_counter());
+  return gauge_reading(make_gauge());
+}
+"#,
+    allowed: &[
+        "Counter",
+        "make_counter",
+        "value_of_counter",
+        "Gauge",
+        "make_gauge",
+        "gauge_reading",
+    ],
+    // `Gauge { reading: 20 }`, plus 2.
+    expect: Expect::Returns(22),
+};
+
+/// A Rust citizen produced by one call and consumed by another, with a third in between.
+///
+/// Citizen identity has to survive crossing a call boundary twice. A lowering that minted a fresh
+/// kind per signature would still typecheck each call in isolation and fail only here, where the
+/// *same* type has to be recognised as the one that came out of the previous call.
+///
+/// Shares its return value with other cases, which is unusual for this corpus — the value is
+/// whatever `bump` yields from `make_counter`, and the flow is the subject rather than the number.
+pub const A_RUST_TYPE_FLOWS_THROUGH_TWO_CALLS: Case = Case {
+    fixture: "fixtures",
+    name: "flows-through-calls",
+    vale: r#"
+exported func main() int {
+  return value_of_counter(bump(make_counter()));
+}
+"#,
+    allowed: &["Counter", "make_counter", "bump", "value_of_counter"],
+    // `Counter { value: 7 }`, bumped once.
+    expect: Expect::Returns(8),
 };
 
 /// A method carrying its **own** type parameter, on top of the container's.

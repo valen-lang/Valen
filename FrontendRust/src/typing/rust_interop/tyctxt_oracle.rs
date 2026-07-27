@@ -16,7 +16,7 @@ use crate::interner::StrI;
 use crate::scout_arena::ScoutArena;
 use crate::typing::names::names::*;
 use crate::typing::rust_interop::oracle::{
-    RustItemId, RustOracle, ValeSig, ValeSigType,
+    DeclineReason, RustItemId, RustOracle, ValeSig, ValeSigType,
 };
 use crate::typing::rust_interop::reserved::RUST_MODULE;
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
@@ -123,8 +123,83 @@ pub struct TyCtxtOracle<'tcx, 's> {
     items: Vec<RustItem<'s>>,
 }
 
+/// Resolve one dotted allowlist entry against every loaded crate, returning **every** match.
+///
+/// **Plural by construction, not by accident.** Rust has no uniqueness rule for names at any depth,
+/// so one path can resolve in more than one crate at once — clippy's equivalent returns a `Vec` for
+/// exactly this reason, since `memchr::memchr` names two major versions of that crate
+/// simultaneously. An `Option` would silently take whichever crate happened to be walked first.
+/// Both sibling implementations shipped the `Option` shape and both found it wanting, which is two
+/// independent confirmations that the plural form is what to build first rather than retrofit.
+///
+/// **A single-segment entry is the degenerate case, not a separate path** (@NNGZ): it descends
+/// through zero modules and matches against the crate root, which is where every fixture item
+/// outside `instruments` sits. There is no "is this a path?" branch anywhere below.
+///
+/// **Intermediate segments must be modules.** Matching them on name alone would let a struct named
+/// `vec` swallow the `vec` in `std::vec::Vec` — the same `DefKind` filter the final segment needs,
+/// applied one level up.
+///
+/// This is O(imports × crates) rather than O(crate graph), and it is still eager: every allowed item
+/// is resolved and declared at construction whether or not the program mentions it. `Vec` brings
+/// ~100 inherent methods, so the eagerness becomes the next thing to attack (§6) — but it is
+/// orthogonal to reachability, which is what this fixes.
+fn resolve_allowlist_path<'tcx>(tcx: TyCtxt<'tcx>, path: &str) -> Vec<(DefId, ItemKind)> {
+    let segments: Vec<&str> = path.split('.').collect();
+    // `split` always yields at least one element, so a last segment always exists.
+    let Some((item_name, module_segments)) = segments.split_last() else {
+        return Vec::new();
+    };
+
+    let mut found = Vec::new();
+    for &cnum in tcx.crates(()).iter() {
+        let mut module = cnum.as_def_id();
+        let mut descended = true;
+        for segment in module_segments {
+            let next = tcx
+                .module_children(module)
+                .iter()
+                // ataflbz-allow: selection, not identity. This matches an allowlist *path segment*
+                // against a module's children to decide what may be imported; the item's identity
+                // still comes from its `DefId` and the `package_coord` derived from `tcx.def_path`.
+                .find(|c| c.ident.to_string() == **segment) // ataflbz-allow: selection
+                .and_then(|c| match c.res {
+                    Res::Def(DefKind::Mod, def_id) => Some(def_id),
+                    _ => None,
+                });
+            let Some(next) = next else {
+                descended = false;
+                break;
+            };
+            module = next;
+        }
+        if !descended {
+            continue;
+        }
+
+        for child in tcx.module_children(module) {
+            // ataflbz-allow: selection, not identity — the allowlist's final segment deciding
+            // which children are admitted. Identity comes from the `DefId` captured below.
+            if child.ident.to_string() != *item_name { // ataflbz-allow: selection
+                continue;
+            }
+            // Filter on DefKind, not just name: a crate's module children include its own
+            // `extern crate std`, so an unfiltered name match would hand back a module
+            // where a function or type was asked for.
+            let kind = match child.res {
+                Res::Def(DefKind::Fn, _) => ItemKind::Function,
+                Res::Def(DefKind::Struct, _) => ItemKind::Type,
+                _ => continue,
+            };
+            let Res::Def(_, def_id) = child.res else { continue };
+            found.push((def_id, kind));
+        }
+    }
+    found
+}
+
 impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
-    /// Resolve `allowed` — the declared-importable names — against the loaded crate graph.
+    /// Resolve `allowed` — the declared-importable paths — against the loaded crate graph.
     ///
     /// Scoping is membership in this list, not a check at the call site. The list is what an
     /// `import rust.X.Y` will eventually populate; supplying it explicitly is the same
@@ -159,24 +234,15 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     pub fn new(tcx: TyCtxt<'tcx>, scout_arena: &ScoutArena<'s>, allowed: &[&str]) -> Self {
         let mut items: Vec<RustItem<'s>> = Vec::new();
 
-        for &cnum in tcx.crates(()).iter() {
-            for child in tcx.module_children(cnum.as_def_id()) {
-                let name = child.ident.to_string();
-                if !allowed.contains(&name.as_str()) {
-                    continue;
-                }
-                // Filter on DefKind, not just name: a crate's module children include its own
-                // `extern crate std`, so an unfiltered name match would hand back a module
-                // where a function or type was asked for.
-                let kind = match child.res {
-                    Res::Def(DefKind::Fn, _) => ItemKind::Function,
-                    Res::Def(DefKind::Struct, _) => ItemKind::Type,
-                    _ => continue,
-                };
-                let Res::Def(_, def_id) = child.res else { continue };
+        for path in allowed {
+            // The short name is the final segment. Qualified naming — registering under the whole
+            // path so two same-named imports stay apart — is §10's Problem A and touches core, so
+            // it is deliberately not done here.
+            let short_name = path.rsplit('.').next().unwrap_or(path);
+            for (def_id, kind) in resolve_allowlist_path(tcx, path) {
                 items.push(RustItem {
-                    human_name: scout_arena.intern_str(&name),
-                    name,
+                    human_name: scout_arena.intern_str(short_name),
+                    name: short_name.to_string(),
                     def_id,
                     package: package_coord_for(tcx, scout_arena, def_id),
                     kind,
@@ -234,7 +300,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
         idx: usize,
         args: rustc_middle::ty::GenericArgsRef<'tcx>,
         interner: &TypingInterner<'s, 't>,
-    ) -> KindT<'s, 't>
+    ) -> Result<KindT<'s, 't>, DeclineReason>
     where
         's: 't,
     {
@@ -247,9 +313,11 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
         let template_args: Vec<ITemplataT<'s, 't>> = args
             .types()
             .map(|arg| {
-                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: self.lower_ty(arg, interner) }))
+                Ok(ITemplataT::Kind(
+                    interner.alloc(KindTemplataT { kind: self.lower_ty(arg, interner)? }),
+                ))
             })
-            .collect();
+            .collect::<Result<Vec<_>, DeclineReason>>()?;
         let struct_name = interner.intern_struct_name(StructNameValT {
             template: IStructTemplateNameT::StructTemplate(template_name),
             template_args: interner.alloc_slice_from_vec(template_args),
@@ -259,7 +327,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
             init_steps: &[],
             local_name: INameT::Struct(struct_name),
         });
-        KindT::Struct(interner.intern_struct_tt(StructTTValT { id: *id }))
+        Ok(KindT::Struct(interner.intern_struct_tt(StructTTValT { id: *id })))
     }
 
     /// Lowers one rustc type to a Vale kind.
@@ -287,15 +355,16 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     /// Hence the `pick<A, B>` fixture instantiated at two different types: a swap yields `bool`
     /// where `int` belongs, which a test can see.
     ///
-    /// `None` for anything not representable, which drops the whole declaration rather than
-    /// importing it with a hole.
+    /// `Err` for anything not representable, which drops the whole declaration rather than
+    /// importing it with a hole — and carries *why*, so the eventual lookup failure can say
+    /// something better than "couldn't find it".
     fn lower_sig_ty<'t>(
         &self,
         ty: Ty<'tcx>,
         own_param_names: &[StrI<'s>],
         def_id: DefId,
         interner: &TypingInterner<'s, 't>,
-    ) -> Option<ValeSigType<'s, 't>>
+    ) -> Result<ValeSigType<'s, 't>, DeclineReason>
     where
         's: 't,
     {
@@ -303,17 +372,17 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
             TyKind::Param(param) => {
                 let name = param.name.as_str();
                 match own_param_names.iter().position(|p| p.0 == name) {
-                    Some(index) => Some(ValeSigType::Generic(index as u32)),
+                    Some(index) => Ok(ValeSigType::Generic(index as u32)),
                     // Not among the item's own parameters, so it was inherited from a parent impl.
                     // Vale's declaration has no slot for it until the container is declared too.
-                    None => None,
+                    None => Err(DeclineReason::InheritedParameter),
                 }
             }
             // A projection — `<I as Iterator>::Item` and friends. Not merely unbounded: resolving
             // it *requires* the `I: Iterator` predicate to find the impl, and we deliberately read
             // no predicates at all. So the type isn't unreadable-for-now, it's un-normalizable, and
             // importing it would put an alias in the declaration that nothing can resolve.
-            TyKind::Alias(..) => None,
+            TyKind::Alias(..) => Err(DeclineReason::UnnormalizableAlias),
             // An imported citizen, kept **unapplied** with its arguments as signature positions of
             // their own. Lowering it to a settled `KindT` here is what used to lose a generic
             // argument (`Holder<i32>` and `Holder<bool>` interning alike) and then, once the args
@@ -325,46 +394,49 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                 let idx = self
                     .items
                     .iter()
-                    .position(|i| i.kind == ItemKind::Type && i.def_id == did)?;
+                    .position(|i| i.kind == ItemKind::Type && i.def_id == did)
+                    .ok_or(DeclineReason::UnimportedType)?;
                 let args: Vec<ValeSigType<'s, 't>> = adt_args
                     .types()
                     .map(|arg| self.lower_sig_ty(arg, own_param_names, def_id, interner))
-                    .collect::<Option<Vec<_>>>()?;
-                Some(ValeSigType::Citizen {
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(ValeSigType::Citizen {
                     name: self.items[idx].human_name,
                     args: interner.alloc_slice_from_vec(args),
                 })
             }
-            _ => Some(ValeSigType::Kind(self.lower_ty(ty, interner))),
+            _ => Ok(ValeSigType::Kind(self.lower_ty(ty, interner)?)),
         }
     }
 
-    fn lower_ty<'t>(&self, ty: Ty<'tcx>, interner: &TypingInterner<'s, 't>) -> KindT<'s, 't>
+    /// `Err` rather than a panic, since 2026-07-27.
+    ///
+    /// These were panics on the reasoning that returning nothing produced a *lie* — "couldn't find
+    /// function `foo`" for a function that plainly exists — and a crash beat a lie. Both halves of
+    /// that were right; the conclusion was not, because these fire during **enumeration** rather
+    /// than at a use site, so one `u64` anywhere in a crate's export surface made the whole crate
+    /// unimportable. Carrying the reason out is what dissolves the choice: the declaration is
+    /// dropped like any other un-representable one, and the reason is available to whatever
+    /// eventually fails to find it.
+    fn lower_ty<'t>(
+        &self,
+        ty: Ty<'tcx>,
+        interner: &TypingInterner<'s, 't>,
+    ) -> Result<KindT<'s, 't>, DeclineReason>
     where
         's: 't,
     {
         match ty.kind() {
-            TyKind::Bool => KindT::Bool(BoolT),
-            TyKind::Tuple(tys) if tys.is_empty() => KindT::Void(VoidT),
+            TyKind::Bool => Ok(KindT::Bool(BoolT)),
+            TyKind::Tuple(tys) if tys.is_empty() => Ok(KindT::Void(VoidT)),
             TyKind::Int(int_ty) => match int_ty {
-                rustc_middle::ty::IntTy::I32 => KindT::Int(IntT::I32),
-                rustc_middle::ty::IntTy::I64 => KindT::Int(IntT::I64),
-                other => panic!(
-                    "cannot lower Rust {other:?}: Vale's IntT carries only `bits`, so only \
-                     i32 and i64 have a representation today"
-                ),
+                rustc_middle::ty::IntTy::I32 => Ok(KindT::Int(IntT::I32)),
+                rustc_middle::ty::IntTy::I64 => Ok(KindT::Int(IntT::I64)),
+                _ => Err(DeclineReason::IntWidth),
             },
-            TyKind::Uint(uint_ty) => panic!(
-                "cannot lower Rust {uint_ty:?}: IntT has no signedness, so an unsigned type \
-                 would silently become its signed counterpart"
-            ),
-            TyKind::Float(float_ty) => panic!(
-                "cannot lower Rust {float_ty:?}: FloatT is a unit struct with no width field"
-            ),
-            TyKind::Str | TyKind::Slice(_) | TyKind::Dynamic(..) => panic!(
-                "cannot lower Rust {ty:?}: Vale has no unsized concept, so str/[T]/dyn Trait \
-                 cannot be value types"
-            ),
+            TyKind::Uint(_) => Err(DeclineReason::UnsignedInteger),
+            TyKind::Float(_) => Err(DeclineReason::Float),
+            TyKind::Str | TyKind::Slice(_) | TyKind::Dynamic(..) => Err(DeclineReason::Unsized),
             TyKind::Adt(adt_def, adt_args) => {
                 let did = adt_def.did();
                 match self
@@ -373,12 +445,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                     .position(|i| i.kind == ItemKind::Type && i.def_id == did)
                 {
                     Some(idx) => self.type_kind(idx, adt_args, interner),
-                    None => panic!(
-                        "cannot lower Rust type {:?}: it was not imported. Every Rust item \
-                         Vale uses must be explicitly imported (@RTMEIZ), including ones \
-                         reached only through another item's signature",
-                        self.tcx.def_path(did)
-                    ),
+                    None => Err(DeclineReason::UnimportedType),
                 }
             }
             TyKind::Ref(_, inner, _) => {
@@ -390,12 +457,12 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                 // one hardcode this too. Rust lifetimes erase to `re_erased` at the boundary
                 // (@ELASZ), so nothing is lost yet — it becomes lossy when group borrowing
                 // and real lifetime reconciliation land (callout map §5.3).
-                KindT::BorrowRef(interner.alloc(BorrowRefT {
-                    inner: self.lower_ty(*inner, interner),
+                Ok(KindT::BorrowRef(interner.alloc(BorrowRefT {
+                    inner: self.lower_ty(*inner, interner)?,
                     region: RegionT::Default,
-                }))
+                })))
             }
-            other => panic!("cannot lower Rust type {other:?}: no Vale representation yet"),
+            _ => Err(DeclineReason::Unrepresentable),
         }
     }
 }
@@ -431,12 +498,19 @@ where
         // held here.
         let generic_params = &rust_item.generic_params;
 
+        // VCOORD: the `DeclineReason` is dropped here, and this is exactly where the side table
+        // attaches. Enumeration is the only place that knows *which item* declined and *why* at the
+        // same moment, so a table populated here is what lets the eventual lookup failure say
+        // "found `first`, but its return type names an associated type" instead of "couldn't find
+        // `first`". Until it exists the reason is computed and thrown away — deliberately, because
+        // unifying the exits is worth landing on its own and the table's consumer may sit in core.
         let params: Vec<ValeSigType<'s, 't>> = sig
             .inputs()
             .iter()
             .map(|ty| self.lower_sig_ty(*ty, generic_params, def_id, interner))
-            .collect::<Option<Vec<_>>>()?;
-        let ret = self.lower_sig_ty(sig.output(), generic_params, def_id, interner)?;
+            .collect::<Result<Vec<_>, _>>()
+            .ok()?;
+        let ret = self.lower_sig_ty(sig.output(), generic_params, def_id, interner).ok()?;
 
         Some(ValeSig {
             generic_params: interner.alloc_slice_copy(generic_params),

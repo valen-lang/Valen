@@ -110,12 +110,23 @@ Concretely:
 - Discovery channel branching on "is generic" ages badly.
 - Symbol mangler with empty-suffix special case ages badly. Write the general path; let N=0 fall out as one iteration with empty args.
 
-Forced exceptions (each `arch-fence-allow:`-annotated):
+Forced exceptions (each `nngz-allow:`-annotated):
 1. Rust syntax constraints — `impl<>` / `Foo<>` / `Self<>` are parse errors; stub_gen emission skips `<>` for N=0.
-2. External rustc behavior with no override — when a query's contract differs for N=0 vs N≥1 in a way Vale can't influence; document and fence.
+2. External rustc behavior with no override — when a query's contract differs for N=0 vs N≥1 in a way Vale can't influence; document it at the site.
 3. Approach A invariants — `debug_assert!(!instance.args.has_param())` is "substituted vs unsubstituted," not "N=0 vs N>0." Keep.
 
-CI fence: AST-walking architecture-fence test (`vale-frontend/tests/architecture_fence.rs`) parses Vale's frontend source and inspects the syntax tree for `type_params.is_empty()` patterns; unannotated occurrences fail the test. Not grep-based — a proper AST walker via rust-analyzer's syn or a similar parser. **Land in Phase 0**, not later — retrofitting this discipline produces dozens of fence-allow markers that all need re-evaluation.
+> **►► REVISED 2026-07-27: the planned source-scanning lint is NOT being built. ◄◄** This section
+> used to prescribe an AST-walking test over the whole frontend, to land in Phase 0. Measured against
+> §1.5.6 rule 4's ordering, it does not earn its place: when @NNGZ was violated in the interop arc,
+> **twelve corpus cases failed immediately** with a legible message. The violation fails *loudly*, so
+> ordinary tests already guard it, and a lint would add a permanent dodgeable artifact for a slightly
+> earlier signal. The Phase 0 item is withdrawn (§28.1).
+>
+> **What to do instead, where the property is worth defending at a specific site: make the two-step
+> emission atomic.** The interop violation was possible because emitting a citizen's `LookupSR` and
+> its `CallSR` are two separate acts at one call site, so an early-out could skip the second. One
+> function that emits both, with no way to emit half, removes the opportunity rather than watching
+> for it. That is rule 4 applied here, and it is the shape to reach for if this bites again.
 
 ### 1.5.6 Interop must not add tech debt to the main compiler
 
@@ -155,6 +166,34 @@ Five rules follow, and each has been applied against a real alternative:
    a regression test: `Oracles::none()` replacing a `StubOracle` that answered nothing; a
    higher-ranked extractor whose result type *cannot* mention the arena lifetimes; deleting the
    per-call-site oracle queries so "nothing asks per call site" stops being a property to check.
+
+   **This outranks every other way of upholding a property, and it is worth stating as an order
+   rather than a preference** *(sharpened 2026-07-27)*. In descending strength:
+
+   | | mechanism | why it beats the next one |
+   |---|---|---|
+   | 1 | **the type system, visibility, API shape** | the violation cannot be written. A sealed constructor, an obligation token, a private field, a signature that cannot name the wrong thing — see `docs/skills/type-enforced-apis.md`. @CMWAR (§26.17) is the worked example: cache-write is gated behind a token only `after_rust_analysis` can construct, so a misplaced call fails **rustc's** typecheck |
+   | 2 | **a loud runtime failure** | the violation can be written but cannot survive a test run. `panic!` over a silent wrong answer, an exhaustive match over a catch-all |
+   | 3 | **an ordinary test** | the violation survives writing and running, but not the suite |
+   | 4 | **a lint over our own source** | last resort — see below |
+
+   **A lint is the weakest of the four and should be reached for only when the first three are
+   unavailable.** It is dodgeable by construction (`args.len() == 0` slips past a matcher keyed on
+   `is_empty`, and the allow-marker is an escape hatch anyone can write), and its failure mode is the
+   bad one: when the code moves out from under it, it stops matching and goes **quiet**, so everyone
+   keeps believing the property holds. *A weak check that looks load-bearing is worse than no check.*
+
+   **The discriminator for whether a property needs anything beyond a test is loud-versus-silent.**
+   If violating it fails loudly, the suite already covers it and a lint is redundant machinery. If
+   violating it fails *silently* — a plausible wrong answer, a no-op — then something is needed, and
+   the order above says try to make it unrepresentable first. @ATAFLBZ is the honest instance: two
+   crates' same-named types interning to one Vale kind was silent, and what actually fixed it was
+   **deleting the two functions that turned a name string into identity**, not the lint added
+   afterwards. Once no such function exists there is nothing left to catch.
+
+   Note the framing this replaces, because it is seductive and it is a false choice: *"the rule is
+   what you believe; the lint is what actually stops you."* That offers two options and the third
+   beats both.
 
 5. **Concentrate the `#[cfg]`s in one purpose-built file rather than threading them.** Gating an
    oracle field, its constructor parameter and its initializer through `Compiler` and
@@ -274,6 +313,46 @@ unrepresentable answer. Minting prototypes at environment-build time was that sa
 miniature. Sky's independent framing is *pre-pass versus interleaving*, with the one-sentence root:
 **don't commit to an answer before the context that determines it exists.**
 
+### 1.5.9 Arguments are data on the node, not something applied away
+
+The companion to §1.5.8, and its mirror image. §1.5.8 is about *resolving* too early; this is about
+*applying* too early — and the failure is worse, because it is silent.
+
+**When a construct takes arguments, keep the arguments on it. Do not fold them in during
+construction to produce something simpler.** The simpler thing cannot represent the general case,
+and unlike §1.5.8's failure it usually does not error — it yields a plausible wrong answer.
+
+The instance that cost this arc a day: a lowered Rust signature position could say *a settled type*
+or *generic parameter i*, and `Holder<T>` is neither. Lowering it eagerly to a settled kind failed
+two ways at once. It **dropped the argument** — `Holder<i32>` and `Holder<bool>` interning to one
+argument-less `Holder`, so Vale gave the same answer for two different Rust types — and it **could
+not express a parameter at all**, since a `ty::Param` has no settled form. The fix was to make the
+position recursive: a citizen *applied to arguments that are themselves positions*, so `Holder<int>`,
+`Holder<Holder<int>>` and `Holder<T>` became one case at three depths.
+
+**This has now been discovered independently three times, at three layers**, which is why it is
+worth stating as a principle rather than a fix:
+
+| layer | where the arguments must live |
+|---|---|
+| the **type reference** | Sky's foreign types carry `type_args` on the reference, so two instantiations are structurally different data and no interning step can discard them |
+| the **signature position** | `ValeSigType::Citizen { name, args }` (§8.10) |
+| the **call node** | §15.7's synthesized drop is specified to write `type_args` onto the call, read off the binding — the synthesizer holds the local's resolved type and never has to infer |
+
+Sky's one-line form, arrived at from the drop side: *arguments must be data on the node, not
+something applied away during construction.*
+
+**The tell** is the thought *"I have the information right here, I may as well resolve it."* You may
+not: the information you have is one instantiation, and the thing you are building has to serve all
+of them. Note the kinship with §1.5.8 — both are impatience about *when*, and both produce something
+structurally incapable rather than merely inconvenient.
+
+**Corollary for solvers.** A dispatch that accepts the over-applied form and quietly does nothing is
+the hazard's accomplice. Vale's `solve_call_rule` has an `ITemplataT::Kind` arm that binds a result
+and **ignores the arguments entirely** — so registering a finished kind where a template belongs
+fails with no error at all. Where such an arm exists, make it loud or unreachable as part of the same
+change, or a fix is one mis-registration away from restoring the bug.
+
 ### 1.6 Nightly rustc forever (valec-rs only)
 
 valec-rs pins a nightly rustc. There is no path to stable rustc for the valec-rs binary. Two unavoidable dependencies:
@@ -291,7 +370,7 @@ User-side: valec-rs is installed via a custom rustup channel; `vale-toolchain.to
 - **Vale does not implement Rust-style "cancellation by drop."** Dropping an executing Vale future panics + aborts. Linear types may not be dropped at all. tokio APIs depending on drop-as-cancel are incompatible with default linear futures; users opt into cancellable futures via `into_cancellable(future, cleanup_handler)` for tokio compat.
 - **Vale does not silently convert Rust types into Vale-shaped views.** Every Rust type Vale source uses must be explicitly imported (Sky `@RTMEIZ`).
 - **Vale does not expose its private surface to rustc.** Only items the user explicitly marks `exported(rust)` (or `exported(c, rust)`) get a DefId in rustc's universe. Vale-private items — the default, and the overwhelming majority of any program — are **invisible and unknown to rustc** at every level: no DefId, unnameable from Rust source, absent from the stub rlib. A common misreading holds that interop requires publishing Vale's whole universe to rustc so its mono collector can reach everything; it does not, and designing for that would be a serious error. Vale codegens non-exported items through its own walk, and transitive Rust deps reached *through* private Vale code surface via the nearest exported ancestor's synthetic MIR body. Vale's surface to rustc is proportional to the chosen export surface, not to Vale's total type universe. §9.4, §9.5.
-- ~~**Vale does not infer generic type arguments at call sites.** Every call to a generic spells out type arguments (or uses a Vale source-level placeholder).~~ **STRUCK 2026-07-27 by the architect — this was never a Vale rule.** It is a near-verbatim transcription of Sky's `rust-interop-architecture.md:201`, made during the bulk fill that drafted this document from theirs. Sky's version ends *"Sky inherits this discipline from toylang's experience with inference-related complexity"* — a cost argument about **their** predecessor prototype — and the transcription **dropped that sentence**, which was the only one carrying any argument. Evidence it was never ratified here: the bullet carries **no Q-ref** while every neighbour in this list cites its provenance; it is **absent from convo-9's explicit inventory** of inherited §1.7 items; **no Vale design conversation discusses generic-argument inference at all**; and **Valen is silent** on it, leaning the other way in comparable rulings (return-group inference took "Rust-style default when unambiguous, explicit otherwise", with always-explicit explicitly rejected). Sky's own rationale is itself unsourced — nothing in their 20k-line design log supports it. **Vale infers generic type arguments from argument types at call sites**; `integration_tests/tests/infer_template_tests.rs` asserts exactly that, though it does not currently run (`integration_tests` is commented out of `lib.rs:37` with the onion arc), and `get_drop_function` depends on argument-driven resolution today. Do not reintroduce this rule, and do not cite it: it blocked a real fix for a day.
+- ~~**Vale does not infer generic type arguments at call sites.** Every call to a generic spells out type arguments (or uses a Vale source-level placeholder).~~ **STRUCK 2026-07-27 by the architect — this was never a Vale rule.** It is a near-verbatim transcription of Sky's `rust-interop-architecture.md:201`, made during the bulk fill that drafted this document from theirs. Sky's version ends *"Sky inherits this discipline from toylang's experience with inference-related complexity"* — a cost argument about **their** predecessor prototype — and the transcription **dropped that sentence**, which was the only one carrying any argument. Evidence it was never ratified here: the bullet carries **no Q-ref** while every neighbour in this list cites its provenance; it is **absent from convo-9's explicit inventory** of inherited §1.7 items; **no Vale design conversation discusses generic-argument inference at all**; and **Valen is silent** on it, leaning the other way in comparable rulings (return-group inference took "Rust-style default when unambiguous, explicit otherwise", with always-explicit explicitly rejected). Sky's own rationale is itself unsourced — nothing in their 20k-line design log supports it. **Vale infers generic type arguments from argument types at call sites**; `integration_tests/tests/infer_template_tests.rs` asserts exactly that, though it does not currently run (`integration_tests` is commented out of `lib.rs:37` with the onion arc), and `get_drop_function` depends on argument-driven resolution today. **Corroborated 2026-07-27 from a second direction:** Vale2 ratified a six-phase call-site pipeline whose **phase 0 exists to do exactly this** — *"emit sends for runes nothing else determines"* — so argument-driven inference is not merely permitted, it is a designed phase of the call site with a named owner. Do not reintroduce this rule, and do not cite it: it blocked a real fix for a day.
 - **Vale does not have Send/Sync as runtime-checkable properties.** Vale's typechecker statically tracks send-ability + sharedness; the runtime carries no marker information. Send/Sync at the rustc boundary are **honest** — no global `unsafe impl Send` lie. This diverges from Sky §12.1; see §12.4.
 - **Vale does not allow incoherent trait implementations.** Vale inherits Rust's orphan rule. Sealed Vale interfaces close at the declaration scope (file or project; TBD); only the declaring scope can add impls. Open interfaces follow the orphan rule.
 - **Vale does not have separate type universes for runtime and compile-time.** Comptime is Zig-style; one type universe.
@@ -388,8 +467,8 @@ Both binaries share `frontend_rust` and the C++ Backend codebases. The split bet
 > **►► CORRECTION: `frontend_rust_rustc` is not a crate yet, and deliberately so. ◄◄** §8.10's
 > **single-crate-cfg decision** (ratified 2026-07-24) supersedes this section and §28 Phase 3's
 > "crate scaffolding" bullet: the rustc-linking code is a `#[cfg(feature = "rust_interop")]`
-> submodule of `frontend_rust`, not a separate library. The fence protecting "the core IR never
-> names a rustc type" is a green feature-off build plus confinement to that submodule, rather than a
+> submodule of `frontend_rust`, not a separate library. What protects "the core IR never names a
+> rustc type" is a green feature-off build plus confinement to that submodule, rather than a
 > physical crate wall.
 >
 > **The split is deferred, not rejected, and its trigger is recorded so it isn't re-litigated from
@@ -402,8 +481,10 @@ Both binaries share `frontend_rust` and the C++ Backend codebases. The split bet
 > interface a crate boundary needs — so the split requires no new abstraction, only moving files.
 > Why it was declined for now: the interop tests need `compiler_test_compilation_with_rust_oracle`
 > and the `collect_*` macros, which live in `frontend_rust`'s own test tree and are invisible across
-> a crate boundary. Four benefits are real but not yet due — incremental-build isolation, the fence
-> becoming a compile error, confining `feature(rustc_private)` (today it sits on the whole crate
+> a crate boundary. Four benefits are real but not yet due — incremental-build isolation, **the
+> containment becoming a compile error rather than a green-build convention** (which is §1.5.6 rule
+> 4 exactly: the crate wall makes the violation unrepresentable where the cfg only makes it
+> detectable), confining `feature(rustc_private)` (today it sits on the whole crate
 > root, so in interop mode every rustc name is in scope everywhere), and localizing nightly-bump
 > drift so a bump breaks the plugin while the frontend stays green.
 
@@ -656,9 +737,9 @@ pub fn is_consumer_codegen_target<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId) -> boo
 | A: real Rust bodies | marker const, ValeOpaqueType wrapper, Vale struct decls, `pub use` re-exports, `extern "C"` decls, Phase-6 `__vale_*_unwrap` helpers | No | survives filter | rustc's normal codegen |
 | B: `unreachable!()` placeholders | exported Vale fns + `__vale_main`, accessor methods on Vale types, trait-impl methods on Vale types (incl. `<ValeType as Drop>::drop`) | **Yes** | removed | Vale's `fill_extra_modules` under rustc-mangled name |
 
-**1:1 invariant:** every tagged item ↔ exactly one Vale emission per concrete Instance the cascade reaches. CI fence asserts this both ways (`emit_consumer_body_tags_only_category_b_items`).
+**1:1 invariant:** every tagged item ↔ exactly one Vale emission per concrete Instance the cascade reaches. A CI test asserts this both ways (`emit_consumer_body_tags_only_category_b_items`).
 
-**Same predicate used by partition filter AND per_instance_mir override** — they must agree on what counts as consumer-owned. CI fence keeps them in lockstep.
+**Same predicate used by partition filter AND per_instance_mir override** — they must agree on what counts as consumer-owned. Best kept in lockstep by having one predicate rather than two (§1.5.6 rule 4); a CI test is the fallback if they ever diverge.
 
 ### 5.4 LlvmCodegenBackend delegation for Rust items
 
@@ -830,6 +911,32 @@ Five idioms supporting Path-1 (matching Rust's orphan rule exactly):
 3. Top-level binary's stub rlib counts as local
 4. Vale's typechecker emits orphan-rule error in Vale terms (don't surface rustc errors)
 5. `#[fundamental]` analog for Vale's `&T in g`-style references
+
+> **►► VOCABULARY TRAP: "interface" in this chapter is NOT Valen's `interface`. ◄◄**
+> *(recorded 2026-07-27; surfaced by Vale2, whose handoff flags it as live on their
+> `tests_exporting_interface` front.)*
+>
+> This document uses **"interface"** in the Vale-era sense, meaning what Valen now splits into
+> **`trait` / `open trait`** — the **struct tier**, which erases to a real Rust `dyn` (`&dyn T`,
+> `Box<dyn T>`). Everything in this section about enum + sealed-trait emission is about **that**
+> tier and is correct for it.
+>
+> **Valen's `interface` is a different thing and gets no Rust projection at all.** It is the
+> **class tier**, RC-erased, spelled bare (`I`, `&I`, `weak I`) and never `dyn I`. Rust cannot
+> instantiate or inspect one; at the boundary it holds an **opaque handle** and calls through it,
+> and design-2 states that is *"the intended answer, not an unfilled gap"* rather than something
+> awaiting design. So there is no enum, no sealed trait, and no `dyn` for a class-tier interface.
+>
+> **Why this matters beyond tidiness.** design-1 cites this document as the FFI authority, so the
+> collision propagates outward from here. And it changes what an export *means*: an API author
+> exporting an erased registry to Rust must spell it the open-trait way
+> (`Vec<Box<dyn EventHandler>>`), **not** the interface way (`List<EventHandler>`) — the second has
+> no Rust type to project. A test asserting a real `dyn` for a class-tier interface is asserting the
+> wrong thing.
+>
+> The prose below is left in its original vocabulary rather than swept, because "interface" appears
+> throughout the chapter and a partial rename reads worse than a stated convention. **Read
+> "interface" here as Valen's `trait` / `open trait` unless the text says class tier.**
 
 **Sealed interfaces exported(rust): emitted as enum + sealed trait.**
 
@@ -1012,12 +1119,12 @@ Trade-off: whitespace/comment edits in upstream cascade invalidations. Toylang h
 
 ### 7.6 Determinism
 
-CI fence: byte-identical cache output across two clean builds in isolated target dirs. Required for:
+CI check: byte-identical cache output across two clean builds in isolated target dirs. Required for:
 - Cargo's per-crate fingerprinting to work correctly
 - Reproducible builds (Q28 / §27)
 - Transitive Merkle correctness (downstream's UpstreamCacheDigests axis depends on upstream cache files being deterministic)
 
-Implementation: `fence_cache_determinism.rs` builds a corpus of small Vale projects twice into per-run target dirs, byte-compares the resulting `.vale-cache` files. Mismatch blocks toolchain release.
+Implementation: `cache_determinism.rs` builds a corpus of small Vale projects twice into per-run target dirs, byte-compares the resulting `.vale-cache` files. Mismatch blocks toolchain release.
 
 Determinism requires:
 - Vale's typing pass produces deterministic HinputsT (no HashMap iteration order in serialized content; sorted iteration where collections are involved)
@@ -1211,8 +1318,41 @@ No sidecar shipment, no cross-process state, no `on_sky_lib_loaded`-style cross-
 >    *type*-lookup path. Vale2's overload/dispatch redesign narrows it further, scoping candidates to
 >    the namespaces of a call's **argument types** rather than an ambient global namespace — under
 >    which a Rust function is not even a candidate at a call with no Rust-typed argument. That
->    redesign is unstarted and **not ratified upstream**; build toward it, and note that today's
+>    redesign is unstarted **as code**; build toward it, and note that today's
 >    reserved-`rust`-package store is *ambient*, which is the thing it replaces.
+>
+>    **Updated 2026-07-27: much of it is now ratified, and one clause constrains how we synthesize.**
+>    The candidate filter is **final and purely static** — decided before any value-solving, from
+>    arity, the parameter's **wrap chain**, and its **value-type template name**. A synthesized
+>    declaration must therefore present all three readably, which the `LookupSR` + `CallSR` pair
+>    already does; a citizen position emitted without its `CallSR` would carry no readable template
+>    name and be invisible to the filter. Overlapping overloads are outlawed under the same coherence
+>    rule as overlapping impls. **What stays open is the clause the narrowing depends on** — whether
+>    `&Ship` counts as *mentioning* `Ship` for namespace membership — which upstream has promoted to
+>    load-bearing, since with the tiebreaker deleted nothing covers for a wrong answer. Treat the
+>    scoping benefit as contingent, not banked.
+>
+> **Three more from 2026-07-27, all in the naming half:**
+>
+> 7. **An imported Rust type is a synthesized `StructS`, registered as `IEnvEntryT::Struct`** — not
+>    a hand-built definition registered as a finished `ITemplataT::Kind`. Item 1 above still holds
+>    (the definition has zero members and an `Extern` attribute) but the definition is now *produced
+>    by* `precompile_struct`/`compile_struct` from the declaration, the way a parsed struct's is.
+>    This is what makes generic types work: only the `StructDefinition` templata that a `Struct`
+>    entry converts to can have type arguments applied to it. The two derive macros are suppressed
+>    with the language's own `DontCallMacro` attribute — the constructor because a field constructor
+>    over zero members claims a layout Vale does not have, the drop because its generated body
+>    destructures *members* and would be an empty destructor that never reaches rustc.
+> 8. **A signature position may be a citizen applied to arguments** (`ValeSigType::Citizen`), and
+>    the name's `template_args` carry them. §1.5.9 is the principle; the practical consequence here
+>    is that `Vec<i64>` is `[Kind(i64)]` on the Vale name **and unapplied in the signature**, so a
+>    generic parameter is representable where a settled kind was not.
+> 9. **`DefId`/`CrateNum` are session-local.** Item 5's `tcx.def_path` is right for identity *within
+>    a compilation*, and what gets stored past a session boundary — a `.vale-cache`, a symbol name,
+>    a comparison against another rustc run — must be the path or a hash of it, never the id. Sky hit
+>    this and answered it with content-addressed identity, which is what §10.8's typeids already do
+>    for Vale types. The architecture already agrees (the name serializes as a path and re-resolves
+>    at universe load); this is a caveat on the implementation, not a change of direction.
 >
 > **Two spellings below are stale.** The compiler-side gate is `#[cfg(feature = "rust_interop")]`,
 > a cargo feature, not the bare `#[cfg(rust_interop)]` this section writes — see the trap in §3.3,
@@ -1222,7 +1362,7 @@ No sidecar shipment, no cross-process state, no `on_sky_lib_loaded`-style cross-
 
 How does the typing pass name a Rust type inside Vale's own IR — e.g. `import rust.std.vec.Vec`, then `my_vec = Vec<i64>()`, then `my_vec.push(x)`? This section locks the representation.
 
-**Decision — Option A (stable-identity name), ratified 2026-07-24.** A Rust item is a **new first-class Vale name carrying Vale-owned stable identity only** — never a rustc type inline. Chosen over Option B (store `(DefId, GenericArgsRef<'tcx>)` directly on the name, cfg-gated, with the interner's arena bound to `'tcx`) after a design pass plus three independent adversarial reviews. The deciding factors: (1) Option A keeps rustc types out of the frontend's **core IR** (`names`/`types`/`interner`) entirely, where Option B would embed `Ty`/`DefId` under `#[cfg]` in the three most central files — preserving the §3.2 fence (which, under the single-crate-cfg decision, is enforced by confining rustc code to a `#[cfg(rust_interop)]` oracle submodule plus a green `cfg`-off build, not a physical crate wall; see the oracle-seam note below); (2) Option B is **strictly more representation, not less** — it still needs Option A's entire `RustAbsolutePath` + `DefId↔ValeItemId` bridge + typeid-recipe serialization layer (rustc pointers can never hit disk, §7.6), *plus* the inline form, *plus* a lower/re-inflate round-trip at every cache boundary; and (3) Option B's one genuine advantage (rustc facts inline on the receiver, no resolution hop) is recoverable *inside* Option A via a per-invocation pointer-keyed memo (below), while its costs — deleting the fence, spreading an asymmetric `#[cfg]` surface and nightly-rustc-API drift across the three most central frontend files, and forfeiting a single testable universe — are structural and unrecoverable. All three reviews returned Option A (confidence ~0.80–0.85).
+**Decision — Option A (stable-identity name), ratified 2026-07-24.** A Rust item is a **new first-class Vale name carrying Vale-owned stable identity only** — never a rustc type inline. Chosen over Option B (store `(DefId, GenericArgsRef<'tcx>)` directly on the name, cfg-gated, with the interner's arena bound to `'tcx`) after a design pass plus three independent adversarial reviews. The deciding factors: (1) Option A keeps rustc types out of the frontend's **core IR** (`names`/`types`/`interner`) entirely, where Option B would embed `Ty`/`DefId` under `#[cfg]` in the three most central files — preserving §3.2's containment (which, under the single-crate-cfg decision, is enforced by confining rustc code to a `#[cfg(rust_interop)]` oracle submodule plus a green `cfg`-off build, not a physical crate wall; see the oracle-seam note below); (2) Option B is **strictly more representation, not less** — it still needs Option A's entire `RustAbsolutePath` + `DefId↔ValeItemId` bridge + typeid-recipe serialization layer (rustc pointers can never hit disk, §7.6), *plus* the inline form, *plus* a lower/re-inflate round-trip at every cache boundary; and (3) Option B's one genuine advantage (rustc facts inline on the receiver, no resolution hop) is recoverable *inside* Option A via a per-invocation pointer-keyed memo (below), while its costs — dissolving that containment, spreading an asymmetric `#[cfg]` surface and nightly-rustc-API drift across the three most central frontend files, and forfeiting a single testable universe — are structural and unrecoverable. All three reviews returned Option A (confidence ~0.80–0.85).
 
 **The representation (name-property design).** A Rust item **reuses the existing kinds** — there is *no* new `KindT` arm and *no* new name type. "Rust-backed" is a property of the name's reserved **`rust` `package_coord`** (`PackageCoordinate{ module:"rust", packages:["std","vec"] }`; §28.1 already reserves `rust`), and the *kind* is chosen by the Rust item's kind at import time:
 
@@ -1239,7 +1379,7 @@ How does the typing pass name a Rust type inside Vale's own IR — e.g. `import 
 
 **Why a candidate source and not a fallback** *(learned in implementation, 2026-07-25)*. Two reasons, both structural. First, a `find_function`-failure fallback is **unreachable** for a Rust receiver: resolution panics earlier, in `get_param_environments` → `get_outer_env_for_type`, because a Rust-backed citizen has no Vale environment. Second, a fallback would make a Rust callee invisible whenever any Vale function of the same name matched loosely — an overload-semantics decision made by accident. Entering as a candidate also means the synthesized prototype flows through `attempt_candidate_banner`'s existing `PrototypeTemplata` arm, which already does `IFunctionNameT::try_from(..).parameters()` + `params_match` — i.e. the machinery a Rust callee needs was already there for function bounds.
 
-**The oracle seam.** All rustc *facts* (kind, `fn_sig`, layout, variance, auto-traits) come lazily through a **`RustOracle`** with Vale-owned inputs/outputs — **no `'tcx` in any signature** — keyed by the stable path; never stored in `HinputsT`. Per §8.2's corrected model the seam is **bidirectional**: Vale→rustc queries return owned facts, and where Vale must feed rustc (`Instance::expect_resolve`, `GenericArgs::for_item`) it constructs interned `Ty<'tcx>` behind the seam and never lets it escape. The pass reaches the oracle as a `#[cfg(rust_interop)]` field on **`Compiler`** — the immutable-context struct, alongside `&'ctx ScoutArena` / `&'ctx TypingInterner` / `&'ctx Keywords` / `&'ctx TypingPassOptions` — supplied as a cfg'd constructor param threaded from `TypingPassCompilation::new`. Deliberately *not* on `CompilerOutputs`: that is the output accumulator drained into `HinputsT`, and an oracle is an input. `Compiler` is a stack local created inside the pass entry and dropped when it returns, so the containment property holds; `HinputsT` never holds it (verified structurally — `HinputsT` is built field-by-field from `coutputs` getters, so nothing can leak in by accident). Tests reach it through `typing_pass_compilation_for_test`, which supplies `Oracles::none()` — **not** a stub implementation, per §26b.3 — so no test about Vale semantics mentions the build mode. Per the **single-crate-cfg decision**, the real `TyCtxt`-backed impl lives behind a `#[cfg(rust_interop)]` submodule of the frontend, **not** a separate `frontend_rust_rustc` crate — so the fence protecting "the core IR never names a rustc type" is a green `cfg(rust_interop)`-off build + confining rustc code to that submodule, rather than a physical crate wall. Either way, Option A does not *shrink* the `'tcx`-touching glue (`per_instance_mir`, `layout_of`, cascade discovery are still separate `'tcx` sites); it *fences* it, keeping the typing-pass core IR `'tcx`-free with no new types at all.
+**The oracle seam.** All rustc *facts* (kind, `fn_sig`, layout, variance, auto-traits) come lazily through a **`RustOracle`** with Vale-owned inputs/outputs — **no `'tcx` in any signature** — keyed by the stable path; never stored in `HinputsT`. Per §8.2's corrected model the seam is **bidirectional**: Vale→rustc queries return owned facts, and where Vale must feed rustc (`Instance::expect_resolve`, `GenericArgs::for_item`) it constructs interned `Ty<'tcx>` behind the seam and never lets it escape. The pass reaches the oracle as a `#[cfg(rust_interop)]` field on **`Compiler`** — the immutable-context struct, alongside `&'ctx ScoutArena` / `&'ctx TypingInterner` / `&'ctx Keywords` / `&'ctx TypingPassOptions` — supplied as a cfg'd constructor param threaded from `TypingPassCompilation::new`. Deliberately *not* on `CompilerOutputs`: that is the output accumulator drained into `HinputsT`, and an oracle is an input. `Compiler` is a stack local created inside the pass entry and dropped when it returns, so the containment property holds; `HinputsT` never holds it (verified structurally — `HinputsT` is built field-by-field from `coutputs` getters, so nothing can leak in by accident). Tests reach it through `typing_pass_compilation_for_test`, which supplies `Oracles::none()` — **not** a stub implementation, per §26b.3 — so no test about Vale semantics mentions the build mode. Per the **single-crate-cfg decision**, the real `TyCtxt`-backed impl lives behind a `#[cfg(rust_interop)]` submodule of the frontend, **not** a separate `frontend_rust_rustc` crate — so what protects "the core IR never names a rustc type" is a green `cfg(rust_interop)`-off build + confining rustc code to that submodule, rather than a physical crate wall. Either way, Option A does not *shrink* the `'tcx`-touching glue (`per_instance_mir`, `layout_of`, cascade discovery are still separate `'tcx` sites); it *contains* it, keeping the typing-pass core IR `'tcx`-free with no new types at all.
 
 **Typechecking flow.** `import rust.std.vec.Vec` → `oracle.resolve_path` (walks `module_children`, honoring re-exports so `std::vec::Vec` and `alloc::vec::Vec` canonicalize to one identity, avoiding the §6.3 name-match fragility) + `oracle.kind` (→ `Struct`) → intern a `rust`-packaged `StructTemplateNameT`/`StructNameT`. `Vec<i64>()` interns the `StructNameT` and builds `KindT::Struct(StructTT)`; the kind then flows through the solver by pointer identity like any Vale citizen. `my_vec.push(x)` resolves via the call seam (the candidate source in `get_candidate_banners`): `is_rust_backed(param_filters[0])` → `oracle.resolve_method(rust.std.vec.Vec, "push")` → `oracle.fn_sig(item, args, interner) -> ValeSig`; behind the seam this reads `tcx.fn_sig` (an `EarlyBinder<PolyFnSig>`), **instantiates with the concrete args `[i64]` FIRST, then lowers to Vale-owned form** (the @EarlyBinder discipline — lowering pre-instantiation would poison the §19.5 typed-body cache with a wrong substitution), and records a `RustCall` node (§8.3) → `ReifyFnPointer` cast at mono (§19.4), dispatching via the trait def's method DefId (@TVIMDGAZ §26.13). The `ValeSig` is over `KindT`, not `CoordT` — the onion refactor dissolved `CoordT` into the reference wraps inside `KindT`, so a Rust `&self` receiver arrives already wrapped as a `BorrowRef`.
 
@@ -2590,7 +2730,7 @@ vale-stub-gen's generated workspace bytewise deterministic given identical input
 - No random IDs
 - No host-system-dependent paths
 
-CI fence: build twice with cache wipes, byte-compare `.vale-build/` contents. Enables cargo's incremental compile correctness and reproducible builds.
+CI check: build twice with cache wipes, byte-compare `.vale-build/` contents. Enables cargo's incremental compile correctness and reproducible builds.
 
 ### 18.5.1 Cargo's role: build graph, parallelism
 
@@ -2929,7 +3069,7 @@ Why: writing from codegen-time callbacks would re-enter consumer state during ru
 
 ### 22.4.1 Queries Vale touches and their cache policy
 
-Audit per Sky §22.4.1: every Vale-overridden rustc query is cache-safe by construction. CI fence at `vale-rustc-glue/tests/cache_audit.rs` requires every override file to carry a `cache-audit:` marker comment describing its disk-cache safety story. New overrides MUST add a marker; test catches drift.
+Audit per Sky §22.4.1: every Vale-overridden rustc query is cache-safe by construction. A source lint at `vale-rustc-glue/tests/cache_audit.rs` requires every override file to carry a `cache-audit:` marker comment describing its disk-cache safety story. New overrides MUST add a marker; the test catches drift. Note this is a §1.5.6-rule-4 last resort: the property is "a human thought about disk-caching," which has no type to express it and no runtime failure to observe.
 
 Queries Vale overrides:
 - `per_instance_mir` — `cache_on_disk_if(false)`; per-compile re-derive.
@@ -3113,11 +3253,11 @@ See @MAMFC invariant (§26.21).
 
 **B23. Type resolver IntLit widening.** Inherits Sky B23. Vale's type resolver widens unsuffixed integer literals to expected type when expected_ty calls for it. Regression fixture required.
 
-**B24. Drop-glue shape stability post-mir_shims-elimination.** ~5-10% over 5 years. Impact: silent UB in destructor chains. Sky's empirical correction: with mir_shims retired, rustc's `build_drop_shim` is in Vale's load-bearing dependency surface. If rustc reshapes drop glue (iteration order, skip semantics), Vale's destructor sequencing silently breaks. Detection fence: sentinel fixtures exercising LIFO iteration over containers + nested-drop chains.
+**B24. Drop-glue shape stability post-mir_shims-elimination.** ~5-10% over 5 years. Impact: silent UB in destructor chains. Sky's empirical correction: with mir_shims retired, rustc's `build_drop_shim` is in Vale's load-bearing dependency surface. If rustc reshapes drop glue (iteration order, skip semantics), Vale's destructor sequencing silently breaks. Detection: sentinel fixtures exercising LIFO iteration over containers + nested-drop chains.
 
-**B25. Default symbol mangling stability.** ~20-30% over 5 years (rustc has changed default manglers before — v0 introduced 2020). Impact: link errors (clean failure mode). With `symbol_name` override retired, Vale depends on rustc's default mangler producing matching symbol names at emission AND reference sites. If rustc changes default mangler, intra-build emission/reference still matches but cross-toolchain-version artifacts diverge. Detection fence: `vale-rustc-glue/tests/mangler_version_fence.rs` asserts emission paths use `tcx.symbol_name(...)`. Reaction: re-introduce override as delegating shim using previous-default mangler.
+**B25. Default symbol mangling stability.** ~20-30% over 5 years (rustc has changed default manglers before — v0 introduced 2020). Impact: link errors (clean failure mode). With `symbol_name` override retired, Vale depends on rustc's default mangler producing matching symbol names at emission AND reference sites. If rustc changes default mangler, intra-build emission/reference still matches but cross-toolchain-version artifacts diverge. Detection: a source lint (`vale-rustc-glue/tests/mangler_version.rs`) asserting emission paths use `tcx.symbol_name(...)`. Weakest mechanism per §1.5.6 rule 4, and used here only because the failure is a link error far from its cause. Reaction: re-introduce override as delegating shim using previous-default mangler.
 
-**B26. MonoItem/InstanceKind variant coverage.** ~15-20% over 5 years (`AsyncDropGlue` already exists; further variants probable). Impact: silent miscompile if new drop-flavored variant bypasses cascade discovery. Detection fence: `instance_kind_coverage_fence.rs` — compile-time exhaustive match over `MonoItem` + `InstanceKind` variants; rustc E0004 fires when new variant lands. Forces conscious decision per new variant.
+**B26. MonoItem/InstanceKind variant coverage.** ~15-20% over 5 years (`AsyncDropGlue` already exists; further variants probable). Impact: silent miscompile if new drop-flavored variant bypasses cascade discovery. Detection: `instance_kind_coverage.rs` — a compile-time exhaustive match over `MonoItem` + `InstanceKind` variants, so rustc's own E0004 fires when a new variant lands. **This is the §1.5.6 rule 4 shape, not a lint**: the property is upheld by the type system rather than watched for, and it cannot be dodged or go quiet.
 
 **B27. Bench-detected creeping perf regression between nightly bumps.** ~30% over 5 years. Canary: re-run perf bench script after every bump. If Bench 1 LTO ratio regresses >10% or Bench 3 drop-chain ratio regresses >20%, investigate. Reaction: bisect upstream nightly range; report upstream or pin to last-known-good.
 
@@ -3261,19 +3401,21 @@ Walks of `tcx.all_impls(trait_def_id)` return impls from every crate including s
 
 ### 26.15 NNGZ (Non-generic is Normal-case-of-Generic)
 
-Source-level positive design principle (§1.5.5) elevated to arcanum form. Never branch on `type_params.is_empty()`. Forced exceptions annotated `arch-fence-allow:`. CI fence at `vale-frontend/tests/architecture_fence.rs` — AST-walking test that parses Vale's frontend source (via syn or rust-analyzer parser) and inspects the syntax tree for `type_params.is_empty()` patterns; unannotated occurrences fail. Not grep-based. **Land in Phase 0.**
+Source-level positive design principle (§1.5.5) elevated to arcanum form. Never branch on `type_params.is_empty()`. Forced exceptions annotated `nngz-allow:` at the site, naming which of §1.5.5's three sanctioned exceptions applies.
+
+**No source-scanning lint** — withdrawn 2026-07-27, see the revision block in §1.5.5. The violation fails loudly (twelve corpus cases at once, immediately), so ordinary tests already guard it; per §1.5.6 rule 4 a lint is the weakest mechanism and is reached for only when the first three are unavailable. Where the property wants defending at a specific site, make the construction atomic instead.
 
 ### 26.16 SMPLZ (Vale Must Pin Linkage for External Refs)
 
 Any Vale-emitted symbol whose only callers live in OTHER compile units' machine code must be pinned in `@llvm.used` LLVM global (not weaker `@llvm.compiler.used`). Three LLVM passes would otherwise remove/rewrite: `GlobalDCE` deletes; LTO `internalize` demotes linkage; linker dead-strips. Failure mode byte-identical to other link errors — disambiguating check: `llvm-objdump -t` on post-LTO `.o`. `g F` = chain intact; `l F` = SMPLZ discipline broken.
 
-Detection fence: `vale-rustc-glue/tests/integration_projects/opt_level_3_fat_lto_smoke/`.
+Detection: `vale-rustc-glue/tests/integration_projects/opt_level_3_fat_lto_smoke/`.
 
 ### 26.17 CMWAR (Cache-Must-Write-At-Rust-analysis)
 
 **Vale-specific.** Cache writes route through `after_rust_analysis` only. Never from inside codegen-time callbacks. Sky's empirical history (two-write-sites cleanup) validates this as real deadlock-prevention discipline against @GCMLZ re-entry.
 
-Detection fence: **structural enforcement, not a grep**. Cache-write functions are gated behind a marker/token type that only the `after_rust_analysis` callback constructs — types check at compile time that no other call site can invoke cache-write, since it's not possible to construct the required marker outside `after_rust_analysis`. Failed attempts fail Rust's own typecheck, not a separate CI grep pass. Same "make it structurally impossible" pattern as Sky's mutex-hierarchy invariants.
+Detection: **structural enforcement, not a source scan** — and this is the canonical §1.5.6 rule 4 instance in the document. Cache-write functions are gated behind a marker/token type that only the `after_rust_analysis` callback constructs, so no other call site *can* invoke cache-write; there is no marker to be had. Failed attempts fail Rust's own typecheck rather than a CI pass. Same "make it structurally impossible" pattern as Sky's mutex-hierarchy invariants — and the shape to reach for before writing any lint.
 
 ### 26.18 CIDD (Comptime If Deterministic Discipline)
 
@@ -3283,7 +3425,7 @@ Enforcement is **Vale-typechecker analysis, not a CI grep pass**. Vale's typing 
 
 ### 26.19 DRAFD (Dangle-Region-Annotation-Flows-Drop)
 
-**Vale-specific.** `#[may_dangle] G_as_re_erased_lifetime` emission on Vale-emitted Drop impls flows from Vale's `dangle` region annotation on the corresponding region/group. Soundness invariant lives in Vale's source-level type system; not in stub-gen's post-hoc syntactic shape-scan. Typing pass enforces that values from a `dangle`-annotated region are not accessed during the type's Drop. CI fence: dangle-annotation-vs-may_dangle-projection alignment test corpus.
+**Vale-specific.** `#[may_dangle] G_as_re_erased_lifetime` emission on Vale-emitted Drop impls flows from Vale's `dangle` region annotation on the corresponding region/group. Soundness invariant lives in Vale's source-level type system; not in stub-gen's post-hoc syntactic shape-scan. Typing pass enforces that values from a `dangle`-annotated region are not accessed during the type's Drop. Detection: a dangle-annotation-vs-`may_dangle`-projection alignment test corpus — an ordinary test, since the typing pass already rejects the violation loudly and the corpus only confirms the projection matches.
 
 ### 26.20 HBAB (Honest at Boundary, Always — no Send/Sync/Unpin lie)
 
@@ -3307,7 +3449,7 @@ Cross-thread reference sharing uses standard `&T` projection — no wrapper medi
 
 Alternative "assume no mut effect" (option a) would silently accept mutating operations as pure reads, enabling races through un-annotated methods like `RefCell::borrow`. Vale rejects (a) categorically for soundness. Alternative "refuse imports without annotation" (option c) forces up-front annotation authoring at higher friction; Vale chose (b) — fail-closed at call sites, not import sites — for softer developer experience while preserving the safety property.
 
-Detection: no CI fence needed for the default itself. Individual annotation-error messages surface directly to users at call sites where the conservative default triggers. Vale stdlib annotation coverage validated separately via the sunny-day test suite (all common Rust std types + methods have annotations covering their real group effects).
+Detection: nothing needed for the default itself. Individual annotation-error messages surface directly to users at call sites where the conservative default triggers. Vale stdlib annotation coverage validated separately via the sunny-day test suite (all common Rust std types + methods have annotations covering their real group effects).
 
 ---
 
@@ -3452,6 +3594,49 @@ The rule exists because substring assertions against `Debug` output broke twice 
 time from a behaviour change — once when a return position started printing as `Kind(Struct(..))`
 rather than `Struct(..)`, and once when `{:?}` on an `Option<String>` escaped every quote inside it.
 
+**A vocabulary that collapses distinctions cannot express the case it is for.** `describe_kind`
+originally rendered every citizen as one word, so a case about *generic arguments* could only assert
+"these two differ" — which two wrong-but-distinct answers also satisfy. It now renders
+`rust-citizen<int32>`, and the case asserts the arguments themselves. When a case can only assert
+inequality, suspect the vocabulary before trusting the result.
+
+### 26b.6 A check that has never been seen to fail is not a check
+
+Rules about the checks themselves, each learned by nearly getting one wrong.
+
+**Reach for a lint last.** §1.5.6 rule 4 has the full ordering — type system, then loud failure,
+then an ordinary test, then a lint over our own source. A lint is dodgeable by construction and goes
+*quiet* rather than loud when the code moves out from under it, so it is the one mechanism that can
+leave everyone confidently wrong. Before writing one, ask whether the property can be made
+unrepresentable instead; a surprising amount of the time it can, and the answer is usually to delete
+the API that permits the violation rather than to watch for it.
+
+**Validate a check by making it fail.** After building the @ATAFLBZ lint we injected a violating
+line to confirm it fires — and the *first* injection was invalid Rust, so the build died before the
+test ran, which reads exactly like a pass. A check validated only by "the suite is green" is not
+validated; one observed to fail **for the wrong reason** is worse, because it is now trusted. Check
+*which* failure you got, not merely that you got one. This is §25.3's C7 (*run the artifact, don't
+assert the build returned 0*) one layer up, and §26b.4's vacuity rule one layer down — the same
+discipline at three scales.
+
+**A negative control degenerates when both branches return success.** An empty-allowlist control is
+only a control while "expected to fail" and "expected to pass" remain distinguishable. Assert the
+*mechanism* of the failure, which is why a failing case pins its `ICompileErrorT` variant rather than
+just "it failed."
+
+**A rule alone does not hold — but the answer is rarely a lint.** @NNGZ is a named, documented
+principle and was violated in this arc anyway, as *"why would I apply zero arguments?"*. The
+instinct that followed was to mechanize it, and Sky had done exactly that. **Both were wrong for
+this case**, and the reason is §1.5.6 rule 4's discriminator: that violation cost **twelve corpus
+cases at once**, immediately, with a legible message. It failed *loudly*, so the suite already
+guarded it and a lint would have been redundant machinery — permanent, dodgeable, and buying only a
+slightly earlier signal. Sky's framing, *"the rule is what you believe; the lint is what actually
+stops you,"* offers two options and quietly omits the one that beats both.
+
+Where a property genuinely fails **silently**, that is the case for a mechanism — and even then the
+order stands. @ATAFLBZ was silent, and its real fix was deleting the two functions that turned a
+name string into identity, not the lint added afterwards.
+
 ### 26b.5 Why the boundaries sit where they do
 
 The architect's framing, recorded because it explains choices that otherwise look arbitrary:
@@ -3569,20 +3754,20 @@ Phases below are nominal; many can parallelize. Phase 0 establishes groundwork t
 
 ### 28.1 What v1 ships
 
-**Phase 0 — Foundational decisions + groundwork (~12-24 months single engineer, ~8-12 months small team).** (Sizing updated from earlier estimate to reflect the cascade of additions during the arch-review pass: GlobalState refactor, arena ownership migration, bench-parity fixture work, expanded CI-fence enforcement work as typechecker analysis rather than grep. Phase 0's substantial scope reflects Vale's "no shortcuts" stance — foundational work up front, downstream phases build on stable substrate.)
+**Phase 0 — Foundational decisions + groundwork (~12-24 months single engineer, ~8-12 months small team).** (Sizing updated from earlier estimate to reflect the cascade of additions during the arch-review pass: GlobalState refactor, arena ownership migration, bench-parity fixture work, enforcement work moved into typechecker analysis rather than source scanning. Phase 0's substantial scope reflects Vale's "no shortcuts" stance — foundational work up front, downstream phases build on stable substrate.)
 - Resolve the ~18 Phase 0 readiness items from the validation pass.
 - Land the architecture doc (this document) as the source of truth.
 - Free deletions (no-op cleanup): retire dead `Options.mode`, collapse dual-CLI-parsing, decide vestigial intern modes.
 - C++ Backend symbol audit (Phase 0 task §5.6): `__vale_` prefix all runtime globals; rename `main` mandatory.
 - HinputsT renaming from "Hinputs" → "Temputs" terminology where applicable.
 - HashMap→IndexMap audit in `HinputsT`.
-- Five CI fences land from day 1 (pass-through corpus, architecture fence per @NNGZ, cache audit fence, cross-language inlining matrix, determinism gate).
-- `cache_audit.rs` fence for query-override cache-on-disk policy.
-- `mangler_version_fence.rs` and `instance_kind_coverage_fence.rs` per §25.2 B25/B26.
+- Four CI checks land from day 1 (pass-through corpus, cache audit, cross-language inlining matrix, determinism gate). **The @NNGZ architecture lint is withdrawn** — see the revision block in §1.5.5; the violation fails loudly, so ordinary tests already guard it.
+- `cache_audit.rs` source lint for query-override cache-on-disk policy.
+- `mangler_version.rs` (a source lint) and `instance_kind_coverage.rs` (an exhaustive match, so the type system does the work) per §25.2 B25/B26.
 - Test harness migration off `name=path` CLI to `Manifest::from_synthetic`-style API.
 - Add `serde` + `bincode` to workspace as baseline.
 - Reserve `rust`/`self`/`crate`/`super` as illegal Vale project names.
-- Architecture-fence + cache-audit + cleanup-audit fences active from day 1.
+- Cache-audit + cleanup-audit checks active from day 1.
 - C++ Backend portage: LLVM 16 → rustc's pinned-nightly LLVM (~21).
 - C++ Backend `GlobalState` refactor: single-invocation lifetime → per-FFI-call instantiation (§5.1). Enables concurrent-CGU emission under `fill_extra_modules`; directionally aligns with Vale-project goal of making `GlobalState` less global. Real engineering task (~days), not a tweak.
 - **Arena ownership migration to Session-scoped storage**: refactor Vale frontend's arena model from the current shape to Session-scoped ownership. Ouroboros/yoke self-referential vs collapse-to-one-lifetime decision made as part of doing this work (not a separate pre-commit gate). Must land before Phase 3's LangCallbacks integration — everything downstream assumes a stable arena model rather than concurrently re-architecting.

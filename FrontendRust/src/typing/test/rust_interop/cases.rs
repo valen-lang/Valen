@@ -420,6 +420,191 @@ fn a_rust_value_bound_to_a_local_gets_a_scope_end_drop() {
     );
 }
 
+/// A value returned and immediately discarded still gets dropped — the temporary path.
+///
+/// Distinct from the case above: with no local to hang the drop on, the drop attaches to a
+/// temporary. The failure is silent — the program compiles and returns the right number either way
+/// — so the assertion has to be on the callee list rather than on the outcome.
+#[test]
+fn a_rust_value_returned_and_discarded_gets_dropped() {
+    let outcome = run_case(&A_RUST_VALUE_RETURNED_AND_DISCARDED_GETS_DROPPED, callees_in_main);
+
+    let callees = outcome
+        .check(&A_RUST_VALUE_RETURNED_AND_DISCARDED_GETS_DROPPED)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "drop" && c.rust_backed),
+        "the discarded Rust temporary got no drop: {callees:?}"
+    );
+}
+
+/// Two types' methods coexist, each resolving to its own receiver.
+///
+/// `Counter::get` and `Gauge::get` share a name deliberately. There is no per-type method table to
+/// keep apart — the risk is the importer pairing a method with the wrong receiver, which surfaces
+/// as a resolution failure rather than a wrong answer.
+#[test]
+fn calls_methods_on_two_different_rust_types() {
+    let outcome = run_case(&CALLS_METHODS_ON_TWO_DIFFERENT_RUST_TYPES, callees_in_main);
+
+    let callees = outcome
+        .check(&CALLS_METHODS_ON_TWO_DIFFERENT_RUST_TYPES)
+        .expect("the case declares it compiles");
+
+    // Both `get`s resolved, and both are Rust-backed — one call each, so a single shared
+    // declaration serving both receivers would show up as one callee rather than two.
+    let gets: Vec<_> = callees.iter().filter(|c| c.name == "get" && c.rust_backed).collect();
+    assert_eq!(2, gets.len(), "expected one `get` per receiver type, got: {callees:?}");
+}
+
+/// Two Rust types imported in one compilation — the importer is a loop, not a single-item path.
+#[test]
+fn imports_two_rust_types_at_once() {
+    let outcome = run_case(&IMPORTS_TWO_RUST_TYPES_AT_ONCE, callees_in_main);
+
+    outcome.check(&IMPORTS_TWO_RUST_TYPES_AT_ONCE);
+
+    // Vacuity: both types must have been walked, not just the one whose value is returned.
+    assert!(
+        outcome.asked(|q| q.offered("value_of_counter").is_some()),
+        "`Counter`'s items were never offered:\n{}",
+        outcome.rendered_log()
+    );
+    assert!(
+        outcome.asked(|q| q.offered("gauge_reading").is_some()),
+        "`Gauge`'s items were never offered:\n{}",
+        outcome.rendered_log()
+    );
+}
+
+/// A Rust citizen produced by one call and consumed by another, with a third in between.
+///
+/// A lowering that minted a fresh kind per signature would typecheck each call in isolation and
+/// fail only here, where the same type has to be recognised across a call boundary twice.
+#[test]
+fn a_rust_type_flows_through_two_calls() {
+    let outcome = run_case(&A_RUST_TYPE_FLOWS_THROUGH_TWO_CALLS, callees_in_main);
+
+    let callees = outcome
+        .check(&A_RUST_TYPE_FLOWS_THROUGH_TWO_CALLS)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "bump" && c.rust_backed),
+        "the intermediate call is not in the chain: {callees:?}"
+    );
+}
+
+/// An item in a nested module, named by a dotted path — the shape `Vec` needs.
+///
+/// A crate-root-only walk cannot see it at all, so this is the first case in the corpus that a
+/// one-level walk fails. Every other case sits at a root, which is the degenerate path.
+#[test]
+fn imports_an_item_from_a_nested_module() {
+    let outcome = run_case(&IMPORTS_AN_ITEM_FROM_A_NESTED_MODULE, callees_in_main);
+
+    let callees = outcome
+        .check(&IMPORTS_AN_ITEM_FROM_A_NESTED_MODULE)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "depth_reading" && c.rust_backed),
+        "the nested function did not resolve as a Rust-backed callee: {callees:?}"
+    );
+}
+
+/// A type in a nested module, plus its method — a different `DefKind` and therefore a different arm.
+#[test]
+fn imports_a_type_from_a_nested_module() {
+    let outcome = run_case(&IMPORTS_A_TYPE_FROM_A_NESTED_MODULE, callees_in_main);
+
+    let callees = outcome
+        .check(&IMPORTS_A_TYPE_FROM_A_NESTED_MODULE)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "depth_of" && c.rust_backed),
+        "the nested type's method did not resolve: {callees:?}"
+    );
+}
+
+/// An item reached through a re-exported name — the shape `std::vec::Vec` actually has.
+#[test]
+fn imports_through_a_re_exported_item() {
+    let outcome = run_case(&IMPORTS_THROUGH_A_RE_EXPORTED_ITEM, callees_in_main);
+
+    let callees = outcome
+        .check(&IMPORTS_THROUGH_A_RE_EXPORTED_ITEM)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "depth_reading" && c.rust_backed),
+        "the re-exported function did not resolve: {callees:?}"
+    );
+}
+
+/// Descending **through** a re-exported module, rather than landing on a re-exported item.
+#[test]
+fn imports_through_a_re_exported_module() {
+    let outcome = run_case(&IMPORTS_THROUGH_A_RE_EXPORTED_MODULE, callees_in_main);
+
+    let callees = outcome
+        .check(&IMPORTS_THROUGH_A_RE_EXPORTED_MODULE)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "depth_of" && c.rust_backed),
+        "the method on a type behind a re-exported module did not resolve: {callees:?}"
+    );
+}
+
+/// **Everything at once** — the composition case.
+///
+/// Every other case is narrow so failures localize. This one exists for the question narrowness
+/// cannot answer: whether the mechanisms coexist. Interference is its own failure class — a shared
+/// name resolving to the wrong item, an import-order dependency, a drop that only works when it is
+/// the only drop — and no narrow case can see it.
+///
+/// The assertions are on the **callee list**, not on the return value alone: a program this size
+/// could return 31 while silently having resolved half its calls to the wrong thing.
+#[test]
+fn a_program_using_everything_at_once() {
+    let outcome = run_case(&A_PROGRAM_USING_EVERYTHING_AT_ONCE, callees_in_main);
+
+    let callees = outcome
+        .check(&A_PROGRAM_USING_EVERYTHING_AT_ONCE)
+        .expect("the case declares it compiles");
+
+    // One representative of each mechanism, so a regression names which one broke.
+    for expected in [
+        "add_two_numbers",   // free function
+        "seven",             // zero-arg
+        "make_counter",      // type inferred from a signature
+        "get",               // method, and the one whose name collides across two types
+        "doubled",           // a second method on one type
+        "or_else",           // method with its own type parameter
+        "new",               // associated function, no receiver
+        "bump",              // citizen flowing through two calls
+        "pick",              // generic function at concrete types
+        "id",                // generic function at a Rust type
+        "holder_ignore",     // generic type at one argument
+        "bool_holder_flag",  // the same generic type at another
+        "depth_reading",     // nested module, by path
+        "depth_of",          // method on a nested type
+        "make_sonar",        // reached through a re-export
+        "drop",              // scope-end drop on the bound Rust values
+    ] {
+        assert!(
+            callees.iter().any(|c| c.name == expected && c.rust_backed),
+            "`{expected}` did not resolve as a Rust-backed callee in the composite program: \
+             {callees:?}"
+        );
+    }
+
+    // The three declined items sit in the allowlist and must not have been imported.
+    for declined in ["first", "unsigned_count", "half_of"] {
+        assert!(
+            !callees.iter().any(|c| c.name == declined),
+            "`{declined}` should have been declined, but reached the callee list: {callees:?}"
+        );
+    }
+}
+
 /// A signature Vale cannot represent is **declined**, not imported with a hole in it.
 ///
 /// `first<I: Iterator>(i: I) -> I::Item` returns `<I as Iterator>::Item`, and normalizing that
@@ -456,6 +641,67 @@ fn declines_an_unrepresentable_parameter() {
             |q| matches!(q, OracleQuery::FnSig { item, answer: None } if *item == take_first)
         ),
         "`take_first` was offered but its signature was not declined:\n{}",
+        outcome.rendered_log()
+    );
+}
+
+/// An unsigned integer declines by the same exit as an alias — it does not panic.
+///
+/// The gap is **signedness**: `IntT` carries a width and nothing else, so importing `u32` would
+/// hand back a plausible `i32`. Until 2026-07-27 this panicked, which made one un-importable item
+/// anywhere in a crate's export surface fatal to the whole import rather than to itself.
+#[test]
+fn declines_an_unsigned_integer() {
+    let outcome = run_case(&DECLINES_AN_UNSIGNED_INTEGER, callees_in_main);
+
+    // Declining one item must not disturb the rest of the import.
+    outcome.check(&DECLINES_AN_UNSIGNED_INTEGER);
+
+    let unsigned_count = offered(&outcome, "unsigned_count");
+    assert!(
+        outcome.asked(
+            |q| matches!(q, OracleQuery::FnSig { item, answer: None } if *item == unsigned_count)
+        ),
+        "`unsigned_count` was offered but its signature was not declined:\n{}",
+        outcome.rendered_log()
+    );
+}
+
+/// A float declines because `FloatT` has no width, so `f32` and `f64` would intern identically.
+#[test]
+fn declines_a_float() {
+    let outcome = run_case(&DECLINES_A_FLOAT, callees_in_main);
+
+    // Declining one item must not disturb the rest of the import.
+    outcome.check(&DECLINES_A_FLOAT);
+
+    let half_of = offered(&outcome, "half_of");
+    assert!(
+        outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, answer: None } if *item == half_of)),
+        "`half_of` was offered but its signature was not declined:\n{}",
+        outcome.rendered_log()
+    );
+}
+
+/// @RTMEIZ from the side that is easy to miss: reaching a type through another item's signature
+/// does not import it.
+///
+/// `takes_hidden` is allowed, `Hidden` is not. Declining is what keeps the allowlist meaning *"what
+/// Vale may use"* rather than quietly becoming *"what Vale may reach"* — under the latter, the
+/// scoping cases would be asserting something weaker than they claim.
+#[test]
+fn declines_a_signature_naming_an_unimported_type() {
+    let outcome = run_case(&DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE, callees_in_main);
+
+    // Declining one item must not disturb the rest of the import.
+    outcome.check(&DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE);
+
+    let takes_hidden = offered(&outcome, "takes_hidden");
+    assert!(
+        outcome.asked(
+            |q| matches!(q, OracleQuery::FnSig { item, answer: None } if *item == takes_hidden)
+        ),
+        "`takes_hidden` was offered but its signature was not declined:\n{}",
         outcome.rendered_log()
     );
 }

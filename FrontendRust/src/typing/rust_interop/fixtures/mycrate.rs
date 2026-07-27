@@ -61,6 +61,92 @@ impl Counter {
     }
 }
 
+/// A nested module, so path resolution is exercised below the crate root.
+///
+/// Every other item in this fixture sits **at** the root, which is the degenerate path — one
+/// segment, zero modules to descend — and a root-only walk passes every one of them. `std::vec::Vec`
+/// is the real shape: it lives under `std::vec`, not under the `std` root, so a root-only walk
+/// cannot see it at all. Without something nested here, the walk could stay one level deep
+/// indefinitely and the whole corpus would still be green.
+///
+/// The names inside are deliberately absent from the crate root, so a walk that ignored the module
+/// segment and matched on the final name alone would find nothing rather than accidentally
+/// succeeding.
+pub mod instruments {
+    pub fn depth_reading() -> i32 {
+        31
+    }
+
+    /// A nested *type*, so the type path is covered as well as the function path — they are
+    /// different `DefKind`s and a walk could plausibly handle one and not the other.
+    pub struct Sonar {
+        pub depth: i32,
+    }
+
+    impl Sonar {
+        /// A method on a nested type. Method discovery runs off `inherent_impls` of the owner's
+        /// `DefId`, which knows nothing about how the owner was reached — so this should work for
+        /// free, and the case exists to confirm that rather than to drive new code.
+        pub fn depth_of(self) -> i32 {
+            self.depth
+        }
+    }
+
+    pub fn make_sonar() -> Sonar {
+        Sonar { depth: 33 }
+    }
+}
+
+/// Re-exports, which is how `std::vec::Vec` actually reaches a user.
+///
+/// `std::vec` is `pub use alloc_crate::vec`, so the path a user writes (`std::vec::Vec`) is **not**
+/// the path the definition has (`alloc::vec::Vec`). Whether a segment walk follows that for free
+/// turns on what `module_children` reports for a re-export — its `Res` names the *definition*, so
+/// it plausibly already works. These exist to decide that by measurement rather than by reading.
+///
+/// Two shapes, because they are different: re-exporting an **item** into a module, and re-exporting
+/// a **module** so the walk has to descend through the alias.
+pub mod readouts {
+    pub use crate::instruments::depth_reading;
+    pub use crate::instruments::make_sonar;
+    pub use crate::instruments::Sonar;
+}
+
+pub mod gear {
+    pub use crate::instruments;
+}
+
+/// A second type with methods, so two types' item sets can be exercised at once.
+///
+/// `get` collides with `Counter::get` **by name, deliberately**. Under methods-are-ordinary-
+/// functions there is no per-type method table to keep apart — both land in one store and overload
+/// resolution separates them by receiver type. So the failure this shape catches is not "the tables
+/// leaked" but the importer attaching a method to the **wrong receiver**: cross `Gauge::get`'s
+/// receiver with `Counter` and `(make_gauge()).get()` stops resolving, loudly.
+///
+/// No `new`, on purpose. `Counter::new` takes no parameters, so a same-named zero-argument
+/// associated function on a second type would be genuinely ambiguous — nothing to resolve on — and
+/// that is a *different* case about candidate narrowing rather than about two types coexisting.
+pub struct Gauge {
+    pub reading: i32,
+}
+
+impl Gauge {
+    pub fn get(self) -> i32 {
+        self.reading
+    }
+}
+
+pub fn make_gauge() -> Gauge {
+    Gauge { reading: 20 }
+}
+
+/// The same type reached through the free-function path rather than the method path, so a case
+/// about *importing two types* need not also depend on method discovery working.
+pub fn gauge_reading(g: Gauge) -> i32 {
+    g.reading + 2
+}
+
 /// A **free function** taking a Rust type as a parameter.
 ///
 /// Distinct from a method: `get` reaches Vale through `associated_items`, this through
@@ -196,3 +282,34 @@ pub fn first<I: Iterator>(mut i: I) -> I::Item {
 /// `I` appears as an ordinary parameter too, so the signature is well-formed Rust; without it `I`
 /// would be unconstrained and rustc would reject the fixture rather than Vale declining it.
 pub fn take_first<I: Iterator>(_i: I, _x: I::Item) {}
+
+/// An unsigned integer — deliberately un-importable.
+///
+/// Vale's `IntT` carries a width and no signedness, so a `u32` would become an `i32` and every
+/// value above `i32::MAX` would read back negative. That is the silent-wrong-answer shape, so the
+/// oracle declines rather than guessing.
+pub fn unsigned_count() -> u32 {
+    7
+}
+
+/// A float — deliberately un-importable.
+///
+/// Vale's `FloatT` is a unit struct with no width field, so `f32` and `f64` would intern
+/// identically and a caller could not tell which one it was handed.
+pub fn half_of(x: f32) -> f32 {
+    x / 2.0
+}
+
+/// Reached only by walking `takes_hidden`'s signature, and never itself in an allowlist.
+///
+/// @RTMEIZ: every Rust type Vale uses is explicitly imported, including one it meets only through
+/// another item's signature. Importing `takes_hidden` while `Hidden` stays out must decline the
+/// function — conjuring the type instead would import something nobody asked for, and silently
+/// widen the allowlist's meaning from "what Vale may use" to "what Vale may reach".
+pub struct Hidden {
+    pub magnitude: i32,
+}
+
+pub fn takes_hidden(h: Hidden) -> i32 {
+    h.magnitude
+}

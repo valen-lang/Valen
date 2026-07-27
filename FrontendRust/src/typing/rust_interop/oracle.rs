@@ -63,6 +63,39 @@ pub enum ValeSigType<'s, 't> {
     Generic(u32),
 }
 
+/// Why a Rust signature has no Vale form.
+///
+/// **Structure only — no rendering here.** A case asserts the variant; the wording a person reads is
+/// built where diagnostics are built, which is also where the arenas to hold it live (§26b.4). The
+/// reason travels because it *is* the point of declining: a bare `None` makes the eventual failure
+/// read *"couldn't find function `foo`"* for a function that plainly exists, and avoiding that lie
+/// is why "for now, panic" was chosen over declining back on 2026-07-25. Declining **with** the
+/// reason is what makes the panic unnecessary rather than merely relocated.
+///
+/// Every variant below was a `panic!` in `lower_ty` until 2026-07-27.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum DeclineReason {
+    /// An integer width `IntT` cannot hold — it carries only `bits`, and only 32 and 64 are mapped.
+    IntWidth,
+    /// `IntT` has no signedness, so an unsigned type would silently become its signed counterpart.
+    UnsignedInteger,
+    /// `FloatT` is a unit struct with no width field, so `f32` and `f64` would intern identically.
+    Float,
+    /// Vale has no unsized concept, so `str` / `[T]` / `dyn Trait` cannot be value types.
+    Unsized,
+    /// A type reached only through this signature and never imported (@RTMEIZ).
+    UnimportedType,
+    /// A projection such as `<I as Iterator>::Item`. Normalizing it *requires* reading the
+    /// `I: Iterator` predicate to find the impl, and no predicates are read at all — so it is
+    /// un-normalizable rather than merely unread.
+    UnnormalizableAlias,
+    /// A `ty::Param` inherited from a parent impl. Vale's declaration has no slot for it until the
+    /// container is declared too.
+    InheritedParameter,
+    /// A rustc type kind with no Vale representation yet — the catch-all.
+    Unrepresentable,
+}
+
 /// A Rust function signature, lowered to Vale terms.
 ///
 /// Note this is expressed over `KindT`, not `CoordT`: the onion refactor dissolved
