@@ -55,11 +55,40 @@ banner saying so.
 Not process for its own sake — each of these was stated or enforced during the arc, and each has
 changed an outcome at least once.
 
+### 0.0 What "core Vale" means
+
+§0.1's protocol is scoped to a specific body of code, so the scope has to be stated. **Core Vale
+is:**
+
+- **the typing pass** (`FrontendRust/src/typing/`), except:
+  - anything under a `rust_interop/` folder — this arc's own territory, worked in freely;
+  - **patterns** — `typing/expression/pattern_compiler.rs` and `typing/rune_typing/patterns.rs`. Out
+    because it is *surface*: the architect is content for edits to land there directly, since what a
+    change there can reach is small and legible.
+- **the instantiating pass** (`FrontendRust/src/instantiating/`);
+- **the backend** — `FrontendRust/src/backend_ffi/` and the C++ `Backend/` behind it.
+
+**Both edges are easy to get wrong, in opposite directions.** The instantiator and the backend are
+**in**, even though every worked example of the protocol so far has been a typing-pass file — a
+session generalising from the examples will edit them freely and be wrong. Patterns is **out**, even
+though it sits inside the typing pass — a session applying "typing pass = core" will stop when it
+need not.
+
+Everything else in the tree — parsing, postparsing, the solver, simplifying, the final AST — is
+neither core in this sense nor ours. Nothing in this arc has needed to touch it; if something does,
+that is itself worth surfacing.
+
+**"Core Vale" is not "core IR."** Arch §8.10 uses the latter for `names`/`types`/`interner`
+specifically, in the Option A argument, where it carries a different claim — that no rustc type
+reaches those three files. It is a strictly narrower set and it keeps its own name. Same word, two
+scopes; don't collapse them.
+
 ### 0.1 The core/interop split is a protocol, not just a layout
 
-Work inside `typing/rust_interop/` and the interop test subtree proceeds freely. **A change to the
-core compiler stops and is brought to the architect verbatim — the exact hunks, before landing.**
-Precedents: the two `compiler.rs` hunks for the import kickoff, and the `get_imprecise_name` arm.
+Work inside `typing/rust_interop/` and the interop test subtree proceeds freely. **A change to core
+Vale — §0.0 defines exactly what that covers — stops and is brought to the architect verbatim, the
+exact hunks, before landing.** Precedents: the two `compiler.rs` hunks for the import kickoff, and
+the `get_imprecise_name` arm.
 
 The corollary matters more than the rule: **when a core change is needed, ask for it rather than
 routing around it in interop.** A workaround built to avoid asking is exactly the debt arch §1.5.6
@@ -83,27 +112,60 @@ The rule: if a claim about compiler behaviour is cheap to check, check it before
 Cases that came out of probes have consistently found something *different* from what they went
 looking for.
 
-### 0.3 Deferrals are trigger-gated, never vague
+### 0.3 No fakes or mocks, ever — dark-box and end-to-end only
+
+**Two kinds of test exist here: dark-box (source in, structured outcome out, at a *pass* boundary)
+and end-to-end (run the program, check its output).** Nothing else — no fakes, no mocks, no stubs,
+no test doubles, and no test that reaches inside a pass to call one function with hand-built
+arguments. A test drives the real component or it does not exist.
+
+This is a standing rule, not a cost/benefit call to re-run per case. **A fake encodes what you
+currently believe the real thing does**, so it passes exactly when your belief is self-consistent —
+which is when it teaches you nothing — and keeps passing after the real behaviour moves, which is
+when you needed telling. It also freezes the interface it doubles, which is the architectural
+inertia the architect objects to in unit tests, one layer down. Arch §26b.3 has the full statement
+and §26b.5 the reasoning.
+
+Live proof from this arc: **every probe that found something real found it by running the actual
+compiler** — that rustc unwinds rather than exits, that Vale source can already name a Rust type,
+that generic types compile and silently drop their arguments, that a Vale/Rust name clash is a
+designed error while a type clash is a panic. Not one of those was reachable from a canned table.
+
+The arc's own fake, the `FixtureOracle`, is deleted. Read its obituary in §26b.3 carefully: its
+*specific* weaknesses are why it was easy to remove, not why it was wrong. "Then write a cheaper
+fake" is the wrong lesson.
+
+Two clarifications worth having, because both look like violations and are not:
+
+- **A decorator over the real thing is fine.** `LoggingOracle` wraps the genuine `TyCtxtOracle` and
+  records what was asked; the answers still come from rustc. Recording and tracing wrappers change
+  nothing about what is computed.
+- **Absence is spelled as absence, not as an object that answers nothing.** `Oracles::none()` is an
+  `Option` that is `None`. A no-op implementation is a mock with a sadder face.
+
+### 0.4 Deferrals are trigger-gated, never vague
 
 Scope pruning is the architect's and it is aggressive — *"lets focus on only the things that block us
 from that goal."* But a deferral names its trigger: *"if we run into a collision, we should work on
 qualified names."* Where a trigger exists, there should be a case pinning the current behaviour so
 the trigger is observable rather than theoretical.
 
-### 0.4 Who is authoritative on what
+### 0.5 Who is authoritative on what
 
 - **Valen (`valen-design-1.md` / `-2.md`) is the language specification.** One architect owns Valen
   and Vale; a contradiction means the doc is behind a ruling, not that two authorities disagree.
-- **Vale2 owns the core compiler and its semantics.** `dot_borrow`, `is_type_convertible`, the
+- **Vale2 owns core Vale (§0.0) and its semantics.** `dot_borrow`, `is_type_convertible`, the
   overload/dispatch redesign, `convert()` unification are theirs; we sequence behind them and route
-  findings over. Their handoff is `/Volumes/V/Vale2/vcoord-handoff.md`.
+  findings over. Those examples are all typing-pass because that is where we have met them — the
+  ownership covers the instantiator and backend too. Their handoff is
+  `/Volumes/V/Vale2/vcoord-handoff.md`.
 - **Harmonious/Sky is evidence, not authority.** *"we'll be using their prototype as a signal for
   **what works**, but not necessarily **whats best**. keep an eye out for things we can do better
   than they did."* Their operational scars have repeatedly been worth more than their conclusions —
   and several times what they "taught" us turned out to be in our own architecture doc already,
   because they helped write it.
 
-### 0.5 A change must not cost other branches anything
+### 0.6 A change must not cost other branches anything
 
 Several branches track `experimental` and build the typing pass. **Interop work must leave their
 build and test exactly where it found them.** The concrete bar, set by the architect: *"typing-pass
@@ -121,7 +183,7 @@ The general test before landing: for each changed file, why can this not affect 
 feature off? Feature-gated items and `build.rs` reads of `CARGO_FEATURE_RUST_INTEROP` are inert;
 anything in the toolchain pin, or unconditionally compiled, is not.
 
-### 0.6 Moves that keep finding things
+### 0.7 Moves that keep finding things
 
 Not general advice — each of these is a question the architect asked that changed an outcome, and
 each is repeatable.
@@ -163,7 +225,7 @@ each is repeatable.
   backend away was made and was simply wrong — §1.7 and §5 already covered it, in detail. The doc is
   authoritative; read it before contradicting it.
 
-### 0.7 The sibling implementations, and the trap in reading them
+### 0.8 The sibling implementations, and the trap in reading them
 
 Two other Rust-interop implementations exist on this machine. Both are useful, and one is dangerous
 to read carelessly.
@@ -183,7 +245,7 @@ This has cost real time twice. A whole plan section once recommended synthesizin
 our tree. **Require every survey of a sibling tree to state which tree each citation belongs to, and
 re-verify any load-bearing claim against our own source before acting on it.**
 
-### 0.8 Doc discipline: a wind-down must not thin the reasoning
+### 0.9 Doc discipline: a wind-down must not thin the reasoning
 
 The name-resolution design (§10) was worked out over a day, including an agent sweep of `~/rust`, and
 was then compressed to a single bullet in a wind-down rewrite. It had to be reconstructed from a
@@ -254,13 +316,14 @@ behaviour with no compile error.
 
 ## 2. What is in the tree
 
-All green. Nothing committed since `8d40eff9d`.
+Committed through `26791765e` (on `experimental-4`, ratcheted to `experimental`). Work since then
+is uncommitted and listed below.
 
 | | |
 |---|---|
 | default suite | **577** passed / 170 failed / 8 ignored |
-| interop suite | **586** passed / 170 / 8 |
-| driver (`valec-rs`) | exit 0 |
+| interop suite | **607** passed / 170 / 8 |
+| driver (`valec-rs`) | exit 0 — `valec-rs <fixture-dir> <out-dir>` |
 | warnings | 8, all pre-existing |
 | **core diff** | **empty** — everything lives in `rust_interop/` and the interop test tree |
 
@@ -274,17 +337,39 @@ ours. That rebase also added an `impl_bounds` parameter to `FunctionS::new`; a s
 declaration passes `&[]`, which is the truth rather than a placeholder, since rustc discharges a Rust
 function's trait obligations and we read no predicates at all.
 
-The interop delta is the 9-case corpus in `typing/test/rust_interop/cases.rs`, all running against a
-real `TyCtxt` inside `cargo test --lib`.
+The interop delta is the **30-case corpus**, all running against a real `TyCtxt` inside
+`cargo test --lib`.
 
-### Uncommitted work
+### Uncommitted work (2026-07-26, after `26791765e`)
+
+- **`rust_interop/corpus.rs` — new.** Every case as data: `(fixture, name, Vale program, allowlist,
+  expectation)`, with the expectation being `Returns(n)`, `FailsToCompile(variant)` or
+  `RustcFails`. It lives in the interop module rather than the test tree **because tier 2's likely
+  home, `end_to_end_tests`, is an ordinary `pub mod`** and cannot see anything gated on
+  `cfg(test)` — a corpus in the test tree would be invisible to it and the two tiers would drift
+  back into two copies of each program. Data only: no assertions, no AST walking.
+- **Per-item package coordinates.** `TyCtxtOracle::new` no longer takes a `package_coord` and
+  stamps every item with it; each item derives its own from `tcx.def_path` (§10.0's Problem A step
+  1). This is what makes two crates' same-named types two Vale types.
+- **`harness.rs` builds N dependency crates**, discovered from the fixture directory (every `*.rs`
+  but `stub.rs`) and sorted for determinism, rather than the single hardcoded `mycrate`.
+- **`fixtures_two_crates/` — new**, with a colliding pair (`Widget`/`Widget`) and a non-colliding
+  pair (`Gadget`/`Doohickey`), so one directory serves both the multiplicity case and the collision
+  case. Which question a case asks is decided purely by its allowlist.
+- **`fixtures/mycrate.rs` grew** the items the new cases need: `seven`, `do_nothing`,
+  `is_positive`/`to_int`, `value_of_counter`, `bump`, `pick_second`, `id`, `take_first`, plus
+  `Counter::doubled`, `Counter::new` and `Counter::or_else<T>`.
+
+### Previously uncommitted, now in `26791765e`
 
 - `declarations.rs` — `synthesize_extern_function`: unique `DefId`-derived `CodeLocationS`, generic
   parameters declared and referenced directly (no rule needed — that is what the postparser emits
   for a hand-written generic function), `LookupSR` per concrete type, `ExternBody`.
 - `importer.rs` — `import_rust_types` declares the type, its sharedness, a real `StructDefinitionT`,
   empty outer **and inner** envs; `rust_package_stores` emits the type as a nameable `Kind` entry
-  plus one declaration per free function, method, and drop.
+  plus one declaration per free function, method, and drop. *(Superseded by the uncommitted work
+  above: `import_rust_types` is deleted and the type is registered as a declaration instead. This
+  entry describes `26791765e` as it stands, not the working tree.)*
 - `oracle.rs` / `tyctxt_oracle.rs` — `ValeSigType`, structural `fn_sig`, name-keyed generic
   resolution, `TyKind::Alias` declined.
 - **Five dead oracle methods deleted** (2026-07-26): `resolve_path`, `kind`, `resolve_method`,
@@ -325,6 +410,13 @@ real `TyCtxt` inside `cargo test --lib`.
   than changed the architecture. Dissolves the `Void`/`Never` destructor-return constraint instead
   of engineering around it. Known cost: `catch_unwind` does not work, including inside Rust
   libraries that sandbox with it.
+- **A Vale value is moved into its destructor; a Rust-backed value is not ours to destruct.**
+  Ratified by the architect 2026-07-27, and it corrects arch §15.7, which applied one mechanism to
+  both. **Vale has no drop-in-place** — `drop(self T)` takes the value by move. A *Rust-backed*
+  value is likewise moved into an `extern` drop, but its **body** destructs in place through
+  rustc's own glue, because Vale is an external consumer and does not own that destructor. Our
+  synthesized receiver is by-value with no reference wrap; only the extern body bridges to a
+  pointer. See the correction block on arch §15.7 for the two inconsistencies this exposes there.
 - **Extern drop uses `__vale_drop<T>`** (arch §1.7). One generic wrapper doing `drop_in_place::<T>`;
   rustc resolves its own drop glue inside it. No symbol to name, no per-monomorphization user shim,
   and non-`needs_drop` types cost nothing for free. **By-pointer, never by-value** — Sky tried
@@ -378,6 +470,17 @@ real `TyCtxt` inside `cargo test --lib`.
   `Self_` — the precedent for a self-entry, if one is ever needed. Not what extern structs do.
 - **`compile_struct_core:144` panics on any non-`Function` entry** in a citizen outer store. Inert
   today (no `StructS` ⇒ it never runs), live the moment one is synthesized.
+- **`get_imprecise_name` takes an `INameT`, not an `IdT`** (`environment.rs:435`) — so it sees the
+  *local* name and **never the package coordinate**. `add_entries` keys every store entry through
+  it (`:567`). This is why §10.9's step 4 cannot be a new match arm: there is nothing in scope to
+  build a qualified key *from*. Either the coordinate gets threaded in, or the interop side
+  registers under an explicitly-supplied imprecise key. Worth knowing before designing the fix.
+- **`CouldntNarrowDownCandidates` has no trailing `T`**, unlike most `ICompileErrorT` arms. Cost a
+  red test on first write.
+- **`+` resolves no candidate at all** in the interop test compilation, and **reading a local**
+  yields `BorrowRef(int)` where `int` is wanted (`NoImplicitCloneDefinedT`). Both are Vale-side, not
+  interop's — the second is the same borrow read-out gap that blocks case 39. Corpus programs
+  therefore avoid arithmetic and return call results directly rather than through a local.
 
 ---
 
@@ -418,8 +521,12 @@ costs one case, legibly.
 ### 5.1 The corpus — 40 cases, named
 
 "A lot of them" needs a number, and the sibling tree's 32 is the bar to pass. Below is the whole
-intended corpus: **9 implemented (✅), 31 planned**. Each line says what breaks if the case fails,
-because a case whose failure mode nobody can state is a case nobody will fix.
+intended corpus: **32 implemented (✅), 8 remaining**. Each line says what breaks if the case
+fails, because a case whose failure mode nobody can state is a case nobody will fix.
+
+Of the ten not written, **five are blocked rather than merely pending**: cases 13, 14 and 15 need
+the panic-vs-decline poison hook (§6), case 39 needs Vale2's borrow read-out fix (§7), and case 25
+is written but pins a panic until the naming change lands. The rest are ordinary work.
 
 Every case that compiles also declares the value `main` returns, so tier 2 can run the identical
 case and check the output. Cases marked **fail** are tier-1-only by nature.
@@ -430,17 +537,17 @@ be expressed.
 | # | case | pins |
 |---|---|---|
 | 1 | `calls_a_rust_free_function` ✅ | a synthesized declaration resolves an ordinary call |
-| 2 | `calls_a_zero_arg_rust_function` | empty parameter list is the degenerate case, not a special one |
-| 3 | `calls_a_rust_function_returning_unit` | `()` → `VoidT`, and a call in statement position |
-| 4 | `passes_and_returns_a_bool` | a non-integer primitive round-trips |
-| 5 | `takes_a_rust_type_as_a_parameter` | a Rust citizen in *argument* position, not just return |
-| 6 | `takes_and_returns_a_rust_type` | the same citizen identity on both sides of one signature |
+| 2 | `calls_a_zero_arg_rust_function` ✅ | empty parameter list is the degenerate case, not a special one |
+| 3 | `calls_a_rust_function_returning_unit` ✅ | `()` → `VoidT`, and a call in statement position |
+| 4 | `passes_and_returns_a_bool` ✅ | a non-integer primitive round-trips |
+| 5 | `takes_a_rust_type_as_a_parameter` ✅ | a Rust citizen in *argument* position, not just return |
+| 6 | `takes_and_returns_a_rust_type` ✅ | the same citizen identity on both sides of one signature |
 | 7 | `reads_a_generic_signature_structurally` ✅ | generics stay parameters instead of collapsing to one instantiation |
-| 8 | `binds_the_second_generic_parameter` | the mirror canary — `pick_second<A,B> -> B` at `<int,bool>` catches an index swap the first canary cannot |
-| 9 | `instantiates_a_generic_at_one_parameter` | `id<T>(T)->T` — substitution happens at all; passes under any mapping, so it is a floor not a canary |
-| 10 | `instantiates_a_generic_at_a_rust_type` | a citizen as a *generic argument*, not just a parameter type |
+| 8 | `binds_the_second_generic_parameter` ✅ | the mirror canary — `pick_second<A,B> -> B` at `<int,bool>` catches an index swap the first canary cannot |
+| 9 | `instantiates_a_generic_at_one_parameter` ✅ | `id<T>(T)->T` — substitution happens at all; passes under any mapping, so it is a floor not a canary |
+| 10 | `instantiates_a_generic_at_a_rust_type` ✅ | a citizen as a *generic argument*, not just a parameter type |
 | 11 | `declines_an_unrepresentable_signature` ✅ | an un-normalizable alias in return position is dropped, not imported with a hole |
-| 12 | `declines_an_unrepresentable_parameter` | the same, in argument position — a different code path |
+| 12 | `declines_an_unrepresentable_parameter` ✅ | the same, in argument position — a different code path |
 | 13 | `declines_an_unsigned_integer` | the `IntT`-has-no-signedness gap; **currently panics**, see §6 |
 | 14 | `declines_a_float` | the `FloatT`-has-no-width gap; same |
 | 15 | `declines_a_signature_naming_an_unimported_type` | @RTMEIZ — reaching a type only through another item's signature does not import it |
@@ -450,20 +557,20 @@ be expressed.
 | # | case | pins |
 |---|---|---|
 | 16 | `calls_a_method_on_a_rust_type` ✅ | a method is a top-level function whose first parameter is the receiver |
-| 17 | `calls_an_associated_function_with_no_receiver` | `Counter::new()` — an inherent fn without `self` still imports |
-| 18 | `calls_two_methods_on_one_type` | method discovery is a list, not a lucky single |
+| 17 | `calls_an_associated_function_with_no_receiver` ✅ | `Counter::new()` — an inherent fn without `self` still imports |
+| 18 | `calls_two_methods_on_one_type` ✅ | method discovery is a list, not a lucky single |
 | 19 | `calls_methods_on_two_different_rust_types` | per-type method sets do not bleed into each other |
 | 20 | `a_rust_value_bound_to_a_local_gets_a_scope_end_drop` ✅ | the synthesized `drop` exists and resolves |
 | 21 | `a_rust_value_returned_and_discarded_gets_dropped` | drop on the temporary path, not just the bound-local path |
-| 22 | `calls_a_generic_method` | a method carrying its *own* type params, on top of the container's |
+| 22 | `calls_a_generic_method` ✅ | a method carrying its *own* type params, on top of the container's |
 
 **C. Multiplicity and crates** — that nothing depends on there being exactly one of anything.
 
 | # | case | pins |
 |---|---|---|
 | 23 | `imports_two_rust_types_at_once` | the importer is a loop, not a single-item path |
-| 24 | `imports_from_two_crates` | one store per package coordinate, keyed correctly |
-| 25 | `two_crates_exporting_the_same_short_name_stay_distinct` | the @ATAFLBZ identity hazard. **Expected to fail until the `DefId` fix lands** — write it red, fix §6, watch it go green |
+| 24 | `imports_from_two_crates` ✅ | one store per package coordinate, keyed correctly |
+| 25 | `two_crates_exporting_the_same_short_name_stay_distinct` ✅ | the @ATAFLBZ identity hazard, **half fixed and half core-blocked**. Written red; per-item `def_path` coordinates made the two `Widget`s two Vale types, which cleared the `declare_type` assertion. What remains is *naming* them: a bare `CodeNameS` finds both and `lookup_nearest_with_imprecise_name` panics. The case now pins that panic via `should_panic` so the trigger is observable; the corpus still declares `Returns(5)`, which is where it lands once §10.9's core steps land |
 | 26 | `a_rust_type_flows_through_two_calls` | citizen identity survives being produced by one call and consumed by another |
 
 **D. Scoping** — that the allowlist is load-bearing and is the only thing that is.
@@ -471,17 +578,17 @@ be expressed.
 | # | case | pins |
 |---|---|---|
 | 27 | `an_empty_allowlist_makes_nothing_importable` ✅ **fail** | the positive cases are not vacuous |
-| 28 | `an_item_not_in_the_allowlist_is_not_importable` **fail** | the positive control's mirror: the crate exports it, we still can't see it |
-| 29 | `an_allowlist_entry_the_crate_does_not_export_is_ignored` | a stale allowlist entry is inert, not fatal |
-| 30 | `a_module_named_in_the_allowlist_is_filtered_by_defkind` | `mycrate`'s children include `std`; a name match must not hand back a module where a function was asked for |
+| 28 | `an_item_not_in_the_allowlist_is_not_importable` ✅ **fail** | the positive control's mirror: the crate exports it, we still can't see it |
+| 29 | `an_allowlist_entry_the_crate_does_not_export_is_ignored` ✅ | a stale allowlist entry is inert, not fatal |
+| 30 | `a_module_named_in_the_allowlist_is_filtered_by_defkind` ✅ | `mycrate`'s children include `std`; a name match must not hand back a module where a function was asked for |
 
 **E. Failure modes** — that wrong programs fail, and fail legibly.
 
 | # | case | pins |
 |---|---|---|
-| 31 | `wrong_argument_types_do_not_resolve` **fail** | a Rust callee competes on `params_match` like any other |
-| 32 | `wrong_generic_arity_does_not_resolve` **fail** | arity is checked rather than silently truncated (@ETASTZ) |
-| 33 | `a_vale_function_and_a_rust_function_with_the_same_name` | that same-named functions **do not** collide. Candidate collection is `lookup_all_with_imprecise_name` — *plural* — so the outcome is a clean resolution or `CouldntNarrowDownCandidates`, never a panic. See §10.10; the type-name case is what needs pinning, not this one |
+| 31 | `wrong_argument_types_do_not_resolve` ✅ **fail** | a Rust callee competes on `params_match` like any other |
+| 32 | `wrong_generic_arity_does_not_resolve` ✅ **fail** | arity is checked rather than silently truncated (@ETASTZ) |
+| 33 | `a_vale_function_and_a_rust_function_with_the_same_name` ✅ | that same-named functions **do not** collide — **now measured, not predicted.** Both reach overload resolution as candidates (one `package_coord: test`, one `rust.["mycrate"]`) and the outcome is the designed `CouldntNarrowDownCandidates` error, never a panic. Exactly §10.10's split, and the deliberate contrast with case 25's type-name panic. Note the variant has **no trailing `T`**, unlike most `ICompileErrorT` arms |
 | 34 | `a_fatal_rustc_error_costs_one_case` ✅ | a broken fixture cannot take the suite down |
 
 **F. Provenance and vacuity** — that our machinery ran, and only where it should.
@@ -489,7 +596,7 @@ be expressed.
 | # | case | pins |
 |---|---|---|
 | 35 | ~~`no_oracle_query_happens_per_call_site`~~ | **subsumed, not written.** The per-call-site queries were deleted from the trait (§2), so the property is unrepresentable rather than tested — a stronger guarantee than a case |
-| 36 | `a_program_using_no_rust_items_compiles_with_an_oracle_present` | an oracle in scope costs an ordinary Vale program nothing |
+| 36 | `a_program_using_no_rust_items_compiles_with_an_oracle_present` ✅ | an oracle in scope costs an ordinary Vale program nothing |
 | 37 | `no_extern_function_name_reaches_an_environment_store` | whether `get_imprecise_name`'s `INameT::ExternFunction` arm (`environment.rs:488`) is still reachable — see §6. If entries are only ever `IEnvEntryT::Function`, that core arm is dead and can go |
 
 **G. Vale source naming Rust items** — the half of the naming story that is *not* about synthesized
@@ -499,7 +606,10 @@ declarations.
 |---|---|---|
 | 38 | `vale_source_can_name_a_rust_type` ✅ | hand-written Vale naming a Rust type by bare name, with no import statement. **Verified 2026-07-26** — it works, via the citizen's `Kind` entry in the reserved `rust` package store plus `PackageEnvironmentT`'s flat union. Easy to assume otherwise |
 | 39 | `vale_source_calls_a_method_on_a_named_rust_parameter` | the same, with a body that *uses* the parameter. **Blocked**: reading a parameter yields `BorrowRef(Counter)` where `get(self Counter)` wants it owned, and `is_type_convertible` panics on the borrow read-out (`templata_compiler.rs:1209`). Vale2's, per §7 — write it when they land the fix |
-| 40 | `a_generic_rust_type_loses_its_arguments` ✅ | a **generic** Rust type imports with its arguments silently dropped — `Holder<i32>` and `Holder<bool>` intern to the same bare `Holder`. The case asserts the *defect*, so it is pinned rather than merely known; invert it when §9's step 2 lands |
+| 40 | `a_generic_rust_type_carries_its_arguments` ✅ | a **generic** Rust type imports with its arguments intact — `Holder<i32>` and `Holder<bool>` are two distinct kinds, asserted as `("rust-citizen<int32>", "rust-citizen<bool>")`. Asserted the *defect* until 2026-07-26; inverted when §9 step 2 landed |
+| 41 | `a_generic_rust_type_gets_a_scope_end_drop` | **not written, and blocked.** A compiler-generated drop call supplies no explicit type argument, so `T` would have to be inferred backwards — see §9 step 2's gap note. Likely Vale2's |
+| 42 | `calls_a_generic_function_taking_a_generic_type` ✅ | `holder_ignore<T>(Holder<T>)` at `<int>` — a citizen *applied to its own parameter* in argument position. The shape `pick<A, B>` does not reach, and what `ValeSigType::Citizen` exists for |
+| 43 | `every_fixture_stub_is_valid_rust` ✅ | a fixture cannot rot into invalid Rust unnoticed. Tier 1 sees only *parse* errors, so nothing else covers a stub that type-errors. Skips `fixtures_broken_rust`, which is unparseable on purpose |
 
 ### 5.2 Discipline — where we are
 
@@ -522,18 +632,22 @@ RFIGA list going forward — case 25 in particular is specified to be *written r
 
 ### 5.3 Next, in order
 
-1. **Hoist each case's Vale program to a shared `const`**, alongside its expected return value, so
-   one corpus genuinely feeds both tiers (arch §26b.1). Today the programs are inline string
-   literals inside `#[test]` functions, so only the Rust fixture crates are shared. **Cheap at nine
-   cases, expensive at forty — do it before growing, not after.**
-2. **The `@ATAFLBZ` fix** (§6) — key on `DefId`, add the provenance filter, then the grep fence.
-   Early because case 25 is written red against it, and because every case added meanwhile is built
-   on top of string matching.
-3. **Grow the corpus** to the 40 above. Cheapest first: group A needs only fixture functions.
+1. ~~**Hoist each case's Vale program to a shared `const`.**~~ **Done.** `rust_interop/corpus.rs`
+   holds every case as data, with its expected return value declared alongside the program. In the
+   interop module rather than the test tree, because tier 2's likely home (`end_to_end_tests`) is
+   an ordinary `pub mod` that cannot see `cfg(test)` items.
+2. ~~**The `@ATAFLBZ` fix.**~~ **Half done, half core-blocked.** Per-item `package_coord` from
+   `tcx.def_path` landed, and case 24 proves two crates coexist with one store each. The naming
+   half is core — see §6 and §10.9.
+3. ~~**Grow the corpus.**~~ **9 → 30.** Groups A, B, C, D, E and F are substantially covered; what
+   remains is listed in §5.1, and five of the ten are blocked rather than pending.
 4. **A fixture compile-check**, so a fixture that type-errors cannot rot unnoticed (§26b.2) — it
-   must skip `fixtures_broken_rust/`, which is unparseable on purpose.
-5. **Tier 2**, when the LLVM port and the onion relink land: a second runner over the same cases,
-   asserting only on what `main` returns.
+   must skip `fixtures_broken_rust/`, which is unparseable on purpose. **Now the next unblocked
+   piece of work**, and the fixtures have grown enough to make it worth having.
+5. **The grep fence for `@ATAFLBZ`**, with an allow-marker. The value is not the one site left but
+   the next one in eight months.
+6. **Tier 2**, when the LLVM port and the onion relink land: a second runner over the same cases,
+   asserting only on what `main` returns. The corpus is now shaped for it.
 
 **Prefer the Vale program to carry the assertion.** `pick<int, bool>` returning `A` means a swapped
 index yields `bool` where `int` belongs and `main() int` will not typecheck — nothing to grep, and it
@@ -551,13 +665,23 @@ the log carries a typed `OracleQuery` beside its rendered line, a compile failur
 
 ## 6. Known defects and open questions
 
-- **The oracle matches by name — one site left, down from three.** `resolve_method` and
-  `resolve_function` were two of the three, and both were **deleted 2026-07-26** having lost their
-  last callers to the pivot (see §2). What remains is the up-front crate walk
-  (`TyCtxtOracle::new`), which decides by `child.ident` string equality against the allowlist.
-  Fix: key on `DefId`, add a provenance filter (arch §6.3's `__VALE_STUBS_MARKER` plus the
-  DefId-parentage check). Harmonious's advice stands: also write a **grep fence** with an
-  allow-marker — the value is not that one site, it is the next one in eight months.
+- **The oracle no longer takes identity from a name.** `resolve_method` and `resolve_function`
+  were deleted 2026-07-26 having lost their callers to the pivot; the remaining site — the up-front
+  crate walk in `TyCtxtOracle::new` — was fixed by **deriving each item's `package_coord` from its
+  own `tcx.def_path`** instead of stamping every item with one coordinate handed to the
+  constructor. Two crates each exporting a `Widget` are now two Vale types in two packages
+  (`imports_from_two_crates` is the green proof; case 25 is the collision).
+
+  What is still name-shaped is *selection* — which items the allowlist admits — and that is the
+  allowlist's own semantics rather than an identity claim. Still owed: the **grep fence** with an
+  allow-marker, per Harmonious. The value is not the site that was fixed, it is the next one.
+
+- **A type-name collision is a panic, and the trigger has fired.** With two same-named types
+  imported, a synthesized declaration's `LookupSR` carries a bare `CodeNameS`; `PackageEnvironmentT`
+  unions every top-level store, so the lookup finds both and `lookup_nearest_with_imprecise_name`
+  panics (`environment.rs:164`). Case 25 pins it. The fix is §10.9's Problem A, **two of whose four
+  steps are core**, so it is the architect's — and §10.9 now records a correction to how step 4
+  has to work.
 - **The up-front crate walk is insufficient, not merely slow.** `module_children` on a crate root
   yields only direct children, so `std::vec::Vec` would never be found. Recursing is what would make
   it expensive *and* widen collisions. End state: resolve the one path an `import` names.
@@ -673,12 +797,209 @@ This step is **Problem B** in §10.0's split, and it is `Vec`-specific: a generi
 whose items sit at the root — `Holder<T>` in our own fixture — needs none of it. That is what makes
 `Holder<int>` the right first target and `Vec` a later one.
 
-**2. Generic types carrying their arguments.** `TyCtxtOracle::type_kind` builds its `StructNameValT`
-with `template_args: &[]` and never reads the ADT's `GenericArgsRef`. Today that is a *silent wrong
-answer*, not a gap: case 40 shows `Holder<i32>` and `Holder<bool>` interning to the same kind.
-Generic *functions* already work — their parameters live on the signature and Vale's solver
-substitutes them — but a generic *citizen* needs the name itself to carry args, which nothing has
-built. This is the largest of the four.
+**2. Generic types carrying their arguments — ✅ DONE 2026-07-26.** `Holder<i32>` and `Holder<bool>`
+are now two distinct Vale kinds; case 40 was inverted from asserting the defect to asserting
+`("rust-citizen<int32>", "rust-citizen<bool>")`. Four changes, all inside `rust_interop/` bar one
+core deletion:
+
+1. `type_kind` reads the ADT's `GenericArgsRef` onto the interned name.
+2. A Rust type is now a synthesized **`StructS`** (`synthesize_extern_struct`), registered as
+   `IEnvEntryT::Struct` rather than a finished `ITemplataT::Kind`. That is what makes its name
+   resolve to a `StructDefinition` templata, the one arm `solve_call_rule` can apply arguments to.
+3. `declarations.rs` emits `LookupSR` + `CallSR` for **every** citizen position, generic or not.
+4. `import_rust_types` is **deleted** — `precompile_struct`/`compile_struct` do its six
+   `coutputs` calls. The core diff is a 7-line deletion of the gated call site, so interop's core
+   footprint shrank.
+
+Both derive macros are suppressed with the language's own `DontCallMacro` attribute. The
+constructor because a field constructor over zero members claims a layout Vale does not have; the
+**drop** because its `GeneratedBody` destructures *members*, so for a zero-member Rust citizen it is
+an empty destructor that never reaches rustc — indistinguishable from correct for a type with no
+`Drop` impl, and a silently skipped destructor for one that has it. We synthesize our own
+`ExternBody` drop instead.
+
+**A fifth change, and the one that made the other four general: `ValeSigType::Citizen`.** A
+signature position can now be *a citizen applied to arguments that are themselves positions*, so
+`Holder<T>` is expressible where before only a settled `KindT` was. Two things were impossible
+without it, both discovered by probe rather than by reasoning:
+
+- `holder_ignore<T>(h: Holder<T>)` **panicked in the oracle** — lowering the ADT's arguments went
+  through `lower_ty`, and a `ty::Param` has no `KindT` at all.
+- a generic type's `drop` receiver could only be named as an argument-less `Holder`, so
+  `predict_struct` zipped one generic parameter against zero arguments.
+
+It also let `synthesize_extern_drop` be deleted: the drop is now an ordinary `ValeSig` with the
+receiver as `Citizen { Holder, [Generic(0)] }`, built by the same `synthesize_extern_function` as
+everything else. One code path again.
+
+> **►► Remaining gap, now diagnosed properly: a compiler-generated drop call cannot infer its type
+> argument. ◄◄** `drop<T>(Holder<T>)` resolves fine when the argument is *written* — case
+> `calls_a_generic_function_taking_a_generic_type` proves the exact shape works via
+> `holder_ignore<int>(make_holder())`. What fails is the **implicit** case: `get_drop_function`
+> calls `find_function` with **no explicit template arguments**, so `T` would have to be inferred
+> backwards through the `CallSR` from the concrete argument, and the solve ends `SolveIncomplete`
+> with `T` and the receiver rune unsolved.
+>
+> ~~**That is arch §1.7 behaving as specified**, not obviously a bug: *"Vale does not infer generic
+> type arguments at call sites."*~~ **WRONG, and struck 2026-07-27.** That rule was a transcription
+> of Sky's, never ratified for Vale, and the architect has struck it from §1.7. So a drop call
+> supplying no explicit type argument is **not** behaving as specified — there is nothing to
+> specify. This paragraph is left standing rather than deleted because citing an unratified
+> inherited rule as authority to *not* fix a defect is the failure mode worth remembering: the rule
+> read as locked because it was phrased like the locked ones around it.
+>
+> Vale's own generic structs must hit this too, and the difference worth chasing is **placement**:
+> a derived drop is registered *nested under the citizen's id* and reaches the citizen's outer env,
+> while ours is a flat top-level declaration. Whether that placement is what supplies the argument
+> is the next thing to find out — and if it is, this is a question for Vale2 rather than a defect
+> of ours. ~~**Do not "fix" it by turning on call-site inference**; that contradicts a locked
+> decision.~~ **Struck 2026-07-27** — there was no locked decision. Relying on argument-driven
+> inference is a legitimate direction, and may be the whole fix.
+>
+> Non-generic drop is unaffected. Case 40's program therefore consumes both `Holder`s rather than
+> letting them fall out of scope, so it pins generic arguments alone; **a case for the drop gap is
+> owed** as case 41.
+>
+> **►► And it is not an interop gap at all — pure Vale has it too, with a failing test. ◄◄**
+> `compiler_ownership_tests::opt_with_undroppable_contents` is a hand-written top-level
+> `func drop<T>(opt Some<T>)` over a generic struct, and it fails with **`Bad template call`**
+> (`rune_type_solver.rs:477`). It is among the 170 the default suite carries unchanged; everything
+> we touch is feature-gated and absent from a default build, so it is not ours. Different error from
+> ours, same capability: a generic citizen going out of scope.
+>
+> **►► The architecture doc already specifies the design that would work, and the typing pass
+> implements a different one. ◄◄** Arch §15.7 step 4 says `insert_scope_end_drops` appends
+> `FnCall { name: "__vale_drop", type_args: [T], args: [Ref(Var(local))] }` — **the type argument
+> written onto the call node**, read off the binding, with one generic wrapper doing all the work
+> and *"no predicate, no `local_needs_scope_drop` decision."* That is exactly the shape Harmonious
+> independently described as why the question never arises for them.
+>
+> But `insert_scope_end_drops` **does not exist in the tree** (zero hits), and `Compiler::drop`
+> instead resolves a *per-type* destructor by overload lookup on the name `drop` with **no explicit
+> type arguments** (`destructor_compiler.rs:29`). That divergence is a complete explanation of both
+> failures: a per-type destructor for a generic citizen has a type argument nobody supplies, whereas
+> one generic wrapper called with an explicit argument has nothing to infer.
+>
+> **Consequence for us:** we are synthesizing one `drop` declaration *per imported type*, matching
+> the implementation rather than the architecture. If the `__vale_drop<T>` wrapper shape is what
+> lands, our per-type drops should retire into it — which would dissolve our half of this gap
+> without any solver work. Routed to Vale2 2026-07-27; do not build around it until they rule.
+
+> **►► Measured 2026-07-26, and the obvious fix is not where it looks. ◄◄** Filling `template_args`
+> in `type_kind` from the ADT's `GenericArgsRef` — which `lower_ty` already has in hand and
+> discards — **changes nothing observable**. Case 40 still passes with the two kinds identical.
+>
+> The reason is one layer down: **a synthesized declaration never carries the lowered kind.**
+> `synthesize_extern_function` reduces a `ValeSigType::Kind(kind)` to
+> `LookupSR { name: CodeName(vale_type_name(kind)) }` — the type's bare *human name* — and lets the
+> solver re-resolve it against whatever the importer registered, which is the argument-less
+> template. So the arguments are dropped by the *declaration*, not by the oracle, and any fix that
+> stops at `type_kind` is dead weight.
+>
+> **The rule shape that would work is `LookupSR` + `CallSR`** — bind a rune to the *template*, then
+> apply the argument runes to it. That is what `declarations.rs`'s own comment calls *"the extra
+> rule the citizen-shaped macros have to emit"*, and what `struct_constructor_macro`,
+> `struct_drop_macro` and `anonymous_interface_macro` already do. Each argument is itself a
+> `ValeSigType`, so the existing `bind` closure recurses and a generic argument that is itself a
+> generic parameter falls out for free.
+>
+> **But emitting those rules is not sufficient, and this is the part that decides who owns the
+> work.** `solve_call_rule`'s forward branch (`compiler_solver.rs:1359`) dispatches on what the
+> template rune resolved to, and it accepts `StructDefinition` / `InterfaceDefinition` / the two
+> array templates — each of which it hands to `predict_struct` and friends. **What the importer
+> registers today is `ITemplataT::Kind`**, and that arm exists too:
+>
+> ```rust
+> ITemplataT::Kind(kt) => { /* binds result_rune to kt, ignoring args entirely */ }
+> ```
+>
+> So a `CallSR` over the current registration **silently passes the argument-less kind through**.
+> Not an error — the same silent wrong answer as case 40, moved one layer up. `CallSR` is
+> necessary and nowhere near sufficient.
+>
+> **`ITemplataT::StructDefinition` is the arm that would work, and it is gated on a `StructS`.**
+> `StructDefinitionTemplataT { declaring_env, origin_struct: &'s StructS }` holds a *parsed* struct
+> declaration, and a Rust type deliberately has none — that absence is what made the core diff
+> empty (§4). Two ways forward, and **choosing between them is the architect's**:
+>
+> 1. **Synthesize a `StructS` per imported Rust type**, symmetric with the `FunctionS` we already
+>    synthesize per imported function — and explicitly sanctioned: *"i dont think we should generate
+>    .vale source literally. if anything, we'd want to generate FunctionS/StructS ... ones that are
+>    wrappers."* Entirely interop-side. **The cost is that it turns on struct-compile machinery over
+>    Rust types**, including `get_struct_sibling_entries`' macro-derived **field constructor** — which
+>    §9 step 4 argues must *not* exist for a Rust type, since fabricating one claims knowledge of a
+>    layout and invariants Vale does not have. It also makes `compile_struct_core:144` live, which
+>    §4 flags as inert only while no `StructS` exists.
+> 2. **Add an `ITemplataT` arm for a Rust-backed citizen template**, plus its arms in
+>    `solve_call_rule` and `resolve_template_call_conclusion`. **Core**, and a new variant on a core
+>    enum — but it keeps Rust types out of the struct-compile path entirely, which is the property
+>    the whole design has been protecting.
+>
+> **Correction owed:** an earlier revision of this block said generic types were *"not blocked on the
+> architect."* That was wrong, and wrong in the specific way §0.2 warns about — it was written after
+> probing the *rule* shape but before probing what the solver does with the registration. The `Kind`
+> arm above is the fact that changes the answer.
+>
+> ### What the two sibling trees said (2026-07-26)
+>
+> **ReiImpl has generic Rust types working, with a two-instantiation test.**
+> `[ReiImpl] tests/rust-interop/ri_23_two_vec_diff_generics.vale` builds `Vec<int>` and `Vec<bool>`
+> in one program and returns `15 + 8`. So this is achieved, not theoretical.
+>
+> **Their route is one the architect ruled out, but the mechanism findings transfer.** They get a
+> `StructS` by **generating `.vale` source text** out of process (ValeRuster emits
+> `#!DeriveStructConstructor extern struct Vec<T> imm { extern func ... }` to a file, picked up by an
+> extra package resolver), which the ordinary lexer/parser/postparser turns into a completely
+> ordinary `StructS`. That is *"generate .vale source literally"*, which the architect declined in
+> favour of *"generate FunctionS/StructS ... ones that are wrappers."* So the route is out; three
+> findings underneath it are not:
+>
+> 1. **The field-constructor objection dissolves — the language already has the opt-out.**
+>    `#!DeriveStructConstructor` is a lexer token producing a `DontCallMacro` macro-call attribute,
+>    and `determine_macros_to_call` filters the default macro list by exactly that
+>    (`[ReiImpl] FrontendRust/src/typing/compiler.rs:2834`). The constructor macro is never invoked
+>    for their extern structs. **In-compiler, the equivalent is to seed the synthesized `StructS`'s
+>    attributes with `MacroCallS { include: DontCallMacro, macro_name: DeriveStructConstructor }`** —
+>    an existing language feature, not a special case. Note `DeriveStructDrop` is *not* suppressed in
+>    their tree; we synthesize our own drop, so we would want to suppress that one too or drop ours.
+> 2. **The missing link is the env entry kind, not a new templata arm.**
+>    `IEnvEntryT::Struct(struct_a)` converts to
+>    `ITemplataT::StructDefinition(StructDefinitionTemplataT { declaring_env, origin_struct })`
+>    (`[ReiImpl] FrontendRust/src/typing/env/environment.rs:617`) — precisely the arm `solve_call_rule`
+>    needs. We register `IEnvEntryT::Templata(ITemplataT::Kind(..))` instead, which is what deprives
+>    us of it.
+> 3. **Neither sibling tree has a Rust-specific `ITemplataT` arm.** The agent read ReiImpl's whole
+>    enum; there is no `RustCitizenTemplata` or equivalent. Nobody needed one.
+>
+> **Harmonious keeps foreign types out of the declaration path entirely**, carrying the arguments on
+> the *type reference* — their ADT lowering yields `RustType { name, type_args }`, so two
+> instantiations are structurally different data and no interning step can discard the args. Their
+> constructor/derive problem never arises because struct-compile is never reached. They offered this
+> as a third option and correctly scoped it: *"whether that's available to you depends on whether
+> `LookupSR`/`CallSR` is the only way to name a parameterized type."*
+>
+> **It is not available to us without a core change.** §10.1 is the answer: `LookupSR` is the only
+> rule variant that names a type and it resolves *by name*; `LiteralSR` carries int/string/bool only;
+> **no rule carries a pre-resolved templata.** So Harmonious's shape needs a new rule variant, which
+> is core — a bigger core change than the templata arm, not a smaller one.
+>
+> **Two warnings worth acting on regardless of route.** Harmonious flags that the silent
+> `ITemplataT::Kind` arm is the same hazard as the corpse — reachable, silent, wrong — and would
+> make it loud or unreachable *as part of the same change*, so the fix cannot be one
+> mis-registration away from re-introducing today's bug. And they flag that **`DefId`/`CrateNum` are
+> session-local**: fine while identity lives in one compile, wrong the moment it crosses a session
+> boundary (a cache, a symbol name, another rustc run). Their answer was content-addressed identity —
+> hash the qualified path. §10.0 currently presents `def_path` as *the* durable name without that
+> caveat; see §10.11.
+>
+> **Where that leaves the choice.** Option 1 — synthesize a `StructS` in-compiler, register it as
+> `IEnvEntryT::Struct`, and suppress the constructor macro with the language's own attribute — is now
+> the strongest: it is what the architect specified (*"FunctionS/StructS ... wrappers"*), it needs no
+> core change, its main objection has a precedented answer, and ReiImpl proves everything downstream
+> of it works. **It remains the architect's call**, because it reverses the lean recorded above and
+> because it makes `compile_struct_core` live over Rust types for the first time (§4's note; our
+> citizen outer env is empty, so the specific panic at `:144` should not fire, but that is reasoning
+> rather than measurement).
 
 **3. Outbound `GenericArgs` reconstruction.** rustc's real args for `Vec<i64>` are `[i64, Global]` —
 type **plus allocator** — while the Vale name would carry `[Kind(i64)]`. Feeding rustc back
@@ -912,7 +1233,7 @@ Three things were named as cheap now and expensive to retrofit. Two landed; one 
 | carried? | item |
 |---|---|
 | ✅ | unique `DefId`-derived `CodeLocationS` per synthesized denizen |
-| ✅ | (partly) keying on identity rather than strings — still open in the oracle, see §6 |
+| ✅ | keying on identity rather than strings — **done 2026-07-26**, via per-item `package_coord` from `tcx.def_path` (§6) |
 | ❌ | **qualified interned name in `LookupSR`** — `declarations.rs:115` still emits a bare `IImpreciseNameValS::CodeName(CodeNameS { .. })` |
 
 The third is a genuine divergence from the stated plan. It has not bitten because nothing collides
@@ -920,14 +1241,70 @@ yet, and it is **still cheap** — and per §10.0 it is cheaper than this doc pr
 the qualified name's contents come from `tcx.def_path` rather than needing a resolver to exist
 first. The whole of Problem A is:
 
-1. `TyCtxtOracle` stamps each item's `package_coord` from `tcx.def_path` instead of from one coord
-   handed to the constructor;
-2. add `IImpreciseNameValS::QualifiedCodeName(&[StrI])` plus its interner and humanizer arms;
-3. `declarations.rs:115` emits it instead of a bare `CodeName`;
-4. `get_imprecise_name` derives the same key for a registered Rust citizen, so the two ends match.
+1. ~~`TyCtxtOracle` stamps each item's `package_coord` from `tcx.def_path`~~ — **done 2026-07-26**,
+   and it is the whole zero-core half. Two crates' same-named types are now two Vale types.
+2. add `IImpreciseNameValS::QualifiedCodeName(&[StrI])` plus its interner and humanizer arms
+   — **core**, `postparsing/names.rs`;
+3. `declarations.rs:115` emits it instead of a bare `CodeName` — ours;
+4. registration derives the same key, so the two ends match — **core**, and **not the one-arm change
+   this list previously implied.**
+
+> **►► Correction to step 4, found while writing case 25. ◄◄** `get_imprecise_name`
+> (`environment.rs:435`) takes an **`INameT`**, not an `IdT` — it sees the local name and never the
+> package coordinate — and `add_entries` keys every store entry through it (`:567`). So there is
+> nothing in scope from which to build a qualified key, and adding a match arm cannot work. The two
+> shapes that can: thread the coordinate into `get_imprecise_name`/`add_entries`, or let a caller
+> supply the imprecise key explicitly and have the interop side pass a qualified one. The second
+> keeps the change off every existing call site, at the cost of a wider `add_entries` signature.
+> Deciding between them is the architect's, since both touch core.
 
 None of that needs a walker, a precedence struct, or the `get_only_nearest` fix — those are
 Problem B.
+
+**The trigger for this work has now fired**, rather than being hypothetical: case 25 is a real
+program that panics, and §5.1 records it. Until step 2–4 land, two imported Rust types sharing a
+short name is a compiler crash.
+
+### 10.9b Nobody has solved the collision — and `DefId` is session-local
+
+Two findings from the sibling trees, 2026-07-26, both bearing on the design above.
+
+**Neither sibling tree solved same-short-name collisions.** An agent read ReiImpl end to end for
+this: no qualified-name surface syntax, no per-crate mangling at the Vale-source level, no
+disambiguation in their generator, no fixture, and **the identical panic text at
+`[ReiImpl] FrontendRust/src/typing/env/environment.rs:213`**. Their docs' own limitations and
+troubleshooting sections never mention it. Harmonious hit the hazard and fixed it with a
+**provenance filter** at six-plus sites rather than with naming — a narrower problem than ours.
+
+They do get per-crate package coordinates for free (`rust.std.vec`), because a user writes
+`import rust.std.vec.Vec` and the coordinate falls out of the path. But **lookup is still by bare
+imprecise name unioned across every namespace**, so the collision is latent there exactly as here.
+Qualification exists only *downstream of typing*, for ABI purposes (`rustifySimpleId` →
+`std::vec::Vec<i32>` for the backend pragmas), derived after the name has already resolved — so it
+does not help.
+
+**Conclusion: there is nothing to steal here.** §10's design is ours to get right, and its value is
+correspondingly higher.
+
+**And `DefId`/`CrateNum` are session-local.** `tcx.def_path`'s crate component is a `CrateNum`,
+assigned per compilation session and not stable across invocations. That is fine while identity
+lives inside one compile — which is all §10.0's Problem A needs today — and **wrong the moment
+identity crosses a session boundary**: persisted to a `.vale-cache`, embedded in a symbol name, or
+compared against something a different rustc run built. Harmonious hit exactly this and their answer
+was **content-addressed identity**: hash the qualified path so independent compilations compute the
+same id with no shared session state, which is also what arch §10.8's typeids already do for Vale
+types.
+
+So §10.0's *"ask rustc for the canonical name"* is right, with the refinement that what gets
+**stored** past the session boundary must be the path or its hash, never the `DefId`. Arch §8.10
+already says the name serializes as a path and re-resolves at universe-load, so the architecture
+agrees; this is a caveat on the interop-side implementation, not a change of direction.
+
+**One more from Harmonious, worth carrying into the design:** their resolver returns
+`Option<DefId>` and takes the first match, which cannot represent the two-major-versions case
+(`memchr::memchr` resolving to two crate versions at once) that our own clippy survey found. Their
+words: build it plural from the start. §6 already records the shape; this is a second tree
+confirming it bit.
 
 ### 10.10 Vale2's dispatch model shrinks Problem B further
 

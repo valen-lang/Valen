@@ -17,6 +17,7 @@
 
 use std::cell::RefCell;
 
+use crate::interner::StrI;
 use crate::typing::rust_interop::oracle::{
     RustItemId, RustOracle, ValeSig, ValeSigType,
 };
@@ -36,6 +37,10 @@ pub enum SigPosition {
     Kind { rust_backed: bool },
     /// A reference to the item's own generic parameter at this index.
     Generic(u32),
+    /// An imported citizen applied to arguments. Recorded with its name and its argument
+    /// positions, because "a citizen reached this position" is not the interesting fact once
+    /// generic types exist — *which* citizen at *which* arguments is.
+    Citizen { name: String, args: Vec<SigPosition> },
 }
 
 /// A lowered signature, reduced to the facts a test keys on.
@@ -67,6 +72,9 @@ pub enum OracleQuery {
     ImportableTypes { items: Vec<(String, RustItemId)> },
     ImportableFunctions { items: Vec<(String, RustItemId)> },
     Methods { owner: RustItemId, found: Vec<(String, RustItemId)> },
+    /// A type's own generic parameter names. Empty means non-generic, which is the degenerate
+    /// case rather than an absence.
+    TypeGenericParams { item: RustItemId, names: Vec<String> },
 }
 
 impl OracleQuery {
@@ -135,6 +143,10 @@ fn shape_of(sig: &ValeSig) -> SigShape {
         match t {
             ValeSigType::Kind(k) => SigPosition::Kind { rust_backed: is_rust_backed_kind(*k) },
             ValeSigType::Generic(i) => SigPosition::Generic(*i),
+            ValeSigType::Citizen { name, args } => SigPosition::Citizen {
+                name: name.0.to_string(),
+                args: args.iter().map(position).collect(),
+            },
         }
     }
     SigShape {
@@ -216,6 +228,20 @@ impl<'a, 's, 't> RustOracle<'s, 't> for LoggingOracle<'a, 's, 't> {
         self.record(
             OracleQuery::Methods { owner: item, found: answer.clone() },
             format!("methods({item:?}) -> {answer:?}"),
+        );
+        answer
+    }
+
+    fn type_generic_params(
+        &self,
+        item: RustItemId,
+        interner: &TypingInterner<'s, 't>,
+    ) -> &'t [StrI<'s>] {
+        let answer = self.inner.type_generic_params(item, interner);
+        let names: Vec<String> = answer.iter().map(|n| n.0.to_string()).collect();
+        self.record(
+            OracleQuery::TypeGenericParams { item, names: names.clone() },
+            format!("type_generic_params({item:?}) -> {names:?}"),
         );
         answer
     }

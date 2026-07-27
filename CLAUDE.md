@@ -85,6 +85,7 @@ Instead, use the same file.
 - **Read when reviewing a diff for added code that doesn't serve the change's goal — dead helpers, redundant reinventions, unused flexibility, and the stale comments that hide them.** → docs/skills/find-deadweight.md
 - **Read when the architect says the literal phrase "fire commit" or "fire commit temporary" (or you're about to commit + sync as a TL).** → docs/skills/fire-commit.md
 - **Read when the architect says the literal phrase "fire rebase".** → docs/skills/fire-rebase.md
+- **Read when you need the entire contents of one or more files, rather than a targeted search or excerpt.** → docs/skills/full-read.md
 - **Read when reviewing or critiquing a plan for testing correctness before implementation.** → docs/skills/good-testing.md
 - **Read when a Guardian shield just fired or failed at hook time and you need to diagnose it.** → docs/skills/guardian-diagnose.md
 - **Read when acting as JR in a Guardian-gated loop.** → docs/skills/guardian-jr.md
@@ -102,5 +103,5 @@ Instead, use the same file.
 - **Read when reviewing or writing typing-pass tests (or other tests that walk the AST with collect_ macros).** → docs/skills/test-review.md
 - **Read when an API has obligations callers must remember (call X before Y, don't forget Z), when the same construction is hand-rolled across many call sites, or when runtime assertions guard "did you do this yet".** → docs/skills/type-enforced-apis.md
 - **Read when reviewing or writing code in the typing pass (FrontendRust/src/typing/).** → docs/skills/typing-reviewer.md
-- **Read when a human asks you to use the mailbox, or to coordinate with another Claude Code session via messages.** → docs/skills/use-mailbox.md
+- **Read when a human asks you to use the mailbox to send mail, or you have trouble arming a mail watcher.** → docs/skills/use-mailbox.md
 - **Read when reviewing or writing FrontendRust compiler code in any pass.** → docs/skills/valec-reviewer.md

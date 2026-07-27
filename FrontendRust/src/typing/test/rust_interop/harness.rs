@@ -27,6 +27,8 @@
 // `Compilation::Stop`, so a fixture that type-errors is invisible here. Tier 2 would catch that
 // rot; tier 1 structurally cannot.
 
+use std::env::{temp_dir, var};
+use std::fs::{create_dir_all, read_dir};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -41,7 +43,9 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::new_test_code_map;
 use crate::typing::hinputs_t::HinputsT;
-use crate::typing::rust_interop::{LoggingOracle, OracleCall, OracleQuery, TyCtxtOracle};
+use crate::typing::rust_interop::{
+    Case, Expect, LoggingOracle, OracleCall, OracleQuery, TyCtxtOracle,
+};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation_with_rust_oracle;
 use crate::typing::typing_interner::TypingInterner;
 
@@ -112,6 +116,35 @@ impl<R> CaseOutcome<R> {
         }
     }
 
+    /// Check the outcome against what the case **declared**, returning the extracted value when
+    /// the case was expected to compile.
+    ///
+    /// This is the half of a case's expectation that tier 1 can check. `Returns(n)` says the
+    /// program typechecks *and* yields `n`; only the first half is observable without running it,
+    /// and the second is precisely what tier 2 exists for. Keeping the declaration whole here —
+    /// rather than letting tier 1 record only "it compiles" — is what lets tier 2 read the same
+    /// case and add nothing.
+    pub fn check(&self, case: &Case) -> Option<&R> {
+        match case.expect {
+            Expect::Returns(_) => Some(self.expect_compiled()),
+            Expect::FailsToCompile(variant) => {
+                let failure = self.expect_failure();
+                assert!(
+                    failure.is(variant),
+                    "expected the program to fail with {variant}, but it failed with {}:\n{}",
+                    failure.variant,
+                    failure.detail
+                );
+                None
+            }
+            Expect::RustcFails => panic!(
+                "case `{}` declares that rustc fails, so it has no Vale outcome to check — use \
+                 `try_run_case` and assert the result is `None`",
+                case.name
+            ),
+        }
+    }
+
     /// Was a question matching `pred` asked? The vacuity assertion.
     pub fn asked(&self, pred: impl Fn(&OracleQuery) -> bool) -> bool {
         self.oracle_log.iter().any(|c| pred(&c.query))
@@ -155,10 +188,9 @@ where
         let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, self.vale_source)]);
         let typing_interner = TypingInterner::new(&typing_bump);
 
-        let module = scout_arena.intern_str("rust");
-        let package = scout_arena.intern_str("mycrate");
-        let coord = scout_arena.intern_package_coordinate(module, &[package]);
-        let real = TyCtxtOracle::new(tcx, &scout_arena, coord, self.allowed);
+        // No package coordinate is handed in: each item derives its own from `tcx.def_path`, so
+        // items from different crates cannot collide on one coordinate.
+        let real = TyCtxtOracle::new(tcx, &scout_arena, self.allowed);
         let compiling = tcx.crate_name(rustc_span::def_id::LOCAL_CRATE).to_string();
         let logging = LoggingOracle::new(&real, &compiling);
 
@@ -185,55 +217,127 @@ fn fixtures_dir(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/typing/rust_interop").join(name)
 }
 
+/// Compile a fixture's `stub.rs` **to completion**, so a fixture cannot rot into invalid Rust
+/// unnoticed.
+///
+/// Tier 1 structurally cannot catch this: `after_expansion` runs before type checking and the
+/// callback returns `Compilation::Stop`, so only *parse* errors ever reach a case. The dependency
+/// crates are already covered — `build_dep_rlib` runs rustc over them in full and asserts success —
+/// so the stub is the one file nothing was checking.
+///
+/// Returns rustc's stderr on failure, so the message names the actual error.
+pub fn compile_check_fixture(fixture: &str) -> Result<(), String> {
+    let fixture_dir = fixtures_dir(fixture);
+    let out_dir = temp_dir().join("vale-interop-fixture-check").join(fixture);
+    create_dir_all(&out_dir).map_err(|e| format!("could not create out dir: {e}"))?;
+
+    let deps = dep_crates(&fixture_dir);
+    for (crate_name, source) in &deps {
+        build_dep_rlib(crate_name, source, &out_dir);
+    }
+
+    let mut command = Command::new(var("RUSTC").unwrap_or_else(|_| "rustc".to_string()));
+    command
+        .arg(fixture_dir.join("stub.rs"))
+        .args(["--crate-type=lib", "--crate-name=stub", "--edition=2021"])
+        .arg(format!("-L{}", out_dir.display()))
+        .arg(format!("--out-dir={}", out_dir.display()));
+    for (crate_name, _) in &deps {
+        command.arg(format!(
+            "--extern={crate_name}={}",
+            out_dir.join(format!("lib{crate_name}.rlib")).display()
+        ));
+    }
+
+    let output = command.output().map_err(|e| format!("could not run rustc: {e}"))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// Every dependency crate a fixture directory declares: one per `*.rs` other than `stub.rs`, with
+/// the crate name taken from the file stem.
+///
+/// Discovered from the directory rather than listed on the `Case`, so that adding a crate to a
+/// fixture is one file and the directory stays the single statement of what a fixture *is*.
+/// Sorted, because `read_dir` order is filesystem-dependent and rustc's `-L`/`--extern` arguments
+/// would otherwise vary run to run — the same determinism discipline the cache keys use
+/// (arch §7.6).
+fn dep_crates(fixture_dir: &Path) -> Vec<(String, PathBuf)> {
+    let mut crates: Vec<(String, PathBuf)> = read_dir(fixture_dir)
+        .expect("could not read the fixture directory")
+        .map(|e| e.expect("could not read a fixture directory entry").path())
+        .filter(|p| p.extension().is_some_and(|e| e == "rs"))
+        .filter(|p| p.file_stem().is_some_and(|s| s != "stub"))
+        .map(|p| {
+            let name = p
+                .file_stem()
+                .expect("a .rs path always has a stem")
+                .to_str()
+                .expect("fixture crate names are utf8")
+                .to_string();
+            (name, p)
+        })
+        .collect();
+    crates.sort();
+    crates
+}
+
 fn sysroot() -> String {
-    let out = Command::new(std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string()))
+    let out = Command::new(var("RUSTC").unwrap_or_else(|_| "rustc".to_string()))
         .arg("--print=sysroot")
         .output()
         .expect("could not run rustc to find the sysroot");
     String::from_utf8(out.stdout).expect("sysroot was not utf8").trim().to_string()
 }
 
-fn build_dep_rlib(fixture_dir: &Path, out_dir: &Path) {
-    std::fs::create_dir_all(out_dir).expect("could not create out dir");
-    let status = Command::new(std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string()))
-        .arg(fixture_dir.join("mycrate.rs"))
-        .args(["--crate-type=lib", "--crate-name=mycrate", "--edition=2021"])
+/// Build one dependency crate to an rlib in `out_dir`.
+///
+/// `-L out_dir` so a fixture's crates may depend on each other; `dep_crates`' sorted order is what
+/// makes that well-defined, since a crate can only name one already built.
+fn build_dep_rlib(crate_name: &str, source: &Path, out_dir: &Path) {
+    let status = Command::new(var("RUSTC").unwrap_or_else(|_| "rustc".to_string()))
+        .arg(source)
+        .args(["--crate-type=lib", "--edition=2021"])
+        .arg(format!("--crate-name={crate_name}"))
+        .arg(format!("-L{}", out_dir.display()))
         .arg("--out-dir")
         .arg(out_dir)
         .status()
         .expect("could not run rustc to build the dependency rlib");
-    assert!(status.success(), "building the dependency rlib failed");
+    assert!(status.success(), "building the dependency rlib for `{crate_name}` failed");
 }
 
-/// Compile `vale_source` against `fixture`'s Rust crate, with `allowed` naming the importable
-/// Rust items, and return what `extract` pulled out of the typing pass's output.
+/// Compile `case`'s Vale program against its Rust fixture, and return what `extract` pulled out of
+/// the typing pass's output.
 ///
-/// `case_name` names this case's private output directory.
+/// The case supplies the program, the fixture and the allowlist; the extractor is the tier's, not
+/// the case's — how to observe an outcome differs per tier, so it does not belong in the corpus.
 pub fn run_case<R: Send>(
-    fixture: &str,
-    case_name: &str,
-    vale_source: &str,
-    allowed: &[&str],
+    case: &Case,
     extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
 ) -> CaseOutcome<R> {
-    try_run_case(fixture, case_name, vale_source, allowed, extract)
-        .expect("rustc returned without ever reaching after_expansion")
+    try_run_case(case, extract).expect("rustc returned without ever reaching after_expansion")
 }
 
 /// `run_case` for the one case that expects rustc itself to fail: `None` means `after_expansion`
 /// never ran, so there is no Vale outcome to report.
 pub fn try_run_case<R: Send>(
-    fixture: &str,
-    case_name: &str,
-    vale_source: &str,
-    allowed: &[&str],
+    case: &Case,
     extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
 ) -> Option<CaseOutcome<R>> {
-    let fixture_dir = fixtures_dir(fixture);
-    let out_dir = std::env::temp_dir().join("vale-interop-cases").join(case_name);
-    build_dep_rlib(&fixture_dir, &out_dir);
+    let fixture_dir = fixtures_dir(case.fixture);
+    let out_dir = temp_dir().join("vale-interop-cases").join(case.name);
+    create_dir_all(&out_dir).expect("could not create out dir");
 
-    let rustc_args: Vec<String> = vec![
+    let deps = dep_crates(&fixture_dir);
+    for (crate_name, source) in &deps {
+        build_dep_rlib(crate_name, source, &out_dir);
+    }
+
+    let mut rustc_args: Vec<String> = vec![
         "valec-rs".to_string(),
         fixture_dir.join("stub.rs").display().to_string(),
         "--crate-type=lib".to_string(),
@@ -241,11 +345,21 @@ pub fn try_run_case<R: Send>(
         "--edition=2021".to_string(),
         format!("--sysroot={}", sysroot()),
         format!("-L{}", out_dir.display()),
-        format!("--extern=mycrate={}", out_dir.join("libmycrate.rlib").display()),
         format!("--out-dir={}", out_dir.display()),
     ];
+    for (crate_name, _) in &deps {
+        rustc_args.push(format!(
+            "--extern={crate_name}={}",
+            out_dir.join(format!("lib{crate_name}.rlib")).display()
+        ));
+    }
 
-    let mut callbacks = CaseCallbacks { vale_source, allowed, extract, outcome: None };
+    let mut callbacks = CaseCallbacks {
+        vale_source: case.vale,
+        allowed: case.allowed,
+        extract,
+        outcome: None,
+    };
     // rustc's fatal-error path does not return — it emits the diagnostic and then **unwinds**,
     // with a `FatalErrorMarker` payload rather than a string. `catch_with_exit_code` is rustc's
     // own way of turning that back into a value, and using it is what keeps a broken fixture from

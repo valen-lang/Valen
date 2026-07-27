@@ -34,161 +34,13 @@ use crate::typing::env::environment::{
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::names::names::*;
-use crate::typing::rust_interop::declarations::synthesize_extern_function;
+use crate::typing::rust_interop::declarations::{
+    synthesize_extern_function, synthesize_extern_struct,
+};
 use crate::typing::rust_interop::oracle::{RustItemId, RustOracle, ValeSig, ValeSigType};
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT, PrototypeTemplataT};
 use crate::typing::types::types::*;
 use crate::utils::code_hierarchy::PackageCoordinate;
-
-/// Declare every importable Rust type. A no-op when no Rust oracle is present, which is
-/// every ordinary compilation.
-pub fn import_rust_types<'s, 'ctx, 't>(
-    compiler: &Compiler<'s, 'ctx, 't>,
-    global_env: &'t GlobalEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-) where
-    's: 't,
-{
-    let Some(oracle) = compiler.oracles.rust else { return };
-    let interner = compiler.typing_interner;
-
-    for (type_name, type_item) in oracle.importable_types() {
-        let human_name = compiler.scout_arena.intern_str(&type_name);
-
-        // Five interner calls and a Rust struct is an ordinary Vale struct-kind. No new
-        // `KindT` arm, no new name type — "Rust-backed" is carried entirely by the reserved
-        // `rust` package coordinate on the id.
-        let template_name =
-            interner.intern_struct_template_name(StructTemplateNameT { human_name });
-        let struct_name = interner.intern_struct_name(StructNameValT {
-            template: IStructTemplateNameT::StructTemplate(template_name),
-            template_args: &[],
-        });
-        let Some(package_coord) = oracle.item_package(type_item) else { continue };
-        let struct_id = interner.intern_id(IdValT {
-            package_coord,
-            init_steps: &[],
-            local_name: INameT::Struct(struct_name),
-        });
-        let struct_kind = KindT::Struct(interner.intern_struct_tt(StructTTValT { id: *struct_id }));
-
-        // The env is keyed by the *template* id, because that is what `get_struct_template`
-        // derives from an instance id and what `get_param_environments` looks up.
-        let template_id = interner.intern_id(IdValT {
-            package_coord,
-            init_steps: &[],
-            local_name: INameT::StructTemplate(template_name),
-        });
-
-        coutputs.declare_type(template_id);
-        coutputs.declare_type_sharedness(template_id, SharednessT::Single);
-
-        // A real definition, with zero members and an `Extern` attribute.
-        //
-        // The attribute is the honest way to say "this type is foreign": every site that wants to
-        // know reads it off the definition, the same as for a hand-written `extern struct`. The
-        // alternative — teaching each of those sites to recognise a `rust`-packaged id — spreads a
-        // Rust-specific special case across the core one site at a time, which is precisely what
-        // this design exists to avoid.
-        //
-        // Zero members is not a stub, it is the truth: Vale is an external consumer of a Rust
-        // type, so its layout is opaque and its private fields are none of Vale's business.
-        // `struct_hammer`'s `translate_opaque_i` asserts exactly that emptiness downstream, and
-        // both sibling implementations converged on the same shape after trying a synthetic
-        // blob-member and abandoning it.
-        let empty_bounds = interner.alloc(InstantiationBoundArgumentsT {
-            rune_to_bound_prototype: interner.alloc_index_map(),
-            rune_to_citizen_rune_to_reachable_prototype: interner.alloc_index_map(),
-            rune_to_bound_impl: interner.alloc_index_map(),
-        });
-        coutputs.add_struct(interner.alloc(StructDefinitionT {
-            template_name: *template_id,
-            instantiated_citizen: *interner.intern_struct_tt(StructTTValT { id: *struct_id }),
-            attributes: interner.alloc_slice_from_vec(vec![ICitizenAttributeT::Extern(ExternT {
-                package_coord: *package_coord,
-            })]),
-            weakable: false,
-            sharedness: SharednessT::Single,
-            members: interner.alloc_slice_from_vec(Vec::new()),
-            is_closure: false,
-            instantiation_bound_params: empty_bounds,
-        }));
-
-        // The kind itself needs bounds registered, not just its methods. Substituting into a
-        // struct rebuilds its `StructTT` and unwraps the original's bounds to translate them
-        // (`substitute_templatas_in_struct`), and that runs even for a non-generic callee. A
-        // Rust type carries no Vale bounds — rustc discharges its own — but an absent entry
-        // is not the same as an empty one.
-        for id in [*struct_id, *template_id] {
-            coutputs.add_instantiation_bounds(
-                compiler.opts.global_options.sanity_check,
-                interner,
-                *template_id,
-                id,
-                interner.alloc(InstantiationBoundArgumentsT {
-                    rune_to_bound_prototype: interner.alloc_index_map(),
-                    rune_to_citizen_rune_to_reachable_prototype: interner.alloc_index_map(),
-                    rune_to_bound_impl: interner.alloc_index_map(),
-                }),
-            );
-        }
-
-        // The outer env is empty, and that is the point.
-        //
-        // A citizen's outer env exists so `get_param_environments` can find the methods declared
-        // inside its braces. Rust methods are not declared there — they are ordinary top-level
-        // declarations taking the receiver as their first parameter (`rust_package_stores`), the
-        // way Vale's own UFCS wants. Putting them here as well produced two candidates for every
-        // call and a `CouldntNarrowDownCandidates` on the first method call, which is how the
-        // duplication announced itself.
-        //
-        // The env still has to *exist*: `get_param_environments` reaches for it unconditionally
-        // for a `KindT::Struct` argument and `get_outer_env_for_type` panics on absence.
-        let templatas = TemplatasStoreBuilder::new(template_id).build_in(interner);
-
-        // The parent is the reserved `rust` package's top-level env. A Vale citizen inherits
-        // its declaring env; a Rust type has none, so we build the one it would have had.
-        let package_top_level = INameT::PackageTopLevel(
-            interner.intern_package_top_level_name(PackageTopLevelNameT {}),
-        );
-        let package_id = interner.intern_id(IdValT {
-            package_coord,
-            init_steps: &[],
-            local_name: package_top_level,
-        });
-        let parent_env = make_top_level_environment(global_env, *package_id, interner);
-
-        let outer_env = interner.alloc(CitizenEnvironmentT {
-            global_env,
-            parent_env: IEnvironmentT::Package(parent_env),
-            template_id: *template_id,
-            id: *template_id,
-            templatas,
-        });
-        coutputs.declare_type_outer_env(template_id, IInDenizenEnvironmentT::Citizen(outer_env));
-
-        // An inner env too, empty.
-        //
-        // For a Vale citizen the inner env holds every rune its definition solve concluded, and
-        // `check_defining_conclusions_and_resolve` (`infer_compiler.rs:491`) walks it to harvest
-        // reachable bound prototypes from any citizen a signature mentions. It reaches for the
-        // inner env of *every* such citizen, unconditionally — so the moment a synthesized
-        // declaration names a Rust type, that type needs one or the lookup unwraps `None`.
-        //
-        // Empty is the honest content: a Rust citizen has no Vale-side runes to conclude, and no
-        // Vale bounds — rustc discharges its own. As with instantiation bounds, an absent entry
-        // and an empty one mean different things, and only the empty one is true here.
-        let inner_store = TemplatasStoreBuilder::new(template_id).build_in(interner);
-        let inner_env = interner.alloc(CitizenEnvironmentT {
-            global_env,
-            parent_env: IEnvironmentT::Citizen(outer_env),
-            template_id: *template_id,
-            id: *template_id,
-            templatas: inner_store,
-        });
-        coutputs.declare_type_inner_env(template_id, IInDenizenEnvironmentT::Citizen(inner_env));
-    }
-}
 
 /// Build the reserved `rust` package's top-level store: every importable free function, as a
 /// prototype entry.
@@ -228,54 +80,60 @@ where
         }
     };
 
-    // Every imported Rust type, under its own human name.
+    // Every imported Rust type, as an ordinary struct **declaration**.
     //
-    // This is what makes a Rust type nameable, and it is the same shape the builtins store uses to
-    // put `int` and `bool` in scope: a bare `Kind` templata, resolved by an ordinary `LookupSR`
-    // with no `CallSR` to apply arguments to. Being in a *top-level* store means the name resolves
-    // ambiently, which is what a top-level declaration requires — a per-type environment would only
-    // be reachable from inside that type's own methods, and under this design there are none.
+    // `IEnvEntryT::Struct` rather than a finished `ITemplataT::Kind`, and that is the whole of what
+    // makes generic Rust types work. The indexing phase in `Compiler::evaluate` converts a `Struct`
+    // entry into `ITemplataT::StructDefinition`, which is the one arm `solve_call_rule` can apply
+    // type arguments to; a `Kind` entry hits a different arm that binds the result and **ignores
+    // the arguments entirely**, so two instantiations silently become one type.
+    //
+    // Registering the declaration also means the ordinary machinery produces the definition:
+    // `precompile_struct` and `compile_struct` do the `declare_type` / `add_struct` /
+    // environment work this module used to do by hand. That is why `import_rust_types` is gone
+    // rather than reduced — synthesized is the degenerate case of parsed, for types exactly as for
+    // functions.
     for (type_name, type_item) in oracle.importable_types() {
         let Some(package_coord) = oracle.item_package(type_item) else { continue };
         let human_name = compiler.scout_arena.intern_str(&type_name);
         let template_name = interner.intern_struct_template_name(StructTemplateNameT { human_name });
-        let struct_name = interner.intern_struct_name(StructNameValT {
-            template: IStructTemplateNameT::StructTemplate(template_name),
-            template_args: &[],
-        });
-        let struct_id = interner.intern_id(IdValT {
+        let struct_s = synthesize_extern_struct(
+            compiler,
             package_coord,
-            init_steps: &[],
-            local_name: INameT::Struct(struct_name),
-        });
-        let kind = KindT::Struct(interner.intern_struct_tt(StructTTValT { id: *struct_id }));
+            human_name,
+            type_item,
+            oracle.type_generic_params(type_item, interner),
+        );
         push(
             &mut per_package,
             package_coord,
-            (
-                INameT::StructTemplate(template_name),
-                IEnvEntryT::Templata(ITemplataT::Kind(interner.alloc(KindTemplataT { kind }))),
-            ),
+            (INameT::StructTemplate(template_name), IEnvEntryT::Struct(struct_s)),
         );
 
-        // Every imported type gets a `drop`, synthesized rather than queried — and as an ordinary
-        // top-level declaration, exactly like its methods.
+        // Every imported type gets a `drop`, synthesized rather than queried, and as an ordinary
+        // top-level declaration exactly like its methods.
         //
-        // `Compiler::drop`'s `KindT::Struct` arm always resolves a destructor call; there is no
-        // discard path for an owned struct, so a Rust value going out of scope needs a `drop` to
-        // resolve or the program fails with `CouldntFindFunctionToCallT`. It cannot come from the
-        // oracle: rustc would answer `None` for any type with no `Drop` impl, which is most of
-        // them. Returns `Void` because the drop autocall requires `Void` or `Never`.
+        // The receiver is the citizen **at its own generic parameters** — `drop<T>(self Holder<T>)`
+        // — which is precisely what `ValeSigType::Citizen` exists to express. Before that variant
+        // the receiver could only be a settled kind, so a generic type's drop named `Holder` with no
+        // arguments and `predict_struct` zipped one parameter against zero arguments.
         //
-        // At codegen this becomes a call to the `__vale_drop<T>` wrapper (arch §1.7), where
-        // `drop_in_place::<T>` lets rustc resolve its own drop glue — a no-op for a type that
-        // needs no drop. Nothing here has to name that glue, which is the point of the wrapper.
-        //
-        // The type's own item id supplies the declaration's identity. Nothing else uses it — the
-        // type itself is a `Kind` entry, which carries no location — so it is free and unique.
+        // It cannot come from the oracle: rustc answers `None` for any type with no `Drop` impl,
+        // which is most of them. And it cannot come from `DeriveStructDrop`, which we suppress —
+        // that macro's generated body destructures *members*, and a Rust citizen truthfully has
+        // none, so its drop would be an empty destructor that never reaches rustc. `ExternBody`
+        // becomes `__vale_drop<T>` → `drop_in_place::<T>` at codegen instead, letting rustc resolve
+        // its own drop glue. Returns `Void` because the drop autocall requires `Void` or `Never`.
+        let generic_params = oracle.type_generic_params(type_item, interner);
+        let receiver = ValeSigType::Citizen {
+            name: human_name,
+            args: interner.alloc_slice_from_vec(
+                (0..generic_params.len()).map(|i| ValeSigType::Generic(i as u32)).collect(),
+            ),
+        };
         let drop_sig = ValeSig {
-            generic_params: interner.alloc_slice_from_vec(Vec::new()),
-            params: interner.alloc_slice_from_vec(vec![ValeSigType::Kind(kind)]),
+            generic_params,
+            params: interner.alloc_slice_from_vec(vec![receiver]),
             ret: ValeSigType::Kind(KindT::Void(VoidT)),
         };
         if let Some(drop_s) = synthesize_extern_function(

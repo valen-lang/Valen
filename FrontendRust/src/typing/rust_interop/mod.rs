@@ -7,6 +7,7 @@
 // See docs/convos/rust_interop/rust-interop-frontend-plan.md and
 // docs/convos/rust_interop/rust-interop-callout-map.md.
 
+pub mod corpus;
 pub mod declarations;
 pub mod importer;
 pub mod logging_oracle;
@@ -14,7 +15,8 @@ pub mod oracle;
 pub mod reserved;
 pub mod tyctxt_oracle;
 
-pub use importer::{import_rust_types, rust_package_stores};
+pub use corpus::{Case, Expect};
+pub use importer::rust_package_stores;
 pub use logging_oracle::{LoggingOracle, OracleCall, OracleQuery, SigPosition, SigShape};
 pub use oracle::{RustItemId, RustOracle, ValeSig};
 pub use tyctxt_oracle::TyCtxtOracle;

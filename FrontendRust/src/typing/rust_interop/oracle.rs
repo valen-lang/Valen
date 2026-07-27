@@ -36,8 +36,23 @@ pub struct RustItemId(pub u32);
 /// prototype has to pick one instantiation and a generic function has none.
 #[derive(Copy, Clone, Debug)]
 pub enum ValeSigType<'s, 't> {
-    /// A type that needs no substitution — a primitive, or an imported citizen.
+    /// A type that needs no substitution — a primitive.
     Kind(KindT<'s, 't>),
+    /// An imported citizen applied to arguments, each of which is itself a signature position.
+    ///
+    /// **Why this cannot be a `Kind`.** A `KindT` is a settled type, and `Holder<T>` is not settled
+    /// — its argument is the enclosing item's generic parameter. Lowering it eagerly means lowering
+    /// `T`, which has no `KindT` at all, so a `Holder<T>` parameter either panics in the oracle or
+    /// silently loses its argument. Both happened before this variant existed.
+    ///
+    /// Recursive, so `Holder<Holder<int>>` and `Holder<T>` are the same case at different depths.
+    /// `args` is empty for a non-generic citizen, which is the degenerate case rather than a
+    /// separate one — a citizen's name resolves to a *template* either way, so it always needs the
+    /// application step.
+    ///
+    /// The name is what a declaration writes into its `LookupSR`; identity comes from the reserved
+    /// `rust` package coordinate the importer registers it under.
+    Citizen { name: StrI<'s>, args: &'t [ValeSigType<'s, 't>] },
     /// The function's own generic parameter at this index.
     ///
     /// The index is into **this item's own** parameters, with any parent (impl) parameters already
@@ -108,6 +123,20 @@ pub trait RustOracle<'s, 't> {
     /// Vale uses to be explicitly imported, making the surface finite and declared.
     fn importable_types(&self) -> Vec<(String, RustItemId)> {
         Vec::new()
+    }
+
+    /// A Rust type's own generic parameter names, in declaration order.
+    ///
+    /// Empty for a non-generic type — the degenerate case, not a separate one. This is what makes a
+    /// synthesized `StructS` a *template* rather than a finished type, and therefore what gives a
+    /// `CallSR` something to apply arguments to. Without it, two instantiations of one generic Rust
+    /// type intern to the same argument-less Vale kind.
+    fn type_generic_params(
+        &self,
+        _item: RustItemId,
+        _interner: &TypingInterner<'s, 't>,
+    ) -> &'t [StrI<'s>] {
+        &[]
     }
 
     /// Every importable Rust free function, with its human name.

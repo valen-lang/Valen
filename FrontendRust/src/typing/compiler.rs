@@ -34,7 +34,7 @@ use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, NeverT, StrT, Void
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::oracles::Oracles;
 #[cfg(feature = "rust_interop")]
-use crate::typing::rust_interop::{import_rust_types, rust_package_stores};
+use crate::typing::rust_interop::rust_package_stores;
 use crate::typing::types::types::{RegionT};
 use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::overload_resolver::FindFunctionFailure;
@@ -739,13 +739,6 @@ where 's: 't,
         });
 
         let mut coutputs = CompilerOutputs::new();
-
-        // Declare the imported Rust types: intern a `rust`-packaged name for each, and give
-        // it an outer environment holding its methods. After this, every later pass can treat
-        // a Rust-backed citizen as an ordinary declared citizen — which is what lets method
-        // resolution, and drop, go through the normal paths instead of a Rust-specific one.
-        #[cfg(feature = "rust_interop")]
-        import_rust_types(self, global_env, &mut coutputs);
 
         self.compile_static_sized_array(global_env, &mut coutputs);
         self.compile_runtime_sized_array(global_env, &mut coutputs);

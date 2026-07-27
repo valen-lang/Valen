@@ -18,6 +18,8 @@ use crate::typing::names::names::*;
 use crate::typing::rust_interop::oracle::{
     RustItemId, RustOracle, ValeSig, ValeSigType,
 };
+use crate::typing::rust_interop::reserved::RUST_MODULE;
+use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
 use crate::typing::types::types::*;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
@@ -39,6 +41,46 @@ fn own_generic_param_names<'s>(
         .iter()
         .map(|p| scout_arena.intern_str(p.name.as_str()))
         .collect()
+}
+
+/// The Vale package coordinate for a Rust item: the reserved `rust` module, then the item's own
+/// crate, then the module path it sits under.
+///
+/// **Asked of rustc rather than reconstructed.** `tcx.def_path` is the *definition* path and is
+/// unique by construction, so two crates each exporting a `Widget` land in different packages and
+/// can never intern to one Vale id. The alternative — one coordinate handed to the constructor and
+/// stamped on every item — is exactly what made them indistinguishable, and it is the shape
+/// @ATAFLBZ warns about: identity from a short name rather than from the thing itself.
+///
+/// The **last** named segment is the item's own name and belongs in `local_name`, not in the
+/// coordinate; everything before it is module nesting. Segments carrying no name — an `impl`
+/// block, for one — contribute nothing to a source-level path and are skipped.
+///
+/// One consequence to know: this is the *definition* path, so `std::vec::Vec` yields
+/// `rust.["alloc","vec"]`, because `std::vec` is a re-export of `alloc::vec`. That is right for
+/// identity and wrong for a diagnostic, which should echo the path the user wrote. rustc keeps a
+/// whole lossy BFS query (`visible_parent_map`) purely to invert one into the other, and it is a
+/// diagnostics problem rather than a resolution one — see the naming design in
+/// `synthesized-declarations-plan.md` §10.0.
+fn package_coord_for<'s>(
+    tcx: TyCtxt<'_>,
+    scout_arena: &ScoutArena<'s>,
+    def_id: DefId,
+) -> &'s PackageCoordinate<'s> {
+    let named: Vec<String> = tcx
+        .def_path(def_id)
+        .data
+        .iter()
+        .filter_map(|segment| segment.data.get_opt_name())
+        .map(|name| name.to_string())
+        .collect();
+
+    let mut packages = vec![scout_arena.intern_str(tcx.crate_name(def_id.krate).as_str())];
+    for module_segment in named.iter().take(named.len().saturating_sub(1)) {
+        packages.push(scout_arena.intern_str(module_segment));
+    }
+
+    scout_arena.intern_package_coordinate(scout_arena.intern_str(RUST_MODULE), &packages)
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -101,25 +143,20 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     ///   because its items sit at the crate root. Recursing to fix that is what would make the
     ///   walk expensive, and it would widen name collisions from crate roots to every visible
     ///   item in every loaded crate.
-    /// - **Short names are not identity.** `resolve_function`, `resolve_method`, and this walk
-    ///   all decide by string equality; `resolve_method` matches a method's *owner* by human
-    ///   name. Rust has no uniqueness rule for short names — `new`, `len`, `Error`, `Box` recur
-    ///   across crates — and `tcx.crates(())` hands us every loaded crate, so first-match-wins
-    ///   silently picks a stranger. Since the matched `DefId` ultimately drives the mangled
-    ///   symbol, the failure surfaces as a link error against a plausible-looking symbol, far
-    ///   from the mistake.
+    /// - **Short names are not identity.** The allowlist is matched by string equality, and
+    ///   `tcx.crates(())` hands us every loaded crate. Rust has no uniqueness rule for short
+    ///   names — `new`, `len`, `Error`, `Box` recur across crates — so a name can match in more
+    ///   than one place. **The item's identity no longer comes from that match**: each carries
+    ///   its own `DefId` and a `package_coord` derived from `tcx.def_path`, so two crates'
+    ///   `Widget`s stay two types (`two_crates_exporting_the_same_short_name_stay_distinct`).
+    ///   What remains name-shaped is *selection* — which items the allowlist admits — and that
+    ///   is the allowlist's own semantics rather than an identity claim.
     ///
     /// The end state enumerates nothing: an `import rust.std.vec.Vec` resolves that one path
     /// segment by segment to exactly one item, keyed by `DefId` thereafter. Cost becomes
     /// O(imports) rather than O(crate graph), and ambiguity stops existing because the user
-    /// wrote the full path. Until then, any walk over a rustc-global collection needs a
-    /// provenance filter (is this from a crate we control?) rather than a name comparison.
-    pub fn new(
-        tcx: TyCtxt<'tcx>,
-        scout_arena: &ScoutArena<'s>,
-        package_coord: &'s PackageCoordinate<'s>,
-        allowed: &[&str],
-    ) -> Self {
+    /// wrote the full path.
+    pub fn new(tcx: TyCtxt<'tcx>, scout_arena: &ScoutArena<'s>, allowed: &[&str]) -> Self {
         let mut items: Vec<RustItem<'s>> = Vec::new();
 
         for &cnum in tcx.crates(()).iter() {
@@ -141,7 +178,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                     human_name: scout_arena.intern_str(&name),
                     name,
                     def_id,
-                    package: package_coord,
+                    package: package_coord_for(tcx, scout_arena, def_id),
                     kind,
                     generic_params: own_generic_param_names(tcx, scout_arena, def_id),
                 });
@@ -186,9 +223,16 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     /// This is the whole of "a Rust struct is an ordinary Vale struct-kind": five interner
     /// calls, no new name type and no new `KindT` arm. `is_rust_backed` holds for it because
     /// the id carries the reserved `rust` package coordinate.
+    /// `args` are the ADT's own generic arguments, which ride the interned name.
+    ///
+    /// Carrying them here is necessary but not sufficient: a synthesized declaration does not
+    /// embed this kind, it names the type through rules. So `declarations.rs` reads these back off
+    /// the name to decide whether one `LookupSR` will do or whether it needs `LookupSR` + `CallSR`.
+    /// Filling this in without that second half changes nothing observable — measured 2026-07-26.
     fn type_kind<'t>(
         &self,
         idx: usize,
+        args: rustc_middle::ty::GenericArgsRef<'tcx>,
         interner: &TypingInterner<'s, 't>,
     ) -> KindT<'s, 't>
     where
@@ -197,9 +241,18 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
         let item = &self.items[idx];
         let template_name = interner
             .intern_struct_template_name(StructTemplateNameT { human_name: item.human_name });
+        // Only type arguments. Lifetimes erase at the boundary (@ELASZ) and Vale's arg list has no
+        // slot for them; a const generic would need one Vale does not have, and reaches
+        // `lower_ty`'s catch-all rather than being silently skipped.
+        let template_args: Vec<ITemplataT<'s, 't>> = args
+            .types()
+            .map(|arg| {
+                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: self.lower_ty(arg, interner) }))
+            })
+            .collect();
         let struct_name = interner.intern_struct_name(StructNameValT {
             template: IStructTemplateNameT::StructTemplate(template_name),
-            template_args: &[],
+            template_args: interner.alloc_slice_from_vec(template_args),
         });
         let id = interner.intern_id(IdValT {
             package_coord: item.package,
@@ -261,6 +314,27 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
             // no predicates at all. So the type isn't unreadable-for-now, it's un-normalizable, and
             // importing it would put an alias in the declaration that nothing can resolve.
             TyKind::Alias(..) => None,
+            // An imported citizen, kept **unapplied** with its arguments as signature positions of
+            // their own. Lowering it to a settled `KindT` here is what used to lose a generic
+            // argument (`Holder<i32>` and `Holder<bool>` interning alike) and then, once the args
+            // were read, what panicked on `Holder<T>` — a `ty::Param` has no `KindT`. Recursing
+            // through `lower_sig_ty` handles both, because a parameter is a legal *position* even
+            // though it is not a legal type.
+            TyKind::Adt(adt_def, adt_args) => {
+                let did = adt_def.did();
+                let idx = self
+                    .items
+                    .iter()
+                    .position(|i| i.kind == ItemKind::Type && i.def_id == did)?;
+                let args: Vec<ValeSigType<'s, 't>> = adt_args
+                    .types()
+                    .map(|arg| self.lower_sig_ty(arg, own_param_names, def_id, interner))
+                    .collect::<Option<Vec<_>>>()?;
+                Some(ValeSigType::Citizen {
+                    name: self.items[idx].human_name,
+                    args: interner.alloc_slice_from_vec(args),
+                })
+            }
             _ => Some(ValeSigType::Kind(self.lower_ty(ty, interner))),
         }
     }
@@ -291,14 +365,14 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                 "cannot lower Rust {ty:?}: Vale has no unsized concept, so str/[T]/dyn Trait \
                  cannot be value types"
             ),
-            TyKind::Adt(adt_def, _) => {
+            TyKind::Adt(adt_def, adt_args) => {
                 let did = adt_def.did();
                 match self
                     .items
                     .iter()
                     .position(|i| i.kind == ItemKind::Type && i.def_id == did)
                 {
-                    Some(idx) => self.type_kind(idx, interner),
+                    Some(idx) => self.type_kind(idx, adt_args, interner),
                     None => panic!(
                         "cannot lower Rust type {:?}: it was not imported. Every Rust item \
                          Vale uses must be explicitly imported (@RTMEIZ), including ones \
@@ -369,6 +443,17 @@ where
             params: interner.alloc_slice_from_vec(params),
             ret,
         })
+    }
+
+    fn type_generic_params(
+        &self,
+        item: RustItemId,
+        interner: &TypingInterner<'s, 't>,
+    ) -> &'t [StrI<'s>] {
+        match self.items.get(item.0 as usize) {
+            Some(rust_item) => interner.alloc_slice_copy(&rust_item.generic_params),
+            None => &[],
+        }
     }
 
     fn importable_types(&self) -> Vec<(String, RustItemId)> {

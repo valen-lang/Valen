@@ -125,7 +125,16 @@ point is not tidiness — it is that the main compiler's cost of carrying intero
 proportional to what interop actually needs, so that someone working on the typing pass never has to
 reason about rustc.
 
-Four rules follow, and each has been applied against a real alternative:
+**What "the main compiler" covers is defined once, in `synthesized-declarations-plan.md` §0.0**, and
+it is not obvious in either direction: the **instantiating pass and the backend are in**, and
+**patterns is out** despite living inside the typing pass. That definition is what scopes the
+verbatim-hunks protocol, so it is the operative one whenever this chapter says "core."
+
+Note that **§8.10's "core IR" is a different and narrower thing** — `names`/`types`/`interner`,
+three specific files, named for a different claim: that no rustc type reaches them. It keeps its own
+name; don't read the two as synonyms.
+
+Five rules follow, and each has been applied against a real alternative:
 
 1. **Interop code lives in `typing/rust_interop/` and the interop test subtree.** The irreducible
    floor is what Rust forces to a crate root: the `cfg_attr(feature, feature(rustc_private))`
@@ -282,7 +291,7 @@ User-side: valec-rs is installed via a custom rustup channel; `vale-toolchain.to
 - **Vale does not implement Rust-style "cancellation by drop."** Dropping an executing Vale future panics + aborts. Linear types may not be dropped at all. tokio APIs depending on drop-as-cancel are incompatible with default linear futures; users opt into cancellable futures via `into_cancellable(future, cleanup_handler)` for tokio compat.
 - **Vale does not silently convert Rust types into Vale-shaped views.** Every Rust type Vale source uses must be explicitly imported (Sky `@RTMEIZ`).
 - **Vale does not expose its private surface to rustc.** Only items the user explicitly marks `exported(rust)` (or `exported(c, rust)`) get a DefId in rustc's universe. Vale-private items — the default, and the overwhelming majority of any program — are **invisible and unknown to rustc** at every level: no DefId, unnameable from Rust source, absent from the stub rlib. A common misreading holds that interop requires publishing Vale's whole universe to rustc so its mono collector can reach everything; it does not, and designing for that would be a serious error. Vale codegens non-exported items through its own walk, and transitive Rust deps reached *through* private Vale code surface via the nearest exported ancestor's synthetic MIR body. Vale's surface to rustc is proportional to the chosen export surface, not to Vale's total type universe. §9.4, §9.5.
-- **Vale does not infer generic type arguments at call sites.** Every call to a generic spells out type arguments (or uses a Vale source-level placeholder).
+- ~~**Vale does not infer generic type arguments at call sites.** Every call to a generic spells out type arguments (or uses a Vale source-level placeholder).~~ **STRUCK 2026-07-27 by the architect — this was never a Vale rule.** It is a near-verbatim transcription of Sky's `rust-interop-architecture.md:201`, made during the bulk fill that drafted this document from theirs. Sky's version ends *"Sky inherits this discipline from toylang's experience with inference-related complexity"* — a cost argument about **their** predecessor prototype — and the transcription **dropped that sentence**, which was the only one carrying any argument. Evidence it was never ratified here: the bullet carries **no Q-ref** while every neighbour in this list cites its provenance; it is **absent from convo-9's explicit inventory** of inherited §1.7 items; **no Vale design conversation discusses generic-argument inference at all**; and **Valen is silent** on it, leaning the other way in comparable rulings (return-group inference took "Rust-style default when unambiguous, explicit otherwise", with always-explicit explicitly rejected). Sky's own rationale is itself unsourced — nothing in their 20k-line design log supports it. **Vale infers generic type arguments from argument types at call sites**; `integration_tests/tests/infer_template_tests.rs` asserts exactly that, though it does not currently run (`integration_tests` is commented out of `lib.rs:37` with the onion arc), and `get_drop_function` depends on argument-driven resolution today. Do not reintroduce this rule, and do not cite it: it blocked a real fix for a day.
 - **Vale does not have Send/Sync as runtime-checkable properties.** Vale's typechecker statically tracks send-ability + sharedness; the runtime carries no marker information. Send/Sync at the rustc boundary are **honest** — no global `unsafe impl Send` lie. This diverges from Sky §12.1; see §12.4.
 - **Vale does not allow incoherent trait implementations.** Vale inherits Rust's orphan rule. Sealed Vale interfaces close at the declaration scope (file or project; TBD); only the declaring scope can add impls. Open interfaces follow the orphan rule.
 - **Vale does not have separate type universes for runtime and compile-time.** Comptime is Zig-style; one type universe.
@@ -1230,13 +1239,13 @@ How does the typing pass name a Rust type inside Vale's own IR — e.g. `import 
 
 **Why a candidate source and not a fallback** *(learned in implementation, 2026-07-25)*. Two reasons, both structural. First, a `find_function`-failure fallback is **unreachable** for a Rust receiver: resolution panics earlier, in `get_param_environments` → `get_outer_env_for_type`, because a Rust-backed citizen has no Vale environment. Second, a fallback would make a Rust callee invisible whenever any Vale function of the same name matched loosely — an overload-semantics decision made by accident. Entering as a candidate also means the synthesized prototype flows through `attempt_candidate_banner`'s existing `PrototypeTemplata` arm, which already does `IFunctionNameT::try_from(..).parameters()` + `params_match` — i.e. the machinery a Rust callee needs was already there for function bounds.
 
-**The oracle seam.** All rustc *facts* (kind, `fn_sig`, layout, variance, auto-traits) come lazily through a **`RustOracle`** with Vale-owned inputs/outputs — **no `'tcx` in any signature** — keyed by the stable path; never stored in `HinputsT`. Per §8.2's corrected model the seam is **bidirectional**: Vale→rustc queries return owned facts, and where Vale must feed rustc (`Instance::expect_resolve`, `GenericArgs::for_item`) it constructs interned `Ty<'tcx>` behind the seam and never lets it escape. The pass reaches the oracle as a `#[cfg(rust_interop)]` field on **`Compiler`** — the immutable-context struct, alongside `&'ctx ScoutArena` / `&'ctx TypingInterner` / `&'ctx Keywords` / `&'ctx TypingPassOptions` — supplied as a cfg'd constructor param threaded from `TypingPassCompilation::new`. Deliberately *not* on `CompilerOutputs`: that is the output accumulator drained into `HinputsT`, and an oracle is an input. `Compiler` is a stack local created inside the pass entry and dropped when it returns, so the containment property holds; `HinputsT` never holds it (verified structurally — `HinputsT` is built field-by-field from `coutputs` getters, so nothing can leak in by accident). Tests reach it through `typing_pass_compilation_for_test`, which supplies a `StubOracle`, so no test about Vale semantics mentions the build mode. Per the **single-crate-cfg decision**, the real `TyCtxt`-backed impl lives behind a `#[cfg(rust_interop)]` submodule of the frontend, **not** a separate `frontend_rust_rustc` crate — so the fence protecting "the core IR never names a rustc type" is a green `cfg(rust_interop)`-off build + confining rustc code to that submodule, rather than a physical crate wall. Either way, Option A does not *shrink* the `'tcx`-touching glue (`per_instance_mir`, `layout_of`, cascade discovery are still separate `'tcx` sites); it *fences* it, keeping the typing-pass core IR `'tcx`-free with no new types at all.
+**The oracle seam.** All rustc *facts* (kind, `fn_sig`, layout, variance, auto-traits) come lazily through a **`RustOracle`** with Vale-owned inputs/outputs — **no `'tcx` in any signature** — keyed by the stable path; never stored in `HinputsT`. Per §8.2's corrected model the seam is **bidirectional**: Vale→rustc queries return owned facts, and where Vale must feed rustc (`Instance::expect_resolve`, `GenericArgs::for_item`) it constructs interned `Ty<'tcx>` behind the seam and never lets it escape. The pass reaches the oracle as a `#[cfg(rust_interop)]` field on **`Compiler`** — the immutable-context struct, alongside `&'ctx ScoutArena` / `&'ctx TypingInterner` / `&'ctx Keywords` / `&'ctx TypingPassOptions` — supplied as a cfg'd constructor param threaded from `TypingPassCompilation::new`. Deliberately *not* on `CompilerOutputs`: that is the output accumulator drained into `HinputsT`, and an oracle is an input. `Compiler` is a stack local created inside the pass entry and dropped when it returns, so the containment property holds; `HinputsT` never holds it (verified structurally — `HinputsT` is built field-by-field from `coutputs` getters, so nothing can leak in by accident). Tests reach it through `typing_pass_compilation_for_test`, which supplies `Oracles::none()` — **not** a stub implementation, per §26b.3 — so no test about Vale semantics mentions the build mode. Per the **single-crate-cfg decision**, the real `TyCtxt`-backed impl lives behind a `#[cfg(rust_interop)]` submodule of the frontend, **not** a separate `frontend_rust_rustc` crate — so the fence protecting "the core IR never names a rustc type" is a green `cfg(rust_interop)`-off build + confining rustc code to that submodule, rather than a physical crate wall. Either way, Option A does not *shrink* the `'tcx`-touching glue (`per_instance_mir`, `layout_of`, cascade discovery are still separate `'tcx` sites); it *fences* it, keeping the typing-pass core IR `'tcx`-free with no new types at all.
 
 **Typechecking flow.** `import rust.std.vec.Vec` → `oracle.resolve_path` (walks `module_children`, honoring re-exports so `std::vec::Vec` and `alloc::vec::Vec` canonicalize to one identity, avoiding the §6.3 name-match fragility) + `oracle.kind` (→ `Struct`) → intern a `rust`-packaged `StructTemplateNameT`/`StructNameT`. `Vec<i64>()` interns the `StructNameT` and builds `KindT::Struct(StructTT)`; the kind then flows through the solver by pointer identity like any Vale citizen. `my_vec.push(x)` resolves via the call seam (the candidate source in `get_candidate_banners`): `is_rust_backed(param_filters[0])` → `oracle.resolve_method(rust.std.vec.Vec, "push")` → `oracle.fn_sig(item, args, interner) -> ValeSig`; behind the seam this reads `tcx.fn_sig` (an `EarlyBinder<PolyFnSig>`), **instantiates with the concrete args `[i64]` FIRST, then lowers to Vale-owned form** (the @EarlyBinder discipline — lowering pre-instantiation would poison the §19.5 typed-body cache with a wrong substitution), and records a `RustCall` node (§8.3) → `ReifyFnPointer` cast at mono (§19.4), dispatching via the trait def's method DefId (@TVIMDGAZ §26.13). The `ValeSig` is over `KindT`, not `CoordT` — the onion refactor dissolved `CoordT` into the reference wraps inside `KindT`, so a Rust `&self` receiver arrives already wrapped as a `BorrowRef`.
 
 The synthesized prototype's name must carry the params, because `PrototypeT::param_types()` reconstructs them from `id.local_name` rather than storing them — a prototype whose name disagreed with its signature would silently report wrong param types at every call site. `ExternFunctionNameT` is the variant used, matching what the C-extern path already produces for a function defined elsewhere with no Vale body. Two consequences to know: `IFunctionNameT::template()` panics for that variant, and `template_args()` returns `&[]`, so a Rust method cannot yet carry generic args of its own — only those already on the receiver kind.
 
-**Cache / cross-run / build.** The name serializes as `ItemRef::RustPath` (path + Vale args) — deterministic, pointer-free, `'tcx`-free (§7.6); cross-run identity re-resolves the path to a fresh `DefId` at universe-load (§10.9), routing around `DefId`'s session-scoping exactly as rustc's own `DefPathHash` does. **Revised on the cfg question (2026-07-25).** An earlier draft of this section claimed the typing pass compiles in both binaries with ~zero `#[cfg]`. That is achievable — an always-compiled trait plus a no-op `StubOracle` needs no gating — but it was **deliberately not taken**, because it means the core calls into the interop module in the standalone build. The chosen requirement is stronger: *under `valec`, nothing may reference the interop module at all.* So the module tree, the `Compiler` field and its threading, and every seam hook are `#[cfg(rust_interop)]`-gated, and the standalone build is byte-identical to no-interop. The residual is a handful of gated one-liners in the core files (inert under `valec`); literally-zero interop text is not achievable for control-flow interception without a global hook table, which @NGSAX forbids. Enforcement is the green cfg-off build. In the test tree the gating is one line — the whole `typing/test/rust_interop/` subtree — so tests about Vale semantics never mention the mode. Concurrency: the typing pass (hence the oracle read path) is single-threaded (§13.11); the immutable name IR is trivially concurrent-read for the rayon providers, which re-query `tcx` directly (@GCMLZ §26.2; cache writes stay in `after_rust_analysis`, @CMWAR §26.17).
+**Cache / cross-run / build.** The name serializes as `ItemRef::RustPath` (path + Vale args) — deterministic, pointer-free, `'tcx`-free (§7.6); cross-run identity re-resolves the path to a fresh `DefId` at universe-load (§10.9), routing around `DefId`'s session-scoping exactly as rustc's own `DefPathHash` does. **Revised on the cfg question (2026-07-25).** An earlier draft of this section claimed the typing pass compiles in both binaries with ~zero `#[cfg]`. That is achievable — an always-compiled trait plus a no-op stub implementation needs no gating — but it was **deliberately not taken**, for two reasons: it means the core calls into the interop module in the standalone build, and the no-op stub is exactly the kind of answers-nothing object §26b.3 rules out. The chosen requirement is stronger: *under `valec`, nothing may reference the interop module at all.* So the module tree, the `Compiler` field and its threading, and every seam hook are `#[cfg(rust_interop)]`-gated, and the standalone build is byte-identical to no-interop. The residual is a handful of gated one-liners in the core files (inert under `valec`); literally-zero interop text is not achievable for control-flow interception without a global hook table, which @NGSAX forbids. Enforcement is the green cfg-off build. In the test tree the gating is one line — the whole `typing/test/rust_interop/` subtree — so tests about Vale semantics never mention the mode. Concurrency: the typing pass (hence the oracle read path) is single-threaded (§13.11); the immutable name IR is trivially concurrent-read for the rayon providers, which re-query `tcx` directly (@GCMLZ §26.2; cache writes stay in `after_rust_analysis`, @CMWAR §26.17).
 
 **Cost, and two honest costs the reviews sharpened.** Hot path: once interned, repeated use is pointer-identity comparison with no oracle call; a per-invocation **pointer-keyed memo** (`*const StructTT`/`*const InterfaceTT → (RustItemId, ValeSig)`) behind the seam makes repeated `fn_sig` lookups O(1) — this is where Option B's inline-facts speed is recovered without inlining rustc types. Cold path: the first touch of an item is a memoized rustc query. Two costs the reviews sharpened:
 
@@ -2337,6 +2346,51 @@ Wrapper tracks state: poll returns Ready → mark complete; subsequent drop skip
 
 Per Q8 reconsideration locked to Sky §F.22 pattern. Drop is not architecturally special; it's a function the language auto-calls.
 
+> **►► CORRECTION (architect, 2026-07-27): this section applies one mechanism to two different
+> things, and only one of them is Vale's. ◄◄**
+>
+> **Vale has no drop-in-place. A Vale value is *moved into* its destructor — `drop(self T)`.** That
+> is the model, and the steps below contradict it: step 4 says that for **EVERY** `let` binding the
+> compiler appends `__vale_drop<T>(&local)`, destructing through a raw pointer via
+> `drop_in_place::<T>`. That is Rust's destruction model, not Vale's, and applying it universally
+> to Vale locals is wrong.
+>
+> The split the section is missing:
+>
+> - **A Vale value** is moved into `drop(self T)`. No pointer, no `drop_in_place`, no `&`. What
+>   rustc's DropGlue sees when a Vale type crosses the boundary is a **boundary-projection**
+>   question, and answering it does not license describing Vale's own destruction that way.
+> - **A Rust-backed value** is moved into an `extern` drop whose *body* destructs it where it sits,
+>   via rustc's own glue. Correct, and for a specific reason: Vale is an external consumer and does
+>   not own that destructor. This is what `rust_interop/` synthesizes today — the receiver is the
+>   citizen **by value** (`drop(self Counter)`), with no reference wrap anywhere in the declaration.
+>   Only the extern body bridges to a pointer, one layer down.
+>
+> Two further inconsistencies fall out of the same conflation, both worth resolving whenever this
+> section is rewritten:
+>
+> 1. **§1.5.7 already calls the prescribed form a mistake.** It lists *"`Drop::drop` takes
+>    `&mut self`, not `self` — a workaround forced by drop being special, since you cannot move out
+>    of a value that is being destroyed"* among the five ways Rust got drop wrong. Step 5 below
+>    routes Vale destruction through exactly that form.
+> 2. **`__vale_drop<T>` cannot be the general mechanism, because `valec` has no `drop_in_place`.**
+>    There is no rustc in the standalone binary and no Rust drop glue at all, yet this section
+>    presents the wrapper as universal (*"the mono path never thinks about drop as special"*). It is
+>    a **valec-rs** mechanism.
+>
+> The explicit `<T>` in `__vale_drop<T>(&local)` has **no recorded rationale of its own** — it falls
+> out of "the synthesizer already holds `T`", and nothing ties it to §1.7. The no-inference bullet
+> that appeared to require it has been **struck** (§1.7): it was never a Vale rule.
+>
+> **And the by-pointer rationale may not transfer either.** It is properly recorded — Sky's
+> `Vec<Vec<Widget>>` double-free, verified verbatim in their §F.22 — but the argument is
+> *"by-value + unconditional per-`let` emission + **the compiler doesn't track moves** =
+> double-free."* **Vale has linear types and move semantics.** Whether we inherit that premise is
+> addressed nowhere, and the conclusion was imported without its condition.
+>
+> Nothing in `rust_interop/` depends on this being resolved: our synthesized drop is by-value and
+> consistent with the ruling above either way.
+
 **Mechanism in five steps:**
 
 1. **Source-level Drop impls are normal trait impls.** `export impl Drop for X { func drop(self: Self) { ... } }` (Vale source; the by-move `Self` receiver — an immovable/class type would instead take `ownref self` — projects to Rust's `fn drop(&mut self)` at the boundary). From typechecker's view, Drop is just a Rust trait Vale source can impl. Impl block's emission + cascade discovery + fill_extra_modules pipeline unchanged from §6's normal trait-impl handling.
@@ -3338,14 +3392,45 @@ Consequences to observe:
   therefore need a separate compile check to keep them honest; tier 2 would catch the rot, tier 1
   structurally cannot.
 
-### 26b.3 No fixture oracle
+### 26b.3 No fakes, no mocks — the real thing or nothing
 
-A hand-written fake oracle is **not** part of the strategy. It cannot produce a `ty::Param`, an
-alias, or anything else rustc-shaped, so it structurally cannot cover generics, projections or
-inherited impl parameters — the surface that matters. Worse, it must be updated whenever the
-`RustOracle` trait changes, which is maintenance paid to a thing that tests nothing real.
-`Oracles::none()` already expresses "no oracle" without an implementation to carry. Deleted
-2026-07-26, once tier 1 could host a real `TyCtxt`.
+**A standing rule, not a cost/benefit call: Vale does not test against fakes, mocks, stubs, or test
+doubles of any kind.** A test either drives the real component or it does not exist. There are two
+acceptable shapes — **dark-box** (source in, structured outcome out, at a pass boundary) and
+**end-to-end** (run the program, check its output) — and a substitute for a real dependency is not
+a third.
+
+The reason is the same one that rules out unit tests (§26b.5), one layer down. **A fake encodes what
+you currently believe the real thing does.** So it passes precisely when your belief is
+self-consistent, which is exactly when it teaches you nothing — and it keeps passing after the real
+component's behaviour moves, which is exactly when you needed to be told. It also freezes the
+interface it doubles: every change to the real trait is now a change to a second implementation that
+exists only to be conformed to, so the fake becomes an argument against refactoring. That is the
+architectural inertia the architect objects to, wearing a different hat.
+
+The arc's own instance, and why it is representative rather than special:
+
+> **The fixture oracle.** A hand-written `RustOracle` answering from a canned table, so a test could
+> exercise the seam without rustc. It could not produce a `ty::Param`, an alias, or anything else
+> rustc-shaped — so it structurally could not cover generics, projections or inherited impl
+> parameters, which is the entire surface that matters — while still needing an update on every
+> trait change. Deleted 2026-07-26 once tier 1 could host a real `TyCtxt`.
+
+Note the trap in that paragraph: read as a *cost/benefit* argument it invites the reply *"then write
+a cheaper fake."* It is not one. The fixture oracle's specific weaknesses are why it was **easy** to
+delete; the rule is why it should not have been written. Every probe that has found something real
+in this arc found it by running the actual compiler.
+
+**What absence looks like instead.** Not an object that answers nothing — that is a mock with a
+sadder face, and `Vec::new()` meaning both "no methods exist" and "methods exist elsewhere" is the
+same mistake (§1.5.6 rule 2). Absence is spelled as absence: `Oracles::none()` is an `Option` that
+is `None`, so a compilation with no Rust dependencies takes the ordinary Vale path with nothing
+standing in for anything.
+
+**A decorator over the real thing is not a fake.** `LoggingOracle` wraps the genuine
+`TyCtxtOracle` and records every question asked, and the answers still come from rustc. Recording,
+tracing, and assertion-collecting wrappers are fine because they change nothing about what is
+computed. The line is whether the *answers* are real.
 
 ### 26b.4 Assertions key on structure, never on rendering
 
@@ -3373,6 +3458,19 @@ The architect's framing, recorded because it explains choices that otherwise loo
 
 > *"unit tests are bad, theyre brittle, and they cause inertia keeping us to a certain architecture,
 > and they often arent correct in the way that end-to-end tests are."*
+
+**There are exactly two kinds of test Vale writes**, and this is a standing rule rather than a
+current preference:
+
+1. **Dark-box** — enter a *pass* with source, leave with a structured outcome, assert on that. The
+   boundary is a pass, never a helper function.
+2. **End-to-end** — run the actual program and check its output.
+
+Everything else is out, including the shapes that look like a reasonable middle: a test against a
+fake or mock (§26b.3), and a test that reaches inside a pass to call one function with hand-built
+arguments. Both are wrong for the same reason — they assert against a picture of the system rather
+than the system — and both make the architecture expensive to change, which is the cost the
+architect names above.
 
 Vale's compiler is not purely end-to-end tested — the parser, postparser, typing pass and so on each
 have their own suites — but **only because each pass is large enough to be its own dark-box boundary

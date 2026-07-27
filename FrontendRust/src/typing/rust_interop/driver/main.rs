@@ -101,10 +101,8 @@ exported func main() int {
 }";
     let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
 
-    let module = scout_arena.intern_str("rust");
-    let package = scout_arena.intern_str("mycrate");
-    let coord = scout_arena.intern_package_coordinate(module, &[package]);
-    let real = TyCtxtOracle::new(tcx, &scout_arena, coord, allowed);
+    // No package coordinate is handed in: each item derives its own from `tcx.def_path`.
+    let real = TyCtxtOracle::new(tcx, &scout_arena, allowed);
     // Tag the log with the crate this rustc invocation is compiling. Constant today because
     // only one invocation runs the typing pass; it stops being constant the moment a second
     // compile contributes entries.

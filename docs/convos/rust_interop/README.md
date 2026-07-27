@@ -35,6 +35,7 @@ Verbatim transcripts, oldest first. `convo-0` through `convo-3` are the architec
 | 7 | `convo-7-callout-map-and-seam.md` | the twelve surveys, the callout map, the oracle seam landing |
 | 8 | `convo-8.md` | Milestone 2 against a real `TyCtxt`; the pivot away from the per-call-site oracle |
 | 9 | `convo-9-generics-seam-collapse-and-test-tiers.md` | generics via structural signature reading; methods/drop/free functions collapsed to one declaration path; a real `StructDefinitionT`; the two test tiers and the in-process-rustc experiment |
+| 10 | `convo-10-test-corpus-and-arc-principles.md` | the tier-1 harness and nine-case corpus; the fixture oracle and four other dead paths deleted; name resolution split into the def-path half and the user-written half; Vale2's dispatch model read; the arc's direction and principles written into the docs |
 
 ## A caveat on paths inside the transcripts
 

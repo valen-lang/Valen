@@ -21,19 +21,26 @@
 // about the declaration records that rustc was involved.
 
 use crate::interner::StrI;
+use crate::scout_arena::ScoutArena;
+use crate::parsing::ast::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::ast::{
-    ExternBodyS, ExternS, FunctionS, GenericParameterS, IBodyS, IFunctionAttributeS,
-    IGenericParameterTypeS, KindGenericParameterTypeS, ParameterS,
+    ExternBodyS, ExternS, FunctionS, GenericParameterS, IBodyS, ICitizenAttributeS,
+    IFunctionAttributeS, IGenericParameterTypeS, KindGenericParameterTypeS, MacroCallS, ParameterS,
+    StructS,
 };
-use crate::postparsing::itemplatatype::{FunctionTemplataType, ITemplataType, TemplateTemplataType};
+use crate::postparsing::itemplatatype::{
+    FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
+};
 use crate::postparsing::names::{
     ArgumentRuneS, CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS,
-    IImpreciseNameValS, IRuneValS, IVarNameS, ReturnRuneS,
+    IImpreciseNameValS, IRuneValS, IStructDeclarationNameS, IVarNameS, ReturnRuneS,
+    TopLevelStructDeclarationNameS,
 };
-use crate::postparsing::rules::rules::{IRulexSR, LookupSR, RuneUsage};
+use crate::postparsing::rules::rules::{CallSR, EqualsSR, IRulexSR, LookupSR, RuneUsage};
 use crate::typing::compiler::Compiler;
 use crate::typing::names::names::{INameT, IStructTemplateNameT};
 use crate::typing::rust_interop::oracle::{RustItemId, ValeSig, ValeSigType};
+use crate::typing::templata::templata::ITemplataT;
 use crate::typing::types::types::*;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
@@ -101,24 +108,22 @@ where
 
     let mut rules: Vec<IRulexSR<'s>> = Vec::new();
 
-    // A concrete position gets a rune bound by an ordinary `LookupSR` to the Vale name of its
-    // type. A primitive resolves straight to a kind — the builtins store holds `int` as
-    // `IEnvEntryT::Templata(ITemplataT::Kind(..))` — so no `CallSR` is needed to apply a template
-    // to arguments, which is the extra rule the citizen-shaped macros have to emit.
+    // Synthetic runes for the intermediate positions a generic citizen needs. `CodeRune` with a
+    // reserved-looking name is safe here because the only other code runes in a synthesized
+    // declaration are the Rust generic parameters, which carry Rust's own identifiers.
+    let mut next_synthetic: u32 = 0;
+
     let mut bind = |sig_type: &ValeSigType<'s, 't>, own_rune: RuneUsage<'s>| -> Option<RuneUsage<'s>> {
-        match sig_type {
-            ValeSigType::Generic(index) => generic_runes.get(*index as usize).copied(),
-            ValeSigType::Kind(kind) => {
-                rules.push(IRulexSR::Lookup(LookupSR {
-                    range,
-                    rune: own_rune,
-                    name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(
-                        CodeNameS { name: vale_type_name(compiler, kind)? },
-                    )),
-                }));
-                Some(own_rune)
-            }
-        }
+        bind_sig_type(
+            compiler,
+            sig_type,
+            own_rune,
+            range,
+            &generic_runes,
+            &mut rules,
+            &mut next_synthetic,
+        )?;
+        Some(own_rune)
     };
 
     let mut params: Vec<ParameterS<'s>> = Vec::new();
@@ -184,6 +189,240 @@ where
         &[],
         scout_arena.alloc(IBodyS::ExternBody(ExternBodyS {})),
     )))
+}
+
+/// Bind `own_rune` to one signature position, emitting whatever rules that takes.
+///
+/// Three shapes, and the split is by *what the name resolves to*, never by argument count:
+///
+///   - **A generic parameter** references its declared rune directly, with no rule at all — which
+///     is what the postparser emits for a hand-written `func foo<T>(x T) T`.
+///   - **A primitive** is one `LookupSR`, because the builtins store holds `int` as a bare
+///     `ITemplataT::Kind`.
+///   - **A citizen is always two rules** — `LookupSR` binding a rune to the *template*, then
+///     `CallSR` applying the argument runes to it. A Rust citizen is registered as
+///     `IEnvEntryT::Struct`, so its name resolves to a `StructDefinition` template, and turning a
+///     template into a kind is what `CallSR` does. **Zero arguments is the degenerate case, not a
+///     special one** (@NNGZ): skipping the call for a non-generic citizen was tried and fails
+///     loudly, with the parameter rune resolving to a `StructDefinition` where a `Kind` is wanted.
+///
+/// Recursive, so `Holder<Holder<int>>` and `Holder<T>` fall out rather than needing their own
+/// cases — an argument is just another position.
+///
+/// `None` for anything not nameable, which drops the whole declaration rather than importing it
+/// with a hole.
+fn bind_sig_type<'s, 't>(
+    compiler: &Compiler<'s, '_, 't>,
+    sig_type: &ValeSigType<'s, 't>,
+    own_rune: RuneUsage<'s>,
+    range: RangeS<'s>,
+    generic_runes: &[RuneUsage<'s>],
+    rules: &mut Vec<IRulexSR<'s>>,
+    next_synthetic: &mut u32,
+) -> Option<()>
+where
+    's: 't,
+{
+    let scout_arena = compiler.scout_arena;
+    match sig_type {
+        ValeSigType::Generic(index) => {
+            // A declared generic parameter is referenced by its own rune. Binding `own_rune` to it
+            // would need an equality rule; instead the caller uses the returned rune directly.
+            let declared = generic_runes.get(*index as usize).copied()?;
+            if declared.rune != own_rune.rune {
+                rules.push(IRulexSR::Equals(EqualsSR { range, left: own_rune, right: declared }));
+            }
+            Some(())
+        }
+        ValeSigType::Kind(kind) => {
+            let name = vale_type_name(compiler, kind)?;
+            rules.push(IRulexSR::Lookup(LookupSR {
+                range,
+                rune: own_rune,
+                name: scout_arena
+                    .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name })),
+            }));
+            Some(())
+        }
+        ValeSigType::Citizen { name, args } => {
+            let template_rune = fresh_rune(scout_arena, range, next_synthetic);
+            rules.push(IRulexSR::Lookup(LookupSR {
+                range,
+                rune: template_rune,
+                name: scout_arena
+                    .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: *name })),
+            }));
+
+            let mut arg_runes: Vec<RuneUsage<'s>> = Vec::new();
+            for arg in args.iter() {
+                // A generic argument uses its declared rune directly rather than a fresh one, so
+                // the `CallSR` mentions the parameter the declaration actually declared — which is
+                // what lets the solver run the call backwards from a concrete argument.
+                let arg_rune = match arg {
+                    ValeSigType::Generic(index) => generic_runes.get(*index as usize).copied()?,
+                    other => {
+                        let fresh = fresh_rune(scout_arena, range, next_synthetic);
+                        bind_sig_type(
+                            compiler,
+                            other,
+                            fresh,
+                            range,
+                            generic_runes,
+                            rules,
+                            next_synthetic,
+                        )?;
+                        fresh
+                    }
+                };
+                arg_runes.push(arg_rune);
+            }
+
+            rules.push(IRulexSR::Call(CallSR {
+                range,
+                result_rune: own_rune,
+                template_rune,
+                args: scout_arena.alloc_slice_from_vec(arg_runes),
+            }));
+            Some(())
+        }
+    }
+}
+
+/// A distinct rune for one of the intermediate positions a generic citizen needs.
+fn fresh_rune<'s>(
+    scout_arena: &ScoutArena<'s>,
+    range: RangeS<'s>,
+    next_synthetic: &mut u32,
+) -> RuneUsage<'s> {
+    let name = scout_arena.intern_str(&format!("__rust_arg{}", next_synthetic));
+    *next_synthetic += 1;
+    RuneUsage { range, rune: scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name })) }
+}
+
+/// The template arguments of a **citizen** kind — `Some(&[])` for a non-generic one, `None` for
+/// anything that is not a citizen at all.
+///
+/// The `Some(&[]) != None` distinction is load-bearing: it separates "a template that takes no
+/// arguments" from "not a template," which is exactly the difference between needing a `CallSR`
+/// and not. Collapsing the two is what @NNGZ warns about.
+fn citizen_template_args<'s, 't>(kind: &KindT<'s, 't>) -> Option<&'t [ITemplataT<'s, 't>]> {
+    match kind {
+        KindT::Struct(struct_tt) => match struct_tt.id.local_name {
+            INameT::Struct(name) => Some(name.template_args),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Synthesize the declaration for one importable Rust type.
+///
+/// The counterpart to `synthesize_extern_function`, and the same idea: hand the ordinary machinery
+/// a *declaration* and let it produce the definition, rather than hand-building the definition and
+/// registering the result. `precompile_struct` and `compile_struct` then do the `declare_type` /
+/// `add_struct` / environment work that this module used to do by hand.
+///
+/// **`generic_params` is the payload.** It is what makes `Holder` a *template* rather than a
+/// finished type — and therefore what gives a `CallSR` something to apply `[int]` to. Without it,
+/// `Holder<i32>` and `Holder<bool>` intern to one argument-less kind and Vale gives the same answer
+/// for two different Rust types.
+///
+/// Three fields say something worth stating:
+///
+///   - **`members: &[]`** — zero members is the truth, not a stub. Vale is an external consumer of
+///     a Rust type; its layout is opaque and its private fields are none of Vale's business.
+///     Synthesizing a declaration does not mean fabricating fields.
+///   - **`internal_methods: &[]`** — a Rust method is an ordinary top-level declaration whose first
+///     parameter is the receiver, not something declared inside the citizen's braces. The sibling
+///     implementation puts its extern functions *inside* the extern struct; that is the
+///     method-shaped path this arc deliberately collapsed, so we do not.
+///   - **both derive macros suppressed** — see below.
+///
+/// **Why both `DeriveStructConstructor` and `DeriveStructDrop` are turned off**, using the
+/// language's own `DontCallMacro` attribute rather than any Rust-specific special case:
+///
+///   - The **constructor** would be a field constructor over zero members, which claims knowledge
+///     of a layout and invariants Vale does not have. A Rust type is constructed by calling a Rust
+///     associated function (`Counter::new`), never by a Vale struct literal.
+///   - The **drop** is the subtler one. The derived drop's body is `GeneratedBody(drop_generator)`,
+///     which destructures the struct and drops its *members* — so for a zero-member Rust citizen it
+///     is an **empty destructor that never reaches rustc**. That is indistinguishable from correct
+///     for a type with no `Drop` impl and silently skips the destructor for a type that has one.
+///     We synthesize our own `drop` instead, with an `ExternBody` that becomes `__vale_drop<T>` →
+///     `drop_in_place::<T>` at codegen, letting rustc resolve its own drop glue.
+pub fn synthesize_extern_struct<'s, 'ctx, 't>(
+    compiler: &Compiler<'s, 'ctx, 't>,
+    package_coord: &'s PackageCoordinate<'s>,
+    human_name: StrI<'s>,
+    item: RustItemId,
+    generic_param_names: &[StrI<'s>],
+) -> &'s StructS<'s>
+where
+    's: 't,
+{
+    let scout_arena = compiler.scout_arena;
+
+    // A distinct synthetic location per item, for the same identity reasons spelled out on
+    // `synthesize_extern_function`. Offset by a different base so a type and a function derived
+    // from the same item cannot collide.
+    let offset = -2_000_000 - (item.0 as i32);
+    let loc = CodeLocationS::internal(scout_arena, offset);
+    let range = RangeS::new(loc, loc);
+
+    let generic_params: Vec<&'s GenericParameterS<'s>> = generic_param_names
+        .iter()
+        .map(|name| {
+            let rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: *name }));
+            &*scout_arena.alloc(GenericParameterS {
+                range,
+                rune: RuneUsage { range, rune },
+                tyype: IGenericParameterTypeS::KindGenericParameterType(
+                    KindGenericParameterTypeS {},
+                ),
+                default: None,
+            })
+        })
+        .collect();
+
+    let tyype = TemplateTemplataType {
+        param_types: scout_arena.alloc_slice_from_vec::<ITemplataType<'s>>(
+            generic_params.iter().map(|p| p.tyype.tyype()).collect(),
+        ),
+        return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+    };
+
+    let dont_call = |macro_name: StrI<'s>| {
+        ICitizenAttributeS::MacroCall(MacroCallS {
+            range,
+            include: IMacroInclusionP::DontCallMacro,
+            macro_name,
+        })
+    };
+
+    scout_arena.alloc(StructS::new(
+        range,
+        IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS {
+            name: human_name,
+            range,
+        }),
+        scout_arena.alloc_slice_from_vec(vec![
+            // The same attribute the postparser attaches for a hand-written `extern struct`.
+            ICitizenAttributeS::Extern(ExternS { package_coord }),
+            dont_call(compiler.keywords.derive_struct_constructor),
+            dont_call(compiler.keywords.derive_struct_drop),
+        ]),
+        // Rust will never support either, so these are permanent rather than provisional.
+        false,
+        scout_arena.alloc_slice_from_vec(generic_params),
+        SharednessP::Single,
+        tyype,
+        // No bounds: rustc discharges a Rust type's own obligations, and we read no predicates.
+        &[],
+        &[],
+        &[],
+        &[],
+        &[],
+    ))
 }
 
 /// The Vale source-level name a lowered kind is written as, if it has one yet.
