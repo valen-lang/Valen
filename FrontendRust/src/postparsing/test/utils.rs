@@ -17,9 +17,9 @@ pub fn expect_code_body_expr<'s>(body: &'s IBodyS<'s>) -> &'s IExpressionSE<'s> 
 
 // Asserts `rune` is where the named type resolved to, following the whole lowering.
 //
-// A bare type name lowers to `Lookup(template)` plus a zero-arg `Call`, so a rune that "is" a named
-// type holds the Call's result, not the Lookup's. Asserting against the Lookup is the natural
-// mistake and passes nothing.
+// Per @TNLTZACZ a bare type name lowers to `Lookup(template)` plus a zero-arg `Call`, so a rune
+// that "is" a named type holds the Call's result, not the Lookup's. Asserting against the Lookup is
+// the natural mistake and passes nothing.
 pub fn assert_rune_resolves_to<'s>(rules: &'s [IRulexSR<'s>], rune: IRuneS<'s>, name: &str) {
   let nodes: Vec<NodeRefS<'s>> = rules.iter().map(NodeRefS::Rulex).collect();
   let lookup_rune = collect_only_snodes!(

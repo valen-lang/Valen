@@ -87,9 +87,7 @@ fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
 
 // VCOORD: revisit this
 // Emit a zero-arg template application: mint a fresh result rune, push a Call of `template_rune`
-// over no args, and return the result rune. A bare type-name is a zero-arg application — a
-// template that declares no parameters, applied to no arguments, is the kind itself (see the
-// NameOrRune and empty-tuple sites).
+// over no args, and return the result rune. This is the bare-name lowering of @TNLTZACZ.
 // The ITemplexPT::Call arm builds its own Call instead of calling this: it mints its result rune
 // *before* translating the template and args, and that ordering feeds the rune's
 // LocationInDenizen path, so sharing this helper would change every applied template's rune.
@@ -193,6 +191,37 @@ fn translate_own_ref_templex<'s>(
 // Translates a type expression into rules and returns its rune. Every rule goes into
 // `rule_builder`. To split the outer reference wrapping (&/weak) from the named
 // type it wraps (as a function parameter needs), call translate_signature_templex instead.
+/// Translates the template half of an application — the `Opt` of `Opt<int>`.
+///
+/// A name here yields the `Lookup` alone, never the bare-name lowering that @TNLTZACZ describes.
+/// That lowering applies the template to no arguments, which collapses it to its own return type;
+/// do it here and the outer application receives a finished kind, with its arguments left nothing
+/// to apply to. Every other templex already yields the right rune — a rune name resolves to itself
+/// or to a parent-env lookup, and neither applies anything.
+fn translate_template_position_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  context_region: IRuneS<'s>,
+  templex: &ITemplexPT<'p>,
+) -> RuneUsage<'s> {
+  let file = env.file();
+  if let ITemplexPT::NameOrRune(NameOrRunePT { name: name_or_rune, .. }) = templex {
+    let name_str = scout_arena.intern_str(name_or_rune.str().as_str());
+    let is_rune_from_env =
+      env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })));
+    if !is_rune_from_env {
+      let name = scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: name_str }));
+      let range_s = PostParser::eval_range(file, name_or_rune.range());
+      let mut child_lidb = lidb.child();
+      return add_lookup_rule(
+        scout_arena, &mut child_lidb, rule_builder, range_s, context_region, name);
+    }
+  }
+  translate_templex(scout_arena, keywords, env, lidb, rule_builder, context_region, templex)
+}
+
 pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,
@@ -290,10 +319,8 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
             )
           }
         } else {
-          // e.g. "int", or a citizen like "Moo". A bare type-name is a zero-arg application:
-          // emit the name Lookup (the template), then a Call([]) so the returned rune is a Kind,
-          // uniform with how `Moo<int>` lowers. This front-loads the "a type-position
-          // name is a Kind" decision so the rune-type solver never coerces Template->Kind.
+          // e.g. "int", or a citizen like "Moo". Per @TNLTZACZ, a bare type-name is a zero-arg
+          // application: the name's Lookup, then a Call([]) whose result is the rune we return.
           let name = scout_arena.intern_imprecise_name(CodeName(CodeNameS {
             name: scout_arena.intern_str(name_or_rune.str().as_str()),
           }));
@@ -355,7 +382,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         let mut child_lidb = lidb.child();
-        let template_rune_s = translate_templex(
+        let template_rune_s = translate_template_position_templex(
           scout_arena,
           keywords,
           env.clone(),
@@ -463,8 +490,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           name: keywords.tuple_human_name[tuple.elements.len()],
         }));
         if tuple.elements.is_empty() {
-          // Zero-arg tuple `()`: a zero-arg application like any bare zero-arg kind — Lookup the
-          // template, then Call([]) so the result is a Kind (matching the NameOrRune site above).
+          // Zero-arg tuple `()`: lowers like any bare type-name, per @TNLTZACZ.
           let mut child_lidb = lidb.child();
           let template_rune_s = RuneUsage {
             range: range_s.clone(),

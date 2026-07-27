@@ -463,11 +463,16 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
           conclusions.insert(x.result_rune.rune.clone(), *return_type);
           solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
         }
-        // A bare type-name like `int` scouts to a zero-arg Call whose template looks up as a Kind
-        // rather than a Template. Applying zero args to a Kind is the identity; a non-empty arg list
-        // on something that isn't a template is a real error. VCOORD: arcana instead
+        // Only primitives reach here: they are the one kind of type name the environment holds as a
+        // finished `ITemplataT::Kind` rather than a template, so the zero-arg Call @TNLTZACZ emits
+        // for a bare `int` arrives with a Kind in template position. Applying zero args to a kind is
+        // the identity. Every other name — citizens included, generic or not — resolves to a real
+        // template and takes the branch above.
         // VCOORD: now that the scout lowers bare names to zero-arg Calls, delete the Template->Kind
         // coercion in lookup_rune_type and its two-pass predicting machinery.
+        // VCOORD: THIS IS A HACK. i think.
+        // VCOORD: registering primitives as zero-generic-param templates would delete this arm, and the same
+        // special case in solve_call_rule with it.
         ITemplataType::KindTemplataType(KindTemplataType { }) => {
           if x.args.is_empty() {
             let mut conclusions = IndexMap::default();

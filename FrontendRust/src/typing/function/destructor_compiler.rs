@@ -28,6 +28,18 @@ where 's: 't,
             IImpreciseNameValS::CodeName(
                 CodeNameS { name: self.keywords.drop }));
         let args = &[type_2];
+        // ZLOOK: those three empty slices are the explicit template args, so dropping a generic
+        // citizen needs T deduced from the argument — and that deduction is dead everywhere, not
+        // just here. assemble_initial_sends_from_args builds exactly the argument-to-parameter
+        // sends that would carry it, and all four callers bind the result and never read it. So
+        // drop is one victim of a general gap rather than a special case: see
+        // opt_with_undroppable_contents, and Vale4's synthesized drop<T>(Holder<T>) failing
+        // SolveIncomplete with T unsolved.
+        //
+        // Two fixes, not exclusive. Wire the sends back up, which serves every call that omits its
+        // type arguments. Or have the synthesizer write the argument here — it stands at the
+        // binding holding the local's resolved type, so it is the one caller that never has to
+        // infer, and Vale4's arch prescribes that shape as __vale_drop<T>(&local).
         match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], &[], context_region, args, &[], true)?
         {
             Err(e) => Err(ICompileErrorT::CouldntFindFunctionToCallT {

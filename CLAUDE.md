@@ -103,5 +103,6 @@ Instead, use the same file.
 - **Read when reviewing or writing typing-pass tests (or other tests that walk the AST with collect_ macros).** → docs/skills/test-review.md
 - **Read when an API has obligations callers must remember (call X before Y, don't forget Z), when the same construction is hand-rolled across many call sites, or when runtime assertions guard "did you do this yet".** → docs/skills/type-enforced-apis.md
 - **Read when reviewing or writing code in the typing pass (FrontendRust/src/typing/).** → docs/skills/typing-reviewer.md
+- **Read when editing `vcoord-handoff.md` or any other long-lived handoff or plan doc.** → docs/skills/update-handoff.md
 - **Read when a human asks you to use the mailbox to send mail, or you have trouble arming a mail watcher.** → docs/skills/use-mailbox.md
 - **Read when reviewing or writing FrontendRust compiler code in any pass.** → docs/skills/valec-reviewer.md

@@ -1221,9 +1221,47 @@ where 's: 't,
                   }
               }
             // VCOORD: WeakRef and OwnRef need the same bidirectional wrap/peel as BorrowRef, minus the
-            // region: KindT::WeakRef(WeakRefT { inner }) and KindT::OwnRef(OwnRefT { inner }).
-            // KindList builds a KindListTemplataT from its member kinds and stamps the result, per
-            // the commented Pack model above.
+            IRulexSR::KindList(r) => {
+                let conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> =
+                    match solver_state.get_conclusion(&r.result_rune.rune) {
+                        Some(ITemplataT::CoordList(list)) => {
+                            assert_eq!(
+                                list.kinds.len(), r.members.len(),
+                                "KindList: the solved list has a different length than the rule's members");
+                            r.members.iter().zip(list.kinds.iter())
+                                .map(|(member_rune, kind)| (
+                                    member_rune.rune,
+                                    ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *kind }))))
+                                .collect()
+                        }
+                        Some(other) => panic!("KindList result concluded {:?}, expected a kind list", other),
+                        None => {
+                            let members: Vec<KindT<'s, 't>> =
+                                r.members.iter()
+                                    .map(|member_rune| match solver_state.get_conclusion(&member_rune.rune) {
+                                        Some(ITemplataT::Kind(KindTemplataT { kind })) => *kind,
+                                        Some(other) => panic!("KindList member concluded {:?}, expected a kind", other),
+                                        None => panic!("Neither the list nor all its members are solved in KindList"),
+                                    })
+                                    .collect();
+                            let kinds = self.typing_interner.alloc_slice_from_vec(members);
+                            let mut conclusions = IndexMap::default();
+                            conclusions.insert(
+                                r.result_rune.rune,
+                                ITemplataT::CoordList(self.typing_interner.alloc(KindListTemplataT { kinds })));
+                            conclusions
+                        }
+                    };
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        let ranges = once(r.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        let error = self.typing_interner.alloc(e);
+                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                    }
+                }
+            }
             other => unreachable!("solve_rule: {:?} — MaybeCoercingLookup/MaybeCoercingCall/IndexList are desugared before reaching the typing-pass solver", other),
         }
     }
@@ -1440,6 +1478,10 @@ where 's: 't,
                             }
                         }
                     }
+                    // The value-solver twin of the rune-type solver's Kind arm: only primitives are
+                    // held in the environment as a finished kind, so only they arrive with a Kind in
+                    // template position, via the zero-arg Call @TNLTZACZ emits for a bare `int`.
+                    // Applying zero args to a kind is the identity.
                     ITemplataT::Kind(kt) => {
                         match solver_state.commit_step(false, vec![rule_index], [(result_rune.rune, ITemplataT::Kind(kt))].into_iter().collect(), vec![], IndexSet::default()) {
                             Ok(_) => return Ok(()),
