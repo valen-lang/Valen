@@ -1198,12 +1198,12 @@ where 's: 't,
             // }
               IRulexSR::BorrowRef(r) => {
                   let mut conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = IndexMap::default();
-                let inner =
+
                     match (solver_state.get_conclusion(&r.result_rune.rune), solver_state.get_conclusion(&r.inner_rune.rune)) {
                         (Some(ITemplataT::Kind(KindTemplataT { kind: result_kind })), _) => {
                             match result_kind {
                                 KindT::BorrowRef(BorrowRefT { inner: result_inner_rune, region: result_region }) => {
-                                    conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT{ kind: *result_inner_rune})));
+                                    conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT{ kind: *result_inner_rune})));
                                 }
                                 _ => unimplemented!()
                             }
@@ -1213,7 +1213,7 @@ where 's: 't,
                             conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: wrap })));
                         },
                         _ => panic!("Neither result nor inner rune solved in BorrowRef"),
-                    };
+                    }
                   match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                       Ok(_) => Ok(()),
                       Err(e) => {
