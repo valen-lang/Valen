@@ -2190,14 +2190,19 @@ where
     fn lookup(
         &self,
         range: RangeS<'s>,
-        name_s: IImpreciseNameS<'s>,
+        parts: &[IImpreciseNameS<'s>],
     ) -> Result<
         IRuneTypeSolverLookupResult<'s>,
         IRuneTypingLookupFailedError<'s>,
     > {
+        // The last segment names the item; only diagnostics need it separately.
+        let name_s = *parts.last().expect("vwat: an empty lookup path");
         let mut filter = HashSet::default();
         filter.insert(ILookupContext::TemplataLookupContext);
-        match self.nenv.lookup_nearest_with_imprecise_name(name_s, &filter, self.typing_interner) {
+        let found = lookup_nearest_with_path(
+            IEnvironmentT::from(self.nenv.snapshot(self.typing_interner)),
+            parts, filter, self.typing_interner);
+        match found {
             Some(ITemplataT::StructDefinition(t)) => {
                 Ok(IRuneTypeSolverLookupResult::Citizen(
                     CitizenRuneTypeSolverLookupResult {
@@ -2235,6 +2240,7 @@ where
             ),
         }
     }
+
 }
 
 // VCOORD: change to 2 spaces

@@ -402,6 +402,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(ValeSigType::Citizen {
                     name: self.items[idx].human_name,
+                    package: self.items[idx].package,
                     args: interner.alloc_slice_from_vec(args),
                 })
             }

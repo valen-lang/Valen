@@ -154,7 +154,7 @@ fn test_struct() {
     NodeRefS::Struct(imoo),
     NodeRefS::LookupRule(
       LookupSR {
-        name: IImpreciseNameS::CodeName(code_name),
+        parts: [IImpreciseNameS::CodeName(code_name)],
         ..
       }
     ) if code_name.name.as_str() == "int" => Some(())
@@ -284,14 +284,14 @@ fn impl_() {
   collect_only_snode!(
     NodeRefS::Impl(impl_),
     NodeRefS::LookupRule(LookupSR {
-      name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("Moo"), .. }),
+      parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("Moo"), .. })],
       ..
     }) => Some(())
   );
   collect_only_snode!(
     NodeRefS::Impl(impl_),
     NodeRefS::LookupRule(LookupSR {
-      name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("IMoo"), .. }),
+      parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("IMoo"), .. })],
       ..
     }) => Some(())
   );
@@ -1364,11 +1364,11 @@ fn test_param_no_outer_wrap_routing() {
     ([ParameterS {
         type_outer_ref_rules: [],
         value_type_rules: [
-          IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. }),
+          IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })], .. }),
           IRulexSR::Call(CallSR { result_rune: value_call_result, args: [], .. }),
         ],
         full_type_rune, value_type_rune, .. }],
-     [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. }), .. }),
+     [IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. })], .. }),
       IRulexSR::Call(CallSR { args: [], .. })]) => {
       assert_eq!(full_type_rune.rune, value_type_rune.rune, "full == value when there's no outer wrap");
       assert_eq!(value_type_rune.rune, value_call_result.rune, "value type is the Call's result rune");
@@ -1401,8 +1401,8 @@ fn test_template_part_in_call_stays_a_template() {
     [ParameterS {
         type_outer_ref_rules: [],
         value_type_rules: [
-          IRulexSR::Lookup(LookupSR { rune: opt_lookup, name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("Opt"), .. }), .. }),
-          IRulexSR::Lookup(LookupSR { rune: int_lookup, name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. }),
+          IRulexSR::Lookup(LookupSR { rune: opt_lookup, parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("Opt"), .. })], .. }),
+          IRulexSR::Lookup(LookupSR { rune: int_lookup, parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })], .. }),
           IRulexSR::Call(CallSR { result_rune: int_result, template_rune: int_template, args: [], .. }),
           IRulexSR::Call(CallSR { result_rune: opt_result, template_rune: opt_template, args: [opt_arg], .. }),
         ],
@@ -1435,7 +1435,7 @@ fn test_param_single_ref_wrap_routing() {
   match foo.params {
     [ParameterS {
         value_type_rules: [
-          IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. }),
+          IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })], .. }),
           IRulexSR::Call(CallSR { args: [], .. }),
         ],
         type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
@@ -1469,7 +1469,7 @@ exported func foo(x held int) int { return 0; }
   match foo.params {
     [ParameterS {
         value_type_rules: [
-          IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. }),
+          IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })], .. }),
           IRulexSR::Call(CallSR { args: [], .. }),
         ],
         type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
@@ -1504,7 +1504,7 @@ exported func foo(x own int) int { return 0; }
   match foo.params {
     [ParameterS {
         value_type_rules: [
-          IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }), .. }),
+          IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })], .. }),
           IRulexSR::Call(CallSR { args: [], .. }),
         ],
         type_outer_ref_rules: [IRulexSR::OwnRef(or)],
@@ -1563,7 +1563,7 @@ fn test_function_rules_no_longer_contains_param_rules() {
   );
   let foo = program.lookup_function("foo");
   match foo.rules {
-    [IRulexSR::Lookup(LookupSR { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. }), .. }),
+    [IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. })], .. }),
      IRulexSR::Call(CallSR { args: [], .. })] => {}
     other => panic!("FunctionS.rules should be exactly [Lookup(void), Call([])]; got {:?}", other),
   }

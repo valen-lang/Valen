@@ -25,7 +25,7 @@ pub fn assert_rune_resolves_to<'s>(rules: &'s [IRulexSR<'s>], rune: IRuneS<'s>, 
   let lookup_rune = collect_only_snodes!(
     &nodes,
     NodeRefS::LookupRule(LookupSR {
-      rune, name: IImpreciseNameS::CodeName(CodeNameS { name: looked_up, .. }), ..
+      rune, parts: [IImpreciseNameS::CodeName(CodeNameS { name: looked_up, .. })], ..
     }) if looked_up.as_str() == name => Some(rune.rune));
   let call_result_rune = collect_only_snodes!(
     &nodes,

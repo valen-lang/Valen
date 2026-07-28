@@ -40,7 +40,9 @@ where 's: 't,
         rules.push(IRulexSR::Lookup(LookupSR {
             range: range(-1672147),
             rune: use_(-64002, void_kind_rune_s),
-            name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
+            parts: self.scout_arena.alloc_slice_copy(&[
+                self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
+            ]),
         }));
         let interface_name_range = interface_a.name.range;
         let interface_citizen_name = TopLevelCitizenDeclarationNameS::from(interface_a.name);
@@ -50,7 +52,7 @@ where 's: 't,
         rules.push(IRulexSR::Lookup(LookupSR {
             range: interface_name_range,
             rune: RuneUsage { range: interface_name_range, rune: self_kind_template_rune_s },
-            name: interface_imprecise_name,
+            parts: self.scout_arena.alloc_slice_copy(&[interface_imprecise_name]),
         }));
 
         let self_kind_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroSelfKindRune(MacroSelfKindRuneS {}));

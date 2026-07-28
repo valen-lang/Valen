@@ -129,7 +129,7 @@ where 's: 't,
             IRulexSR::Lookup(LookupSR {
                 range: struct_a.range,
                 rune: RuneUsage { range: struct_a.range, rune: anon_template_rune },
-                name: struct_imprecise_name,
+                parts: self.scout_arena.alloc_slice_copy(&[struct_imprecise_name]),
             }),
             IRulexSR::Call(CallSR {
                 range: struct_a.range,
@@ -142,7 +142,7 @@ where 's: 't,
             IRulexSR::Lookup(LookupSR {
                 range: interface_a.range,
                 rune: RuneUsage { range: interface_a.range, rune: parent_interface_template_rune },
-                name: interface_imprecise_name,
+                parts: self.scout_arena.alloc_slice_copy(&[interface_imprecise_name]),
             }),
             IRulexSR::Call(CallSR {
                 range: interface_a.range,
@@ -210,7 +210,9 @@ where 's: 't,
             IRulexSR::Lookup(x) => IRulexSR::Lookup(LookupSR {
                 range: x.range,
                 rune: RuneUsage { range: x.rune.range, rune: func(x.rune.rune) },
-                name: x.name,
+                // The path is carried through unchanged: `map_runes` renames runes, and a path
+                // names items rather than runes, so there is nothing in it to rename.
+                parts: x.parts,
             }),
             // IRulexSR::MaybeCoercingLookup(_) => {
                 // panic!("implement: map_runes_anonymous_interface MaybeCoercingLookup");
@@ -386,7 +388,7 @@ where 's: 't,
         rules_builder.push(IRulexSR::Lookup(LookupSR {
             range: range(-1672147),
             rune: use_rune(-64002, void_kind_rune),
-            name: void_imprecise_name,
+            parts: self.scout_arena.alloc_slice_copy(&[void_imprecise_name]),
         }));
 
         let void_kind_rune = self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructVoidKindRune(AnonymousSubstructVoidKindRuneS {}));
@@ -517,7 +519,9 @@ where 's: 't,
                 rules_builder.push(IRulexSR::Lookup(LookupSR {
                     range: interface_param.range,
                     rune: method_interface_template_rune,
-                    name: interface_a.name.get_imprecise_name(self.scout_arena),
+                    parts: self.scout_arena.alloc_slice_copy(&[
+                        interface_a.name.get_imprecise_name(self.scout_arena),
+                    ]),
                 }));
                 let generic_param_runes: Vec<RuneUsage<'s>> = interface_a.generic_params.iter().map(|gp| gp.rune).collect();
                 let generic_param_runes_slice = self.scout_arena.alloc_slice_from_vec(generic_param_runes);
@@ -748,8 +752,10 @@ where 's: 't,
         let lookup_struct_template_rule = IRulexSR::Lookup(LookupSR {
             range: abstract_param_range,
             rune: RuneUsage { range: abstract_param_range, rune: self_kind_template_rune },
-            name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::AnonymousSubstructTemplateImpreciseName(
-                AnonymousSubstructTemplateImpreciseNameValS { interface_imprecise_name: struct_interface_imprecise })),
+            parts: self.scout_arena.alloc_slice_copy(&[
+                self.scout_arena.intern_imprecise_name(IImpreciseNameValS::AnonymousSubstructTemplateImpreciseName(
+                    AnonymousSubstructTemplateImpreciseNameValS { interface_imprecise_name: struct_interface_imprecise })),
+            ]),
         });
         rules.push(lookup_struct_template_rule);
 

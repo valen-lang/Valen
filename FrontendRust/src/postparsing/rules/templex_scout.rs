@@ -80,7 +80,7 @@ fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
   rule_builder.push(Lookup(LookupSR {
     range: range_s,
     rune: rune_s.clone(),
-    name: name_sn,
+    parts: scout_arena.alloc_slice_copy(&[name_sn]),
   }));
   rune_s
 }
@@ -461,9 +461,9 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         rule_builder.push(Lookup(LookupSR {
           range: range_s.clone(),
           rune: template_rune_s.clone(),
-          name: scout_arena.intern_imprecise_name(CodeName(CodeNameS {
-            name: keywords.array,
-          })),
+          parts: scout_arena.alloc_slice_copy(&[
+            scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: keywords.array })),
+          ]),
         }));
         let mut child_lidb = lidb.child();
         let element_rune_s = translate_templex(
@@ -499,7 +499,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           rule_builder.push(Lookup(LookupSR {
             range: range_s.clone(),
             rune: template_rune_s.clone(),
-            name: tuple_name,
+            parts: scout_arena.alloc_slice_copy(&[tuple_name]),
           }));
           add_zero_arg_call_rule(scout_arena, &mut child_lidb, rule_builder, range_s, template_rune_s)
         } else {
@@ -516,7 +516,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           rule_builder.push(Lookup(LookupSR {
             range: range_s.clone(),
             rune: template_rune_s.clone(),
-            name: tuple_name,
+            parts: scout_arena.alloc_slice_copy(&[tuple_name]),
           }));
           let mut element_runes = Vec::<RuneUsage<'s>>::new();
           for element in tuple.elements {

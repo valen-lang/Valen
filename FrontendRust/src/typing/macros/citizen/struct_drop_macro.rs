@@ -52,13 +52,15 @@ where 's: 't,
         rules.push(IRulexSR::Lookup(LookupSR {
             range: range(-1672147),
             rune: use_(-64002, void_kind_rune_s),
-            name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
+            parts: self.scout_arena.alloc_slice_copy(&[
+                self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
+            ]),
         }));
         let self_kind_template_rune_s = self.scout_arena.intern_rune(IRuneValS::SelfKindTemplateRune(SelfKindTemplateRuneS { loc: struct_a.range.begin }));
         rules.push(IRulexSR::Lookup(LookupSR {
             range: struct_a.name.range(),
             rune: RuneUsage { range: struct_a.name.range(), rune: self_kind_template_rune_s },
-            name: struct_a.name.get_imprecise_name(self.scout_arena),
+            parts: self.scout_arena.alloc_slice_copy(&[struct_a.name.get_imprecise_name(self.scout_arena)]),
         }));
 
         let self_kind_rune_s = self.scout_arena.intern_rune(IRuneValS::SelfKindRune(SelfKindRuneS {}));
@@ -158,12 +160,12 @@ where 's: 't,
             IRulexSR::Lookup(LookupSR {
                 range: internal_range(-1672161),
                 rune: RuneUsage { range: internal_range(-64002), rune: drop_p1k_rune },
-                name: self_name_s,
+                parts: self.scout_arena.alloc_slice_copy(&[self_name_s]),
             }),
             IRulexSR::Lookup(LookupSR {
                 range: internal_range(-1672162),
                 rune: RuneUsage { range: internal_range(-64002), rune: drop_vk_rune },
-                name: void_name_s,
+                parts: self.scout_arena.alloc_slice_copy(&[void_name_s]),
             }),
         ]);
 

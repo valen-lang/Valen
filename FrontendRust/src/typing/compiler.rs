@@ -310,7 +310,6 @@ where 's: 't,
         self.lookup_templata_by_rune(envs.self_env, state, range, name)
     }
     
-    
     pub fn predict_static_sized_array_kind(
         &self,
         _envs: InferEnv<'s, 't>,

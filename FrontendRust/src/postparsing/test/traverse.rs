@@ -735,7 +735,9 @@ where
     IRulexSR::Lookup(x) => {
       collect_if(pred, out, NodeRefS::LookupRule(x));
       visit_rune_usage(pred, out, &x.rune);
-      visit_imprecise_name(pred, out, &x.name);
+      for part in x.parts {
+        visit_imprecise_name(pred, out, part);
+      }
     }
     IRulexSR::RuneParentEnvLookup(x) => {
       visit_rune_usage(pred, out, &x.rune);

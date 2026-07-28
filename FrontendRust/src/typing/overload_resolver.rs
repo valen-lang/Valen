@@ -261,11 +261,15 @@ where 's: 't,
             fn lookup(
                 &self,
                 range: RangeS<'s>,
-                name_s: IImpreciseNameS<'s>,
+                parts: &[IImpreciseNameS<'s>],
             ) -> Result<IRuneTypeSolverLookupResult<'s>, IRuneTypingLookupFailedError<'s>> {
+                // The last segment names the item; only diagnostics need it separately.
+                let name_s = *parts.last().expect("vwat: an empty lookup path");
                 let mut filter = HashSet::default();
                 filter.insert(ILookupContext::TemplataLookupContext);
-                match self.calling_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
+                let found = lookup_nearest_with_path(
+                    IEnvironmentT::from(self.calling_env), parts, filter, self.typing_interner);
+                match found {
                     Some(x) => Ok(IRuneTypeSolverLookupResult::Templata(TemplataLookupResult { templata: x.tyype(self.scout_arena) })),
                     None => Err(IRuneTypingLookupFailedError::CouldntFindType(RuneTypingCouldntFindType { range, name: name_s })),
                 }

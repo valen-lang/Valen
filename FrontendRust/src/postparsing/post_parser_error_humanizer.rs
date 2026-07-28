@@ -234,7 +234,11 @@ pub fn humanize_rule<'s>(
     IRulexSR::WeakRef(r) => "weak ".to_string() + &humanize_rune(r.inner_rune.rune),
     IRulexSR::OwnRef(r) => "own ".to_string() + &humanize_rune(r.inner_rune.rune),
     IRulexSR::Call(r) => humanize_rune(r.result_rune.rune) + " = " + &humanize_rune(r.template_rune.rune) + "<" + &r.args.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ") + ">",
-    IRulexSR::Lookup(r) => humanize_rune(r.rune.rune) + " = \"" + &humanize_imprecise_name(r.name) + "\"",
+    // Joined rather than asserted-single: a humanizer runs while reporting a failure, so it must
+    // render whatever it is handed rather than adding a second failure on top of the first.
+    IRulexSR::Lookup(r) => humanize_rune(r.rune.rune) + " = \""
+        + &r.parts.iter().map(|p| humanize_imprecise_name(*p)).collect::<Vec<_>>().join(".")
+        + "\"",
     IRulexSR::Literal(r) => humanize_rune(r.rune.rune) + " = " + &humanize_literal(&r.literal),
     IRulexSR::Equals(r) => humanize_rune(r.left.rune) + " = " + &humanize_rune(r.right.rune),
     IRulexSR::RuneParentEnvLookup(r) => "inherit ".to_string() + &humanize_rune(r.rune.rune),

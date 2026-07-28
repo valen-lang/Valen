@@ -143,7 +143,7 @@ fn shape_of(sig: &ValeSig) -> SigShape {
         match t {
             ValeSigType::Kind(k) => SigPosition::Kind { rust_backed: is_rust_backed_kind(*k) },
             ValeSigType::Generic(i) => SigPosition::Generic(*i),
-            ValeSigType::Citizen { name, args } => SigPosition::Citizen {
+            ValeSigType::Citizen { name, package: _, args } => SigPosition::Citizen {
                 name: name.0.to_string(),
                 args: args.iter().map(position).collect(),
             },

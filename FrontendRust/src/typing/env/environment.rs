@@ -151,6 +151,7 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
   }
   
 
+
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -364,6 +365,60 @@ where 's: 't,
 
 
 
+/// Resolves a **path** — the last segment, looked up in whatever the earlier ones select.
+///
+/// Narrowing by an empty prefix is the identity, so a one-segment path is an ordinary ambient
+/// lookup and a longer one is the same lookup in a narrower place.
+///
+/// A free function rather than a method on `IEnvironmentT` because it reaches nothing private — it
+/// is a composition of two public operations, and putting it on the enum would widen the interface
+/// of the compiler's most central type without adding a capability to it.
+pub fn lookup_nearest_with_path<'s, 't>(
+  env: IEnvironmentT<'s, 't>,
+  parts: &[IImpreciseNameS<'s>],
+  lookup_filter: HashSet<ILookupContext>,
+  interner: &TypingInterner<'s, 't>,
+) -> Option<ITemplataT<'s, 't>>
+where 's: 't,
+{
+  let (item_name, prefix) = parts.split_last()?;
+  // VCOORD: This branch is the flat table showing through, not a special case worth keeping. Prefixes must
+  // be matched whole, because `name_to_top_level_environment` holds only fully-qualified
+  // coordinates and no store answers to `rust` alone — and matching nothing against nothing selects
+  // no store rather than every store. Once that table is a tree the identity falls out structurally
+  // and this becomes `prefix.iter().try_fold(env, descend)?`, where zero segments is zero work.
+  let env =
+    if prefix.is_empty() {
+      env
+    } else {
+      let global_env = env.global_env();
+      let wanted: Vec<StrI<'s>> = prefix
+          .iter()
+          .map(|segment| match segment {
+            IImpreciseNameS::CodeName(code_name) => Some(code_name.name),
+            _ => None,
+          })
+          .collect::<Option<Vec<_>>>()?;
+      let store =
+          global_env
+              .name_to_top_level_environment
+              .iter()
+              .find(|(id, _)| {
+                let coord = id.package_coord;
+                std::iter::once(coord.module)
+                    .chain(coord.packages.iter().copied())
+                    .eq(wanted.iter().copied())
+              })
+              .map(|(_, store)| *store)?;
+      IEnvironmentT::Package(interner.alloc(PackageEnvironmentT {
+        global_env,
+        id: *store.templatas_store_name,
+        global_namespaces: interner.alloc_slice_copy(&[store]),
+      }))
+    };
+  return env.lookup_nearest_with_imprecise_name(*item_name, lookup_filter, interner);
+}
+
 pub fn entry_matches_filter<'s, 't>(
   entry: &IEnvEntryT<'s, 't>,
   contexts: &HashSet<ILookupContext>,
@@ -485,10 +540,20 @@ pub fn get_imprecise_name<'s, 't>(
         }
     }
     INameT::AnonymousSubstruct(a) => get_imprecise_name(scout_arena, INameT::AnonymousSubstructTemplate(a.template)),
-    INameT::ExternFunction(f) => {
-        Some(scout_arena.intern_imprecise_name(
-            IImpreciseNameValS::CodeName(CodeNameS { name: f.human_name })))
-    }
+    // `INameT::ExternFunction` deliberately falls through to the panic below.
+    //
+    // It had an arm, added for a Rust-interop design that registered finished *prototypes* in
+    // environment stores. That design is gone: an extern function — whether a hand-written
+    // `extern func` or a synthesized Rust one — is registered as an ordinary
+    // `IEnvEntryT::Function` keyed by its `FunctionTemplate` name, and the `ExternFunction` name is
+    // built only for the prototype (`function_compiler_core.rs:337`), which never enters a store.
+    // So nothing asks this function for an extern function's imprecise name.
+    //
+    // Verified by replacing the arm with a panic and re-running both configurations: unchanged, and
+    // never reached. Deleted rather than parked because a dead-but-correct arm is what lets the
+    // prototype-store shape come back by accident — with the arm gone, registering one fails loudly
+    // here instead of quietly working. What would bring it back: a design that puts prototypes in
+    // stores again, which two implementations have now abandoned.
     _ => {
         panic!("Unimplemented: get_imprecise_name for {:?}", name_t);
         // vimpl(other.toString)

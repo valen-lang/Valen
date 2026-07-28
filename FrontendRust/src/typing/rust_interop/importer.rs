@@ -127,6 +127,9 @@ where
         let generic_params = oracle.type_generic_params(type_item, interner);
         let receiver = ValeSigType::Citizen {
             name: human_name,
+            // The same coordinate this type's store is registered under, so the synthesized drop
+            // names its receiver by the identical path the importer used.
+            package: package_coord,
             args: interner.alloc_slice_from_vec(
                 (0..generic_params.len()).map(|i| ValeSigType::Generic(i as u32)).collect(),
             ),

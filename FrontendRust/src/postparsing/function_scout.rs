@@ -576,11 +576,11 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           rules.push(IRulexSR::Lookup(LookupSR {
             range: ret_range_s.clone(),
             rune: ret_rune.clone(),
-            name: self
+            parts: self.scout_arena.alloc_slice_copy(&[self
               .scout_arena
               .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
                 name: self.keywords.void,
-              })),
+              }))]),
           }));
           Some(ret_rune)
         }
@@ -919,7 +919,7 @@ fn create_closure_param(
       range: closure_param_range.clone(),
       rune: closure_struct_kind_rune.clone(),
     },
-    name: closure_struct_imprecise_name.clone(),
+    parts: self.scout_arena.alloc_slice_copy(&[closure_struct_imprecise_name.clone()]),
   }));
   let closure_param_type_rune = RuneUsage {
     range: closure_param_range.clone(),

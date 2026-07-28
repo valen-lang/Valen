@@ -33,8 +33,8 @@ use crate::postparsing::itemplatatype::{
 };
 use crate::postparsing::names::{
     ArgumentRuneS, CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS,
-    IImpreciseNameValS, IRuneValS, IStructDeclarationNameS, IVarNameS, ReturnRuneS,
-    TopLevelStructDeclarationNameS,
+    IImpreciseNameS, IImpreciseNameValS, IRuneValS, IStructDeclarationNameS, IVarNameS,
+    ReturnRuneS, TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::rules::rules::{CallSR, EqualsSR, IRulexSR, LookupSR, RuneUsage};
 use crate::typing::compiler::Compiler;
@@ -239,18 +239,27 @@ where
             rules.push(IRulexSR::Lookup(LookupSR {
                 range,
                 rune: own_rune,
-                name: scout_arena
-                    .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name })),
+                // One segment, deliberately. This arm is a *primitive* — `int`, `bool`, `void` —
+                // which lives in the builtins store under a bare name. Qualifying it would
+                // un-resolve it; only a citizen carries a package path.
+                parts: scout_arena.alloc_slice_copy(&[
+                    scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name })),
+                ]),
             }));
             Some(())
         }
-        ValeSigType::Citizen { name, args } => {
+        ValeSigType::Citizen { name, package, args } => {
             let template_rune = fresh_rune(scout_arena, range, next_synthetic);
             rules.push(IRulexSR::Lookup(LookupSR {
                 range,
                 rune: template_rune,
-                name: scout_arena
-                    .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: *name })),
+                // **The one site in the compiler that emits a multi-segment path.** The citizen is
+                // named by its package coordinate followed by its short name — `rust.mycrate.Widget`
+                // — so two crates exporting the same short name are reached by different paths and
+                // the ambiguity never forms. Both ends are ours: the importer registers the store
+                // under this coordinate and this writes the same one, so they agree by construction
+                // rather than by a key both sides have to compute identically.
+                parts: package_path(scout_arena, package, *name),
             }));
 
             let mut arg_runes: Vec<RuneUsage<'s>> = Vec::new();
@@ -425,18 +434,41 @@ where
     ))
 }
 
-/// The Vale source-level name a lowered kind is written as, if it has one yet.
+/// A citizen's `LookupSR` path: its package coordinate's segments, then its short name.
 ///
-/// A declaration's rules name their types the way source does, so a lowered `KindT` has to be
-/// mapped back to the name that resolves to it. Primitives are in the builtins store under their
-/// keyword; a Rust-backed citizen is in the reserved `rust` package's top-level store under its own
-/// human name (see `rust_package_stores`). Both resolve by ordinary ambient lookup, which is what
-/// lets a Rust type appear in a signature at all.
+/// The coordinate is `{ module, packages }`, so `rust.["mycrate"]` yields `[rust, mycrate, Widget]`
+/// — module first, exactly the order `GlobalEnvironmentT::find_package_store` matches against.
+/// The two must stay in step; they are the two ends of the same handshake.
+fn package_path<'s>(
+    scout_arena: &ScoutArena<'s>,
+    package: &'s PackageCoordinate<'s>,
+    name: StrI<'s>,
+) -> &'s [IImpreciseNameS<'s>] {
+    let mut parts: Vec<IImpreciseNameS<'s>> = Vec::new();
+    let mut push = |segment: StrI<'s>| {
+        parts.push(
+            scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: segment })),
+        );
+    };
+    push(package.module);
+    for segment in package.packages.iter() {
+        push(*segment);
+    }
+    push(name);
+    scout_arena.alloc_slice_from_vec(parts)
+}
+
+/// The Vale keyword naming a **builtin**, for the one-segment `LookupSR` a primitive needs.
 ///
-/// `None` means "not nameable", and it stays deliberately narrow — an associated-type projection,
-/// an un-imported ADT, a type Vale's IR cannot express. The caller drops the whole declaration,
-/// so an unnameable signature makes the function un-importable rather than importable with a wrong
-/// type.
+/// Only builtins reach here. A citizen never does: `lower_sig_ty` catches `TyKind::Adt` ahead of
+/// the fallthrough that produces `ValeSigType::Kind`, so a struct arrives as
+/// `ValeSigType::Citizen` — carrying its package coordinate — and is named by a path instead.
+///
+/// It used to have a `KindT::Struct` arm, from before `Citizen` existed, which turned a citizen
+/// into a bare human name. **Measured dead 2026-07-27** (arm replaced with a `panic!`, both configs
+/// re-run unchanged with zero hits) and deleted rather than parked: it was the last thing in this
+/// file that could reduce a citizen to an unqualified name, which is precisely the shape the
+/// package path exists to prevent.
 fn vale_type_name<'s, 't>(
     compiler: &Compiler<'s, '_, 't>,
     kind: &KindT<'s, 't>,
@@ -448,17 +480,6 @@ where
         KindT::Int(i) if i.bits == 32 => Some(compiler.keywords.int),
         KindT::Bool(_) => Some(compiler.keywords.bool),
         KindT::Void(_) => Some(compiler.keywords.void),
-        // A Rust citizen, named by the same human name its store entry is keyed under. The id
-        // carries the reserved `rust` package coordinate, so this cannot collide with a Vale type
-        // of the same name *within* the store — but it can collide across global namespaces at
-        // lookup time, which is the deferred precedence question (plan doc §5).
-        KindT::Struct(struct_tt) => match struct_tt.id.local_name {
-            INameT::Struct(name) => match name.template {
-                IStructTemplateNameT::StructTemplate(t) => Some(t.human_name),
-                _ => None,
-            },
-            _ => None,
-        },
         _ => None,
     }
 }

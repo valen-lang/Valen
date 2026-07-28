@@ -68,7 +68,7 @@ where 's: 't,
         rules.push(IRulexSR::Lookup(LookupSR {
             range: struct_name_range,
             rune: struct_generic_rune,
-            name: struct_imprecise_name,
+            parts: self.scout_arena.alloc_slice_copy(&[struct_imprecise_name]),
         }));
 
         // Instantiate the struct template; the resulting kind is the constructor's return type,

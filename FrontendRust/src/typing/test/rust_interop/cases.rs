@@ -872,12 +872,15 @@ fn imports_from_two_crates() {
 /// `get_imprecise_name` derive the same key for a registered Rust citizen. Two of those three are
 /// in core name types, so they are the architect's rather than this arc's.
 ///
-/// The expectation keys on the literal in the `panic!` format string, never on the `Debug`
-/// rendering of the name that follows it (arch §26b.4). **When the core change lands, delete the
-/// `should_panic` and assert the two constructors' return kinds differ** — the corpus already says
-/// what the case must do.
+/// **The `should_panic` is gone as of the package-path change** — a synthesized declaration now
+/// names a citizen by its package coordinate, so the two `Widget`s are reached by different paths
+/// and the ambiguity never forms. What the case asserts is what the corpus always declared: both
+/// import, and their constructors return **different kinds**.
+///
+/// Distinctness has a second half this case structurally cannot see — a conflated pair would still
+/// satisfy every call in this program, since each is consistent within its own crate. That is
+/// `a_type_from_one_crate_does_not_satisfy_the_others_parameter`.
 #[test]
-#[should_panic(expected = "Too many with name")]
 fn two_crates_exporting_the_same_short_name_stay_distinct() {
     run_case(&TWO_CRATES_EXPORTING_THE_SAME_SHORT_NAME_STAY_DISTINCT, |coutputs| {
         let main = coutputs.lookup_function_by_str("main");
@@ -894,6 +897,32 @@ fn two_crates_exporting_the_same_short_name_stay_distinct() {
         };
         ret_of("make_widget") != ret_of("make_other_widget")
     });
+}
+
+/// The distinctness half — and the only shape that can observe it.
+///
+/// The case above proves both `Widget`s import. It cannot prove they stayed *distinct*: a
+/// conflated pair satisfies every call in that program, because each call is consistent within its
+/// own crate. Crossing them is what tells them apart, and it does so by **failing** — `widget_value`
+/// takes `mycrate`'s `Widget` and is handed `othercrate`'s.
+///
+/// So a regression that merged the two types makes this case start *compiling*. That is an unusual
+/// direction for a corpus case and worth stating plainly, since "it passes" here means "the
+/// compiler rejected the program."
+#[test]
+fn a_type_from_one_crate_does_not_satisfy_the_others_parameter() {
+    let outcome =
+        run_case(&A_TYPE_FROM_ONE_CRATE_DOES_NOT_SATISFY_THE_OTHERS_PARAMETER, callees_in_main);
+
+    outcome.check(&A_TYPE_FROM_ONE_CRATE_DOES_NOT_SATISFY_THE_OTHERS_PARAMETER);
+
+    // Vacuity: the callee must have been *offered*, or the case would pass for the boring reason
+    // that nothing named `widget_value` was importable at all.
+    assert!(
+        outcome.asked(|q| q.offered("widget_value").is_some()),
+        "`widget_value` was never offered, so the rejection proves nothing:\n{}",
+        outcome.rendered_log()
+    );
 }
 
 /// **@ATAFLBZ fence: nothing in `rust_interop/` may take a Rust item's identity from its human

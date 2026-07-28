@@ -154,7 +154,7 @@ pub struct LiteralSR<'s> {
 pub struct LookupSR<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
-  pub name: IImpreciseNameS<'s>,
+  pub parts: &'s [IImpreciseNameS<'s>],
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

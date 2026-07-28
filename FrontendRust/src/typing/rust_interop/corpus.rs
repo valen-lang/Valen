@@ -694,6 +694,29 @@ exported func main() int {
     expect: Expect::Returns(5),
 };
 
+/// The distinctness half, and the only shape that can observe it.
+///
+/// The case above proves both `Widget`s *import*. It cannot prove they stayed **distinct** — if
+/// Vale had conflated them into one kind, that program would still typecheck, because every call in
+/// it is consistent within its own crate. Distinctness is only visible when the two are *crossed*,
+/// and then it shows up as a failure: `widget_value` takes `mycrate`'s `Widget`, and handing it
+/// `othercrate`'s must not resolve.
+///
+/// So this is a negative case by necessity rather than by preference — passing here means the
+/// compiler rejected a program, and a regression that merged the two types would make it start
+/// compiling.
+pub const A_TYPE_FROM_ONE_CRATE_DOES_NOT_SATISFY_THE_OTHERS_PARAMETER: Case = Case {
+    fixture: "fixtures_two_crates",
+    name: "two-crates-crossed",
+    vale: r#"
+exported func main() int {
+  return widget_value(make_other_widget());
+}
+"#,
+    allowed: &["Widget", "make_widget", "widget_value", "make_other_widget"],
+    expect: Expect::FailsToCompile("CouldntFindFunctionToCallT"),
+};
+
 // ---------------------------------------------------------------------------
 // D. Scoping — the allowlist is load-bearing, and is the only thing that is
 // ---------------------------------------------------------------------------

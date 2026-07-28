@@ -50,7 +50,7 @@ pub enum ITypingPassSolverError<'s, 't> {
     ReceivingDifferentOwnerships { params: &'t [(IRuneS<'s>, KindT<'s, 't>)] },
     SendingNonIdenticalKinds { send_coord: KindT<'s, 't>, receive_coord: KindT<'s, 't> },
     NoCommonAncestors { params: &'t [(IRuneS<'s>, KindT<'s, 't>)] },
-    LookupFailed { name: IImpreciseNameS<'s> },
+    LookupFailed { path: &'s [IImpreciseNameS<'s>] },
     NoAncestorsSatisfyCall { params: &'t [(IRuneS<'s>, KindT<'s, 't>)] },
     CantDetermineNarrowestKind { kinds: &'t [KindT<'s, 't>] },
     // OwnershipDidntMatch { coord: CoordT<'s, 't>, expected_ownership: OwnershipT },
@@ -1031,8 +1031,12 @@ where 's: 't,
             //     case LookupSR(...) =>
             IRulexSR::Lookup(r) => {
                 let ranges: Vec<RangeS<'s>> = once(r.range).chain(env.parent_ranges.iter().copied()).collect();
-                let result = match self.lookup_templata_imprecise(env, state, &ranges, r.name) {
-                    None => return Err(ITypingPassSolverError::LookupFailed { name: r.name }),
+                let mut lookup_filter = HashSet::default();
+                lookup_filter.insert(ILookupContext::TemplataLookupContext);
+                let found = lookup_nearest_with_path(
+                    env.self_env, r.parts, lookup_filter, self.typing_interner);
+                let result = match found {
+                    None => return Err(ITypingPassSolverError::LookupFailed { path: r.parts }),
                     Some(x) => x,
                 };
                 let mut conclusions = IndexMap::default();

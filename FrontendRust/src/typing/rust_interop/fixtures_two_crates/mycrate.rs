@@ -13,6 +13,16 @@ pub fn make_widget() -> Widget {
     Widget { value: 1 }
 }
 
+/// Takes **this** crate's `Widget`, so that handing it the other crate's is a type error.
+///
+/// This is what makes distinctness observable. Two same-named types both *importing* proves only
+/// that the importer survived them; if Vale had conflated them into one kind, every program in the
+/// positive case would still typecheck. Only a cross-crate call can tell the two apart, and it does
+/// so by failing.
+pub fn widget_value(w: Widget) -> i32 {
+    w.value
+}
+
 /// The non-colliding half of the fixture, for `imports_from_two_crates`.
 ///
 /// `Gadget` and `othercrate`'s `Doohickey` have distinct short names, so importing both exercises

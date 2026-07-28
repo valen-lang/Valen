@@ -50,9 +50,16 @@ pub enum ValeSigType<'s, 't> {
     /// separate one — a citizen's name resolves to a *template* either way, so it always needs the
     /// application step.
     ///
-    /// The name is what a declaration writes into its `LookupSR`; identity comes from the reserved
-    /// `rust` package coordinate the importer registers it under.
-    Citizen { name: StrI<'s>, args: &'t [ValeSigType<'s, 't>] },
+    /// The name and its **package coordinate**, which together are what a declaration writes into
+    /// its `LookupSR` as a path. The coordinate is not decoration: two crates can export the same
+    /// short name, and a bare name would find both and panic. Identity still comes from the
+    /// coordinate the importer registers the citizen under — this carries it to the declaration so
+    /// both ends agree by construction.
+    Citizen {
+        name: StrI<'s>,
+        package: &'s PackageCoordinate<'s>,
+        args: &'t [ValeSigType<'s, 't>],
+    },
     /// The function's own generic parameter at this index.
     ///
     /// The index is into **this item's own** parameters, with any parent (impl) parameters already

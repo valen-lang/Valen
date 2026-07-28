@@ -1129,11 +1129,14 @@ where
     fn lookup(
         &self,
         range: RangeS<'s>,
-        name_s: IImpreciseNameS<'s>,
+        parts: &[IImpreciseNameS<'s>],
     ) -> Result<
         IRuneTypeSolverLookupResult<'s>,
         IRuneTypingLookupFailedError<'s>,
     > {
+        // The last segment names the item; only diagnostics and the lambda-struct arm need it
+        // separately from the path.
+        let name_s = *parts.last().expect("vwat: an empty lookup path");
         match name_s {
             IImpreciseNameS::LambdaStructImpreciseName(_) => {
                 Ok(IRuneTypeSolverLookupResult::Templata(
@@ -1147,7 +1150,9 @@ where
             _ => {
                 let mut filter = HashSet::default();
                 filter.insert(ILookupContext::TemplataLookupContext);
-                match self.parent_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
+                let found = lookup_nearest_with_path(
+                    IEnvironmentT::from(self.parent_env), parts, filter, self.typing_interner);
+                match found {
                     Some(ITemplataT::StructDefinition(t)) => {
                         Ok(IRuneTypeSolverLookupResult::Citizen(
                             CitizenRuneTypeSolverLookupResult {
@@ -1185,6 +1190,7 @@ where
                     ),
                 }
             }
+
         }
     }
 

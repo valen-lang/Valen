@@ -163,10 +163,15 @@ pub struct TemplataLookupResult<'s> {
 
 
 pub trait IRuneTypeSolverEnv<'s> {
+  /// Resolve a `LookupSR`'s **path** — the last segment, in whatever the earlier ones select.
+  ///
+  /// Takes the whole path rather than a name, and there is no second "path form" method: a
+  /// one-segment path is an ordinary ambient lookup, and narrowing by an empty prefix is the
+  /// identity, so both go through one implementation (@NNGZ).
   fn lookup(
     &self,
     range: RangeS<'s>,
-    name: IImpreciseNameS<'s>,
+    parts: &[IImpreciseNameS<'s>],
   ) -> Result<IRuneTypeSolverLookupResult<'s>, IRuneTypingLookupFailedError<'s>>;
 }
 
@@ -394,8 +399,10 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), x.literal.get_type())].into_iter().collect(), vec![], IndexSet::default())
     }
     IRulexSR::Lookup(x) => {
+      // VCOORD: the rune-type solver must walk the path too, not just the typing solver — both
+      // need one notion of where a name resolves, or a collision types the rune off the wrong item.
       let actual_lookup_result =
-          match env.lookup(x.range.clone(), x.name.clone()) {
+          match env.lookup(x.range.clone(), x.parts) {
             Err(_e) => {
               panic!("LookupSR solve error path not yet implemented");
               // return Err(RuleError(e))
@@ -424,8 +431,10 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     // }
     IRulexSR::RuneParentEnvLookup(x) => {
       let lookup_name = scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: x.rune.rune.clone() }));
+      // A rune name is a one-segment path — the degenerate case, spelled the same way.
+      let lookup_path = scout_arena.alloc_slice_copy(&[lookup_name]);
       let actual_lookup_result =
-          match env.lookup(x.range.clone(), lookup_name) {
+          match env.lookup(x.range.clone(), lookup_path) {
             Err(_e) => {
               panic!("RuneParentEnvLookupSR solve error path not yet implemented");
               // return Err(RuleError(e))
@@ -642,7 +651,8 @@ pub fn solve_rune_types<'s, E: IRuneTypeSolverEnv<'s>>(
     for rule in rules_s {
       match rule {
         IRulexSR::Lookup(lookup) => {
-          match env.lookup(lookup.range.clone(), lookup.name.clone()) {
+          // VCOORD: same walk as the solve arm above — see its note.
+          match env.lookup(lookup.range.clone(), lookup.parts) {
             Err(_e) => {
               panic!("LookupSR pre-computation error path not yet implemented");
               // return Err(RuleError(e))
