@@ -9,6 +9,7 @@ use crate::typing::ast::expressions::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::overload_resolver::IFindFunctionFailureReason;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::env::environment::get_imprecise_name;
 use crate::typing::types::types::RegionT;
@@ -71,7 +72,33 @@ where 's: 't,
           true,
         )? {
             Ok(stamp) => stamp.prototype,
-            Err(_fff) => panic!("CouldntFindFunctionToCallT"),
+            Err(fff) => {
+                // Name the rejection kind per candidate rather than dumping the payload: an
+                // InferFailure carries a whole solve tree, which buries the one fact that
+                // distinguishes "no such override" from "the override exists and didn't solve".
+                let reasons: Vec<String> = fff.rejected_callee_to_reason.iter()
+                    .map(|(_candidate, reason)| match reason {
+                        IFindFunctionFailureReason::WrongNumberOfArguments { supplied, expected } =>
+                            format!("WrongNumberOfArguments (supplied {}, expected {})", supplied, expected),
+                        IFindFunctionFailureReason::WrongNumberOfTemplateArguments { supplied, expected } =>
+                            format!("WrongNumberOfTemplateArguments (supplied {}, expected {})", supplied, expected),
+                        IFindFunctionFailureReason::SpecificParamDoesntSend { index, .. } =>
+                            format!("SpecificParamDoesntSend (param {})", index),
+                        IFindFunctionFailureReason::SpecificParamDoesntMatchExactly { index, .. } =>
+                            format!("SpecificParamDoesntMatchExactly (param {})", index),
+                        IFindFunctionFailureReason::SpecificParamVirtualityDoesntMatch { index } =>
+                            format!("SpecificParamVirtualityDoesntMatch (param {})", index),
+                        IFindFunctionFailureReason::Outscored => "Outscored".to_string(),
+                        IFindFunctionFailureReason::RuleTypeSolveFailure { .. } => "RuleTypeSolveFailure".to_string(),
+                        IFindFunctionFailureReason::InferFailure { .. } => "InferFailure".to_string(),
+                        IFindFunctionFailureReason::FindFunctionResolveFailure { .. } => "FindFunctionResolveFailure".to_string(),
+                        IFindFunctionFailureReason::CouldntEvaluateTemplateError { .. } => "CouldntEvaluateTemplateError".to_string(),
+                    })
+                    .collect();
+                panic!(
+                    "abstract body: no override found for {:?}, {} candidate(s) rejected: [{}]",
+                    fff.name, reasons.len(), reasons.join(", "))
+            }
         };
 
         let virtual_index = header.get_virtual_index()

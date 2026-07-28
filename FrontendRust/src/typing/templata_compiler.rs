@@ -504,9 +504,9 @@ where 's: 't,
                     _ => panic!("KindPlaceholderT has non-KindPlaceholder local_name"),
                 };
                 if p.id.init_id(interner) == needle_template_name {
-                    unimplemented!();
-                    // new_substituting_templatas[index as usize]
+                    expect_kind_templata(new_substituting_templatas[index as usize]).kind
                 } else {
+                    // VCOORD: investigate what this case is for... suspicious fallback-looking thing
                     kind
                 }
             }
@@ -519,10 +519,22 @@ where 's: 't,
                 KindT::Interface(new_interface)
             }
             KindT::OverloadSet(_) => unreachable!("an OverloadSet cannot appear as a substantive kind here"),
-            KindT::BorrowRef(_) => unimplemented!(),
-            KindT::OwnRef(_) => unimplemented!(),
-            KindT::ShareRef(_) => unimplemented!(),
-            KindT::WeakRef(_) => unimplemented!(),
+            // Substitution reaches through a reference without disturbing it, so each wrap is
+            // rebuilt around the substituted inner. A borrow keeps its own region: substituting
+            // `T` in `&T` changes what is pointed at, never which group points at it.
+            KindT::BorrowRef(b) => KindT::BorrowRef(interner.alloc(BorrowRefT {
+                inner: Self::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, b.inner),
+                region: b.region,
+            })),
+            KindT::OwnRef(o) => KindT::OwnRef(interner.alloc(OwnRefT {
+                inner: Self::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, o.inner),
+            })),
+            KindT::ShareRef(s) => KindT::ShareRef(interner.alloc(ShareRefT {
+                inner: Self::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, s.inner),
+            })),
+            KindT::WeakRef(w) => KindT::WeakRef(interner.alloc(WeakRefT {
+                inner: Self::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, w.inner),
+            })),
 
             // // VCOORD: revisit
             // // Composition of substituted ownership. `Borrow + share-kind` is distinct
