@@ -22,6 +22,7 @@ use crate::solver::solver::{FailedSolve, ISolverError, RuleError, Step};
 use crate::typing::ast::ast::{KindExportT, SignatureValT};
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::infer_compiler::IResolvingError;
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::typing::names::names::{CodeVarNameT, ExportNameT, ExportTemplateNameT, FunctionNameValT, FunctionTemplateNameT, IdT, IdValT, IStructTemplateNameT, InterfaceNameValT, InterfaceTemplateNameT, StructNameT, StructNameValT, StructTemplateNameT};
 use crate::typing::overload_resolver::FindFunctionFailure;
@@ -3733,7 +3734,7 @@ fn humanize_errors() {
         TopLevelStructDeclarationNameS { name: scout_arena.intern_str("SpaceshipSnapshot"), range: tz });
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::ImmStructCantHaveVaryingMember { range: tz_slice, struct_name: INameS::TopLevelStructDeclaration(spaceship_snapshot_name_s), member_name: "fuel" }).is_empty());
-    let candidates_slice: &[FailedSolve<_, _, _, _>] = typing_bump.alloc_slice_fill_iter(empty());
+    let candidates_slice: &[IResolvingError] = typing_bump.alloc_slice_fill_iter(empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantDowncastUnrelatedTypes { range: tz_slice, source_kind: ispaceship_kind, target_kind: unrelated_kind, candidates: candidates_slice }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,

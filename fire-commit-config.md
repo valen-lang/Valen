@@ -20,5 +20,9 @@ Pick the family matching the working branch; ask if ambiguous.
 
 **Repo-specific sweeps:**
 - Guardian temp-disable sweep: `git grep -n "Guardian: temp-disable:"` — every hit needs ratifying (architect) or the underlying issue fixed before commit.
-- Test-delta report: diff `#[test]` additions/deletions/modifications in the staged Rust diff (`git diff --cached -U0 -- '*.rs' | grep -B0 -A1 '^[+-].*#\[test\]' | grep -E '^[+-].*fn [a-zA-Z_]'`), one-sentence why per deleted/modified test, architect confirms.
+- Test-delta report: two commands, because one can't see all four cases.
+  - **Signatures added/removed** (catches added, deleted, and renamed tests): `git diff --cached -U0 -- '*.rs' | grep -E '^[+-][[:space:]]*(pub )?(async )?fn [a-zA-Z_0-9]+'`
+  - **Bodies changed** (catches modified tests): `git diff --cached -U0 -- '*.rs' | grep -oE '@@ .*fn [a-zA-Z_0-9]+' | sed 's/.*fn //' | sort -u` — git puts the enclosing function in each hunk header, so this names every function containing a changed line. It lists helpers as well as tests; that's deliberate, since a superset never hides a weakened assertion.
+
+  One-sentence why per deleted, renamed, or modified test; architect confirms. Do **not** use the old `grep -B0 -A1 '^[+-].*#\[test\]'` form: it only fires when the `#[test]` line itself is added or removed, so a rename (signature changes, attribute doesn't) and a body edit (neither changes) were both invisible — it could never report a "modification" at all.
 - New `#[ignore]` scan in the staged diff — confirm intended-permanent vs. temporary scaffolding per hit.

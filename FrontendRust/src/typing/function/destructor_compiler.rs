@@ -69,7 +69,12 @@ where 's: 't,
                 // Decrement a reference count
                 unimplemented!()
             }
-            KindT::Struct(_) => {
+            // Every one of these resolves `drop` by name against the value's own kind, so they share
+            // one body: an interface dispatches to its abstract drop, an array to arrays.vale's
+            // `drop<E>([]E)` or its StaticArray twin, and a placeholder to whatever the denizen's
+            // `where func drop(T)void` bound conjured.
+            KindT::Struct(_) | KindT::Interface(_) | KindT::StaticSizedArray(_)
+            | KindT::RuntimeSizedArray(_) | KindT::KindPlaceholder(_) => {
                 let StampFunctionSuccess { prototype: destructor_prototype, .. } =
                     self.get_drop_function(env, coutputs, call_range, call_location, RegionT::Default, result_coord)?;
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, destructor_prototype.id).is_some());
@@ -80,10 +85,6 @@ where 's: 't,
                     result_tt,
                 )))
             }
-            KindT::Interface(_) => unimplemented!(),
-            KindT::StaticSizedArray(_) => unimplemented!(),
-            KindT::RuntimeSizedArray(_) => unimplemented!(),
-            KindT::KindPlaceholder(_) => unimplemented!(),
         };
         // let result_expr_2 = match (result_coord.ownership, result_coord.kind) {
         //     // VCOORD: doublecheck this: post-cut Share+Never is rejected by CoordT::new, so this arm should be unreachable.

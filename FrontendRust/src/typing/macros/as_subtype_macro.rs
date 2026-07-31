@@ -16,6 +16,8 @@ use crate::typing::templata::templata::ITemplataT;
 use crate::typing::citizen::impl_compiler::IsParentResult;
 use crate::typing::names::names::IFunctionNameT;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
+use crate::typing::templata_compiler::{peel_all_references, replace_value_type_in_ref};
+use crate::typing::infer_compiler::IResolvingError;
 
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -50,16 +52,12 @@ where 's: 't,
         // let incoming_ownership = local_name.parameters().first().expect("vassertSome: parameters.headOption").ownership;
 
         let incoming_coord = param_coords[0].tyype;
-        let incoming_kind = incoming_coord;
+        // The declared param is `&SuperType` or `SuperType`, so the citizen sits under whatever wraps
+        // the signature wrote. is_parent and ISuperKindTT below want the citizen, not the reference.
+        let incoming_kind = peel_all_references(incoming_coord);
 
-        // Because we dont yet put borrows in structs
-        // let result_ownership = incoming_ownership;
-        // ZHERE: both of these — replace_value_type_in_ref(interner, <the declared param's type>,
-        // target_kind) and the same over incoming_kind, so each result refers to its citizen the
-        // way the signature's param refers to its own. `incoming_ownership` at :50 goes away with
-        // them, since the shape comes from the param type itself rather than a read-off ownership.
-        let success_coord = unimplemented!();//KindT::new(result_ownership, RegionT::Default, target_kind);
-        let fail_coord = unimplemented!();//KindT::new(result_ownership, RegionT::Default, incoming_kind);
+        let success_coord = replace_value_type_in_ref(self.typing_interner, incoming_coord, target_kind);
+        let fail_coord = incoming_coord;
         let (result_coord, ok_constructor, ok_result_impl, err_constructor, err_result_impl) =
             self.get_result(coutputs, env, call_range, call_location, RegionT::Default, success_coord, fail_coord)?;
         if result_coord != maybe_ret_coord.expect("vassertSome: maybeRetCoord") {
@@ -84,7 +82,14 @@ where 's: 't,
             super_kind,
         ) {
             IsParentResult::IsParent(p) => p.impl_id,
-            IsParentResult::IsntParent(_) => panic!("vwat"),
+            IsParentResult::IsntParent(isnt) => {
+                return Err(ICompileErrorT::CantDowncastUnrelatedTypes {
+                    range: self.typing_interner.alloc_slice_copy(call_range),
+                    source_kind: incoming_kind,
+                    target_kind,
+                    candidates: self.typing_interner.alloc_slice_from_vec(isnt.candidates),
+                });
+            }
         };
 
         let as_subtype_expr = ExpressionTE::AsSubtype(self.typing_interner.alloc(AsSubtypeTE::new(

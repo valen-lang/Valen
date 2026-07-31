@@ -93,12 +93,17 @@ where 's: 't,
                             }).collect();
                         if !isa_failures.is_empty() {
                             let (sub, suuper, _) = isa_failures[0].clone();
-                            let failed_solves: Vec<_> = isa_failures.into_iter().map(|(_, _, fs)| fs).collect();
+                            // The error carries whole rejection reasons, so the solve failures we
+                            // sifted out above go back into their IResolvingError shape.
+                            let candidates: Vec<IResolvingError<'s, 't>> =
+                                isa_failures.into_iter()
+                                    .map(|(_, _, fs)| IResolvingError::ResolvingSolveFailedOrIncomplete(fs))
+                                    .collect();
                             return Err(ICompileErrorT::CantDowncastUnrelatedTypes {
                                 range: self.typing_interner.alloc_slice_copy(range),
                                 source_kind: suuper,
                                 target_kind: sub,
-                                candidates: self.typing_interner.alloc_slice_from_vec(failed_solves),
+                                candidates: self.typing_interner.alloc_slice_from_vec(candidates),
                             });
                         } else {
                             return Err(ICompileErrorT::CouldntFindFunctionToCallT {

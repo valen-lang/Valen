@@ -7,7 +7,19 @@ Session: 8b824c88-fe28-4a78-8b17-8f7d4cada5a8
 
 # Let MBXX accept the heredoc form its own skill documents
 
-## ⚠ This plan cannot be applied by an AI without your say-so
+## ✅ DONE — landed in Luz `ebce6fb`, verified live
+
+All five slices implemented; M1 and M5 went red first, M2/M3/M4 passed immediately (noted at the
+time rather than counted as verified). Verified end-to-end against the running hook: a real
+heredoc message was sent and received, body carrying `;`, `|`, backticks and `$(…)`.
+
+One design correction during implementation: detection had to read **raw text**, because
+`tokenize_for_bulk_edit` emits `<` as its own token and strips quotes — so `<<'EOF'` and `<<EOF`
+tokenize identically, erasing the quoted/unquoted distinction the whole safety argument rests on.
+
+The NMSFX note below was resolved by the architect ordaining the session and confirming explicitly.
+
+## ⚠ Original blocker (resolved)
 
 `NoModificationsToShieldFiles-NMSFX` forbids exactly this edit, and its DENY example is
 literally a shield's `src/main.rs`:

@@ -36,7 +36,11 @@ where 's: 't,
             return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
             maybe_origin_function_templata: Some(env.templata()),
         };
-        let borrow_coord = unimplemented!();//KindT::new(OwnershipT::Borrow, param_coords[0].tyype.region, param_coords[0].tyype.kind);
+        let borrow_coord = match param_coords[0].tyype {
+            KindT::WeakRef(w) => KindT::BorrowRef(
+                self.typing_interner.alloc(BorrowRefT { inner: w.inner, region: RegionT::Default })),
+            other => panic!("lock's parameter must be a weak: {:?}", other),
+        };
         let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
             self.get_option(coutputs, env, call_range, call_location, RegionT::Default, borrow_coord)?;
         let lock_expr = ExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE::new(

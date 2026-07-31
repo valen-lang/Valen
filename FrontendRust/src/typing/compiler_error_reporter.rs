@@ -31,7 +31,7 @@ pub enum ICompileErrorT<'s, 't> {
         range: &'t [RangeS<'s>],
         source_kind: KindT<'s, 't>,
         target_kind: KindT<'s, 't>,
-        candidates: &'t [FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>],
+        candidates: &'t [IResolvingError<'s, 't>],
     },
     CantDowncastToInterface { range: &'t [RangeS<'s>], target_kind: InterfaceTT<'s, 't> },
     CantUseRuneValueAsExpression { range: &'t [RangeS<'s>], rune: IRuneS<'s> },
