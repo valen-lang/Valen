@@ -313,7 +313,7 @@ fn calls_a_generic_method() {
     );
 }
 
-/// Arity is checked rather than silently truncated (@ETASTZ).
+/// Excess type arguments do not resolve — three named against `pick<A, B>`'s two slots.
 #[test]
 fn wrong_generic_arity_does_not_resolve() {
     let outcome = run_case(&WRONG_GENERIC_ARITY_DOES_NOT_RESOLVE, callees_in_main);

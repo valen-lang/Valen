@@ -106,25 +106,17 @@ where
         }));
     }
 
-    let mut rules: Vec<IRulexSR<'s>> = Vec::new();
+    // Rules the *function* owns, which is the return type's and nothing else. A parameter's rules
+    // belong to the parameter (@PFVSZ), so they are built per-parameter below.
+    let mut header_rules: Vec<IRulexSR<'s>> = Vec::new();
 
     // Synthetic runes for the intermediate positions a generic citizen needs. `CodeRune` with a
     // reserved-looking name is safe here because the only other code runes in a synthesized
     // declaration are the Rust generic parameters, which carry Rust's own identifiers.
+    //
+    // Function-scoped, deliberately: it names the runes, so restarting it per parameter would let
+    // two parameters mint the same name.
     let mut next_synthetic: u32 = 0;
-
-    let mut bind = |sig_type: &ValeSigType<'s, 't>, own_rune: RuneUsage<'s>| -> Option<RuneUsage<'s>> {
-        bind_sig_type(
-            compiler,
-            sig_type,
-            own_rune,
-            range,
-            &generic_runes,
-            &mut rules,
-            &mut next_synthetic,
-        )?;
-        Some(own_rune)
-    };
 
     let mut params: Vec<ParameterS<'s>> = Vec::new();
     for (index, sig_type) in sig.params.iter().enumerate() {
@@ -134,7 +126,19 @@ where
                 arg_index: index as i32,
             })),
         };
-        let usage = bind(sig_type, own_rune)?;
+        // The parameter's own bucket, built here and handed straight to `ParameterS::new`. There is
+        // no shared list for it to leak into, which is what keeps @PFVSZ's split true by
+        // construction rather than by remembering.
+        let mut value_type_rules: Vec<IRulexSR<'s>> = Vec::new();
+        bind_sig_type(
+            compiler,
+            sig_type,
+            own_rune,
+            range,
+            &generic_runes,
+            &mut value_type_rules,
+            &mut next_synthetic,
+        )?;
         params.push(ParameterS::new(
             range,
             None,
@@ -142,10 +146,10 @@ where
             IVarNameS::CodeVarName(scout_arena.intern_str(&format!("p{}", index))),
             // No outer ref wraps: an extern's params are taken by value at this stage, so the
             // full type and the value type are the same rune. `ParameterS::new` asserts it.
-            usage,
-            usage,
+            own_rune,
+            own_rune,
             scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
-            scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+            scout_arena.alloc_slice_from_vec(value_type_rules),
         ));
     }
 
@@ -153,7 +157,15 @@ where
         range,
         rune: scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {})),
     };
-    let ret_usage = bind(&sig.ret, ret_own_rune)?;
+    bind_sig_type(
+        compiler,
+        &sig.ret,
+        ret_own_rune,
+        range,
+        &generic_runes,
+        &mut header_rules,
+        &mut next_synthetic,
+    )?;
 
     // One template parameter per declared generic, typed as a kind. Empty for a concrete
     // function, which is what makes `make_extern_function` — which reads its template arguments
@@ -180,8 +192,8 @@ where
         scout_arena.alloc_slice_from_vec(generic_params),
         tyype,
         scout_arena.alloc_slice_from_vec(params),
-        Some(ret_usage),
-        scout_arena.alloc_slice_from_vec(rules),
+        Some(ret_own_rune),
+        scout_arena.alloc_slice_from_vec(header_rules),
         // No impl bounds, and that is the truth rather than a placeholder. A Rust function's trait
         // obligations are discharged by rustc, never by Vale — and we read no predicates at all,
         // which is why a signature that *needs* one (`first<I: Iterator> -> I::Item`) is declined

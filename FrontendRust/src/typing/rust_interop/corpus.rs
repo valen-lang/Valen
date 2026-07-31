@@ -783,15 +783,20 @@ exported func main() int {
     expect: Expect::FailsToCompile("CouldntFindFunctionToCallT"),
 };
 
-/// Arity is checked rather than silently truncated. @ETASTZ records that
-/// `build_generic_args_for_item` discards excess type args without complaint, which would turn a
-/// user's mistake into a plausible wrong answer.
+/// **More** type arguments than the item declares does not resolve. `pick<A, B>` has two slots and
+/// the call names three, so silently dropping the excess and resolving anyway would turn a user's
+/// mistake into a plausible wrong answer.
+///
+/// **Under-supply is deliberately not what this pins**, and the distinction is the whole point:
+/// `pick<int>(3, true)` is legal, because argument types reach the call-site solve and deduce `B`
+/// from the argument. A case written against the under-supplied form tests inference's absence
+/// rather than arity, and stops meaning anything the moment inference works.
 pub const WRONG_GENERIC_ARITY_DOES_NOT_RESOLVE: Case = Case {
     fixture: "fixtures",
     name: "wrong-generic-arity",
     vale: r#"
 exported func main() int {
-  return pick<int>(3, true);
+  return pick<int, bool, int>(3, true);
 }
 "#,
     allowed: &["pick"],
