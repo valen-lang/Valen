@@ -59,6 +59,7 @@ include_shields = [
     { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "NoAddingGuardianDirectives-NAGDX.md" },
     { name = "NoRemovingVMarkers-NRVMX.md" },
+    { name = "RequireSkillBeforeEdit-RSBEX.md" },
 
     { name = "NeverDowncastTraits-NEDCX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },

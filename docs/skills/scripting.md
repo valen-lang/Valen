@@ -44,11 +44,20 @@ JR (the junior agent) does **not** write, review, or apply transform scripts of 
 
 **After every `review`, before `apply`, emit a line beginning literally `Issues I see in the diff:` followed by every issue you find (or "none"). Required even when the diff looks routine — that's when script bugs slip through. If the list is non-empty, fix the script and re-review.**
 
-## Raw `python3 ./tmp/scripts/*.py` for bulk-edit is retired
+## Raw `python3 ./tmp/scripts/*.py` is retired
 
-Bulk-edit transforms — `python3 ./tmp/scripts/<NAME>.py < <SRC> > ./tmp/working/<BN>` — are no longer auto-allowed by VRBX. The only canonical bulk-edit path is `safe-script-runner`. If you invoke the raw form against `./tmp/working/`, Claude Code falls through to the normal Bash confirmation dialog (no auto-allow); using `safe-script-runner` is the friction-free path.
+**Any** `python3 ./tmp/scripts/<NAME>.py` invocation is denied by BESWX — not merely left un-auto-allowed. It is a violation, not a confirmation dialog you can approve:
 
-Read-only / info / analysis scripts under `./tmp/scripts/` are unaffected — `python3 ./tmp/scripts/analyze.py < log.txt | head` still auto-allows. The retirement is narrowly targeted at the `> ./tmp/working/` stdout shape.
+```
+running `python3 ./tmp/scripts/foo.py` is forbidden — the raw-python3 bulk-edit
+pattern was retired; use `safe-script-runner review/apply` instead
+```
+
+This holds whatever the script does and wherever its output goes, because the detector keys on the invocation rather than on the redirect. In particular there is **no exemption for read-only work**: `python3 ./tmp/scripts/analyze.py < log.txt | head` is denied too, and BESWX has a test (`deny_python_info_script`) pinning exactly that.
+
+- **Transforming files** → `safe-script-runner review/apply`, the only canonical path.
+- **Read-only analysis** → ordinary shell: `grep`, `awk`, `find`. These auto-allow and are usually enough for counting, tallying, or scanning logs.
+- **Analysis that genuinely needs Python** → say so and get the flow authorized, rather than reaching for the raw form and being denied.
 
 A failed apply via `safe-script-runner` is recoverable from the backup at `./tmp/backup/<ts>/...`.
 

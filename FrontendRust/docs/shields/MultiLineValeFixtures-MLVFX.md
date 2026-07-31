@@ -4,6 +4,7 @@ g_model: SimpleSmall
 g_primary: rust
 g_program: MultiLineValeFixtures-MLVFX
 g_context: definition
+g_filter_file: "*"
 g_read_when: Read when writing an `r#"..."#` raw string containing embedded Vale source in a Rust test.
 g_mention_in:
   - CLAUDE.md
