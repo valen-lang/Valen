@@ -1360,7 +1360,7 @@ fn test_param_no_outer_wrap_routing() {
   let foo = program.lookup_function("foo");
   // Per @TNLTZACZ `int` lowers to Lookup(int) + Call([]), as does the explicit `void` return, so
   // value_type_rune is the Call's result rune.
-  match (foo.params, foo.rules) {
+  match (foo.params, foo.header_rules) {
     ([ParameterS {
         type_outer_ref_rules: [],
         value_type_rules: [
@@ -1562,7 +1562,7 @@ fn test_function_rules_no_longer_contains_param_rules() {
     "exported func foo(x int, y bool) void { }",
   );
   let foo = program.lookup_function("foo");
-  match foo.rules {
+  match foo.header_rules {
     [IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. })], .. }),
      IRulexSR::Call(CallSR { args: [], .. })] => {}
     other => panic!("FunctionS.rules should be exactly [Lookup(void), Call([])]; got {:?}", other),
@@ -1599,8 +1599,8 @@ fn test_function_where_implements_becomes_an_impl_bound() {
     other => panic!("expected implements(T, <lookup>) with an implicit result rune; got {:?}", other),
   }
 
-  assert_rune_resolves_to(launch.rules, bound.super_rune.rune, "IShip");
-  assert_rune_absent_from_rules(launch.rules, bound.result_rune.rune);
+  assert_rune_resolves_to(launch.header_rules, bound.super_rune.rune, "IShip");
+  assert_rune_absent_from_rules(launch.header_rules, bound.result_rune.rune);
 }
 
 #[test]

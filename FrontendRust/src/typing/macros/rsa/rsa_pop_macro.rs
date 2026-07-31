@@ -11,6 +11,7 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::types::types::KindT;
+use crate::typing::templata_compiler::peel_all_references;
 
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -42,7 +43,7 @@ where 's: 't,
                         0,
                         param_coords[0].tyype,
                     )));
-                    let element_type = match array_expr.result() {
+                    let element_type = match peel_all_references(array_expr.result()) {
                         KindT::RuntimeSizedArray(rsa) => rsa.element_type(),
                         other => panic!("vwat: {:?}", other),
                     };

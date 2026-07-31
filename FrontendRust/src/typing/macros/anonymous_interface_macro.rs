@@ -410,7 +410,7 @@ where 's: 't,
         for ((internal_method, member_rune), _method_index) in
             interface_a.internal_methods.iter().zip(member_runes.iter()).zip(0i32..) {
             let internal_method = *internal_method;
-            for rule in internal_method.rules.iter() {
+            for rule in internal_method.header_rules.iter() {
                 let mapped = self.map_runes_anonymous_interface(*rule, |method_rune| {
                     self.inherited_method_rune_anonymous_interface(interface_a, internal_method, method_rune)
                 });
@@ -484,7 +484,7 @@ where 's: 't,
                 };
 
                 let collected: Vec<IRuneS<'s>> = Vec::new();
-                for rule in internal_method.rules.iter() {
+                for rule in internal_method.header_rules.iter() {
                     match rule {
                         // IRulexSR::Augment(a) if a.result_rune.rune.ptr_eq(&original_interface_kind_rune) => {
                             // collected.push(a.inner_rune.rune);
@@ -669,7 +669,7 @@ where 's: 't,
         let method_original_type = method.tyype;
         let method_original_identifying_runes: &'s [&'s GenericParameterS<'s>] = method.generic_params;
         let original_params = method.params;
-        let method_original_rules = method.rules;
+        let method_original_rules = method.header_rules;
 
         // vassert(struct.genericParameters.map(_.rune).startsWith(methodOriginalIdentifyingRunes.map(_.rune)))
         let starts_with = struct_.generic_params.len() >= method_original_identifying_runes.len()

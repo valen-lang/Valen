@@ -63,25 +63,25 @@ pub struct PartialEdgeT<'s, 't> {
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn compile_i_tables(
+    pub fn compile_i_tables( // VCOORD: we added this -> Result, but not sure this function should ever return errors, long term
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-    ) -> (Vec<&'t InterfaceEdgeBlueprintT<'s, 't>>, HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>>) {
+    ) -> Result<(Vec<&'t InterfaceEdgeBlueprintT<'s, 't>>, HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>>), ICompileErrorT<'s, 't>> {
         // val interfaceEdgeBlueprints = makeInterfaceEdgeBlueprints(coutputs)
         let interface_edge_blueprints = self.make_interface_edge_blueprints(coutputs);
 
         // val itables = interfaceEdgeBlueprints.map(interfaceEdgeBlueprint => { ... })
         let itables: HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>> =
-            interface_edge_blueprints.iter().map(|interface_edge_blueprint| {
+            interface_edge_blueprints.iter().map(|interface_edge_blueprint| -> Result<(IdT<'s,'t>, HashMap<IdT<'s,'t>, &'t EdgeT<'s,'t>>), ICompileErrorT<'s,'t>> {
                 let interface_placeholdered_id = interface_edge_blueprint.interface;
                 let interface_template_id = self.get_interface_template(interface_placeholdered_id);
                 let interface_id = coutputs.lookup_interface_by_template_name(interface_template_id).instantiated_interface.id;
                 let overriding_impls = coutputs.get_child_impls_for_super_interface_template(interface_template_id);
                 let overriding_citizen_to_found_function: HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>> =
-                    overriding_impls.iter().map(|overriding_impl| -> (IdT<'s,'t>, &'t EdgeT<'s,'t>) {
+                    overriding_impls.iter().map(|overriding_impl| -> Result<(IdT<'s,'t>, &'t EdgeT<'s,'t>), ICompileErrorT<'s,'t>> {
                         let overriding_citizen_template_id = overriding_impl.sub_citizen_template_id;
                         let found_functions: Vec<(IdT<'s, 't>, &'t OverrideT<'s, 't>)> =
-                            interface_edge_blueprint.super_family_root_headers.iter().map(|(abstract_function_prototype, abstract_index)| -> (IdT<'s,'t>, &'t OverrideT<'s,'t>) {
+                            interface_edge_blueprint.super_family_root_headers.iter().map(|(abstract_function_prototype, abstract_index)| -> Result<(IdT<'s,'t>, &'t OverrideT<'s,'t>), ICompileErrorT<'s,'t>> {
                                 let overrride = self.look_for_override(
                                     coutputs,
                                     LocationInDenizen { path: &[] },
@@ -90,12 +90,9 @@ where 's: 't,
                                     overriding_citizen_template_id,
                                     *abstract_function_prototype,
                                     *abstract_index,
-                                ).unwrap_or_else(|_| {
-                                    panic!("implement: ICompileErrorT from look_for_override in compile_i_tables")
-                                    // throw CompileErrorExceptionT(e)
-                                });
-                                (abstract_function_prototype.id, self.typing_interner.alloc(overrride))
-                            }).collect();
+                                )?;
+                                Ok((abstract_function_prototype.id, self.typing_interner.alloc(overrride)))
+                            }).collect::<Result<Vec<_>, _>>()?;
                         let overriding_citizen = overriding_impl.sub_citizen;
                         assert!(coutputs.get_instantiation_bounds(self.typing_interner, ISubKindTT::from(overriding_citizen).id()).is_some());
                         let super_interface_id = overriding_impl.super_interface.id;
@@ -112,12 +109,12 @@ where 's: 't,
                             abstract_func_to_override_func,
                         });
                         let overriding_citizen_def = coutputs.lookup_citizen_by_template_name(overriding_citizen_template_id);
-                        (ISubKindTT::from(overriding_citizen_def.instantiated_citizen()).id(), edge)
-                    }).collect();
-                (interface_id, overriding_citizen_to_found_function)
-            }).collect();
+                        Ok((ISubKindTT::from(overriding_citizen_def.instantiated_citizen()).id(), edge))
+                    }).collect::<Result<HashMap<_, _>, _>>()?;
+                Ok((interface_id, overriding_citizen_to_found_function))
+            }).collect::<Result<HashMap<_, _>, _>>()?;
 
-        (interface_edge_blueprints, itables)
+        Ok((interface_edge_blueprints, itables))
     }
 
     pub fn make_interface_edge_blueprints(
@@ -305,6 +302,7 @@ where 's: 't,
         let impl_placeholder_to_dispatcher_placeholder: Vec<(IdT<'s, 't>, ITemplataT<'s, 't>)> =
             instantiated_local.template_args().iter()
                 .zip(impl_t.rune_index_to_independence.iter())
+                // Don't make placeholders for independent runes (see OMCNAGP).
                 .filter(|(_, &independent)| !independent)
                 .map(|(templata, _)| *templata)
                 .enumerate()

@@ -24,10 +24,11 @@ current answer was always the answer.
 Write in the present tense without timestamps. The one exception is a fact that *is* about time:
 "design-1 as of 2026-07-26" earns its date because a newer version may differ.
 
-Never append a "what landed today" section — update the plan the work belonged to. Cut who found it,
+Never file by where knowledge came from — a date, a session, an investigation. Dissolve it into
+whatever it is about: the plan, the design section, the open list. Cut who found it,
 which agent investigated, and how many rounds it took; keep a name only if the reader must route a
 question back to it. Commit hashes only for archaeology ("this was a regression from X, don't
-resurrect it"), never as a record of what landed.
+resurrect it"), never as a record of what landed. Related: never append a "what happened today" section.
 
 ## Verify before you write
 
@@ -98,6 +99,11 @@ Grep for citations before deleting or renumbering a numbered item. A number that
 
 Branch tips, what is uncommitted, a suite count — these rot however present-tense you write them.
 Give the command that regenerates them, plus the sentence saying why they matter.
+
+## Record what changes a decision
+
+Evidence confirming what you already believed changes nothing anyone does — keep only the cost or the
+contradiction. A survey that agrees with you is one sentence; the part that disagrees is the entry.
 
 ## The test
 

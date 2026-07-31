@@ -21,8 +21,7 @@ use crate::typing::types::types::KindT;
 use crate::typing::ast::ast::AbstractT;
 use std::iter::once;
 use std::marker::PhantomData;
-
-
+use crate::typing::templata_compiler::peel_all_references;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -38,7 +37,7 @@ where 's: 't,
         match maybe_virtuality {
             None => Ok(None),
             Some(abstract_sp) => {
-                let interface_tt = match param_kind {
+                let interface_tt = match peel_all_references(*param_kind) {
                     KindT::Interface(i) => i,
                     _ => panic!("RangedInternalErrorT: Can only have virtual parameters for interfaces"),
                 };

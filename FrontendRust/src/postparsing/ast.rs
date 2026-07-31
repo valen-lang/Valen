@@ -559,7 +559,9 @@ pub struct FunctionS<'s> {
   pub tyype: TemplateTemplataType<'s>,
   pub params: &'s [ParameterS<'s>],
   pub maybe_ret_kind_rune: Option<RuneUsage<'s>>,
-  pub rules: &'s [IRulexSR<'s>],
+  // Called header rules because it doesn't include any of the rules from the parameters, those are
+  // in ParameterS.
+  pub header_rules: &'s [IRulexSR<'s>],
   /// `where implements(Sub, Super)` clauses. Kept out of `rules` because they are checked after
   /// the solve rather than solved; see ImplBoundS.
   pub impl_bounds: &'s [ImplBoundS<'s>],
@@ -601,7 +603,8 @@ impl<'s> FunctionS<'s> {
     }
     Self {
       range, name, attributes, generic_params,
-      tyype, params, maybe_ret_kind_rune, rules, impl_bounds, body,
+      tyype, params, maybe_ret_kind_rune,
+      header_rules: rules, impl_bounds, body,
       _sealed: (),
     }
   }

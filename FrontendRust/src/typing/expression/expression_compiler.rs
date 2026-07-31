@@ -17,7 +17,7 @@ use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
 use crate::utils::fx::IndexMap;
 use crate::utils::fx::{HashMap, HashSet};
-use crate::typing::templata_compiler::{is_ref, peel_one_reference, IBoundArgumentsSource};
+use crate::typing::templata_compiler::{is_ref, peel_one_reference, peel_all_references, IBoundArgumentsSource};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::ast::citizens::{StructMemberT};
 use crate::typing::env::environment::ILookupContext;
@@ -786,12 +786,16 @@ where 's: 't,
                         CodeVarNameT { name: dot.member}));
                 let (unborrowed_container_expr_2, returns_from_container_expr) =
                     self.evaluate_expression(coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, dot.left)?;
-                let container_expr_2 = {
-                    let range_with_parent: Vec<RangeS<'s>> =
-                        once(dot.range).chain(parent_ranges.iter().copied()).collect();
-                    self.dot_borrow(coutputs, nenv, &range_with_parent, outer_call_location, life.add(self.typing_interner, 1), region, unborrowed_container_expr_2)
+                let container_expr_2 = match unborrowed_container_expr_2.result() {
+                    KindT::BorrowRef(_) => unborrowed_container_expr_2,
+                    KindT::WeakRef(_) => panic!("implement: dot on a weak is a compile error"),
+                    KindT::KindPlaceholder(_) => panic!("implement: dot on a placeholder is a compile error"),
+                    // Anything else is a value rather than a place, so it wants materializing into a
+                    // temporary and lending, with its drop deferred, probably with
+                    // make_temporary_local_defer at life.add(1).
+                    _ => panic!("implement: materialize an rvalue container"),
                 };
-                let expr_2 = match container_expr_2.result() {
+                let expr_2 = match peel_all_references(container_expr_2.result()) {
                     KindT::Struct(struct_tt) => {
                         let struct_def = coutputs.lookup_struct(struct_tt.id, self);
                         let (struct_member, _member_index) =
@@ -1525,12 +1529,19 @@ where 's: 't,
                     self.evaluate_expression(coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), index_se.left)?;
                 let range_with_parent: Vec<RangeS<'s>> =
                     once(index_se.range).chain(parent_ranges.iter().copied()).collect();
-                let container_expr_2 =
-                    self.dot_borrow(coutputs, nenv, &range_with_parent, outer_call_location, life.add(self.typing_interner, 1), region, unborrowed_container_expr_2);
+                let container_expr_2 = match unborrowed_container_expr_2.result() {
+                    KindT::BorrowRef(_) => unborrowed_container_expr_2,
+                    KindT::WeakRef(_) => panic!("implement: indexing a weak is a compile error"),
+                    KindT::KindPlaceholder(_) => panic!("implement: indexing a placeholder is a compile error"),
+                    // Anything else is a value rather than a place, so it wants materializing into a
+                    // temporary and lending, with its drop deferred, with
+                    // make_temporary_local_defer at life.add(1).
+                    _ => panic!("implement: materialize an rvalue container"),
+                };
                 let (index_expr_2, returns_from_index_expr) =
                     self.evaluate_expression(
                         coutputs, nenv, life.add(self.typing_interner, 2), parent_ranges, outer_call_location, nenv.default_region(), index_se.index_expr)?;
-                let expr_templata = match container_expr_2.result() {
+                let expr_templata = match peel_all_references(container_expr_2.result()) {
                     KindT::RuntimeSizedArray(rsa) => {
                         let lookup = self.lookup_in_unknown_sized_array(&range_with_parent, index_se.range, container_expr_2, index_expr_2, rsa)?;
                         ExpressionTE::RuntimeSizedArrayLookup(self.typing_interner.alloc(lookup))
@@ -1949,34 +1960,6 @@ where 's: 't,
         }
     }
 
-    pub fn dot_borrow(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBox<'s, 't>,
-        range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        life: LocationInFunctionEnvironmentT<'t>,
-        context_region: RegionT,
-        unborrowed_container_expr_2: ExpressionTE<'s, 't>,
-    ) -> ExpressionTE<'s, 't> {
-        match unborrowed_container_expr_2.result() {
-            KindT::BorrowRef(_) => panic!("unimplemented"),
-            KindT::ShareRef(_) => panic!("unimplemented"),
-            KindT::WeakRef(_) => panic!("unimplemented"),
-            _ => {
-                panic!("implement: dot_borrow — OwnT arm (makeTemporaryLocal)");
-                // localHelper.makeTemporaryLocal(
-                //   coutputs,
-                //   nenv,
-                //   range,
-                //   callLocation,
-                //   life + 1,
-                //   contextRegion,
-                //   unborrowedContainerExpr2,
-                //   BorrowT)
-            }
-        }
-    }
 
     pub fn evaluate_closure(
         &self,
@@ -2077,7 +2060,7 @@ where 's: 't,
             self.opts.global_options.sanity_check,
             &rune_type_solve_env,
             range_list.clone(),
-            function_s.rules,
+            function_s.header_rules,
             &identifying_runes_s.iter().map(|gp| gp.rune.rune).collect::<Vec<_>>(),
             true,
             rune_s_to_pre_known_type_a,
@@ -2096,7 +2079,7 @@ where 's: 't,
             tyype.clone(),
             params_s,
             maybe_ret_coord_rune.clone(),
-            function_s.rules,
+            function_s.header_rules,
             function_s.impl_bounds,
             body_s,
         ))

@@ -4870,6 +4870,43 @@ fn structs_can_resolve_other_structs_instantiation_bound_arguments() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
+// VCOORD: revisit this, make sure its phrased well
+// Compiling the struct discharges its own `where func drop(T)void` against the placeholder XNone$0,
+// and drop.vale offers the borrow blanket `drop<T>(x &T)` as a candidate. Solving that candidate
+// sends the placeholder at its `&T` parameter's full_type_rune, so the BorrowRef rule is asked to
+// peel a kind that is not a borrow. A candidate whose shape the argument cannot satisfy must be
+// rejected, never fault the solve. No instantiation is needed to reach this — the bound is
+// discharged at the definition. Namespaces will eventually keep the blanket out of the candidate set
+// entirely, since it belongs to &T's namespace, but nothing here depends on that.
+#[test]
+fn drop_bound_on_a_generic_struct_ignores_the_borrow_blanket() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.drop.*;\n",
+        "\n",
+        "struct XNone<T> where func drop(T)void { }\n",
+        "\n",
+        "exported func main() { }\n",
+    );
+    let code_source = CodeSource::new(vec![
+        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+        new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
+    ]);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
+}
+
 // VCOORD: revisit to turn this into a real test
 // arith probe — verifies source-level `__copy_prim(x)` flows correctly into
 // binary operators. Rewrite to exercise auto-insertion when the syntax is retired.

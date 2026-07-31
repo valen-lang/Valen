@@ -7,7 +7,7 @@ use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::typing::infer_compiler::{include_rule_in_definition_solve, include_rule_in_call_site_solve, InitialKnown, InitialSend, InferEnv, CompleteResolveSolve, CompleteDefineSolve, IResolvingError, IDefiningError};
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::utils::arena_index_map::ArenaIndexMap;
-use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::ast::*;
@@ -32,7 +32,7 @@ use crate::typing::infer_compiler::IConclusionResolveError;
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use std::iter::empty;
 use std::marker::PhantomData;
-
+use crate::postparsing::rules::rules::EqualsSR;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -102,7 +102,13 @@ where 's: 't,
         // Check preconditions
         self.check_closure_concerns_handled(declaring_env);
 
-        let call_site_rules = self.assemble_call_site_rules(function.rules);
+        // VCOORD: A user param's type-binding rules live per-param rather than in header_rules, so both the
+        // solve and rune-typing must fold them in or the param runes are never bound (@PFVSZ). The
+        // sites at :407, :556 and :720 do; this one does not, so it is wrong for any function with a
+        // source-written parameter. Fold `params.flat_map(value_type_rules ++ type_outer_ref_rules)`
+        // in the way they do.
+        unimplemented!("header_rules alone: fold in the per-param type-binding rules, see @PFVSZ");
+        let call_site_rules = self.assemble_call_site_rules(function.header_rules);
 
         let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>());
         let initial_knowns = self.assemble_known_templatas(function, already_specified_template_args);
@@ -110,7 +116,7 @@ where 's: 't,
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             self.derive_rune_to_type(
                 original_calling_env, call_range.to_vec(),
-                function.generic_params, function.rules, IndexMap::default());
+                function.generic_params, function.header_rules, IndexMap::default());
 
         let call_range_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(call_range);
 
@@ -213,7 +219,14 @@ where 's: 't,
         // Per @ECSIIOSZ, this is the per-call-site solver for function call resolution: argument
         // types become InitialSends, explicit template args become InitialKnowns, and
         // assemble_call_site_rules filters per SROACSD.
-        let call_site_rules = self.assemble_call_site_rules(function.rules);
+        //
+        // VCOORD: A user param's type-binding rules live per-param rather than in header_rules, so both the
+        // solve and rune-typing must fold them in or the param runes are never bound (@PFVSZ). The
+        // sites at :407, :556 and :720 do; this one does not, so it is wrong for any function with a
+        // source-written parameter. Fold `params.flat_map(value_type_rules ++ type_outer_ref_rules)`
+        // in the way they do.
+        unimplemented!("header_rules alone: fold in the per-param type-binding rules, see @PFVSZ");
+        let call_site_rules = self.assemble_call_site_rules(function.header_rules);
 
         let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>());
         let initial_knowns = self.assemble_known_templatas(function, explicit_template_args);
@@ -221,7 +234,7 @@ where 's: 't,
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             self.derive_rune_to_type(
                 original_calling_env, call_range.to_vec(),
-                function.generic_params, function.rules, IndexMap::default());
+                function.generic_params, function.header_rules, IndexMap::default());
 
         let call_range_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(call_range);
 
@@ -404,11 +417,11 @@ where 's: 't,
         // of the defining-path wiring at :671. Return-type rules already ride in function.rules. Both
         // call_site_rules and derive_rune_to_type (below) use all_rules. // VCOORD: rewrite comment
         let all_rules: Vec<IRulexSR<'s>> =
-            function.rules.iter().copied()
+            function.header_rules.iter().copied()
                 .chain(function.params.iter().flat_map(|p|
                     p.value_type_rules.iter().copied().chain(p.type_outer_ref_rules.iter().copied())))
                 .collect();
-        let call_site_rules: Vec<IRulexSR<'s>> = all_rules.iter().copied()
+        let mut call_site_rules: Vec<IRulexSR<'s>> = all_rules.iter().copied()
             .filter(|r| include_rule_in_call_site_solve(r))
             .collect();
 
@@ -422,16 +435,25 @@ where 's: 't,
             self_env: IEnvironmentT::BuildingWithClosureds(outer_env),
             context_region,
         };
-        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+        let mut rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             self.derive_rune_to_type(
                 calling_env, call_range.to_vec(),
                 function.generic_params, &all_rules, IndexMap::default());
         let invocation_range = call_range;
-        let initial_knowns: Vec<InitialKnown<'s, 't>> = {
+        let mut initial_knowns: Vec<InitialKnown<'s, 't>> = {
             let mut v = self.assemble_known_templatas(function, explicit_template_args);
             v.extend(container_rune_initial_knowns.iter().copied());
             v
         };
+        for s in initial_sends {
+            initial_knowns.push(InitialKnown { rune: s.sender_rune, templata: s.send_templata });
+            call_site_rules.push(IRulexSR::Equals(EqualsSR {
+                range: s.sender_rune.range,
+                left: s.sender_rune,
+                right: s.receiver_rune
+            }));
+            rune_to_type.insert(s.sender_rune.rune, ITemplataType::KindTemplataType(KindTemplataType{}));
+        }
         let include_reachable_bounds_for_runes: Vec<IRuneS<'s>> =
             function.params.iter()
                 .map(|p| p.value_type_rune.rune)
@@ -543,8 +565,17 @@ where 's: 't,
         let function = near_env.function;
         self.check_closure_concerns_handled(near_env);
 
+        let all_rules: Vec<IRulexSR<'s>> =
+            function.header_rules.iter().copied()
+                .chain(function.params.iter().flat_map(|p|
+                    p.value_type_rules.iter().copied().chain(p.type_outer_ref_rules.iter().copied())))
+                .collect();
         let function_definition_rules: Vec<IRulexSR<'s>> =
-            function.rules.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
+            all_rules.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
+        let function_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+            self.derive_rune_to_type(
+                calling_env, call_range.to_vec(),
+                function.generic_params, &all_rules, IndexMap::default());
 
         let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, args);
 
@@ -555,22 +586,31 @@ where 's: 't,
             self_env: IEnvironmentT::BuildingWithClosureds(near_env),
             context_region: RegionT::Default,
         };
-        let preliminary_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
-                calling_env, call_range.to_vec(),
-                function.generic_params, function.rules, IndexMap::default());
+        let mut preliminary_solve_initial_knowns = Vec::new();
+        let mut preliminary_rules = function_definition_rules.clone();
+        let mut preliminary_rune_to_type = function_rune_to_type.clone();
+        for initial_send in initial_sends {
+            preliminary_solve_initial_knowns.push(InitialKnown { rune: initial_send.sender_rune, templata: initial_send.send_templata });
+            // VCOORD: see if we can simplify away this rule? can we not just feed it directly?
+            preliminary_rules.push(IRulexSR::Equals(EqualsSR {
+                range: initial_send.sender_rune.range,
+                left: initial_send.sender_rune,
+                right: initial_send.receiver_rune
+            }));
+            preliminary_rune_to_type.insert(initial_send.sender_rune.rune, ITemplataType::KindTemplataType(KindTemplataType{}));
+        }
         let mut preliminary_solver_state =
             self.make_solver_state(
                 preliminary_envs,
                 coutputs,
-                &function_definition_rules,
+                &preliminary_rules,
                 &preliminary_rune_to_type,
                 &{
                     let mut ranges = vec![function.range];
                     ranges.extend_from_slice(call_range);
                     ranges
                 },
-                &[]);
+                &preliminary_solve_initial_knowns);
         match self.r#continue(preliminary_envs, coutputs, &mut preliminary_solver_state) {
             Ok(()) => {}
             Err(_f) => { panic!("implement: TypingPassSolverError from preliminary continue"); }
@@ -583,7 +623,10 @@ where 's: 't,
             function.generic_params.iter().enumerate().flat_map(|(index, generic_param)| {
                 match preliminary_inferences.get(&generic_param.rune.rune) {
                     Some(&x) => Some(InitialKnown { rune: generic_param.rune, templata: x }),
-                    None => { panic!("implement: create placeholder for missing preliminary inference"); }
+                    None => {
+
+                        panic!("implement: create placeholder for missing preliminary inference");
+                    }
                 }
             }).collect();
 
@@ -599,7 +642,7 @@ where 's: 't,
                 coutputs,
                 &function_definition_rules,
                 function.impl_bounds,
-                &preliminary_rune_to_type,
+                &function_rune_to_type,
                 &{
                     let mut ranges = vec![function.range];
                     ranges.extend_from_slice(call_range);
@@ -617,7 +660,16 @@ where 's: 't,
                     runes
                 },
             ) {
-                Err(_f) => { panic!("implement: TypingPassDefiningError from solve_for_defining"); }
+                Err(f) => {
+                    return Err(ICompileErrorT::TypingPassDefiningError {
+                        range: self.typing_interner.alloc_slice_copy(&{
+                            let mut ranges = vec![function.range];
+                            ranges.extend_from_slice(call_range);
+                            ranges
+                        }),
+                        inner: f,
+                    });
+                }
                 Ok(c) => c,
             };
         let reachable_bounds: Vec<PrototypeTemplataT<'s, 't>> =
@@ -678,7 +730,7 @@ where 's: 't,
         // (@PFVSZ produced-but-not-consumed). Return-type rules already ride in function.rules. Both
         // the value solve (definition_rules) and rune-typing (derive_rune_to_type below) use all_rules. VCOORD: rewrite this comment
         let all_rules: Vec<IRulexSR<'s>> =
-            function.rules.iter().copied()
+            function.header_rules.iter().copied()
                 .chain(function.params.iter().flat_map(|p|
                     p.value_type_rules.iter().copied().chain(p.type_outer_ref_rules.iter().copied())))
                 .collect();
@@ -839,7 +891,7 @@ where 's: 't,
             .map(|p| p.full_type_rune)
             .zip(args.iter())
             .enumerate()
-            .flat_map(|(arg_index, (param_rune, arg))| {
+            .flat_map(|(arg_index, (param_full_type_rune, arg))| {
                 match arg {
                     None => None,
                     Some(arg_templata) => {
@@ -850,7 +902,7 @@ where 's: 't,
                         };
                         Some(InitialSend {
                             sender_rune,
-                            receiver_rune: param_rune,
+                            receiver_rune: param_full_type_rune,
                             send_templata: ITemplataT::Kind(
                                 self.typing_interner.alloc(KindTemplataT { kind: *arg_templata })),
                         })

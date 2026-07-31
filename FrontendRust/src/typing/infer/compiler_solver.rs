@@ -23,6 +23,7 @@ use crate::postparsing::ast::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::typing::infer_compiler::InferEnv;
+use crate::postparsing::post_parser_error_humanizer::humanize_rune;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::citizen::impl_compiler::IsntParent;
 use crate::typing::citizen::struct_compiler::ResolveFailure;
@@ -38,6 +39,10 @@ pub enum ITypingPassSolverError<'s, 't> {
     KindIsNotConcrete { kind: KindT<'s, 't> },
     KindIsNotInterface { kind: KindT<'s, 't> },
     KindIsNotStruct { kind: KindT<'s, 't> },
+    KindIsNotBorrowRef { kind: KindT<'s, 't> },
+    KindIsNotWeakRef { kind: KindT<'s, 't> },
+    KindIsNotOwnRef { kind: KindT<'s, 't> },
+    KindIsNotFromATemplate { kind: KindT<'s, 't> },
     CouldntFindFunction { range: &'t [RangeS<'s>], fff: FindFunctionFailure<'s, 't> },
     CouldntFindImpl { range: &'t [RangeS<'s>], fail: &'t IsntParent<'s, 't> },
     CouldntResolveKind { rf: &'t ResolveFailure<'s, 't, KindT<'s, 't>> },
@@ -258,7 +263,10 @@ where 's: 't,
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
         for rule in &rules {
             for rune_usage in rule.rune_usages() {
-                assert!(rune_to_type.contains_key(&rune_usage.rune));
+                assert!(
+                    rune_to_type.contains_key(&rune_usage.rune),
+                    "rune {} is used by a rule but has no type: {:?}",
+                    humanize_rune(rune_usage.rune), rule);
             }
         }
 
@@ -1205,7 +1213,7 @@ where 's: 't,
                                 KindT::BorrowRef(BorrowRefT { inner: result_inner_rune, region: result_region }) => {
                                     conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT{ kind: *result_inner_rune})));
                                 }
-                                _ => unimplemented!()
+                                _ => return Err(ITypingPassSolverError::KindIsNotBorrowRef { kind: *result_kind }),
                             }
                         },
                         (_, Some(ITemplataT::Kind(KindTemplataT { kind: inner }))) => {
@@ -1224,7 +1232,60 @@ where 's: 't,
                       }
                   }
               }
-            // VCOORD: WeakRef and OwnRef need the same bidirectional wrap/peel as BorrowRef, minus the
+              IRulexSR::WeakRef(r) => {
+                  let mut conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = IndexMap::default();
+                  match (solver_state.get_conclusion(&r.result_rune.rune), solver_state.get_conclusion(&r.inner_rune.rune)) {
+                      (Some(ITemplataT::Kind(KindTemplataT { kind: result_kind })), _) => {
+                          match result_kind {
+                              KindT::WeakRef(WeakRefT { inner: result_inner }) => {
+                                  conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *result_inner })));
+                              }
+                              _ => return Err(ITypingPassSolverError::KindIsNotWeakRef { kind: *result_kind }),
+                          }
+                      },
+                      (_, Some(ITemplataT::Kind(KindTemplataT { kind: inner }))) => {
+                          let wrap = KindT::WeakRef(self.typing_interner.alloc(WeakRefT { inner: *inner }));
+                          conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: wrap })));
+                      },
+                      _ => panic!("Neither result nor inner rune solved in WeakRef"),
+                  }
+                  match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
+                      Ok(_) => Ok(()),
+                      Err(e) => {
+                          let ranges = once(r.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                          let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                          let error = self.typing_interner.alloc(e);
+                          Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                      }
+                  }
+              }
+              IRulexSR::OwnRef(r) => {
+                  let mut conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = IndexMap::default();
+                  match (solver_state.get_conclusion(&r.result_rune.rune), solver_state.get_conclusion(&r.inner_rune.rune)) {
+                      (Some(ITemplataT::Kind(KindTemplataT { kind: result_kind })), _) => {
+                          match result_kind {
+                              KindT::OwnRef(OwnRefT { inner: result_inner }) => {
+                                  conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *result_inner })));
+                              }
+                              _ => return Err(ITypingPassSolverError::KindIsNotOwnRef { kind: *result_kind }),
+                          }
+                      },
+                      (_, Some(ITemplataT::Kind(KindTemplataT { kind: inner }))) => {
+                          let wrap = KindT::OwnRef(self.typing_interner.alloc(OwnRefT { inner: *inner }));
+                          conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: wrap })));
+                      },
+                      _ => panic!("Neither result nor inner rune solved in OwnRef"),
+                  }
+                  match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
+                      Ok(_) => Ok(()),
+                      Err(e) => {
+                          let ranges = once(r.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                          let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                          let error = self.typing_interner.alloc(e);
+                          Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                      }
+                  }
+              }
             IRulexSR::KindList(r) => {
                 let conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> =
                     match solver_state.get_conclusion(&r.result_rune.rune) {
@@ -1392,7 +1453,7 @@ where 's: 't,
                                     }
                                 }
                             }
-                            _ => unreachable!("solve_call_rule Some-branch Kind match is exhaustive in practice (RSA/SSA only); other Kind variants deferred"),
+                            other => return Err(ITypingPassSolverError::KindIsNotFromATemplate { kind: other }),
                         }
                     }
                     _ => unreachable!("solve_call_rule Some branch handles only Kind result; other ITemplataT variants deferred"),

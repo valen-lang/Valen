@@ -1197,7 +1197,7 @@ where 's: 't,
         // val (interfaceEdgeBlueprints, interfaceToSubCitizenToEdge) =
         //   Profiler.frame(() => { edgeCompiler.compileITables(coutputs) })
         let (interface_edge_blueprints, interface_to_sub_citizen_to_edge) =
-            self.compile_i_tables(&mut coutputs);
+            self.compile_i_tables(&mut coutputs)?;
 
         // Deferred function compilation loop
         // while (coutputs.peekNextDeferredFunctionBodyCompile().nonEmpty || coutputs.peekNextDeferredFunctionCompile().nonEmpty)

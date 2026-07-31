@@ -458,11 +458,6 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       // solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], IndexSet::default())
     // }
     // IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet implemented in rune_type solve_rule"),
-    // ZHERE: fill this Call arm from the template's rune-type (the commented MaybeCoercingCall
-    // at :307 is the model). Read template_rune's conclusion (a TemplateTemplataType); stamp each
-    // arg from param_types AND derive result_rune = return_type — the latter is the onion change
-    // vs the old MaybeCoercingCall, which treated result as a precondition. return_type is just a
-    // Kind now (no Kind/Coord split):
     IRulexSR::Call(x) => {
       match solver_state.get_conclusion(&x.template_rune.rune)
           .expect("Call: template rune unsolved") {

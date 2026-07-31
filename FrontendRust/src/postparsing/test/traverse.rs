@@ -408,7 +408,7 @@ where
   if let Some(rune) = &function.maybe_ret_kind_rune {
     visit_rune_usage(pred, out, rune);
   }
-  for rule in function.rules {
+  for rule in function.header_rules {
     visit_rulex(pred, out, rule);
   }
   for impl_bound in function.impl_bounds {

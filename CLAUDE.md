@@ -76,10 +76,12 @@ Instead, use the same file.
 ## SEE ALSO (auto)
 
 - **Read when writing an `r#"..."#` raw string containing embedded Vale source in a Rust test.** → FrontendRust/docs/shields/MultiLineValeFixtures-MLVFX.md
+- **Read when decoding the compact id shorthand used in docs/Generics.md, investigation notes, or comments — forms like `dis$0`, `Foo<^int>`, `MySome.bound:drop:66`.** → docs/arcana/IdShorthandNotation-ISNZ.md
 - **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
 - **Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.** → docs/skills/bug-repro.md
 - **Read when the human asks to close, end, or shut down the current Claude Code session.** → docs/skills/close-session.md
 - **Read when investigating a compiler bug by tracing execution with debug printouts and narrowing the call graph.** → docs/skills/collapsed-call-tree.md
+- **Read when the human says this session continues, resumes, or picks up an earlier session or convo.** → docs/skills/continue-session.md
 - **Read when the user says "/diagnose" — dig for the root cause of a failure without proposing fixes.** → docs/skills/diagnose.md
 - **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → docs/skills/feature-development-flow.md
 - **Read when reviewing a diff for added code that doesn't serve the change's goal — dead helpers, redundant reinventions, unused flexibility, and the stale comments that hide them.** → docs/skills/find-deadweight.md
@@ -98,6 +100,7 @@ Instead, use the same file.
 - **Read when the architect asks what `master` has that `experimental` might want, or asks to pull specific commits from `master`.** → docs/skills/merging-from-master.md
 - **Read when writing or reviewing prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-reviewer.md
 - **Read when checking the grammar and voice of prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-tactical.md
+- **Read when the human asks to read a past session or convo plus the conversation that came before it.** → docs/skills/read-convo.md
 - **Read when authoring or running any bulk-edit script (`./tmp/scripts/*.py`, shell loops over many files, or any per-file transform across more than a handful of files).** → docs/skills/scripting.md
 - **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → docs/skills/tdd.md
 - **Read when reviewing or writing typing-pass tests (or other tests that walk the AST with collect_ macros).** → docs/skills/test-review.md

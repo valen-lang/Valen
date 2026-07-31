@@ -12,6 +12,7 @@ use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::types::types::{KindT, RegionT};
 use crate::typing::templata::templata::ITemplataT;
+use crate::typing::templata_compiler::peel_all_references;
 
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -40,7 +41,7 @@ where 's: 't,
             self.typing_interner.alloc(header.to_signature()),
             header.return_type,
         );
-        let len = match param_coords[0].tyype {
+        let len = match peel_all_references(param_coords[0].tyype) {
             KindT::StaticSizedArray(ssa) => ssa.size(),
             other => panic!("SSALenMacro received non-SSA param: {:?}", other),
         };
