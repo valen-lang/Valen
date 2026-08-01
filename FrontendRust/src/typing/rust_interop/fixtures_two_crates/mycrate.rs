@@ -42,3 +42,24 @@ impl Gadget {
         self.value
     }
 }
+
+/// A nested module, so the stub can re-export it **across a crate boundary**.
+///
+/// This is the half `std::vec` needs: `std` reaches its `Vec` by `pub use alloc_crate::vec`, so the
+/// module a user descends through and the module the definition lives in are in different crates.
+/// The intra-crate re-exports in `fixtures/` cannot pose that.
+pub mod tools {
+    pub struct Spanner {
+        pub size: i32,
+    }
+
+    pub fn make_spanner() -> Spanner {
+        Spanner { size: 6 }
+    }
+
+    impl Spanner {
+        pub fn spanner_size(self) -> i32 {
+            self.size
+        }
+    }
+}

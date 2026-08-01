@@ -33,7 +33,7 @@ use crate::typing::rust_interop::{
 };
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::test::rust_interop::harness::{
-    compile_check_fixture, run_case, try_run_case, CaseOutcome,
+    compile_check_fixture, run_case, run_case_in_package, try_run_case, CaseOutcome,
 };
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::*;
@@ -420,6 +420,34 @@ fn a_rust_value_bound_to_a_local_gets_a_scope_end_drop() {
     );
 }
 
+/// A generic Rust value bound to a local and never consumed needs a scope-end drop.
+#[test]
+fn a_generic_rust_type_gets_a_scope_end_drop() {
+    let outcome = run_case(&A_GENERIC_RUST_TYPE_GETS_A_SCOPE_END_DROP, callees_in_main);
+
+    let callees = outcome
+        .check(&A_GENERIC_RUST_TYPE_GETS_A_SCOPE_END_DROP)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "drop" && c.rust_backed),
+        "the bound generic Rust value got no scope-end drop: {callees:?}"
+    );
+}
+
+/// Hand-written Vale naming a Rust type in a parameter and calling a method on it.
+#[test]
+fn vale_source_calls_a_method_on_a_named_rust_parameter() {
+    let outcome = run_case(&VALE_SOURCE_CALLS_A_METHOD_ON_A_NAMED_RUST_PARAMETER, callees_in_main);
+
+    let callees = outcome
+        .check(&VALE_SOURCE_CALLS_A_METHOD_ON_A_NAMED_RUST_PARAMETER)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "value_of" && !c.rust_backed),
+        "the Vale function taking a Rust-typed parameter did not resolve: {callees:?}"
+    );
+}
+
 /// A value returned and immediately discarded still gets dropped — the temporary path.
 ///
 /// Distinct from the case above: with no local to hang the drop on, the drop attaches to a
@@ -553,6 +581,77 @@ fn imports_through_a_re_exported_module() {
     );
 }
 
+/// A re-export whose target lives in another crate, reached by a path through the re-exporting one.
+#[test]
+fn imports_through_a_cross_crate_re_exported_item() {
+    let outcome = run_case(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_ITEM, callees_in_main);
+
+    let callees = outcome
+        .check(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_ITEM)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "gadget_value" && c.rust_backed),
+        "the method on a cross-crate re-exported type did not resolve: {callees:?}"
+    );
+}
+
+/// Descending through a re-exported **module** whose target is in another crate — `std::vec`'s form.
+#[test]
+fn imports_through_a_cross_crate_re_exported_module() {
+    let outcome = run_case(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_MODULE, callees_in_main);
+
+    let callees = outcome
+        .check(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_MODULE)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "spanner_size" && c.rust_backed),
+        "the method behind a cross-crate re-exported module did not resolve: {callees:?}"
+    );
+}
+
+/// An item defined in the compiled crate itself is not importable — the walk sees dependencies.
+#[test]
+fn an_item_in_the_compiled_crate_is_not_importable() {
+    let outcome = run_case(&AN_ITEM_IN_THE_COMPILED_CRATE_IS_NOT_IMPORTABLE, callees_in_main);
+
+    assert!(outcome.check(&AN_ITEM_IN_THE_COMPILED_CRATE_IS_NOT_IMPORTABLE).is_none());
+    assert!(
+        !outcome.asked(|q| q.offered("stub_only").is_some()),
+        "the compiled crate's own item was offered for import: {}",
+        outcome.rendered_log()
+    );
+}
+
+/// A Vale package compiled as the reserved `rust` module is refused.
+///
+/// The refusal is a panic rather than a compile error: the reason has to travel as a diagnostic
+/// before it can be one, and the reservation is worth enforcing before that lands. Asserting the
+/// message rather than the mechanism is what lets this survive the upgrade. The expected substring
+/// names only the reservation, not the verb around it — the wording has already been revised once,
+/// and a test that pins the whole sentence fails on rephrasing rather than on behaviour.
+#[test]
+#[should_panic(expected = "reserved `rust` module")]
+fn a_vale_package_may_not_claim_the_rust_module() {
+    run_case_in_package(&A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE, "rust", callees_in_main);
+}
+
+/// The control for the case above: the identical program under an ordinary package name compiles.
+///
+/// Without this, the `should_panic` passes for any reason a compilation might blow up, and would
+/// keep passing if the program itself went bad.
+#[test]
+fn the_reserved_module_case_compiles_under_an_ordinary_package() {
+    let outcome = run_case(&A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE, callees_in_main);
+
+    let callees = outcome
+        .check(&A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "add_two_numbers" && c.rust_backed),
+        "the control program did not resolve its Rust call: {callees:?}"
+    );
+}
+
 /// **Everything at once** — the composition case.
 ///
 /// Every other case is narrow so failures localize. This one exists for the question narrowness
@@ -603,6 +702,29 @@ fn a_program_using_everything_at_once() {
             "`{declined}` should have been declined, but reached the callee list: {callees:?}"
         );
     }
+
+    // A Vale function taking a Rust-typed parameter, resolving alongside everything else. Not
+    // Rust-backed: it is the caller, and the point is that it coexists with the callees.
+    assert!(
+        callees.iter().any(|c| c.name == "vale_counter_value" && !c.rust_backed),
+        "the Vale function over a Rust type did not resolve in the composite program: {callees:?}"
+    );
+
+    // Drop is the mechanism most likely to break only in company, so it is asserted by shape
+    // rather than by presence: four non-generic citizens and one generic one fall out of scope
+    // here, and the generic drop is the one that needs `T` deduced from the value.
+    let drops: Vec<&Vec<String>> =
+        callees.iter().filter(|c| c.name == "drop" && c.rust_backed).map(|c| &c.params).collect();
+    assert!(
+        drops.iter().any(|params| params.iter().any(|p| p.contains('<'))),
+        "no generic citizen was dropped in the composite program, so the generic drop never \
+         composed with the others: {drops:?}"
+    );
+    assert!(
+        drops.iter().any(|params| params.iter().all(|p| !p.contains('<'))),
+        "no non-generic citizen was dropped, so the two drop shapes were not exercised \
+         together: {drops:?}"
+    );
 }
 
 /// A signature Vale cannot represent is **declined**, not imported with a hole in it.

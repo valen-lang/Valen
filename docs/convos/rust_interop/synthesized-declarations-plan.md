@@ -27,9 +27,10 @@ user explicitly exported, never to Vale's whole type universe (arch §1.7, §9.4
 
 **Where that stands today.** The typing pass can typecheck a Vale program that calls a Rust free
 function, calls a generic Rust function at concrete types, holds a Rust type obtained from a
-signature, calls a method or associated function on it, drops it, imports from two crates at once,
-and uses a **generic** Rust type at two different arguments — all against a real rustc, with a core
-diff that is a net **deletion**. 33 corpus cases. Nothing downstream of typing exists: no
+signature, calls a method or associated function on it, drops it — generic or not — imports from two
+crates at once, reaches items through nested modules and cross-crate re-exports, and uses a
+**generic** Rust type at two different arguments. All against a real rustc, and all of it composed in
+one program by case 48 rather than only case by case. Nothing downstream of typing exists: no
 instantiator, no codegen, no linking. The interop build deliberately does not even link the C++
 backend yet.
 
@@ -460,15 +461,23 @@ a stop, not a footnote. Take a reading before starting and compare after.
 Interop's own count is the default count plus the corpus (§5.1). The driver exits 0. Warnings are
 all pre-existing and unrelated — a change there is also a stop.
 
+**The sharpest check is that the two configurations' *failure* counts match**, since everything
+interop adds is a passing corpus case. One more failure under `rust_interop` than under the default
+means exactly one corpus case is red, and says so before any count has to be compared against a
+remembered number. That is what surfaced case 32 going stale under an upstream change.
+
 **The full gate cannot run at all.** `cargo build` exits 101 on `src/bin/valec/`, which references
 `backend_ffi` and `pass_manager` — commented out of `lib.rs` by the onion arc — so neither nextest
 backend can build its targets. This is not a red suite; it is a suite that cannot start, and it is
 unchanged by every commit so far. `--lib` is the ratified substitute. Do not spend time diagnosing
 it.
 
-**Interop's footprint on core is a net deletion.** Nothing is gated into the core files except the
-one loop in `Compiler::evaluate` that pushes Rust stores into the global environment; the naming work
-(§10) added a path to `LookupSR` and a free function beside it, and removed more than it added.
+**Interop's footprint on core is one gated block.** In `Compiler::evaluate`: the loop that pushes
+Rust stores into the global environment, and the check ahead of it refusing a user package named
+`rust` (§6). Both sit under one `#[cfg(feature = "rust_interop")]`, and the check calls a predicate
+that lives in `rust_interop/reserved.rs`, so core gained a call rather than a rule. Outside that, the
+naming work (§10) added a path to `LookupSR` and a free function beside it, and removed more than it
+added.
 
 ### Where things live, and why there
 
@@ -553,8 +562,8 @@ Each of these is gone because keeping it was the hazard, not because it was mere
 ## 4. Verified facts worth not rediscovering
 
 - **`StructDefinitionT` has no `origin_struct` field** and `add_struct` asserts only two things
-  (sharedness declared; not already added). So a definition can be built with no `StructS` at all —
-  which is what made the core diff empty.
+  (sharedness declared; not already added). So a definition can be built with no `StructS` at all,
+  which is why importing a Rust type needs nothing from core.
 - **Methods are already just functions in Vale.** `IEnvEntryT` has no method variant, `ITemplataT`
   has none, `grep -n "internal" overload_resolver.rs` returns zero hits, and method syntax is erased
   in the postparser. The ~15 places that treat methods differently are all "declared inside braces,
@@ -621,10 +630,25 @@ Each of these is gone because keeping it was the hazard, not because it was mere
   sends go against `full_type_rune` **unpeeled** (harmless only because discarded, so the producer
   needs reshaping too), and wiring up the existing call sites is *not* the fix, because what a send
   means when the rune is already determined is explicitly unruled. See §7.
-- **`+` resolves no candidate at all** in the interop test compilation, and **reading a local**
-  yields `BorrowRef(int)` where `int` is wanted (`NoImplicitCloneDefinedT`). Both are Vale-side, not
-  interop's — the second is the same borrow read-out gap that blocks case 39. Corpus programs
-  therefore avoid arithmetic and return call results directly rather than through a local.
+- **`+` resolves no candidate at all** in the interop test compilation, which is the missing-builtins
+  fact above rather than a Vale defect. Corpus programs therefore avoid arithmetic.
+- **The walk sees dependency crates, never the crate being compiled.** `resolve_allowlist_path`
+  resolves against `tcx.crates(())`, so an item defined in the stub itself is out of scope — right,
+  since the stub exists to force dependencies to load rather than to export. The trap is that a
+  fixture placed in the stub fails *exactly* like a broken walk: zero candidates, `importable_*`
+  empty. Case 51 pins it. Posing a genuine cross-crate question therefore takes two dependency
+  crates, and the harness builds them in sorted order, so a later name may depend on an earlier one.
+- **A signature position denotes a rune; only some positions mint one.** `bind_sig_type` returns the
+  rune for the position rather than binding a supplied one — a bare generic comes back as the
+  declared rune with no rule at all, exactly as the postparser emits for `func foo<T>(x T) T`. Two
+  parameters of the same type therefore share one rune, which is what `f<T>(a T, b T)` means. An
+  argument inside a citizen is just another position through the same call, so nothing branches on
+  generic-versus-not.
+- **Reading a place yields a borrow, so consuming it takes an explicit move.** Passing a Rust value
+  to anything with a by-value parameter — a method's `self`, a `drop` — is a consume, and a bare
+  mention reads as a borrow that no candidate accepts. The failure is `CouldntFindFunctionToCallT`
+  naming the *callee*, which reads like a missing import while the fix is `^` at the call site.
+  Case 39 pins it.
 - **A synthesized declaration has to stay *statically filterable*, and a rule's *placement* is half
   of that.** Vale2's ratified candidate filter (§10.10) reads three things off a parameter with no
   solving: arity, the **wrap chain** from `type_outer_ref_rules`, and the **value-type template
@@ -685,14 +709,17 @@ costs one case, legibly.
 ### 5.1 The corpus — 40 cases, named
 
 "A lot of them" needs a number, and the sibling tree's 32 is the bar to pass. Below is the whole
-intended corpus: **39 implemented (✅), 2 remaining, 2 answered without a case**. Each line says what
-breaks if the case fails, because a case whose failure mode nobody can state is a case nobody will
-fix.
+intended corpus: **all 50 implemented (✅), 2 answered without a case**. Each line says what breaks if
+the case fails, because a case whose failure mode nobody can state is a case nobody will fix.
 
-**Both remaining cases are blocked, and neither is ours**: case 39 needs Vale2's borrow read-out fix
-and case 41 needs their phase 0 (§7). Case 25 is written but pins a panic until the naming change
-lands. Cases 35 and 37 were **answered by making the property unrepresentable or by probe** rather
-than by writing a case — see their rows; that is §1.5.6 rule 4 working, not coverage missing.
+Cases 35 and 37 were **answered by making the property unrepresentable or by probe** rather than by
+writing a case — see their rows; that is §1.5.6 rule 4 working, not coverage missing.
+
+**Write the case before believing it is blocked.** Four rows in this table were recorded as blocked
+and turned out to need nothing: re-export traversal, case 15's decline, and cases 39 and 41. Two of
+those waited on another team who had already shipped the capability, and one waited on a compiler
+defect that was really a call-site spelling. A row that says *blocked* is a claim with a date on it,
+and the cheapest way to check it is to write the case.
 
 Every case that compiles also declares the value `main` returns, so tier 2 can run the identical
 case and check the output. Cases marked **fail** are tier-1-only by nature.
@@ -771,16 +798,20 @@ declarations.
 | # | case | pins |
 |---|---|---|
 | 38 | `vale_source_can_name_a_rust_type` ✅ | hand-written Vale naming a Rust type by bare name, with no import statement. It works, via the citizen's entry in the reserved `rust` package store plus `PackageEnvironmentT`'s flat union — easy to assume otherwise, which is why the case exists |
-| 39 | `vale_source_calls_a_method_on_a_named_rust_parameter` | the same, with a body that *uses* the parameter. **Blocked**: reading a parameter yields `BorrowRef(Counter)` where `get(self Counter)` wants it owned, and `is_type_convertible` in `templata_compiler.rs` panics on the borrow read-out. Vale2's, per §7 — write it when they land the fix |
+| 39 | `vale_source_calls_a_method_on_a_named_rust_parameter` ✅ | the same, with a body that *uses* the parameter. **The `^` is load-bearing**: a by-value Rust receiver lowers to `get(self Counter)`, which consumes, so the caller moves — the rule that makes `drop(bare_local)` an error and `drop(^local)` correct. A bare mention reads as a borrow, no candidate takes one, and the failure is `CouldntFindFunctionToCallT` naming the callee rather than the mention |
 | 40 | `a_generic_rust_type_carries_its_arguments` ✅ | a **generic** Rust type imports with its arguments intact — `Holder<i32>` and `Holder<bool>` are two distinct kinds, asserted as `("rust-citizen<int32>", "rust-citizen<bool>")`. The program consumes both `Holder`s rather than letting them fall out of scope, so it pins arguments alone and not the drop gap |
-| 41 | `a_generic_rust_type_gets_a_scope_end_drop` | **not written, and Vale2's.** A compiler-generated drop call supplies no explicit type argument, and inference does not happen. **Pure Vale has the same gap** — `compiler_ownership_tests::opt_with_undroppable_contents`, a hand-written top-level `func drop<T>(opt Some<T>)`, is among the 170. Not an interop defect; see §9 step 2 |
+| 41 | `a_generic_rust_type_gets_a_scope_end_drop` ✅ | a **generic** citizen bound to a local and left to fall out of scope. The synthesized declaration is `drop<T>(Holder<T>)` and a compiler-generated drop call names no explicit type argument, so `T` comes from the value being dropped — which works once argument types reach the call-site solve. Case 20 is the non-generic shape |
 | 42 | `calls_a_generic_function_taking_a_generic_type` ✅ | `holder_ignore<T>(Holder<T>)` at `<int>` — a citizen *applied to its own parameter* in argument position. The shape `pick<A, B>` does not reach, and what `ValeSigType::Citizen` exists for |
 | 43 | `every_fixture_stub_is_valid_rust` ✅ | a fixture cannot rot into invalid Rust unnoticed. Tier 1 sees only *parse* errors, so nothing else covers a stub that type-errors. Skips `fixtures_broken_rust`, which is unparseable on purpose |
 | 44 | `imports_an_item_from_a_nested_module` ✅ | an item below the crate root, named by a dotted path — the shape `Vec` needs. **The first case a root-only walk fails**: every other case sits at a root, which is the degenerate path, so all of them passed while nested items were structurally invisible |
 | 45 | `imports_a_type_from_a_nested_module` ✅ | the same at a different `DefKind`, plus a method on the nested type. A walk could plausibly descend for functions and not for types; the method came for free, since discovery runs off the owner's `inherent_impls` and never asks how the owner was reached |
-| 46 | `imports_through_a_re_exported_item` ✅ | a re-exported name, which is the shape `std::vec::Vec` actually has. **Written expecting red, passed immediately** — `module_children` reports a re-export with its `Res` naming the definition, so taking the `DefId` from the `Res` follows it invisibly. Intra-crate only; cross-crate is untested |
+| 46 | `imports_through_a_re_exported_item` ✅ | a re-exported name, which is the shape `std::vec::Vec` actually has. **Written expecting red, passed immediately** — `module_children` reports a re-export with its `Res` naming the definition, so taking the `DefId` from the `Res` follows it invisibly. Intra-crate; cases 49 and 50 are the cross-crate pair |
 | 47 | `imports_through_a_re_exported_module` ✅ | descending *through* a re-exported module rather than landing on a re-exported item — a walk could handle the destination and not the intermediate hop. It handles both |
-| 48 | `a_program_using_everything_at_once` ✅ | **the composition case.** Sixteen mechanisms in one program and one import list, plus three declined items that must not disturb them. Every other case is narrow so failures localize, which is right for diagnosis and useless for *"do these coexist?"* — interference is its own failure class (a shared name resolving to the wrong item, an import-order dependency, a drop that works only when it is the only drop) and no narrow case can see it. Asserts on the **callee list**, not the return value: a program this size could return 31 while resolving half its calls wrongly |
+| 48 | `a_program_using_everything_at_once` ✅ | **the composition case.** Eighteen mechanisms in one program and one import list, plus three declined items that must not disturb them. Every other case is narrow so failures localize, which is right for diagnosis and useless for *"do these coexist?"* — interference is its own failure class (a shared name resolving to the wrong item, an import-order dependency, a drop that works only when it is the only drop) and no narrow case can see it. Asserts on the **callee list**, not the return value: a program this size could return 31 while resolving half its calls wrongly. **Drop is asserted by shape rather than presence** — a generic citizen and four non-generic ones fall out of scope, and both drop shapes must appear, because the generic one is the newest capability and the likeliest to work alone and break in company. Cross-crate re-exports are deliberately absent: they need a second dependency crate, and `fixtures/` has one |
+| 49 | `imports_through_a_cross_crate_re_exported_item` ✅ | a re-export whose target is in **another crate**, reached by a path through the re-exporting one. Cases 46 and 47 are intra-crate; `std::vec::Vec` is not |
+| 50 | `imports_through_a_cross_crate_re_exported_module` ✅ | descending **through** a cross-crate re-exported module — `std::vec`'s exact form, since `std` reaches `Vec` by `pub use alloc_crate::vec`. Both forms work, and the walk never needed to know a crate boundary was crossed |
+| 51 | `an_item_in_the_compiled_crate_is_not_importable` ✅ **fail** | the walk resolves against the loaded **dependency** crates, so an item defined in the crate being compiled is out of scope. That is correct — the stub exists to force dependencies to load, not to export — but it is invisible until asked, and a fixture placed in the stub is indistinguishable from a broken walk. Asserts the item was never *offered*, not merely that the program failed |
+| 52 | `a_vale_package_may_not_claim_the_rust_module` ✅ **fail** | a Vale package compiled as `rust` is refused. Every synthesized declaration names its citizen by a path rooted there, and `lookup_nearest_with_path` selects a store by matching a coordinate whole — so a colliding user package resolves to whichever store comes first, silently. Paired with a control compiling the identical program under an ordinary package name, without which the `should_panic` would pass for any reason a compilation might blow up |
 
 ### 5.2 How to run a slice here
 
@@ -825,18 +856,26 @@ The corpus in §5.1 remains the RFIGA list going forward.
    A side table is the right producer regardless: poisoning earns its cost only if a poisoned item
    must *participate* in later phases, and this one only has to explain its own absence.
 
-2. **Eagerness** (§6). The half that is ours is the per-type method fan-out — importing a type
-   declares every method on it whether called or not, so `Vec` costs ~100. The expensive half is
-   core: declarations are compiled by the loop in `Compiler::evaluate` that walks every top-level
-   store, so lazy population needs that loop and the lookup driving it. Needs a ruling before
-   anything is built.
+2. **Eagerness** (§6). The architect's design: an eagerly-built index of names in the global
+   environment, plus a cache in `CompilerOutputs` mapping a name to `Option<scoutput>`, populated on
+   demand — a Vale name turns its parsed AST into a declaration, a Rust name calls the interop
+   plugin. `None` carries the `DeclineReason`, which is also what retires the separate side table of
+   step 1.
 
-3. **Cross-crate re-exports.** Re-export traversal works — `module_children` reports a re-export with
-   its `Res` naming the definition, so taking the `DefId` from the `Res` follows it — but the cases
-   covering it are **intra-crate**. `std::vec` is `pub use alloc_crate::vec`, a different
-   `module_children` path, and untested. `fixtures_two_crates` already exists to host it.
+   **It is the *declaration* that is lazy, not the compile.** The compile loop keeps walking the
+   eager index in order, so error order, vtable slot assignment and every whole-suite lookup are
+   untouched. Four core changes: the cache and its accessor in `compiler_outputs.rs`; the parsed AST
+   outliving `Compiler::evaluate`'s locals so the Vale-side producer can reach it; the store's entry
+   becoming kind-plus-key in `environment.rs`, with the two lookup funnels forcing; and splitting
+   `name_to_top_level_environment`'s two jobs, since it serves as both the lookup index and the
+   compile driver and Rust stores belong only in the first.
 
-4. **Tier 2**, when the LLVM port and the onion relink land: a second runner over the same cases,
+   All four declaration kinds go lazy. `add_entries` keeps its shape: of its three payload-reading
+   arms, `Isa` and `Prototype` read already-typed values rather than declarations, and `Impl` reads
+   two imprecise names that come off the parsed impl without scouting — so the index carries those
+   two names and keys from them.
+
+3. **Tier 2**, when the LLVM port and the onion relink land: a second runner over the same cases,
    asserting only on what `main` returns. The corpus is shaped for it — that was the point of
    `corpus.rs`. `instantiating/` and `simplifying/` are not merely gated — they are stale and would
    not compile, matching on `ReferenceExpressionTE` variants with zero hits under `typing/`. Vale2
@@ -868,12 +907,33 @@ way source does.
   mentions it. Harmless at a five-name allowlist; `Vec` alone brings roughly a hundred inherent
   methods. Keep the wrapper — it is what lets the ordinary solver do the work, and why generics
   needed no core changes — and attack the eagerness instead, as rustc's own `populate_on_access`
-  does. §5.3 step 2 for which half is ours.
+  does. §5.3 step 2 has the design.
+
+  **The cost is where the design needs it to be.** Only `fn_sig` drives a rustc query at oracle-call
+  time; enumeration reads a table built once in `TyCtxtOracle::new`, so a complete name index costs
+  nothing extra. A cache miss is one `fn_sig` plus one `FunctionS`. And rustc splits it the same
+  way: `populate_on_access` is a per-module flag initialized to `is_foreign`, so local modules are
+  never lazily populated and foreign ones always are — one field, not two mechanisms.
+
+  **The producer must be a pure function of the name.** Memoization only preserves identity if
+  producing a declaration twice yields identical runes, and the instantiator zips definition against
+  call site *by rune*. `synthesize_extern_function` satisfies this because `next_synthetic` is scoped
+  per declaration; rustc reaches the same requirement from the other side, handing a fresh
+  disambiguator to every lazy def-creation site so a name never depends on how many were made before
+  it. The counterexample to avoid is `rustc_public`'s `create_or_fetch`, which mints public ids from
+  insertion order into a lazily-populated map — touch items in a different order and every id moves.
 
   **Do not build a name-scan of the Vale source as a reachability filter.** A Rust item can be
   reached without its name appearing — a drop we synthesize, a method reached through a generic
   instantiation — so the filter would be approximate in the direction that silently drops
   declarations.
+
+- **`vale_type_name` names only `int`, `bool` and `void`, and drops everything else silently.** A
+  Rust `i64` lowers happily — `lower_ty` yields `KindT::Int(IntT::I64)` and `i64` is a Vale builtin
+  primitive — and is then discarded when `bind_sig_type` finds no name for it, with no
+  `DeclineReason` recorded anywhere. That is a second decline gate carrying no reason, which is
+  exactly what the `Option`-carries-the-reason cache exists to retire; the arm is also simply
+  missing, so `i64` is representable today and unimportable.
 
 - **Diagnostics name a path nobody can write.** A citizen's package coordinate comes from
   `tcx.def_path`, so an error says `rust.alloc.vec.Vec` where the user wrote `std.vec.Vec`.
@@ -895,8 +955,12 @@ way source does.
   `expression_compiler.rs` already returns `CouldntFindTypeT` rather than panicking in the analogous
   spot.
 
-- **`RUST_MODULE` is reserved by comment and enforced nowhere.** `rust.mycrate.Widget` is
-  unambiguous only while no Vale module is named `rust`. One check, not yet written.
+- **The `rust` module is reserved, and now enforced.** `Compiler::evaluate` refuses a compilation
+  whose user packages include one named `rust`, checked at the one moment the user's namespaces and
+  the imported ones are separable — the Rust stores are pushed onto that same vector on the next
+  line. The refusal is a `panic!` rather than a diagnostic, which is the right *tier* for something
+  the type system cannot express and the wrong *rendering* for something a user can cause; case 52
+  asserts the message, so converting it to an `ICompileErrorT` will not touch the test.
 
 - **Name resolution beyond this is §10**, which carries what was ruled out and why. Its headline: a
   *type* name is the only thing that can panic — function candidates are collected plurally and
@@ -907,51 +971,25 @@ way source does.
 
 ## 7. Blocked elsewhere
 
-**The borrow path.** Two holes, both Vale's, neither ours.
+**The borrow path is Vale2's, and the corpus does not sit on it.** `dot_borrow`'s wrap arms are
+their largest single cluster and the design is settled — six arms, wraps peeling to the base kind —
+waiting on a shape decision rather than on discovery. `get_param_environments` in
+`overload_resolver.rs` matches only `Struct`, `Interface` and `KindPlaceholder`, so a
+`BorrowRef(Struct(Foo))` argument contributes no param environment.
 
-`dot_borrow` in `expression_compiler.rs` is unimplemented for the wrap arms, demonstrated by a
-pure-Vale test — `compiler_ownership_tests::calling_a_method_on_a_local_will_supply_borrow_ref`. It
-is Vale2's largest single cluster; the design is settled (six arms, wraps peeling to the base kind)
-and waits on a shape decision rather than on discovery.
+Neither is on our path. A Rust method's receiver is by-value, the top-level-declaration design takes
+resolution from the calling env, and a Vale caller consuming a Rust value **moves** it (case 39), so
+nothing we emit needs a borrowed receiver to resolve.
 
-`get_param_environments` in `overload_resolver.rs` matches only `Struct`, `Interface` and
-`KindPlaceholder`. Since the onion refactor put ref-ness *inside* `KindT`, a `&Foo` argument is
-`BorrowRef(Struct(Foo))` and matches none, so a borrowed receiver contributes no param environment.
+**Scope-end drop of a generic citizen works** (case 41). It needed argument types to reach the
+call-site solve, which is what a `drop<T>(Holder<T>)` call deduces `T` from when nothing writes the
+type argument. Pure Vale still has a narrower gap of its own at a *placeholder*-typed value, which
+is Vale2's and does not reach us: our drops are emitted against concrete citizens.
 
-**We route around both, and that is temporary.** The fixture uses by-value `self`, and the
-top-level-declaration design takes resolution from the calling env, so `get_param_environments` is
-not on our path. Corpus programs return call results directly rather than through a local, which
-sidesteps the same family — reading a local yields `BorrowRef(int)` where `int` is wanted. Vale2's
-instruction is to **keep case 39 parked and expect to write it** rather than routing around it
-permanently, and to unwind the return-directly workaround when the fix lands.
-
-**Scope-end drop of a generic citizen.** Not an interop defect — pure Vale has it, in
-`compiler_ownership_tests::opt_with_undroppable_contents`. Its blocker has moved twice, so read the
-current failure before planning against any description of it, including this one.
-
-As of the scout fix (@TNLTZACZ, which made a name in template position keep its `Lookup` instead of
-collapsing to a zero-arg `Call`), it fails in `abstract_body_macro.rs`, reporting that no `drop`
-override was found and naming why each candidate was rejected. Two reason kinds only —
-`SpecificParamDoesntMatchExactly` always at param 0, and `FindFunctionResolveFailure`. Vale2 reads
-the whole abstract-body cluster as one capability rather than many problems.
-
-**Underneath it is a general gap, not a drop-specific one.** `get_drop_function` in
-`destructor_compiler.rs` passes empty slices for all three explicit-template-arg parameters, so
-dropping a generic needs `T` deduced from the argument — and that deduction is dead everywhere.
-`assemble_initial_sends_from_args` in `function_compiler_solving_layer.rs` builds exactly the
-argument-to-parameter sends that would carry it, and all four callers bind the result and never read
-it. Vale2 has ratified a call-site pipeline whose first phase owns emitting those sends, so the
-producer has a designed home. Two things gate it, both theirs: **what a send does when the rune is
-already determined is unruled** — "conclude if unknown, no-op if known" was proposed and rejected —
-and the `BorrowRef` arm of `solve_rule` in `compiler_solver.rs` inserts into `result_rune` in its
-peel branch where it means `inner_rune`, so the wrap rule cannot fire in that direction at all.
-
-One detail worth carrying: those sends go against `full_type_rune` **unpeeled**, harmless only
-because the output is discarded. Wiring up the existing call sites without reshaping the producer
-would be wrong.
-
-**Tier 2** needs the LLVM port and the onion relink. `integration_tests` is commented out of
-`lib.rs`, so un-ignoring anything is not a shortcut around it.
+**Tier 2** is the only thing here that is genuinely blocked, and it is scheduled rather than open.
+It needs the LLVM 16 → ~21 port plus the onion relink of `instantiating/`/`simplifying/`, which are
+stale rather than merely gated; Vale2 sizes the relink at roughly three weeks. `integration_tests`
+is commented out of `lib.rs`, so un-ignoring anything is not a shortcut around it.
 
 ---
 
@@ -1009,8 +1047,9 @@ Cases 44 and 45 cover the function and type paths. The nested type's *method* co
 discovery runs off the owner's `inherent_impls` and knows nothing about how the owner was reached.
 
 Re-exports traverse for free too — `module_children` reports one with its `Res` naming the
-definition, so taking the `DefId` from the `Res` follows it without knowing. Only the intra-crate
-case is covered; §5.3 step 3 has the gap.
+definition, so taking the `DefId` from the `Res` follows it without knowing, and it never needs to
+know a crate boundary was crossed. Cases 46 and 47 cover the intra-crate forms, 49 and 50 the
+cross-crate ones, which is `std::vec`'s own shape.
 
 This step was **Problem B** in §10.0's split. The `Vec`-specific remainder is the eagerness (§6),
 which stops being cosmetic the moment a crate the size of `std` is walked.
@@ -1049,12 +1088,10 @@ It also let `synthesize_extern_drop` be deleted: the drop is now an ordinary `Va
 receiver as `Citizen { Holder, [Generic(0)] }`, built by the same `synthesize_extern_function` as
 everything else. One code path again.
 
-> **The remaining gap: a compiler-generated drop call supplies no type argument.**
-> `drop<T>(Holder<T>)` resolves when the argument is *written* — `calls_a_generic_function_taking_a_generic_type`
-> proves the shape works via `holder_ignore<int>(make_holder())`. What fails is the implicit case,
-> where `get_drop_function` passes no explicit template arguments and `T` would have to come from
-> the concrete argument. §7 has the mechanism and what gates it; it is Vale2's, and pure Vale fails
-> the same way.
+> **A compiler-generated drop call supplies no type argument, and that is fine.**
+> `drop<T>(Holder<T>)` resolves whether or not the argument is written: `holder_ignore<int>(..)`
+> writes it, and a scope-end drop does not, deducing `T` from the concrete value instead once
+> argument types reach the call-site solve. Cases 40, 41 and 42 hold the three shapes.
 >
 > **Do not chase *placement*.** Vale's own derived drop is registered nested under the citizen's id
 > while ours is a flat top-level declaration, and that difference looks like the cause. It is not —
@@ -1073,8 +1110,8 @@ everything else. One code path again.
 > phase that emits argument sends a per-type `drop<T>(Holder<T>)` resolves without it. **This is a
 > place where the design and the code disagree and neither has been ruled the winner.**
 >
-> Non-generic drop is unaffected. Case 40's program therefore consumes both `Holder`s rather than
-> letting them fall out of scope, so it pins generic arguments alone; case 41 is owed for the gap.
+> Case 40's program consumes both `Holder`s rather than letting them fall out of scope, so it pins
+> generic arguments alone; case 41 covers the scope-end drop separately.
 
 > **What the sibling trees do here, since two of their findings shaped this.** ReiImpl has generic
 > Rust types working, reached by generating `.vale` source text out of process — a route the

@@ -366,6 +366,83 @@ exported func main() int {
     expect: Expect::Returns(33),
 };
 
+/// A re-export whose target lives in **another crate**, reached by a path through the crate doing
+/// the re-exporting.
+///
+/// Cases 46 and 47 are intra-crate. `std::vec::Vec` is not: `std` reaches it by
+/// `pub use alloc_crate::vec`, so the crate a user descends through and the crate the definition
+/// lives in differ, and `module_children` reports that hop differently.
+pub const IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_ITEM: Case = Case {
+    fixture: "fixtures_two_crates",
+    name: "cross-crate-re-export-item",
+    vale: r#"
+exported func main() int {
+  return (make_gadget()).gadget_value();
+}
+"#,
+    allowed: &["vendored.make_gadget", "vendored.Gadget"],
+    // `Gadget { value: 2 }`.
+    expect: Expect::Returns(2),
+};
+
+/// The other cross-crate shape: descending **through** a re-exported module whose target is in
+/// another crate. This is `std::vec`'s exact form, and the one a walk could plausibly get wrong
+/// while handling a re-exported item correctly.
+pub const IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_MODULE: Case = Case {
+    fixture: "fixtures_two_crates",
+    name: "cross-crate-re-export-module",
+    vale: r#"
+exported func main() int {
+  return (make_spanner()).spanner_size();
+}
+"#,
+    allowed: &["toolkit.tools.make_spanner", "toolkit.tools.Spanner"],
+    // `Spanner { size: 6 }`.
+    expect: Expect::Returns(6),
+};
+
+/// An item defined in the **compiled crate itself** is not importable.
+///
+/// The walk resolves allowlist paths against `tcx.crates(())`, which is the loaded *dependency*
+/// crates, so the crate being compiled is out of scope by construction. That is the right answer —
+/// the stub exists to force dependencies to load, not to export anything of its own — but it is
+/// invisible until something asks for it, and a fixture that puts an item in the stub looks
+/// identical to a broken walk.
+///
+/// `stub.rs` re-exports `add_two_numbers` from `mycrate`, so the *name* is present in the compiled
+/// crate's own children; only the definition's crate makes it reachable.
+pub const AN_ITEM_IN_THE_COMPILED_CRATE_IS_NOT_IMPORTABLE: Case = Case {
+    fixture: "fixtures",
+    name: "compiled-crate-not-importable",
+    vale: r#"
+exported func main() int {
+  return stub_only();
+}
+"#,
+    allowed: &["stub_only"],
+    expect: Expect::FailsToCompile("CouldntFindFunctionToCallT"),
+};
+
+/// A Vale package may not claim the reserved `rust` module.
+///
+/// Every synthesized declaration names its citizen by a package path rooted at `rust`, and
+/// `lookup_nearest_with_path` selects a store by matching that coordinate whole. A Vale package
+/// compiled as `rust` is therefore indistinguishable from an imported crate at the moment of
+/// selection — and the collision is silent, because selection takes a match rather than reporting
+/// two. The case compiles an ordinary program under that coordinate; what it pins is that doing so
+/// is refused rather than quietly permitted.
+pub const A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE: Case = Case {
+    fixture: "fixtures",
+    name: "reserved-rust-module",
+    vale: r#"
+exported func main() int {
+  return add_two_numbers(20, 22);
+}
+"#,
+    allowed: &["add_two_numbers"],
+    expect: Expect::Returns(42),
+};
+
 /// **Everything at once** — the composition case.
 ///
 /// Every other case is deliberately narrow, so that a failure localizes to one capability. That is
@@ -394,6 +471,7 @@ exported func main() int {
   held_counter = make_counter();
   held_gauge = make_gauge();
   held_sonar = make_sonar();
+  held_holder = make_holder();
 
   from_zero_arg = seven();
   from_free_fn = add_two_numbers(20, 22);
@@ -409,8 +487,12 @@ exported func main() int {
   from_bool_holder = bool_holder_flag(make_bool_holder());
 
   from_nested_type = (make_sonar()).depth_of();
+  from_vale_fn = vale_counter_value(make_counter());
 
   return depth_reading();
+}
+func vale_counter_value(c Counter) int {
+  return (^c).get();
 }
 "#,
     allowed: &[
@@ -847,11 +929,9 @@ exported func main() int {
 
 /// Hand-written Vale naming a Rust type by bare name, with no import statement.
 ///
-/// The body is deliberately trivial. `return (c).get()` here does *not* compile — reading a
-/// parameter yields `BorrowRef(Counter)` where `get(self Counter)` wants it owned, and
-/// `is_type_convertible` panics on that borrow read-out. That is one of the two Vale-side
-/// onion-arc gaps already with Vale2, not an interop limitation, so this case stays on the naming
-/// question. `c` is still unconsumed, so the synthesized `drop` runs on the way out.
+/// The body is deliberately trivial, so this case pins naming and nothing else — case 39 covers
+/// reading the parameter into a receiver. `c` is never consumed here, so the synthesized `drop`
+/// runs on the way out, which is the second thing this case holds.
 pub const VALE_SOURCE_CAN_NAME_A_RUST_TYPE: Case = Case {
     fixture: "fixtures",
     name: "vale-names-a-rust-type",
@@ -865,6 +945,51 @@ func value_of(c Counter) int {
 "#,
     allowed: &["make_counter", "Counter"],
     expect: Expect::Returns(11),
+};
+
+/// A **generic** Rust value bound to a local and never consumed needs a scope-end drop.
+///
+/// Case 20 covers the non-generic shape. This one differs in that the synthesized declaration is
+/// `drop<T>(Holder<T>)` and a compiler-generated drop call names no explicit type argument, so `T`
+/// has to come from the value being dropped.
+pub const A_GENERIC_RUST_TYPE_GETS_A_SCOPE_END_DROP: Case = Case {
+    fixture: "fixtures",
+    name: "generic-scope-end-drop",
+    vale: r#"
+exported func main() int {
+  h = make_holder();
+  return 17;
+}
+"#,
+    allowed: &["make_holder", "Holder"],
+    expect: Expect::Returns(17),
+};
+
+/// Hand-written Vale naming a Rust type in a parameter **and calling a method on it**.
+///
+/// Case 38 covers naming alone, with a body that never touches the parameter. This one reads the
+/// parameter into a receiver position, which is the half that was never exercised.
+///
+/// **The `^` is load-bearing.** A Rust method with a by-value receiver lowers to
+/// `get(self Counter)`, which *consumes*, so the caller has to move — the same rule that makes
+/// `drop(bare_local)` an error and `drop(^local)` correct. Without it a bare mention reads as a
+/// borrow, no candidate takes a borrow, and the call reports `CouldntFindFunctionToCallT`. That
+/// error names the callee rather than the mention, so it reads like a missing import; the fix is at
+/// the call site.
+pub const VALE_SOURCE_CALLS_A_METHOD_ON_A_NAMED_RUST_PARAMETER: Case = Case {
+    fixture: "fixtures",
+    name: "vale-param-method-call",
+    vale: r#"
+exported func main() int {
+  return value_of(make_counter());
+}
+func value_of(c Counter) int {
+  return (^c).get();
+}
+"#,
+    allowed: &["make_counter", "Counter"],
+    // `Counter { value: 7 }` in the fixture.
+    expect: Expect::Returns(7),
 };
 
 /// A generic Rust type imports **with its arguments intact** — `Holder<i32>` and `Holder<bool>`

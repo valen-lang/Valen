@@ -130,7 +130,7 @@ where
         // no shared list for it to leak into, which is what keeps @PFVSZ's split true by
         // construction rather than by remembering.
         let mut value_type_rules: Vec<IRulexSR<'s>> = Vec::new();
-        bind_sig_type(
+        let rune = bind_sig_type(
             compiler,
             sig_type,
             own_rune,
@@ -146,8 +146,8 @@ where
             IVarNameS::CodeVarName(scout_arena.intern_str(&format!("p{}", index))),
             // No outer ref wraps: an extern's params are taken by value at this stage, so the
             // full type and the value type are the same rune. `ParameterS::new` asserts it.
-            own_rune,
-            own_rune,
+            rune,
+            rune,
             scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
             scout_arena.alloc_slice_from_vec(value_type_rules),
         ));
@@ -157,7 +157,7 @@ where
         range,
         rune: scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {})),
     };
-    bind_sig_type(
+    let ret_rune = bind_sig_type(
         compiler,
         &sig.ret,
         ret_own_rune,
@@ -192,7 +192,7 @@ where
         scout_arena.alloc_slice_from_vec(generic_params),
         tyype,
         scout_arena.alloc_slice_from_vec(params),
-        Some(ret_own_rune),
+        Some(ret_rune),
         scout_arena.alloc_slice_from_vec(header_rules),
         // No impl bounds, and that is the truth rather than a placeholder. A Rust function's trait
         // obligations are discharged by rustc, never by Vale — and we read no predicates at all,
@@ -231,20 +231,18 @@ fn bind_sig_type<'s, 't>(
     generic_runes: &[RuneUsage<'s>],
     rules: &mut Vec<IRulexSR<'s>>,
     next_synthetic: &mut u32,
-) -> Option<()>
+) -> Option<RuneUsage<'s>>
 where
     's: 't,
 {
     let scout_arena = compiler.scout_arena;
     match sig_type {
         ValeSigType::Generic(index) => {
-            // A declared generic parameter is referenced by its own rune. Binding `own_rune` to it
-            // would need an equality rule; instead the caller uses the returned rune directly.
-            let declared = generic_runes.get(*index as usize).copied()?;
-            if declared.rune != own_rune.rune {
-                rules.push(IRulexSR::Equals(EqualsSR { range, left: own_rune, right: declared }));
-            }
-            Some(())
+            // A declared generic parameter *is* its rune — the position denotes it directly, with
+            // no rule at all, which is what the postparser emits for a hand-written
+            // `func foo<T>(x T) T`. Two parameters of the same type therefore share one rune,
+            // which is what `f<T>(a T, b T)` means.
+            generic_runes.get(*index as usize).copied()
         }
         ValeSigType::Kind(kind) => {
             let name = vale_type_name(compiler, kind)?;
@@ -258,7 +256,7 @@ where
                     scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name })),
                 ]),
             }));
-            Some(())
+            Some(own_rune)
         }
         ValeSigType::Citizen { name, package, args } => {
             let template_rune = fresh_rune(scout_arena, range, next_synthetic);
@@ -276,25 +274,20 @@ where
 
             let mut arg_runes: Vec<RuneUsage<'s>> = Vec::new();
             for arg in args.iter() {
-                // A generic argument uses its declared rune directly rather than a fresh one, so
-                // the `CallSR` mentions the parameter the declaration actually declared — which is
-                // what lets the solver run the call backwards from a concrete argument.
-                let arg_rune = match arg {
-                    ValeSigType::Generic(index) => generic_runes.get(*index as usize).copied()?,
-                    other => {
-                        let fresh = fresh_rune(scout_arena, range, next_synthetic);
-                        bind_sig_type(
-                            compiler,
-                            other,
-                            fresh,
-                            range,
-                            generic_runes,
-                            rules,
-                            next_synthetic,
-                        )?;
-                        fresh
-                    }
-                };
+                // An argument is just another position, so it goes through the same call. A generic
+                // one comes back as the declared rune, which is what lets the solver run the call
+                // backwards from a concrete argument; anything else binds the fresh rune offered
+                // here.
+                let fresh = fresh_rune(scout_arena, range, next_synthetic);
+                let arg_rune = bind_sig_type(
+                    compiler,
+                    arg,
+                    fresh,
+                    range,
+                    generic_runes,
+                    rules,
+                    next_synthetic,
+                )?;
                 arg_runes.push(arg_rune);
             }
 
@@ -304,7 +297,7 @@ where
                 template_rune,
                 args: scout_arena.alloc_slice_from_vec(arg_runes),
             }));
-            Some(())
+            Some(own_rune)
         }
     }
 }

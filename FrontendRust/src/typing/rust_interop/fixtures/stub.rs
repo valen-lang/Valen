@@ -12,3 +12,12 @@
 extern crate mycrate;
 
 pub use mycrate::{add_two_numbers, make_counter, Counter};
+
+/// Defined *here* rather than in a dependency, so nothing can import it.
+///
+/// The walk resolves against `tcx.crates(())` — the loaded dependency crates — so the crate being
+/// compiled is out of scope. `an_item_in_the_compiled_crate_is_not_importable` pins that, and this
+/// is the item it asks for.
+pub fn stub_only() -> i32 {
+    99
+}

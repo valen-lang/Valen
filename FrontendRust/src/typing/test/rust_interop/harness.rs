@@ -37,17 +37,22 @@ use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::interface::Compiler as RustcCompiler;
 use rustc_middle::ty::TyCtxt;
 
-use crate::code_source::CodeSource;
+use std::sync::Arc;
+
+use crate::code_source::{CodeSource, Source};
+use crate::compile_options::GlobalOptions;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::tests::tests::new_test_code_map;
+use crate::typing::compilation::TypingPassCompilation;
 use crate::typing::hinputs_t::HinputsT;
+use crate::typing::oracles::Oracles;
 use crate::typing::rust_interop::{
     Case, Expect, LoggingOracle, OracleCall, OracleQuery, TyCtxtOracle,
 };
-use crate::typing::test::compiler_test_compilation::compiler_test_compilation_with_rust_oracle;
 use crate::typing::typing_interner::TypingInterner;
+use crate::typing::TypingPassOptions;
+use crate::utils::code_hierarchy::FileCoordinateMap;
 
 /// A typing-pass failure, owned so it can outlive the compilation that produced it.
 ///
@@ -168,6 +173,9 @@ impl<R> CaseOutcome<R> {
 struct CaseCallbacks<'a, F, R> {
     vale_source: &'a str,
     allowed: &'a [&'a str],
+    /// The Vale package the case's source is compiled as. Almost always `"test"`; a case naming
+    /// the reserved `rust` module is what makes the reservation observable at all.
+    package_module: &'a str,
     extract: F,
     outcome: Option<CaseOutcome<R>>,
 }
@@ -185,23 +193,46 @@ where
         let scout_arena = ScoutArena::new(&scout_bump);
         let keywords = Keywords::new_for_scout(&scout_arena);
         let parser_keywords = Keywords::new_for_parse(&parse_arena);
-        let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, self.vale_source)]);
         let typing_interner = TypingInterner::new(&typing_bump);
 
-        // No package coordinate is handed in: each item derives its own from `tcx.def_path`, so
-        // items from different crates cannot collide on one coordinate.
+        // The case's package, built here rather than taken from a helper, because which package the
+        // Vale source is compiled as is itself under test — `"test"` is the ordinary value, not a
+        // fixed one.
+        let package_coord = parse_arena
+            .intern_package_coordinate(parse_arena.intern_str(self.package_module), &[]);
+        let mut files = FileCoordinateMap::<String>::new();
+        files.put(
+            parse_arena.intern_file_coordinate(package_coord, "0.vale"),
+            self.vale_source.to_string(),
+        );
+        let code_source = CodeSource::new(vec![Source::from_code_map(&files)]);
+
+        // No package coordinate is handed to the oracle: each item derives its own from
+        // `tcx.def_path`, so items from different crates cannot collide on one coordinate.
         let real = TyCtxtOracle::new(tcx, &scout_arena, self.allowed);
         let compiling = tcx.crate_name(rustc_span::def_id::LOCAL_CRATE).to_string();
         let logging = LoggingOracle::new(&real, &compiling);
 
-        let mut compile = compiler_test_compilation_with_rust_oracle(
+        let mut compile = TypingPassCompilation::new(
             &typing_interner,
             &scout_arena,
             &keywords,
             &parser_keywords,
             &parse_arena,
+            vec![package_coord],
             &code_source,
-            &logging,
+            TypingPassOptions {
+                global_options: GlobalOptions {
+                    sanity_check: true,
+                    use_overload_index: true,
+                    use_optimized_solver: true,
+                    verbose_errors: true,
+                    debug_output: true,
+                },
+                debug_out: Arc::new(|x: &str| println!("{}", x)),
+                tree_shaking_enabled: true,
+            },
+            Oracles::with_rust(&logging),
         );
         let compiled = match compile.get_compiler_outputs() {
             Ok(coutputs) => Ok((self.extract)(coutputs)),
@@ -319,13 +350,34 @@ pub fn run_case<R: Send>(
     case: &Case,
     extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
 ) -> CaseOutcome<R> {
-    try_run_case(case, extract).expect("rustc returned without ever reaching after_expansion")
+    run_case_in_package(case, "test", extract)
+}
+
+/// `run_case`, compiling the case's program as a caller-chosen Vale package.
+///
+/// `"test"` is the ordinary value rather than a default hidden in a helper, so a case that needs
+/// to name the reserved `rust` module is an argument rather than a second code path.
+pub fn run_case_in_package<R: Send>(
+    case: &Case,
+    package_module: &str,
+    extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
+) -> CaseOutcome<R> {
+    try_run_case_in_package(case, package_module, extract)
+        .expect("rustc returned without ever reaching after_expansion")
 }
 
 /// `run_case` for the one case that expects rustc itself to fail: `None` means `after_expansion`
 /// never ran, so there is no Vale outcome to report.
 pub fn try_run_case<R: Send>(
     case: &Case,
+    extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
+) -> Option<CaseOutcome<R>> {
+    try_run_case_in_package(case, "test", extract)
+}
+
+fn try_run_case_in_package<R: Send>(
+    case: &Case,
+    package_module: &str,
     extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
 ) -> Option<CaseOutcome<R>> {
     let fixture_dir = fixtures_dir(case.fixture);
@@ -357,6 +409,7 @@ pub fn try_run_case<R: Send>(
     let mut callbacks = CaseCallbacks {
         vale_source: case.vale,
         allowed: case.allowed,
+        package_module,
         extract,
         outcome: None,
     };

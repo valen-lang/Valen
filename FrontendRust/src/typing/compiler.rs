@@ -34,7 +34,7 @@ use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, NeverT, StrT, Void
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::oracles::Oracles;
 #[cfg(feature = "rust_interop")]
-use crate::typing::rust_interop::rust_package_stores;
+use crate::typing::rust_interop::{is_rust_backed, rust_package_stores};
 use crate::typing::types::types::{RegionT};
 use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::overload_resolver::FindFunctionFailure;
@@ -707,8 +707,15 @@ where 's: 't,
         // Adding them here is what lets a Rust free function be found by ordinary ambient
         // name lookup, the same way any Vale function is.
         #[cfg(feature = "rust_interop")]
-        for (package_id, store) in rust_package_stores(self) {
-            namespace_name_to_templatas_vec.push((package_id, store));
+        {
+            if let Some((id, _)) =
+                namespace_name_to_templatas_vec.iter().find(|(id, _)| is_rust_backed(id))
+            {
+                panic!("Overlap, a Vale package claimed the reserved `rust` module: {id:?}");
+            }
+            for (package_id, store) in rust_package_stores(self) {
+                namespace_name_to_templatas_vec.push((package_id, store));
+            }
         }
 
         let name_to_top_level_environment =
