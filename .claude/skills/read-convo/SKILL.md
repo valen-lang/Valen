@@ -1,1 +1,0 @@
-../../../docs/skills/read-convo.md
