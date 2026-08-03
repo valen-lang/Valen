@@ -1,1 +1,1 @@
-../../Luz/skills/CollapsedCallTree.md
+../../Luz/skills/collapsed-call-tree.md

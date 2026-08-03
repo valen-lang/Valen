@@ -15,7 +15,7 @@ The deliverable is a *failing* test. We want a failing minimal test that illustr
 ## Loop
 
 1. **Probe.** Run the target real-world program through the binary; observe failure.
-2. **Diagnose.** Trace to root cause. Test hypotheses against the actual call graph — don't fix from the surface symptom.
+2. **Diagnose.** Trace to root cause, per the `diagnose` skill — which also has the shape to report it in. Test hypotheses against the actual call graph — don't fix from the surface symptom.
 3. **Reduce to minimal in-tree repro.** Bisect / synthesize the smallest self-contained input that reproduces. Embed as a test.
 4. **Write the test asserting *correct* output.** It fails now because of the bug; passes after the fix.
 

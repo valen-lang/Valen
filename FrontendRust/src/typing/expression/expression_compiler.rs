@@ -346,6 +346,7 @@ where 's: 't,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
     ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>), ICompileErrorT<'s, 't>> {
+        // VTRACE: show
         match expr_1 {
             IExpressionSE::Void(_) => {
                 Ok((ExpressionTE::VoidLiteral(self.typing_interner.alloc(
@@ -2005,6 +2006,7 @@ where 's: 't,
             KindT::OverloadSet(overload_set))))
     }
 
+    // VTRACE: hide
     pub fn evaluate_block_statements(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,

@@ -16,7 +16,7 @@ use crate::typing::types::types::FloatT;
 use crate::typing::typing_interner::TypingInterner;
 use std::any::Any;
 use std::marker::PhantomData;
-use crate::typing::templata_compiler::{is_ref, peel_one_reference};
+use crate::typing::templata_compiler::{is_ref, peel_one_reference, replace_value_type_in_ref};
 
 /// Arena-allocated (see @TFITCX)
 //
@@ -1128,13 +1128,14 @@ where 's: 't,
 
 impl<'s, 't> UpcastTE<'s, 't> where 's: 't, {
     pub fn new(
+        interner: &TypingInterner<'s, 't>,
         inner_expr: ExpressionTE<'s, 't>,
         target_super_kind: ISuperKindTT<'s, 't>,
         impl_name: IdT<'s, 't>,
     ) -> UpcastTE<'s, 't> {
-        // VCOORD: preserve the inner wrap and swap the innermost citizen to target_super_kind.
-        // perhaps: replace_value_type_in_ref(interner, inner_expr.result(), target_super_kind.into())
-        unimplemented!("UpcastTE onion result")
+        let result =
+            replace_value_type_in_ref(interner, inner_expr.result(), target_super_kind.into());
+        UpcastTE { inner_expr, target_super_kind, impl_name, result, _sealed: () }
     }
 }
 /// Arena-allocated (see @TFITCX)

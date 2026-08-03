@@ -175,6 +175,7 @@ target:
           IsParentResult::IsParent(is_parent) => {
             assert!(coutputs.get_instantiation_bounds(self.typing_interner, is_parent.impl_id).is_some());
             Ok(ExpressionTE::Upcast(self.typing_interner.alloc(UpcastTE::new(
+              self.typing_interner,
               source_expr,
               target_super_kind,
               is_parent.impl_id,

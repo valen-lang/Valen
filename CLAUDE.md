@@ -80,9 +80,9 @@ Instead, use the same file.
 - **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
 - **Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.** → docs/skills/bug-repro.md
 - **Read when the human asks to close, end, or shut down the current Claude Code session.** → docs/skills/close-session.md
-- **Read when investigating a compiler bug by tracing execution with debug printouts and narrowing the call graph.** → docs/skills/collapsed-call-tree.md
+- **Read when investigating a compiler bug by tracing execution and narrowing the call graph.** → docs/skills/collapsed-call-tree.md
 - **Read when the human says this session continues, resumes, or picks up an earlier session or convo.** → docs/skills/continue-session.md
-- **Read when the user says "/diagnose" — dig for the root cause of a failure without proposing fixes.** → docs/skills/diagnose.md
+- **Read when reporting a failure to the human, or when the user says "/diagnose" — dig for the root cause of a failure without proposing fixes.** → docs/skills/diagnose.md
 - **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → docs/skills/feature-development-flow.md
 - **Read when reviewing a diff for added code that doesn't serve the change's goal — dead helpers, redundant reinventions, unused flexibility, and the stale comments that hide them.** → docs/skills/find-deadweight.md
 - **Read when the architect says the literal phrase "fire commit" or "fire commit temporary" (or you're about to commit + sync as a TL).** → docs/skills/fire-commit.md

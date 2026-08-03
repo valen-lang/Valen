@@ -1,4 +1,4 @@
-use crate::postparsing::names::{INameS, IFunctionDeclarationNameS, IStructDeclarationNameS, IVarNameS};
+use crate::postparsing::names::{INameS, ICitizenDeclarationNameS, IFunctionDeclarationNameS, IStructDeclarationNameS, IVarNameS};
 use crate::postparsing::post_parser::ICompileErrorS;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IImpreciseNameS;
@@ -116,6 +116,15 @@ pub fn humanize_name_for_struct_declaration<'s>(name: IStructDeclarationNameS<'s
   }
 }
 
+pub fn humanize_citizen_declaration_name<'s>(name: ICitizenDeclarationNameS<'s>) -> String {
+  match name {
+    ICitizenDeclarationNameS::TopLevelStructDeclarationName(n) => n.name.as_str().to_string(),
+    ICitizenDeclarationNameS::TopLevelInterfaceDeclarationName(n) => n.name.as_str().to_string(),
+    ICitizenDeclarationNameS::AnonymousSubstructTemplateName(n) =>
+      n.interface_name.name.as_str().to_string() + ".anonymous",
+  }
+}
+
 pub fn humanize_imprecise_name<'s>(
   name: IImpreciseNameS<'s>,
 ) -> String {
@@ -146,7 +155,7 @@ pub fn humanize_rune<'s>(
     IRuneS::SelfKindTemplateRune(_) => "(self kind template)".to_string(),
     IRuneS::PatternInputRune(_) => panic!("implement: humanize_rune PatternInputRune"),
     IRuneS::SelfRune(_) => panic!("implement: humanize_rune SelfRune"),
-    IRuneS::ReturnRune(_) => panic!("implement: humanize_rune ReturnRune"),
+    IRuneS::ReturnRune(_) => "(return)".to_string(),
     IRuneS::AnonymousSubstructParentInterfaceTemplateRune(_) => panic!("implement: humanize_rune AnonymousSubstructParentInterfaceTemplateRune"),
     IRuneS::ImplDropVoidRune(_) => panic!("implement: humanize_rune ImplDropVoidRune"),
     IRuneS::ImplDropKindRune(_) => panic!("implement: humanize_rune ImplDropKindRune"),
@@ -155,7 +164,7 @@ pub fn humanize_rune<'s>(
     IRuneS::AnonymousSubstructKindRune(_) => panic!("implement: humanize_rune AnonymousSubstructKindRune"),
     IRuneS::AnonymousSubstructTemplateRune(_) => panic!("implement: humanize_rune AnonymousSubstructTemplateRune"),
     IRuneS::AnonymousSubstructParentInterfaceKindRune(_) => panic!("implement: humanize_rune AnonymousSubstructParentInterfaceKindRune"),
-    IRuneS::StructNameRune(_) => panic!("implement: humanize_rune StructNameRune"),
+    IRuneS::StructNameRune(r) => humanize_citizen_declaration_name(r.struct_name),
     IRuneS::FreeOverrideStructTemplateRune(_) => panic!("implement: humanize_rune FreeOverrideStructTemplateRune"),
     IRuneS::FunctorPrototypeRuneName(_) => panic!("implement: humanize_rune FunctorPrototypeRuneName"),
     IRuneS::MacroSelfKindRune(_) => "_MSelfK".to_string(),

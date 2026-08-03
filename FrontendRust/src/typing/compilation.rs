@@ -107,6 +107,7 @@ pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, I
   self.scout_compilation.get_scoutput()
 }
 
+// VTRACE: hide
 pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
   if self.hinputs_cache.is_some() {
     return Ok(self.hinputs_cache.as_ref().unwrap());
@@ -124,6 +125,7 @@ pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErro
   }
 }
   
+// VTRACE: hide
 pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
 
   match self.get_compiler_outputs().err() {
