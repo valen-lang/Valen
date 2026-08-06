@@ -40,3 +40,7 @@ Head them in the reader's terms, not the report's — **What the test wants**, *
 - **Terse.** Cut the adjacent finding, the taxonomy, and the second example.
 - **Plain, which is not the same as terse** — see `prose-reviewer`'s *"minimize reader effort, not word count"*, and `ewhy` when a rewrite still doesn't land.
 - **Read, don't guess.** Every claim about what the code did comes from that code.
+
+## Required reading
+
+ * collapsed-call-tree

@@ -86,6 +86,7 @@ exporter sweeps every 30s — Guardian mints one instead of making you wait.
 the single writer; anything written from here is either clobbered or a race. That is the
 whole reason this goes through an endpoint.
 
-## See also
+## Required reading
 
-- `update-handoff.md` — the rules the handoff in step 3 was written under.
+ * update-handoff
+ * full-read

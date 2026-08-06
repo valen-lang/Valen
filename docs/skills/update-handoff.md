@@ -109,3 +109,7 @@ contradiction. A survey that agrees with you is one sentence; the part that disa
 
 If you can't state it in the present tense as a fact about the code or the design, it belongs in a
 commit message or a convo log.
+
+## Required reading
+
+ * full-read

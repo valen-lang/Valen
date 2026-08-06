@@ -1,0 +1,97 @@
+---
+name: design-assistant
+description: How to recursively read a document, such as a skill, or documentation, or arcana, etc.
+g_read_when: Read when the human wants you to know the a document and all of its background looks relevant.
+g_mention_in:
+  - CLAUDE.md
+---
+
+Here's what we should do when designing:
+
+## The Plan Document
+
+We'll have a plan document.
+
+ * While we're working on it, it will be committed to docs/convos, ending with "plan-", no number. Example: docs/convos/generics-solving-plan.md.
+ * It will be committed to docs/historical when it's done.
+ * This doesn't replace the handoff document. But the handoff document shouldnt contain anything that would be better in here.
+ * To check what the human changed, use **verbatim** the command `diff -U2 <(sed -n '1,/^## Strategic Directions Proposals/p' /tmp/plan-phased-calls-0.md) <(sed -n '1,/^## Strategic Directions Proposals/p' docs/convos/plan-phased-calls.md) || true; cp docs/convos/plan-phased-calls.md /tmp/plan-phased-calls-1.md`, updating the 0 and 1 as you go. If the human says only "read", they might mean this.
+
+Sections:
+
+**"Strategic Directions (human-only)" section:**
+
+ * Only I (the human) can edit it.
+ * It tracks the plan's high-level requirements and direction as I understand them.
+ * I'll number the paragraphs S1, S2, etc. and never re-number them. Gaps will happen, that's ok.
+ * When I un-ratify something, I'll delete it from the Strategic Directions entirely, and you'll delete it (and any derived plans) from the Plan Details. When I say I un-ratified something, please check that I edited the doc.
+ * When you notice something in this section that seems wrong, **please tell me.**
+ * When I edit this section, remove anything from "Strategic Directions Proposals" that is now redundant or inconsistent.
+
+**"Strategic Directions Proposals" section:**
+
+ * You add things to this section as you understand them, concisely.
+ * As we go, I'll "ratify", in other words, move things to the top section.
+ * We won't consider it "part of the plan" until it's ratified.
+ * Continue the S1/S2/S3/etc naming scheme.
+ * Every item in this section should be short, effective, and to the point.
+
+**"Plan Details" section:**
+
+ * You can modify this section.
+ * It describes how we'll carry out the top section's items.
+ * It's okay if it's empty for a while while we're still designing.
+ * Everything in this section should be roughly derivable from the Strategic Directions, and anything that seems like a large decision that affects things should be moved to Strategic Directions Proposals instead of living only in the Plan.
+ * Every item in the plan should name the paragraph of the Strategic Directions that it's derived from.
+
+**"Discussed examples and test cases" section:**
+
+ * You can modify this section.
+ * Write in it any examples or test cases that we explicitly talked through, or you specifically explored.
+ * Don't eagerly try to fill this out, just put in here what you happen to think through, or what we happen to talk about.
+
+**"Background and Current State" section**:
+
+ * You can modify this section.
+ * It should have information on the compiler as it currently is, that factors into the plan.
+ * This section can (and often should be!) be very large.
+ * Every part should have references, so that a sub-agent can doublecheck/verify things in there. References will be inline, with the code file + symbol name, or markdown document file path + the date that part of the markdown document was last updated.
+
+**"Open Questions" section:**
+
+ * You can modify this section.
+ * If it's an open question that has a factual answer from the code/docs, then when answered it moves to the "Background and Current State" section in the handoff.
+ * If it's an open question about which way to go, its answer should be promoted to "Strategic Directions Proposals".
+ * There should be no closed questions in the open questions section.
+
+## Two-phase Communication
+
+We'll use "two-phase communication":
+
+ * First, you do your thinking, as you normally do.
+ * Second, you will tell me, in your own words, with all necessary details, whatever it is you want to say.
+ * Third, you will output a separator line: "-------- Clearer explanation, per prose-reviewer / prose-tactical --------"
+ * Fourth, you will output a simplified explanation, using the guidelines in prose-reviewer and prose-tactical.
+    * It should be about half the length of the previous section.
+    * No jargon.
+    * Use short examples to illustrate things. Avoid speaking in abstractions.
+    * Sentences should be short, effective, and to the point.
+    * Clear, not just concise.
+    * The clearer explanation **should not reference** anything said above the separator line, because I might not read anything above the separator line. If referencing a short example from somewhere else, **repeat** the short example.
+    * Afterward, if needed, you can put a list of one-sentence caveats and important details that didn't fit into the clear explanation.
+    * If you have multiple questions for me, the clearer explanation should only contain the *first* question, and only mention the remaining ones in another "remaining questions" list with one-sentence per item (and you can give me the next question when i say "ok next").
+
+This is necessary because usually, in your first attempt at saying something, you often speak very densely. And it's often tricky to speak simply and clearly on the first go, so the clearer explanation is your chance to rephrase everything more clearly.
+
+Note that I **might not read** anything above the separator line, or any of the caveats, or any of the "remaining questions" list, so don't assume I've read them. If I haven't modified Strategic Directions to address it, or havent explicitly answered it, then don't assume I've read it.
+
+When I say "QQ:" or "QT:" you can skip the two-phase communication.
+When I say "edited" as a whole sentence, that means I updated the doc, and I want you to look at what I edited.
+If you see a problem in the design or somethign I wrote, lead with a single sentence, then a short example that shows the problem, then you can explain more.
+
+## Required reading
+
+ * prose-reviewer
+ * prose-tactical
+ * diagnose
+ * update-handoff
