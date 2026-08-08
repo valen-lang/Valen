@@ -97,7 +97,7 @@ Instead, use the same file.
 - **Read when promoting an LLM-mode shield to Rust mode with a deterministic companion program.** → docs/skills/guardian-rustify.md
 - **Read when acting as or setting up the architect, TL, or JR in a Guardian-gated loop.** → docs/skills/guardian-tl.md
 - **Read when adding a new skill to docs/skills/ or Luz/skills/.** → docs/skills/luz-add-skill.md
-- **Read when a skill exists in Luz/skills/ (e.g. added upstream and pulled in) but isn't showing up as a usable skill in this repo.** → docs/skills/luz-import-skill.md
+- **Read when a skill exists in Luz/skills/ or an inner repo's own docs/skills/ (e.g. Guardian's) but isn't showing up as a usable skill in this repo.** → docs/skills/luz-import-skill.md
 - **Read when the architect asks what `experimental` has that `master` might want, or asks to pull specific commits from `experimental`.** → docs/skills/merging-from-experimental.md
 - **Read when the architect asks what `master` has that `experimental` might want, or asks to pull specific commits from `master`.** → docs/skills/merging-from-master.md
 - **Read when writing or reviewing prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-reviewer.md

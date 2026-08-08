@@ -72,7 +72,8 @@ include_shields = [
     { name = "BulkEditScriptWorkflow-BESWX.md" },
     { name = "MailboxWorkflow-MBXX.md" },
 
-    { name = "MailboxWatcherGuard-MWGX.md" }
+    { name = "MailboxWatcherGuard-MWGX.md" },
+    { name = "WorkInProgressBranch-WIPBX.md" }
 ]
 
 [review_mode]

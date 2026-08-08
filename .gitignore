@@ -52,3 +52,6 @@ migration-drive-todo.legacy.md
 /Guardian/
 
 docs/convos/
+# Per-worktree Guardian ports (each worktree runs its own Guardian instance)
+guardian_port.txt
+opencode_port.txt

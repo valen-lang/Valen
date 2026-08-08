@@ -8,7 +8,7 @@ g_mention_in:
 
 # Diagnose
 
-Find the **root cause** of the problem under discussion, report it, and stop short of the fix.
+When diagnosing, find the **root cause** of the problem under discussion, report it, and stop short of the fix.
 
 ## Rules
 

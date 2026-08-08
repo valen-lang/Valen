@@ -12,10 +12,10 @@ Here's what we should do when designing:
 
 We'll have a plan document.
 
- * While we're working on it, it will be committed to docs/convos, ending with "plan-", no number. Example: docs/convos/generics-solving-plan.md.
+ * While we're working on it, it will be committed to docs/plans, ending with "-plan", no number. Example: docs/plans/generics-solving-plan.md.
  * It will be committed to docs/historical when it's done.
  * This doesn't replace the handoff document. But the handoff document shouldnt contain anything that would be better in here.
- * To check what the human changed, use **verbatim** the command `diff -U2 <(sed -n '1,/^## Strategic Directions Proposals/p' /tmp/plan-phased-calls-0.md) <(sed -n '1,/^## Strategic Directions Proposals/p' docs/convos/plan-phased-calls.md) || true; cp docs/convos/plan-phased-calls.md /tmp/plan-phased-calls-1.md`, updating the 0 and 1 as you go. If the human says only "read", they might mean this.
+ * To check what the human changed, use **verbatim** the command `diff -U2 <(sed -n '1,/^## Strategic Directions Proposals/p' /tmp/plan-phased-calls-0.md) <(sed -n '1,/^## Strategic Directions Proposals/p' docs/plans/plan-phased-calls.md) || true; cp docs/plans/plan-phased-calls.md /tmp/plan-phased-calls-1.md`, updating the 0 and 1 as you go. If the human says only "read", they might mean this.
 
 Sections:
 
@@ -70,6 +70,7 @@ We'll use "two-phase communication":
 
  * First, you do your thinking, as you normally do.
  * Second, you will tell me, in your own words, with all necessary details, whatever it is you want to say.
+    * Do not skip this part, unless I say "QQ:" or "QT:".
  * Third, you will output a separator line: "-------- Clearer explanation, per prose-reviewer / prose-tactical --------"
  * Fourth, you will output a simplified explanation, using the guidelines in prose-reviewer and prose-tactical.
     * It should be about half the length of the previous section.
@@ -85,13 +86,10 @@ This is necessary because usually, in your first attempt at saying something, yo
 
 Note that I **might not read** anything above the separator line, or any of the caveats, or any of the "remaining questions" list, so don't assume I've read them. If I haven't modified Strategic Directions to address it, or havent explicitly answered it, then don't assume I've read it.
 
-When I say "QQ:" or "QT:" you can skip the two-phase communication.
-When I say "edited" as a whole sentence, that means I updated the doc, and I want you to look at what I edited.
 If you see a problem in the design or somethign I wrote, lead with a single sentence, then a short example that shows the problem, then you can explain more.
 
 ## Required reading
 
  * prose-reviewer
  * prose-tactical
- * diagnose
  * update-handoff
