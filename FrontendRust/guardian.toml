@@ -52,6 +52,7 @@ exclude_shields = [
     "NoNewDefinitions-NNDX.md",
     "NoRenamedDefinitions-NRDX.md",
     "NoMovedDefinitions-NMDX.md",
+    "NoGlobalStateAnywhere-NGSAX.md",
 ]
 
 [guard_mode]
@@ -78,27 +79,30 @@ include_shields = [
 
 [review_mode]
 include_shields = [
+    # Rust-enforced
+    { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
+    { name = "NeverUseStaticLifetime-NUSLX.md" },
+    { name = "NoRemovingVMarkers-NRVMX.md" },
+
+    # Data handling
     { name = "ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md" },
     { name = "NoExpensiveClones-NECX.md" },
-    { name = "SuffixWhenDealingWithMultipleStages-SWDWMSX.md" },
     { name = "EnumsShouldntContainComplexData-ESCCDX.md" },
+    { name = "ArenaTypesDontClone-ATDCX.md" },
+
+    # Error handling
     { name = "NeverRecoverAlwaysFail-NRAFX.md" },
-    { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "FailFastFailLoud-FFFLX.md" },
+
+    # Style
+    { name = "SuffixWhenDealingWithMultipleStages-SWDWMSX.md" },
+
+    # Tests
     { name = "KeepInlineComparisonsInline-KICIX.md" },
     { name = "NeverHaveConditionalsInTests-NHCITX.md" },
-    { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
     { name = "NeverRepeatImplementationCodeInTests-NRICITX.md" },
     { name = "NoConditionalsInTestsOneBranchProceedsAllOthersPanic-NCTOBPAOPX.md" },
     { name = "TestsPreferUnwrapToExpectForConciseness-TPUTEFCX.md" },
     { name = "PreferSingleMatchOverNestedMatches-PSMONMX.md" },
-    { name = "ArenaTypesDontClone-ATDCX.md" },
     { name = "UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md" },
-    { name = "NoModificationsToShieldFiles-NMSFX.md" },
-    { name = "NeverUseStaticLifetime-NUSLX.md" },
-    { name = "NoRemovingVMarkers-NRVMX.md" },
-
-    { name = "ValidateReadonlyBash-VRBX.md" },
-    { name = "BulkEditScriptWorkflow-BESWX.md" },
-    { name = "MailboxWorkflow-MBXX.md" },
 ]

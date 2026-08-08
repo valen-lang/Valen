@@ -979,7 +979,7 @@ Recall:
 
 ```
 interface ISpaceship<E, F, G> { ... }
-abstract func moo<X, Y, Z>(self &ISpaceship<X, Y, Z>, bork X) where exists drop(Y)void;
+abstract func launch<X, Y, Z>(self &ISpaceship<X, Y, Z>, bork X) where exists drop(Y)void;
 
 struct Raza<A, B, C> { ... }
 impl<I, J> ISpaceship<int, I, J> for Raza<I, J>;
@@ -989,19 +989,39 @@ func launch<Y, Z>(self &Raza<Y, Z>, bork int) where exists drop(Y)void { ... }
 
 Right now we have ISpaceship, launch, and the impl ("ri").
 
+ZHERE: This whole section uses "dispatcher" for the per-impl thing. Settled model: the
+ZHERE: **dispatcher** is the abstract function (never compiled as one thing — the vtable does
+ZHERE: that job), and the per-impl compiled function is a **dispatcher case**. The word "case"
+ZHERE: is never bare; it is always "dispatcher case".
+ZHERE:
+ZHERE: The snippet below is also misleading, not just misnamed. Its signature already has `int`
+ZHERE: baked in at position 0 and in `bork int`, substituted from the Raza impl — so it cannot
+ZHERE: serve any other impl of ISpaceship. The multi-arm `self match` implies one function with
+ZHERE: sibling arms, but the code mints one per (abstract function, impl) at
+ZHERE: edge_compiler.rs:284-287, each with exactly one case under it. Redraw as a single arm and
+ZHERE: state explicitly that this is compiled once per impl.
+ZHERE:
+ZHERE: "the dispatcher's inner environment" below -> "the dispatcher case's inner environment".
+
 We want to locate that launch/Raza override, similarly to this conceptual "dispatcher" function:
 
 ```
-func launch<Y, Z>(virtual self &ISpaceship<int, Y, Z>, bork int)
+func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
 where exists drop(Y)void {
   self match {
-    raza &Raza<Y, Z> => launch(raza, bork)
+    case raza &Raza<Y, Z> comptime if X == int => launch(raza, bork)
   }
 }
 ```
 
 The first step is figuring out the dispatcher's inner environment, so we can later use it to resolve our `launch` override.
 
+
+ZHERE: Heading -> "In Terms of Dispatcher Case". Keep the GTCII code, it's referenced elsewhere.
+ZHERE: Below: "the dispatcher's case" -> "the dispatcher case"; "dispatcher interface" ->
+ZHERE: "dispatcher case interface". Note `dis$` are the dispatcher case's *dependent*
+ZHERE: placeholders and `case$` (Step 4) are its *independent* ones — both belong to the
+ZHERE: dispatcher case, so neither is "the dispatcher's".
 
 ## Step 1: Get The Compiled Impl's Interface, In Terms of Dispatcher (GTCII)
 
@@ -1027,6 +1047,12 @@ ISpaceship<int, dis$0, dis$1>
 
 We'll refer to this as the "dispatcher interface".
 
+
+ZHERE: Heading -> "Compile Dispatcher Case Function Given Interface". Keep the CDFGI code.
+ZHERE: Below, "compile it given the dispatcher interface" -> "dispatcher case interface".
+ZHERE: The line "We're conceptually compiling a match's case" is the one place this section gets
+ZHERE: it right — it just contradicts the heading. Reword to "We're compiling the dispatcher
+ZHERE: case" so the two agree.
 
 ## Step 2: Compile Dispatcher Function Given Interface (CDFGI)
 
@@ -1196,6 +1222,12 @@ Hence, that `ZZ` is an "independent" rune. The rest, `I` `J` `K` are "dependent"
 This doesn't happen in EdgeCompiler, it actually happens in ImplCompiler and we just remember the independences of each rune.
 
 
+ZHERE: Heading "For Case" -> "For Dispatcher Case" (case is never bare). Keep the FOSFC code.
+ZHERE: Below: "the dispatcher interface" -> "the dispatcher case interface" (twice), and
+ZHERE: "in the Milano case" / "the case struct" -> "dispatcher case". `case$3` is the dispatcher
+ZHERE: case's independent placeholder — see the ISNZ shorthand question about whether the bare
+ZHERE: `case$` token gets renamed too.
+
 ## Step 4: Figure Out Struct For Case (FOSFC)
 
 
@@ -1276,6 +1308,13 @@ Let's do it here for this conceptual case too.
 
 
 
+ZHERE: Heading "the Case Environment" -> "the Dispatcher Case Environment". Keep ACEFRO.
+ZHERE: Below: "Step 2 gave us the dispatcher interface" -> "dispatcher case interface";
+ZHERE: "the case struct" -> "the dispatcher case struct"; the "case environment" -> "dispatcher
+ZHERE: case environment". Note this environment is the *with-independents* one
+ZHERE: (edge_compiler.rs:609-617), i.e. the dispatcher case plus its `case$` binder — worth
+ZHERE: saying so, since Step 2's function deliberately excludes those (OMCNAGP).
+
 ## Step 5: Assemble the Case Environment For Resolving the Override (ACEFRO)
 
 Step 2 gave us the dispatcher interface: `ISpaceship<dis$0, dis$1, dis$2>`
@@ -1288,6 +1327,11 @@ It's particularly necessary because it has any bounds that originally came from 
 
 We'll be using this to resolve an overload later.
 
+
+ZHERE: Heading "Use Case Environment" -> "Use Dispatcher Case Environment". Keep UCEFO.
+ZHERE: The snippet below repeats the misleading multi-arm match from the top of this section —
+ZHERE: same fix: one arm, and say it's compiled once per impl. "Recall the dispatcher function"
+ZHERE: -> "Recall the dispatcher case function".
 
 ## Step 6: Use Case Environment to Find Override (UCEFO)
 
@@ -1333,6 +1377,13 @@ terms of impl placeholders (eg ri$0).
 
 
 ## Step 7: Monomorphization
+
+ZHERE: "Calls The Dispatcher" -> "Calls The Dispatcher Case". Keep AFCTD.
+ZHERE: This section is the densest cluster of the misnaming. Below: "'dis' placeholders which
+ZHERE: stands for 'dispatcher'" -> "dispatcher case"; "it's the 'dispatcher' and it takes in
+ZHERE: generic parameters similar to the impl" -> "dispatcher case" (that sentence is itself the
+ZHERE: proof it's per-impl); `func dis<dis$X>` -> whatever the ISNZ shorthand lands on; and the
+ZHERE: OMCNAGP note about excluding independent runes is correct as written, just rename.
 
 AKA: Abstract Function Calls The Dispatcher (AFCTD)
 
@@ -1400,6 +1451,12 @@ We have all the substitutions we need.
 The call becomes: `dis<str>(&IObs<Opt<str>>, Opt<str>)` with instantiation bounds `D` = `func drop(Opt<str>)void`).
 
 
+
+ZHERE: Heading "For Case" -> "For Dispatcher Case". Keep TIBANFC.
+ZHERE: "the override dispatcher for func len, specifically for its case for MySome" has the
+ZHERE: levels inverted: the impl selects the *dispatcher case*, and the thing beneath it is the
+ZHERE: with-independents step. Should read "the override dispatcher case for func len for the
+ZHERE: MySome impl". The `odis{impl:98}...case` shorthand below follows the ISNZ decision.
 
 ### Translate Impl Bound Argument Names For Case (TIBANFC)
 
@@ -1711,6 +1768,10 @@ Previously, we would introduce those bounds into `myFunc`'s environment:
 
 However, this led to some ambiguity when the typing phase was registering instantiation bounds. Sometimes it would choose that first one, sometimes it would choose that second one. We don't want that because that could lead to confusion in the instantiator, and also probably the overload index.
 
+ZHERE: "the overload dispatcher function" and "the dispatcher function's placeholders" below both
+ZHERE: mean the per-impl thing -> "override dispatcher case function" / "the dispatcher case's
+ZHERE: placeholders". (Also "overload dispatcher" looks like a typo for "override dispatcher".)
+
 We tried making it so there was a clear order when doing overload resolution, so that the overload resolver would choose deterministically, but the problem was when we did substitutions. For example, in the overload dispatcher function, when we tried to grab the subcitizen or superinterface out of the impl, we substituted the dispatcher function's placeholders in. In doing that, we also substituted those placeholders into the bounds that it had registered. Those didn't agree with the abstract param's interface's instantiation bounds.
 
 The solution was to take the location out of the bound's name, and to rename any incoming bound to be in the original denizen's (`myFunc` here) namespace. That way, all bounds have the same full ID no matter where they came from.
@@ -1726,6 +1787,9 @@ We tried splitting this out into a ReachableFunctionNameT, so each function coul
 It turns out, we can still do that, without having a FunctionBoundNameT/ReachableFunctionNameT distinction.
 
 We keep them in different fields of the InstantiationBoundArgumentsT.
+
+ZHERE: Four uses of "override dispatcher" in the paragraph below all mean the per-impl thing ->
+ZHERE: "override dispatcher case".
 
 The reason we combined them all to have one name, FunctionBoundNameT, is because these bounds can come from a lot of different places. For example, in the override dispatcher function, we resolve the impl, and in doing so, we resolve its subcitizen and the superinterface. We did a substitution to phrase those in terms of the override dispatcher's placeholders (IOW, bring them into the override dispatcher's perspective) but in doing that substitution, we translated the instantiation bound arguments as ReachableFunctionNameT. That later conflicted with when the override dispatcher instantiated the interface directly, and the interface directly used on of the bounds from the virtual function, a FunctionBoundNameT. Uh oh, that means we've registered the same interface with different instantiation bound args. Assertion tripped in addInstantiationBounds.
 

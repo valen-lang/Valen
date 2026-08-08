@@ -228,26 +228,6 @@ fn bare_param_keeps_name() {
 }
 ```
 
-## No `|` in a test's match pattern
-
-A test pins one exact shape. An or-pattern accepts several, so a wrong-but-listed variant passes silently. Match the single shape the code actually produces.
-
-BEFORE:
-```rust
-match slot {
-    None | Some(DestinationLocalP { decl: INameDeclarationP::IgnoredLocalNameDeclaration(_), .. }) => {}
-    other => panic!("got {:?}", other),
-}
-```
-
-AFTER:
-```rust
-match slot {
-    Some(DestinationLocalP { decl: INameDeclarationP::IgnoredLocalNameDeclaration(_), .. }) => {}
-    other => panic!("got {:?}", other),
-}
-```
-
 ## No silent catch-all `else`
 
 A bare `else` silently swallows the next case added to the ladder. Give every real case its own condition and let the `else` assert unreachable, so additions fail loud.
@@ -366,68 +346,5 @@ match &func.header.params {
     Some(ParamsP { params: [ParameterP {
         pattern: Some(PatternPP { destructure: Some(_), .. }), .. }], .. }) => {}
     other => panic!("expected one destructuring param, got {:?}", other),
-}
-```
-
-## Never an `if` guard in a test's match
-
-Pin a literal in the pattern, don't test it in a guard. A guard hides the check outside the pattern.
-
-BEFORE:
-```rust
-match name {
-    IVarNameS::CodeVarName(s) if s.as_str() == "a" => {}
-    other => panic!("got {:?}", other),
-}
-```
-
-AFTER:
-```rust
-match name {
-    IVarNameS::CodeVarName(StrI("a")) => {}
-    other => panic!("got {:?}", other),
-}
-```
-
-## No `cast!` in a test; match the variant
-
-Don't `cast!` into a variant, then work on the result. Match the variant in one flat pattern, so a wrong variant fails through `other => panic!` with the actual value.
-
-BEFORE:
-```rust
-let let_se = cast!(&expr, IExpressionSE::Let);
-match &let_se.pattern.destructure {
-    Some(_) => {}
-    other => panic!("got {:?}", other),
-}
-```
-
-AFTER:
-```rust
-match &expr {
-    IExpressionSE::Let(LetSE { pattern: AtomSP { destructure: Some(_), .. }, .. }) => {}
-    other => panic!("got {:?}", other),
-}
-```
-
-## Pin the exact result; don't `if let` a shape check
-
-A test asserts the one correct shape. An `if let ... panic!` only fires on a specific wrong shape and lets every other invalid result pass silently. Match the expected shape with `other => panic!`, so anything unexpected fails.
-
-BEFORE:
-```rust
-// only catches one bad shape; a totally different (also-wrong) body head passes
-if let IExpressionSE::Consecutor(cons) = &block.expr {
-    if let Some(IExpressionSE::Let(_)) = cons.exprs.first() {
-        panic!("did not expect a param let here");
-    }
-}
-```
-
-AFTER:
-```rust
-match &block.expr {
-    IExpressionSE::Void(_) => {}
-    other => panic!("expected an untouched Void body head, got {:?}", other),
 }
 ```

@@ -1,5 +1,7 @@
 # Fire-Commit Config
 
+Commit everything dirty in Luz and Guardian, even if it looks unrelated to this session.
+
 **External repos:**
 - `Luz/` (gitignored) — own remote (`Verdagon/Luz`), always lands on `main`. Drain any `Luz/shields/*/cases/need-*/` curate queue (`guardian-curate`) before committing.
 - `Guardian/` (gitignored) — own remote (`Verdagon/Guardian`), always lands on `main`. Has its own submodules (Rabble, ShieldFile, ContextifiedDiff, ContextifiedShield, opencode) — check `git -C Guardian submodule status` too.

@@ -31,6 +31,10 @@ test_output/
 # Claude Code
 */.claude/settings.local.json
 */.claude/worktrees/
+guardian_port.txt
+opencode_port.txt
+.guardian-build.lock
+opencode-serve.log
 .DS_Store
 guardian-cache
 target

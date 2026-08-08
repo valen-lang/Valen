@@ -78,6 +78,7 @@ Instead, use the same file.
 - **Read when writing an `r#"..."#` raw string containing embedded Vale source in a Rust test.** → FrontendRust/docs/shields/MultiLineValeFixtures-MLVFX.md
 - **Read when decoding the compact id shorthand used in docs/Generics.md, investigation notes, or comments — forms like `dis$0`, `Foo<^int>`, `MySome.bound:drop:66`.** → docs/arcana/IdShorthandNotation-ISNZ.md
 - **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
+- **Read when reviewing a plan document or code, to flag suspicious patterns — newly-visible mutation, field mutation instead of methods, and fallbacks.** → docs/skills/approach-review.md
 - **Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.** → docs/skills/bug-repro.md
 - **Read when the human asks to close, end, or shut down the current Claude Code session.** → docs/skills/close-session.md
 - **Read when investigating a compiler bug by tracing execution and narrowing the call graph.** → docs/skills/collapsed-call-tree.md
@@ -109,4 +110,5 @@ Instead, use the same file.
 - **Read when reviewing or writing code in the typing pass (FrontendRust/src/typing/).** → docs/skills/typing-reviewer.md
 - **Read when editing `vcoord-handoff.md` or any other long-lived handoff or plan doc.** → docs/skills/update-handoff.md
 - **Read when a human asks you to use the mailbox to send mail, or you have trouble arming a mail watcher.** → docs/skills/use-mailbox.md
+- **Read when reviewing a plan document or FrontendRust code, to flag suspicious patterns — new jargon, broken existing patterns, and creation-order changes that reduce decoupling.** → docs/skills/valec-approach-review.md
 - **Read when reviewing or writing FrontendRust compiler code in any pass.** → docs/skills/valec-reviewer.md

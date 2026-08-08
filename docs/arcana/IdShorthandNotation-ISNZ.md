@@ -71,6 +71,23 @@ So when an old note writes `^impl:98$0`, the `^` tells you the position was coor
 
 So `^len.odis{impl:98}$0` parses as `^( len . odis{impl:98}$0 )` — an owned coord whose kind is the placeholder `$0` of the lambda-template-tagged `odis{impl:98}` reached via the path `len.…`.
 
+ZHERE: The table below encodes the dispatcher/case confusion. Settled model: the **dispatcher**
+ZHERE: is the abstract function, and the per-impl compiled function is a **dispatcher case**;
+ZHERE: `case` is never bare.
+ZHERE:
+ZHERE: Three problems here:
+ZHERE:  - `dis` = "dispatcher" and `odis` = "override dispatcher" are listed as separate prefixes
+ZHERE:    with nothing distinguishing them. Both denote the per-impl thing, i.e. one concept.
+ZHERE:  - `case` = "dispatcher case" is the *with-independents* step, not the per-impl function.
+ZHERE:    Under the new names those are OverrideDispatcherCaseNameT and
+ZHERE:    OverrideDispatcherCaseWithIndependentsNameT respectively.
+ZHERE:  - compiler_error_humanizer.rs:688,697 already prints `ovdt:` / `ovd:`, which agrees with
+ZHERE:    neither `dis` nor `odis`. Whatever this table lands on, those two must match.
+ZHERE:
+ZHERE: Open question (see the plan): do the shorthand *tokens* follow the never-bare-`case` rule
+ZHERE: (`discase$0`, `discase_indep$3`), or is shorthand exempt because it is terse by design and
+ZHERE: only the glosses get fixed?
+
 ## Common denizen-prefix abbreviations
 
 | Prefix | Denizen kind |
@@ -91,6 +108,11 @@ These are conventional names for placeholder origins discussed in `docs/Generics
 | Rune name | Meaning |
 |---|---|
 | `functor:M` | An anonymous substruct's member-rune for interface method `M` (one per interface method, conceptually the callable that backs that method). E.g., for `interface I { func moo(...) int; }`, the substruct's single member-rune is humanized as `$I.anon.moo.functor` and written `$functor:moo` in shorthand. The `:moo` is the method-name qualifier on the conceptual rune kind `functor`. |
+
+ZHERE: `dis$0` below is glossed "the dispatcher's 0-th generic" — it is the *dispatcher case's*
+ZHERE: 0-th dependent generic. Its independent counterpart is `case$N`. Also the
+ZHERE: `^len.odis{impl:98}$0` example uses `odis` where the prose elsewhere uses `dis$0` for the
+ZHERE: same placeholder; pick one spelling.
 
 ## Examples decoded
 
