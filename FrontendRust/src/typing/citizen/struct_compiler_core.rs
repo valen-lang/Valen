@@ -17,7 +17,7 @@ use crate::typing::names::names::{IInstantiationNameT, IStructTemplateNameT, IdV
 use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT, ILookupContext};
 use crate::typing::types::types::StructTTValT;
 use crate::typing::compiler_outputs::DeferredActionT;
-use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::env::i_env_entry::{IEnvEntryT, FunctionEnvEntry};
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::hinputs_t::make;
 use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
@@ -132,8 +132,9 @@ where 's: 't,
 
         for (name, entry) in outer_env.templatas().name_to_entry.iter() {
             match entry {
-                IEnvEntryT::Function(function_a) => {
+                IEnvEntryT::Function(FunctionEnvEntry { template_id: id }) => {
                     let deferred_name = outer_env.id().add_step(self.typing_interner, *name);
+                    let function_a = coutputs.get_postparsed_function(id);
                     coutputs.defer_evaluating_function(DeferredActionT::EvaluateFunction {
                         name: deferred_name,
                         calling_env: outer_env,
@@ -228,11 +229,11 @@ where 's: 't,
 
         let mut internal_methods: Vec<(PrototypeT<'s, 't>, usize)> = Vec::new();
         for (_name, entry) in outer_env.templatas().name_to_entry.iter() {
-            if let IEnvEntryT::Function(function_a) = entry {
+            if let IEnvEntryT::Function(FunctionEnvEntry { template_id: id }) = entry {
                 let outer_env_ienv = IEnvironmentT::from(outer_env);
                 let header = self.evaluate_generic_function_from_non_call_for_header(
                     coutputs, parent_ranges, call_location,
-                    FunctionTemplataT { outer_env: outer_env_ienv, function: function_a })?;
+                    FunctionTemplataT { outer_env: outer_env_ienv, function_template_id: id })?;
                 let virtual_index = header.get_virtual_index()
                     .expect("vwat: interface internal method must have a virtual index");
                 internal_methods.push((header.to_prototype(), virtual_index));
@@ -397,16 +398,21 @@ where 's: 't,
             _ => panic!("unexpected"),
         };
 
+        let call_func_template_id = understruct_templated_id.add_step(self.typing_interner, call_func_name_t);
+        coutputs.register_postparsed_function(call_func_template_id, function_a);
+
         let drop_function_a =
             self.make_implicit_drop_function_struct_drop(*drop_function_decl_name_s, function_a.range);
         let drop_function_a_ref = self.scout_arena.alloc(drop_function_a);
+        let drop_func_template_id = understruct_templated_id.add_step(self.typing_interner, drop_func_name_t);
+        coutputs.register_postparsed_function(drop_func_template_id, drop_function_a_ref);
 
         let mut outer_store = TemplatasStoreBuilder::new(understruct_templated_id);
         outer_store.add_entries(
             self.scout_arena,
             vec![
-                (call_func_name_t, IEnvEntryT::Function(function_a)),
-                (drop_func_name_t, IEnvEntryT::Function(drop_function_a_ref)),
+                (call_func_name_t, IEnvEntryT::Function(FunctionEnvEntry { template_id: call_func_template_id })),
+                (drop_func_name_t, IEnvEntryT::Function(FunctionEnvEntry { template_id: drop_func_template_id })),
                 (understruct_instantiated_name_t, IEnvEntryT::Templata(
                     ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(understruct_struct_tt) })))),
                 (INameT::Self_(self.typing_interner.intern_self_name(SelfNameT { })),
@@ -441,7 +447,7 @@ where 's: 't,
         // if it's not a template).
         let function_templata = FunctionTemplataT {
             outer_env: IEnvironmentT::Citizen(struct_inner_env),
-            function: function_a,
+            function_template_id: call_func_template_id,
         };
 
         coutputs.declare_type(understruct_templated_id);

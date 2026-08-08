@@ -257,9 +257,10 @@ where 's: 't,
             typing_interner: &'a TypingInterner<'s, 't>,
             scout_arena: &'a ScoutArena<'s>,
         }
-        impl<'a, 's, 't> IRuneTypeSolverEnv<'s> for OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
+        impl<'a, 's, 't> IRuneTypeSolverEnv<'s, 't> for OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
             fn lookup(
                 &self,
+                coutputs: &CompilerOutputs<'s, 't>,
                 range: RangeS<'s>,
                 parts: &[IImpreciseNameS<'s>],
             ) -> Result<IRuneTypeSolverLookupResult<'s>, IRuneTypingLookupFailedError<'s>> {
@@ -279,7 +280,7 @@ where 's: 't,
         match candidate {
             ICalleeCandidate::Function(FunctionCalleeCandidate { ft }) => {
                 // See OFCBT.
-                let identifying_rune_templata_types = ft.function.tyype.param_types;
+                let identifying_rune_templata_types = coutputs.get_postparsed_function(ft.function_template_id).tyype.param_types;
                 // Now we want to check that the user didn't specify too many right here.
                 // The function can inherit runes from its container, so subtract those first.
                 let own_rune_count = identifying_rune_templata_types.len() - receiving_rune_to_explicit_template_arg_rune.len();
@@ -293,8 +294,8 @@ where 's: 't,
                     let explicit_template_arg_rules_with_connections: Vec<IRulexSR<'s>> = {
                         let mut v = explicit_template_arg_rules_without_connections.to_vec();
                         for (receiving_rune, callsite_rune) in receiving_rune_to_explicit_template_arg_rune.iter() {
-                            if !ft.function.generic_params.iter().any(|gp| gp.rune.rune == receiving_rune.rune) {
-                                panic!("Supplied rune {:?} that doesn't exist in called function {:?}", receiving_rune, ft.function.name);
+                            if !coutputs.get_postparsed_function(ft.function_template_id).generic_params.iter().any(|gp| gp.rune.rune == receiving_rune.rune) {
+                                panic!("Supplied rune {:?} that doesn't exist in called function {:?}", receiving_rune, coutputs.get_postparsed_function(ft.function_template_id).name);
                             }
                             v.push(IRulexSR::Equals(EqualsSR { range: callsite_rune.range, left: *receiving_rune, right: *callsite_rune }));
                         }
@@ -307,7 +308,7 @@ where 's: 't,
                     // container template args) also need their callsite rune seeded with the expected type,
                     // otherwise MaybeCoercingLookupSR for those args can't fire in the rune-type solver.
                     let receiving_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-                        ft.function.generic_params.iter().map(|gp| (gp.rune.rune, gp.tyype.tyype())).collect();
+                        coutputs.get_postparsed_function(ft.function_template_id).generic_params.iter().map(|gp| (gp.rune.rune, gp.tyype.tyype())).collect();
                     let callsite_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
                         receiving_rune_to_explicit_template_arg_rune.iter()
                             .filter_map(|(receiving_rune, callsite_rune)| {
@@ -337,6 +338,7 @@ where 's: 't,
                         v
                     };
                     match solve_rune_types(
+                        coutputs,
                         self.scout_arena,
                         self.opts.global_options.sanity_check,
                         &rune_type_solve_env,
@@ -421,7 +423,7 @@ where 's: 't,
                                             })
                                             .collect();
 
-                                    if ft.function.is_lambda() {
+                                    if coutputs.get_postparsed_function(ft.function_template_id).is_lambda() {
                                         assert!(receiving_rune_to_explicit_template_arg_templata.is_empty(), "implement: lambda receiving rune templatas");
                                         // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
                                         match self.evaluate_templated_function_from_call_for_prototype(

@@ -9,7 +9,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::env::environment::*;
-use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::env::i_env_entry::{IEnvEntryT, FunctionEnvEntry};
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::interner::Interner;
@@ -89,14 +89,25 @@ where 's: 't,
         self.resolve_struct_layer(coutputs, calling_env, call_range, call_location, struct_templata, uncoerced_template_args)
     }
 
+    /// The (local name, template id) for one of a citizen's internal methods, derived from the
+    /// citizen's own template id.
+    pub fn internal_method_template_id(
+        &self,
+        parent_template_id: &'t IdT<'s, 't>,
+        internal_method: &'s FunctionS<'s>,
+    ) -> (INameT<'s, 't>, &'t IdT<'s, 't>) {
+        let local_name = INameT::from(self.translate_generic_function_name(internal_method.name));
+        (local_name, parent_template_id.add_step(self.typing_interner, local_name))
+    }
+
     pub fn precompile_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
     ) -> () {
         let declaring_env = struct_templata.declaring_env;
-        let struct_a = struct_templata.origin_struct;
-        let struct_template_id = self.resolve_struct_template(
+        let struct_a = coutputs.get_postparsed_struct(struct_templata.struct_template_id);
+        let struct_template_id = self.resolve_struct_template(coutputs,
             self.typing_interner.alloc(struct_templata)
         );
         coutputs.declare_type(struct_template_id);
@@ -108,8 +119,8 @@ where 's: 't,
         // Build internal method entries for the outer env
         let internal_method_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
             struct_a.internal_methods.iter().map(|internal_method| {
-                let function_name = self.translate_generic_function_name(internal_method.name);
-                (INameT::from(function_name), IEnvEntryT::Function(internal_method))
+                let (local_name, func_template_id) = self.internal_method_template_id(struct_template_id, internal_method);
+                (local_name, IEnvEntryT::Function(FunctionEnvEntry { template_id: func_template_id }))
             }).collect();
         let sibling_key = struct_template_id.add_step(
             self.typing_interner,
@@ -144,8 +155,8 @@ where 's: 't,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
     ) -> () {
         let declaring_env = interface_templata.declaring_env;
-        let interface_a = interface_templata.origin_interface;
-        let interface_template_id = self.resolve_interface_template(
+        let interface_a = coutputs.get_postparsed_interface(interface_templata.interface_template_id);
+        let interface_template_id = self.resolve_interface_template(coutputs,
             self.typing_interner.alloc(interface_templata)
         );
         coutputs.declare_type(interface_template_id);
@@ -163,19 +174,8 @@ where 's: 't,
         // Build internal method entries for the outer env
         let internal_method_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
             interface_a.internal_methods.iter().map(|internal_method| {
-                let function_name = self.translate_generic_function_name(internal_method.name);
-                let local_name = match function_name {
-                    IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
-                    IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => INameT::ForwarderFunctionTemplate(r),
-                    IFunctionTemplateNameT::ConstructorTemplate(r) => INameT::ConstructorTemplate(r),
-                    IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => INameT::AnonymousSubstructConstructorTemplate(r),
-                    IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => INameT::LambdaCallFunctionTemplate(r),
-                    IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => INameT::OverrideDispatcherTemplate(r),
-                    IFunctionTemplateNameT::ExternFunction(r) => INameT::ExternFunction(r),
-                    IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
-                    IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
-                };
-                (local_name, IEnvEntryT::Function(internal_method))
+                let (local_name, func_template_id) = self.internal_method_template_id(interface_template_id, internal_method);
+                (local_name, IEnvEntryT::Function(FunctionEnvEntry { template_id: func_template_id }))
             }).collect();
         // Merge in sibling entries from the global environment
         let sibling_key = interface_template_id.add_step(

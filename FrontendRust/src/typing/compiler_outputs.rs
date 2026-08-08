@@ -1,4 +1,4 @@
-use crate::postparsing::ast::FunctionS;
+use crate::postparsing::ast::{FunctionS, StructS, InterfaceS, ImplS};
 use crate::interner::{Interner, StrI};
 use crate::utils::fx::{HashMap, HashSet};
 use crate::utils::fx::IndexMap;
@@ -58,6 +58,11 @@ where 's: 't,
     pub signature_to_function:
         IndexMap<SignatureT<'s, 't>, &'t FunctionDefinitionT<'s, 't>>,
 
+    pub template_id_to_postparsed_function: IndexMap<&'t IdT<'s, 't>, &'s FunctionS<'s>>,
+    pub template_id_to_postparsed_struct: IndexMap<&'t IdT<'s, 't>, &'s StructS<'s>>,
+    pub template_id_to_postparsed_interface: IndexMap<&'t IdT<'s, 't>, &'s InterfaceS<'s>>,
+    pub template_id_to_postparsed_impl: IndexMap<&'t IdT<'s, 't>, &'s ImplS<'s>>,
+
     pub function_declared_names:
         HashMap<IdT<'s, 't>, RangeS<'s>>,
     pub type_declared_names:
@@ -111,10 +116,19 @@ where 's: 't,
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
-    pub fn new() -> Self {
+    pub fn new(
+        template_id_to_postparsed_function: IndexMap<&'t IdT<'s, 't>, &'s FunctionS<'s>>,
+        template_id_to_postparsed_struct: IndexMap<&'t IdT<'s, 't>, &'s StructS<'s>>,
+        template_id_to_postparsed_interface: IndexMap<&'t IdT<'s, 't>, &'s InterfaceS<'s>>,
+        template_id_to_postparsed_impl: IndexMap<&'t IdT<'s, 't>, &'s ImplS<'s>>,
+    ) -> Self {
         Self {
             return_types_by_signature: HashMap::default(),
             signature_to_function: IndexMap::default(),
+            template_id_to_postparsed_function,
+            template_id_to_postparsed_struct,
+            template_id_to_postparsed_interface,
+            template_id_to_postparsed_impl,
             function_declared_names: HashMap::default(),
             type_declared_names: HashSet::default(),
             function_name_to_outer_env: HashMap::default(),
@@ -687,5 +701,28 @@ where 's: 't,
     pub fn get_function_externs(&self) -> Vec<&'t FunctionExternT<'s, 't>> {
         self.function_externs.clone()
     }
-    
+
+    pub fn register_postparsed_function(&mut self, template_id: &'t IdT<'s, 't>, function: &'s FunctionS<'s>) {
+        self.template_id_to_postparsed_function.insert(template_id, function);
+    }
+
+    pub fn get_postparsed_function(&self, template_id: &'t IdT<'s, 't>) -> &'s FunctionS<'s> {
+        self.template_id_to_postparsed_function.get(template_id).copied()
+            .unwrap_or_else(|| panic!("vfail: no postparsed function seeded for {:?}", template_id))
+    }
+
+    pub fn get_postparsed_struct(&self, template_id: &'t IdT<'s, 't>) -> &'s StructS<'s> {
+        self.template_id_to_postparsed_struct.get(template_id).copied()
+            .unwrap_or_else(|| panic!("vfail: no postparsed struct seeded for {:?}", template_id))
+    }
+
+    pub fn get_postparsed_interface(&self, template_id: &'t IdT<'s, 't>) -> &'s InterfaceS<'s> {
+        self.template_id_to_postparsed_interface.get(template_id).copied()
+            .unwrap_or_else(|| panic!("vfail: no postparsed interface seeded for {:?}", template_id))
+    }
+
+    pub fn get_postparsed_impl(&self, template_id: &'t IdT<'s, 't>) -> &'s ImplS<'s> {
+        self.template_id_to_postparsed_impl.get(template_id).copied()
+            .unwrap_or_else(|| panic!("vfail: no postparsed impl seeded for {:?}", template_id))
+    }
 }

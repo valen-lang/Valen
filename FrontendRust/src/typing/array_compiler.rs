@@ -63,6 +63,7 @@ where 's: 't,
         }
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
             solve_rune_types(
+                coutputs,
                 self.scout_arena,
                 self.opts.global_options.sanity_check,
                 &rune_typing_env,
@@ -171,6 +172,7 @@ where 's: 't,
         }
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
             solve_rune_types(
+                coutputs,
                 self.scout_arena,
                 self.opts.global_options.sanity_check,
                 &rune_typing_env,
@@ -335,6 +337,7 @@ where 's: 't,
         // Note: Rust solve_rune_types doesn't accept useOptimizedSolver (pre-existing API difference)
         let rune_a_to_type_with_implicitly_coercing_lookups_s =
             solve_rune_types(
+                coutputs,
                 self.scout_arena,
                 self.opts.global_options.sanity_check,
                 &rune_typing_env,

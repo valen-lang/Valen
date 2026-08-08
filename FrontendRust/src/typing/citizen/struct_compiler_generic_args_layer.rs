@@ -49,7 +49,7 @@ where 's: 't,
     ) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
 
         let declaring_env = struct_templata.declaring_env;
-        let struct_a = struct_templata.origin_struct;
+        let struct_a = coutputs.get_postparsed_struct(struct_templata.struct_template_id);
         let struct_template_name = self.translate_struct_name(struct_a.name);
 
         // We no longer assume this:
@@ -71,7 +71,7 @@ where 's: 't,
             context_region,
         };
         let header_rune_to_type_map: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
+            self.derive_rune_to_type(coutputs,
                 original_calling_env, call_range.to_vec(),
                 struct_a.generic_params, struct_a.header_rules, IndexMap::default());
 
@@ -122,7 +122,8 @@ where 's: 't,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> InterfaceTT<'s, 't> {
-        let InterfaceDefinitionTemplataT { declaring_env, origin_interface: interface_a } = interface_templata;
+        let InterfaceDefinitionTemplataT { declaring_env, interface_template_id: interface_id, .. } = interface_templata;
+        let interface_a = coutputs.get_postparsed_interface(interface_id);
         let interface_template_name = self.translate_interface_name(*interface_a.name);
 
         // We no longer assume this:
@@ -144,7 +145,7 @@ where 's: 't,
             interface_a.generic_params.iter()
                 .filter_map(|gp| gp.default.as_ref().map(|d| (d.result_rune, gp.tyype.tyype())))
                 .collect();
-        let interface_rune_to_type = self.derive_rune_to_type(
+        let interface_rune_to_type = self.derive_rune_to_type(coutputs,
             original_calling_env, call_range.to_vec(),
             interface_a.generic_params, interface_a.rules, IndexMap::default());
         let rune_to_type_for_prediction: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
@@ -199,7 +200,8 @@ where 's: 't,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> StructTT<'s, 't> {
-        let StructDefinitionTemplataT { declaring_env, origin_struct: struct_a } = struct_templata;
+        let StructDefinitionTemplataT { declaring_env, struct_template_id: struct_id, .. } = struct_templata;
+        let struct_a = coutputs.get_postparsed_struct(struct_id);
         let struct_template_name = self.translate_struct_name(struct_a.name);
 
         // We no longer assume this:
@@ -221,7 +223,7 @@ where 's: 't,
             struct_a.generic_params.iter()
                 .filter_map(|gp| gp.default.as_ref().map(|d| (d.result_rune, gp.tyype.tyype())))
                 .collect();
-        let header_rune_to_type = self.derive_rune_to_type(
+        let header_rune_to_type = self.derive_rune_to_type(coutputs,
             original_calling_env, call_range.to_vec(),
             struct_a.generic_params, struct_a.header_rules, IndexMap::default());
         let rune_to_type_for_prediction: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
@@ -280,7 +282,7 @@ where 's: 't,
     ) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
 
         let declaring_env = interface_templata.declaring_env;
-        let interface_a = interface_templata.origin_interface;
+        let interface_a = coutputs.get_postparsed_interface(interface_templata.interface_template_id);
         let interface_template_name = self.translate_interface_name(*interface_a.name);
 
         // We no longer assume this:
@@ -302,7 +304,7 @@ where 's: 't,
             context_region,
         };
         let rune_to_type_map: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
+            self.derive_rune_to_type(coutputs,
                 original_calling_env, call_range.to_vec(),
                 interface_a.generic_params, interface_a.rules, IndexMap::default());
 
@@ -352,7 +354,7 @@ where 's: 't,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
     ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
         let declaring_env = struct_templata.declaring_env;
-        let struct_a = struct_templata.origin_struct;
+        let struct_a = coutputs.get_postparsed_struct(struct_templata.struct_template_id);
         let struct_template_name = self.translate_struct_name(struct_a.name);
         let local_name = match struct_template_name {
             IStructTemplateNameT::StructTemplate(r) => INameT::StructTemplate(r),
@@ -370,7 +372,7 @@ where 's: 't,
         all_ranges.extend_from_slice(parent_ranges);
         // Use both member and header rules to figure out the types of all the runes.
         let all_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
+            self.derive_rune_to_type(coutputs,
                 outer_env, all_ranges.clone(),
                 struct_a.generic_params, &all_rules_s, IndexMap::default());
         let outer_env_ienv = IEnvironmentT::from(outer_env);
@@ -474,7 +476,7 @@ where 's: 't,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
     ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
         let declaring_env = interface_templata.declaring_env;
-        let interface_a = interface_templata.origin_interface;
+        let interface_a = coutputs.get_postparsed_interface(interface_templata.interface_template_id);
         let interface_template_name = self.translate_interface_name(*interface_a.name);
         let local_name = match interface_template_name {
             IInterfaceTemplateNameT::InterfaceTemplate(r) => INameT::InterfaceTemplate(r),
@@ -487,7 +489,7 @@ where 's: 't,
         let mut all_ranges: Vec<RangeS<'s>> = vec![interface_a.range];
         all_ranges.extend_from_slice(parent_ranges);
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
+            self.derive_rune_to_type(coutputs,
                 outer_env, all_ranges.clone(),
                 interface_a.generic_params, interface_a.rules, IndexMap::default());
         let outer_env_ienv = IEnvironmentT::from(outer_env);

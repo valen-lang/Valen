@@ -1,3 +1,4 @@
+use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::postparsing::ast::*;
 use crate::postparsing::expressions::{BlockSE, BodySE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LocalLoadSE, LocalS, OwnershippedSE, UnletSE};
 use crate::postparsing::itemplatatype::{FunctionTemplataType, ITemplataType, KindTemplataType, PackTemplataType, PrototypeTemplataType, TemplateTemplataType};
@@ -38,7 +39,7 @@ use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{BorrowRefSR, CallSR, CallSiteFuncSR, DefinitionFuncSR, EqualsSR, IRulexSR, KindListSR, LiteralSR, LookupSR, OwnRefSR, RegionSR, ResolveSR, RuneParentEnvLookupSR, RuneUsage, WeakRefSR};
 use crate::parsing::ast::ast::LoadAsP;
 use crate::typing::compiler::Compiler;
-use crate::typing::env::i_env_entry::*;
+use crate::typing::macros::macros::GeneratedAhtDenizen;
 use crate::typing::names::names::*;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::RangeS;
@@ -50,7 +51,7 @@ where 's: 't,
         &self,
         interface_name: IdT<'s, 't>,
         interface_a: &'s InterfaceS<'s>,
-    ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
+    ) -> Vec<GeneratedAhtDenizen<'s, 't>> {
 
         if interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Sealed(_))) {
             return vec![];
@@ -78,11 +79,12 @@ where 's: 't,
         let struct_name_s_ref = self.scout_arena.alloc(struct_name_s);
         let struct_local_name = self.translate_name_step(INameS::AnonymousSubstructTemplateName(struct_name_s_ref));
         let struct_name_t_steps = interface_name.init_steps.to_vec();
-        let struct_name_t = *self.typing_interner.intern_id(IdValT {
+        let struct_name_t_ref = self.typing_interner.intern_id(IdValT {
             package_coord: interface_name.package_coord,
             init_steps: &struct_name_t_steps,
             local_name: struct_local_name,
         });
+        let struct_name_t = *struct_name_t_ref;
 
         let struct_a = self.make_struct_anonymous_interface(
             interface_a,
@@ -91,23 +93,21 @@ where 's: 't,
             struct_name_s,
         );
 
-        let more_entries = self.get_struct_sibling_entries_struct_constructor(struct_name_t, struct_a);
-        let mut more_entries2 = self.get_struct_sibling_entries_struct_drop(struct_name_t, struct_a);
-        let mut more_entries_combined = more_entries;
-        more_entries_combined.append(&mut more_entries2);
+        let mut generated_aht_denizens: Vec<GeneratedAhtDenizen<'s, 't>> =
+            self.get_struct_sibling_entries_struct_constructor(struct_name_t, struct_a);
+        generated_aht_denizens.extend(self.get_struct_sibling_entries_struct_drop(struct_name_t, struct_a));
 
-        let forwarder_methods: Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> =
-            interface_a.internal_methods.iter().zip(member_runes.iter()).enumerate().map(|(method_index, (method, _rune))| {
-                let local_name: INameT<'s, 't> = self.translate_generic_function_name(method.name).into();
-                let name = *self.typing_interner.intern_id(IdValT {
-                    package_coord: struct_name_t.package_coord,
-                    init_steps: struct_name_t.init_steps,
-                    local_name,
-                });
-                let forwarder = self.make_forwarder_function_anonymous_interface(
-                    struct_name_s, interface_a, struct_a, *method, method_index as i32);
-                (name, IEnvEntryT::Function(forwarder))
-            }).collect();
+        for (method_index, (method, _rune)) in interface_a.internal_methods.iter().zip(member_runes.iter()).enumerate() {
+            let local_name: INameT<'s, 't> = self.translate_generic_function_name(method.name).into();
+            let name_ref = self.typing_interner.intern_id(IdValT {
+                package_coord: struct_name_t.package_coord,
+                init_steps: struct_name_t.init_steps,
+                local_name,
+            });
+            let forwarder = self.make_forwarder_function_anonymous_interface(
+                struct_name_s, interface_a, struct_a, *method, method_index as i32);
+            generated_aht_denizens.push(GeneratedAhtDenizen::Function(name_ref, forwarder));
+        }
 
         let anon_template_rune = self.scout_arena.intern_rune(
             IRuneValS::AnonymousSubstructTemplateRune(AnonymousSubstructTemplateRuneS {})
@@ -184,21 +184,20 @@ where 's: 't,
             &[],
         ));
 
-        let impl_local_name = self.translate_name_step(impl_a.name.to_i_name_s(self.scout_arena));
+        let impl_template_name = self.translate_impl_name(
+            impl_a.name, impl_a.sub_citizen_imprecise_name, impl_a.super_interface_imprecise_name);
+        let impl_local_name: INameT<'s, 't> = INameT::from(impl_template_name);
         let impl_name_t_steps = struct_name_t.init_steps.to_vec();
-        let impl_name_t = *self.typing_interner.intern_id(IdValT {
+        let impl_name_t_ref = self.typing_interner.intern_id(IdValT {
             package_coord: struct_name_t.package_coord,
             init_steps: &impl_name_t_steps,
             local_name: impl_local_name,
         });
+        let impl_name_t = *impl_name_t_ref;
 
-        let mut result = vec![
-            (struct_name_t, IEnvEntryT::Struct(struct_a)),
-            (impl_name_t, IEnvEntryT::Impl(impl_a)),
-        ];
-        result.extend(more_entries_combined);
-        result.extend(forwarder_methods);
-        result
+        generated_aht_denizens.push(GeneratedAhtDenizen::Struct(struct_name_t_ref, struct_a));
+        generated_aht_denizens.push(GeneratedAhtDenizen::Impl(impl_name_t_ref, impl_a));
+        generated_aht_denizens
     }
 
     pub fn map_runes_anonymous_interface(

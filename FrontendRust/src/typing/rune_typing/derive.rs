@@ -1,4 +1,5 @@
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
 use crate::typing::rune_typing::rune_type_solver::RuneTypeSolver;
 use crate::postparsing::ast::GenericParameterS;
@@ -16,6 +17,7 @@ where 's: 't,
     // list, like an impl's own kind runes or a lambda's param kind runes.
     pub fn derive_rune_to_type(
         &self,
+        coutputs: &CompilerOutputs<'s, 't>,
         parent_env: IInDenizenEnvironmentT<'s, 't>,
         ranges: Vec<RangeS<'s>>,
         generic_params: &[&GenericParameterS<'s>],
@@ -31,6 +33,7 @@ where 's: 't,
         let env = self.create_rune_type_solver_env(parent_env);
         let solver = RuneTypeSolver { scout_arena: self.scout_arena };
         match solver.solve_rune_types(
+            coutputs,
             self.opts.global_options.sanity_check,
             &env,
             ranges,

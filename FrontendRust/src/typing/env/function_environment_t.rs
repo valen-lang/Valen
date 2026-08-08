@@ -38,9 +38,9 @@ where 's: 't,
 
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
   pub fn templata(&'t self) -> FunctionTemplataT<'s, 't> {
-    FunctionTemplataT { outer_env: self.parent_env, function: self.function }
+    FunctionTemplataT { outer_env: self.parent_env, function_template_id: &self.id }
   }
-  
+
 }
 
 impl<'s, 't> Hash for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
@@ -810,9 +810,9 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 
 impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
   pub fn templata(&'t self) -> FunctionTemplataT<'s, 't> {
-    FunctionTemplataT { outer_env: self.parent_env, function: self.function }
+    FunctionTemplataT { outer_env: self.parent_env, function_template_id: &self.template_id }
   }
-  
+
 
   pub fn add_entry(
     &self,

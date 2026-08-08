@@ -5,11 +5,11 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::macros::macros::GeneratedAhtDenizen;
 use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::postparsing::ast::*;
@@ -31,7 +31,7 @@ where 's: 't,
         &self,
         struct_name: IdT<'s, 't>,
         struct_a: &'s StructS<'s>,
-    ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
+    ) -> Vec<GeneratedAhtDenizen<'s, 't>> {
 
         if struct_a.members.iter().any(|m| matches!(m, IStructMemberS::VariadicStructMember(_))) {
             // Dont generate constructors for variadic structs, not supported yet.
@@ -120,12 +120,12 @@ where 's: 't,
             ConstructorNameS { tlcd: struct_name_as_citizen }
         )));
         let translated_local_name = self.translate_name_step(function_name_s);
-        let result_id = *self.typing_interner.intern_id(IdValT {
+        let result_template_id_ref = self.typing_interner.intern_id(IdValT {
             package_coord: struct_name.package_coord,
             init_steps: struct_name.init_steps,
             local_name: translated_local_name,
         });
-        vec![(result_id, IEnvEntryT::Function(function_a))]
+        vec![GeneratedAhtDenizen::Function(result_template_id_ref, function_a)]
     }
 
     pub fn generate_function_body_struct_constructor(

@@ -1354,7 +1354,7 @@ where 's: 't,
                                 let template_def = solver_state.get_conclusion(&template_rune.rune).unwrap_or_else(|| panic!("solve_call_rule Some StructTT: template_rune not solved"));
                                 match template_def {
                                     ITemplataT::StructDefinition(it) => {
-                                        if !self.citizen_is_from_template(ICitizenTT::Struct(struct_tt), template_def) {
+                                        if !self.citizen_is_from_template(state,ICitizenTT::Struct(struct_tt), template_def) {
                                             return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: template_def, actual: result });
                                         }
                                         let conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> =
@@ -1384,7 +1384,7 @@ where 's: 't,
                                 let template_def = solver_state.get_conclusion(&template_rune.rune).unwrap_or_else(|| panic!("solve_call_rule Some InterfaceTT: template_rune not solved"));
                                 match template_def {
                                     ITemplataT::InterfaceDefinition(_it) => {
-                                        if !self.citizen_is_from_template(ICitizenTT::Interface(interface_tt), template_def) {
+                                        if !self.citizen_is_from_template(state,ICitizenTT::Interface(interface_tt), template_def) {
                                             return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: template_def, actual: result });
                                         }
                                     }

@@ -1,5 +1,7 @@
 // VCOORD:
 
+use crate::typing::compiler_outputs::CompilerOutputs;
+use crate::typing::templata::templata::ITemplataT;
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
 use crate::postparsing::ast::GenericParameterS;
@@ -160,16 +162,51 @@ pub struct TemplataLookupResult<'s> {
   pub templata: ITemplataType<'s>,
 }
 
+/// Map a rune-type-solver path lookup into a solver lookup result. After the id-only refactor,
+/// StructDefinition/InterfaceDefinition templatas carry only ids, so their type and generic params
+/// come from the postparsed cache; every other templata answers tyype() cache-free. Shared by the
+/// IRuneTypeSolverEnv::lookup impls that need the citizen generic-params, so the cache access lives
+/// in one place instead of being copy-pasted per environment.
+pub fn citizen_or_templata_rune_type_lookup<'s, 't>(
+  coutputs: &CompilerOutputs<'s, 't>,
+  scout_arena: &ScoutArena<'s>,
+  found: Option<ITemplataT<'s, 't>>,
+  range: RangeS<'s>,
+  name_s: IImpreciseNameS<'s>,
+) -> Result<IRuneTypeSolverLookupResult<'s>, IRuneTypingLookupFailedError<'s>>
+where 's: 't,
+{
+  match found {
+    Some(ITemplataT::StructDefinition(t)) => {
+      let struct_a = coutputs.get_postparsed_struct(t.struct_template_id);
+      Ok(IRuneTypeSolverLookupResult::Citizen(CitizenRuneTypeSolverLookupResult {
+        tyype: ITemplataType::TemplateTemplataType(struct_a.tyype),
+        generic_params: struct_a.generic_params,
+      }))
+    }
+    Some(ITemplataT::InterfaceDefinition(t)) => {
+      let interface_a = coutputs.get_postparsed_interface(t.interface_template_id);
+      Ok(IRuneTypeSolverLookupResult::Citizen(CitizenRuneTypeSolverLookupResult {
+        tyype: ITemplataType::TemplateTemplataType(interface_a.tyype),
+        generic_params: interface_a.generic_params,
+      }))
+    }
+    Some(x) => Ok(IRuneTypeSolverLookupResult::Templata(TemplataLookupResult {
+      templata: x.tyype(scout_arena),
+    })),
+    None => Err(IRuneTypingLookupFailedError::CouldntFindType(RuneTypingCouldntFindType {
+      range,
+      name: name_s,
+    })),
+  }
+}
 
 
-pub trait IRuneTypeSolverEnv<'s> {
-  /// Resolve a `LookupSR`'s **path** — the last segment, in whatever the earlier ones select.
-  ///
-  /// Takes the whole path rather than a name, and there is no second "path form" method: a
-  /// one-segment path is an ordinary ambient lookup, and narrowing by an empty prefix is the
-  /// identity, so both go through one implementation (@NNGZ).
+
+pub trait IRuneTypeSolverEnv<'s, 't> where 's: 't {
   fn lookup(
     &self,
+    coutputs: &CompilerOutputs<'s, 't>,
     range: RangeS<'s>,
     parts: &[IImpreciseNameS<'s>],
   ) -> Result<IRuneTypeSolverLookupResult<'s>, IRuneTypingLookupFailedError<'s>>;
@@ -183,8 +220,9 @@ pub struct RuneTypeSolver<'s, 'ctx> {
 
 
 impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
-  pub fn solve_rune_types<E: IRuneTypeSolverEnv<'s>>(
+  pub fn solve_rune_types<'t, E: IRuneTypeSolverEnv<'s, 't>>(
     &self,
+    coutputs: &CompilerOutputs<'s, 't>,
     sanity_check: bool,
     env: &E,
     range: Vec<RangeS<'s>>,
@@ -195,8 +233,8 @@ impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
   ) -> Result<
     IndexMap<IRuneS<'s>, ITemplataType<'s>>,
     RuneTypeSolveError<'s>,
-  > {
-    solve_rune_types(self.scout_arena, sanity_check, env, range, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
+  > where 's: 't {
+    solve_rune_types(coutputs, self.scout_arena, sanity_check, env, range, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
   }
   
 }
@@ -270,11 +308,12 @@ fn get_rune_typing_puzzles<'s>(
 
 
 
-fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
+fn solve_rule<'s, 't, E: IRuneTypeSolverEnv<'s, 't>>(
   scout_arena: &ScoutArena<'s>,
   env: &E,
   rule_index: i32,
   rule: &IRulexSR<'s>,
+  coutputs: &CompilerOutputs<'s, 't>,
   solver_state: &mut SimpleSolverState<
     IRulexSR<'s>,
     IRuneS<'s>,
@@ -402,7 +441,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       // VCOORD: the rune-type solver must walk the path too, not just the typing solver — both
       // need one notion of where a name resolves, or a collision types the rune off the wrong item.
       let actual_lookup_result =
-          match env.lookup(x.range.clone(), x.parts) {
+          match env.lookup(coutputs, x.range.clone(), x.parts) {
             Err(_e) => {
               panic!("LookupSR solve error path not yet implemented");
               // return Err(RuleError(e))
@@ -434,7 +473,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       // A rune name is a one-segment path — the degenerate case, spelled the same way.
       let lookup_path = scout_arena.alloc_slice_copy(&[lookup_name]);
       let actual_lookup_result =
-          match env.lookup(x.range.clone(), lookup_path) {
+          match env.lookup(coutputs, x.range.clone(), lookup_path) {
             Err(_e) => {
               panic!("RuneParentEnvLookupSR solve error path not yet implemented");
               // return Err(RuleError(e))
@@ -556,7 +595,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
 
 
 
-fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
+fn lookup_rune_type<'s, 't, E: IRuneTypeSolverEnv<'s, 't>>(
   _env: &E,
   solver_state: &mut SimpleSolverState<
     IRulexSR<'s>,
@@ -570,7 +609,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   IRuneS<'s>,
   ITemplataType<'s>,
   IRuneTypeRuleError<'s>,
->> {
+>> where 's: 't {
   let expected_type = solver_state.get_conclusion(&rune.rune).expect("lookup_rune_type: no conclusion for rune");
   match actual_lookup_result {
     IRuneTypeSolverLookupResult::Primitive(p) => {
@@ -624,7 +663,8 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
 }
 
 
-pub fn solve_rune_types<'s, E: IRuneTypeSolverEnv<'s>>(
+pub fn solve_rune_types<'s, 't, E: IRuneTypeSolverEnv<'s, 't>>(
+  coutputs: &CompilerOutputs<'s, 't>,
   scout_arena: &ScoutArena<'s>,
   sanity_check: bool,
   env: &E,
@@ -636,7 +676,7 @@ pub fn solve_rune_types<'s, E: IRuneTypeSolverEnv<'s>>(
 ) -> Result<
   IndexMap<IRuneS<'s>, ITemplataType<'s>>,
   RuneTypeSolveError<'s>,
-> {
+> where 's: 't {
 
 
   // Iterate over LookupSR rules and pre-compute types via env.lookup.
@@ -647,7 +687,7 @@ pub fn solve_rune_types<'s, E: IRuneTypeSolverEnv<'s>>(
       match rule {
         IRulexSR::Lookup(lookup) => {
           // VCOORD: same walk as the solve arm above — see its note.
-          match env.lookup(lookup.range.clone(), lookup.parts) {
+          match env.lookup(coutputs, lookup.range.clone(), lookup.parts) {
             Err(_e) => {
               panic!("LookupSR pre-computation error path not yet implemented");
               // return Err(RuleError(e))
@@ -776,7 +816,7 @@ pub fn solve_rune_types<'s, E: IRuneTypeSolverEnv<'s>>(
       Some(rule_index) => {
         let rule = solver_state.get_rule(rule_index).clone();
         let steps_before = solver_state.get_steps().len();
-        match solve_rule(scout_arena, env, rule_index, &rule, &mut solver_state) {
+        match solve_rule(scout_arena, env, rule_index, &rule, coutputs, &mut solver_state) {
           Ok(()) => {}
           Err(e) => {
             return Err(RuneTypeSolveError {

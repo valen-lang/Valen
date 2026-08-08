@@ -42,9 +42,9 @@ where 's: 't,
             attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
             params: self.typing_interner.alloc_slice_from_vec(params2.to_vec()),
             return_type: return_reference_type2,
-            maybe_origin_function_templata: origin_function.map(|f| FunctionTemplataT {
+            maybe_origin_function_templata: origin_function.map(|_f| FunctionTemplataT {
                 outer_env: env.parent_env,
-                function: f,
+                function_template_id: &env.template_id,
             }),
         };
 

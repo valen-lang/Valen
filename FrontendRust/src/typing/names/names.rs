@@ -5,6 +5,7 @@ use crate::interner::StrI;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IRuneS;
+use crate::postparsing::names::IImpreciseNameS;
 use crate::typing::types::types::{KindT, RegionT, ICitizenTT};
 use crate::typing::templata::templata::{ITemplataT, expect_integer, expect_kind_templata};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
@@ -839,8 +840,24 @@ impl<'s, 't> IImplTemplateNameT<'s, 't> where 's: 't {
       }
     }
   }
-  
+
+  pub fn imprecise_names(&self) -> (IImpreciseNameS<'s>, IImpreciseNameS<'s>) {
+    match self {
+      IImplTemplateNameT::ImplTemplate(t) =>
+        (t.sub_citizen_imprecise_name, t.super_interface_imprecise_name),
+      IImplTemplateNameT::ImplBoundTemplate(_) => {
+        // Possible future move: might be a good idea to make them use imprecise names,
+        // like if we have implements(T, IObserver<int>) then maybe the imprecise names
+        // could be T and IObserver, or maybe we can have some sort of imprecise name for
+        // the bound itself.
+        panic!("ImplBoundTemplate has no imprecise names")
+      }
+      IImplTemplateNameT::AnonymousSubstructImplTemplate(t) =>
+        (t.sub_citizen_imprecise_name, t.super_interface_imprecise_name),
+    }
+  }
 }
+
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IImplNameT<'s, 't> {
@@ -890,6 +907,8 @@ pub struct ExportNameT<'s, 't> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplTemplateNameT<'s> {
     pub code_location: CodeLocationS<'s>,
+    pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
+    pub super_interface_imprecise_name: IImpreciseNameS<'s>,
 }
 
 /// Interned (see @TFITCX)
@@ -1419,6 +1438,8 @@ pub struct InterfaceTemplateNameT<'s> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructImplTemplateNameT<'s, 't> {
     pub interface: IInterfaceTemplateNameT<'s, 't>,
+    pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
+    pub super_interface_imprecise_name: IImpreciseNameS<'s>,
 }
 
 /// Interned (see @TFITCX)

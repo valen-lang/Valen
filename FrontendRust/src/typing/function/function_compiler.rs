@@ -100,7 +100,7 @@ where 's: 't,
         function_templata: FunctionTemplataT<'s, 't>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
         let env = function_templata.outer_env;
-        let function = function_templata.function;
+        let function = coutputs.get_postparsed_function(function_templata.function_template_id);
         if function.is_light() {
             let mut new_ranges: Vec<RangeS<'s>> = Vec::with_capacity(1 + parent_ranges.len());
             new_ranges.push(function.range);
@@ -143,7 +143,8 @@ where 's: 't,
       context_region: RegionT,
       arg_types: &[KindT<'s, 't>],
     ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
-        let FunctionTemplataT { outer_env: declaring_env, function } = function_templata;
+        let FunctionTemplataT { outer_env: declaring_env, function_template_id: function_id } = function_templata;
+        let function = coutputs.get_postparsed_function(function_id);
         if function.is_light() {
             self.evaluate_templated_light_banner_from_call_closure_or_light(
                 declaring_env, coutputs, calling_env, call_range, call_location,
@@ -223,7 +224,8 @@ where 's: 't,
       function_templata: FunctionTemplataT<'s, 't>,
       args: &[Option<KindT<'s, 't>>],
     ) -> Result<IDefineFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
-        let FunctionTemplataT { outer_env, function } = function_templata;
+        let FunctionTemplataT { outer_env, function_template_id: function_id } = function_templata;
+        let function = coutputs.get_postparsed_function(function_id);
         self.evaluate_generic_virtual_dispatcher_function_for_prototype_closure_or_light(
             outer_env, coutputs, calling_env, call_range, call_location, function, args)
     }
@@ -240,7 +242,8 @@ where 's: 't,
       args: &[KindT<'s, 't>],
       container_rune_initial_knowns: &[InitialKnown<'s, 't>],
     ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
-        let FunctionTemplataT { outer_env: env, function } = function_templata;
+        let FunctionTemplataT { outer_env: env, function_template_id: function_id } = function_templata;
+        let function = coutputs.get_postparsed_function(function_id);
         self.evaluate_generic_light_function_from_call_for_prototype2(
             env, coutputs, calling_env, call_range, call_location, function, explicit_template_args,
             context_region, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>(), container_rune_initial_knowns)

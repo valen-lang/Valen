@@ -175,14 +175,11 @@ where 's: 't,
                     )
                 )
             }
-            INameS::AnonymousSubstructImplDeclaration(n) => {
-                // See LNASC.
-                let interface_template_name = self.translate_interface_name(n.interface);
-                INameT::AnonymousSubstructImplTemplate(
-                    self.typing_interner.intern_anonymous_substruct_impl_template_name(
-                        AnonymousSubstructImplTemplateNameT { interface: interface_template_name }
-                    )
-                )
+            INameS::AnonymousSubstructImplDeclaration(_) => {
+                // Impl template names carry the sub-citizen and super-interface imprecise
+                // names, which INameS doesn't hold — callers must go through
+                // translate_impl_name with the imprecise names from the ImplS.
+                panic!("translate_name_step can't build an impl name; use translate_impl_name");
             }
             INameS::ImplDeclaration(_) => {
                 panic!("Unimplemented: translate_name_step ImplDeclarationNameS");
@@ -282,11 +279,18 @@ where 's: 't,
         }
     }
 
-    pub fn translate_impl_name(&self, n: IImplDeclarationNameS<'s>) -> IImplTemplateNameT<'s, 't> {
+    pub fn translate_impl_name(
+        &self,
+        n: IImplDeclarationNameS<'s>,
+        sub_citizen_imprecise_name: IImpreciseNameS<'s>,
+        super_interface_imprecise_name: IImpreciseNameS<'s>,
+    ) -> IImplTemplateNameT<'s, 't> {
         match n {
             IImplDeclarationNameS::ImplDeclarationName(impl_decl) => {
                 let impl_template_name = ImplTemplateNameT {
                     code_location: self.translate_code_location(impl_decl.code_location),
+                    sub_citizen_imprecise_name,
+                    super_interface_imprecise_name,
                 };
                 IImplTemplateNameT::ImplTemplate(
                     self.typing_interner.intern_impl_template_name(impl_template_name)
@@ -296,6 +300,8 @@ where 's: 't,
                 let interface_template_name = self.translate_interface_name(anon.interface);
                 let anon_impl_template_name = AnonymousSubstructImplTemplateNameT {
                     interface: interface_template_name,
+                    sub_citizen_imprecise_name,
+                    super_interface_imprecise_name,
                 };
                 IImplTemplateNameT::AnonymousSubstructImplTemplate(
                     self.typing_interner.intern_anonymous_substruct_impl_template_name(anon_impl_template_name)

@@ -12,8 +12,8 @@ use crate::typing::env::function_environment_t::{
   BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
   BuildingFunctionEnvironmentWithClosuredsT, FunctionEnvironmentT, NodeEnvironmentT,
 };
-use crate::typing::env::i_env_entry::IEnvEntryT;
-use crate::typing::names::names::{IdT, INameT, IInstantiationNameT, ITemplateNameT};
+use crate::typing::env::i_env_entry::{IEnvEntryT, FunctionEnvEntry, StructEnvEntry, InterfaceEnvEntry, ImplEnvEntry};
+use crate::typing::names::names::{IdT, INameT, IInstantiationNameT, ITemplateNameT, IImplTemplateNameT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::env::function_environment_t::lookup_with_imprecise_name_inner;
 use crate::interner::StrI;
@@ -460,27 +460,29 @@ pub fn entry_to_templata<'s, 't>(
 where 's: 't,
 {
   match entry {
-    IEnvEntryT::Function(func) => {
+    IEnvEntryT::Function(FunctionEnvEntry { template_id: id }) => {
         ITemplataT::Function(interner.alloc(FunctionTemplataT {
             outer_env: defining_env,
-            function: func,
+            function_template_id: id,
         }))
     }
-    IEnvEntryT::Struct(struct_a) => {
+    IEnvEntryT::Struct(StructEnvEntry { template_id: id, tyype }) => {
         ITemplataT::StructDefinition(interner.alloc(StructDefinitionTemplataT {
             declaring_env: defining_env,
-            origin_struct: struct_a,
+            struct_template_id: id,
+            tyype,
         }))
     }
-    IEnvEntryT::Interface(interface_a) => {
+    IEnvEntryT::Interface(InterfaceEnvEntry { template_id: id, tyype }) => {
         ITemplataT::InterfaceDefinition(interner.alloc(InterfaceDefinitionTemplataT {
             declaring_env: defining_env,
-            origin_interface: interface_a,
+            interface_template_id: id,
+            tyype,
         }))
     }
-    IEnvEntryT::Impl(impl_a) => ITemplataT::ImplDefinition(interner.alloc(ImplDefinitionTemplataT {
+    IEnvEntryT::Impl(ImplEnvEntry { template_id: id, .. }) => ITemplataT::ImplDefinition(interner.alloc(ImplDefinitionTemplataT {
         env: defining_env,
-        impl_: impl_a,
+        impl_template_id: id,
     })),
     IEnvEntryT::Templata(templata) => templata,
   }
@@ -637,9 +639,10 @@ where 's: 't,
           }
           self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameS {}))).or_insert_with(Vec::new).push(*entry);
         }
-        IEnvEntryT::Impl(impl_a) => {
-          let sub = impl_a.sub_citizen_imprecise_name;
-          let sup = impl_a.super_interface_imprecise_name;
+        IEnvEntryT::Impl(ImplEnvEntry { template_id: id }) => {
+          let impl_template_name = IImplTemplateNameT::try_from(id.local_name)
+            .expect("ImplEnvEntry id's local_name isn't an impl template name");
+          let (sub, sup) = impl_template_name.imprecise_names();
           self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(ImplImpreciseNameValS { sub_citizen_imprecise_name: sub, super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
           self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub }))).or_insert_with(Vec::new).push(*entry);
           self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);

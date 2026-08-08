@@ -114,7 +114,7 @@ where 's: 't,
         let initial_knowns = self.assemble_known_templatas(function, already_specified_template_args);
 
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
+            self.derive_rune_to_type(coutputs,
                 original_calling_env, call_range.to_vec(),
                 function.generic_params, function.header_rules, IndexMap::default());
 
@@ -232,7 +232,7 @@ where 's: 't,
         let initial_knowns = self.assemble_known_templatas(function, explicit_template_args);
 
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
+            self.derive_rune_to_type(coutputs,
                 original_calling_env, call_range.to_vec(),
                 function.generic_params, function.header_rules, IndexMap::default());
 
@@ -436,7 +436,7 @@ where 's: 't,
             context_region,
         };
         let mut rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
+            self.derive_rune_to_type(coutputs,
                 calling_env, call_range.to_vec(),
                 function.generic_params, &all_rules, IndexMap::default());
         let invocation_range = call_range;
@@ -573,7 +573,7 @@ where 's: 't,
         let function_definition_rules: Vec<IRulexSR<'s>> =
             all_rules.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
         let function_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
+            self.derive_rune_to_type(coutputs,
                 calling_env, call_range.to_vec(),
                 function.generic_params, &all_rules, IndexMap::default());
 
@@ -764,7 +764,7 @@ where 's: 't,
         };
 
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
-            self.derive_rune_to_type(
+            self.derive_rune_to_type(coutputs,
                 near_env_as_in_denizen, range.clone(),
                 function.generic_params, &all_rules, IndexMap::default());
         let mut solver = self.make_solver_state(

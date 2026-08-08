@@ -44,6 +44,7 @@ use crate::typing::env::environment::ILookupContext;
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::rune_typing::rune_type_solver::CitizenRuneTypeSolverLookupResult;
 use crate::typing::rune_typing::rune_type_solver::RuneTypingCouldntFindType;
+use crate::typing::rune_typing::rune_type_solver::citizen_or_templata_rune_type_lookup;
 use crate::utils::fx::HashSet;
 use std::iter::empty;
 use std::marker::PhantomData;
@@ -1121,13 +1122,14 @@ where
 }
 
 
-impl<'a, 's, 't> IRuneTypeSolverEnv<'s>
+impl<'a, 's, 't> IRuneTypeSolverEnv<'s, 't>
 for TemplataCompilerRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,
 {
     fn lookup(
         &self,
+        coutputs: &CompilerOutputs<'s, 't>,
         range: RangeS<'s>,
         parts: &[IImpreciseNameS<'s>],
     ) -> Result<
@@ -1138,6 +1140,7 @@ where
         // separately from the path.
         let name_s = *parts.last().expect("vwat: an empty lookup path");
         match name_s {
+            // VCOORD: remove this entire branch and see if it just works, it might
             IImpreciseNameS::LambdaStructImpreciseName(_) => {
                 Ok(IRuneTypeSolverLookupResult::Templata(
                     TemplataLookupResult {
@@ -1152,43 +1155,7 @@ where
                 filter.insert(ILookupContext::TemplataLookupContext);
                 let found = lookup_nearest_with_path(
                     IEnvironmentT::from(self.parent_env), parts, filter, self.typing_interner);
-                match found {
-                    Some(ITemplataT::StructDefinition(t)) => {
-                        Ok(IRuneTypeSolverLookupResult::Citizen(
-                            CitizenRuneTypeSolverLookupResult {
-                                tyype: ITemplataType::TemplateTemplataType(
-                                    t.origin_struct.tyype,
-                                ),
-                                generic_params: t.origin_struct.generic_params,
-                            },
-                        ))
-                    }
-                    Some(ITemplataT::InterfaceDefinition(t)) => {
-                        Ok(IRuneTypeSolverLookupResult::Citizen(
-                            CitizenRuneTypeSolverLookupResult {
-                                tyype: ITemplataType::TemplateTemplataType(
-                                    t.origin_interface.tyype,
-                                ),
-                                generic_params: t.origin_interface.generic_params,
-                            },
-                        ))
-                    }
-                    Some(x) => {
-                        Ok(IRuneTypeSolverLookupResult::Templata(
-                            TemplataLookupResult {
-                                templata: x.tyype(self.scout_arena),
-                            },
-                        ))
-                    }
-                    None => Err(
-                        IRuneTypingLookupFailedError::CouldntFindType(
-                            RuneTypingCouldntFindType {
-                                range,
-                                name: name_s,
-                            },
-                        ),
-                    ),
-                }
+                citizen_or_templata_rune_type_lookup(coutputs, self.scout_arena, found, range, name_s)
             }
 
         }
@@ -1404,10 +1371,11 @@ where 's: 't,
 
     pub fn resolve_struct_template(
         &self,
+        coutputs: &CompilerOutputs<'s, 't>,
         struct_templata: &'t StructDefinitionTemplataT<'s, 't>,
     ) -> &'t IdT<'s, 't> {
         let declaring_env = struct_templata.declaring_env;
-        let struct_a = struct_templata.origin_struct;
+        let struct_a = coutputs.get_postparsed_struct(struct_templata.struct_template_id);
         let translated = self.translate_struct_name(struct_a.name);
         let local_name = match translated {
             IStructTemplateNameT::StructTemplate(r) => INameT::StructTemplate(r),
@@ -1419,10 +1387,11 @@ where 's: 't,
 
     pub fn resolve_interface_template(
         &self,
+        coutputs: &CompilerOutputs<'s, 't>,
         interface_templata: &'t InterfaceDefinitionTemplataT<'s, 't>,
     ) -> &'t IdT<'s, 't> {
         let declaring_env = interface_templata.declaring_env;
-        let interface_a = interface_templata.origin_interface;
+        let interface_a = coutputs.get_postparsed_interface(interface_templata.interface_template_id);
         let translated = self.translate_interface_name(*interface_a.name);
         let local_name = match translated {
             IInterfaceTemplateNameT::InterfaceTemplate(r) => INameT::InterfaceTemplate(r),
@@ -1439,12 +1408,13 @@ where 's: 't,
 
     pub fn citizen_is_from_template(
         &self,
+        coutputs: &CompilerOutputs<'s, 't>,
         actual_citizen_ref: ICitizenTT<'s, 't>,
         expected_citizen_templata: ITemplataT<'s, 't>,
     ) -> bool {
         let citizen_template_id = match expected_citizen_templata {
-            ITemplataT::StructDefinition(st) => *self.resolve_struct_template(st),
-            ITemplataT::InterfaceDefinition(it) => *self.resolve_interface_template(it),
+            ITemplataT::StructDefinition(st) => *self.resolve_struct_template(coutputs, st),
+            ITemplataT::InterfaceDefinition(it) => *self.resolve_interface_template(coutputs, it),
             ITemplataT::Kind(kt) => {
                 match ISubKindTT::try_from(kt.kind) {
                     Ok(sub) => self.get_citizen_template(sub.id()),

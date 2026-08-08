@@ -13,8 +13,41 @@ use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::names::names::IdT;
 use crate::postparsing::ast::StructS;
-use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::env::i_env_entry::{IEnvEntryT, FunctionEnvEntry, StructEnvEntry, ImplEnvEntry};
 use crate::postparsing::ast::InterfaceS;
+use crate::postparsing::ast::ImplS;
+
+/// An AHT (abstract high-level tree) denizen a sibling-entry macro synthesized and wants
+/// registered in the postparsed cache. Macros return these instead of registering directly.
+pub enum GeneratedAhtDenizen<'s, 't> where 's: 't {
+    Function(&'t IdT<'s, 't>, &'s FunctionS<'s>),
+    Struct(&'t IdT<'s, 't>, &'s StructS<'s>),
+    Impl(&'t IdT<'s, 't>, &'s ImplS<'s>),
+    // We could one day have interfaces here too
+}
+
+impl<'s, 't> GeneratedAhtDenizen<'s, 't> where 's: 't {
+    pub fn template_id(&self) -> &'t IdT<'s, 't> {
+        match self {
+            GeneratedAhtDenizen::Function(id, _) => id,
+            GeneratedAhtDenizen::Struct(id, _) => id,
+            GeneratedAhtDenizen::Impl(id, _) => id,
+        }
+    }
+
+    // The env entry is fully derivable from the denizen: the variant fixes the entry kind, the id
+    // is the key, and a struct's tyype rides on its StructS.
+    pub fn env_entry(&self) -> IEnvEntryT<'s, 't> {
+        match self {
+            GeneratedAhtDenizen::Function(id, _) =>
+                IEnvEntryT::Function(FunctionEnvEntry { template_id: id }),
+            GeneratedAhtDenizen::Struct(id, struct_a) =>
+                IEnvEntryT::Struct(StructEnvEntry { template_id: id, tyype: struct_a.tyype }),
+            GeneratedAhtDenizen::Impl(id, _) =>
+                IEnvEntryT::Impl(ImplEnvEntry { template_id: id }),
+        }
+    }
+}
 
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -83,7 +116,7 @@ impl OnStructDefinedMacro {
         compiler: &Compiler<'s, 'ctx, 't>,
         struct_name: IdT<'s, 't>,
         struct_a: &'s StructS<'s>,
-    ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)>
+    ) -> Vec<GeneratedAhtDenizen<'s, 't>>
     where 's: 't,
     {
         match self {
@@ -107,7 +140,7 @@ impl OnInterfaceDefinedMacro {
         compiler: &Compiler<'s, 'ctx, 't>,
         interface_name: IdT<'s, 't>,
         interface_a: &'s InterfaceS<'s>,
-    ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)>
+    ) -> Vec<GeneratedAhtDenizen<'s, 't>>
     where 's: 't,
     {
         match self {

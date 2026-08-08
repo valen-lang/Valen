@@ -115,12 +115,8 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
         panic!("Unimplemented: tyype on Function");
         // vfail()
       }
-      // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
-      // In Compiler, StructTemplatas are templates, even if they have zero arguments.
-      ITemplataT::StructDefinition(s) => ITemplataType::TemplateTemplataType(s.origin_struct.tyype),
-      // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
-      // In Compiler, InterfaceTemplatas are templates, even if they have zero arguments.
-      ITemplataT::InterfaceDefinition(i) => ITemplataType::TemplateTemplataType(i.origin_interface.tyype),
+      ITemplataT::StructDefinition(s) => ITemplataType::TemplateTemplataType(s.tyype),
+      ITemplataT::InterfaceDefinition(i) => ITemplataType::TemplateTemplataType(i.tyype),
       ITemplataT::ExternFunction(_) => {
         panic!("Unimplemented: tyype on ExternFunction");
         // vfail()
@@ -154,25 +150,10 @@ pub struct StaticSizedArrayTemplateTemplataT {
 }
 
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
-pub struct FunctionTemplataT<'s, 't> {
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FunctionTemplataT<'s, 't> where 's: 't {
   pub outer_env: IEnvironmentT<'s, 't>,
-  pub function: &'s FunctionS<'s>,
-}
-impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    self.function.range == other.function.range
-      && self.function.name == other.function.name
-  }
-  
-}
-impl<'s, 't> Eq for FunctionTemplataT<'s, 't> {}
-impl<'s, 't> Hash for FunctionTemplataT<'s, 't> {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.function.range.hash(state);
-    self.function.name.hash(state);
-  }
-  
+  pub function_template_id: &'t IdT<'s, 't>,
 }
 
 
@@ -191,26 +172,11 @@ impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
 // `FunctionTemplataT`'s equality ignores `outerEnv` but this type's derived
 // equality includes `declaring_env`.
 /// Value-type (see @TFITCX)
-// Identity equality on the origin denizen (range + name), mirroring `FunctionTemplataT`.
-// `StructS` isn't `Eq`/`Hash` (it holds `PartialEq`-only `IRulexSR` rules), so this
-// keeps `ITemplataT` derivably `Eq`/`Hash` without recursing into the raw rules.
-#[derive(Copy, Clone, Debug)]
-pub struct StructDefinitionTemplataT<'s, 't> {
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct StructDefinitionTemplataT<'s, 't> where 's: 't {
   pub declaring_env: IEnvironmentT<'s, 't>,
-  pub origin_struct: &'s StructS<'s>,
-}
-impl<'s, 't> PartialEq for StructDefinitionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    self.origin_struct.range == other.origin_struct.range
-      && self.origin_struct.name == other.origin_struct.name
-  }
-}
-impl<'s, 't> Eq for StructDefinitionTemplataT<'s, 't> {}
-impl<'s, 't> Hash for StructDefinitionTemplataT<'s, 't> {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.origin_struct.range.hash(state);
-    self.origin_struct.name.hash(state);
-  }
+  pub struct_template_id: &'t IdT<'s, 't>,
+  pub tyype: TemplateTemplataType<'s>,
 }
 
 
@@ -327,46 +293,19 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 }
 
 /// Value-type (see @TFITCX)
-// Identity equality on the origin denizen (range + name), mirroring `FunctionTemplataT`.
-#[derive(Copy, Clone, Debug)]
-pub struct InterfaceDefinitionTemplataT<'s, 't> {
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct InterfaceDefinitionTemplataT<'s, 't> where 's: 't {
   pub declaring_env: IEnvironmentT<'s, 't>,
-  pub origin_interface: &'s InterfaceS<'s>,
-}
-impl<'s, 't> PartialEq for InterfaceDefinitionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    self.origin_interface.range == other.origin_interface.range
-      && self.origin_interface.name == other.origin_interface.name
-  }
-}
-impl<'s, 't> Eq for InterfaceDefinitionTemplataT<'s, 't> {}
-impl<'s, 't> Hash for InterfaceDefinitionTemplataT<'s, 't> {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.origin_interface.range.hash(state);
-    self.origin_interface.name.hash(state);
-  }
+  pub interface_template_id: &'t IdT<'s, 't>,
+  pub tyype: TemplateTemplataType<'s>,
 }
 
 
 /// Value-type (see @TFITCX)
-// Identity equality on the origin denizen (range + name), mirroring `FunctionTemplataT`.
-#[derive(Copy, Clone, Debug)]
-pub struct ImplDefinitionTemplataT<'s, 't> {
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplDefinitionTemplataT<'s, 't> where 's: 't {
   pub env: IEnvironmentT<'s, 't>,
-  pub impl_: &'s ImplS<'s>,
-}
-impl<'s, 't> PartialEq for ImplDefinitionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    self.impl_.range == other.impl_.range
-      && self.impl_.name == other.impl_.name
-  }
-}
-impl<'s, 't> Eq for ImplDefinitionTemplataT<'s, 't> {}
-impl<'s, 't> Hash for ImplDefinitionTemplataT<'s, 't> {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.impl_.range.hash(state);
-    self.impl_.name.hash(state);
-  }
+  pub impl_template_id: &'t IdT<'s, 't>,
 }
 
 /// Value-type (see @TFITCX)

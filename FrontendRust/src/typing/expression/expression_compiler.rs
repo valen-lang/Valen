@@ -49,6 +49,7 @@ use crate::postparsing::names::SelfRuneS;
 use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
 use crate::postparsing::rules::rules::RuneUsage;
 use crate::typing::rune_typing::rune_type_solver::solve_rune_types;
+use crate::typing::rune_typing::rune_type_solver::citizen_or_templata_rune_type_lookup;
 use crate::typing::names::names::RuneNameT;
 use std::iter::once;
 use std::marker::PhantomData;
@@ -448,6 +449,7 @@ where 's: 't,
                     once(let_se.range).chain(parent_ranges.iter().copied()).collect();
                 let rune_to_type =
                     solve_rune_types(
+                        coutputs,
                         self.scout_arena,
                         self.opts.global_options.sanity_check,
                         &rune_type_solve_env,
@@ -559,10 +561,10 @@ where 's: 't,
                                             name: part.name,
                                         }),
                                     };
-                                    let struct_template_id = self.resolve_struct_template(struct_templata);
+                                    let struct_template_id = self.resolve_struct_template(coutputs, struct_templata);
                                     let look_in_env = coutputs.get_outer_env_for_type(&range_list, *struct_template_id);
                                     let part_rune_to_template_arg: Vec<(RuneUsage<'s>, RuneUsage<'s>)> =
-                                        struct_templata.origin_struct.generic_params.iter()
+                                        coutputs.get_postparsed_struct(struct_templata.struct_template_id).generic_params.iter()
                                             .zip(part.explicit_template_args.iter())
                                             .map(|(gp, arg_rune)| (gp.rune, *arg_rune))
                                             .collect();
@@ -2059,6 +2061,7 @@ where 's: 't,
         // explicify_lookups was the only consumer of that map, and it is retired.
         // The rules are already explicit Lookup/Call. The lambda's runes get solved again when it is typed.
         match rune_type_solver.solve_rune_types(
+            coutputs,
             self.opts.global_options.sanity_check,
             &rune_type_solve_env,
             range_list.clone(),
@@ -2167,13 +2170,14 @@ where
 }
 
 
-impl<'a, 's, 't> IRuneTypeSolverEnv<'s>
+impl<'a, 's, 't> IRuneTypeSolverEnv<'s, 't>
     for LetExprRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,
 {
     fn lookup(
         &self,
+        coutputs: &CompilerOutputs<'s, 't>,
         range: RangeS<'s>,
         parts: &[IImpreciseNameS<'s>],
     ) -> Result<
@@ -2187,43 +2191,7 @@ where
         let found = lookup_nearest_with_path(
             IEnvironmentT::from(self.nenv.snapshot(self.typing_interner)),
             parts, filter, self.typing_interner);
-        match found {
-            Some(ITemplataT::StructDefinition(t)) => {
-                Ok(IRuneTypeSolverLookupResult::Citizen(
-                    CitizenRuneTypeSolverLookupResult {
-                        tyype: ITemplataType::TemplateTemplataType(
-                            t.origin_struct.tyype,
-                        ),
-                        generic_params: t.origin_struct.generic_params,
-                    },
-                ))
-            }
-            Some(ITemplataT::InterfaceDefinition(t)) => {
-                Ok(IRuneTypeSolverLookupResult::Citizen(
-                    CitizenRuneTypeSolverLookupResult {
-                        tyype: ITemplataType::TemplateTemplataType(
-                            t.origin_interface.tyype,
-                        ),
-                        generic_params: t.origin_interface.generic_params,
-                    },
-                ))
-            }
-            Some(x) => {
-                Ok(IRuneTypeSolverLookupResult::Templata(
-                    TemplataLookupResult {
-                        templata: x.tyype(self.scout_arena),
-                    },
-                ))
-            }
-            None => Err(
-                IRuneTypingLookupFailedError::CouldntFindType(
-                    RuneTypingCouldntFindType {
-                        range,
-                        name: name_s,
-                    },
-                ),
-            ),
-        }
+        citizen_or_templata_rune_type_lookup(coutputs, self.scout_arena, found, range, name_s)
     }
 
 }

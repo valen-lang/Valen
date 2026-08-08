@@ -602,10 +602,27 @@ pub fn humanize_candidate<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner:
       humanize_name(scout_arena, typing_interner, code_map, prototype_t.id.local_name, None) + ":\n"
     }
     ICalleeCandidate::Function(FunctionCalleeCandidate { ft }) => {
-      let begin = line_range_containing(ft.function.range.begin).begin;
-      code_map(begin) + ":\n" +
-        &format!("{:?}", line_range_containing(begin).begin) + "\n"
+      match function_template_code_location(ft.function_template_id.local_name) {
+        Some(code_loc) => {
+          let begin = line_range_containing(code_loc).begin;
+          code_map(begin) + ":\n" +
+            &format!("{:?}", line_range_containing(begin).begin) + "\n"
+        }
+        None => humanize_name(scout_arena, typing_interner, code_map, ft.function_template_id.local_name, None) + ":\n",
+      }
     }
+  }
+}
+
+/// Best-effort source location for a function-template id's local name. Returns None for the
+/// kinds that carry no location (extern, bound, predicted, override-dispatcher, anon-substruct
+/// constructor); callers degrade gracefully rather than assume one exists.
+fn function_template_code_location<'s, 't>(local_name: INameT<'s, 't>) -> Option<CodeLocationS<'s>> {
+  match local_name {
+    INameT::FunctionTemplate(n) => Some(n.code_location),
+    INameT::ConstructorTemplate(n) => Some(n.code_location),
+    INameT::LambdaCallFunctionTemplate(n) => Some(n.code_location),
+    _ => None,
   }
 }
 
@@ -613,11 +630,17 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
   match templata {
     ITemplataT::RuntimeSizedArrayTemplate(_) => "Array".to_string(),
     ITemplataT::StaticSizedArrayTemplate(_) => "StaticArray".to_string(),
-    ITemplataT::InterfaceDefinition(interface_def) => interface_def.origin_interface.name.name.0.to_string(),
-    ITemplataT::StructDefinition(struct_def) => match struct_def.origin_struct.name {
-      IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n.name.as_str().to_string(),
-      IStructDeclarationNameS::AnonymousSubstructTemplateName(n) =>
-        format!("<anonymous substruct of {}>", n.interface_name.name.as_str()),
+    ITemplataT::InterfaceDefinition(interface_def) => match interface_def.interface_template_id.local_name {
+      INameT::InterfaceTemplate(itn) => itn.human_namee.0.to_string(),
+      other => panic!("unexpected interface id local name in humanize_templata: {:?}", other),
+    },
+    ITemplataT::StructDefinition(struct_def) => match struct_def.struct_template_id.local_name {
+      INameT::StructTemplate(stn) => stn.human_name.0.to_string(),
+      INameT::AnonymousSubstructTemplate(astn) => {
+        let iface = match astn.interface { IInterfaceTemplateNameT::InterfaceTemplate(t) => t };
+        format!("<anonymous substruct of {}>", iface.human_namee.0)
+      }
+      other => panic!("unexpected struct id local name in humanize_templata: {:?}", other),
     },
     ITemplataT::Integer(value) => value.to_string(),
     ITemplataT::Prototype(prototype_templata) => humanize_id(scout_arena, typing_interner, code_map, prototype_templata.prototype.id, None),

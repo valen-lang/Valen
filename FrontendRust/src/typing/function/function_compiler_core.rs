@@ -156,7 +156,7 @@ where 's: 't,
                             self.translate_function_attributes(full_env.function.attributes),
                             params2,
                             ret_coord,
-                            Some(FunctionTemplataT { outer_env: full_env.parent_env, function: full_env.function }));
+                            Some(FunctionTemplataT { outer_env: full_env.parent_env, function_template_id: &full_env.template_id }));
                     header
                 }
                 IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => {
@@ -247,7 +247,7 @@ where 's: 't,
             return_type: return_coord,
             maybe_origin_function_templata: Some(FunctionTemplataT {
                 outer_env: full_env.parent_env,
-                function: full_env.function,
+                function_template_id: &full_env.template_id,
             }),
         });
         let sig_ref = self.typing_interner.alloc(header.to_signature());

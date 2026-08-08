@@ -8,9 +8,9 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::macros::macros::GeneratedAhtDenizen;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
@@ -36,7 +36,7 @@ where 's: 't,
         &self,
         struct_name: IdT<'s, 't>,
         struct_a: &'s StructS<'s>,
-    ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
+    ) -> Vec<GeneratedAhtDenizen<'s, 't>> {
 
         let range = |n: i32| -> RangeS<'s> {
             let loc = CodeLocationS::internal(self.scout_arena, n);
@@ -121,7 +121,7 @@ where 's: 't,
             IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
         };
         let drop_name_t = struct_name.add_step(self.typing_interner, drop_name_local);
-        vec![(*drop_name_t, IEnvEntryT::Function(drop_function_a))]
+        vec![GeneratedAhtDenizen::Function(drop_name_t, drop_function_a)]
     }
 
     pub fn make_implicit_drop_function_struct_drop(

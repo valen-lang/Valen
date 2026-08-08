@@ -1,8 +1,9 @@
+use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::postparsing::ast::*;
 use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
-use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::macros::macros::GeneratedAhtDenizen;
 use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, MacroSelfKindTemplateRuneS, MacroSelfKindRuneS, IVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
 use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
 use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
@@ -24,7 +25,7 @@ where 's: 't,
         &self,
         interface_name: IdT<'s, 't>,
         interface_a: &'s InterfaceS<'s>,
-    ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
+    ) -> Vec<GeneratedAhtDenizen<'s, 't>> {
 
         let range = |n: i32| -> RangeS<'s> {
             let loc = CodeLocationS::internal(self.scout_arena, n);
@@ -112,12 +113,12 @@ where 's: 't,
             IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
             IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
         };
-        let drop_name_t = *self.typing_interner.intern_id(IdValT {
+        let drop_name_t_ref = self.typing_interner.intern_id(IdValT {
             package_coord: interface_name.package_coord,
             init_steps: interface_name.init_steps,
             local_name: drop_name_local,
         });
-        vec![(drop_name_t, IEnvEntryT::Function(drop_function_a))]
+        vec![GeneratedAhtDenizen::Function(drop_name_t_ref, drop_function_a)]
     }
 
 }

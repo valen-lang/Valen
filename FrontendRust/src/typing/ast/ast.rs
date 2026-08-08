@@ -277,8 +277,8 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 
 
     pub fn same(&self, that: &FunctionBannerT<'s, 't>) -> bool {
-        let self_func = self.origin_function_templata.map(|t| t.function as *const _);
-        let that_func = that.origin_function_templata.map(|t| t.function as *const _);
+        let self_func = self.origin_function_templata.map(|t| t.function_template_id as *const _);
+        let that_func = that.origin_function_templata.map(|t| t.function_template_id as *const _);
         self_func == that_func && self.name == that.name
     }
 
