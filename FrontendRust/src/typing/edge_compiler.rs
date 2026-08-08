@@ -269,7 +269,9 @@ where 's: 't,
 
         let origin_function_templata = maybe_origin_function_templata
             .expect("vassertSome: originFunctionTemplata");
-        let range = coutputs.get_postparsed_function(origin_function_templata.function_template_id).range;
+        let origin_func = coutputs.get_postparsed_function(origin_function_templata.function_template_id);
+        let impl_a = coutputs.get_postparsed_impl(impl_t.templata.impl_template_id);
+        let range = origin_func.range;
 
         let abstract_func_outer_env = coutputs.get_outer_env_for_function(abstract_func_template_id);
 
@@ -355,7 +357,7 @@ where 's: 't,
 
         let define_result = self.evaluate_generic_virtual_dispatcher_function_for_prototype(
             coutputs,
-            &[range, coutputs.get_postparsed_impl(impl_t.templata.impl_template_id).range],
+            &[range, impl_a.range],
             call_location,
             IInDenizenEnvironmentT::from(dispatcher_outer_env),
             origin_function_templata,
@@ -376,7 +378,7 @@ where 's: 't,
                 }
             };
         let dispatcher_params: Vec<KindT<'s, 't>> =
-            coutputs.get_postparsed_function(origin_function_templata.function_template_id).params.iter()
+            origin_func.params.iter()
                 .map(|p| p.full_type_rune.rune)
                 .map(|rune| {
                     let templata = *dispatcher_inner_inferences.get(&rune)
@@ -396,7 +398,7 @@ where 's: 't,
                 .map(|p| Compiler::get_placeholder_templata_id(*p))
                 .collect();
         let fresh_dispatcher_placeholders: Vec<ITemplataT<'s, 't>> =
-            coutputs.get_postparsed_function(origin_function_templata.function_template_id).generic_params.iter()
+            origin_func.generic_params.iter()
                 .filter_map(|gp| {
                     dispatcher_inner_inferences.get(&gp.rune.rune).and_then(|templata| match *templata {
                         ITemplataT::Kind(&KindTemplataT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }), .. }) => {
@@ -438,7 +440,7 @@ where 's: 't,
         // Step 3: Figure Out Dependent And Independent Runes, see FODAIR.
 
         let impl_independent_rune_to_impl_placeholder_and_case_placeholder: Vec<(IRuneS<'s>, IdT<'s, 't>, ITemplataT<'s, 't>)> =
-            coutputs.get_postparsed_impl(impl_t.templata.impl_template_id).user_specified_identifying_runes.iter()
+            impl_a.user_specified_identifying_runes.iter()
                 .map(|p| p.rune.rune)
                 .zip(instantiated_local.template_args().iter())
                 .zip(impl_t.rune_index_to_independence.iter())
@@ -472,7 +474,7 @@ where 's: 't,
                 IInDenizenEnvironmentT::from(dispatcher_inner_env),
                 &{
                     let mut knowns = vec![InitialKnown {
-                        rune: RuneUsage { range, rune: coutputs.get_postparsed_impl(impl_t.templata.impl_template_id).interface_kind_rune.rune },
+                        rune: RuneUsage { range, rune: impl_a.interface_kind_rune.rune },
                         templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Interface(dispatcher_placeholdered_interface) })),
                     }];
                     for (rune, templata) in impl_independent_rune_to_case_placeholder.iter() {
@@ -487,7 +489,7 @@ where 's: 't,
             ).unwrap_or_else(|_| panic!("vassert: partialResolveImpl should succeed"));
 
         // Only grab sub_citizen entries, and assert we can't handle non-empty ones yet.
-        let impl_struct_rune = coutputs.get_postparsed_impl(impl_t.templata.impl_template_id).struct_kind_rune.rune;
+        let impl_struct_rune = impl_a.struct_kind_rune.rune;
         let dispatcher_and_case_placeholdered_impl_reachable_prototypes:
                 Vec<(IRuneS<'s>, IRuneS<'s>, PrototypeTemplataT<'s, 't>)> =
             partial_resolve_conclusions.iter()
@@ -564,7 +566,7 @@ where 's: 't,
             IInDenizenEnvironmentT::from(dispatcher_inner_env_with_bounds_for_sub_citizen),
             &{
                 let mut knowns = vec![InitialKnown {
-                    rune: RuneUsage { range, rune: coutputs.get_postparsed_impl(impl_t.templata.impl_template_id).interface_kind_rune.rune },
+                    rune: RuneUsage { range, rune: impl_a.interface_kind_rune.rune },
                     templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Interface(dispatcher_placeholdered_interface) })),
                 }];
                 for (rune, templata) in impl_independent_rune_to_case_placeholder.iter() {
@@ -587,7 +589,7 @@ where 's: 't,
         // Step 4: Figure Out Struct For Case, see FOSFC.
 
         let dispatcher_case_placeholdered_sub_citizen: ICitizenTT<'s, 't> = {
-            let templata = impl_conclusions.get(&coutputs.get_postparsed_impl(impl_t.templata.impl_template_id).struct_kind_rune.rune)
+            let templata = impl_conclusions.get(&impl_a.struct_kind_rune.rune)
                 .expect("vassertSome: implConclusions.get(subCitizenRune)");
             match templata {
                 ITemplataT::Kind(k) => k.kind.expect_citizen(),
@@ -632,13 +634,13 @@ where 's: 't,
         override_function_param_types[abstract_index as usize] = overriding_param_coord;
 
         let extra_envs: Vec<IInDenizenEnvironmentT<'s, 't>> = vec![
-            coutputs.get_outer_env_for_type(&[range, coutputs.get_postparsed_impl(impl_t.templata.impl_template_id).range], interface_template_id),
-            coutputs.get_outer_env_for_type(&[range, coutputs.get_postparsed_impl(impl_t.templata.impl_template_id).range], sub_citizen_template_id),
+            coutputs.get_outer_env_for_type(&[range, impl_a.range], interface_template_id),
+            coutputs.get_outer_env_for_type(&[range, impl_a.range], sub_citizen_template_id),
         ];
         let found_function = match self.find_function(
             IInDenizenEnvironmentT::from(dispatcher_case_env),
             coutputs,
-            &[range, coutputs.get_postparsed_impl(impl_t.templata.impl_template_id).range],
+            &[range, impl_a.range],
             call_location,
             override_imprecise_name,
             &[],

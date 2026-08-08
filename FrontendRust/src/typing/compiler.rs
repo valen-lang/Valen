@@ -954,7 +954,6 @@ where 's: 't,
                                     templatas: export_templatas,
                                 });
                                 let export_env_as_iindenizen = IInDenizenEnvironmentT::Export(export_env);
-                                let interface_a = coutputs.get_postparsed_interface(id);
                                 let export_call_range = self.typing_interner.alloc_slice_copy(&[interface_a.range]);
                                 let export_placeholdered_kind = match self.resolve_interface(
                                     &mut coutputs,
@@ -967,7 +966,6 @@ where 's: 't,
                                     IResolveOutcome::ResolveSuccess(s) => self.typing_interner.alloc(s.kind),
                                     IResolveOutcome::ResolveFailure(_f) => panic!("vwat: resolve interface failed for export"),
                                 };
-                                let interface_a = coutputs.get_postparsed_interface(id);
                                 let export_name = interface_a.name.name;
                                 coutputs.add_kind_export(
                                     interface_a.range,
@@ -1053,7 +1051,6 @@ where 's: 't,
                         match maybe_export {
                             None => {}
                             Some(_export_s) => {
-                                let function_a = coutputs.get_postparsed_function(id);
                                 let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
                                     code_loc: function_a.range.begin,
                                 });
@@ -1093,7 +1090,6 @@ where 's: 't,
                                     templatas: export_templatas,
                                 });
                                 let export_env_as_iindenizen = IInDenizenEnvironmentT::Export(export_env);
-                                let function_a = coutputs.get_postparsed_function(id);
                                 let call_ranges = self.typing_interner.alloc_slice_copy(&[function_a.range]);
                                 let export_placeholdered_prototype =
                                     match self.evaluate_generic_light_function_from_call_for_prototype(
@@ -1109,14 +1105,12 @@ where 's: 't,
                                     )? {
                                         IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
                                         IResolveFunctionResult::ResolveFunctionFailure(failure) => {
-                                            let function_a = coutputs.get_postparsed_function(id);
                                             return Err(ICompileErrorT::TypingPassResolvingError {
                                                 range: self.typing_interner.alloc_slice_copy(&[function_a.range]),
                                                 inner: failure.reason,
                                             });
                                         }
                                     };
-                                let function_a = coutputs.get_postparsed_function(id);
                                 let export_name = match function_a.name {
                                     IFunctionDeclarationNameS::FunctionName(fn_name_s) => fn_name_s.name,
                                     other => panic!("vwat: {:?}", other),
