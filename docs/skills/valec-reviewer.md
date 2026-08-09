@@ -348,3 +348,23 @@ match &func.header.params {
     other => panic!("expected one destructuring param, got {:?}", other),
 }
 ```
+
+## Don't talk about specific callers
+
+A function's comments shouldn't talk about its callers, it should talk in general about what it's useful for.
+
+BEFORE:
+```
+/// The (local name, template id) for one of a citizen's internal methods, derived from the
+/// citizen's own template id. This is the single source of truth for that id: the index loop in
+/// Compiler::evaluate seeds the postparsed cache under it, and precompile_struct/precompile_interface
+/// build the outer-env entry from it — the two must agree, so both go through here.
+pub fn internal_method_template_id(&self, parent_template_id: &'t IdT<'s, 't>, internal_method: &'s FunctionS<'s>, )
+```
+
+AFTER:
+```
+/// The (local name, template id) for one of a citizen's internal methods, derived from the
+/// citizen's own template id. This is the only place that should calculate this.
+pub fn internal_method_template_id(&self, parent_template_id: &'t IdT<'s, 't>, internal_method: &'s FunctionS<'s>, )
+```

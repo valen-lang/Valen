@@ -101,6 +101,7 @@ Instead, use the same file.
 - **Read when a skill exists in Luz/skills/ or an inner repo's own docs/skills/ (e.g. Guardian's) but isn't showing up as a usable skill in this repo.** → docs/skills/luz-import-skill.md
 - **Read when the architect asks what `experimental` has that `master` might want, or asks to pull specific commits from `experimental`.** → docs/skills/merging-from-experimental.md
 - **Read when the architect asks what `master` has that `experimental` might want, or asks to pull specific commits from `master`.** → docs/skills/merging-from-master.md
+- **Read when referring to a specific place in code, so the reference is a ctrl-clickable path:line.** → docs/skills/point.md
 - **Read when writing or reviewing prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-reviewer.md
 - **Read when checking the grammar and voice of prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-tactical.md
 - **Read when authoring or running any bulk-edit script (`./tmp/scripts/*.py`, shell loops over many files, or any per-file transform across more than a handful of files).** → docs/skills/scripting.md

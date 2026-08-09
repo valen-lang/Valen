@@ -48,3 +48,7 @@ match main.header.return_type {
     other => panic!("got {:?}", other),
 }
 ```
+
+## Struct and interface handling should be consistent
+
+When we change some struct code, look for equivalent code in interfaces, and vice versa. The two should stay roughly equivalent.
