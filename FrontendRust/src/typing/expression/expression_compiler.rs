@@ -902,7 +902,7 @@ where 's: 't,
                         actual_type => {
                             let range_with_parent: Vec<RangeS<'s>> =
                                 once(if_se.condition.range()).chain(parent_ranges.iter().copied()).collect();
-                            return Err(ICompileErrorT::IfConditionIsntBoolean {
+                            return Err(ICompileErrorT::ConditionIsntBoolean {
                                 range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
                                 actual_type,
                             });

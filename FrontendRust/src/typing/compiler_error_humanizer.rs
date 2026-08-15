@@ -243,12 +243,9 @@ that wasn't exported from package {}",
     ICompileErrorT::AbstractMethodOutsideOpenInterface { range: _ } => {
       "Open (non-sealed) interfaces can't have abstract methods defined outside the interface.".to_string()
     }
-    ICompileErrorT::IfConditionIsntBoolean { range: _, actual_type } => {
-      format!("If condition should be a bool, but was: {}",
+    ICompileErrorT::ConditionIsntBoolean { range: _, actual_type } => {
+      format!("Condition should be a bool, but was: {}",
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *actual_type }))))
-    }
-    ICompileErrorT::WhileConditionIsntBoolean { range: _, actual_type } => {
-      format!("If condition should be a bool, but was: {:?}", actual_type)
     }
     ICompileErrorT::CantImplNonInterface { range: _, templata } => {
       format!("Can't extend a non-interface: {}",

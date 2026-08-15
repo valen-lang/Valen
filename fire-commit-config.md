@@ -19,8 +19,8 @@ files so you can spot a stray before it lands and move it to `tmp/`.
   build-time regeneration — feel free to discard it.
 
 **Branch families** (the `.toml` says `branch_model = "rebase-ff"`; the families it can't name):
-- `experimental` family — side-branches `experimental-1`, `experimental-2`, … feed local tip
-  `experimental`, ratcheted via `git fetch . <branch>:experimental`.
+- `valen` family — side-branches `experimental-1`, `experimental-2`, … (kept under their old
+  names) feed local tip `valen`, ratcheted via `git fetch . <branch>:valen`.
 - `master` family — side-branches (e.g. `repair-vale`) feed tip `master`.
 
 Pick the family matching the working branch; ask if ambiguous. What `temporary` withholds versus a
@@ -35,7 +35,7 @@ says the literal `fire override green`.**
 **CI** (not in the `.toml` — the tool doesn't gate on CI): GitHub Actions workflow `CI`
 (`.github/workflows/ci.yml`) on `origin` (`Verdagon/Vale`). Jobs: `build_and_test_ubuntu`,
 `build_and_test_mac`, `build_and_test_docker`, `build_and_test_wasi`. Auto-triggers on push/PR to
-`master`/`stable`/`repair-vale`; `experimental-*` branches need manual dispatch: `gh workflow run CI
+`master`/`stable`/`repair-vale`; `valen` and the `experimental-*` side-branches need manual dispatch: `gh workflow run CI
 --ref <branch>` then `gh run watch`. Opt-in via `with CI`.
 
 **Sweep judgment.** The sweeps themselves (DO-NOT-SUBMIT, absolute paths, broken symlinks, Guardian

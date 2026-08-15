@@ -6,7 +6,7 @@
 # [[external]] blocks at the end (an empty `external = []` would have to precede [repo]).
 
 [repo]
-# rebase-ff (experimental family). Full sync: rebase onto target → ratchet the target
+# rebase-ff (valen family). Full sync: rebase onto target → ratchet the target
 # (git fetch . <branch>:<target>) → push target + push side branch. `temporary` does the same
 # minus the ratchet and the target push: it still rebases and still pushes the side branch to
 # origin, it just doesn't advance the shared target. So temporary commits ARE pushed.
@@ -37,10 +37,21 @@ new_ignore            = { enabled = true, allow = ["docs/**"] }
 [[repo.tests]]
 cmd = "cargo nextest run --manifest-path FrontendRust/Cargo.toml"
 env = {}
+when_changed = []
 
 [[repo.tests]]
 cmd = "cargo nextest run --manifest-path FrontendRust/Cargo.toml"
 env = { VALE_TEST_BACKEND = "wasi" }
+when_changed = []
+
+# The `rust_interop` feature (lazy Rust imports) is off by default and its suite isn't in the default
+# gate. Gate it on changes to its subtree so it runs exactly when relevant. Prereq: the pinned nightly
+# needs `rustc-dev` (`rustup component add rustc-dev --toolchain <pinned>`); without it this command
+# fails rather than skips — install it, or `fire override green` if the change is unrelated.
+[[repo.tests]]
+cmd = "cargo test --manifest-path FrontendRust/Cargo.toml --lib --features rust_interop"
+env = {}
+when_changed = ["FrontendRust/src/typing/rust_interop/**"]
 
 # Externals, located by path; each carries its own fire-commit-config.toml. Both are plain clones
 # here (independent checkouts, gitignored in this repo), not submodules.

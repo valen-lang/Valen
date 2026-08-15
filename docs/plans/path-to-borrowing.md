@@ -51,14 +51,10 @@ against the current tree:
   `assemble_initial_sends_from_args` seeds each argument into the solve as an `InitialKnown` plus an
   `Equals` (`typing/function/function_compiler_solving_layer.rs:927`, consumed at `:453-461`). The
   old "consumed nowhere" note is stale.
-- **The tree already has a complete walk skeleton.** `typing/test/traverse.rs:visit_expression_te`
-  walks all 50 `ExpressionTE` variants. It is a flat collector rather than a control-flow-aware
-  walk, so it is the *model* for the checker's walk, not the walk itself, but nothing in it is
-  test-only and it moves out of `test/` cleanly.
 - **Control flow survives in the finished tree.** `IfTE` is its own join node with a `result` that
   says whether the join is reachable; `WhileTE` carries the implicit back-edge (Vale `while` is
-  `loop`); a break produces `KindT::Never { from_break: true }`; there is no `continue`. A dataflow
-  walk over the finished tree is therefore feasible.
+  `loop`); a break produces `KindT::Never { from_break: true }`; there is no `continue`. A recursive
+  check over the finished tree is therefore feasible.
 - **`replace_value_type_in_ref` and `UpcastTE` are landed** (`typing/templata_compiler.rs:116`,
   `typing/convert_helper.rs:206`).
 
@@ -136,85 +132,116 @@ Two syntax landmines to plan around:
 Effect clauses (`mut(...)`, `not(mut(...))`), value-paths (`world.ships[]`), and `...` are all
 rung 1 and later. Rung 0 needs only the group declaration plus a way to name a group at a borrow.
 
-### 3. Where the checker plugs in
+### 3. Where and how the checker runs
 
-The big call-site rewrite (`plan-phased-calls.md`) is **not** a prerequisite.
+The big call-site rewrite (`plan-phased-calls.md`) is **not** a prerequisite, and the checker does
+**not** run per call site. All borrow checking is one **whole-function walk**, run once per function
+over the finished body, at the end of compiling that function's `FunctionT`, inside the typing pass.
+There is no separate borrowck pass.
 
-The borrow checker needs one property: after the compiler has picked one candidate, the check only
-emits errors and never rejects a candidate. That property already holds. `find_function` returns
-exactly one prototype to every caller, and no borrow logic sits in candidate selection. The rewrite
-changes a *different* thing (whether the losing candidates get solved at all), which the checker
-does not care about, because it runs after resolution.
+The plug-in point is concrete. A function body is compiled into a `FunctionDefinitionT`
+(`function_compiler_core.rs:304`), then registered with `coutputs.add_function` (`:309`). The walk
+runs here, on the finished `function2`, whose body is already a complete `ExpressionTE` tree. The
+other body-bearing function kinds register at the sibling `add_function` sites (`:196`, `:396`); each
+is a plug-in point.
 
-So the call-out point is concrete:
+Whether the walk runs before or after `coutputs.add_function` is left open (see "What still needs a
+ruling"). The finished function is handed to the walk directly, so it does not depend on this
+function being in `coutputs`.
 
-- Call it in `call_compiler.rs`, right after resolution and before the call node is built:
-  in `evaluate_call` between `check_types` (`:151`) and `FunctionCallTE::new` (`:155`), and in the
-  `evaluate_custom_call` twin (`:263`). This is `plan-phased-calls`'s "phase 8," realized in the
-  current architecture with no rewrite.
-- Do **not** call it in `find_function`. That has about eleven callers, most of which are bound,
-  vtable, or synthetic lookups that must not be borrow-checked.
+Because the walk runs on the fully-resolved body, two hazards the old per-call idea had to avoid
+simply do not arise:
 
-The one discipline to hold: the check runs *after* resolution, never inside `attempt_candidate_banner`.
-Inside, a borrow failure would demote a candidate and let a sibling win, which re-creates the
-reject-during-solve hazard the rewrite exists to remove.
+- It never runs inside candidate selection. The finished tree holds only the one resolved call at
+  each site, so a borrow failure can never demote a candidate. The old "never inside
+  `attempt_candidate_banner`" discipline is now automatic.
+- The per-call disjointness check is one **arm** of this walk, firing when the walk reaches a
+  `FunctionCallTE`, not a hook threaded into `call_compiler.rs`. There is nothing to place carefully
+  during typing.
 
-### 4. The checker's walk and its inputs
+Do not call the checker from `call_compiler.rs` or `find_function`; the only entry point is once per
+finished function.
 
-The checker reads the finished `ExpressionTE` tree, runs per-body, and stays quarantined: no
-`&mut CompilerOutputs`, no interner, no arena, no calls back into resolution. It returns errors and
-the architect routes them.
+### 4. The checker's inputs and contract
 
-- **The walk**: promote `traverse.rs` into a context-carrying walk (it is a flat collector today,
-  and the checker needs per-frame state for move-tracking and invalidation).
-- **Seam 1, borrow creation**: the member and element lookups, at `expression_compiler.rs:786`
-  (Dot) and `:1546` (Index). Each already yields a `BorrowRef` of the pointee, so that borrow is the
-  thing the checker keys on.
-- **Seam 2, the joint-argument check**: the call-out point in section 3.
-- **Quarantine**: feasible, with one caveat. The checker needs to read struct member layout for
-  reach and sibling-disjointness. That data must be snapshotted into the checker's read-only inputs,
-  not handed to it as a live `&CompilerOutputs`.
+The checker walks the finished function's `ExpressionTE` body once, carrying per-frame state for
+move-tracking and invalidation. Its contract is deliberately narrow:
+
+- **Inputs**: the finished function, plus a read-only `&CompilerOutputs` and a read-only `&Compiler`.
+  Read-only borrows are enough, so nothing has to be snapshotted into a separate input struct. The
+  checker reads struct member layout (for reach and sibling-disjointness) straight from the read-only
+  `coutputs`.
+- **Output**: a list of errors. The checker mutates nothing (no `&mut CompilerOutputs`, no interner,
+  no arena) and triggers no resolution or instantiation. The architect routes the errors it returns.
+- **Shape**: `check_function(function: &FunctionDefinitionT, coutputs: &CompilerOutputs, compiler:
+  &Compiler) -> Vec<BorrowError>`, stateless across functions. It gains internal per-body state (the
+  dataflow sets) only at the rung whose first test is use-after-churn.
+
+The walk does its work in two node-arms that compose in a fixed order:
+
+- **Borrow creation** at the member and element lookups (`expression_compiler.rs:786` Dot, `:1546`
+  Index). Each already yields a `BorrowRef` of the pointee, and that borrow is what the checker keys
+  on.
+- **The joint-argument check** at each `FunctionCallTE`. This is the per-call disjointness check, an
+  arm of this same walk rather than a separate hook.
+
+The creation arm runs before the call arm that consumes a borrow, so the walk hands the call check a
+borrow it has already recorded. Write the check as recursive descent over `ExpressionTE`, the same
+idiom the typing pass itself uses: match each variant and recurse into children, carrying the
+checker's per-frame state, with `IfTE` and `WhileTE` driving the joins and loop re-walks. The
+compiler has no walker framework, and `traverse.rs` is test-only, not a basis for this.
 
 ## Groundwork worth doing early
 
-Two items are independent of the region decision and cheaper to do before the checker exists.
+One item is independent of the region decision and cheaper to do before the checker exists.
 
 - **Add source ranges to the call and control-flow nodes.** Only 6 of 50 `ExpressionTE` variants
   carry a `RangeS`, and none of the call or control nodes do (`FunctionCallTE`, `IfTE`, `WhileTE`,
   `BreakTE`, and the rest). A post-hoc checker cannot point at a call site or an `if` without them.
   Adding ranges now is far cheaper than retrofitting them once a checker depends on the tree shape.
-- **Thread the solver's per-call inferences out to callers.** The solver computes the per-call rune
-  bindings and then discards them: about six sites build `StampFunctionSuccess` with
-  `inferences: IndexMap::default()` (`call_compiler.rs:74` and `:238`, plus `array_compiler`,
-  `edge_compiler`, `overload_resolver`, `destructor_compiler`). The borrow checker needs those
-  bindings, because a group rides as a rune conclusion. The fix is small: stop discarding what the
-  solver already produced.
+
+The per-call group bindings need no separate plumbing. Once rung 0 puts a real region on every
+`BorrowRefT`, each argument's group rides on that argument expression's own `BorrowRef` region, and a
+return-position group rides on the call's result. Both are already in the finished tree, so the walk
+reads a call's groups straight off its argument and result nodes, matched against the callee header's
+region parameters. It does not depend on the solver's discarded `inferences` map. The only groups
+this misses are ones that appear on no argument and no result (an independent where-clause group, or
+an effect-only `mut(g)`), and those are rung 1 and later.
 
 ## The order
 
 1. **Decide** (architect): go or no-go on rung 0. Nothing past rung 0 starts until this.
 2. **Groundwork** (region-independent, do anytime): add source ranges to the call and control
-   nodes; thread the per-call inferences out.
+   nodes.
 3. **Rung 0 core**: the region representation (`ITemplataT::Region`, interned recursive `RegionT`,
    a real region-placeholder mint, the concrete-group-expression rep with the `rc.T` mention and
    independent-group-rune constraints). Thread the real region through the ~85 `Default` sites.
 4. **Rung 0 syntax**: `<g': T>`, then the `in g` clause (which resolves the anonymous-region panic).
-5. **The seam**: stand up the context-carrying per-body walker, and wire the `check_call` hook at
-   `call_compiler.rs:151` as a no-op that proves the plumbing. Rung 0 is well-formedness only, so no
-   real check yet.
+5. **The seam**: stand up the whole-function walk and invoke it at the end of compiling each
+   `FunctionT` (`function_compiler_core.rs:304-309` and the sibling `add_function` sites), passing the
+   finished function plus a read-only `&CompilerOutputs` and `&Compiler`, returning errors. Rung 0 is
+   well-formedness only, so the walk does nothing yet; this step just proves the plumbing: it exists,
+   runs once per function, and returns an empty error list.
 
 Rung 1 follows: the first real check plus effect clauses (`mut(g)`), which is a second solver
 domain (`ITemplataT::Effect`). It is deferrable and does not gate the start.
 
 ## What still needs a ruling
 
-One open question is shape-determining for the rung 0 representation, so it is worth resolving as
-that representation is designed:
+Two open questions remain. The first is shape-determining for the rung 0 representation, so resolve
+it as that representation is designed:
 
 - **What does `&x` form at a claim-typed place?** The candidates are a payload borrow, a
   compositional borrow-of-claim, or a one-hop argument coercion. This is open upstream, they have
   asked for our input, and our onion lowering already picks a horn implicitly. It is entangled with
   the `rc.T` mention above.
+
+The second is a small ordering choice, not a design fork:
+
+- **Does the whole-function walk run before or after `coutputs.add_function`**
+  (`function_compiler_core.rs:309`)? The finished function is handed to the checker directly, so its
+  own data never depends on being registered; the only effect is whether the checker sees its own
+  function in the read-only `coutputs` while checking, which it should not need. Undecided.
 
 The other open design items (where mutability lives, the effect vocabulary, the per-group
 permission map) all belong to rung 1's effect domain. They can wait.
@@ -223,7 +250,7 @@ permission map) all belong to rung 1's effect domain. They can wait.
 
 Rung 0 is the foundation. Each rung past it catches a distinct class of error.
 
-| Rung | Delivers | New errors | Call-site check? |
+| Rung | Delivers | New errors | Emits errors? |
 |---|---|---|---|
 | 0 | `<g'>`/`in g` parse+scout; `ITemplataT::Region`; real region on `BorrowRefT` | none (well-formedness only) | no |
 | 1 | effect clauses (`mut(g)`); the first check | disjointness violation (declared disjoint, passed aliasing); permission escalation | yes, the first real check |
@@ -269,7 +296,7 @@ is no outlives lattice, no variance, and no subtyping over groups. Everything is
 what lets a group live in the existing templata/rune vocabulary at all. Do not import Rust's region
 reasoning; it answers a different question.
 
-**What the call-site check actually is.** Omission is a checked disjointness claim: a signature's
+**What the per-call check verifies.** Omission is a checked disjointness claim: a signature's
 mutated groups include its effect targets, and omitting a declared relation between a bound group
 and an effect target is a disjointness claim, verified at every binding site.
 
@@ -291,20 +318,21 @@ may-facts: union at joins, least fixpoint on loops. Conserved facts (move-state,
 admit no safe extreme, so a disagreeing join rejects. The existing move tracker is the conserved
 kind; invalidation is the monotone kind. They sit side by side.
 
-**Two seams, because the call-site check alone is insufficient.** `xs[i]` is a place expression, not
+**Two node-arms, because the call check alone is insufficient.** `xs[i]` is a place expression, not
 a call. design-1:169 calls `&entity.rings[0]` "a fresh borrow derived from a place," and design-1:902
-binds group parameters to indexed places. So borrow creation needs its own hook at the
-member/element-lookup seam, and the call-site check covers borrow checking only. They compose in a
-fixed order: the creation hook runs first and hands the call-site check something. Plan the file for
-both entry points from the start; this is the cheap-now, expensive-later item.
+binds group parameters to indexed places. So borrow creation is its own arm of the whole-function
+walk, at the member/element-lookup nodes, and the per-call check covers checking only. They compose
+in a fixed order: the creation arm runs first and hands the call arm a recorded borrow. Plan the walk
+for both node-arms from the start; this is the cheap-now, expensive-later item.
 
 **Quarantine by capability, not visibility.** The checker reads `ExpressionTE`. A parallel fact-IR
 was considered and rejected: a second representation with permanent sync cost, and rustc only
 affords MIR because MIR has four other consumers. The rule instead constrains what the checker may
 do: no `&mut CompilerOutputs`, no interner, no arena, no calls back into resolution; errors are
-returned and the architect routes them. The entry point starts stateless,
-`check_call(callee_header, conclusions, arg_kinds) -> Result<(), BorrowError>`, and gains state only
-at the rung whose first test is use-after-churn.
+returned and the architect routes them. The entry point is `check_function(function:
+&FunctionDefinitionT, coutputs: &CompilerOutputs, compiler: &Compiler) -> Vec<BorrowError>`. A
+read-only `coutputs` and `compiler` are enough, so nothing is snapshotted. It is stateless across
+functions and gains internal per-body state only at the rung whose first test is use-after-churn.
 
 **The checker is per-body.** Resolution is symbolic at the typing pass (design-1:125); poisoning is
 computed per frame. Every use goes through a typed binding in some frame, each frame knows its own
@@ -359,9 +387,10 @@ Two surveys of `~/rust` justify the choices above.
 - MIR was edited for borrowck after the fact (`FalseEdge`, `FakeRead`, special match lowering) to
   hide CFG structure from it. Lowering to a CFG bought precision, then they spent effort blurring it
   back.
-- rustc's structure is two walks: a location-local visitor (`check_call_inputs`/`check_call_dest`,
-  our call-site check) plus a body-global dataflow fixpoint (our rung 2). Plan the file so both
-  coexist.
+- rustc's structure is two separate traversals: a location-local visitor
+  (`check_call_inputs`/`check_call_dest`) plus a body-global dataflow fixpoint. Our structured
+  control flow lets one whole-function walk play both roles: the per-call check is an arm, the
+  dataflow is carried state (or a preceding propagate pass). Plan the walk for both from the start.
 - `rustc_borrowck` is a leaf crate, which is precedent that capability-quarantine works.
 - Rust has no declared disjointness; it uses place-overlap detection (`places_conflict.rs`, ~526
   lines). Our same-group-aliases-freely rule deletes that entirely.

@@ -3368,8 +3368,8 @@ fn reports_when_if_condition_isnt_boolean() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
     let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
     match &err {
-        ICompileErrorT::IfConditionIsntBoolean { .. } => {}
-        _other => panic!("expected IfConditionIsntBoolean"),
+        ICompileErrorT::ConditionIsntBoolean { .. } => {}
+        _other => panic!("expected ConditionIsntBoolean"),
     }
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
@@ -3377,9 +3377,35 @@ fn reports_when_if_condition_isnt_boolean() {
 exported func main() int { if 3 { return 5; } else { return 7; } }
 At test:0.vale:1:31:
 exported func main() int { if 3 { return 5; } else { return 7; } }
-If condition should be a bool, but was: i32
+Condition should be a bool, but was: i32
 "#,
     );
+}
+
+#[test]
+fn reports_when_while_condition_isnt_boolean() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "exported func main() int { while (3) { } return 7; }";
+    let code_source = CodeSource::new(vec![
+        new_test_code_map(&parse_arena, code),
+    ]);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
+        ICompileErrorT::ConditionIsntBoolean { .. } => {}
+        _other => panic!("expected ConditionIsntBoolean"),
+    }
+    let humanized = humanize_compile_error(&mut compile, err);
+    assert!(
+        humanized.contains("Condition should be a bool, but was: i32"),
+        "expected the shared condition error, got:\n{}", humanized);
 }
 
 #[test]
@@ -3726,9 +3752,7 @@ fn humanize_errors() {
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::LambdaReturnDoesntMatchInterfaceConstructor { range: tz_slice }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
-        ICompileErrorT::IfConditionIsntBoolean { range: tz_slice, actual_type: firefly_coord }).is_empty());
-    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
-        ICompileErrorT::WhileConditionIsntBoolean { range: tz_slice, actual_type: firefly_coord }).is_empty());
+        ICompileErrorT::ConditionIsntBoolean { range: tz_slice, actual_type: firefly_coord }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantImplNonInterface { range: tz_slice, templata: ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: firefly_kind })) }).is_empty());
     let spaceship_snapshot_name_s = scout_arena.intern_struct_declaration_name(

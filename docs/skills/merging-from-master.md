@@ -8,6 +8,11 @@ g_mention_in:
 
 # Merging From Master
 
+> **⚠️ OUT OF DATE — do not trust the branch names below.** This guide is pending two naming
+> decisions still TBD: what the AI-driven branch is named (currently `experimental`) and what the
+> main branch is named (currently `master`). Until those are settled, treat every `experimental` /
+> `master` reference here as a placeholder.
+
 `master` and `experimental` diverged philosophically. Master revived 5-region backends, Fearless FFI, HGM/generations, and the `pure_height` collapser in commit `29ca93394`. Experimental deleted that apparatus. **Most master commits past the divergence are not safe for experimental.** Triage carefully; do not bulk-cherry-pick.
 
 This is the mirror of `merging-from-experimental.md` (read it for the master-bound flow). Both directions share the same divergence — viewed from opposite sides.
