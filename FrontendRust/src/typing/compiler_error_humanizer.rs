@@ -159,6 +159,10 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
     ICompileErrorT::CouldntFindTypeT { range: _, name } => {
       format!("Couldn't find any type named `{:?}`!", name)
     }
+    ICompileErrorT::UnresolvableRustImport { range: _, path } => {
+      format!("Couldn't resolve the Rust import `rust.{path}` to any importable item. Name the crate \
+               and a `pub` type or function, e.g. `import rust.mycrate.Widget;`.")
+    }
     ICompileErrorT::CouldntNarrowDownCandidates { range: _, candidates } => {
       let parts: Vec<String> = candidates.iter().map(|proto| {
         format!("\n  {}", humanize_id(scout_arena, typing_interner, code_map, proto.id, None))

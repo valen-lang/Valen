@@ -44,6 +44,7 @@ use crate::compile_options::GlobalOptions;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
+use crate::postparsing::ScoutCompilation;
 use crate::typing::compilation::TypingPassCompilation;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::oracles::Oracles;
@@ -172,7 +173,6 @@ impl<R> CaseOutcome<R> {
 
 struct CaseCallbacks<'a, F, R> {
     vale_source: &'a str,
-    allowed: &'a [&'a str],
     /// The Vale package the case's source is compiled as. Almost always `"test"`; a case naming
     /// the reserved `rust` module is what makes the reservation observable at all.
     package_module: &'a str,
@@ -207,9 +207,53 @@ where
         );
         let code_source = CodeSource::new(vec![Source::from_code_map(&files)]);
 
+        let global_options = GlobalOptions {
+            sanity_check: true,
+            use_overload_index: true,
+            use_optimized_solver: true,
+            verbose_errors: true,
+            debug_output: true,
+        };
+
+        // Parse before building the oracle. The oracle's importable set is exactly the program's real
+        // `import rust.X.Y` statements, each joined back into the dotted path the oracle resolves.
+        // `ScoutCompilation` needs no oracle, so it runs first and yields the parsed imports; the tiny
+        // program is parsed again inside the typing compilation below, which costs nothing.
+        let mut import_paths: Vec<String> = Vec::new();
+        {
+            let mut scout = ScoutCompilation::new(
+                &scout_arena,
+                &keywords,
+                &parser_keywords,
+                &parse_arena,
+                vec![package_coord],
+                &code_source,
+                global_options.clone(),
+            );
+            if let Ok(scoutput) = scout.get_scoutput() {
+                for program in scoutput.file_coord_to_contents.values() {
+                    for imp in program.imports {
+                        if imp.module_name == keywords.rust {
+                            let mut segments: Vec<&str> =
+                                imp.package_names.iter().map(|s| s.0).collect();
+                            segments.push(imp.importee_name.0);
+                            import_paths.push(segments.join("."));
+                        }
+                    }
+                }
+            }
+        }
+        // String-dedup so a program that names the same item twice does not register it twice.
+        let mut import_path_strs: Vec<&str> = Vec::new();
+        for path in &import_paths {
+            if !import_path_strs.contains(&path.as_str()) {
+                import_path_strs.push(path.as_str());
+            }
+        }
+
         // No package coordinate is handed to the oracle: each item derives its own from
         // `tcx.def_path`, so items from different crates cannot collide on one coordinate.
-        let real = TyCtxtOracle::new(tcx, &scout_arena, self.allowed);
+        let real = TyCtxtOracle::new(tcx, &scout_arena, &import_path_strs);
         let compiling = tcx.crate_name(rustc_span::def_id::LOCAL_CRATE).to_string();
         let logging = LoggingOracle::new(&real, &compiling);
 
@@ -222,13 +266,7 @@ where
             vec![package_coord],
             &code_source,
             TypingPassOptions {
-                global_options: GlobalOptions {
-                    sanity_check: true,
-                    use_overload_index: true,
-                    use_optimized_solver: true,
-                    verbose_errors: true,
-                    debug_output: true,
-                },
+                global_options: global_options.clone(),
                 debug_out: Arc::new(|x: &str| println!("{}", x)),
                 tree_shaking_enabled: true,
             },
@@ -408,7 +446,6 @@ fn try_run_case_in_package<R: Send>(
 
     let mut callbacks = CaseCallbacks {
         vale_source: case.vale,
-        allowed: case.allowed,
         package_module,
         extract,
         outcome: None,

@@ -42,12 +42,9 @@ pub struct Case {
     /// Names this case's private rustc output directory, so concurrent cases do not race on one
     /// rlib path (@TMBFIZ).
     pub name: &'static str,
-    /// The Vale program. `main` is the entry point and its return value is the case's observable.
+    /// The Vale program, including its `import rust.X.Y;` statements. `main` is the entry point and its
+    /// return value is the case's observable. Importable Rust items are exactly what the program imports.
     pub vale: &'static str,
-    /// The Rust items declared importable. This is what an `import rust.X.Y` will eventually
-    /// populate; supplying it explicitly is the same mechanism with a different source. Scoping is
-    /// membership in this list, never a check at the call site.
-    pub allowed: &'static [&'static str],
     pub expect: Expect,
 }
 
@@ -59,12 +56,29 @@ pub const CALLS_A_RUST_FREE_FUNCTION: Case = Case {
     fixture: "fixtures",
     name: "free-function",
     vale: r#"
+import rust.mycrate.add_two_numbers;
 exported func main() int {
   return add_two_numbers(20, 22);
 }
 "#,
-    allowed: &["add_two_numbers"],
     expect: Expect::Returns(42),
+};
+
+/// Laziness, proven positively: three representable free functions are imported and exactly one is
+/// called. Only the called function's signature is ever queried. This is the whole payoff — importing
+/// a type with a hundred methods must not pay `fn_sig` for the ones a program never calls.
+pub const LAZY_SYNTHESIS_ONLY_QUERIES_CALLED_FUNCTIONS: Case = Case {
+    fixture: "fixtures",
+    name: "lazy-only-called",
+    vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.seven;
+import rust.mycrate.is_positive;
+exported func main() int {
+  return add_two_numbers(3, 4);
+}
+"#,
+    expect: Expect::Returns(7),
 };
 
 /// The negative control for the case above. If the same program compiled with nothing importable,
@@ -77,7 +91,6 @@ exported func main() int {
   return add_two_numbers(20, 22);
 }
 "#,
-    allowed: &[],
     expect: Expect::FailsToCompile("CouldntFindFunctionToCallT"),
 };
 
@@ -90,11 +103,12 @@ pub const READS_A_GENERIC_SIGNATURE_STRUCTURALLY: Case = Case {
     fixture: "fixtures",
     name: "generic-function",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.pick;
 exported func main() int {
   return pick<int, bool>(add_two_numbers(10, 5), true);
 }
 "#,
-    allowed: &["add_two_numbers", "pick"],
     expect: Expect::Returns(15),
 };
 
@@ -103,11 +117,11 @@ pub const CALLS_A_ZERO_ARG_RUST_FUNCTION: Case = Case {
     fixture: "fixtures",
     name: "zero-arg",
     vale: r#"
+import rust.mycrate.seven;
 exported func main() int {
   return seven();
 }
 "#,
-    allowed: &["seven"],
     expect: Expect::Returns(7),
 };
 
@@ -116,12 +130,12 @@ pub const CALLS_A_RUST_FUNCTION_RETURNING_UNIT: Case = Case {
     fixture: "fixtures",
     name: "returns-unit",
     vale: r#"
+import rust.mycrate.do_nothing;
 exported func main() int {
   do_nothing();
   return 8;
 }
 "#,
-    allowed: &["do_nothing"],
     expect: Expect::Returns(8),
 };
 
@@ -130,11 +144,12 @@ pub const PASSES_AND_RETURNS_A_BOOL: Case = Case {
     fixture: "fixtures",
     name: "bool-round-trip",
     vale: r#"
+import rust.mycrate.is_positive;
+import rust.mycrate.to_int;
 exported func main() int {
   return to_int(is_positive(5));
 }
 "#,
-    allowed: &["is_positive", "to_int"],
     expect: Expect::Returns(1),
 };
 
@@ -144,11 +159,13 @@ pub const TAKES_A_RUST_TYPE_AS_A_PARAMETER: Case = Case {
     fixture: "fixtures",
     name: "rust-type-parameter",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.value_of_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   return value_of_counter(make_counter());
 }
 "#,
-    allowed: &["make_counter", "value_of_counter", "Counter"],
     expect: Expect::Returns(7),
 };
 
@@ -158,11 +175,14 @@ pub const TAKES_AND_RETURNS_A_RUST_TYPE: Case = Case {
     fixture: "fixtures",
     name: "rust-type-both-sides",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.bump;
+import rust.mycrate.value_of_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   return value_of_counter(bump(make_counter()));
 }
 "#,
-    allowed: &["make_counter", "bump", "value_of_counter", "Counter"],
     // `Counter { value: 7 }`, bumped once.
     expect: Expect::Returns(8),
 };
@@ -175,11 +195,12 @@ pub const BINDS_THE_SECOND_GENERIC_PARAMETER: Case = Case {
     fixture: "fixtures",
     name: "generic-second-parameter",
     vale: r#"
+import rust.mycrate.pick_second;
+import rust.mycrate.seven;
 exported func main() int {
   return pick_second<bool, int>(true, seven());
 }
 "#,
-    allowed: &["pick_second", "seven"],
     expect: Expect::Returns(7),
 };
 
@@ -189,11 +210,11 @@ pub const INSTANTIATES_A_GENERIC_AT_ONE_PARAMETER: Case = Case {
     fixture: "fixtures",
     name: "generic-one-parameter",
     vale: r#"
+import rust.mycrate.id;
 exported func main() int {
   return id<int>(9);
 }
 "#,
-    allowed: &["id"],
     expect: Expect::Returns(9),
 };
 
@@ -202,11 +223,14 @@ pub const INSTANTIATES_A_GENERIC_AT_A_RUST_TYPE: Case = Case {
     fixture: "fixtures",
     name: "generic-at-rust-type",
     vale: r#"
+import rust.mycrate.id;
+import rust.mycrate.make_counter;
+import rust.mycrate.value_of_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   return value_of_counter(id<Counter>(make_counter()));
 }
 "#,
-    allowed: &["id", "make_counter", "value_of_counter", "Counter"],
     expect: Expect::Returns(7),
 };
 
@@ -216,11 +240,12 @@ pub const DECLINES_AN_UNREPRESENTABLE_SIGNATURE: Case = Case {
     fixture: "fixtures",
     name: "declined-signature",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.first;
 exported func main() int {
   return add_two_numbers(1, 4);
 }
 "#,
-    allowed: &["add_two_numbers", "first"],
     expect: Expect::Returns(5),
 };
 
@@ -231,11 +256,12 @@ pub const DECLINES_AN_UNREPRESENTABLE_PARAMETER: Case = Case {
     fixture: "fixtures",
     name: "declined-parameter",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.take_first;
 exported func main() int {
   return add_two_numbers(2, 4);
 }
 "#,
-    allowed: &["add_two_numbers", "take_first"],
     expect: Expect::Returns(6),
 };
 
@@ -249,11 +275,12 @@ pub const DECLINES_AN_UNSIGNED_INTEGER: Case = Case {
     fixture: "fixtures",
     name: "declined-unsigned",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.unsigned_count;
 exported func main() int {
   return add_two_numbers(3, 4);
 }
 "#,
-    allowed: &["add_two_numbers", "unsigned_count"],
     expect: Expect::Returns(7),
 };
 
@@ -267,11 +294,12 @@ pub const DECLINES_A_FLOAT: Case = Case {
     fixture: "fixtures",
     name: "declined-float",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.half_of;
 exported func main() int {
   return add_two_numbers(4, 4);
 }
 "#,
-    allowed: &["add_two_numbers", "half_of"],
     expect: Expect::Returns(8),
 };
 
@@ -286,11 +314,12 @@ pub const DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE: Case = Case {
     fixture: "fixtures",
     name: "declined-unimported-type",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.takes_hidden;
 exported func main() int {
   return add_two_numbers(4, 5);
 }
 "#,
-    allowed: &["add_two_numbers", "takes_hidden"],
     expect: Expect::Returns(9),
 };
 
@@ -307,11 +336,11 @@ pub const IMPORTS_AN_ITEM_FROM_A_NESTED_MODULE: Case = Case {
     fixture: "fixtures",
     name: "nested-module",
     vale: r#"
+import rust.mycrate.instruments.depth_reading;
 exported func main() int {
   return depth_reading();
 }
 "#,
-    allowed: &["instruments.depth_reading"],
     expect: Expect::Returns(31),
 };
 
@@ -325,11 +354,12 @@ pub const IMPORTS_A_TYPE_FROM_A_NESTED_MODULE: Case = Case {
     fixture: "fixtures",
     name: "nested-module-type",
     vale: r#"
+import rust.mycrate.instruments.Sonar;
+import rust.mycrate.instruments.make_sonar;
 exported func main() int {
   return (make_sonar()).depth_of();
 }
 "#,
-    allowed: &["instruments.Sonar", "instruments.make_sonar"],
     // `Sonar { depth: 33 }`.
     expect: Expect::Returns(33),
 };
@@ -343,11 +373,11 @@ pub const IMPORTS_THROUGH_A_RE_EXPORTED_ITEM: Case = Case {
     fixture: "fixtures",
     name: "re-export-item",
     vale: r#"
+import rust.mycrate.readouts.depth_reading;
 exported func main() int {
   return depth_reading();
 }
 "#,
-    allowed: &["readouts.depth_reading"],
     expect: Expect::Returns(31),
 };
 
@@ -357,11 +387,12 @@ pub const IMPORTS_THROUGH_A_RE_EXPORTED_MODULE: Case = Case {
     fixture: "fixtures",
     name: "re-export-module",
     vale: r#"
+import rust.mycrate.gear.instruments.Sonar;
+import rust.mycrate.gear.instruments.make_sonar;
 exported func main() int {
   return (make_sonar()).depth_of();
 }
 "#,
-    allowed: &["gear.instruments.Sonar", "gear.instruments.make_sonar"],
     // `Sonar { depth: 33 }`.
     expect: Expect::Returns(33),
 };
@@ -376,11 +407,12 @@ pub const IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_ITEM: Case = Case {
     fixture: "fixtures_two_crates",
     name: "cross-crate-re-export-item",
     vale: r#"
+import rust.othercrate.vendored.make_gadget;
+import rust.othercrate.vendored.Gadget;
 exported func main() int {
   return (make_gadget()).gadget_value();
 }
 "#,
-    allowed: &["vendored.make_gadget", "vendored.Gadget"],
     // `Gadget { value: 2 }`.
     expect: Expect::Returns(2),
 };
@@ -392,11 +424,12 @@ pub const IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_MODULE: Case = Case {
     fixture: "fixtures_two_crates",
     name: "cross-crate-re-export-module",
     vale: r#"
+import rust.othercrate.toolkit.tools.make_spanner;
+import rust.othercrate.toolkit.tools.Spanner;
 exported func main() int {
   return (make_spanner()).spanner_size();
 }
 "#,
-    allowed: &["toolkit.tools.make_spanner", "toolkit.tools.Spanner"],
     // `Spanner { size: 6 }`.
     expect: Expect::Returns(6),
 };
@@ -415,12 +448,14 @@ pub const AN_ITEM_IN_THE_COMPILED_CRATE_IS_NOT_IMPORTABLE: Case = Case {
     fixture: "fixtures",
     name: "compiled-crate-not-importable",
     vale: r#"
+import rust.stub.stub_only;
 exported func main() int {
   return stub_only();
 }
 "#,
-    allowed: &["stub_only"],
-    expect: Expect::FailsToCompile("CouldntFindFunctionToCallT"),
+    // `stub_only` lives in the crate being compiled (the stub), which is not among the loaded
+    // dependency crates, so naming it as `rust.stub.stub_only` resolves to nothing.
+    expect: Expect::FailsToCompile("UnresolvableRustImport"),
 };
 
 /// A Vale package may not claim the reserved `rust` module.
@@ -435,11 +470,11 @@ pub const A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE: Case = Case {
     fixture: "fixtures",
     name: "reserved-rust-module",
     vale: r#"
+import rust.mycrate.add_two_numbers;
 exported func main() int {
   return add_two_numbers(20, 22);
 }
 "#,
-    allowed: &["add_two_numbers"],
     expect: Expect::Returns(42),
 };
 
@@ -467,6 +502,27 @@ pub const A_PROGRAM_USING_EVERYTHING_AT_ONCE: Case = Case {
     fixture: "fixtures",
     name: "everything",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.seven;
+import rust.mycrate.Counter;
+import rust.mycrate.make_counter;
+import rust.mycrate.value_of_counter;
+import rust.mycrate.bump;
+import rust.mycrate.Gauge;
+import rust.mycrate.make_gauge;
+import rust.mycrate.pick;
+import rust.mycrate.id;
+import rust.mycrate.Holder;
+import rust.mycrate.make_holder;
+import rust.mycrate.make_bool_holder;
+import rust.mycrate.holder_ignore;
+import rust.mycrate.bool_holder_flag;
+import rust.mycrate.instruments.depth_reading;
+import rust.mycrate.instruments.Sonar;
+import rust.mycrate.readouts.make_sonar;
+import rust.mycrate.first;
+import rust.mycrate.unsigned_count;
+import rust.mycrate.half_of;
 exported func main() int {
   held_counter = make_counter();
   held_gauge = make_gauge();
@@ -481,7 +537,7 @@ exported func main() int {
   from_second_type = (make_gauge()).get();
   from_second_method = (make_counter()).doubled();
   from_generic_method = (make_counter()).or_else<int>(19);
-  from_chained_calls = value_of_counter(bump(new()));
+  from_chained_calls = value_of_counter(bump(Counter.new()));
 
   from_int_holder = holder_ignore<int>(make_holder());
   from_bool_holder = bool_holder_flag(make_bool_holder());
@@ -495,36 +551,6 @@ func vale_counter_value(c Counter) int {
   return (^c).get();
 }
 "#,
-    allowed: &[
-        // Free functions and a zero-arg one.
-        "add_two_numbers",
-        "seven",
-        // A type, its methods, and free functions over it.
-        "Counter",
-        "make_counter",
-        "value_of_counter",
-        "bump",
-        // A second type whose `get` collides with the first's by name.
-        "Gauge",
-        "make_gauge",
-        // Generic functions.
-        "pick",
-        "id",
-        // A generic type at two instantiations.
-        "Holder",
-        "make_holder",
-        "make_bool_holder",
-        "holder_ignore",
-        "bool_holder_flag",
-        // Nested module: an item and a type by path, plus one reached through a re-export.
-        "instruments.depth_reading",
-        "instruments.Sonar",
-        "readouts.make_sonar",
-        // Three declined signatures, present but unusable. Nothing else here may notice.
-        "first",
-        "unsigned_count",
-        "half_of",
-    ],
     // `instruments::depth_reading` returns 31.
     expect: Expect::Returns(31),
 };
@@ -533,17 +559,19 @@ func vale_counter_value(c Counter) int {
 // B. Item kinds
 // ---------------------------------------------------------------------------
 
-/// A Rust type reaches Vale by inference from a signature — never by name — and its method is an
-/// ordinary top-level function whose first parameter is the receiver.
+/// A Rust type reaches Vale by inference from a signature — never by name — and its method lives in
+/// the type's outer environment, a function whose first parameter is the receiver. `v.get()` desugars
+/// to `get(v)`, which overload resolution finds via the receiver's outer env.
 pub const CALLS_A_METHOD_ON_A_RUST_TYPE: Case = Case {
     fixture: "fixtures",
     name: "method",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   return (make_counter()).get();
 }
 "#,
-    allowed: &["make_counter", "Counter"],
     // `Counter { value: 7 }` in the fixture.
     expect: Expect::Returns(7),
 };
@@ -557,15 +585,39 @@ pub const CALLS_AN_ASSOCIATED_FUNCTION_WITH_NO_RECEIVER: Case = Case {
     fixture: "fixtures",
     name: "associated-function",
     vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.value_of_counter;
 exported func main() int {
-  return value_of_counter(new());
+  return value_of_counter(Counter.new());
 }
 "#,
-    // No `make_counter`: `new` is the only way a `Counter` enters this program, so the case
-    // cannot pass by accidentally exercising the ordinary constructor path.
-    allowed: &["Counter", "value_of_counter"],
+    // No `make_counter`: `Counter.new()` is the only way a `Counter` enters this program, so the case
+    // cannot pass by accidentally exercising the ordinary constructor path. An associated function (no
+    // receiver) is named type-prefixed and resolves through the type's outer environment.
     // `Counter::new` builds `Counter { value: 5 }`.
     expect: Expect::Returns(5),
+};
+
+/// A method on a **generic** type, whose signature names the type's own parameter. `Holder<int>`'s
+/// `into_value(self) -> T` returns `T`, which is inherited from the impl (`impl<T> Holder<T>`), not
+/// declared by the method. This is the shape that used to decline as `InheritedParameter`; the fix is
+/// the parent-inclusive generic list.
+pub const CALLS_A_METHOD_NAMING_THE_TYPES_GENERIC: Case = Case {
+    fixture: "fixtures",
+    // Distinct from CALLS_A_GENERIC_METHOD's "generic-method": the name is the per-case build out_dir
+    // (`vale-interop-cases/<name>`), so a shared name races two tests on one `libmycrate.rlib`.
+    name: "method-naming-types-generic",
+    vale: r#"
+import rust.mycrate.Holder;
+import rust.mycrate.make_holder;
+exported func main() int {
+  return (make_holder()).into_value();
+}
+"#,
+    // Called on the rvalue directly (not a local), so the owned `self` matches without the borrow-read
+    // gap that reading a local variable would trip.
+    // `Holder<int> { value: 9 }`, unwrapped.
+    expect: Expect::Returns(9),
 };
 
 /// Method discovery is a **list**, not a lucky single: two methods on one type, both callable.
@@ -573,33 +625,36 @@ pub const CALLS_TWO_METHODS_ON_ONE_TYPE: Case = Case {
     fixture: "fixtures",
     name: "two-methods",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   x = (make_counter()).get();
   return (make_counter()).doubled();
 }
 "#,
-    allowed: &["make_counter", "Counter"],
     // `Counter { value: 7 }`, doubled.
     expect: Expect::Returns(14),
 };
 
 /// Two types' methods coexist, and each resolves to its own receiver.
 ///
-/// `Counter::get` and `Gauge::get` share a name on purpose. There is no per-type method table under
-/// this design — every method is a top-level function whose first parameter is the receiver — so
-/// what could actually break is the importer pairing a method with the wrong type. It would show up
-/// here as a resolution failure rather than a wrong answer, since no `Gauge` would satisfy a
-/// `Counter` receiver.
+/// `Counter::get` and `Gauge::get` share a name on purpose. Each lives in its own type's outer
+/// environment, so what could actually break is the importer pairing a method with the wrong type. It
+/// would show up here as a resolution failure rather than a wrong answer, since no `Gauge` would
+/// satisfy a `Counter` receiver.
 pub const CALLS_METHODS_ON_TWO_DIFFERENT_RUST_TYPES: Case = Case {
     fixture: "fixtures",
     name: "two-types-methods",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.Counter;
+import rust.mycrate.make_gauge;
+import rust.mycrate.Gauge;
 exported func main() int {
   x = (make_counter()).get();
   return (make_gauge()).get();
 }
 "#,
-    allowed: &["make_counter", "Counter", "make_gauge", "Gauge"],
     // `Gauge { reading: 20 }`.
     expect: Expect::Returns(20),
 };
@@ -614,12 +669,13 @@ pub const A_RUST_VALUE_RETURNED_AND_DISCARDED_GETS_DROPPED: Case = Case {
     fixture: "fixtures",
     name: "discarded-temporary",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   make_counter();
   return 4;
 }
 "#,
-    allowed: &["make_counter", "Counter"],
     expect: Expect::Returns(4),
 };
 
@@ -631,19 +687,17 @@ pub const IMPORTS_TWO_RUST_TYPES_AT_ONCE: Case = Case {
     fixture: "fixtures",
     name: "two-types",
     vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.make_counter;
+import rust.mycrate.value_of_counter;
+import rust.mycrate.Gauge;
+import rust.mycrate.make_gauge;
+import rust.mycrate.gauge_reading;
 exported func main() int {
   x = value_of_counter(make_counter());
   return gauge_reading(make_gauge());
 }
 "#,
-    allowed: &[
-        "Counter",
-        "make_counter",
-        "value_of_counter",
-        "Gauge",
-        "make_gauge",
-        "gauge_reading",
-    ],
     // `Gauge { reading: 20 }`, plus 2.
     expect: Expect::Returns(22),
 };
@@ -660,11 +714,14 @@ pub const A_RUST_TYPE_FLOWS_THROUGH_TWO_CALLS: Case = Case {
     fixture: "fixtures",
     name: "flows-through-calls",
     vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.make_counter;
+import rust.mycrate.bump;
+import rust.mycrate.value_of_counter;
 exported func main() int {
   return value_of_counter(bump(make_counter()));
 }
 "#,
-    allowed: &["Counter", "make_counter", "bump", "value_of_counter"],
     // `Counter { value: 7 }`, bumped once.
     expect: Expect::Returns(8),
 };
@@ -677,11 +734,12 @@ pub const CALLS_A_GENERIC_METHOD: Case = Case {
     fixture: "fixtures",
     name: "generic-method",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   return (make_counter()).or_else<int>(19);
 }
 "#,
-    allowed: &["make_counter", "Counter"],
     expect: Expect::Returns(19),
 };
 
@@ -693,12 +751,13 @@ pub const A_RUST_VALUE_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP: Case = Case {
     fixture: "fixtures",
     name: "scope-end-drop",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   c = make_counter();
   return 3;
 }
 "#,
-    allowed: &["make_counter", "Counter"],
     expect: Expect::Returns(3),
 };
 
@@ -713,11 +772,13 @@ pub const CALLS_A_GENERIC_FUNCTION_TAKING_A_GENERIC_TYPE: Case = Case {
     fixture: "fixtures",
     name: "generic-fn-generic-param",
     vale: r#"
+import rust.mycrate.make_holder;
+import rust.mycrate.holder_ignore;
+import rust.mycrate.Holder;
 exported func main() int {
   return holder_ignore<int>(make_holder());
 }
 "#,
-    allowed: &["make_holder", "holder_ignore", "Holder"],
     expect: Expect::Returns(9),
 };
 
@@ -739,19 +800,15 @@ pub const IMPORTS_FROM_TWO_CRATES: Case = Case {
     // wanted (`NoImplicitCloneDefinedT`) — the same borrow read-out gap that blocks case 39, and
     // Vale2's. A case about multiplicity should not be gated on either.
     vale: r#"
+import rust.mycrate.Gadget;
+import rust.mycrate.make_gadget;
+import rust.othercrate.Doohickey;
+import rust.othercrate.make_doohickey;
 exported func main() int {
   d = (make_doohickey()).doohickey_value();
   return (make_gadget()).gadget_value();
 }
 "#,
-    allowed: &[
-        "Gadget",
-        "make_gadget",
-        "gadget_value",
-        "Doohickey",
-        "make_doohickey",
-        "doohickey_value",
-    ],
     // `Gadget { value: 2 }`.
     expect: Expect::Returns(2),
 };
@@ -766,13 +823,16 @@ pub const TWO_CRATES_EXPORTING_THE_SAME_SHORT_NAME_STAY_DISTINCT: Case = Case {
     fixture: "fixtures_two_crates",
     name: "two-crates-same-short-name",
     vale: r#"
+import rust.mycrate.Widget;
+import rust.othercrate.Widget;
+import rust.mycrate.make_widget;
+import rust.othercrate.make_other_widget;
 exported func main() int {
   a = make_widget();
   b = make_other_widget();
   return 5;
 }
 "#,
-    allowed: &["Widget", "make_widget", "make_other_widget"],
     expect: Expect::Returns(5),
 };
 
@@ -791,11 +851,15 @@ pub const A_TYPE_FROM_ONE_CRATE_DOES_NOT_SATISFY_THE_OTHERS_PARAMETER: Case = Ca
     fixture: "fixtures_two_crates",
     name: "two-crates-crossed",
     vale: r#"
+import rust.mycrate.Widget;
+import rust.othercrate.Widget;
+import rust.mycrate.make_widget;
+import rust.mycrate.widget_value;
+import rust.othercrate.make_other_widget;
 exported func main() int {
   return widget_value(make_other_widget());
 }
 "#,
-    allowed: &["Widget", "make_widget", "widget_value", "make_other_widget"],
     expect: Expect::FailsToCompile("CouldntFindFunctionToCallT"),
 };
 
@@ -809,11 +873,11 @@ pub const AN_ITEM_NOT_IN_THE_ALLOWLIST_IS_NOT_IMPORTABLE: Case = Case {
     fixture: "fixtures",
     name: "item-not-allowed",
     vale: r#"
+import rust.mycrate.add_two_numbers;
 exported func main() int {
   return seven();
 }
 "#,
-    allowed: &["add_two_numbers"],
     expect: Expect::FailsToCompile("CouldntFindFunctionToCallT"),
 };
 
@@ -824,12 +888,15 @@ pub const AN_ALLOWLIST_ENTRY_THE_CRATE_DOES_NOT_EXPORT_IS_IGNORED: Case = Case {
     fixture: "fixtures",
     name: "stale-allowlist-entry",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.no_such_item_exists_anywhere;
 exported func main() int {
   return add_two_numbers(2, 8);
 }
 "#,
-    allowed: &["add_two_numbers", "no_such_item_exists_anywhere"],
-    expect: Expect::Returns(10),
+    // The crate exports no such item, so the import resolves to nothing — an error now, rather than a
+    // silently-ignored allowlist entry.
+    expect: Expect::FailsToCompile("UnresolvableRustImport"),
 };
 
 /// A crate's module children include its own `extern crate std`, so an unfiltered name match would
@@ -839,12 +906,15 @@ pub const A_MODULE_NAMED_IN_THE_ALLOWLIST_IS_FILTERED_BY_DEFKIND: Case = Case {
     fixture: "fixtures",
     name: "module-in-allowlist",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.std;
 exported func main() int {
   return add_two_numbers(4, 8);
 }
 "#,
-    allowed: &["add_two_numbers", "std"],
-    expect: Expect::Returns(12),
+    // `std` names a module, not a fn/struct, so the import resolves to nothing — an error now, rather
+    // than a silently-ignored allowlist entry.
+    expect: Expect::FailsToCompile("UnresolvableRustImport"),
 };
 
 // ---------------------------------------------------------------------------
@@ -857,11 +927,11 @@ pub const WRONG_ARGUMENT_TYPES_DO_NOT_RESOLVE: Case = Case {
     fixture: "fixtures",
     name: "wrong-argument-types",
     vale: r#"
+import rust.mycrate.add_two_numbers;
 exported func main() int {
   return add_two_numbers(true, 4);
 }
 "#,
-    allowed: &["add_two_numbers"],
     expect: Expect::FailsToCompile("CouldntFindFunctionToCallT"),
 };
 
@@ -877,11 +947,11 @@ pub const WRONG_GENERIC_ARITY_DOES_NOT_RESOLVE: Case = Case {
     fixture: "fixtures",
     name: "wrong-generic-arity",
     vale: r#"
+import rust.mycrate.pick;
 exported func main() int {
   return pick<int, bool, int>(3, true);
 }
 "#,
-    allowed: &["pick"],
     expect: Expect::FailsToCompile("CouldntFindFunctionToCallT"),
 };
 
@@ -896,6 +966,7 @@ pub const A_VALE_FUNCTION_AND_A_RUST_FUNCTION_WITH_THE_SAME_NAME: Case = Case {
     fixture: "fixtures",
     name: "same-named-function",
     vale: r#"
+import rust.mycrate.add_two_numbers;
 exported func main() int {
   return add_two_numbers(1, 2);
 }
@@ -903,7 +974,6 @@ func add_two_numbers(a int, b int) int {
   return 99;
 }
 "#,
-    allowed: &["add_two_numbers"],
     // No trailing `T` on this one, unlike most `ICompileErrorT` arms.
     expect: Expect::FailsToCompile("CouldntNarrowDownCandidates"),
 };
@@ -919,11 +989,13 @@ pub const A_PROGRAM_USING_NO_RUST_ITEMS_COMPILES_WITH_AN_ORACLE_PRESENT: Case = 
     fixture: "fixtures",
     name: "no-rust-items",
     vale: r#"
+import rust.mycrate.add_two_numbers;
+import rust.mycrate.Counter;
+import rust.mycrate.make_counter;
 exported func main() int {
   return 17;
 }
 "#,
-    allowed: &["add_two_numbers", "Counter", "make_counter"],
     expect: Expect::Returns(17),
 };
 
@@ -936,6 +1008,8 @@ pub const VALE_SOURCE_CAN_NAME_A_RUST_TYPE: Case = Case {
     fixture: "fixtures",
     name: "vale-names-a-rust-type",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   return value_of(make_counter());
 }
@@ -943,7 +1017,6 @@ func value_of(c Counter) int {
   return 11;
 }
 "#,
-    allowed: &["make_counter", "Counter"],
     expect: Expect::Returns(11),
 };
 
@@ -956,12 +1029,13 @@ pub const A_GENERIC_RUST_TYPE_GETS_A_SCOPE_END_DROP: Case = Case {
     fixture: "fixtures",
     name: "generic-scope-end-drop",
     vale: r#"
+import rust.mycrate.make_holder;
+import rust.mycrate.Holder;
 exported func main() int {
   h = make_holder();
   return 17;
 }
 "#,
-    allowed: &["make_holder", "Holder"],
     expect: Expect::Returns(17),
 };
 
@@ -980,6 +1054,8 @@ pub const VALE_SOURCE_CALLS_A_METHOD_ON_A_NAMED_RUST_PARAMETER: Case = Case {
     fixture: "fixtures",
     name: "vale-param-method-call",
     vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.Counter;
 exported func main() int {
   return value_of(make_counter());
 }
@@ -987,7 +1063,6 @@ func value_of(c Counter) int {
   return (^c).get();
 }
 "#,
-    allowed: &["make_counter", "Counter"],
     // `Counter { value: 7 }` in the fixture.
     expect: Expect::Returns(7),
 };
@@ -1012,19 +1087,17 @@ pub const A_GENERIC_RUST_TYPE_CARRIES_ITS_ARGUMENTS: Case = Case {
     // wanted, not forbidden, so this is a defect rather than a constraint. Routed to Vale2; see
     // plan §9 step 2.
     vale: r#"
+import rust.mycrate.make_holder;
+import rust.mycrate.make_bool_holder;
+import rust.mycrate.holder_value;
+import rust.mycrate.bool_holder_flag;
+import rust.mycrate.Holder;
 exported func main() int {
   a = holder_value(make_holder());
   b = bool_holder_flag(make_bool_holder());
   return 13;
 }
 "#,
-    allowed: &[
-        "make_holder",
-        "make_bool_holder",
-        "holder_value",
-        "bool_holder_flag",
-        "Holder",
-    ],
     expect: Expect::Returns(13),
 };
 
@@ -1035,10 +1108,10 @@ pub const A_FATAL_RUSTC_ERROR_COSTS_ONE_CASE: Case = Case {
     fixture: "fixtures_broken_rust",
     name: "fatal-rustc-error",
     vale: r#"
+import rust.mycrate.add_two_numbers;
 exported func main() int {
   return add_two_numbers(20, 22);
 }
 "#,
-    allowed: &["add_two_numbers"],
     expect: Expect::RustcFails,
 };

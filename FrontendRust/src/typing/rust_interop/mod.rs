@@ -16,7 +16,7 @@ pub mod reserved;
 pub mod tyctxt_oracle;
 
 pub use corpus::{Case, Expect};
-pub use importer::rust_package_stores;
+pub use importer::{create_postparsed_function, declare_rust_import, rust_method_entries};
 pub use logging_oracle::{LoggingOracle, OracleCall, OracleQuery, SigPosition, SigShape};
 pub use oracle::{RustItemId, RustOracle, ValeSig};
 pub use tyctxt_oracle::TyCtxtOracle;

@@ -18,6 +18,8 @@
 use std::cell::RefCell;
 
 use crate::interner::StrI;
+use crate::postparsing::ast::ImportS;
+use crate::typing::env::environment::ResolvedName;
 use crate::typing::rust_interop::oracle::{
     RustItemId, RustOracle, ValeSig, ValeSigType,
 };
@@ -66,27 +68,31 @@ pub enum OracleQuery {
     /// `None` means the signature was **declined** — it mentions something with no Vale form,
     /// so the declaration built from it would have a hole in it.
     FnSig { item: RustItemId, answer: Option<SigShape> },
-    // The enumerating queries carry the handles alongside the names, so a test can correlate:
-    // "the item offered as `first` is the one whose signature was declined" needs the id to
-    // join on, and a name-only record would leave that assertion coupled to ordering.
-    ImportableTypes { items: Vec<(String, RustItemId)> },
-    ImportableFunctions { items: Vec<(String, RustItemId)> },
+    // `Methods` carries the handles alongside the names so a test can correlate: "the method offered as
+    // `first` is the one whose signature was declined" needs the id to join on, and a name-only record
+    // would leave that assertion coupled to ordering.
     Methods { owner: RustItemId, found: Vec<(String, RustItemId)> },
     /// A type's own generic parameter names. Empty means non-generic, which is the degenerate
     /// case rather than an absence.
     TypeGenericParams { item: RustItemId, names: Vec<String> },
+    /// One `import rust.crate.X.Y` resolved to a top-level type or free function. `None` means the
+    /// import resolved to nothing. This is the offer point for top-level items — a type or free
+    /// function reaches a program by being imported, so this is where a test sees it offered; methods
+    /// are offered by `Methods` instead.
+    ResolveImport { offered: Option<(String, RustItemId)> },
 }
 
 impl OracleQuery {
-    /// The handle offered under `name` by an enumerating query, if this is one and it offered it.
+    /// The handle offered under `name`, if this query offered it. A top-level type or free function is
+    /// offered by resolving an import; a method by enumerating its type's `methods`.
     pub fn offered(&self, name: &str) -> Option<RustItemId> {
-        let items = match self {
-            OracleQuery::ImportableTypes { items } => items,
-            OracleQuery::ImportableFunctions { items } => items,
-            OracleQuery::Methods { found, .. } => found,
-            _ => return None,
-        };
-        items.iter().find(|(n, _)| n == name).map(|(_, id)| *id)
+        match self {
+            OracleQuery::Methods { found: items, .. } => {
+                items.iter().find(|(n, _)| n == name).map(|(_, id)| *id)
+            }
+            OracleQuery::ResolveImport { offered: Some((n, id)) } if n == name => Some(*id),
+            _ => None,
+        }
     }
 }
 
@@ -157,6 +163,28 @@ fn shape_of(sig: &ValeSig) -> SigShape {
 }
 
 impl<'a, 's, 't> RustOracle<'s, 't> for LoggingOracle<'a, 's, 't> {
+    // A pure delegation, not recorded: `resolve` is a name-to-item table lookup, not a question put
+    // to rustc, so it does not belong in the oracle log the tests assert `fn_sig` counts against. It
+    // must still be forwarded explicitly — a decorator that inherits the default `None` would silently
+    // fail every lazy synthesis (see the note below on `methods`).
+    fn resolve(&self, name: &ResolvedName<'s>) -> Option<RustItemId> {
+        self.inner.resolve(name)
+    }
+
+    fn resolve_import(&self, import: &ImportS<'s>) -> Option<ResolvedName<'s>> {
+        let answer = self.inner.resolve_import(import);
+        // Record what the import offered, joined to its handle, so a test can assert an item reached
+        // the program by import and then correlate that handle with later `fn_sig` queries.
+        let offered = answer
+            .and_then(|name| self.inner.resolve(&name).map(|id| (name.importee_name.0.to_string(), id)));
+        let rendered = match &offered {
+            Some((n, id)) => format!("resolve_import -> {n} ({id:?})"),
+            None => "resolve_import -> None".to_string(),
+        };
+        self.record(OracleQuery::ResolveImport { offered }, rendered);
+        answer
+    }
+
     fn item_package(&self, item: RustItemId) -> Option<&'s PackageCoordinate<'s>> {
         let answer = self.inner.item_package(item);
         let rendered = answer.map(|c| {
@@ -200,29 +228,10 @@ impl<'a, 's, 't> RustOracle<'s, 't> for LoggingOracle<'a, 's, 't> {
 
     // Every trait method must be forwarded explicitly, including ones with defaults.
     //
-    // `importable_types` and `methods` have default impls returning empty, and for a while
-    // this decorator inherited them — so it answered "no types" no matter what the real
-    // oracle knew, and the importer's loop body simply never ran. Nothing failed; the import
-    // was a silent no-op. A decorator that inherits a default is a decorator that lies, so
-    // any method added to `RustOracle` has to be added here too.
-    fn importable_types(&self) -> Vec<(String, RustItemId)> {
-        let answer = self.inner.importable_types();
-        self.record(
-            OracleQuery::ImportableTypes { items: answer.clone() },
-            format!("importable_types -> {answer:?}"),
-        );
-        answer
-    }
-
-    fn importable_functions(&self) -> Vec<(String, RustItemId)> {
-        let answer = self.inner.importable_functions();
-        self.record(
-            OracleQuery::ImportableFunctions { items: answer.clone() },
-            format!("importable_functions -> {answer:?}"),
-        );
-        answer
-    }
-
+    // `methods` and `resolve` have default impls returning empty/`None`, and a decorator that inherits
+    // a default is a decorator that lies — it would answer "no methods" no matter what the real oracle
+    // knew, silently making the import a no-op. So any method added to `RustOracle` has to be forwarded
+    // here too.
     fn methods(&self, item: RustItemId) -> Vec<(String, RustItemId)> {
         let answer = self.inner.methods(item);
         self.record(

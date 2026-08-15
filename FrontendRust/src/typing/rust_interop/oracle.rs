@@ -14,6 +14,8 @@
 // docs/convos/rust_interop/rust-interop-frontend-plan.md §5.
 
 use crate::interner::StrI;
+use crate::postparsing::ast::ImportS;
+use crate::typing::env::environment::ResolvedName;
 use crate::typing::names::names::IdT;
 use crate::typing::types::types::*;
 use crate::typing::typing_interner::TypingInterner;
@@ -138,6 +140,25 @@ pub trait RustOracle<'s, 't> {
     /// Only needed for free functions; a method nests under its receiver's id instead.
     fn item_package(&self, item: RustItemId) -> Option<&'s PackageCoordinate<'s>>;
 
+    /// The rustc item a resolved canonical name refers to, or `None` if this oracle has no such item.
+    ///
+    /// This is the inverse of the name a top-level denizen's `IdT` carries: given the `ResolvedName`
+    /// rebuilt from an id (its `package_coord` + `local_name`), hand back the `RustItemId` so lazy
+    /// synthesis can query the signature. It replaces the offset-encoding trick, where the item index
+    /// was decoded from a synthesized code-location offset. Only top-level types and free functions
+    /// resolve here; a method is found via its owner's `ResolvedName` plus `methods`.
+    fn resolve(&self, _name: &ResolvedName<'s>) -> Option<RustItemId> {
+        None
+    }
+
+    /// The canonical name a crate-qualified `import rust.crate.X.Y` statement resolves to, following
+    /// re-exports. `None` when it resolves to nothing — the crate isn't loaded, a module segment is
+    /// missing, or the target is a module rather than a fn/struct — which the caller treats as an
+    /// unresolvable-import error. Singular: the crate is named, so there is no cross-crate ambiguity.
+    fn resolve_import(&self, _import: &ImportS<'s>) -> Option<ResolvedName<'s>> {
+        None
+    }
+
     /// The signature of a Rust function, read **structurally** and lowered to Vale terms.
     ///
     /// @EarlyBinder: this deliberately does *not* instantiate. It reads the signature with its
@@ -156,15 +177,6 @@ pub trait RustOracle<'s, 't> {
         interner: &TypingInterner<'s, 't>,
     ) -> Option<ValeSig<'s, 't>>;
 
-    /// Every Rust type that should be declared as a Vale citizen, with its human name.
-    ///
-    /// Enumerable rather than queried by name because the importer materializes the whole
-    /// set up front — which is only tractable because `@RTMEIZ` requires every Rust item
-    /// Vale uses to be explicitly imported, making the surface finite and declared.
-    fn importable_types(&self) -> Vec<(String, RustItemId)> {
-        Vec::new()
-    }
-
     /// A Rust type's own generic parameter names, in declaration order.
     ///
     /// Empty for a non-generic type — the degenerate case, not a separate one. This is what makes a
@@ -177,15 +189,6 @@ pub trait RustOracle<'s, 't> {
         _interner: &TypingInterner<'s, 't>,
     ) -> &'t [StrI<'s>] {
         &[]
-    }
-
-    /// Every importable Rust free function, with its human name.
-    ///
-    /// The enumerable counterpart to `resolve_function`. Needed because free functions are
-    /// materialized into the reserved `rust` package's store up front, rather than answered
-    /// one name at a time — the same reason `importable_types` exists.
-    fn importable_functions(&self) -> Vec<(String, RustItemId)> {
-        Vec::new()
     }
 
     /// The methods of a Rust type, by name.

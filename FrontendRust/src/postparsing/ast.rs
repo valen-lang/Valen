@@ -369,7 +369,6 @@ pub struct ImportS<'s> {
   pub importee_name: StrI<'s>,
 }
 
-
 pub fn interface_s_name<'s>(interface_s: &InterfaceS<'s>) -> TopLevelCitizenDeclarationNameS<'s> {
   TopLevelCitizenDeclarationNameS::from(interface_s.name)
 }

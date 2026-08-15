@@ -92,10 +92,22 @@ where
               Some(imports_accum) => imports_accum.push(im.clone()),
             }
 
-            packages_to_explore.push((
-              im.module_name.str.to_string(),
-              im.package_steps.iter().map(|x| x.str.to_string()).collect(),
-            ));
+            if im.module_name.str == keywords.rust {
+              // The reserved `rust` module names rustc items resolved by the rust-interop oracle, not a
+              // Vale source package on disk, so it is not added to package discovery (that would send
+              // the explorer hunting for a `rust` package that does not exist). Without the feature
+              // there is no oracle to resolve it, so importing it is an error rather than a skip.
+              #[cfg(not(feature = "rust_interop"))]
+              panic!(
+                "`import {}.…` needs the `rust_interop` feature, which is not enabled in this build",
+                keywords.rust.0
+              );
+            } else {
+              packages_to_explore.push((
+                im.module_name.str.to_string(),
+                im.package_steps.iter().map(|x| x.str.to_string()).collect(),
+              ));
+            }
 
             let denizen_result = denizen_handler(file_coord, &code, &[], &denizen);
             result_acc.push(denizen_result);
@@ -104,12 +116,6 @@ where
             match maybe_imports_accum.take() {
               None => {}
               Some(imports_accum) => {
-                for imp in &imports_accum {
-                  packages_to_explore.push((
-                    imp.module_name.str.to_string(),
-                    imp.package_steps.iter().map(|x| x.str.to_string()).collect(),
-                  ));
-                }
                 maybe_imports = Some(imports_accum);
               }
             }

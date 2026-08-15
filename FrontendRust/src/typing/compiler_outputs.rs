@@ -58,10 +58,21 @@ where 's: 't,
     pub signature_to_function:
         IndexMap<SignatureT<'s, 't>, &'t FunctionDefinitionT<'s, 't>>,
 
-    pub template_id_to_postparsed_function: IndexMap<&'t IdT<'s, 't>, &'s FunctionS<'s>>,
-    pub template_id_to_postparsed_struct: IndexMap<&'t IdT<'s, 't>, &'s StructS<'s>>,
-    pub template_id_to_postparsed_interface: IndexMap<&'t IdT<'s, 't>, &'s InterfaceS<'s>>,
-    pub template_id_to_postparsed_impl: IndexMap<&'t IdT<'s, 't>, &'s ImplS<'s>>,
+    // VCOORD: whether a postparsed already exists in these tables must be undetectable to callers.
+    // Once Rust imports go lazy, get_or_create_postparsed_* builds a missing denizen on demand, so a
+    // caller that could ask "is this id in the table yet?" would observe that build order. It must not.
+    // The only two legal operations are:
+    //   1. ask an environment what denizens it holds, and
+    //   2. get_or_create_postparsed_* for a denizen id, which always returns (building on a miss).
+    // There must be no "does this id have a postparsed?" query anywhere.
+    // Enforce it structurally: move these tables and their peek behind a private module that exposes
+    // only the total get_or_create_* accessors, so the fields stop being pub and the membership check
+    // lives in exactly one sealed place. A Guardian shield guarding against new existence queries may
+    // be worth adding on top.
+    template_id_to_postparsed_function: IndexMap<&'t IdT<'s, 't>, &'s FunctionS<'s>>,
+    template_id_to_postparsed_struct: IndexMap<&'t IdT<'s, 't>, &'s StructS<'s>>,
+    template_id_to_postparsed_interface: IndexMap<&'t IdT<'s, 't>, &'s InterfaceS<'s>>,
+    template_id_to_postparsed_impl: IndexMap<&'t IdT<'s, 't>, &'s ImplS<'s>>,
 
     pub function_declared_names:
         HashMap<IdT<'s, 't>, RangeS<'s>>,
@@ -702,26 +713,31 @@ where 's: 't,
         self.function_externs.clone()
     }
 
-    pub fn register_postparsed_function(&mut self, template_id: &'t IdT<'s, 't>, function: &'s FunctionS<'s>) {
+    pub(in crate::typing) fn register_postparsed_function(&mut self, template_id: &'t IdT<'s, 't>, function: &'s FunctionS<'s>) {
         self.template_id_to_postparsed_function.insert(template_id, function);
     }
 
-    pub fn get_postparsed_function(&self, template_id: &'t IdT<'s, 't>) -> &'s FunctionS<'s> {
+    // The four tables are sealed (see the VCOORD on their declaration): callers must not be able to
+    // observe whether an id has a postparsed yet. The function table can be lazy (Rust functions build
+    // on first lookup), so its peek is private to the typing module and its ONLY caller is
+    // Compiler::get_or_create_postparsed_function, which turns a miss into a build. Struct/interface/impl
+    // are always eager (seeded at index time), so their accessors are total and cannot reveal existence:
+    // a miss is a vfail (compiler bug), never a recoverable "not there".
+    pub(in crate::typing) fn peek_postparsed_function(&self, template_id: &'t IdT<'s, 't>) -> Option<&'s FunctionS<'s>> {
         self.template_id_to_postparsed_function.get(template_id).copied()
-            .unwrap_or_else(|| panic!("vfail: no postparsed function seeded for {:?}", template_id))
     }
 
-    pub fn get_postparsed_struct(&self, template_id: &'t IdT<'s, 't>) -> &'s StructS<'s> {
+    pub(in crate::typing) fn get_postparsed_struct(&self, template_id: &'t IdT<'s, 't>) -> &'s StructS<'s> {
         self.template_id_to_postparsed_struct.get(template_id).copied()
             .unwrap_or_else(|| panic!("vfail: no postparsed struct seeded for {:?}", template_id))
     }
 
-    pub fn get_postparsed_interface(&self, template_id: &'t IdT<'s, 't>) -> &'s InterfaceS<'s> {
+    pub(in crate::typing) fn get_postparsed_interface(&self, template_id: &'t IdT<'s, 't>) -> &'s InterfaceS<'s> {
         self.template_id_to_postparsed_interface.get(template_id).copied()
             .unwrap_or_else(|| panic!("vfail: no postparsed interface seeded for {:?}", template_id))
     }
 
-    pub fn get_postparsed_impl(&self, template_id: &'t IdT<'s, 't>) -> &'s ImplS<'s> {
+    pub(in crate::typing) fn get_postparsed_impl(&self, template_id: &'t IdT<'s, 't>) -> &'s ImplS<'s> {
         self.template_id_to_postparsed_impl.get(template_id).copied()
             .unwrap_or_else(|| panic!("vfail: no postparsed impl seeded for {:?}", template_id))
     }

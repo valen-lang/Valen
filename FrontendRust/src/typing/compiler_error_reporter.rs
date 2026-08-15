@@ -37,6 +37,10 @@ pub enum ICompileErrorT<'s, 't> {
     CantUseRuneValueAsExpression { range: &'t [RangeS<'s>], rune: IRuneS<'s> },
     CouldntFindTypeT { range: &'t [RangeS<'s>], name: IImpreciseNameS<'s> },
     TooManyTypesWithNameT { range: &'t [RangeS<'s>], name: IImpreciseNameS<'s> },
+    /// An `import rust.crate.X.Y` statement that resolves to no importable item — the crate is not
+    /// loaded, a module segment is missing, the target is a module rather than a fn/struct, or the
+    /// import omits the crate (a bare `import rust.Widget`). `path` is the dotted path as written.
+    UnresolvableRustImport { range: &'t [RangeS<'s>], path: String },
     ArrayElementsHaveDifferentTypes { range: &'t [RangeS<'s>], types: &'t [KindT<'s, 't>] },
     UnexpectedArrayElementType { range: &'t [RangeS<'s>], expected_type: KindT<'s, 't>, actual_type: KindT<'s, 't> },
     InitializedWrongNumberOfElements { range: &'t [RangeS<'s>], expected_num_elements: i32, num_elements_initialized: i32 },
@@ -137,6 +141,7 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
             Self::CantUseRuneValueAsExpression { range, .. } => *range,
             Self::CouldntFindTypeT { range, .. } => *range,
             Self::TooManyTypesWithNameT { range, .. } => *range,
+            Self::UnresolvableRustImport { range, .. } => *range,
             Self::ArrayElementsHaveDifferentTypes { range, .. } => *range,
             Self::UnexpectedArrayElementType { range, .. } => *range,
             Self::InitializedWrongNumberOfElements { range, .. } => *range,

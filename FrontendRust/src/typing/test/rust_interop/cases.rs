@@ -158,6 +158,38 @@ fn calls_a_rust_free_function() {
     );
 }
 
+/// Laziness, proven positively: importing three representable free functions and calling one queries
+/// `fn_sig` for the called function and for neither uncalled one. This is the whole point of the slice
+/// — importing a type with a hundred methods must not pay `fn_sig` for the ones never called.
+#[test]
+fn lazy_synthesis_only_queries_called_functions() {
+    let outcome = run_case(&LAZY_SYNTHESIS_ONLY_QUERIES_CALLED_FUNCTIONS, callees_in_main);
+
+    outcome.check(&LAZY_SYNTHESIS_ONLY_QUERIES_CALLED_FUNCTIONS);
+
+    let add_two_numbers = offered(&outcome, "add_two_numbers");
+    let seven = offered(&outcome, "seven");
+    let is_positive = offered(&outcome, "is_positive");
+
+    // The called function's signature is queried — it must be, to compile the call.
+    assert!(
+        outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == add_two_numbers)),
+        "the called function's signature was never queried:\n{}",
+        outcome.rendered_log()
+    );
+    // The two imported-but-uncalled functions are never queried — the laziness guarantee.
+    assert!(
+        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == seven)),
+        "`seven` was imported but never called, yet its signature was queried:\n{}",
+        outcome.rendered_log()
+    );
+    assert!(
+        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == is_positive)),
+        "`is_positive` was imported but never called, yet its signature was queried:\n{}",
+        outcome.rendered_log()
+    );
+}
+
 /// The common shape: the case compiles, and each named callee resolved to a **Rust-backed**
 /// function. Rust-backedness is the load-bearing half — a Vale function of the same name would
 /// satisfy "it compiled" just as well, and only the reserved `rust` package coordinate says where
@@ -295,10 +327,41 @@ fn calls_an_associated_function_with_no_receiver() {
     );
 }
 
-/// Method discovery is a list, not a lucky single.
+/// A method on a generic type whose signature names the type's own parameter (`into_value(self) -> T`).
+/// `T` is inherited from `impl<T> Holder<T>`, not declared by the method — the case that used to decline
+/// as `InheritedParameter` before the oracle reported parent-inclusive generic params for methods.
+#[test]
+fn calls_a_method_naming_the_types_generic() {
+    let outcome = run_case(&CALLS_A_METHOD_NAMING_THE_TYPES_GENERIC, callees_in_main);
+    outcome.check(&CALLS_A_METHOD_NAMING_THE_TYPES_GENERIC);
+}
+
+/// Method discovery is a list, not a lucky single — and it is lazy per method.
 #[test]
 fn calls_two_methods_on_one_type() {
     assert_rust_callees(&CALLS_TWO_METHODS_ON_ONE_TYPE, &["get", "doubled"]);
+
+    // Method laziness: Counter has four methods (get, doubled, or_else, new); this program calls only
+    // `get` and `doubled`. Those two are queried; `or_else` and `new` are imported but uncalled, so their
+    // signatures are never asked for. This is the payoff for methods — a hundred-method type costs
+    // `fn_sig` only for the methods you actually call.
+    let outcome = run_case(&CALLS_TWO_METHODS_ON_ONE_TYPE, callees_in_main);
+    for called in ["get", "doubled"] {
+        let item = offered(&outcome, called);
+        assert!(
+            outcome.asked(|q| matches!(q, OracleQuery::FnSig { item: i, .. } if *i == item)),
+            "called method `{called}` was never queried:\n{}",
+            outcome.rendered_log()
+        );
+    }
+    for uncalled in ["or_else", "new"] {
+        let item = offered(&outcome, uncalled);
+        assert!(
+            !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item: i, .. } if *i == item)),
+            "uncalled method `{uncalled}` was queried, so per-method laziness is broken:\n{}",
+            outcome.rendered_log()
+        );
+    }
 }
 
 /// A method carrying its own type parameter, on top of the container's.
@@ -377,8 +440,8 @@ fn reads_a_generic_signature_structurally() {
     }
 }
 
-/// A Rust type reaches Vale by inference from a signature — never by name — and its method is an
-/// ordinary top-level function whose first parameter is the receiver.
+/// A Rust type reaches Vale by inference from a signature — never by name — and its method lives in
+/// the type's outer environment, resolved via the receiver when `v.get()` desugars to `get(v)`.
 #[test]
 fn calls_a_method_on_a_rust_type() {
     let outcome = run_case(&CALLS_A_METHOD_ON_A_RUST_TYPE, callees_in_main);
@@ -468,9 +531,9 @@ fn a_rust_value_returned_and_discarded_gets_dropped() {
 
 /// Two types' methods coexist, each resolving to its own receiver.
 ///
-/// `Counter::get` and `Gauge::get` share a name deliberately. There is no per-type method table to
-/// keep apart — the risk is the importer pairing a method with the wrong receiver, which surfaces
-/// as a resolution failure rather than a wrong answer.
+/// `Counter::get` and `Gauge::get` share a name deliberately. Each lives in its own type's outer env,
+/// so the risk is the importer pairing a method with the wrong receiver, which surfaces as a
+/// resolution failure rather than a wrong answer.
 #[test]
 fn calls_methods_on_two_different_rust_types() {
     let outcome = run_case(&CALLS_METHODS_ON_TWO_DIFFERENT_RUST_TYPES, callees_in_main);
@@ -727,103 +790,93 @@ fn a_program_using_everything_at_once() {
     );
 }
 
-/// A signature Vale cannot represent is **declined**, not imported with a hole in it.
+/// A signature Vale cannot represent costs nothing when it is imported but never called: with lazy
+/// synthesis its signature is never even queried.
 ///
 /// `first<I: Iterator>(i: I) -> I::Item` returns `<I as Iterator>::Item`, and normalizing that
-/// requires the `I: Iterator` predicate to find the impl. No predicates are read at all, so this
-/// is not merely an unbounded parameter but an un-normalizable alias.
+/// requires the `I: Iterator` predicate to find the impl. No predicates are read at all, so this is
+/// not merely an unbounded parameter but an un-normalizable alias — it would decline if forced. Here
+/// it is offered but uncalled, so it is never forced.
 #[test]
 fn declines_an_unrepresentable_signature() {
     let outcome = run_case(&DECLINES_AN_UNREPRESENTABLE_SIGNATURE, callees_in_main);
 
-    // Declining one item must not disturb the rest of the import.
+    // An uncalled unrepresentable import must not disturb the rest of the import.
     outcome.check(&DECLINES_AN_UNREPRESENTABLE_SIGNATURE);
 
     let first = offered(&outcome, "first");
     assert!(
-        outcome.asked(
-            |q| matches!(q, OracleQuery::FnSig { item, answer: None } if *item == first)
-        ),
-        "`first` was offered but its signature was not declined:\n{}",
+        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == first)),
+        "`first` is imported but never called, so its signature must never be queried:\n{}",
         outcome.rendered_log()
     );
 }
 
-/// The same decline in **argument** position — a different code path from the return position.
+/// The same unrepresentable type in **argument** position, offered but uncalled: still never queried.
 #[test]
 fn declines_an_unrepresentable_parameter() {
     let outcome = run_case(&DECLINES_AN_UNREPRESENTABLE_PARAMETER, callees_in_main);
 
-    // Declining one item must not disturb the rest of the import.
+    // An uncalled unrepresentable import must not disturb the rest of the import.
     outcome.check(&DECLINES_AN_UNREPRESENTABLE_PARAMETER);
 
     let take_first = offered(&outcome, "take_first");
     assert!(
-        outcome.asked(
-            |q| matches!(q, OracleQuery::FnSig { item, answer: None } if *item == take_first)
-        ),
-        "`take_first` was offered but its signature was not declined:\n{}",
+        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == take_first)),
+        "`take_first` is imported but never called, so its signature must never be queried:\n{}",
         outcome.rendered_log()
     );
 }
 
-/// An unsigned integer declines by the same exit as an alias — it does not panic.
-///
-/// The gap is **signedness**: `IntT` carries a width and nothing else, so importing `u32` would
-/// hand back a plausible `i32`. Until 2026-07-27 this panicked, which made one un-importable item
-/// anywhere in a crate's export surface fatal to the whole import rather than to itself.
+/// An unsigned integer would decline if forced — its signature is `u32`-shaped, and `IntT` carries a
+/// width but no signedness, so importing it would hand back a plausible `i32`. Offered but uncalled,
+/// it is never forced, so it is never queried.
 #[test]
 fn declines_an_unsigned_integer() {
     let outcome = run_case(&DECLINES_AN_UNSIGNED_INTEGER, callees_in_main);
 
-    // Declining one item must not disturb the rest of the import.
+    // An uncalled unrepresentable import must not disturb the rest of the import.
     outcome.check(&DECLINES_AN_UNSIGNED_INTEGER);
 
     let unsigned_count = offered(&outcome, "unsigned_count");
     assert!(
-        outcome.asked(
-            |q| matches!(q, OracleQuery::FnSig { item, answer: None } if *item == unsigned_count)
-        ),
-        "`unsigned_count` was offered but its signature was not declined:\n{}",
+        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == unsigned_count)),
+        "`unsigned_count` is imported but never called, so its signature must never be queried:\n{}",
         outcome.rendered_log()
     );
 }
 
-/// A float declines because `FloatT` has no width, so `f32` and `f64` would intern identically.
+/// A float would decline if forced — `FloatT` has no width, so `f32` and `f64` would intern
+/// identically. Offered but uncalled, it is never forced.
 #[test]
 fn declines_a_float() {
     let outcome = run_case(&DECLINES_A_FLOAT, callees_in_main);
 
-    // Declining one item must not disturb the rest of the import.
+    // An uncalled unrepresentable import must not disturb the rest of the import.
     outcome.check(&DECLINES_A_FLOAT);
 
     let half_of = offered(&outcome, "half_of");
     assert!(
-        outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, answer: None } if *item == half_of)),
-        "`half_of` was offered but its signature was not declined:\n{}",
+        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == half_of)),
+        "`half_of` is imported but never called, so its signature must never be queried:\n{}",
         outcome.rendered_log()
     );
 }
 
-/// @RTMEIZ from the side that is easy to miss: reaching a type through another item's signature
-/// does not import it.
-///
-/// `takes_hidden` is allowed, `Hidden` is not. Declining is what keeps the allowlist meaning *"what
-/// Vale may use"* rather than quietly becoming *"what Vale may reach"* — under the latter, the
-/// scoping cases would be asserting something weaker than they claim.
+/// @RTMEIZ from the side that is easy to miss: reaching a type through another item's signature does
+/// not import it. `takes_hidden` is allowed, `Hidden` is not, so `takes_hidden` would decline if
+/// forced — but offered and uncalled, it is never forced, so it is never queried.
 #[test]
 fn declines_a_signature_naming_an_unimported_type() {
     let outcome = run_case(&DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE, callees_in_main);
 
-    // Declining one item must not disturb the rest of the import.
+    // An uncalled unrepresentable import must not disturb the rest of the import.
     outcome.check(&DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE);
 
     let takes_hidden = offered(&outcome, "takes_hidden");
     assert!(
-        outcome.asked(
-            |q| matches!(q, OracleQuery::FnSig { item, answer: None } if *item == takes_hidden)
-        ),
-        "`takes_hidden` was offered but its signature was not declined:\n{}",
+        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == takes_hidden)),
+        "`takes_hidden` is imported but never called, so its signature must never be queried:\n{}",
         outcome.rendered_log()
     );
 }
@@ -914,14 +967,20 @@ fn an_item_not_in_the_allowlist_is_not_importable() {
 /// against, so a name that stops existing must not take the compilation down.
 #[test]
 fn an_allowlist_entry_the_crate_does_not_export_is_ignored() {
-    assert_rust_callees(&AN_ALLOWLIST_ENTRY_THE_CRATE_DOES_NOT_EXPORT_IS_IGNORED, &["add_two_numbers"]);
+    // Importing an item the crate does not export now fails the compile (`UnresolvableRustImport`)
+    // rather than being silently ignored.
+    let outcome = run_case(&AN_ALLOWLIST_ENTRY_THE_CRATE_DOES_NOT_EXPORT_IS_IGNORED, callees_in_main);
+    assert!(outcome.check(&AN_ALLOWLIST_ENTRY_THE_CRATE_DOES_NOT_EXPORT_IS_IGNORED).is_none());
 }
 
 /// A crate's module children include its own `extern crate std`. Without the `DefKind` filter, a
 /// name match would hand back a module where a function or type was asked for.
 #[test]
 fn a_module_named_in_the_allowlist_is_filtered_by_defkind() {
-    assert_rust_callees(&A_MODULE_NAMED_IN_THE_ALLOWLIST_IS_FILTERED_BY_DEFKIND, &["add_two_numbers"]);
+    // A module (not a fn/struct) fails the `DefKind` filter, so the import resolves to nothing and the
+    // compile fails (`UnresolvableRustImport`) rather than the entry being silently ignored.
+    let outcome = run_case(&A_MODULE_NAMED_IN_THE_ALLOWLIST_IS_FILTERED_BY_DEFKIND, callees_in_main);
+    assert!(outcome.check(&A_MODULE_NAMED_IN_THE_ALLOWLIST_IS_FILTERED_BY_DEFKIND).is_none());
 }
 
 /// A Rust callee competes on `params_match` like any other candidate.
@@ -1110,6 +1169,48 @@ fn no_rust_item_identity_comes_from_a_human_name() {
          which items the allowlist *admits* rather than which item something *is*, add a \
          `{ALLOW}` comment on the line:\n  {}",
         offenders.join("\n  ")
+    );
+}
+
+/// Every `Case`'s `name` must be unique.
+///
+/// The name is the case's build directory (`vale-interop-cases/<name>`), where `build_dep_rlib`
+/// writes `lib<crate>.rlib`. Two cases sharing a name share that directory, so their two test threads
+/// race on the one rlib — one build clobbers or half-writes the other's, and whichever loses fails
+/// nondeterministically with "building the dependency rlib failed" while both pass in isolation. This
+/// asserts uniqueness so a future collision fails loudly and locally instead of flaking the suite.
+#[test]
+fn every_case_name_is_unique() {
+    let corpus = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("src/typing/rust_interop/corpus.rs");
+    let source = read_to_string(&corpus).expect("could not read corpus.rs");
+
+    // Match the `Case` struct field `name: "…",` exactly, so prose and Vale source are not counted.
+    let mut names: Vec<String> = Vec::new();
+    for line in source.lines() {
+        let trimmed = line.trim();
+        let Some(rest) = trimmed.strip_prefix("name: \"") else { continue };
+        let Some(name) = rest.strip_suffix("\",") else { continue };
+        names.push(name.to_string());
+    }
+    // A floor guards against the extraction silently matching nothing and passing vacuously.
+    assert!(
+        names.len() > 40,
+        "found only {} case names — the `name:` extraction likely broke",
+        names.len()
+    );
+
+    let mut sorted = names.clone();
+    sorted.sort();
+    let mut dups: Vec<String> =
+        sorted.windows(2).filter(|w| w[0] == w[1]).map(|w| w[0].clone()).collect();
+    dups.dedup();
+    assert!(
+        dups.is_empty(),
+        "these Case names are used more than once. The name is the per-case build out_dir \
+         (vale-interop-cases/<name>), so a duplicate races two test threads on one libmycrate.rlib \
+         and flakes the suite. Give each Case a unique name:\n  {}",
+        dups.join("\n  ")
     );
 }
 

@@ -29,6 +29,31 @@ use std::hash::Hasher;
 use std::mem::discriminant;
 
 
+/// The *resolved* canonical name an `import` resolves to (post-re-export), as opposed to the raw
+/// written `ImportS` the parser produced. Vale-native: interned strings, no rustc `DefId`, so it
+/// crosses any boundary and is reusable for Vale's own package imports later. `rust_interop` uses it
+/// as the key to fetch the rustc item (`oracle.resolve`), both when declaring an import and when
+/// re-resolving a denizen for lazy synthesis. A denizen's template `IdT` carries this name (it is the
+/// id's `package_coord` + `local_name`), which is what retires the offset-encoding trick.
+///
+/// A method is not a `ResolvedName` on its own; it is expressed as its owner's `ResolvedName` plus the
+/// method's short name, resolved via `oracle.methods`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ResolvedName<'s> {
+  pub module_name: StrI<'s>,
+  pub package_names: &'s [StrI<'s>],
+  pub importee_name: StrI<'s>,
+  /// Whether this name is a type or a free function, so a consumer can branch without re-resolving.
+  pub kind: ImportedItemKind,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ImportedItemKind {
+  Type,
+  Function,
+}
+
+
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IEnvironmentT<'s, 't>

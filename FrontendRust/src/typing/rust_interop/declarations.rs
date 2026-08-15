@@ -45,46 +45,34 @@ use crate::typing::types::types::*;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 
+/// The synthetic code-location offset every synthesized Rust denizen shares. Negative because
+/// `CodeLocationS::internal` requires it (real source offsets are non-negative). It carries no
+/// identity: a denizen's identity is its template id, which is unique without help from the range.
+pub const SYNTHESIZED_RANGE_OFFSET: i32 = -1;
+
 /// Synthesize the declaration for one importable Rust free function.
 ///
-/// `item` supplies the declaration's identity. Every synthesized denizen must get its **own**
-/// `CodeLocationS`, because four separate things key on it and one of them fails silently:
-///
-///   - `FunctionTemplataT`'s hand-rolled eq/hash is `(function.range, function.name)` and
-///     ignores the environment the declaration came from (`templata.rs:162-176`);
-///   - overload candidates are deduped through a `HashSet` over exactly that
-///     (`overload_resolver.rs:576`, `:191`);
-///   - `FunctionNameS` carries the location, and it flows into `FunctionTemplateNameT`;
-///   - `ExternTemplateNameT`'s only field is a code location (`names.rs:1236`).
-///
-/// So two synthesized externs sharing a sentinel location collapse into one candidate with no
-/// error at all — and `Vec::new`, `String::new`, `Box::new` all have the human name `new`. The
-/// in-tree macros dodge this by borrowing their citizen's *real* range and using sentinels only
-/// on rules and params, which are never identity keys; we have no real range to borrow.
-///
-/// `RustItemId` is an index into the oracle's item table, so it is unique within a compilation by
-/// construction and reproducible across identical runs. (Deriving from `tcx.def_path_hash` instead
-/// would additionally survive a change in item ordering between builds — worth doing if these
-/// locations ever reach a symbol name, which today they do not: ordinary function templates drop
-/// the location at the backend.)
+/// The synthetic range is a single shared sentinel (`SYNTHESIZED_RANGE_OFFSET`), not a per-item
+/// location. It once had to be distinct per item, because `FunctionTemplataT`'s hand-rolled eq/hash
+/// keyed on `(range, name)` and ignored the environment, so two synthesized externs named `new`
+/// (`Vec::new`, `String::new`) sharing a sentinel would collapse into one overload candidate with no
+/// error. That eq/hash is now derived over `{ outer_env, function_template_id }`, so identity is the
+/// template id — and a denizen's id is already unique by `(package_coord, init_steps, human_name)`
+/// (free functions per package, methods and drops per owner type). The range no longer carries
+/// identity, so it needs no per-item content.
 ///
 /// `None` when any type in the signature has no Vale source-level name yet — see `vale_type_name`.
 pub fn synthesize_extern_function<'s, 'ctx, 't>(
     compiler: &Compiler<'s, 'ctx, 't>,
     package_coord: &'s PackageCoordinate<'s>,
     human_name: StrI<'s>,
-    item: RustItemId,
     sig: &ValeSig<'s, 't>,
 ) -> Option<&'s FunctionS<'s>>
 where
     's: 't,
 {
     let scout_arena = compiler.scout_arena;
-
-    // Negative offsets are the established convention for compiler-synthesized ranges, and
-    // `CodeLocationS::internal` asserts on it. One distinct offset per item, per the doc comment.
-    let offset = -1_000_000 - (item.0 as i32);
-    let loc = CodeLocationS::internal(scout_arena, offset);
+    let loc = CodeLocationS::internal(scout_arena, SYNTHESIZED_RANGE_OFFSET);
     let range = RangeS::new(loc, loc);
 
     // The item's own generic parameters, declared before anything refers to them. A generic
@@ -368,7 +356,6 @@ pub fn synthesize_extern_struct<'s, 'ctx, 't>(
     compiler: &Compiler<'s, 'ctx, 't>,
     package_coord: &'s PackageCoordinate<'s>,
     human_name: StrI<'s>,
-    item: RustItemId,
     generic_param_names: &[StrI<'s>],
 ) -> &'s StructS<'s>
 where
@@ -376,11 +363,10 @@ where
 {
     let scout_arena = compiler.scout_arena;
 
-    // A distinct synthetic location per item, for the same identity reasons spelled out on
-    // `synthesize_extern_function`. Offset by a different base so a type and a function derived
-    // from the same item cannot collide.
-    let offset = -2_000_000 - (item.0 as i32);
-    let loc = CodeLocationS::internal(scout_arena, offset);
+    // The shared synthesized sentinel; see `synthesize_extern_function`. A struct's identity is its
+    // template id (`StructTemplate(human_name)` under its package), which carries no code location, so
+    // the range is purely cosmetic here and needs no per-item content.
+    let loc = CodeLocationS::internal(scout_arena, SYNTHESIZED_RANGE_OFFSET);
     let range = RangeS::new(loc, loc);
 
     let generic_params: Vec<&'s GenericParameterS<'s>> = generic_param_names

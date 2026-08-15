@@ -34,7 +34,7 @@ use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, NeverT, StrT, Void
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::oracles::Oracles;
 #[cfg(feature = "rust_interop")]
-use crate::typing::rust_interop::{is_rust_backed, rust_package_stores};
+use crate::typing::rust_interop::{create_postparsed_function, declare_rust_import, is_rust_backed};
 use crate::typing::types::types::{RegionT};
 use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::overload_resolver::FindFunctionFailure;
@@ -479,6 +479,26 @@ where 's: 't,
         //   fullEnv, coutputs, life, callRange, originFunction, paramCoords, maybeRetCoord)
     }
     
+    // Total accessor for a function's postparsed AST, keyed by its template id. Callers cannot observe
+    // whether it was already built: this always returns, or vfails on a compiler bug. A Rust function
+    // builds on its first lookup here (the #[cfg] create hook is wired in the lazy step); a Vale
+    // function is always already seeded at index time. This is the one seam through which every
+    // function read passes, so no read site ever touches the sealed table directly. See the sealing
+    // VCOORD in compiler_outputs.rs. Struct/interface/impl are always eager, so their reads stay on the
+    // total coutputs.get_postparsed_* accessors, which likewise never reveal existence.
+    pub(in crate::typing) fn get_or_create_postparsed_function(
+        &self, coutputs: &mut CompilerOutputs<'s, 't>, template_id: &'t IdT<'s, 't>,
+    ) -> &'s FunctionS<'s> {
+        if let Some(f) = coutputs.peek_postparsed_function(template_id) { return f; }
+        #[cfg(feature = "rust_interop")]
+        {
+            if let Some(f) = create_postparsed_function(self, coutputs, template_id) {
+                return f;
+            }
+        }
+        panic!("vfail: no postparsed function for {:?}", template_id);
+    }
+
     pub fn evaluate<'p>(
         &self,
         _code_map: &FileCoordinateMap<'p, String>,
@@ -688,9 +708,7 @@ where 's: 't,
         }
         let builtins = builtins_builder.build_in(self.typing_interner);
 
-        // The reserved `rust` package's top-level namespaces, one per imported Rust crate.
-        // Adding them here is what lets a Rust free function be found by ordinary ambient
-        // name lookup, the same way any Vale function is.
+        // Handle `import rust.whatever` imports.
         #[cfg(feature = "rust_interop")]
         {
             if let Some((id, _)) =
@@ -698,8 +716,55 @@ where 's: 't,
             {
                 panic!("Overlap, a Vale package claimed the reserved `rust` module: {id:?}");
             }
-            for (package_id, store) in rust_package_stores(self) {
-                namespace_name_to_templatas_vec.push((package_id, store));
+            // Loop over all `import rust.whatever` imports, and turn each into an env entry (and eagerly postparse it
+            // if it's a type).
+            let mut per_crate: IndexMap<&'s PackageCoordinate<'s>, Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>> =
+                IndexMap::default();
+            for program in file_to_program_s.file_coord_to_contents.values() {
+                for import in program.imports {
+                    if import.module_name != self.keywords.rust {
+                        continue;
+                    }
+                    // Oracle must be present if the user is doing any `import rust` things.
+                    let oracle = self
+                        .oracles
+                        .rust
+                        // VCOORD: make this into an error?
+                        .expect("an `import rust.…` statement, but no Rust oracle was provided");
+                    let name = match oracle.resolve_import(import) {
+                        Some(name) => name,
+                        None => {
+                            let mut path =
+                                import.package_names.iter().map(|s| format!("{}.", s.0)).collect::<String>();
+                            path.push_str(import.importee_name.0);
+                            return Err(ICompileErrorT::UnresolvableRustImport {
+                                range: self.typing_interner.alloc_slice_from_vec(vec![import.range]),
+                                path,
+                            });
+                        }
+                    };
+                    let (local_name, entry, seed) = declare_rust_import(self, name);
+                    if let Some((struct_id, struct_s)) = seed {
+                        template_id_to_postparsed_struct.insert(struct_id, struct_s);
+                    }
+                    let coord = self
+                        .scout_arena
+                        .intern_package_coordinate(name.module_name, name.package_names);
+                    per_crate.entry(coord).or_default().push((local_name, entry));
+                }
+            }
+            for (coord, entries) in per_crate {
+                let package_id = self.typing_interner.intern_id(IdValT {
+                    package_coord: coord,
+                    init_steps: &[],
+                    local_name: INameT::PackageTopLevel(
+                        self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT {}),
+                    ),
+                });
+                let mut store = TemplatasStoreBuilder::new(package_id);
+                store.add_entries(self.scout_arena, entries);
+                namespace_name_to_templatas_vec
+                    .push((package_id, store.build_in(self.typing_interner)));
             }
         }
 
@@ -984,6 +1049,14 @@ where 's: 't,
             if !package_id.init_steps.is_empty() {
                 continue;
             }
+            // Skip the whole `rust` package, because we lazily postparse rust methods
+            // when their postparseds are requested.
+            // VRI: consider some other thing to loop over?
+            // VRI: consider making vale lazy in some way too.
+            #[cfg(feature = "rust_interop")]
+            {
+                if is_rust_backed(package_id) { continue; }
+            }
             let global_namespaces: Vec<&TemplatasStoreT<'s, 't>> =
                 global_env.name_to_top_level_environment.iter().map(|(_, ts)| *ts).collect();
             let global_namespaces = self.typing_interner.alloc_slice_from_vec(global_namespaces);
@@ -1003,7 +1076,7 @@ where 's: 't,
                         };
                         let _header = self.evaluate_generic_function_from_non_call(
                             &mut coutputs, &[], LocationInDenizen { path: &[] }, templata)?;
-                        let function_a = coutputs.get_postparsed_function(id);
+                        let function_a = self.get_or_create_postparsed_function(&mut coutputs, id);
                         let maybe_export = function_a.attributes.iter().find_map(|a| match a { IFunctionAttributeS::Export(e) => Some(e), _ => None });
                         match maybe_export {
                             None => {}

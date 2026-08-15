@@ -8,11 +8,21 @@ struct ProgramInput {
 
 const ALLOWED_EXTENSIONS: &[&str] = &[".rs", ".md", ".cpp", ".c", ".h", ".vale"];
 
+// Python scripts staged for safe-script-runner live in tmp/scripts/ (see docs/skills/scripting.md);
+// the hook may pass the path as either relative or absolute.
+fn is_safe_script_runner_script(file_path: &str) -> bool {
+    file_path.ends_with(".py")
+        && (file_path.starts_with("tmp/scripts/") || file_path.contains("/tmp/scripts/"))
+}
+
 fn check(file_path: &str) -> Vec<String> {
-    if file_path.is_empty() || ALLOWED_EXTENSIONS.iter().any(|ext| file_path.ends_with(ext)) {
+    if file_path.is_empty()
+        || ALLOWED_EXTENSIONS.iter().any(|ext| file_path.ends_with(ext))
+        || is_safe_script_runner_script(file_path)
+    {
         vec![]
     } else {
-        vec![format!("File extension not allowed (only .rs, .md, .cpp, .c, .h, .vale may be edited): {}", file_path)]
+        vec![format!("File extension not allowed (only .rs, .md, .cpp, .c, .h, .vale may be edited; .py only under tmp/scripts/): {}", file_path)]
     }
 }
 
@@ -87,6 +97,26 @@ mod tests {
     #[test]
     fn allow_empty_path() {
         assert!(run(&make_input("")).is_empty());
+    }
+
+    #[test]
+    fn allow_py_in_tmp_scripts_relative() {
+        assert!(run(&make_input("tmp/scripts/migrate.py")).is_empty());
+    }
+
+    #[test]
+    fn allow_py_in_tmp_scripts_absolute() {
+        assert!(run(&make_input("/some/checkout/tmp/scripts/migrate-corpus-imports.py")).is_empty());
+    }
+
+    #[test]
+    fn deny_py_in_tmp_outside_scripts() {
+        assert_eq!(run(&make_input("tmp/migrate.py")).len(), 1);
+    }
+
+    #[test]
+    fn deny_non_py_in_tmp_scripts() {
+        assert_eq!(run(&make_input("tmp/scripts/helper.sh")).len(), 1);
     }
 
     #[test]

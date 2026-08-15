@@ -7,22 +7,17 @@
 // methods through the ordinary param-environment path, and drop resolves through ordinary
 // overload lookup, with no Rust-specific branch in either.
 //
-// Two differences from the Vale version, both semantic rather than expedient:
+// Each imported denizen becomes an id-only env entry (`StructEnvEntry` / `FunctionEnvEntry`),
+// and its actual `StructS` / `FunctionS` is seeded into the postparsed caches under the same
+// template id — exactly the shape `Compiler::evaluate`'s index loop builds for a Vale denizen.
+// After that, method resolution finds a Rust method by ordinary name lookup, and drop resolves
+// through ordinary overload lookup, with no Rust-specific branch in either.
 //
-//   - The store holds `IEnvEntryT::Templata(ITemplataT::Prototype(..))` rather than
-//     `IEnvEntryT::Function(&FunctionS)`. A Rust method has no Vale AST behind it; a
-//     prototype is exactly what a call site points at. The `Templata` arm already exists —
-//     it is how primitives like `int` and `Array` get into the builtins store.
-//   - `sibling_entries` is empty. Vale pulls in the declaring package's siblings because
-//     Vale methods are UFCS, so a free `func doSomething(b &Bork)` next to `struct Bork` is
-//     callable as `b.doSomething()`. Rust has no UFCS — its methods come from inherent impls
-//     and in-scope traits — so there are no siblings to pull in. Simpler, and correct.
-//
-// Called once from `Compiler::evaluate`, after the global environment exists (a
-// `CitizenEnvironmentT` needs one, and a Rust type has no declaring env to inherit it from)
-// and after `CompilerOutputs` exists (registering a prototype's instantiation bounds needs
-// `&mut`).
+// Called once from `Compiler::evaluate`, before `CompilerOutputs::new`, while the four
+// postparsed caches are still locals there. It seeds two of them (functions and structs), passed
+// in by `&mut`.
 
+use crate::typing::env::environment::{ImportedItemKind, ResolvedName};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::StructDefinitionT;
 use crate::typing::compiler::Compiler;
@@ -31,188 +26,276 @@ use crate::typing::env::environment::{
     make_top_level_environment, CitizenEnvironmentT, GlobalEnvironmentT, IEnvironmentT,
     IInDenizenEnvironmentT, TemplatasStoreBuilder, TemplatasStoreT,
 };
-use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::env::i_env_entry::{FunctionEnvEntry, IEnvEntryT, StructEnvEntry};
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::names::names::*;
 use crate::typing::rust_interop::declarations::{
-    synthesize_extern_function, synthesize_extern_struct,
+    synthesize_extern_function, synthesize_extern_struct, SYNTHESIZED_RANGE_OFFSET,
 };
 use crate::typing::rust_interop::oracle::{RustItemId, RustOracle, ValeSig, ValeSigType};
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT, PrototypeTemplataT};
 use crate::typing::types::types::*;
 use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::fx::IndexMap;
+use crate::utils::range::CodeLocationS;
+use crate::interner::StrI;
+use crate::postparsing::ast::{FunctionS, StructS};
+use crate::postparsing::names::{FunctionNameS, IFunctionDeclarationNameS};
+use crate::typing::rust_interop::reserved::is_rust_backed;
 
-/// Build the reserved `rust` package's top-level store: every importable free function, as a
-/// prototype entry.
+/// Turn one resolved Rust import into its top-level env entry for the reserved `rust` package.
 ///
-/// This is what retires the overload-resolution hook. With these names in
-/// `name_to_top_level_environment`, a Rust free function is found by ordinary ambient name
-/// lookup — the same path that finds any Vale function — instead of by a Rust-specific
-/// candidate source. Nothing asks the oracle per call site any more: the store either has the
-/// name or it doesn't, at ordinary lookup cost.
+/// A **type** becomes an ordinary struct declaration: an eager opaque `StructS` (returned as a seed
+/// for the caller to register in the postparsed cache) plus a `StructEnvEntry`. `IEnvEntryT::Struct`
+/// rather than a finished `ITemplataT::Kind` is what makes generic Rust types work — the indexing
+/// phase converts it into `ITemplataT::StructDefinition`, the one arm `solve_call_rule` can apply type
+/// arguments to. A **free function** becomes an id-only lazy `FunctionEnvEntry` (no `fn_sig`, no
+/// synthesis, no seed); `create_postparsed_function` builds it on first call. A type's methods and drop
+/// are NOT produced here — they are lazy entries in the type's outer environment, added by
+/// `rust_method_entries` when `precompile_struct` builds it. `v.get()` resolves via the receiver's
+/// outer env; an associated function is called type-prefixed (`Counter.new()`).
 ///
-/// Scoping is membership in this store. That is not a weaker guarantee than an import check —
-/// it *is* the import list, materialized.
-///
-/// Returns one store per distinct package coordinate, since imported items may come from more
-/// than one Rust crate. Empty when there is no oracle, which is every ordinary compilation.
-pub fn rust_package_stores<'s, 'ctx, 't>(
+/// The name is one `resolve_import` returned, so it resolves; a `None` would be a bug and vfails.
+pub fn declare_rust_import<'s, 'ctx, 't>(
     compiler: &Compiler<'s, 'ctx, 't>,
-) -> Vec<(&'t IdT<'s, 't>, &'t TemplatasStoreT<'s, 't>)>
+    name: ResolvedName<'s>,
+) -> (
+    INameT<'s, 't>,
+    IEnvEntryT<'s, 't>,
+    Option<(&'t IdT<'s, 't>, &'s StructS<'s>)>,
+)
 where
     's: 't,
 {
-    let Some(oracle) = compiler.oracles.rust else { return Vec::new() };
     let interner = compiler.typing_interner;
+    let oracle = compiler
+        .oracles
+        .rust
+        .expect("declare_rust_import called without a rust oracle");
+    let item = oracle
+        .resolve(&name)
+        .unwrap_or_else(|| panic!("vfail: a resolved rust import does not resolve: {:?}", name));
+    let package_coord = oracle
+        .item_package(item)
+        .unwrap_or_else(|| panic!("vfail: a resolved rust item has no package: {:?}", name));
+    // Every Rust denizen is a top-level denizen of its crate's `rust` package, so its template id is
+    // that package id plus the denizen's local name. The same id is both the env entry's `template_id`
+    // and the postparsed-cache key, so a later lookup can't drift from the seed.
+    let package_id = interner.intern_id(IdValT {
+        package_coord,
+        init_steps: &[],
+        local_name: INameT::PackageTopLevel(
+            interner.intern_package_top_level_name(PackageTopLevelNameT {}),
+        ),
+    });
+    let human_name = name.importee_name;
 
-    // Group by package coord: one top-level store per Rust crate.
-    let mut per_package: Vec<(
-        &'s PackageCoordinate<'s>,
-        Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
-    )> = Vec::new();
+    match name.kind {
+        ImportedItemKind::Type => {
+            let template_name =
+                interner.intern_struct_template_name(StructTemplateNameT { human_name });
+            let struct_local_name = INameT::StructTemplate(template_name);
+            let struct_s = synthesize_extern_struct(
+                compiler,
+                package_coord,
+                human_name,
+                oracle.type_generic_params(item, interner),
+            );
+            let struct_template_id = package_id.add_step(interner, struct_local_name);
+            (
+                struct_local_name,
+                IEnvEntryT::Struct(StructEnvEntry {
+                    template_id: struct_template_id,
+                    tyype: struct_s.tyype,
+                }),
+                Some((struct_template_id, struct_s)),
+            )
+        }
+        ImportedItemKind::Function => {
+            let function_local_name = lazy_extern_function_local_name(compiler, human_name);
+            let function_template_id = package_id.add_step(interner, function_local_name);
+            (
+                function_local_name,
+                IEnvEntryT::Function(FunctionEnvEntry {
+                    template_id: function_template_id,
+                }),
+                None,
+            )
+        }
+    }
+}
 
-    let push = |per_package: &mut Vec<(&'s PackageCoordinate<'s>, Vec<_>)>,
-                    package_coord: &'s PackageCoordinate<'s>,
-                    entry: (INameT<'s, 't>, IEnvEntryT<'s, 't>)| {
-        match per_package.iter_mut().find(|(c, _)| std::ptr::eq(*c, package_coord)) {
-            Some((_, entries)) => entries.push(entry),
-            None => per_package.push((package_coord, vec![entry])),
+/// The local name a lazily-registered Rust function or method carries, minted WITHOUT synthesizing its
+/// `FunctionS`. It is byte-identical to what `synthesize_extern_function`'s output name would translate
+/// to (same human name, same shared synthetic location), so the id-only entry's template id and the
+/// eventually-built `FunctionS` agree — the same consistency the eager path gets for free. The rustc item
+/// is no longer encoded in the location; `create_postparsed_function` recovers it by re-resolving the
+/// id's canonical name.
+fn lazy_extern_function_local_name<'s, 'ctx, 't>(
+    compiler: &Compiler<'s, 'ctx, 't>,
+    human_name: StrI<'s>,
+) -> INameT<'s, 't>
+where
+    's: 't,
+{
+    let loc = CodeLocationS::internal(compiler.scout_arena, SYNTHESIZED_RANGE_OFFSET);
+    let name_s = IFunctionDeclarationNameS::FunctionName(FunctionNameS { name: human_name, code_location: loc });
+    match compiler.translate_generic_function_name(name_s) {
+        IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
+        other => panic!("lazy extern function got an unexpected template name shape: {:?}", other),
+    }
+}
+
+/// The canonical `ResolvedName` a top-level Rust id carries, or `None` if its local name is neither a
+/// struct template nor a function template. `rust_interop` hands this to `oracle.resolve` to recover the
+/// rustc item, which is what lets the offset-encoding trick go away: the id already names the item.
+fn resolved_name_of<'s, 't>(
+    package_coord: &'s PackageCoordinate<'s>,
+    local_name: INameT<'s, 't>,
+) -> Option<ResolvedName<'s>>
+where
+    's: 't,
+{
+    let (importee_name, kind) = match local_name {
+        INameT::StructTemplate(t) => (t.human_name, ImportedItemKind::Type),
+        INameT::FunctionTemplate(t) => (t.human_name, ImportedItemKind::Function),
+        _ => return None,
+    };
+    Some(ResolvedName {
+        module_name: package_coord.module,
+        package_names: package_coord.packages.as_slice(),
+        importee_name,
+        kind,
+    })
+}
+
+/// Build a lazily-registered Rust function's `FunctionS` on its first lookup, called by
+/// `Compiler::get_or_create_postparsed_function` on a cache miss. Recovers the rustc item by
+/// re-resolving the canonical name the template id carries (no offset decoding), queries its signature,
+/// synthesizes the declaration, and registers it under the same id.
+///
+/// A free function's own id resolves directly. A method nests under its owner type, so its owner is
+/// resolved first and the method found among that type's `methods` by name.
+///
+/// Returns `None` when the id is not a Rust-backed function template (a genuine bug, surfaced by the
+/// caller's vfail) or when the signature declines — a called function whose type Vale cannot name. That
+/// decline path is out of scope for now (Vale2's callsite/overload rework owns graceful errors), so the
+/// caller's vfail is the interim behavior.
+pub fn create_postparsed_function<'s, 'ctx, 't>(
+    compiler: &Compiler<'s, 'ctx, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    template_id: &'t IdT<'s, 't>,
+) -> Option<&'s FunctionS<'s>>
+where
+    's: 't,
+{
+    if !is_rust_backed(template_id) {
+        return None;
+    }
+    let oracle = compiler.oracles.rust?;
+    let interner = compiler.typing_interner;
+    let function_template_name = match template_id.local_name {
+        INameT::FunctionTemplate(r) => r,
+        _ => return None,
+    };
+    let human_name = function_template_name.human_name;
+
+    let sig = if template_id.init_steps.is_empty() {
+        // A top-level free function: its own canonical name resolves directly to the item.
+        let name = resolved_name_of(template_id.package_coord, template_id.local_name)?;
+        let item = oracle.resolve(&name)?;
+        oracle.fn_sig(item, interner)?
+    } else {
+        // A denizen nested under its owner type (`OwnerTemplate.add_step(name)`): resolve the owner.
+        let owner_local_name = *template_id.init_steps.last()?;
+        let owner_name = resolved_name_of(template_id.package_coord, owner_local_name)?;
+        let owner_item = oracle.resolve(&owner_name)?;
+        // ataflbz-allow: not Rust-item identity — dispatching on a Vale keyword (`drop`) to pick the
+        // synthesis path, since rustc has no drop method to resolve. The owner's identity is its `DefId`.
+        if human_name == compiler.keywords.drop { // ataflbz-allow: keyword dispatch
+            // A drop is a method with no rustc signature to query: manufacture `drop(self Owner<T…>)
+            // void`. The receiver is the owner at its own generic parameters (`ValeSigType::Citizen`),
+            // resolved from the owner type item, exactly as the old eager drop built it.
+            let owner_human_name = match owner_local_name {
+                INameT::StructTemplate(t) => t.human_name,
+                _ => return None,
+            };
+            let generic_params = oracle.type_generic_params(owner_item, interner);
+            let receiver = ValeSigType::Citizen {
+                name: owner_human_name,
+                package: template_id.package_coord,
+                args: interner.alloc_slice_from_vec(
+                    (0..generic_params.len()).map(|i| ValeSigType::Generic(i as u32)).collect(),
+                ),
+            };
+            ValeSig {
+                generic_params,
+                params: interner.alloc_slice_from_vec(vec![receiver]),
+                ret: ValeSigType::Kind(KindT::Void(VoidT)),
+            }
+        } else {
+            // A regular method: find it among the owner's `methods` by name.
+            let method_item = oracle
+                .methods(owner_item)
+                .into_iter()
+                // ataflbz-allow: selection, not identity — one type's methods have unique names, so this
+                // picks the right method; its identity is still the `DefId` behind the returned item.
+                .find(|(n, _)| n.as_str() == human_name.0) // ataflbz-allow: selection
+                .map(|(_, item)| item)?;
+            oracle.fn_sig(method_item, interner)?
         }
     };
 
-    // Every imported Rust type, as an ordinary struct **declaration**.
-    //
-    // `IEnvEntryT::Struct` rather than a finished `ITemplataT::Kind`, and that is the whole of what
-    // makes generic Rust types work. The indexing phase in `Compiler::evaluate` converts a `Struct`
-    // entry into `ITemplataT::StructDefinition`, which is the one arm `solve_call_rule` can apply
-    // type arguments to; a `Kind` entry hits a different arm that binds the result and **ignores
-    // the arguments entirely**, so two instantiations silently become one type.
-    //
-    // Registering the declaration also means the ordinary machinery produces the definition:
-    // `precompile_struct` and `compile_struct` do the `declare_type` / `add_struct` /
-    // environment work this module used to do by hand. That is why `import_rust_types` is gone
-    // rather than reduced — synthesized is the degenerate case of parsed, for types exactly as for
-    // functions.
-    for (type_name, type_item) in oracle.importable_types() {
-        let Some(package_coord) = oracle.item_package(type_item) else { continue };
-        let human_name = compiler.scout_arena.intern_str(&type_name);
-        let template_name = interner.intern_struct_template_name(StructTemplateNameT { human_name });
-        let struct_s = synthesize_extern_struct(
-            compiler,
-            package_coord,
-            human_name,
-            type_item,
-            oracle.type_generic_params(type_item, interner),
-        );
-        push(
-            &mut per_package,
-            package_coord,
-            (INameT::StructTemplate(template_name), IEnvEntryT::Struct(struct_s)),
-        );
+    let function_s =
+        synthesize_extern_function(compiler, template_id.package_coord, human_name, &sig)?;
+    coutputs.register_postparsed_function(template_id, function_s);
+    Some(function_s)
+}
 
-        // Every imported type gets a `drop`, synthesized rather than queried, and as an ordinary
-        // top-level declaration exactly like its methods.
-        //
-        // The receiver is the citizen **at its own generic parameters** — `drop<T>(self Holder<T>)`
-        // — which is precisely what `ValeSigType::Citizen` exists to express. Before that variant
-        // the receiver could only be a settled kind, so a generic type's drop named `Holder` with no
-        // arguments and `predict_struct` zipped one parameter against zero arguments.
-        //
-        // It cannot come from the oracle: rustc answers `None` for any type with no `Drop` impl,
-        // which is most of them. And it cannot come from `DeriveStructDrop`, which we suppress —
-        // that macro's generated body destructures *members*, and a Rust citizen truthfully has
-        // none, so its drop would be an empty destructor that never reaches rustc. `ExternBody`
-        // becomes `__vale_drop<T>` → `drop_in_place::<T>` at codegen instead, letting rustc resolve
-        // its own drop glue. Returns `Void` because the drop autocall requires `Void` or `Never`.
-        let generic_params = oracle.type_generic_params(type_item, interner);
-        let receiver = ValeSigType::Citizen {
-            name: human_name,
-            // The same coordinate this type's store is registered under, so the synthesized drop
-            // names its receiver by the identical path the importer used.
-            package: package_coord,
-            args: interner.alloc_slice_from_vec(
-                (0..generic_params.len()).map(|i| ValeSigType::Generic(i as u32)).collect(),
-            ),
-        };
-        let drop_sig = ValeSig {
-            generic_params,
-            params: interner.alloc_slice_from_vec(vec![receiver]),
-            ret: ValeSigType::Kind(KindT::Void(VoidT)),
-        };
-        if let Some(drop_s) = synthesize_extern_function(
-            compiler,
-            package_coord,
-            compiler.keywords.drop,
-            type_item,
-            &drop_sig,
-        ) {
-            let local_name = match compiler.translate_generic_function_name(drop_s.name) {
-                IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
-                other => panic!("synthesized drop got an unexpected name shape: {:?}", other),
-            };
-            push(&mut per_package, package_coord, (local_name, IEnvEntryT::Function(drop_s)));
-        }
+/// The id-only method entries that belong in a Rust type's outer environment (Vale's home for a type's
+/// methods and associated functions). Chained into `precompile_struct`'s outer store for every citizen;
+/// empty for a Vale struct. Each is lazy — no `fn_sig`, no synthesis — like a lazily-imported free
+/// function, and synthesizes on first call through `create_postparsed_function`. Its template id nests
+/// under the type's (`struct_template_id.add_step(method_name)`), the shape a Vale internal method uses;
+/// the citizen-compile loop skips these Rust-backed entries so they are not force-compiled.
+///
+/// The type's rustc item is recovered by re-resolving the type's own canonical name (carried by
+/// `struct_template_id`), so the synthesized `StructS`'s range no longer needs to encode it.
+pub fn rust_method_entries<'s, 'ctx, 't>(
+    compiler: &Compiler<'s, 'ctx, 't>,
+    struct_template_id: &'t IdT<'s, 't>,
+) -> Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>
+where
+    's: 't,
+{
+    if !is_rust_backed(struct_template_id) {
+        return Vec::new();
     }
-
-    // Free functions and methods become the same thing: an ordinary top-level declaration whose
-    // first parameter is the receiver, if it has one.
-    //
-    // Vale erases method syntax in the postparser — `v.get()` becomes an overload call with the
-    // subject spliced in as argument zero — so a method-shaped declaration would buy nothing and
-    // cost an asymmetry. One code path, for that reason.
-    let mut declarations: Vec<(String, RustItemId)> = oracle.importable_functions();
-    for (_, type_item) in oracle.importable_types() {
-        declarations.extend(oracle.methods(type_item));
-    }
-
-    for (function_name, item) in declarations {
-        let Some(package_coord) = oracle.item_package(item) else { continue };
-        let Some(sig) = oracle.fn_sig(item, interner) else { continue };
-
-        // A declaration, not a resolved prototype. The function-compile phase in
-        // `Compiler::evaluate` walks the top-level stores and calls
-        // `evaluate_generic_function_from_non_call` on every `IEnvEntryT::Function` it finds, so
-        // putting the declaration here is all it takes for a Rust function to be compiled by the
-        // ordinary path — and `make_extern_function` mints the prototype at the end of that,
-        // once the solver has concrete types.
-        //
-        // Skipped when the signature mentions something with no Vale source-level name — an
-        // associated-type projection, or a type Vale's IR cannot express. Dropping the whole
-        // declaration is deliberate: it makes the function un-importable rather than importable
-        // with a wrong type.
-        let Some(function_s) = synthesize_extern_function(
-            compiler,
-            package_coord,
-            compiler.scout_arena.intern_str(&function_name),
-            item,
-            &sig,
-        ) else {
-            continue;
-        };
-        let local_name = match compiler.translate_generic_function_name(function_s.name) {
-            IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
-            other => panic!(
-                "synthesized extern declaration got an unexpected template name shape: {:?}",
-                other
-            ),
-        };
-        push(&mut per_package, package_coord, (local_name, IEnvEntryT::Function(function_s)));
-    }
-
-    per_package
+    let Some(oracle) = compiler.oracles.rust else { return Vec::new() };
+    let interner = compiler.typing_interner;
+    let Some(owner_name) = resolved_name_of(struct_template_id.package_coord, struct_template_id.local_name)
+    else {
+        return Vec::new();
+    };
+    let Some(type_item) = oracle.resolve(&owner_name) else { return Vec::new() };
+    let mut entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = oracle
+        .methods(type_item)
         .into_iter()
-        .map(|(package_coord, entries)| {
-            let package_id = interner.intern_id(IdValT {
-                package_coord,
-                init_steps: &[],
-                local_name: INameT::PackageTopLevel(
-                    interner.intern_package_top_level_name(PackageTopLevelNameT {}),
-                ),
-            });
-            let mut store = TemplatasStoreBuilder::new(package_id);
-            store.add_entries(compiler.scout_arena, entries);
-            (package_id, store.build_in(interner))
+        .map(|(method_name, method_item)| {
+            let human_name = compiler.scout_arena.intern_str(&method_name);
+            let local_name = lazy_extern_function_local_name(compiler, human_name);
+            let method_id = struct_template_id.add_step(interner, local_name);
+            (local_name, IEnvEntryT::Function(FunctionEnvEntry { template_id: method_id }))
         })
-        .collect()
+        .collect();
+
+    // Every imported type gets a `drop`, an id-only lazy entry nested in the type's env exactly like a
+    // method (drop is just a method — no special case in the store). rustc exposes no drop signature, so
+    // `create_postparsed_function` manufactures `drop(self Owner<T…>) void` on force. The minted name
+    // carries the *type* (owner) item, which the create hook resolves the receiver's generics from.
+    let drop_local_name = lazy_extern_function_local_name(compiler, compiler.keywords.drop);
+    let drop_id = struct_template_id.add_step(interner, drop_local_name);
+    entries.push((drop_local_name, IEnvEntryT::Function(FunctionEnvEntry { template_id: drop_id })));
+    entries
 }
 

@@ -16,6 +16,8 @@ use crate::interner::Interner;
 use crate::typing::templata_compiler::*;
 use crate::typing::infer_compiler::*;
 use crate::typing::compiler::Compiler;
+#[cfg(feature = "rust_interop")]
+use crate::typing::rust_interop::rust_method_entries;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::rules::rules::*;
@@ -133,8 +135,16 @@ where 's: 't,
                 .filter(|(id, _)| **id == *sibling_key)
                 .flat_map(|(_, ts)| ts.name_to_entry.iter().map(|(n, e)| (*n, *e)))
                 .collect();
-        let all_outer_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+        // A Rust-backed type's methods and associated functions live in THIS outer env, added as id-only
+        // entries that synthesize lazily on first call (the citizen-compile loop skips them, so they are
+        // not force-compiled here). Under the feature only; a Vale struct adds nothing here. Costs one
+        // oracle.methods() query (no fn_sig) per imported type. (A Rust type's drop stays a top-level
+        // eager entry: it needs no fn_sig, and its receiver sig is manufactured at import.)
+        #[cfg_attr(not(feature = "rust_interop"), allow(unused_mut))]
+        let mut all_outer_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
             internal_method_entries.into_iter().chain(sibling_entries.into_iter()).collect();
+        #[cfg(feature = "rust_interop")]
+        all_outer_entries.extend(rust_method_entries(self, struct_template_id));
         let mut outer_store = TemplatasStoreBuilder::new(struct_template_id);
         outer_store.add_entries(self.scout_arena, all_outer_entries);
         let outer_templatas = outer_store.build_in(self.typing_interner);

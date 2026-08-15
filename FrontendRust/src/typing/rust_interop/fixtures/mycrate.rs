@@ -224,6 +224,15 @@ pub struct Holder<T> {
     pub value: T,
 }
 
+impl<T> Holder<T> {
+    /// A method whose signature names the impl's inherited `T` — `Holder<int>.into_value()` returns the
+    /// element type. Its parent impl is `impl<T> Holder<T>`, so the parent-inclusive generic list is
+    /// `[T]` and the receiver/return resolve against it.
+    pub fn into_value(self) -> T {
+        self.value
+    }
+}
+
 pub fn make_holder() -> Holder<i32> {
     Holder { value: 9 }
 }

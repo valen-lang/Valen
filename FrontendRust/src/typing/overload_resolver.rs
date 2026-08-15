@@ -248,7 +248,7 @@ where 's: 't,
         match candidate {
             ICalleeCandidate::Function(FunctionCalleeCandidate { ft }) => {
                 // See OFCBT.
-                let function = coutputs.get_postparsed_function(ft.function_template_id);
+                let function = self.get_or_create_postparsed_function(coutputs, ft.function_template_id);
                 let identifying_rune_templata_types = function.tyype.param_types;
                 // Now we want to check that the user didn't specify too many right here.
                 // The function can inherit runes from its container, so subtract those first.

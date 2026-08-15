@@ -8,11 +8,15 @@
 // frame: this oracle cannot outlive the callback that built it, and must never be stashed in
 // a static or in `HinputsT`.
 
+use std::collections::HashSet;
+
 use rustc_hir::def::{DefKind, Res};
 use rustc_middle::ty::{Ty, TyCtxt, TyKind};
 use rustc_span::def_id::DefId;
 
 use crate::interner::StrI;
+use crate::postparsing::ast::ImportS;
+use crate::typing::env::environment::{ImportedItemKind, ResolvedName};
 use crate::scout_arena::ScoutArena;
 use crate::typing::names::names::*;
 use crate::typing::rust_interop::oracle::{
@@ -41,6 +45,36 @@ fn own_generic_param_names<'s>(
         .iter()
         .map(|p| scout_arena.intern_str(p.name.as_str()))
         .collect()
+}
+
+/// The parent-inclusive generic parameter names for an item: the parent's params first (at the low
+/// indices), then the item's own — the exact order rustc numbers `ty::Param`s and `GenericArgs::for_item`
+/// fills them.
+///
+/// A method on a generic type references its **impl's** parameters in its signature — `Vec::push`'s
+/// `value: T` and `Vec::new`'s return `Vec<T, Global>` both name the impl's `T` — but `generics_of(method)`
+/// reports those under `.parent`, leaving the method's *own* params empty. Lowering that signature against
+/// only the own params rejects the inherited `T` as an `InheritedParameter`, so a method needs this full
+/// list. Which impl matters: `Vec::new` sits in `impl<T> Vec<T>` (parent params `[T]`, `Global` concrete),
+/// while `Vec::push` sits in `impl<T, A> Vec<T, A>` (parent params `[T, A]`) — the parent walk picks up
+/// each. A free function or a top-level type has no parent, so this reduces to `own_generic_param_names`.
+fn parent_inclusive_generic_param_names<'s>(
+    tcx: TyCtxt<'_>,
+    scout_arena: &ScoutArena<'s>,
+    def_id: DefId,
+) -> Vec<StrI<'s>> {
+    let generics = tcx.generics_of(def_id);
+    let mut names = match generics.parent {
+        Some(parent) => parent_inclusive_generic_param_names(tcx, scout_arena, parent),
+        None => Vec::new(),
+    };
+    names.extend(
+        generics
+            .own_params
+            .iter()
+            .map(|p| scout_arena.intern_str(p.name.as_str())),
+    );
+    names
 }
 
 /// The Vale package coordinate for a Rust item: the reserved `rust` module, then the item's own
@@ -123,79 +157,63 @@ pub struct TyCtxtOracle<'tcx, 's> {
     items: Vec<RustItem<'s>>,
 }
 
-/// Resolve one dotted allowlist entry against every loaded crate, returning **every** match.
+/// Resolve one **crate-qualified** dotted path (`crate.module….item`) to a single item.
 ///
-/// **Plural by construction, not by accident.** Rust has no uniqueness rule for names at any depth,
-/// so one path can resolve in more than one crate at once — clippy's equivalent returns a `Vec` for
-/// exactly this reason, since `memchr::memchr` names two major versions of that crate
-/// simultaneously. An `Option` would silently take whichever crate happened to be walked first.
-/// Both sibling implementations shipped the `Option` shape and both found it wanting, which is two
-/// independent confirmations that the plural form is what to build first rather than retrofit.
+/// The first segment names the crate, the last names the item, and any segments between are the
+/// module path within that crate. Because the crate is named, resolution is unambiguous: there is no
+/// cross-crate scan and no plurality — `crate1.Widget` and `crate2.Widget` are different paths naming
+/// different items. Returns `None` when the crate is not loaded, a module segment is missing, or the
+/// final item is not a `fn`/`struct`.
 ///
-/// **A single-segment entry is the degenerate case, not a separate path** (@NNGZ): it descends
-/// through zero modules and matches against the crate root, which is where every fixture item
-/// outside `instruments` sits. There is no "is this a path?" branch anywhere below.
+/// A re-exported item resolves through the re-export chain to its canonical `DefId` (e.g.
+/// `std.vec.Vec` reaches `alloc`'s `Vec`), so identity still comes from the `DefId`, never the path.
 ///
-/// **Intermediate segments must be modules.** Matching them on name alone would let a struct named
-/// `vec` swallow the `vec` in `std::vec::Vec` — the same `DefKind` filter the final segment needs,
-/// applied one level up.
-///
-/// This is O(imports × crates) rather than O(crate graph), and it is still eager: every allowed item
-/// is resolved and declared at construction whether or not the program mentions it. `Vec` brings
-/// ~100 inherent methods, so the eagerness becomes the next thing to attack (§6) — but it is
-/// orthogonal to reachability, which is what this fixes.
-fn resolve_allowlist_path<'tcx>(tcx: TyCtxt<'tcx>, path: &str) -> Vec<(DefId, ItemKind)> {
+/// **Intermediate segments must be modules** — the `DefKind::Mod` filter stops a struct named `vec`
+/// from swallowing the `vec` in `std::vec::Vec`, the same `DefKind` filter the final item needs.
+fn resolve_crate_qualified_path<'tcx>(tcx: TyCtxt<'tcx>, path: &str) -> Option<(DefId, ItemKind)> {
     let segments: Vec<&str> = path.split('.').collect();
-    // `split` always yields at least one element, so a last segment always exists.
-    let Some((item_name, module_segments)) = segments.split_last() else {
-        return Vec::new();
-    };
+    // Need at least `crate.item`: the first segment is the crate, the last is the item.
+    let (crate_name, rest) = segments.split_first()?;
+    let (item_name, module_segments) = rest.split_last()?;
 
-    let mut found = Vec::new();
-    for &cnum in tcx.crates(()).iter() {
-        let mut module = cnum.as_def_id();
-        let mut descended = true;
-        for segment in module_segments {
-            let next = tcx
-                .module_children(module)
-                .iter()
-                // ataflbz-allow: selection, not identity. This matches an allowlist *path segment*
-                // against a module's children to decide what may be imported; the item's identity
-                // still comes from its `DefId` and the `package_coord` derived from `tcx.def_path`.
-                .find(|c| c.ident.to_string() == **segment) // ataflbz-allow: selection
-                .and_then(|c| match c.res {
-                    Res::Def(DefKind::Mod, def_id) => Some(def_id),
-                    _ => None,
-                });
-            let Some(next) = next else {
-                descended = false;
-                break;
-            };
-            module = next;
-        }
-        if !descended {
+    // The named crate must be a loaded dependency. `tcx.crates(())` is exactly those external crates;
+    // `LOCAL_CRATE` (the compiled stub) is deliberately not among them, so it is never importable.
+    let cnum = tcx
+        .crates(())
+        .iter()
+        .copied()
+        .find(|c| tcx.crate_name(*c).as_str() == *crate_name)?;
+
+    let mut module = cnum.as_def_id();
+    for segment in module_segments {
+        module = tcx
+            .module_children(module)
+            .iter()
+            // ataflbz-allow: selection — matching a written module segment against a module's children.
+            .find(|c| c.ident.to_string() == **segment) // ataflbz-allow: selection
+            .and_then(|c| match c.res {
+                Res::Def(DefKind::Mod, def_id) => Some(def_id),
+                _ => None,
+            })?;
+    }
+
+    for child in tcx.module_children(module) {
+        // Selection — the final segment deciding which child is admitted. Identity comes from the
+        // `DefId` captured below, not from this name match.
+        if child.ident.to_string() != *item_name { // ataflbz-allow: selection
             continue;
         }
-
-        for child in tcx.module_children(module) {
-            // ataflbz-allow: selection, not identity — the allowlist's final segment deciding
-            // which children are admitted. Identity comes from the `DefId` captured below.
-            if child.ident.to_string() != *item_name { // ataflbz-allow: selection
-                continue;
-            }
-            // Filter on DefKind, not just name: a crate's module children include its own
-            // `extern crate std`, so an unfiltered name match would hand back a module
-            // where a function or type was asked for.
-            let kind = match child.res {
-                Res::Def(DefKind::Fn, _) => ItemKind::Function,
-                Res::Def(DefKind::Struct, _) => ItemKind::Type,
-                _ => continue,
-            };
-            let Res::Def(_, def_id) = child.res else { continue };
-            found.push((def_id, kind));
-        }
+        // Filter on DefKind: a module's children include re-exported modules, `extern crate` entries,
+        // etc., so a name match alone could hand back a module where a fn/struct was asked for.
+        let kind = match child.res {
+            Res::Def(DefKind::Fn, _) => ItemKind::Function,
+            Res::Def(DefKind::Struct, _) => ItemKind::Type,
+            _ => continue,
+        };
+        let Res::Def(_, def_id) = child.res else { continue };
+        return Some((def_id, kind));
     }
-    found
+    None
 }
 
 impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
@@ -235,11 +253,9 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
         let mut items: Vec<RustItem<'s>> = Vec::new();
 
         for path in allowed {
-            // The short name is the final segment. Qualified naming — registering under the whole
-            // path so two same-named imports stay apart — is §10's Problem A and touches core, so
-            // it is deliberately not done here.
+            // The short name is the final segment; the crate + module segments before it disambiguate.
             let short_name = path.rsplit('.').next().unwrap_or(path);
-            for (def_id, kind) in resolve_allowlist_path(tcx, path) {
+            if let Some((def_id, kind)) = resolve_crate_qualified_path(tcx, path) {
                 items.push(RustItem {
                     human_name: scout_arena.intern_str(short_name),
                     name: short_name.to_string(),
@@ -275,7 +291,9 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                         def_id: assoc.def_id,
                         package,
                         kind: ItemKind::Method(owner_idx),
-                        generic_params: own_generic_param_names(tcx, scout_arena, assoc.def_id),
+                        // Parent-inclusive: a method's signature names the impl's params (`self Vec<T, A>`,
+                        // `value: T`), which live under the method's `.parent`, not its own params.
+                        generic_params: parent_inclusive_generic_param_names(tcx, scout_arena, assoc.def_id),
                     });
                 }
             }
@@ -476,6 +494,61 @@ where
         Some(self.items.get(item.0 as usize)?.package)
     }
 
+    fn resolve(&self, name: &ResolvedName<'s>) -> Option<RustItemId> {
+        // A name resolves to the one table item whose coordinate, short name, and kind all match.
+        // Identity still comes from the `DefId` behind the item; this match is *selection* — which
+        // already-resolved item a canonical name picks out — exactly the role the allowlist scan
+        // played, now keyed by the full coordinate rather than a bare short name.
+        let want_kind = match name.kind {
+            ImportedItemKind::Type => ItemKind::Type,
+            ImportedItemKind::Function => ItemKind::Function,
+        };
+        self.items.iter().position(|item| {
+            // Selection, not identity — picking which already-resolved item a *full* canonical
+            // coordinate + short name admits. The item's identity is still its `DefId`, and the
+            // coordinate (`tcx.def_path`-derived) makes the pair unique, so this is not a bare
+            // short-name match.
+            item.kind == want_kind
+                && item.human_name == name.importee_name // ataflbz-allow: selection
+                && item.package.module == name.module_name
+                && item.package.packages.as_slice() == name.package_names
+        }).map(|idx| RustItemId(idx as u32))
+    }
+
+    fn resolve_import(&self, import: &ImportS<'s>) -> Option<ResolvedName<'s>> {
+        // Join the import's crate + module + importee segments into the crate-qualified path the
+        // resolver walks. The reserved `rust` module is already matched by the caller and is not part
+        // of the rustc path.
+        let mut path = String::new();
+        for seg in import.package_names {
+            if !path.is_empty() {
+                path.push('.');
+            }
+            path.push_str(seg.0);
+        }
+        if !path.is_empty() {
+            path.push('.');
+        }
+        path.push_str(import.importee_name.0);
+
+        // One crate-qualified path resolves to at most one item; find it in the already-resolved table
+        // and hand back its canonical name. A method's `DefId` never comes back from the resolver (it
+        // filters to fn/struct), so only top-level `Type` and `Function` items match.
+        let (def_id, _kind) = resolve_crate_qualified_path(self.tcx, &path)?;
+        let item = self.items.iter().find(|item| item.def_id == def_id)?;
+        let kind = match item.kind {
+            ItemKind::Type => ImportedItemKind::Type,
+            ItemKind::Function => ImportedItemKind::Function,
+            ItemKind::Method(_) => return None,
+        };
+        Some(ResolvedName {
+            module_name: item.package.module,
+            package_names: item.package.packages.as_slice(),
+            importee_name: item.human_name,
+            kind,
+        })
+    }
+
     fn fn_sig(
         &self,
         item: RustItemId,
@@ -529,24 +602,6 @@ where
             Some(rust_item) => interner.alloc_slice_copy(&rust_item.generic_params),
             None => &[],
         }
-    }
-
-    fn importable_types(&self) -> Vec<(String, RustItemId)> {
-        self.items
-            .iter()
-            .enumerate()
-            .filter(|(_, i)| i.kind == ItemKind::Type)
-            .map(|(idx, i)| (i.name.clone(), RustItemId(idx as u32)))
-            .collect()
-    }
-
-    fn importable_functions(&self) -> Vec<(String, RustItemId)> {
-        self.items
-            .iter()
-            .enumerate()
-            .filter(|(_, i)| i.kind == ItemKind::Function)
-            .map(|(idx, i)| (i.name.clone(), RustItemId(idx as u32)))
-            .collect()
     }
 
     fn methods(&self, item: RustItemId) -> Vec<(String, RustItemId)> {

@@ -5,6 +5,8 @@ use crate::typing::ast::ast::{ExternT, ICitizenAttributeT};
 use crate::typing::ast::citizens::{InterfaceDefinitionT, StructMemberT, StructDefinitionT};
 use crate::typing::names::names::{CodeVarNameT, IVarNameT};
 use crate::typing::compiler::Compiler;
+#[cfg(feature = "rust_interop")]
+use crate::typing::rust_interop::is_rust_backed;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::{CitizenEnvironmentT, IInDenizenEnvironmentT};
 use crate::typing::env::function_environment_t::NodeEnvironmentT;
@@ -133,8 +135,15 @@ where 's: 't,
         for (name, entry) in outer_env.templatas().name_to_entry.iter() {
             match entry {
                 IEnvEntryT::Function(FunctionEnvEntry { template_id: id }) => {
+                    // Lazily compile rust structs' methods.
+                    // VRI: Soon, we should lazily compile vale's internal methods too,
+                    // getting rid of this whole loop.
+                    #[cfg(feature = "rust_interop")]
+                    {
+                        if is_rust_backed(id) { continue; }
+                    }
                     let deferred_name = outer_env.id().add_step(self.typing_interner, *name);
-                    let function_a = coutputs.get_postparsed_function(id);
+                    let function_a = self.get_or_create_postparsed_function(coutputs, id);
                     coutputs.defer_evaluating_function(DeferredActionT::EvaluateFunction {
                         name: deferred_name,
                         calling_env: outer_env,
