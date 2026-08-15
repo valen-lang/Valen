@@ -89,7 +89,7 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
         humanize_name(scout_arena, typing_interner, code_map, INameT::from(*local_id), None))
     }
     ICompileErrorT::CannotSubscriptT { range: _, tyype } => {
-      format!("Cannot subscript type: {}!",
+      format!("Cannot subscript type: {}",
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *tyype }))))
     }
     ICompileErrorT::CouldntConvertForReturnT { range: _, expected_type, actual_type } => {

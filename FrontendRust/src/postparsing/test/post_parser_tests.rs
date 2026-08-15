@@ -167,6 +167,14 @@ fn test_struct() {
 
   let normal_member = cast!(only_member, IStructMemberS::NormalStructMember);
   assert_eq!(normal_member.name.as_str(), "x");
+
+  match normal_member.tyype {
+    ITypeST::Name(name) => match name.name {
+      IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }) => {}
+      other => panic!("expected member type Name to be `int`; got {:?}", other),
+    },
+    other => panic!("expected member tyype to be a concrete Name; got {:?}", other),
+  }
 }
 
 #[test]
@@ -305,6 +313,21 @@ fn impl_() {
     NodeRefS::CallRule(CallSR { result_rune, args, .. })
       if result_rune.rune == impl_.interface_kind_rune.rune && args.is_empty() => Some(())
   );
+
+  match impl_.sub_citizen_type {
+    ITypeST::Name(name) => match name.name {
+      IImpreciseNameS::CodeName(CodeNameS { name: StrI("Moo"), .. }) => {}
+      other => panic!("expected sub_citizen_type Name to be `Moo`; got {:?}", other),
+    },
+    other => panic!("expected sub_citizen_type to be a concrete Name; got {:?}", other),
+  }
+  match impl_.super_interface_type {
+    ITypeST::Name(name) => match name.name {
+      IImpreciseNameS::CodeName(CodeNameS { name: StrI("IMoo"), .. }) => {}
+      other => panic!("expected super_interface_type Name to be `IMoo`; got {:?}", other),
+    },
+    other => panic!("expected super_interface_type to be a concrete Name; got {:?}", other),
+  }
 }
 
 #[test]
@@ -1339,7 +1362,8 @@ fn test_named_param_keeps_its_name_at_postparse() {
   }
 }
 
-use crate::postparsing::rules::rules::{IRulexSR, RegionSR};
+use crate::postparsing::rules::rules::{IRulexSR, RegionSR, ResolveSR};
+use crate::postparsing::rules::types::ITypeST;
 
 #[test]
 fn test_param_no_outer_wrap_routing() {
@@ -1601,6 +1625,116 @@ fn test_function_where_implements_becomes_an_impl_bound() {
 
   assert_rune_resolves_to(launch.header_rules, bound.super_rune.rune, "IShip");
   assert_rune_absent_from_rules(launch.header_rules, bound.result_rune.rune);
+}
+
+#[test]
+fn test_function_where_func_bound_carries_an_itypest() {
+  // A `where func foo(&T)bool` bound records its parameter and return types as a read-only
+  // ITypeST on the Resolve rule, per plan-phased-calls §P. A later phase reads the rune mentions in
+  // there, so the tree must know that `&T`'s inner is the generic `T` (a Rune) while the concrete
+  // return `bool` is a Name.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func bar<T>(x T) where func foo(&T)bool { }",
+  );
+  let bar = program.lookup_function("bar");
+  let resolve: &ResolveSR = bar.header_rules.iter().find_map(|rule| match rule {
+    IRulexSR::Resolve(r) => Some(r),
+    _ => None,
+  }).expect("expected a Resolve rule from `where func foo(&T)bool`");
+
+  // params_types is `[&T]`: one BorrowRef whose inner is the generic rune `T`.
+  match expect_1(resolve.params_types) {
+    ITypeST::BorrowRef(br) => match br.inner {
+      ITypeST::Rune(ru) => match ru.rune.rune {
+        IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }) => {}
+        other => panic!("expected `&T`'s inner rune to be the generic T; got {:?}", other),
+      },
+      other => panic!("expected `&T`'s inner to be a Rune; got {:?}", other),
+    },
+    other => panic!("expected params_types to be [BorrowRef(Rune(T))]; got {:?}", other),
+  }
+
+  // return_type is the concrete `bool`, so it is a Name rather than a Rune.
+  match resolve.return_type {
+    ITypeST::Name(name) => match name.name {
+      IImpreciseNameS::CodeName(CodeNameS { name: StrI("bool"), .. }) => {}
+      other => panic!("expected the return Name to be `bool`; got {:?}", other),
+    },
+    other => panic!("expected return_type to be a concrete Name; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_generic_default_carries_an_itypest() {
+  // A generic parameter default records its written type as a read-only ITypeST on the
+  // GenericParameterDefaultS, from which its rules are derived (§P). Only Int/Region/RefList runes
+  // can carry a default (parse_rune_type accepts no Kind annotation), so this uses an Int rune with
+  // an Int-literal default; its ITypeST is an Int node.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(&scout_arena, &keywords, &parse_arena, "func bar<N Int = 5>() { }");
+  let bar = program.lookup_function("bar");
+  let default = expect_1(bar.generic_params).default.as_ref()
+    .expect("expected a `= 5` default on N");
+  match default.tyype {
+    ITypeST::Int(int_literal) => assert_eq!(int_literal.value.value, 5),
+    other => panic!("expected default tyype to be an Int literal; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_export_carries_an_itypest() {
+  // An `export Moo as Bork` records the exported type as a read-only ITypeST on the ExportAsS, from
+  // which its rules are derived (§P). `Moo` is a concrete type-name, so a Name.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(&scout_arena, &keywords, &parse_arena, "export Moo as Bork;");
+  let export = expect_1(program.exports);
+  match export.tyype {
+    ITypeST::Name(name) => match name.name {
+      IImpreciseNameS::CodeName(CodeNameS { name: StrI("Moo"), .. }) => {}
+      other => panic!("expected exported type Name to be `Moo`; got {:?}", other),
+    },
+    other => panic!("expected export tyype to be a concrete Name; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_variadic_member_carries_an_itypest() {
+  // A variadic struct member `_ ..T` records its written type as a read-only ITypeST on the
+  // VariadicStructMemberS, from which its rules are derived (§P). `T` is the struct's generic, so a
+  // Rune rather than a Name.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(&scout_arena, &keywords, &parse_arena, "struct Moo<T> { _ ..T; }");
+  let moo = program.lookup_struct("Moo");
+  match expect_1(&moo.members) {
+    IStructMemberS::VariadicStructMember(variadic_member) => match variadic_member.tyype {
+      ITypeST::Rune(ru) => match ru.rune.rune {
+        IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }) => {}
+        other => panic!("expected variadic member type to be the generic Rune T; got {:?}", other),
+      },
+      other => panic!("expected variadic member tyype to be a Rune; got {:?}", other),
+    },
+    other => panic!("expected a variadic member; got {:?}", other),
+  }
 }
 
 #[test]

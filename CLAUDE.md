@@ -91,6 +91,7 @@ Instead, use the same file.
 - **Read when the architect says the literal phrase "fire commit" or "fire commit temporary" (or you're about to commit + sync as a TL).** → docs/skills/fire-commit.md
 - **Read when the architect says the literal phrase "fire rebase".** → docs/skills/fire-rebase.md
 - **Read when you need the entire contents of one or more files, rather than a targeted search or excerpt.** → docs/skills/full-read.md
+- **Read when writing or adding an arcana doc for a cross-cutting concern.** → docs/skills/good-arcana.md
 - **Read when reviewing or critiquing a plan for testing correctness before implementation.** → docs/skills/good-testing.md
 - **Read when a Guardian shield just fired or failed at hook time and you need to diagnose it.** → docs/skills/guardian-diagnose.md
 - **Read when acting as JR in a Guardian-gated loop.** → docs/skills/guardian-jr.md
@@ -104,9 +105,11 @@ Instead, use the same file.
 - **Read when referring to a specific place in code, so the reference is a ctrl-clickable path:line.** → docs/skills/point.md
 - **Read when writing or reviewing prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-reviewer.md
 - **Read when checking the grammar and voice of prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-tactical.md
+- **Read when the human says they are about to fork this session, or asks you to get ready for a fork.** → docs/skills/ready-fork.md
 - **Read when authoring or running any bulk-edit script (`./tmp/scripts/*.py`, shell loops over many files, or any per-file transform across more than a handful of files).** → docs/skills/scripting.md
 - **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → docs/skills/tdd.md
 - **Read when reviewing or writing typing-pass tests (or other tests that walk the AST with collect_ macros).** → docs/skills/test-review.md
+- **Read when the human asks for two-phase communication, or wants an answer followed by a plain-language restatement below a separator line.** → docs/skills/two-phase.md
 - **Read when an API has obligations callers must remember (call X before Y, don't forget Z), when the same construction is hand-rolled across many call sites, or when runtime assertions guard "did you do this yet".** → docs/skills/type-enforced-apis.md
 - **Read when reviewing or writing code in the typing pass (FrontendRust/src/typing/).** → docs/skills/typing-reviewer.md
 - **Read when editing `vcoord-handoff.md` or any other long-lived handoff or plan doc.** → docs/skills/update-handoff.md

@@ -688,9 +688,20 @@ pub fn solve_rune_types<'s, 't, E: IRuneTypeSolverEnv<'s, 't>>(
         IRulexSR::Lookup(lookup) => {
           // VCOORD: same walk as the solve arm above — see its note.
           match env.lookup(coutputs, lookup.range.clone(), lookup.parts) {
-            Err(_e) => {
-              panic!("LookupSR pre-computation error path not yet implemented");
-              // return Err(RuleError(e))
+            Err(e) => {
+              return Err(RuneTypeSolveError {
+                range: range.clone(),
+                failed_solve: FailedSolve {
+                  steps: vec![],
+                  conclusions: HashMap::default(),
+                  unsolved_rules: rules_s.to_vec(),
+                  unsolved_runes: vec![],
+                  error: ISolverError::RuleError(RuleError {
+                    err: e.into(),
+                    _phantom: PhantomData,
+                  }),
+                },
+              });
             }
             Ok(result) => {
               let entries: Vec<(IRuneS<'s>, ITemplataType)> = match &result {

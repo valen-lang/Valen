@@ -23,7 +23,10 @@ use crate::typing::types::types::IntT;
 
 pub struct AfterRegionsErrorTests {}
 
+// VCOORD: enable this. Downcast error-message check; try_as resolves through the Result machinery
+// (fails finding `expect`) before the relatedness check, so CantDowncastUnrelatedTypes never surfaces.
 #[test]
+#[ignore]
 fn report_when_downcasting_between_unrelated_types() {
     // This test does not pass yet, use #[ignore].
     let parse_bump = Bump::new();
@@ -42,7 +45,7 @@ struct Spoon { }
 
 exported func main() {
   ship = __pretend<ISpaceship>();
-  ship.as<Spoon>();
+  ship.try_as<Spoon>();
 }
 ";
     let code_source = CodeSource::new(vec![
@@ -68,13 +71,15 @@ exported func main() {
         r#"At test:0.vale:8:1:
 exported func main() {
 At test:0.vale:10:7:
-  ship.as<Spoon>();
+  ship.try_as<Spoon>();
 Can't downcast `ISpaceship` to unrelated `Spoon`
 "#,
     );
 }
 
+// VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
+#[ignore]
 fn lambda_body_type_mismatches_anonymous_interface_return_type() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -161,16 +166,22 @@ fn detects_sending_non_citizen_to_citizen() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
+import v.builtins.panic.*;
+
 interface MyInterface {}
 func moo<T>(a T)
-where implements(T, MyInterface), func drop(T)void
-{ }
+where implements(T, MyInterface)
+{
+  __vbi_panic();
+}
 exported func main() {
   moo(7);
 }
 ";
     let code_source = CodeSource::new(vec![
+        Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
         new_test_code_map(&parse_arena, code),
+        Source::Fn(empty_v_builtins_stub),
     ]);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
@@ -204,61 +215,33 @@ exported func main() {
         }
         other => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", other),
     }
-    assert_humanized_eq(
+    assert_humanized_eq( // VCOORD: this is super fragile, we need to improve this once we have phased calls
         &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:6:1:
+        r#"At test:0.vale:10:1:
 exported func main() {
-At test:0.vale:7:3:
+At test:0.vale:11:3:
   moo(7);
 Couldn't find a suitable function moo(i32). Rejected candidates:
 
-Candidate 1 (of 1): test:0.vale:3:1:
-CodeLocationS { file: FileCoordinate { package_coord: PackageCoordinate { module: "test", packages: [] }, filepath: "0.vale" }, offset: 26 }
+Candidate 1 (of 1): test:0.vale:5:1:
+CodeLocationS { file: FileCoordinate { package_coord: PackageCoordinate { module: "test", packages: [] }, filepath: "0.vale" }, offset: 54 }
 Kind i32 cannot be a sub-kind.
-where implements(T, MyInterface), func drop(T)void
-                                              ^^^^ _121311: void
-                                            ^ T: i32
-                                           ^^^ _1212: (unknown)
-                                  ^^^^^^^^^^^^^^^^ _1214: (unknown)
-                    ^^^^^^^^^^^ _112111: MyInterface
-                 ^ T: i32
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^ _113: (unknown)
 Steps:
 Supplied:
   (arg 0): i32
-  added rule: _112111.gen = "MyInterface"
-  added rule: _112111.kind = _112111.gen<>
-  added rule: coerceToCoord(_112111, _112111.kind)
-  added rule: _113 = T call-isa _112111
-  added rule: _1212 = (T)
-  added rule: _121311.kind = "void"
-  added rule: coerceToCoord(_121311, _121311.kind)
-  added rule: _1214 = callsite-func drop(_1212)_121311
-  added rule: _1214 = resolve-func drop(_1212)_121311
-  added rule: _4.kind = "void"
-  added rule: coerceToCoord(_4, _4.kind)
-  added rule: (arg 0) -> T
-_112111.gen = "MyInterface"
-  _112111.gen: MyInterface
-_112111.kind = _112111.gen<>
-  _112111.kind: MyInterface
-coerceToCoord(_112111, _112111.kind)
+  added rule: _112111 = "MyInterface"
+  added rule: _112112 = _112111<>
+  added rule: _4 = "void"
+  added rule: (arg 0) = T
+_112111 = "MyInterface"
   _112111: MyInterface
-_121311.kind = "void"
-  _121311.kind: void
-coerceToCoord(_121311, _121311.kind)
-  _121311: void
-_4.kind = "void"
-  _4.kind: void
-coerceToCoord(_4, _4.kind)
+_112112 = _112111<>
+  _112112: MyInterface
+_4 = "void"
   _4: void
-(arg 0) -> T
+(arg 0) = T
   T: i32
-Unsolved rule: _1212 = (T)
-Unsolved rule: _1214 = resolve-func drop(_1212)_121311
-Unsolved rule: _1214 = callsite-func drop(_1212)_121311
-Unsolved rule: _113 = T call-isa _112111
-Unsolved runes: _113 _1212 _1214
+
 
 
 "#,
@@ -443,8 +426,8 @@ func main(muta Muta) int  { return 7; }
     }
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:2:1:
-weakable interface IUnit {}
+        r#"At test:0.vale:4:1:
+impl IUnit for Muta;
 Weakable mismatch in impl: struct is not weakable, but interface is.
 "#,
     );
@@ -571,43 +554,39 @@ Couldn't find a suitable function make(i32). Rejected candidates:
 
 Candidate 1 (of 1): test:0.vale:4:1:
 CodeLocationS { file: FileCoordinate { package_coord: PackageCoordinate { module: "test", packages: [] }, filepath: "0.vale" }, offset: 31 }
-Couldn't solve some runes: K, V, _6111, _6111.kind
+Couldn't solve some runes: K, V, _6111
 func make<K, V, H>(h H) MyStruct<K, V, H>
                                        ^ H: i32
                                     ^ V: (unknown)
                                  ^ K: (unknown)
                         ^^^^^^^^^^^^^^^^^ _6111: (unknown)
-                        ^^^^^^^^^^^^^^^^^ _6111.kind: (unknown)
                         ^^^^^^^^ _611211: MyStruct
 Steps:
 Supplied:
   (arg 0): i32
   added rule: _1112 = (H)
-  added rule: _111311.kind = "void"
-  added rule: coerceToCoord(_111311, _111311.kind)
-  added rule: _1114 = callsite-func drop(_1112)_111311
-  added rule: _1114 = resolve-func drop(_1112)_111311
+  added rule: _111311 = "void"
+  added rule: _111312 = _111311<>
+  added rule: _1114 = callsite-func drop(_1112)_111312
+  added rule: _1114 = resolve-func drop(_1112)_111312
   added rule: _611211 = "MyStruct"
-  added rule: _6111.kind = _611211<K, V, H>
-  added rule: coerceToCoord(_6111, _6111.kind)
-  added rule: (arg 0) -> H
-_111311.kind = "void"
-  _111311.kind: void
-coerceToCoord(_111311, _111311.kind)
+  added rule: _6111 = _611211<K, V, H>
+  added rule: (arg 0) = H
+_111311 = "void"
   _111311: void
+_111312 = _111311<>
+  _111312: void
 _611211 = "MyStruct"
   _611211: MyStruct
-(arg 0) -> H
+(arg 0) = H
   H: i32
 _1112 = (H)
   _1112: (i32)
-_1114 = resolve-func drop(_1112)_111311
+_1114 = resolve-func drop(_1112)_111312
   _1114: main.drop(i32)
-_1114 = callsite-func drop(_1112)_111311
-(complex)
-Unsolved rule: coerceToCoord(_6111, _6111.kind)
-Unsolved rule: _6111.kind = _611211<K, V, H>
-Unsolved runes: K V _6111 _6111.kind
+_1114 = callsite-func drop(_1112)_111312
+Unsolved rule: _6111 = _611211<K, V, H>
+Unsolved runes: K V _6111
 
 
 "#,

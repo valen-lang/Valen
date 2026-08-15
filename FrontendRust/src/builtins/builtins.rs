@@ -11,7 +11,8 @@ use crate::keywords::Keywords;
 pub const ENTRIES: &[(&str, &str, &str)] = &[
     ("arith",                          "arith.vale",                          include_str!("resources/arith.vale")),
     ("logic",                          "logic.vale",                          include_str!("resources/logic.vale")),
-    ("migrate",                        "migrate.vale",                        include_str!("resources/migrate.vale")),
+    // VCOORD: re-enable closures
+    // ("migrate",                        "migrate.vale",                        include_str!("resources/migrate.vale")),
     ("str",                            "str.vale",                            include_str!("resources/str.vale")),
     ("drop",                           "drop.vale",                           include_str!("resources/drop.vale")),
     ("clone",                          "clone.vale",                          include_str!("resources/clone.vale")),
@@ -30,7 +31,8 @@ pub const ENTRIES: &[(&str, &str, &str)] = &[
     ("opt",                            "opt.vale",                            include_str!("resources/opt.vale")),
     ("result",                         "result.vale",                         include_str!("resources/result.vale")),
     ("sameinstance",                   "sameinstance.vale",                   include_str!("resources/sameinstance.vale")),
-    ("weak",                           "weak.vale",                           include_str!("resources/weak.vale")),
+    // VCOORD: re-enable weaks
+    //("weak",                           "weak.vale",                           include_str!("resources/weak.vale")),
 ];
 
 /// Build a `FileCoordinateMap` for the one builtin module named `name`, keyed at

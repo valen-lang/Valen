@@ -34,7 +34,7 @@ use crate::postparsing::names::{
   TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::rules::rule_scout::{translate_rulexes, translate_type};
-use crate::postparsing::rules::templex_scout::{translate_templex, add_literal_rule};
+use crate::postparsing::rules::templex_scout::{translate_templex, add_literal_rule, translate_templex_into_type_st, translate_type_st_into_rune, translate_signature_type_st};
 use crate::postparsing::rules::rules::{
   EqualsSR, IRulexSR, RuneUsage,
 };
@@ -61,7 +61,6 @@ use crate::parsing::ast::InterfaceP;
 use crate::parsing::ast::FunctionP;
 use crate::postparsing::ast::ExternS;
 use crate::postparsing::function_scout::ParentCitizen;
-use crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune;
 use crate::utils::fx::HashSet;
 #[derive(Debug, PartialEq)]
 pub struct CompileErrorExceptionS<'s> {
@@ -475,9 +474,12 @@ pub(crate) fn scout_generic_parameter(
   };
   let default_s = generic_param_p.maybe_default.map(|default_pt| {
     let mut uncategorized_rules = Vec::new();
-    let result_rune = translate_templex(
-      self.scout_arena, self.keywords, env, lidb, &mut uncategorized_rules, context_region, &default_pt,
+    let default_tree = translate_templex_into_type_st(self.scout_arena, env.clone(), &default_pt);
+    let (result_rune, _value_rune, outer_vec, value_vec) = translate_signature_type_st(
+      self.scout_arena, self.keywords, env, lidb, context_region, &default_tree,
     );
+    uncategorized_rules.extend(value_vec);
+    uncategorized_rules.extend(outer_vec);
     uncategorized_rules.push(IRulexSR::Equals(EqualsSR {
       range: generic_param_range_s,
       left: rune_s.clone(),
@@ -506,6 +508,7 @@ pub(crate) fn scout_generic_parameter(
     GenericParameterDefaultS {
       result_rune: result_rune.rune,
       rules: self.scout_arena.alloc_slice_from_vec(rules_to_leave_in_default_argument),
+      tyype: default_tree,
     }
   });
 
@@ -755,32 +758,36 @@ fn scout_impl(
     Some(x) => x,
   };
 
+  let sub_citizen_type = translate_templex_into_type_st(self.scout_arena, impl_env.clone(), struct_);
   let struct_rune = {
     let mut child_lidb = lidb.child();
-    translate_maybe_type_into_rune(
+    let (full, _value, outer_vec, value_vec) = translate_signature_type_st(
       self.scout_arena,
         self.keywords,
       impl_env.clone(),
       &mut child_lidb,
-      range_s.clone(),
-      &mut rule_builder,
       default_region_rune_s.clone(),
-      Some(struct_),
-    )
+      &sub_citizen_type,
+    );
+    rule_builder.extend(value_vec);
+    rule_builder.extend(outer_vec);
+    full
   };
 
+  let super_interface_type = translate_templex_into_type_st(self.scout_arena, impl_env.clone(), &impl0.interface);
   let interface_rune = {
     let mut child_lidb = lidb.child();
-    translate_maybe_type_into_rune(
+    let (full, _value, outer_vec, value_vec) = translate_signature_type_st(
       self.scout_arena,
         self.keywords,
       impl_env.clone(),
       &mut child_lidb,
-      range_s.clone(),
-      &mut rule_builder,
       default_region_rune_s.clone(),
-      Some(&impl0.interface),
-    )
+      &super_interface_type,
+    );
+    rule_builder.extend(value_vec);
+    rule_builder.extend(outer_vec);
+    full
   };
 
   let sub_citizen_imprecise_name = match struct_ {
@@ -888,8 +895,10 @@ fn scout_impl(
     tyype,
     struct_rune,
     sub_citizen_imprecise_name,
+    sub_citizen_type,
     interface_rune,
     super_interface_imprecise_name,
+    super_interface_type,
     self.scout_arena.alloc_slice_from_vec(impl_bounds),
   ))
 }
@@ -920,21 +929,24 @@ fn scout_export_as(
     tyype: IGenericParameterTypeS::RegionGenericParameterType(RegionGenericParameterTypeS {}),
     default: None,
   };
-  let rune_s = translate_templex(
+  let export_tree = translate_templex_into_type_st(self.scout_arena, export_env.clone(), &export_as_p.struct_);
+  let (rune_s, _value_rune, outer_vec, value_vec) = translate_signature_type_st(
     self.scout_arena,
     self.keywords,
     export_env,
     &mut lidb,
-    &mut rule_builder,
     default_region_rune_s,
-    &export_as_p.struct_,
+    &export_tree,
   );
+  rule_builder.extend(value_vec);
+  rule_builder.extend(outer_vec);
   ExportAsS {
     range: range_s,
     rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
     export_name: ExportAsNameS { code_location: pos },
     rune: rune_s,
     exported_name: self.scout_arena.intern_str(export_as_p.exported_name.str().as_str()),
+    tyype: export_tree,
   }
 }
 
@@ -1099,34 +1111,47 @@ fn scout_import(
       .iter()
       .flat_map(|member| match member {
         IStructContent::NormalStructMember(member) => {
-          let member_rune = translate_templex(
-            self.scout_arena,
-            self.keywords,
-            struct_env.clone(),
-            &mut lidb.child(),
-            &mut member_rule_builder,
-            default_region_rune_s.clone(),
-            &member.tyype,
-          );
+          let member_tree = translate_templex_into_type_st(self.scout_arena, struct_env.clone(), &member.tyype);
+          // The @PFVSZ split, so a constructor param built from this member matches a user-written one.
+          let (member_full_rune, member_value_rune, outer_ref_rules_vec, value_rules_vec) =
+            translate_signature_type_st(
+              self.scout_arena,
+              self.keywords,
+              struct_env.clone(),
+              &mut lidb.child(),
+              default_region_rune_s.clone(),
+              &member_tree,
+            );
+          member_rule_builder.extend(value_rules_vec.iter().copied());
+          member_rule_builder.extend(outer_ref_rules_vec.iter().copied());
+          let value_type_rules = self.scout_arena.alloc_slice_from_vec(value_rules_vec);
+          let type_outer_ref_rules = self.scout_arena.alloc_slice_from_vec(outer_ref_rules_vec);
           vec![IStructMemberS::NormalStructMember(NormalStructMemberS {
             range: Self::eval_range(file, member.range),
             name: self.scout_arena.intern_str(member.name.str().as_str()),
-            type_rune: member_rune,
+            type_rune: member_full_rune,
+            tyype: member_tree,
+            value_type_rune: member_value_rune,
+            type_outer_ref_rules,
+            value_type_rules,
           })]
         }
         IStructContent::VariadicStructMember(member) => {
-          let member_rune = translate_templex(
+          let member_tree = translate_templex_into_type_st(self.scout_arena, struct_env.clone(), &member.tyype);
+          let (member_rune, _value_rune, outer_vec, value_vec) = translate_signature_type_st(
             self.scout_arena,
             self.keywords,
             struct_env.clone(),
             &mut lidb.child(),
-            &mut member_rule_builder,
             default_region_rune_s.clone(),
-            &member.tyype,
+            &member_tree,
           );
+          member_rule_builder.extend(value_vec);
+          member_rule_builder.extend(outer_vec);
           vec![IStructMemberS::VariadicStructMember(VariadicStructMemberS {
             range: Self::eval_range(file, member.range),
             type_rune: member_rune,
+            tyype: member_tree,
           })]
         }
         IStructContent::StructMethod(func_p) => {

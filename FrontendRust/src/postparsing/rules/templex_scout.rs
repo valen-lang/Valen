@@ -24,6 +24,10 @@ use crate::utils::range::RangeS;
 use crate::postparsing::rules::rules::{
   CallSiteFuncSR, DefinitionFuncSR, ResolveSR,
 };
+use crate::postparsing::rules::types::{
+  AnonymousRuneST, BoolST, BorrowRefST, CallST, IntST, ITypeST, NameST, OwnRefST, PackST,
+  RegionS, RuneUsageST, RuntimeSizedArrayST, StringST, TupleST, WeakRefST,
+};
 use crate::interner::StrI;
 
 
@@ -220,6 +224,522 @@ fn translate_template_position_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
     }
   }
   translate_templex(scout_arena, keywords, env, lidb, rule_builder, context_region, templex)
+}
+
+/// Builds the read-only ITypeST mirror of a written type, alongside the rules translate_templex
+/// emits. Per plan-phased-calls §P, later phases read this tree to find each rune mention: a bound
+/// like `where exists drop(D)void` searches the *value* D resolves to rather than the parameter
+/// type, so it needs the tree to know that `D` is a rune.
+///
+/// NameOrRune splits into Name (a concrete type like `int`) or Rune (a declared generic like `D`).
+/// Ref wraps nest. Unlike the rules, nothing is lowered here: no zero-arg Call for a bare name, no
+/// parent-env lookup. Substituting into an ITypeST later produces a KindT, never a new ITypeST.
+pub fn translate_templex_into_type_st<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
+  env: IEnvironmentS<'s>,
+  templex: &ITemplexPT<'p>,
+) -> ITypeST<'s> {
+  let file = env.file();
+  let range_s = PostParser::eval_range(file, templex.range());
+  match templex {
+    ITemplexPT::AnonymousRune(_) =>
+      ITypeST::AnonymousRune(scout_arena.alloc(AnonymousRuneST { range: range_s })),
+
+    ITemplexPT::Bool(BoolPT { value, .. }) =>
+      ITypeST::Bool(scout_arena.alloc(BoolST { range: range_s, value: *value })),
+
+    ITemplexPT::Int(IntPT { value, .. }) =>
+      ITypeST::Int(scout_arena.alloc(IntST { range: range_s, value: IntLiteralSL { value: *value } })),
+
+    ITemplexPT::String(StringPT { str, .. }) =>
+      ITypeST::String(scout_arena.alloc(StringST {
+        range: range_s, str: scout_arena.intern_str(str.as_str()),
+      })),
+
+    // A bare name, e.g. `int` (a concrete type) or `D` (a declared generic). The env decides which.
+    ITemplexPT::NameOrRune(NameOrRunePT { name: name_or_rune, .. }) => {
+      let name_str = scout_arena.intern_str(name_or_rune.str().as_str());
+      let is_rune = env.all_declared_runes().contains(
+        &scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })));
+      if is_rune {
+        ITypeST::Rune(scout_arena.alloc(RuneUsageST {
+          rune: RuneUsage {
+            range: range_s,
+            rune: scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })),
+          },
+        }))
+      } else {
+        ITypeST::Name(scout_arena.alloc(NameST {
+          range: range_s,
+          name: scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: name_str })),
+        }))
+      }
+    }
+
+    ITemplexPT::Call(call) => {
+      let template: &'s ITypeST<'s> =
+        scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), call.template));
+      let mut args = Vec::<&'s ITypeST<'s>>::new();
+      for arg in call.args {
+        args.push(scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), arg)));
+      }
+      ITypeST::Call(scout_arena.alloc(CallST {
+        range: range_s, template, args: scout_arena.alloc_slice_from_vec(args),
+      }))
+    }
+
+    ITemplexPT::BorrowRef(borrow_ref) => {
+      let inner: &'s ITypeST<'s> =
+        scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), borrow_ref.inner));
+      let region = match borrow_ref.region {
+        RegionP::Unspecified => RegionS::Unspecified,
+        RegionP::Held => RegionS::Held,
+        RegionP::Rune(region_pt) => match region_pt.name {
+          None => RegionS::Rune(None),
+          Some(name) => {
+            let rune_ref: &'s RuneUsage<'s> = scout_arena.alloc(RuneUsage {
+              range: PostParser::eval_range(file, region_pt.range),
+              rune: scout_arena.intern_rune(CodeRune(CodeRuneS {
+                name: scout_arena.intern_str(name.str().as_str()),
+              })),
+            });
+            RegionS::Rune(Some(rune_ref))
+          }
+        },
+      };
+      ITypeST::BorrowRef(scout_arena.alloc(BorrowRefST { range: range_s, inner, region }))
+    }
+
+    ITemplexPT::WeakRef(weak_ref) => {
+      let inner: &'s ITypeST<'s> =
+        scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), weak_ref.inner));
+      ITypeST::WeakRef(scout_arena.alloc(WeakRefST { range: range_s, inner }))
+    }
+
+    ITemplexPT::OwnRef(own_ref) => {
+      let inner: &'s ITypeST<'s> =
+        scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), own_ref.inner));
+      ITypeST::OwnRef(scout_arena.alloc(OwnRefST { range: range_s, inner }))
+    }
+
+    ITemplexPT::Pack(pack) => {
+      let mut members = Vec::<&'s ITypeST<'s>>::new();
+      for member in pack.members {
+        members.push(scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), member)));
+      }
+      ITypeST::Pack(scout_arena.alloc(PackST {
+        range: range_s, members: scout_arena.alloc_slice_from_vec(members),
+      }))
+    }
+
+    ITemplexPT::Tuple(tuple) => {
+      let mut elements = Vec::<&'s ITypeST<'s>>::new();
+      for element in tuple.elements {
+        elements.push(scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), element)));
+      }
+      ITypeST::Tuple(scout_arena.alloc(TupleST {
+        range: range_s, elements: scout_arena.alloc_slice_from_vec(elements),
+      }))
+    }
+
+    ITemplexPT::RuntimeSizedArray(rsa) => {
+      let element: &'s ITypeST<'s> =
+        scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), rsa.element));
+      ITypeST::RuntimeSizedArray(scout_arena.alloc(RuntimeSizedArrayST { range: range_s, element }))
+    }
+
+    // translate_templex itself does not lower these yet, so the ITypeST mirror does not either.
+    ITemplexPT::Function(_) => panic!("POSTPARSER_TYPE_ST_FUNCTION_NOT_YET_IMPLEMENTED"),
+    ITemplexPT::Func(_) => panic!("POSTPARSER_TYPE_ST_FUNC_NOT_YET_IMPLEMENTED"),
+    ITemplexPT::RegionRune(_) => panic!("POSTPARSER_TYPE_ST_REGION_RUNE_IS_NOT_A_TYPE"),
+    ITemplexPT::TypedRune(_) => panic!("POSTPARSER_TYPE_ST_TYPED_RUNE_NOT_YET_IMPLEMENTED"),
+  }
+}
+
+/// The inverse of `translate_templex_into_type_st`: walks a read-only ITypeST and emits the same
+/// rules `translate_templex` would for the equivalent source, returning the value rune. This is the
+/// plan-phased-calls Post-cleanup direction, where rules are derived from the ITypeST rather than
+/// produced alongside it, so a caller can hold one tree as the single source of truth and get its
+/// rules on demand.
+///
+/// It reuses translate_templex's own rule helpers, so the emitted rules match it arm-for-arm. The
+/// minted structural runes are fresh (their identity follows the lidb path, not the source), so the
+/// rules are structurally equivalent to translate_templex's rather than rune-for-rune identical.
+/// Bare names split by position per @TNLTZACZ: a value-position name lowers to Lookup plus a zero-arg
+/// Call, a template-position name (the template of a Call) to the Lookup alone.
+pub fn translate_type_st_into_rune<'s>(
+  scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  // Nearest enclosing region marker, see RADTGCA.
+  context_region: IRuneS<'s>,
+  type_st: &ITypeST<'s>,
+) -> RuneUsage<'s> {
+  let range_s = type_st.range();
+  match type_st {
+    ITypeST::Bool(b) => {
+      let mut child_lidb = lidb.child();
+      add_literal_rule(scout_arena, &mut child_lidb, rule_builder, range_s,
+        ILiteralSL::BoolLiteral(BoolLiteralSL { value: b.value }))
+    }
+
+    ITypeST::Int(i) => {
+      let mut child_lidb = lidb.child();
+      add_literal_rule(scout_arena, &mut child_lidb, rule_builder, range_s,
+        ILiteralSL::IntLiteral(i.value))
+    }
+
+    ITypeST::String(s) => {
+      let mut child_lidb = lidb.child();
+      add_literal_rule(scout_arena, &mut child_lidb, rule_builder, range_s,
+        ILiteralSL::StringLiteral(StringLiteralSL { value: s.str }))
+    }
+
+    ITypeST::AnonymousRune(_) => RuneUsage {
+      range: range_s,
+      rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
+    },
+
+    ITypeST::Rune(r) => {
+      if env.local_declared_runes().contains(&r.rune.rune) {
+        RuneUsage { range: range_s, rune: r.rune.rune }
+      } else {
+        // From a parent env, e.g. a lambda's `__call` mentioning its parent's `T`.
+        let mut child_lidb = lidb.child();
+        add_rune_parent_env_lookup_rule(scout_arena, &mut child_lidb, rule_builder, range_s, r.rune.rune)
+      }
+    }
+
+    ITypeST::Name(n) => {
+      // A value-position bare name like `int`. Per @TNLTZACZ it is a zero-arg application: the
+      // name's Lookup, then a Call([]) whose result is the value rune.
+      let mut child_lidb = lidb.child();
+      let template_rune = add_lookup_rule(scout_arena, &mut child_lidb, rule_builder, range_s, context_region, n.name);
+      add_zero_arg_call_rule(scout_arena, &mut child_lidb, rule_builder, range_s, template_rune)
+    }
+
+    ITypeST::Call(c) => {
+      let mut child_lidb = lidb.child();
+      let result_rune_s = RuneUsage {
+        range: range_s,
+        rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+      };
+      let template_rune_s = translate_type_st_template_position_into_rune(
+        scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, c.template);
+      let mut arg_runes = Vec::<RuneUsage<'s>>::new();
+      for arg in c.args {
+        arg_runes.push(translate_type_st_into_rune(
+          scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, arg));
+      }
+      rule_builder.push(Call(CallSR {
+        range: range_s,
+        result_rune: result_rune_s.clone(),
+        template_rune: template_rune_s,
+        args: scout_arena.alloc_slice_from_vec(arg_runes),
+      }));
+      result_rune_s
+    }
+
+    ITypeST::BorrowRef(br) => {
+      let inner_rune = translate_type_st_into_rune(
+        scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, br.inner);
+      let region = region_s_into_region_sr(scout_arena, env.clone(), &mut lidb.child(), rule_builder, br.region);
+      translate_borrow_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune, region)
+    }
+
+    ITypeST::WeakRef(wr) => {
+      let inner_rune = translate_type_st_into_rune(
+        scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, wr.inner);
+      translate_weak_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
+    }
+
+    ITypeST::OwnRef(or) => {
+      let inner_rune = translate_type_st_into_rune(
+        scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, or.inner);
+      translate_own_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
+    }
+
+    ITypeST::Tuple(tuple) => {
+      let tuple_name = scout_arena.intern_imprecise_name(CodeName(CodeNameS {
+        name: keywords.tuple_human_name[tuple.elements.len()],
+      }));
+      if tuple.elements.is_empty() {
+        // Zero-arg tuple `()`: lowers like any bare type-name, per @TNLTZACZ.
+        let mut child_lidb = lidb.child();
+        let template_rune_s = RuneUsage {
+          range: range_s,
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+        };
+        rule_builder.push(Lookup(LookupSR {
+          range: range_s, rune: template_rune_s.clone(),
+          parts: scout_arena.alloc_slice_copy(&[tuple_name]),
+        }));
+        add_zero_arg_call_rule(scout_arena, &mut child_lidb, rule_builder, range_s, template_rune_s)
+      } else {
+        let mut child_lidb = lidb.child();
+        let result_rune_s = RuneUsage {
+          range: range_s,
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+        };
+        let mut child_lidb = lidb.child();
+        let template_rune_s = RuneUsage {
+          range: range_s,
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+        };
+        rule_builder.push(Lookup(LookupSR {
+          range: range_s, rune: template_rune_s.clone(),
+          parts: scout_arena.alloc_slice_copy(&[tuple_name]),
+        }));
+        let mut element_runes = Vec::<RuneUsage<'s>>::new();
+        for element in tuple.elements {
+          element_runes.push(translate_type_st_into_rune(
+            scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, element));
+        }
+        rule_builder.push(Call(CallSR {
+          range: range_s,
+          result_rune: result_rune_s.clone(),
+          template_rune: template_rune_s,
+          args: scout_arena.alloc_slice_from_vec(element_runes),
+        }));
+        result_rune_s
+      }
+    }
+
+    ITypeST::RuntimeSizedArray(rsa) => {
+      let mut child_lidb = lidb.child();
+      let result_rune_s = RuneUsage {
+        range: range_s,
+        rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+      };
+      let mut child_lidb = lidb.child();
+      let template_rune_s = RuneUsage {
+        range: range_s,
+        rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+      };
+      rule_builder.push(Lookup(LookupSR {
+        range: range_s, rune: template_rune_s.clone(),
+        parts: scout_arena.alloc_slice_copy(&[
+          scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: keywords.array })),
+        ]),
+      }));
+      let element_rune_s = translate_type_st_into_rune(
+        scout_arena, keywords, env, &mut lidb.child(), rule_builder, context_region, rsa.element);
+      rule_builder.push(Call(CallSR {
+        range: range_s,
+        result_rune: result_rune_s.clone(),
+        template_rune: template_rune_s,
+        args: scout_arena.alloc_slice_from_vec(vec![element_rune_s]),
+      }));
+      result_rune_s
+    }
+
+    // translate_templex itself does not lower these, so its ITypeST twin does not either.
+    ITypeST::Pack(_) => panic!("POSTPARSER_TYPE_ST_INTO_RUNE_PACK_NOT_YET_IMPLEMENTED"),
+    ITypeST::Function(_) => panic!("POSTPARSER_TYPE_ST_INTO_RUNE_FUNCTION_NOT_YET_IMPLEMENTED"),
+  }
+}
+
+// The template half of an application yields the name's Lookup alone, never the value-position
+// zero-arg Call (@TNLTZACZ). The tree encodes template position structurally: only a CallST's
+// `template` reaches here. Everything but a bare Name lowers normally.
+fn translate_type_st_template_position_into_rune<'s>(
+  scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  context_region: IRuneS<'s>,
+  type_st: &ITypeST<'s>,
+) -> RuneUsage<'s> {
+  if let ITypeST::Name(n) = type_st {
+    let mut child_lidb = lidb.child();
+    add_lookup_rule(scout_arena, &mut child_lidb, rule_builder, type_st.range(), context_region, n.name)
+  } else {
+    translate_type_st_into_rune(scout_arena, keywords, env, lidb, rule_builder, context_region, type_st)
+  }
+}
+
+// The one way to lower an ITypeST for a slot that needs the @PFVSZ split (params, members): returns the
+// full-type and value-type runes plus the outer ref-wrap rules and the value-type rules, separated.
+// Callers needing the split (params) use both lists; callers wanting a single type concat them and take
+// full_rune. The ITypeST twin of translate_signature_templex.
+//
+// The outer function owns both lists. The inner value translator, translate_type_st_into_rune, only
+// ever sees value_rules; it never touches outer_ref_rules. A wrap-less type produces an empty
+// outer_ref_rules with full_rune == value_rune, so it lowers byte-identically to a plain
+// translate_type_st_into_rune call.
+pub fn translate_signature_type_st<'s>(
+  scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
+  lidb: &mut LocationInDenizenBuilder,
+  context_region: IRuneS<'s>,
+  type_st: &ITypeST<'s>,
+) -> (RuneUsage<'s>, RuneUsage<'s>, Vec<IRulexSR<'s>>, Vec<IRulexSR<'s>>) {
+  let mut value_rules = Vec::new();
+  let mut outer_ref_rules = Vec::new();
+  let (full_rune, value_rune) = split_type_st_into(
+    scout_arena, keywords, env, lidb, &mut value_rules, &mut outer_ref_rules, context_region, type_st);
+  (full_rune, value_rune, outer_ref_rules, value_rules)
+}
+
+// The recursive outer-wrap peeler. Each ref layer recurses to peel the next, then emits its wrap rule
+// into outer_ref_builder (and its region into value_builder, matching the flat core). The value root
+// found at the bottom goes through translate_type_st_into_rune into value_builder — the only place the
+// inner value translator runs, and it only ever sees value_builder. Build order is forced: a wrap needs
+// its inner rune, so the value (the innermost rune) is built first, then the wraps outward.
+fn split_type_st_into<'s>(
+  scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
+  lidb: &mut LocationInDenizenBuilder,
+  value_builder: &mut Vec<IRulexSR<'s>>,
+  outer_ref_builder: &mut Vec<IRulexSR<'s>>,
+  context_region: IRuneS<'s>,
+  type_st: &ITypeST<'s>,
+) -> (RuneUsage<'s>, RuneUsage<'s>) {
+  let range_s = type_st.range();
+  match type_st {
+    ITypeST::BorrowRef(br) => {
+      let (inner_full, value) = split_type_st_into(
+        scout_arena, keywords, env.clone(), &mut lidb.child(),
+        value_builder, outer_ref_builder, context_region, br.inner);
+      let region = region_s_into_region_sr(scout_arena, env.clone(), &mut lidb.child(), value_builder, br.region);
+      let full = translate_borrow_ref_templex(scout_arena, lidb, outer_ref_builder, range_s, inner_full, region);
+      (full, value)
+    }
+    ITypeST::WeakRef(wr) => {
+      let (inner_full, value) = split_type_st_into(
+        scout_arena, keywords, env.clone(), &mut lidb.child(),
+        value_builder, outer_ref_builder, context_region, wr.inner);
+      let full = translate_weak_ref_templex(scout_arena, lidb, outer_ref_builder, range_s, inner_full);
+      (full, value)
+    }
+    ITypeST::OwnRef(or) => {
+      let (inner_full, value) = split_type_st_into(
+        scout_arena, keywords, env.clone(), &mut lidb.child(),
+        value_builder, outer_ref_builder, context_region, or.inner);
+      let full = translate_own_ref_templex(scout_arena, lidb, outer_ref_builder, range_s, inner_full);
+      (full, value)
+    }
+    // The value root, past the outer wraps: translate it flat into the value list (nested wraps, e.g.
+    // the `&` inside `Opt<&Spaceship>`, correctly stay in value position). full == value here.
+    _ => {
+      let value = translate_type_st_into_rune(
+        scout_arena, keywords, env, lidb, value_builder, context_region, type_st);
+      (value, value)
+    }
+  }
+}
+
+// Lowers a borrow's region (the ITypeST RegionS) into the rule-side RegionSR, resolving a named
+// region rune the way a value rune resolves: local runes pass straight through, a parent-env rune
+// gets a RuneParentEnvLookup rule.
+fn region_s_into_region_sr<'s>(
+  scout_arena: &ScoutArena<'s>,
+  env: IEnvironmentS<'s>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  region: RegionS<'s>,
+) -> RegionSR<'s> {
+  match region {
+    RegionS::Unspecified => RegionSR::Unspecified,
+    RegionS::Held => RegionSR::Held,
+    RegionS::Rune(None) => panic!("POSTPARSER_TYPE_ST_REGION_RUNE_NONE_NOT_YET_IMPLEMENTED"),
+    RegionS::Rune(Some(ru)) => {
+      if env.local_declared_runes().contains(&ru.rune) {
+        RegionSR::Rune(RuneUsage { range: ru.range, rune: ru.rune })
+      } else {
+        let mut child_lidb = lidb.child();
+        RegionSR::Rune(add_rune_parent_env_lookup_rule(scout_arena, &mut child_lidb, rule_builder, ru.range, ru.rune))
+      }
+    }
+  }
+}
+
+/// Rewrites every rune an ITypeST mentions through `func`, returning a fresh tree. This is the
+/// ITypeST twin of the rune-remapping the anonymous-interface macro does over rules: when that macro
+/// renames a denizen's runes, the ITypeST it carries must be renamed the same way, or its rune
+/// mentions go stale against the remapped rules. Leaves that name no rune pass through unchanged.
+pub fn map_runes_in_type_st<'s, F>(
+  scout_arena: &ScoutArena<'s>,
+  func: &F,
+  type_st: &ITypeST<'s>,
+) -> ITypeST<'s>
+where
+  F: Fn(IRuneS<'s>) -> IRuneS<'s>,
+{
+  match type_st {
+    ITypeST::AnonymousRune(_) | ITypeST::Bool(_) | ITypeST::Int(_)
+    | ITypeST::String(_) | ITypeST::Name(_) => *type_st,
+
+    ITypeST::Rune(r) => ITypeST::Rune(scout_arena.alloc(RuneUsageST {
+      rune: RuneUsage { range: r.rune.range, rune: func(r.rune.rune) },
+    })),
+
+    ITypeST::Call(c) => {
+      let template: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, c.template));
+      let mut args = Vec::<&'s ITypeST<'s>>::new();
+      for arg in c.args {
+        args.push(scout_arena.alloc(map_runes_in_type_st(scout_arena, func, arg)));
+      }
+      ITypeST::Call(scout_arena.alloc(CallST {
+        range: c.range, template, args: scout_arena.alloc_slice_from_vec(args),
+      }))
+    }
+
+    ITypeST::BorrowRef(br) => {
+      let inner: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, br.inner));
+      let region = match br.region {
+        RegionS::Rune(Some(ru)) => {
+          let ru_ref: &'s RuneUsage<'s> = scout_arena.alloc(RuneUsage { range: ru.range, rune: func(ru.rune) });
+          RegionS::Rune(Some(ru_ref))
+        }
+        other => other,
+      };
+      ITypeST::BorrowRef(scout_arena.alloc(BorrowRefST { range: br.range, inner, region }))
+    }
+
+    ITypeST::WeakRef(wr) => {
+      let inner: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, wr.inner));
+      ITypeST::WeakRef(scout_arena.alloc(WeakRefST { range: wr.range, inner }))
+    }
+
+    ITypeST::OwnRef(or) => {
+      let inner: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, or.inner));
+      ITypeST::OwnRef(scout_arena.alloc(OwnRefST { range: or.range, inner }))
+    }
+
+    ITypeST::Pack(p) => {
+      let mut members = Vec::<&'s ITypeST<'s>>::new();
+      for member in p.members {
+        members.push(scout_arena.alloc(map_runes_in_type_st(scout_arena, func, member)));
+      }
+      ITypeST::Pack(scout_arena.alloc(PackST {
+        range: p.range, members: scout_arena.alloc_slice_from_vec(members),
+      }))
+    }
+
+    ITypeST::Tuple(t) => {
+      let mut elements = Vec::<&'s ITypeST<'s>>::new();
+      for element in t.elements {
+        elements.push(scout_arena.alloc(map_runes_in_type_st(scout_arena, func, element)));
+      }
+      ITypeST::Tuple(scout_arena.alloc(TupleST {
+        range: t.range, elements: scout_arena.alloc_slice_from_vec(elements),
+      }))
+    }
+
+    ITypeST::RuntimeSizedArray(rsa) => {
+      let element: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, rsa.element));
+      ITypeST::RuntimeSizedArray(scout_arena.alloc(RuntimeSizedArrayST { range: rsa.range, element }))
+    }
+
+    // The builder never produces a Function node, so its remap is unneeded until it does.
+    ITypeST::Function(_) => panic!("POSTPARSER_MAP_RUNES_IN_TYPE_ST_FUNCTION_NOT_YET_IMPLEMENTED"),
+  }
 }
 
 pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
@@ -422,14 +942,27 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let params_range_s = PostParser::eval_range(file, func.params_range);
         let NameP(_, name_p) = &func.name;
         let name: StrI<'s> = scout_arena.intern_str(name_p.as_str());
+        let mut params_types = Vec::<ITypeST<'s>>::new();
+        for param_p in func.parameters {
+          params_types.push(translate_templex_into_type_st(scout_arena, env.clone(), param_p));
+        }
+        let return_type = translate_templex_into_type_st(scout_arena, env.clone(), func.return_type);
+
         let params_s: Vec<RuneUsage<'s>> =
-          func.parameters.iter().map(|param_p| {
-            translate_templex(scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), param_p)
+          params_types.iter().map(|param_type| {
+            let (full, _value, outer_vec, value_vec) = translate_signature_type_st(
+              scout_arena, keywords, env.clone(), &mut lidb.child(), context_region.clone(), param_type);
+            rule_builder.extend(value_vec);
+            rule_builder.extend(outer_vec);
+            full
           }).collect();
         let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))) };
         rule_builder.push(IRulexSR::KindList(KindListSR { range: params_range_s, result_rune: param_list_rune_s.clone(), members: scout_arena.alloc_slice_from_vec(params_s) }));
 
-        let return_rune_s = translate_templex(scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), func.return_type);
+        let (return_rune_s, _rt_value, rt_outer_vec, rt_value_vec) = translate_signature_type_st(
+          scout_arena, keywords, env.clone(), &mut lidb.child(), context_region.clone(), &return_type);
+        rule_builder.extend(rt_value_vec);
+        rule_builder.extend(rt_outer_vec);
 
         let result_rune_s = RuneUsage { range: PostParser::eval_range(file, func.range), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))) };
 
@@ -437,8 +970,17 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         rule_builder.push(IRulexSR::CallSiteFunc(CallSiteFuncSR { range: range_s.clone(), prototype_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s.clone(), return_rune: return_rune_s.clone() }));
         // Only appears in definition; filtered out when solving call site
         rule_builder.push(IRulexSR::DefinitionFunc(DefinitionFuncSR { range: range_s.clone(), result_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s.clone(), return_rune: return_rune_s.clone() }));
+
         // Only appears in call site; filtered out when solving definition
-        rule_builder.push(IRulexSR::Resolve(ResolveSR { range: range_s, result_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s, return_rune: return_rune_s }));
+        rule_builder.push(IRulexSR::Resolve(ResolveSR {
+          range: range_s,
+          result_rune: result_rune_s.clone(),
+          name: name.clone(),
+          params_list_rune: param_list_rune_s,
+          params_types: scout_arena.alloc_slice_from_vec(params_types),
+          return_rune: return_rune_s,
+          return_type,
+        }));
 
         result_rune_s
 
@@ -555,6 +1097,10 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
 // - the value type, and everything nested inside it, goes into `rule_builder`.
 //
 // Returns (full type rune, value-type root rune), which are equal when there's no wrapping.
+//
+// VCOORD: Superseded by translate_signature_type_st (the ITypeST twin) and now caller-free except its own
+// recursion — function params were the last caller and now route through the ITypeST deriver. Kept
+// during the migration; safe to delete once the ITypeST route is fully trusted.
 pub fn translate_signature_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,

@@ -12,11 +12,12 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::postparsing::rules::RuneUsage;
 use crate::typing::infer_compiler::{InferEnv, InitialKnown, InitialSend};
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
-use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::typing::templata_compiler::{peel_all_references, IBoundArgumentsSource};
 use crate::postparsing::expressions::IExpressionSE;
 use crate::utils::fx::IndexMap;
 use crate::utils::fx::HashMap;
@@ -48,7 +49,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             LocationInFunctionEnvironmentT<'t>,
             &[LocalVariable<'s, 't>],
         ) -> ExpressionTE<'s, 't> + 'ctx,
-    ) -> ExpressionTE<'s, 't> {
+    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         // The rules are different depending on the incoming type.
         // See Impl Rule For Upcasts (IRFU).
         let converted_input_expr = match &pattern.kind_rune {
@@ -134,17 +135,16 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 self.convert(
                     nenv, life, coutputs, &range_list, call_location,
                     region, unconverted_input_expr, expected_coord)
-                    // VCOORD: revisit
-                    .expect("convert() in pattern position returned NoImplicitCloneDefinedT — thread Result if this fires")
+                    ?
             }
         };
 
-        self.inner_translate_sub_pattern_and_maybe_continue(
+        Ok(self.inner_translate_sub_pattern_and_maybe_continue(
             coutputs, nenv, life, parent_ranges, call_location,
             pattern, self.typing_interner.alloc_slice_copy(&[]), converted_input_expr, region,
             move |compiler, coutputs, nenv, life, live_capture_locals| {
                 after_patterns_success_continuation(compiler, coutputs, nenv, life, live_capture_locals)
-            })
+            }))
     }
 
     pub fn inner_translate_sub_pattern_and_maybe_continue(
@@ -491,7 +491,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             assert!(names == distinct);
         }
 
-        let expected_container_kind = expected_container_coord;
+        let expected_container_kind = peel_all_references(expected_container_coord);
 
         match list_of_maybe_destructure_member_patterns {
             [] => after_destructure_success_continuation(self, coutputs, nenv, life.add(self.typing_interner, 0), live_capture_locals),

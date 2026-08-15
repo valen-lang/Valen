@@ -7,6 +7,7 @@ use crate::postparsing::names::*;
 
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
+use crate::typing::templata_compiler::peel_all_references;
 use crate::typing::templata::templata::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::hinputs_t::*;
@@ -357,7 +358,13 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
         let abstract_interfaces: Vec<InterfaceTT<'s, 't>> =
             self.params.iter().filter_map(|param| {
                 match param {
-                    ParameterT { virtuality: Some(AbstractT), tyype: KindT::Interface(ir), .. } => Some(**ir),
+                    ParameterT { virtuality: Some(AbstractT), tyype, .. } => {
+                        // VCOORD: doublecheck this peel
+                        match peel_all_references(*tyype) {
+                            KindT::Interface(ir) => Some(*ir),
+                            _ => None,
+                        }
+                    }
                     _ => None,
                 }
             }).collect();

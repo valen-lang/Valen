@@ -1,30 +1,49 @@
 # Fire-Commit Config
 
-Commit everything dirty in Luz and Guardian, even if it looks unrelated to this session.
+**Machine facts live in the `fire-commit-config.toml` files, not here.** The host's is at
+`fire-commit-config.toml` and each external carries its own at `<external>/fire-commit-config.toml`;
+they declare the branch model, sweeps, test commands, and external list, and `commit-preflight`
+reads them. This doc holds only the prose and judgment the `.toml` can't encode.
 
-**External repos:**
-- `Luz/` (gitignored) — own remote (`Verdagon/Luz`), always lands on `main`. Drain any `Luz/shields/*/cases/need-*/` curate queue (`guardian-curate`) before committing.
-- `Guardian/` (gitignored) — own remote (`Verdagon/Guardian`), always lands on `main`. Has its own submodules (Rabble, ShieldFile, ContextifiedDiff, ContextifiedShield, opencode) — check `git -C Guardian submodule status` too.
+**Policy:** commit everything dirty in Luz and Guardian, even if it looks unrelated to this session.
+This is only safe because anything *not* meant to be committed lives in each repo's gitignored `tmp/`
+(host, Luz, and Guardian all ignore `tmp/`) — the wholesale `git -C <repo> add -A` never sees it.
+Keep scratch, debug output, and one-off files there; `commit-preflight` lists an external's pending
+files so you can spot a stray before it lands and move it to `tmp/`.
 
-**Test command:**
-- `cargo build --manifest-path FrontendRust/Cargo.toml`
-- `cargo nextest run --manifest-path FrontendRust/Cargo.toml` (full unfiltered suite, native backend)
-- `VALE_TEST_BACKEND=wasi cargo nextest run --manifest-path FrontendRust/Cargo.toml` (full suite, wasm32-wasi backend) — both backends are the gate.
-- When committing Guardian: `cargo nextest run --manifest-path Guardian/Cargo.toml` + each Guardian submodule's own tests.
+**External repos** (declared as `[[external]]` in `fire-commit-config.toml`):
+- `Luz/` — before committing, drain any `Luz/shields/*/cases/need-*/` curate queue (`guardian-curate`).
+- `Guardian/` — its five submodules (Rabble, ShieldFile, ContextifiedDiff, ContextifiedShield,
+  opencode) are `[[external]]` entries in `Guardian/fire-commit-config.toml`, so the tool composes
+  them (commits/pushes each, then bumps Guardian's pins). A dirty `bun.lock` in a submodule is just
+  build-time regeneration — feel free to discard it.
 
-**Branch model:** rebase-and-fast-forward, two families:
-- `experimental` family — side-branches `experimental-1`, `experimental-2`, … feed local tip `experimental`, ratcheted via `git fetch . <branch>:experimental`. That local ratchet **is** the sync step; `fire commit` stops there and pushes nothing. Note the family *is* mirrored on origin (`origin/experimental`, `origin/experimental-1`, …) and those mirrors run stale as a result — pushing any of them is a separate, explicitly-requested step, and a side-branch that has been rebased will need a force-push.
-- `master` family — side-branches (e.g. `repair-vale`) feed tip `master`, mirrored to `origin/master`.
+**Branch families** (the `.toml` says `branch_model = "rebase-ff"`; the families it can't name):
+- `experimental` family — side-branches `experimental-1`, `experimental-2`, … feed local tip
+  `experimental`, ratcheted via `git fetch . <branch>:experimental`.
+- `master` family — side-branches (e.g. `repair-vale`) feed tip `master`.
 
-Pick the family matching the working branch; ask if ambiguous.
+Pick the family matching the working branch; ask if ambiguous. What `temporary` withholds versus a
+full commit (the target ratchet + target push) is spelled out in `Luz/skills/fire-commit.md`.
 
-**CI:** GitHub Actions workflow `CI` (`.github/workflows/ci.yml`) on `origin` (`Verdagon/Vale`). Jobs: `build_and_test_ubuntu`, `build_and_test_mac`, `build_and_test_docker`, `build_and_test_wasi`. Auto-triggers on push/PR to `master`/`stable`/`repair-vale`; `experimental-*` branches need manual dispatch: `gh workflow run CI --ref <branch>` then `gh run watch`. Opt-in via `with CI`.
+**Test commands** are the `[[repo.tests]]` in each `.toml` (host: `cargo build` + both FrontendRust
+nextest backends, native and wasi; Guardian: its workspace `cargo nextest run` with the API key).
+No known-environmental failures are whitelisted — treat any failure as real. `commit-preflight`
+emits these as plan steps for you to run and judge; a **green suite is required unless the architect
+says the literal `fire override green`.**
 
-**Repo-specific sweeps:**
-- Guardian temp-disable sweep: `git grep -n "Guardian: temp-disable:"` — every hit needs ratifying (architect) or the underlying issue fixed before commit.
-- Test-delta report: two commands, because one can't see all four cases.
-  - **Signatures added/removed** (catches added, deleted, and renamed tests): `git diff --cached -U0 -- '*.rs' | grep -E '^[+-][[:space:]]*(pub )?(async )?fn [a-zA-Z_0-9]+'`
-  - **Bodies changed** (catches modified tests): `git diff --cached -U0 -- '*.rs' | grep -oE '@@ .*fn [a-zA-Z_0-9]+' | sed 's/.*fn //' | sort -u` — git puts the enclosing function in each hunk header, so this names every function containing a changed line. It lists helpers as well as tests; that's deliberate, since a superset never hides a weakened assertion.
+**CI** (not in the `.toml` — the tool doesn't gate on CI): GitHub Actions workflow `CI`
+(`.github/workflows/ci.yml`) on `origin` (`Verdagon/Vale`). Jobs: `build_and_test_ubuntu`,
+`build_and_test_mac`, `build_and_test_docker`, `build_and_test_wasi`. Auto-triggers on push/PR to
+`master`/`stable`/`repair-vale`; `experimental-*` branches need manual dispatch: `gh workflow run CI
+--ref <branch>` then `gh run watch`. Opt-in via `with CI`.
 
-  One-sentence why per deleted, renamed, or modified test; architect confirms. Do **not** use the old `grep -B0 -A1 '^[+-].*#\[test\]'` form: it only fires when the `#[test]` line itself is added or removed, so a rename (signature changes, attribute doesn't) and a body edit (neither changes) were both invisible — it could never report a "modification" at all.
-- New `#[ignore]` scan in the staged diff — confirm intended-permanent vs. temporary scaffolding per hit.
+**Sweep judgment.** The sweeps themselves (DO-NOT-SUBMIT, absolute paths, broken symlinks, Guardian
+temp-disable, test-delta, new-`#[ignore]`) run from each repo's `[repo.sweeps]` config; what still
+needs a human:
+- Guardian temp-disable hits need ratifying (architect) or the underlying issue fixed before commit.
+- Test-delta: one-sentence why per deleted / renamed / modified test; the architect confirms each.
+  When running the detection by hand (rather than via the tool's `test_delta` sweep):
+  - Signatures added/removed: `git diff --cached -U0 -- '*.rs' | grep -E '^[+-][[:space:]]*(pub )?(async )?fn [a-zA-Z_0-9]+'`
+  - Bodies changed: `git diff --cached -U0 -- '*.rs' | grep -oE '@@ .*fn [a-zA-Z_0-9]+' | sed 's/.*fn //' | sort -u`
+- New `#[ignore]`: confirm intended-permanent vs. temporary scaffolding per hit.

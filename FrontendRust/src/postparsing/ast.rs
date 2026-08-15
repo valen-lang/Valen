@@ -12,6 +12,7 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::patterns::AtomSP;
 use crate::postparsing::rules::{ImplBoundS, IRulexSR, RuneUsage};
+use crate::postparsing::rules::types::ITypeST;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
 use crate::scout_arena::ScoutArena;
@@ -239,14 +240,21 @@ impl<'s> IStructMemberS<'s> {
 pub struct NormalStructMemberS<'s> {
   pub range: RangeS<'s>,
   pub name: StrI<'s>,
-  pub type_rune: RuneUsage<'s>,
+  pub type_rune: RuneUsage<'s>, // VCOORD: remove this in favor of the ITypeST
+  pub tyype: ITypeST<'s>,
+  // Per @PFVSZ, the member's type split into its outer ref wraps and the value they enclose, so a
+  // constructor param built from this member is byte-identical to a user-written param.
+  pub value_type_rune: RuneUsage<'s>,
+  pub type_outer_ref_rules: &'s [IRulexSR<'s>],
+  pub value_type_rules: &'s [IRulexSR<'s>],
 }
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct VariadicStructMemberS<'s> {
   pub range: RangeS<'s>,
-  pub type_rune: RuneUsage<'s>,
+  pub type_rune: RuneUsage<'s>, // VCOORD: remove this in favor of the ITypeST
+  pub tyype: ITypeST<'s>,
 }
 
 
@@ -304,10 +312,12 @@ pub struct ImplS<'s> {
   pub user_specified_identifying_runes: &'s [&'s GenericParameterS<'s>],
   pub rules: &'s [IRulexSR<'s>],
   pub tyype: ITemplataType<'s>,
-  pub struct_kind_rune: RuneUsage<'s>,
+  pub struct_kind_rune: RuneUsage<'s>, // VCOORD: remove this in favor of the ITypeST
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
-  pub interface_kind_rune: RuneUsage<'s>,
+  pub sub_citizen_type: ITypeST<'s>,
+  pub interface_kind_rune: RuneUsage<'s>, // VCOORD: remove this in favor of the ITypeST
   pub super_interface_imprecise_name: IImpreciseNameS<'s>,
+  pub super_interface_type: ITypeST<'s>,
   /// `where implements(Sub, Super)` clauses; see ImplBoundS.
   pub impl_bounds: &'s [ImplBoundS<'s>],
   _sealed: (),
@@ -322,15 +332,17 @@ impl<'s> ImplS<'s> {
     tyype: ITemplataType<'s>,
     struct_kind_rune: RuneUsage<'s>,
     sub_citizen_imprecise_name: IImpreciseNameS<'s>,
+    sub_citizen_type: ITypeST<'s>,
     interface_kind_rune: RuneUsage<'s>,
     super_interface_imprecise_name: IImpreciseNameS<'s>,
+    super_interface_type: ITypeST<'s>,
     impl_bounds: &'s [ImplBoundS<'s>],
   ) -> Self {
     Self {
       range, name, user_specified_identifying_runes, rules,
       tyype,
-      struct_kind_rune, sub_citizen_imprecise_name,
-      interface_kind_rune, super_interface_imprecise_name,
+      struct_kind_rune, sub_citizen_imprecise_name, sub_citizen_type,
+      interface_kind_rune, super_interface_imprecise_name, super_interface_type,
       impl_bounds,
       _sealed: (),
     }
@@ -343,8 +355,9 @@ pub struct ExportAsS<'s> {
   pub range: RangeS<'s>,
   pub rules: &'s [IRulexSR<'s>],
   pub export_name: ExportAsNameS<'s>,
-  pub rune: RuneUsage<'s>,
+  pub rune: RuneUsage<'s>, // VCOORD: remove this in favor of the ITypeST
   pub exported_name: StrI<'s>,
+  pub tyype: ITypeST<'s>,
 }
 
 
@@ -547,7 +560,8 @@ pub struct GenericParameterS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParameterDefaultS<'s> {
   pub result_rune: IRuneS<'s>,
-  pub rules: &'s [&'s IRulexSR<'s>],
+  pub rules: &'s [&'s IRulexSR<'s>], // VCOORD: remove this in favor of the ITypeST
+  pub tyype: ITypeST<'s>,
 }
 
 #[derive(Debug, PartialEq)]

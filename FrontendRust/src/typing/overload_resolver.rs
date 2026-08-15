@@ -17,7 +17,7 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::FunctionEnvironmentT;
 use crate::typing::function::function_compiler::{StampFunctionSuccess, IResolveFunctionResult, IEvaluateFunctionResult};
 use crate::typing::infer_compiler::{InferEnv, InitialKnown};
-use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::typing::templata_compiler::{peel_all_references, IBoundArgumentsSource};
 use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
@@ -64,45 +64,6 @@ pub struct EvaluateFunctionFailure2;
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn find_function(
-        &self,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        function_name: IImpreciseNameS<'s>,
-        explicit_template_arg_rules_s: &[IRulexSR<'s>],
-        positional_explicit_template_arg_runes_s: &[IRuneS<'s>],
-        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
-        context_region: RegionT,
-        args: &[KindT<'s, 't>],
-        extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
-        exact: bool,
-    ) -> Result<Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
-        let potential_banner = self.find_potential_function(
-            calling_env,
-            coutputs,
-            call_range,
-            call_location,
-            function_name,
-            explicit_template_arg_rules_s,
-            positional_explicit_template_arg_runes_s,
-            receiving_rune_to_explicit_template_arg_rune,
-            context_region,
-            args,
-            extra_envs_to_look_in,
-            exact)?;
-        match potential_banner {
-            Err(e) => Ok(Err(e)),
-            Ok(potential_banner) => {
-                Ok(Ok(StampFunctionSuccess {
-                    prototype: potential_banner.prototype,
-                    inferences: IndexMap::default(),
-                }))
-            }
-        }
-    }
-
     pub fn params_match(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -118,6 +79,7 @@ where 's: 't,
                 supplied: desired_params.len() as i32, expected: candidate_params.len() as i32 });
         }
         for (param_index, (desired_param, candidate_param)) in desired_params.iter().zip(candidate_params.iter()).enumerate() {
+            // Per @ENECCLZ, exact is used for looking for functions to satisfy bounds, looking for things in vtables, etc.
             if exact {
                 if desired_param != candidate_param {
                     return Err(IFindFunctionFailureReason::SpecificParamDoesntMatchExactly {
@@ -154,11 +116,17 @@ where 's: 't,
         extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         searched_envs: &mut Vec<SearchedEnvironment<'s, 't>>,
         results: &mut Vec<ICalleeCandidate<'s, 't>>,
+        exact: bool,
+        // VCOORD: this is currently DEAD, but intended for searching for bounds
+        search_only_in_extra_envs: bool,
     ) {
-        self.get_candidate_banners_inner(env, coutputs, range, function_name, searched_envs, results);
-        for e in self.get_param_environments(coutputs, range, param_filters) {
-            self.get_candidate_banners_inner(e, coutputs, range, function_name, searched_envs, results);
+        if !search_only_in_extra_envs {
+            self.get_candidate_banners_inner(env, coutputs, range, function_name, searched_envs, results);
+            for e in self.get_param_environments(coutputs, range, param_filters, exact) {
+                self.get_candidate_banners_inner(e, coutputs, range, function_name, searched_envs, results);
+            }
         }
+        // VCOORD: see if we can supply these as extra envs... and then rename "extra envs"
         for e in self.get_placeholder_extra_call_envs(env, coutputs, range, param_filters) {
             self.get_candidate_banners_inner(e, coutputs, range, function_name, searched_envs, results);
         }
@@ -507,9 +475,22 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         param_filters: &[KindT<'s, 't>],
+        exact: bool,
     ) -> Vec<IInDenizenEnvironmentT<'s, 't>> {
+        // Per @ENECCLZ, exact keeps the type whole and non-exact peels it.
         param_filters.iter().flat_map(|tyype| {
-            match tyype {
+            let type_whose_env_to_search =
+                if exact {
+                    // If we're doing exact searches, like for bounds or virtual tables,
+                    // then we should look in this type's outer environment, even if it's
+                    // a borrow ref (in which case we should look in borrow.vale).
+                    *tyype
+                } else {
+                    // If a user callsite is searching for candidates, look in the value type.
+                    // For example, if this is a &Ship, we should look in Ship's namespace.
+                    peel_all_references(*tyype)
+                };
+            match type_whose_env_to_search {
                 KindT::Struct(sr) => { vec![coutputs.get_outer_env_for_type(range, self.get_struct_template(sr.id))] }
                 KindT::Interface(ir) => { vec![coutputs.get_outer_env_for_type(range, self.get_interface_template(ir.id))] }
                 KindT::KindPlaceholder(kp) => { vec![coutputs.get_outer_env_for_type(range, self.get_placeholder_template(kp.id))] }
@@ -530,7 +511,8 @@ where 's: 't,
         // Look through each parameter, and if it's a placeholder that impls an interface, grab
         // the interface env so that callers can look inside them for methods too (see @BDPFWDZ).
         for tyype in param_filters.iter() {
-            match tyype {
+            // VCOORD: revisit this peel
+            match peel_all_references(*tyype) {
                 KindT::KindPlaceholder(kp) => {
                     let placeholder_imprecise = match get_imprecise_name(self.scout_arena, kp.id.local_name) {
                         None => panic!("Placeholder localName had no imprecise name: {:?}", kp.id.local_name),
@@ -559,7 +541,7 @@ where 's: 't,
         collected
     }
 
-    pub fn find_potential_function(
+    pub fn find_function(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -573,13 +555,15 @@ where 's: 't,
         args: &[KindT<'s, 't>],
         extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         exact: bool,
+        // VCOORD: this is currently DEAD, but intended for searching for bounds
+        search_only_in_extra_envs: bool,
     ) -> Result<Result<AttemptedCandidate<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
         // This is here for debugging, so when we dont find something we can see what envs we searched
         let mut searched_envs: Vec<SearchedEnvironment<'s, 't>> = Vec::new();
         let mut undeduped_candidates: Vec<ICalleeCandidate<'s, 't>> = Vec::new();
         self.get_candidate_banners(
             env, coutputs, call_range, function_name, args, extra_envs_to_look_in,
-            &mut searched_envs, &mut undeduped_candidates);
+            &mut searched_envs, &mut undeduped_candidates, exact, search_only_in_extra_envs);
         let mut seen = HashSet::default();
         let candidates: Vec<ICalleeCandidate<'s, 't>> =
             undeduped_candidates.into_iter().filter(|c| seen.insert(*c)).collect();
@@ -754,7 +738,33 @@ where 's: 't,
             callable_te.result(),
             KindT::Int(IntT { bits: 32 }),
         ];
-        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], &[], context_region, &param_filters, &[], false)? {
+        let explicit_template_arg_rules_s = &[];
+        let positional_explicit_template_arg_runes_s = &[];
+        let receiving_rune_to_explicit_template_arg_rune = &[];
+        let extra_envs_to_look_in = &[];
+        let potential_banner = self.find_function(
+            calling_env,
+            coutputs,
+            range,
+            call_location,
+            func_name,
+            explicit_template_arg_rules_s,
+            positional_explicit_template_arg_runes_s,
+            receiving_rune_to_explicit_template_arg_rune,
+            context_region,
+            &param_filters,
+            extra_envs_to_look_in,
+            false,
+            false)?;
+        match (match potential_banner {
+            Err(e) => Ok(Err(e)),
+            Ok(potential_banner) => {
+                Ok(Ok(StampFunctionSuccess {
+                    prototype: potential_banner.prototype,
+                    inferences: IndexMap::default(),
+                }))
+            }
+        })? {
             Err(e) => Err(ICompileErrorT::CouldntFindFunctionToCallT {
                 range: self.typing_interner.alloc_slice_copy(range),
                 fff: e,
@@ -778,7 +788,33 @@ where 's: 't,
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
         let param_filters = vec![callable_te.result(), element_type];
         let calling_env = IInDenizenEnvironmentT::from(fate);
-        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], &[], context_region, &param_filters, &[], false)?
+        let explicit_template_arg_rules_s = &[];
+        let positional_explicit_template_arg_runes_s = &[];
+        let receiving_rune_to_explicit_template_arg_rune = &[];
+        let extra_envs_to_look_in = &[];
+        let potential_banner = self.find_function(
+            calling_env,
+            coutputs,
+            range,
+            call_location,
+            func_name,
+            explicit_template_arg_rules_s,
+            positional_explicit_template_arg_runes_s,
+            receiving_rune_to_explicit_template_arg_rune,
+            context_region,
+            &param_filters,
+            extra_envs_to_look_in,
+            false,
+            false)?;
+        match (match potential_banner {
+            Err(e) => Ok(Err(e)),
+            Ok(potential_banner) => {
+                Ok(Ok(StampFunctionSuccess {
+                    prototype: potential_banner.prototype,
+                    inferences: IndexMap::default(),
+                }))
+            }
+        })?
         {
             Err(_e) => panic!("CouldntFindFunctionToCallT"),
             Ok(sfs) => Ok(sfs.prototype),

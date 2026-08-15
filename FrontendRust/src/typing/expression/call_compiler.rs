@@ -16,8 +16,8 @@ use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-
-
+use crate::typing::function::function_compiler::StampFunctionSuccess;
+use crate::utils::fx::IndexMap;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -48,19 +48,33 @@ where 's: 't,
                 // We want to get the prototype here, not the entire header, because
                 // we might be in the middle of a recursive call like:
                 // func main():Int(main())
-                let stamp_result = match self.find_function(
-                        overload_set.env,
-                        coutputs,
-                        range,
-                        call_location,
-                        *overload_set.name,
-                        explicit_template_arg_rules_s,
-                        explicit_template_arg_runes_s,
-                        receiving_rune_to_explicit_template_arg_rune,
-                        context_region,
-                        &unconverted_args_pointer_types_2,
-                        &[],
-                        false)?
+              let calling_env = overload_set.env;
+              let function_name = *overload_set.name;
+              let extra_envs_to_look_in = &[];
+              let potential_banner = self.find_function(
+                calling_env,
+                coutputs,
+                range,
+                call_location,
+                function_name,
+                explicit_template_arg_rules_s,
+                explicit_template_arg_runes_s,
+                receiving_rune_to_explicit_template_arg_rune,
+                context_region,
+                &unconverted_args_pointer_types_2,
+                extra_envs_to_look_in,
+                false,
+                false)?;
+                // VCOORD: simplify
+              let stamp_result = match (match potential_banner {
+                Err(e) => Ok(Err(e)),
+                Ok(potential_banner) => {
+                  Ok(Ok(StampFunctionSuccess {
+                    prototype: potential_banner.prototype,
+                    inferences: IndexMap::default(),
+                  }))
+                }
+              })?
                 {
                     Err(e @ FindFunctionFailure { name: IImpreciseNameS::CodeName(CodeNameS { name: as_name }), .. }) if *as_name == self.keywords.r#as => {
                         let isa_failures: Vec<(KindT<'s, 't>, KindT<'s, 't>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>)> =
@@ -170,7 +184,7 @@ where 's: 't,
       range: &[RangeS<'s>],
       call_location: LocationInDenizen<'s>,
       context_region: RegionT,
-      kind: KindT<'s, 't>,
+      _kind: KindT<'s, 't>, // VCOORD: remove?
       explicit_template_arg_rules_s: &[IRulexSR<'s>],
       explicit_template_arg_runes_s: &[IRuneS<'s>],
       receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
@@ -194,30 +208,37 @@ where 's: 't,
 
         let args_types_2: Vec<KindT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result()).collect();
         // The `__call` function takes the callable the same way we're holding it.
-        let closure_param_type = match given_callable_borrow_expr_2.result() {
-            KindT::ShareRef(_) =>
-                KindT::ShareRef(self.typing_interner.alloc(ShareRefT { inner: kind })),
-            _ =>
-                KindT::BorrowRef(self.typing_interner.alloc(
-                    BorrowRefT { inner: kind, region: RegionT::Default })),
-        };
+        let closure_param_type = given_callable_borrow_expr_2.result();
         let mut param_filters = vec![closure_param_type];
         param_filters.extend_from_slice(&args_types_2);
 
         let env_ref = IInDenizenEnvironmentT::Node(env);
-        let resolved = match self.find_function(
-                env_ref,
-                coutputs,
-                range,
-                call_location,
-                self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call })),
-                explicit_template_arg_rules_s,
-                explicit_template_arg_runes_s,
-                receiving_rune_to_explicit_template_arg_rune,
-                context_region,
-                &param_filters,
-                &[],
-                false)?
+      let function_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
+      let extra_envs_to_look_in = &[];
+      let potential_banner = self.find_function(
+        env_ref,
+        coutputs,
+        range,
+        call_location,
+        function_name,
+        explicit_template_arg_rules_s,
+        explicit_template_arg_runes_s,
+        receiving_rune_to_explicit_template_arg_rune,
+        context_region,
+        &param_filters,
+        extra_envs_to_look_in,
+        false,
+        false)?;
+        // VCOORD: simplify
+      let resolved = match (match potential_banner {
+        Err(e) => Ok(Err(e)),
+        Ok(potential_banner) => {
+          Ok(Ok(StampFunctionSuccess {
+            prototype: potential_banner.prototype,
+            inferences: IndexMap::default(),
+          }))
+        }
+      })?
         {
             Err(_e) => { panic!("CouldntFindFunctionToCallT"); }
             Ok(x) => x,

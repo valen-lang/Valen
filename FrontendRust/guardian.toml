@@ -74,7 +74,10 @@ include_shields = [
     { name = "MailboxWorkflow-MBXX.md" },
 
     { name = "MailboxWatcherGuard-MWGX.md" },
-    { name = "WorkInProgressBranch-WIPBX.md" }
+    { name = "WorkInProgressBranch-WIPBX.md" },
+    { name = "OwedQuestionReminder-OQRX.md" },
+    { name = "WorktreeRootReminder-WRRX.md" },
+    { name = "CommitPreflightWorkflow-CPWX.md" },
 ]
 
 [review_mode]

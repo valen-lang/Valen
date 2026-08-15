@@ -88,7 +88,7 @@ func add<K Ref, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
       }
       set i = i + 1;
     }
-    (set map.table = newTable).drop_into({ ((_).as<None<HashMapNode<K, V>>>()).expect("wat"); });
+    (set map.table = newTable).drop_into({ ((_).try_take_as<None<HashMapNode<K, V>>>()).expect("wat"); });
   }
 
   addNodeToTable(map.table, &map.hasher, HashMapNode<K, V>(key, value));
@@ -102,7 +102,7 @@ where func(&H, K)int, func drop(K)void {
   index = findEmptyIndexForKey(&table, startIndex, node.key);
 
   opt Opt<HashMapNode<K, V>> = Some(node);
-  ((set table[index] = opt).as<None<HashMapNode<K, V>>>()).expect("wat");
+  ((set table[index] = opt).try_take_as<None<HashMapNode<K, V>>>()).expect("wat");
 }
 
 func findEmptyIndexForKey<K Ref, V>(table &Array<Opt<HashMapNode<K, V>>>, startIndex int, key K) int
@@ -218,7 +218,7 @@ V {
       [neighborKey, neighborValue] = (maybeNeighbor).get();
       addNodeToTable(map.table, map.hasher, HashMapNode<K, V>(neighborKey, neighborValue));
     } else {
-      ((maybeNeighbor).as<None<HashMapNode<K, V>>>()).expect("wat"); // drops it
+      ((maybeNeighbor).try_take_as<None<HashMapNode<K, V>>>()).expect("wat"); // drops it
       set i = map.table.len(); // break
     }
     set i = i + 1;

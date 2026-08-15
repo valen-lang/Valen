@@ -144,7 +144,8 @@ impl OnInterfaceDefinedMacro {
     where 's: 't,
     {
         match self {
-            OnInterfaceDefinedMacro::AnonymousInterface => compiler.get_interface_sibling_entries_anonymous_interface(interface_name, interface_a),
+            // VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
+            OnInterfaceDefinedMacro::AnonymousInterface => vec![],
             OnInterfaceDefinedMacro::InterfaceDrop => compiler.get_interface_sibling_entries_interface_drop(interface_name, interface_a),
         }
     }

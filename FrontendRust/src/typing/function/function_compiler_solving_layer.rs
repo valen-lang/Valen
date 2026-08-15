@@ -33,6 +33,7 @@ use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use std::iter::empty;
 use std::marker::PhantomData;
 use crate::postparsing::rules::rules::EqualsSR;
+use crate::typing::templata_compiler::{peel_all_references, peel_n_references};
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -110,7 +111,8 @@ where 's: 't,
         unimplemented!("header_rules alone: fold in the per-param type-binding rules, see @PFVSZ");
         let call_site_rules = self.assemble_call_site_rules(function.header_rules);
 
-        let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>());
+        // VTBRX: thread coutputs/calling_env/call_range_t/call_location/context_region into this call (seam signature change, Edit 2).
+        let initial_sends = self.old_assemble_initial_sends_from_args(call_range[0], function, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>());
         let initial_knowns = self.assemble_known_templatas(function, already_specified_template_args);
 
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
@@ -228,7 +230,8 @@ where 's: 't,
         unimplemented!("header_rules alone: fold in the per-param type-binding rules, see @PFVSZ");
         let call_site_rules = self.assemble_call_site_rules(function.header_rules);
 
-        let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>());
+        // VTBRX: thread coutputs/calling_env/call_range_t/call_location/context_region into this call (seam signature change, Edit 2).
+        let initial_sends = self.old_assemble_initial_sends_from_args(call_range[0], function, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>());
         let initial_knowns = self.assemble_known_templatas(function, explicit_template_args);
 
         let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
@@ -425,9 +428,11 @@ where 's: 't,
             .filter(|r| include_rule_in_call_site_solve(r))
             .collect();
 
-        let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, args);
-
         let call_range_t = self.typing_interner.alloc_slice_copy(call_range);
+        let initial_sends = self.assemble_initial_sends_from_args(
+            call_range[0], function, args,
+            coutputs, calling_env, call_range_t, call_location, context_region);
+
         let envs = InferEnv {
             original_calling_env: calling_env,
             parent_ranges: call_range_t,
@@ -437,7 +442,7 @@ where 's: 't,
         };
         let mut rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             self.derive_rune_to_type(coutputs,
-                calling_env, call_range.to_vec(),
+                IInDenizenEnvironmentT::BuildingWithClosureds(outer_env), call_range.to_vec(),
                 function.generic_params, &all_rules, IndexMap::default());
         let invocation_range = call_range;
         let mut initial_knowns: Vec<InitialKnown<'s, 't>> = {
@@ -577,7 +582,10 @@ where 's: 't,
                 calling_env, call_range.to_vec(),
                 function.generic_params, &all_rules, IndexMap::default());
 
-        let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, args);
+        // VTBRX: thread coutputs/calling_env/call_range_t/call_location/context_region into this call (defining-path twin, Edit 2).
+        // Defining path keeps old_ for now: it has no context_region, and §2A upcast does not apply to
+        // its placeholder args (it defines the function rather than resolving a concrete call).
+        let initial_sends = self.old_assemble_initial_sends_from_args(call_range[0], function, args);
 
         let preliminary_envs = InferEnv {
             original_calling_env: calling_env,
@@ -881,20 +889,24 @@ where 's: 't,
         }
     }
 
-    pub fn assemble_initial_sends_from_args(
+    // VCOORD: delete this
+    pub fn old_assemble_initial_sends_from_args(
         &self,
         call_range: RangeS<'s>,
         function: &FunctionS<'s>,
         args: &[Option<KindT<'s, 't>>],
     ) -> Vec<InitialSend<'s, 't>> {
         function.params.iter()
-            .map(|p| p.full_type_rune)
+            .map(|p| p.value_type_rune)
             .zip(args.iter())
             .enumerate()
-            .flat_map(|(arg_index, (param_full_type_rune, arg))| {
-                match arg {
+            .flat_map(|(arg_index, (param_full_type_rune, arg_maybe))| {
+                match arg_maybe {
                     None => None,
-                    Some(arg_templata) => {
+                    Some(unpeeled_arg) => {
+                        // We feed in the peeled arg to the `value_type_rune`, then later on after
+                        // the solve we sort out the cloning/auto-ref'ing.
+                        let peeled_arg = peel_all_references(*unpeeled_arg);
                         let sender_rune = RuneUsage {
                             range: call_range,
                             rune: self.scout_arena.intern_rune(
@@ -904,12 +916,67 @@ where 's: 't,
                             sender_rune,
                             receiver_rune: param_full_type_rune,
                             send_templata: ITemplataT::Kind(
-                                self.typing_interner.alloc(KindTemplataT { kind: *arg_templata })),
+                                self.typing_interner.alloc(KindTemplataT { kind: peeled_arg })),
                         })
                     }
                 }
             })
             .collect()
+    }
+
+    pub fn assemble_initial_sends_from_args(
+        &self,
+        call_range: RangeS<'s>,
+        function: &FunctionS<'s>,
+        args: &[Option<KindT<'s, 't>>],
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>, // VCOORD: why do we need calling_env? sus.
+        call_range_t: &'t [RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        context_region: RegionT,
+    ) -> Vec<InitialSend<'s, 't>> {
+        let mut sends: Vec<InitialSend<'s, 't>> = Vec::new();
+        for (arg_index, (param, arg_maybe)) in function.params.iter().zip(args.iter()).enumerate() {
+            let Some(unpeeled_arg) = arg_maybe else { continue; };
+            // Peel the arg to match the parameter's value slot before seeding its value_type_rune.
+            // Ask whether the value slot is a rune (a generic like `T`, perhaps under the param's own
+            // ref wraps) rather than a concrete type produced by a Call (e.g. `int` or `Opt<T>`). A
+            // rune slot binds whatever the arg is, references and all, so we peel only the param's own
+            // written wraps and keep the rest. That is how an explicitly-bound `T = &Spaceship` keeps
+            // its `&`. A concrete slot instead reads out the arg's outer reference, a spurious mention
+            // borrow.
+            // VCOORD: This is here only temporarily because we don't want to change the entire solver
+            // quite yet. We cant move plan-phased-calls.md's 4A entirely to here because 4A needs
+            // to read things that were determined by the explicit template args.
+            let value_slot_is_rune = !param.value_type_rules.iter().any(|r|
+                matches!(r, IRulexSR::Call(c) if c.result_rune.rune == param.value_type_rune.rune));
+            let peeled_arg = if value_slot_is_rune {
+                peel_n_references(*unpeeled_arg, param.type_outer_ref_rules.len())
+                    .unwrap_or_else(|| peel_all_references(*unpeeled_arg))
+            } else {
+                peel_all_references(*unpeeled_arg)
+            };
+            // Phase 2A: if the arg's template differs from the param's and the arg implements the
+            // param's interface, seed the upcast interface kind so the send's Equals stops
+            // conflicting. convert_via_upcast emits the actual upcast later.
+            let send_kind = self
+                .compute_upcast_coerced_arg(
+                    coutputs, calling_env, call_range_t, call_location, context_region,
+                    peeled_arg, param)
+                .unwrap_or(peeled_arg);
+            let sender_rune = RuneUsage {
+                range: call_range,
+                rune: self.scout_arena.intern_rune(
+                    IRuneValS::ArgumentRune(ArgumentRuneS { arg_index: arg_index as i32 })),
+            };
+            sends.push(InitialSend {
+                sender_rune,
+                receiver_rune: param.value_type_rune,
+                send_templata: ITemplataT::Kind(
+                    self.typing_interner.alloc(KindTemplataT { kind: send_kind })),
+            });
+        }
+        sends
     }
 
 

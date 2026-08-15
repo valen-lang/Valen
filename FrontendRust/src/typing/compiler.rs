@@ -256,6 +256,9 @@ where 's: 't,
         }
     }
 
+    // VCOORD: doublecheck before re-enabling. Dead today (its only caller is commented out in
+    // compiler_solver.rs). The BorrowRef/OwnRef/ShareRef/WeakRef arms unimplemented!()-panic on
+    // any ref-wrapped kind; peel references first.
     pub fn is_descendant_kind(
         &self,
         _envs: &InferEnv<'s, 't>,
@@ -287,6 +290,9 @@ where 's: 't,
         }
     }
 
+    // VCOORD: doublecheck before re-enabling. Dead today (its only caller is commented out in
+    // compiler_solver.rs). A BorrowRef(Interface) or KindPlaceholder falls to _ => false and
+    // silently drops an upcast candidate; peel references and handle placeholders first.
     pub fn is_ancestor_kind(
         &self,
         _envs: &InferEnv<'s, 't>,
@@ -396,27 +402,7 @@ where 's: 't,
         let prototype = self.typing_interner.intern_prototype(PrototypeValT { id: IdValT { package_coord: id.package_coord, init_steps: id.init_steps, local_name: id.local_name }, return_type: return_coord });
         PrototypeTemplataT { prototype }
     }
-    
-    pub fn resolve_function_from_infer_env(
-        &self,
-        env: InferEnv<'s, 't>,
-        state: &mut CompilerOutputs<'s, 't>,
-        ranges: &[RangeS<'s>],
-        name: StrI<'s>,
-        param_coords: &[KindT<'s, 't>],
-    ) -> Result<Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
-        self.resolve_function(
-            env.original_calling_env,
-            state,
-            ranges,
-            env.call_location,
-            name,
-            param_coords,
-            env.context_region,
-            true,
-        )
-    }
-    
+
     pub fn assemble_prototype(
         &self,
         envs: InferEnv<'s, 't>,
@@ -439,36 +425,7 @@ where 's: 't,
         state.add_instantiation_bounds(self.opts.global_options.sanity_check, self.typing_interner, envs.original_calling_env.denizen_template_id(), result.id, empty_bounds);
         result
     }
-    
-    pub fn resolve_function(
-        &self,
-        calling_env: IInDenizenEnvironmentT<'s, 't>,
-        state: &mut CompilerOutputs<'s, 't>,
-        ranges: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        name: StrI<'s>,
-        coords: &[KindT<'s, 't>],
-        context_region: RegionT,
-        verify_conclusions: bool,
-    ) -> Result<Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
-        let _ = verify_conclusions;
-        self.find_function(
-            calling_env,
-            state,
-            ranges,
-            call_location,
-            self.scout_arena.intern_imprecise_name(
-                IImpreciseNameValS::CodeName(
-                    CodeNameS { name })),
-            &[],
-            &[],
-            &[],
-            context_region,
-            coords,
-            &[],
-            true)
-    }
-    
+
 
     pub fn evaluate_generic_function_from_non_call_for_header(
         &self,
@@ -1731,10 +1688,8 @@ where 's: 't,
             KindT::StaticSizedArray(_) => false,
             KindT::RuntimeSizedArray(_) => false,
             KindT::OverloadSet(_) => false,
-            KindT::BorrowRef(_) => unimplemented!(),
-            KindT::OwnRef(_) => unimplemented!(),
-            KindT::ShareRef(_) => unimplemented!(),
-            KindT::WeakRef(_) => unimplemented!(),
+            // VCOORD: settle on a definition for primitive. err on the side of *not* this, probably...
+            KindT::BorrowRef(_) | KindT::OwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) => true,
         }
     }
     

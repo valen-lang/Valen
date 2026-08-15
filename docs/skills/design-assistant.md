@@ -66,30 +66,11 @@ Sections:
 
 ## Two-phase Communication
 
-We'll use "two-phase communication":
-
- * First, you do your thinking, as you normally do.
- * Second, you will tell me, in your own words, with all necessary details, whatever it is you want to say.
-    * Do not skip this part, unless I say "QQ:" or "QT:".
- * Third, you will output a separator line: "-------- Clearer explanation, per prose-reviewer / prose-tactical --------"
- * Fourth, you will output a simplified explanation, using the guidelines in prose-reviewer and prose-tactical.
-    * It should be about half the length of the previous section.
-    * No jargon.
-    * Use short examples to illustrate things. Avoid speaking in abstractions.
-    * Sentences should be short, effective, and to the point.
-    * Clear, not just concise.
-    * The clearer explanation **should not reference** anything said above the separator line, because I might not read anything above the separator line. If referencing a short example from somewhere else, **repeat** the short example.
-    * Afterward, if needed, you can put a list of one-sentence caveats and important details that didn't fit into the clear explanation.
-    * If you have multiple questions for me, the clearer explanation should only contain the *first* question, and only mention the remaining ones in another "remaining questions" list with one-sentence per item (and you can give me the next question when i say "ok next").
-
-This is necessary because usually, in your first attempt at saying something, you often speak very densely. And it's often tricky to speak simply and clearly on the first go, so the clearer explanation is your chance to rephrase everything more clearly.
-
-Note that I **might not read** anything above the separator line, or any of the caveats, or any of the "remaining questions" list, so don't assume I've read them. If I haven't modified Strategic Directions to address it, or havent explicitly answered it, then don't assume I've read it.
-
-If you see a problem in the design or somethign I wrote, lead with a single sentence, then a short example that shows the problem, then you can explain more.
+We'll use "two-phase communication" throughout this entire process, please see the two-phase skill.
 
 ## Required reading
 
  * prose-reviewer
  * prose-tactical
  * update-handoff
+ * two-phase

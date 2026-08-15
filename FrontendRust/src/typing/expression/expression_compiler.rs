@@ -480,7 +480,7 @@ where 's: 't,
                         ExpressionTE::VoidLiteral(self.typing_interner.alloc(
                             VoidLiteralTE::new(nenv.default_region())))
                     },
-                );
+                )?;
 
                 Ok((result_te, returns_from_source))
             }
@@ -888,20 +888,26 @@ where 's: 't,
                 // The then and else blocks are children of the block which contains the condition
                 // so they can access any locals declared by the condition.
 
-                let (condition_expr, returns_from_condition) =
+                let (uncoerced_condition_expr, returns_from_condition) =
                     self.evaluate_expression(
                         coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, nenv.default_region(), if_se.condition)?;
-                match condition_expr.result() {
-                    KindT::Bool(_) => {}
-                    actual_type => {
-                        let range_with_parent: Vec<RangeS<'s>> =
-                            once(if_se.condition.range()).chain(parent_ranges.iter().copied()).collect();
-                        return Err(ICompileErrorT::IfConditionIsntBoolean {
-                            range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
-                            actual_type,
-                        });
-                    }
-                }
+
+                let condition_expr =
+                    match uncoerced_condition_expr.result() {
+                        // VCOORD: is there some unified thing we can do to coerce like this? or maybe we can make if-statements take references? thatd be easy to coerce...
+                        KindT::Bool(_) => uncoerced_condition_expr,
+                        KindT::BorrowRef(BorrowRefT { inner: KindT::Bool(_), .. }) => {
+                            ExpressionTE::CopyPrim(self.typing_interner.alloc(CopyPrimTE::new(uncoerced_condition_expr, KindT::Bool(BoolT { }))))
+                        }
+                        actual_type => {
+                            let range_with_parent: Vec<RangeS<'s>> =
+                                once(if_se.condition.range()).chain(parent_ranges.iter().copied()).collect();
+                            return Err(ICompileErrorT::IfConditionIsntBoolean {
+                                range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
+                                actual_type,
+                            });
+                        }
+                    };
 
                 let then_body_se_as_expr: &'s IExpressionSE<'s> =
                     self.scout_arena.alloc(IExpressionSE::Block(if_se.then_body));
@@ -1290,19 +1296,24 @@ where 's: 't,
 
                 let range_with_parent: Vec<RangeS<'s>> =
                     once(em.range).chain(parent_ranges.iter().copied()).collect();
+                let destination_value_type =
+                    match destination_expr_2.result() {
+                        KindT::BorrowRef(BorrowRefT { inner, .. }) => inner,
+                        _ => panic!("evaluate_addressible_lookup_for_mutate returned non-borrow")
+                    };
                 let is_convertible =
                     self.is_type_convertible(coutputs, IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), &range_with_parent, outer_call_location,
-                        unconverted_source_expr_2.result(), destination_expr_2.result());
+                        unconverted_source_expr_2.result(), *destination_value_type);
                 if !is_convertible {
                     return Err(ICompileErrorT::CouldntConvertForMutateT {
                         range: self.typing_interner.alloc_slice_copy(&range_with_parent),
-                        expected_type: destination_expr_2.result(),
+                        expected_type: *destination_value_type,
                         actual_type: unconverted_source_expr_2.result(),
                     });
                 }
                 let converted_source_expr_2 =
                     self.convert(nenv, life, coutputs, &range_with_parent, outer_call_location,
-                        region, unconverted_source_expr_2, destination_expr_2.result())?;
+                        region, unconverted_source_expr_2, *destination_value_type)?;
                 // VCOORD: lets rename all the _2 to _te etc.
                 let mutate_2 = ExpressionTE::Mutate(self.typing_interner.alloc(
                     MutateTE::new(destination_expr_2, converted_source_expr_2)));
@@ -1322,20 +1333,25 @@ where 's: 't,
                 let destination_expr_2 =
                     self.evaluate_addressible_lookup_for_mutate(coutputs, nenv, parent_ranges, region, lm.range, lm.name)
                         .unwrap_or_else(|| panic!("Couldnt find {:?}", lm.name));
+                let destination_value_type =
+                    match destination_expr_2.result() {
+                        KindT::BorrowRef(BorrowRefT { inner, .. }) => inner,
+                        _ => panic!("evaluate_addressible_lookup_for_mutate returned non-borrow")
+                    };
                 let is_convertible =
                     self.is_type_convertible(coutputs, IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), &range_with_parent, outer_call_location,
-                        unconverted_source_expr_2.result(), destination_expr_2.result());
+                        unconverted_source_expr_2.result(), *destination_value_type);
                 if !is_convertible {
                     return Err(ICompileErrorT::CouldntConvertForMutateT {
                         range: self.typing_interner.alloc_slice_copy(&range_with_parent),
-                        expected_type: destination_expr_2.result(),
+                        expected_type: *destination_value_type,
                         actual_type: unconverted_source_expr_2.result(),
                     });
                 }
                 assert!(is_convertible);
                 let converted_source_expr_2 =
                     self.convert(nenv, life, coutputs, &range_with_parent, outer_call_location,
-                        region, unconverted_source_expr_2, destination_expr_2.result())?;
+                        region, unconverted_source_expr_2, *destination_value_type)?;
                 let expr_te = match destination_expr_2 {
                     ExpressionTE::LocalLookup(local_lookup) if nenv.unstackifieds().contains(&local_lookup.local_variable.name) => {
                         nenv.mark_local_restackified(local_lookup.local_variable.name);
@@ -1872,8 +1888,11 @@ where 's: 't,
             &[contained_success_coord],
             &[],
         )? {
-            IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
-                panic!("CompileErrorExceptionT: RangedInternalErrorT")
+            IResolveFunctionResult::ResolveFunctionFailure(fff) => {
+                return Err(ICompileErrorT::TypingPassResolvingError {
+                    range: self.typing_interner.alloc_slice_copy(range),
+                    inner: fff.reason,
+                });
             }
             IResolveFunctionResult::ResolveFunctionSuccess(p) => p.prototype.prototype,
         };
@@ -1914,8 +1933,11 @@ where 's: 't,
             &[contained_fail_coord],
             &[],
         )? {
-            IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
-                panic!("CompileErrorExceptionT: RangedInternalErrorT")
+            IResolveFunctionResult::ResolveFunctionFailure(fff) => {
+                return Err(ICompileErrorT::TypingPassResolvingError {
+                    range: self.typing_interner.alloc_slice_copy(range),
+                    inner: fff.reason,
+                });
             }
             IResolveFunctionResult::ResolveFunctionSuccess(p) => p.prototype.prototype,
         };

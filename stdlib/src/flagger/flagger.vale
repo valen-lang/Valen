@@ -330,7 +330,7 @@ func get_string_flag(parsed_flag_list &ParsedFlagList, flag_name str) Opt<str> {
   while i < parsed_flag_list.parsed_flags.len() {
     hay_flag = parsed_flag_list.parsed_flags.get(i);
     if hay_flag.name == needle_flag_name {
-      maybe_str_flag = hay_flag.val.as<FlagString>();
+      maybe_str_flag = hay_flag.val.try_as<FlagString>();
       if maybe_str_flag.is_ok() {
         strFlag = maybe_str_flag.expect("zork b");
         return Some<str>(strFlag.value);
@@ -406,7 +406,7 @@ func get_bool_flag(parsed_flag_list &ParsedFlagList, flag_name str) Opt<bool> {
   while i < parsed_flag_list.parsed_flags.len() {
     hay_flag = parsed_flag_list.parsed_flags.get(i);
     if hay_flag.name == needle_flag_name {
-      maybe_str_flag = hay_flag.val.as<FlagBool>();
+      maybe_str_flag = hay_flag.val.try_as<FlagBool>();
       if maybe_str_flag.is_ok() {
         strFlag = maybe_str_flag.expect("zork c");
         return Some<bool>(strFlag.value);
@@ -482,7 +482,7 @@ func get_int_flag(parsed_flag_list &ParsedFlagList, flag_name str) Opt<int> {
   while i < parsed_flag_list.parsed_flags.len() {
     hay_flag = parsed_flag_list.parsed_flags.get(i);
     if hay_flag.name == needle_flag_name {
-      maybe_str_flag = hay_flag.val.as<FlagInt>();
+      maybe_str_flag = hay_flag.val.try_as<FlagInt>();
       if maybe_str_flag.is_ok() {
         strFlag = maybe_str_flag.expect("zork d");
         return Some<int>(strFlag.value);

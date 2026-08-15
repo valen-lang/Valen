@@ -11,7 +11,7 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::macros::macros::GeneratedAhtDenizen;
 use crate::typing::templata::templata::*;
-use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::typing::templata_compiler::{IBoundArgumentsSource, peel_all_references};
 use crate::postparsing::ast::*;
 use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ICitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
 use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
@@ -22,6 +22,24 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::names::names::IdValT;
 use crate::postparsing::ast::FunctionS;
 use crate::postparsing::names::IFunctionDeclarationNameS;
+
+
+// A constructor param mirrors a user-written param: it carries the member's @PFVSZ split verbatim, so
+// downstream (e.g. §2A's expected-value-type-template scan) sees a constructor param exactly as it would
+// a hand-written one. Pure: reads only the member's fields and calls the sealed ParameterS::new.
+// VCOORD: inline?
+fn parameter_from_normal_member<'s>(member: &NormalStructMemberS<'s>) -> ParameterS<'s> {
+    ParameterS::new(
+        member.range,
+        None,
+        false,
+        IVarNameS::CodeVarName(member.name),
+        member.type_rune,
+        member.value_type_rune,
+        member.type_outer_ref_rules,
+        member.value_type_rules,
+    )
+}
 
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -52,9 +70,6 @@ where 's: 't,
         // the header rules.
         for r in struct_a.header_rules.iter() { rules.push(*r); }
 
-        // We include these because they become our parameters. If a struct contains a Opt<^MyNode<T>> we want those two
-        // CallSRs in our function rules too.
-        for r in struct_a.member_rules.iter() { rules.push(*r); }
 
         let struct_name_range = struct_a.name.range();
         let ret_rune_s = self.scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {}));
@@ -85,16 +100,7 @@ where 's: 't,
         let params: Vec<ParameterS<'s>> = struct_a.members.iter().flat_map(|m| {
             match m {
                 IStructMemberS::NormalStructMember(member) => {
-                    vec![ParameterS::new(
-                        member.range,
-                        None,
-                        false,
-                        IVarNameS::CodeVarName(member.name),
-                        member.type_rune,
-                        member.type_rune,
-                        self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
-                        self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
-                    )]
+                    vec![parameter_from_normal_member(member)]
                 }
                 IStructMemberS::VariadicStructMember(_) => vec![],
             }
@@ -141,7 +147,11 @@ where 's: 't,
       maybe_ret_coord: Option<KindT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
         let ret_coord = maybe_ret_coord.expect("vassertSome: maybeRetCoord");
-        let struct_tt = match ret_coord {
+        // The return coord arrives ShareRef-wrapped for a share citizen (see the share-wrap in
+        // function_compiler_core); peel to the struct kind to construct it. The return type is
+        // re-wrapped from sharedness below.
+        // VCOORD: revisit this
+        let struct_tt = match peel_all_references(ret_coord) {
             KindT::Struct(s) => s,
             _ => panic!("Expected struct kind in generate_function_body_struct_constructor"),
         };

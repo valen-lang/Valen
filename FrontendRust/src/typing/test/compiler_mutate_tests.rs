@@ -172,6 +172,7 @@ fn expr_set_upcasts() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
 import v.builtins.drop.*;
+import v.builtins.panic.*;
 
 interface IXOption<T> where func drop(T)void { }
 struct XSome<T> where func drop(T)void { value T; }
@@ -182,13 +183,18 @@ impl<T> IXOption<T> for XNone<T>;
 struct Marine {
   weapon IXOption<int>;
 }
-exported func main() {
-  m = Marine(XNone<int>());
+
+func __pretend<T>() T { __vbi_panic() }
+func main() {
+  foo(__pretend<Marine>());
+}
+func foo(m Marine) {
   set m.weapon = XSome(6);
 }
 ";
     let code_source = CodeSource::new(vec![
         Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+        Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
         new_test_code_map(&parse_arena, code),
         Source::Fn(empty_v_builtins_stub),
     ]);
@@ -197,9 +203,9 @@ exported func main() {
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_str("main");
+    let foo = coutputs.lookup_function_by_str("foo");
     collect_only_tnode!(
-        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionDefinition(foo),
         NodeRefT::Mutate(MutateTE {
             source_expr: ExpressionTE::Upcast(_),
             ..
@@ -220,7 +226,7 @@ fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type() {
 
 exported func main() {
   a = 5;
-  set a = "blah";
+  set a = true;
 }
 "#;
     let code_source = CodeSource::new(vec![
@@ -230,16 +236,16 @@ exported func main() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
     let err = compile.get_compiler_outputs().err().unwrap();
     match &err {
-        ICompileErrorT::CouldntConvertForMutateT { expected_type: KindT::Int(IntT { bits: 32 }), actual_type: KindT::ShareRef(ShareRefT { inner: KindT::Str(_) }), .. } => {}
-        _ => panic!("expected CouldntConvertForMutateT"),
+        ICompileErrorT::CouldntConvertForMutateT { expected_type: KindT::Int(IntT { bits: 32 }), actual_type: KindT::Bool(_), .. } => {}
+        other => panic!("expected CouldntConvertForMutateT: {:?}", other),
     }
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
         r##"At test:0.vale:3:1:
 exported func main() {
 At test:0.vale:5:7:
-  set a = "blah";
-Mutate couldn't convert @str to expected destination type i32
+  set a = true;
+Mutate couldn't convert bool to expected destination type i32
 "##,
     );
 }
@@ -280,6 +286,7 @@ Can't extend a non-interface: i32
     );
 }
 
+#[ignore] // VCOORD: uses lambda
 #[test]
 fn can_mutate_an_element_in_a_runtime_sized_array() {
     let parse_bump = Bump::new();

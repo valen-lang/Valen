@@ -17,7 +17,7 @@ use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::interner::Interner;
 use crate::utils::arena_index_map::ArenaIndexMap;
-use crate::typing::function::function_compiler::IDefineFunctionResult;
+use crate::typing::function::function_compiler::{IDefineFunctionResult, StampFunctionSuccess};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::names::names::{KindPlaceholderNameT, KindPlaceholderTemplateNameT};
 use crate::typing::types::types::{RegionT, KindPlaceholderT, KindT};
@@ -637,22 +637,32 @@ where 's: 't,
             coutputs.get_outer_env_for_type(&[range, impl_a.range], interface_template_id),
             coutputs.get_outer_env_for_type(&[range, impl_a.range], sub_citizen_template_id),
         ];
-        let found_function = match self.find_function(
-            IInDenizenEnvironmentT::from(dispatcher_case_env),
+        let calling_env = IInDenizenEnvironmentT::from(dispatcher_case_env);
+        let call_range = &[range, impl_a.range];
+        let explicit_template_arg_rules_s = &[];
+        let positional_explicit_template_arg_runes_s = &[];
+        let receiving_rune_to_explicit_template_arg_rune = &[];
+        let context_region = RegionT::Default;
+        let potential_banner = self.find_function(
+            calling_env,
             coutputs,
-            &[range, impl_a.range],
+            call_range,
             call_location,
             override_imprecise_name,
-            &[],
-            &[],
-            &[],
-            RegionT::Default,
+            explicit_template_arg_rules_s,
+            positional_explicit_template_arg_runes_s,
+            receiving_rune_to_explicit_template_arg_rune,
+            context_region,
             &override_function_param_types,
             &extra_envs,
             true,
-        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from find_function in look_for_override")) {
+            false)?;
+        let found_function = match potential_banner {
             Err(_e) => panic!("Unimplemented: CouldntFindOverrideT error"),
-            Ok(x) => x,
+            Ok(candidate) => StampFunctionSuccess {
+                prototype: candidate.prototype,
+                inferences: IndexMap::default(),
+            },
         };
 
         assert!(coutputs.get_instantiation_bounds(self.typing_interner, found_function.prototype.id).is_some());

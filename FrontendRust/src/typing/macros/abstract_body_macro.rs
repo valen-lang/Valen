@@ -17,7 +17,8 @@ use crate::typing::types::types::RegionT;
 use crate::typing::templata::templata::FunctionTemplataT;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
-
+use crate::typing::function::function_compiler::StampFunctionSuccess;
+use crate::utils::fx::IndexMap;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -58,20 +59,36 @@ where 's: 't,
             .expect("vassertSome: TemplatasStore.getImpreciseName env.id.localName");
         let param_types: Vec<KindT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
         let env_as_iindenizen = self.typing_interner.alloc(IInDenizenEnvironmentT::Function(env));
-        let prototype = match self.find_function(
-          *env_as_iindenizen,
-          coutputs,
-          call_range,
-          call_location,
-          imprecise_name,
-          &[],
-          &[],
-          &[],
-          RegionT::Default,
-          &param_types,
-          &[],
-          true,
-        )? {
+      let calling_env = *env_as_iindenizen;
+      let explicit_template_arg_rules_s = &[];
+      let positional_explicit_template_arg_runes_s = &[];
+      let receiving_rune_to_explicit_template_arg_rune = &[];
+      let context_region = RegionT::Default;
+      let extra_envs_to_look_in = &[];
+      let potential_banner = self.find_function(
+        calling_env,
+        coutputs,
+        call_range,
+        call_location,
+        imprecise_name,
+        explicit_template_arg_rules_s,
+        positional_explicit_template_arg_runes_s,
+        receiving_rune_to_explicit_template_arg_rune,
+        context_region,
+        &param_types,
+        extra_envs_to_look_in,
+        true,
+        false)?;
+        // VCOORD: simplify
+      let prototype = match (match potential_banner {
+        Err(e) => Ok(Err(e)),
+        Ok(potential_banner) => {
+          Ok(Ok(StampFunctionSuccess {
+            prototype: potential_banner.prototype,
+            inferences: IndexMap::default(),
+          }))
+        }
+      })? {
             Ok(stamp) => stamp.prototype,
             Err(fff) => {
                 // Name the rejection kind per candidate rather than dumping the payload: an

@@ -4,14 +4,8 @@ use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, ITemplataType, IntegerTemplataType, StringTemplataType,
 };
+use crate::postparsing::rules::types::ITypeST;
 use crate::utils::range::RangeS;
-
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RuneUsage<'s> {
-  pub range: RangeS<'s>,
-  pub rune: IRuneS<'s>,
-}
 
 
 /// A `where implements(Sub, Super)` clause. The bound itself is not a rule — it deduces nothing,
@@ -119,8 +113,10 @@ pub struct ResolveSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
   pub name: StrI<'s>,
-  pub params_list_rune: RuneUsage<'s>,
-  pub return_rune: RuneUsage<'s>,
+  pub params_list_rune: RuneUsage<'s>, // VCOORD: get rid of this in favor of params_types
+  pub params_types: &'s [ITypeST<'s>],
+  pub return_rune: RuneUsage<'s>, // VCOORD: get rid of this in favor of return_type
+  pub return_type: ITypeST<'s>
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -207,6 +203,13 @@ pub struct KindListSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
   pub members: &'s [RuneUsage<'s>],
+}
+
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RuneUsage<'s> {
+  pub range: RangeS<'s>,
+  pub rune: IRuneS<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

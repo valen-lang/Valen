@@ -8,10 +8,10 @@ A call site does these phases:
 
  * Phase 1: Candidate selection / filtering. Narrow down the exact *only* candidate to attempt the rest with.
  * Phase 2: Upcastability, for each argument try to solve the impl that casts it to the expected parameter template.
- * Phase 3: Rune-typing, to figure out the types of all the callee's runes.
+ * Phase 3: Seed initial knowns into conclusions map
  * Phase 4: Main solve, to detect problems and determine the function's runes mapping.
  * Phase 5: Resolve bounds and register instantiation bounds.
- * Phase 6: Reference-solve: extend the main solve with type_outer_ref_rules to calculate each parameter's full_type_rune.
+ * Phase 6: Substitute for final parameter type
  * Phase 7: Convert: insert upcast operations at the callsite.
  * Phase 8: Borrow check
 
@@ -25,7 +25,7 @@ let my_opt = None();
 we'll be writing:
 ```
 v = Vec<int>();
-x Opt<int> = None();
+x Opt<int> = None<int>();
 ```
 This is an acceptable cost, to get the simpler 8-phase approach.
 
@@ -80,7 +80,13 @@ Before Phase 1 can work, we'll reorganize things:
        * `str(bool)` in bool.vale.
        * `as` in as.vale, for (infallible) upcasts. Make `as` implicitly imported, like the other builtins.
  * Make it so every bound (ImplBoundS, ResolveSR) contains its rules and its own runes.
- * Make it so postparsing doesnt produce rules, instead it produces ITypeST. (Phase 4 will privately make temporarily transient rules for its own purposes, otherwise, nobody will ever see rules)
+ * Make it so postparsing an impl puts not only rules in the ImplS, but also a `sub_citizen_type: ITypeST` and `super_interface_type: ITypeST`.
+ * Make it so postparsing includes not only rules in the ParameterS, but also a `type: ITypeST`.
+ * Make it so function bounds hold a `super_interface_type: ITypeST` too.
+ * Make it so a generic param's hold its default value as an ITypeST too.
+ * ITypeST is read-only, only the postparser constructs one. Substituting things into it produces a KindT, never a new ITypeST.
+ * Enforce that an impl only lives in its struct's file or its interface's file.
+ * When we declare a bound like `where exists drop(T)void`, put that PrototypeTemplata into the placeholder's outer env (this helps 5.8).
 
 Things to do during or after the plan, depending on what failures they'd fix:
 
@@ -96,21 +102,25 @@ Things to do during or after the plan, depending on what failures they'd fix:
 Do the explicit template args solve, to determine the actual templatas that the callsite wants to explicitly send in.
 Note that this is a full solve, but using only things visible from the callsite, so we don't need to know anything about the callee yet.
 
-
 ### Phase 1F: Candidate selection / filtering. §1F
 
  1. Look at each callsite argument. For each:
-    * Ignore any references on it (peel them away). Save these peeled args, phase 2B will use them.
+    * Ignore any references on it (peel them away).
     * Look at its type's package env (package's top-level namespace).
     * Look at its type's outer env (the methods defined inside the struct/interface).
     * In both, find any method of the desired name, and the right arity. If you found zero, continue to next one. If one, stop here. If multiple, show an error, require them to disambiguate.
- 2. If the function has the same name as a type that is visible to (imported by) the callsite:
+ 2. (Later when we have default trait methods)
+   For each impl in the argument type's file and any imported interfaces files, whose sub_citizen_type's template is the callsite argument's template:
+    * Look in the super_interface_type's outer env.
+    * Find any method of the desired name, and the right arity.
+   If you found exactly one, stop here. If zero, continue. If multiple, show an error.
+ 3. If the function has the same name as a type that is visible to (imported by) the callsite:
     * Look at its type's package env (package's top-level namespace).
     * Look at its type's outer env (the methods defined inside the struct/interface).
-    * In both, find any method with that name of the right arity. If you found zero, continue to step 3. If one, stop here. If multiple, show an error, require them to disambiguate.
- 3. If the function was imported by the callsite:
-    * Check if it has the right arity. If found zero, continue to step 4. If one, stop here. If multiple, show an error, require them to disambiguate.
- 4. If zero were found, show an error.
+    * In both, find any method with that name of the right arity. If you found zero, continue to step 4. If one, stop here. If multiple, show an error, require them to disambiguate.
+ 4. If the function was imported by the callsite:
+    * Check if it has the right arity. If found zero, continue to step 5. If one, stop here. If multiple, show an error, require them to disambiguate.
+ 5. If zero were found, show an error.
 
 We stop at the first one, to support this bunch of functions:
  1. str.vale: `func contains(haystack str, needle str) bool`
@@ -119,22 +129,83 @@ We stop at the first one, to support this bunch of functions:
  4. str_slice.vale: `func contains_slice(haystack StrSlice, needle StrSlice) bool`
 Otherwise, `contains("hi","hello")` has a conflict between #1 and #3.
 
+### Phase 1G: Postparse the callee §1G
+
+If the callee hasn't been postparsed, request a postparse now.
+Main purpose is to generate the "steps" that we'll use later on in phase 4.
+Basically, do a topo sort of the bounds (regardless of whether theyre specified in where clauses or in the generic parameters) and the function params (because e.g. `func tag<T: Named>(label T.Name, thing T)`), to produce "steps". Error on cycle (though, we could relax this, as explicitly specified args do make it callable).
+
+This is also where we do the lookups. So instead of referring to things by their imprecise name, we do the actual resolve.
+ * We note a parent_runes Set here, runes the callee doesn't declare (like a lambda's `__call` mentioning its parent's `T`). Phase 4 will use this.
+
+This is also where, for each parameter, we look up whether the type is a class or a struct (because we desugar bare mentions of classes like `x: MyClass` into something like `x: BorrowRef(ShareRef(MyClass))``), when we produce the ITypeST for the parameter.
+
+Steps:
+ * ArgumentStep
+ * ImplBoundStep
+ * FuncBoundStep
+ * GenericDefaultStep
+    * This one is skipped if the user actually specified it via an explicit template arg.
+    * "Dead defaults" cause a compiler error. Example: `func append<T = int>(v Vec<T>, x T)`'s `T` is always determined by the arguments so will never happen.
+
+The topo sort's order is determined by what a step's inputs and outputs are.
+
+Generally, it works like this:
+ * ArgumentStep's input is the argument type, and its outputs are all the runes mentioned in the parameter.
+    * Example: `x: MyThing<T, Y>` input is the argument type, outputs are T and Y.
+ * ImplBoundStep's input is the runes in the sub_citizen_type.
+    * Example: `implements(T, Sporkle<Y, Z>)` input is T, outputs are Y and Z.
+ * FuncBoundStep's input is the runes in the arguments, output is the runes in the returns.
+    * Example: `where exists foo(T,Y)R` inputs are T and Y, output is R.
+ * GenericDefaultStep's input is the runes in the default, output is the result.
+    * Example: `H = DefaultHasher<K, V>` inputs are K and V, output is H.
+
+However, associated projections (`T.Item`) can make it trickier. Generally they make `T` an input, unless `T` is already an output of the same step.
+ * ArgumentStep examples:
+    * `x: MyThing<T, Y>` input is the argument type, outputs are T and Y.
+    * `x: MyThing<T.Spork, Y>` input is the argument type and T, output is Y.
+    * `x: MyThing<T, T.Spork>` input is the argument type, output is T.
+    * `x: MyThing<T.Spork, T>` input is the argument type, output is T. (Same as above, but note how the order doesn't matter)
+ * ImplBoundStep examples:
+    * `implements(T, Sporkle<Y.Bork, Z>)` inputs are T and Y, output is Z.
+    * `implements(T, Sporkle<Y, Y.Bork>)` input is T, output is Y.
+ * FuncBoundStep examples:
+    * `where exists foo(T,Y)R` inputs are T and Y, output is R.
+    * `where exists foo(T,Y)R.Thing` inputs are T, Y, and R. No outputs.
+To make this work, determine for each non-projection rune-mention (`T`, not `T.Item`) whether it's an input or output, then look at the projections.
+
+Example §1G1
+ * callee: `func foo<T, Y>(x Opt<T>) where implements(T, MyInterface<Y>) { ... }`
+ * impl: `impl MyStruct for MyInterface<bool>;`
+ * callsite: `foo(Some(MyStruct()))`
+In the topo-sort, the `implements(T, MyInterface<Y>)` only needs to happen once `T` is known.
+
+More examples to work through: ????
+ 1. implements(T, MyInterface<Y>) — waits on T. The common case.
+ 2. implements(Pair<T, U>, IFoo<Y>) — waits on T and U; it needs the whole left type built.
+ 3. implements(MyStruct, ISerializable) — waits on nothing; it can even be checked once when the declaration compiles, since no call site changes it.
+ 4. implements(T.Item, IComparable<Y>) — waits on the computation of T.Item, not just on a rune.
+ 5. implements(T, MyInterface<U.Out>) — right-side plain runes like Y never cause waiting, but a right-side computed type like U.Out does, because computed types are never run backward
+ 6. `func add_into<T>(x T, vec Vec<T>)`. I think here we actually want to order the `vec` argument first, to get a clearer picture of what `T` is, because top-level `T`s like `x` go through the confusing phase 4 argument coercion. We should delay e.g. top-level `T` and `&T` until after the other params.
+
+Note for future features: we're sorting once, at postparse time, and every call reuses the same order. This only works if one order fits all callers. This is true, but only because of these facts:
+ 1. No matter how much a caller explicitly specifies, it doesn't change the order.
+ 2. No matter what arguments a caller supplies, it doesn't change the order.
+ 3. Each step has inputs and outputs that are set in stone, we don't rearrange rules depending on what's available.
+ 4. Information doesn't need to flow backwards into the arguments (like lambdas can in Rust).
+
 ### Phase 1H: Check explicit template args types against callee §1H
 
 Make sure that the explicit template args types' match the expected types (generic_params[i].tyype).
 
-### Phase 1L: Lookups and Literals §1L
+### Phase 2A: Dyn Upcastability. §2A
 
-Extract and process the callee's LiteralSR and LookupSR and RuneEnvParentLookupSR rules.
-
-These will be `InitialKnown`s for all solves in the rest of the phases.
-
-### Phase 2A: Dyn Upcastability. §2
-
-Look at each callsite argument (the "uncoerced argument"). For each:
- * Get the corresponding callee parameter value_type_rune.
- * If there's a CallSR rule whose result rune is the parameter's value_type_rune, then continue. Otherwise, skip to the next argument.
- * Get the CallSR's template, that's the "expected template".
+Look at each callsite argument ("uncoerced-argument"). For each:
+ * Peel it ("peeled-uncoerced-argument").
+ * Look at the parameter's type ITypeST.
+ * Look past any outer refs (peel them).
+ * If the remaining is a CallST, then continue. Otherwise, skip to the next argument.
+ * Get the CallST's template, that's the "expected template".
  * If the argument template and expected template are the same, then skip this argument. Otherwise continue.
  * Ignore any references on both (peel them away).
  * Find all impls for the uncoerced argument type and the parameter type. In this example:
@@ -149,9 +220,11 @@ Look at each callsite argument (the "uncoerced argument"). For each:
    impl<T> Some<T> for Opt<T>
    ```
  * If there is no impl, then give a compiler error and stop the whole callsite.
- * Once we have that impl, do a solve on it to turn the `Some<int>` into its parent `Opt`. In other words, take `Some<int>`'s `<int>` and plug that into the `impl`'s solve and get the resulting trait, which is `Opt<int>`.
- * Remember the `Opt<int>`. We'll be handing that in as the argument in later phases, instead of the original callsite argument.
- * Note that the solve should not be registering any instantiation bounds yet. We must remember to do that at the end when we're sure this call will work.
+ * Once we have that impl, match the peeled-uncoerced-argument (`Some<int>`) against the impl's sub_citizen_type (`Some<T>`) to get impl_rune_to_type map (T = int).
+ * Substitute the impl_rune_to_type map into the impl's super_interface_type (`Opt<T>`) to get the result ("peeled-coerced-argument") (`Opt<int>`).
+ * Enforce peeled-coerced-argument contains no impl runes, otherwise compile error.
+ * Remember the peeled-coerced-argument (`Opt<int>`). It's handed into the ArgumentStep's input.
+ * Note that none of this should be registering any instantiation bounds yet. We must remember to do that at the end when we're sure this call will work.
  * The upcast is one hop, not transitive.
 
 Note that there might be multiple impls for a given struct to a given interface, like (§2.1):
@@ -166,37 +239,224 @@ In that case, we expect the user to disambiguate with a cast:
 watch(as<IObserver<SignalA>>(&MyController()))
 ```
 
-### Phase 2B: Trait Upcastability. §2.5
+Note that lambda arguments are seen as normal lambda capture structs. They aren't special. Their signature isn't dealt with until later when we consider the lambda struct's bounds.
 
-Look at each callsite argument (the "uncoerced argument"). For each:
- * Get the corresponding callee parameter value_type_rune.
- * For each ImplBoundS whose sub_rune is the parameter's `value_type_rune`:
-    * That ImplBoundS's super rune is the "expected template".
-    * If the argument template and expected template are the same, then skip this argument. If the same, continue.
-    * Assert no outer references on both (argument outer refs should have been peeled by phase 2B and value_type_rune doesn't contain outer refs)
-    * Find all impls for the uncoerced argument type and the parameter type. In this example:
-      ```
-      fn callee<X, T, U>(x &T) where implements(T, IObserver<X, U>) { ... }
-      fn caller<A>(x MyController<A>) {
-        callee(&x)
-      }
-      ```
-      we're looking for the impl that turns `MyController` into an `IObserver`:
-      ```
-      impl<Z> MyController<Z> for IObserver<Z, int>;
-      ```
-    * If there is no impl, then give a compiler error and stop the whole callsite.
-    * For each one of those impls:
-       1. Look up the impl's placeholdered struct (`MyController<Z>`) and placeholdered interface (`IObserver<Z, int>`), which were produced back when compiling the impl's definition.
-       2. Recursively compare the impl's placeholdered struct (`MyController<Z>`) with the uncoerced argument type (`MyController<A>`). Note what placeholders in the former (`Z`) is matched with what in the latter (`A`). Build a map of impl_placeholder_to_argument_type (`Z` -> `A`).
-       3. Using that map (`Z` -> `A`), substitute into the impl's placeholdered interface (`IObserver<Z, int>`) and note the result (`IObserver<A, int>`) which is phrased in terms of the caller.
-        * Assert that the result doesn't contain any impl placeholders (§2.5.1)
-       4. Match callee bound interface (`IObserver<X, U>`) against step 3's result (`IObserver<A, int>`). Note what placeholders in the former are matched with what in the latter (`X` with `A`, `U` with `int`). Build a map of callee_placeholder_to_argument_type (`X` -> `A`, `U` -> `int`).
-       5. Check for any conflicts with any explicit arguments. If any conflicts, dont issue a compile error, just reject this impl and hope that another one succeeds.
-       6. Remember the resulting parent (`IObserver<A, int>`), this is how Phase 4 knows about the impl's trait's generic args.
-    * Only one of those impls should have succeeded. Use its resulting parent.
-    * Note that the solve should not be registering any instantiation bounds yet. We must remember to do that at the end when we're sure this call will work.
-    * The upcast is one hop, not transitive.
+### Phase 3: Initial Knowns §3
+
+Look up the explicit template args, and the env-supplied values for the parent runes from §1B, and put them into a `conclusions: IndexMap<Rune, ITemplata>` map.
+
+### Phase 4: Execute Steps §4
+
+Iterate through the postparsed denizen's sorted steps.
+ A. If it's an argument step, then do a recursive walk matching the incoming argument KindT and the function's param's ITypeST.
+ B. If it's a function bound step, then do what step 5 was doing. It can teach.
+    * We might naturally be calling into a lambda's call function here.
+ C. if it's an impl bound step, then do what step 2B and 5 were doing. they can teach.
+Each of these is explained in more detail below.
+
+We shouldn't register any instantiation bounds yet. We must remember to do that at the end when we're sure this call will work.
+ * One exception: the FuncBoundStep might be compiling a lambda. The lambda's body will be registering some instantiation bounds.
+
+#### Phase 4's ArgumentStep §4A
+
+The basic idea here is:
+ * First do an "outer compare" which adds or peels outer references (like the first `&` in `&Vec<&Spork>`).
+ * Once everyone agrees on outer references, do a stricter recursive compare of the "value type" (like the `Vec<&Spork>` in `&Vec<&Spork>`).
+
+Actual steps:
+ 1. Do the "outer compare". Look at the incoming argument KindT and the function's param's ITypeST.
+    * If the param's ITypeST is a rune:
+       * Look first in the conclusions map, populated by previous steps and by phase 3 initial knowns.
+       * If rune not known, fill it with the corresponding part of the incoming KindT. End here.
+       * If rune is known, use that known value for the param and keep going.
+    * If they both have a ref, strip it off both, repeat the "outer compare" step.
+    * If the incoming argument KindT has a ref but the param's ITypeST doesn't, allow it if the type implements Copy or has a `__copy_prim`, which phase 7 will call. Strip off the incoming argument's ref, proceed to the "inner compare".
+    * If the incoming argument KindT has no ref, but the param's ITypeST does. Either (depending on experimental flags):
+       * Allow it, and phase 7 will automatically insert a temporary local variable and give a ref of that. Strip off the param's ITypeST's ref, proceed to the "inner compare".
+       * Reject it, compile error.
+    * If you come across anything else, proceed to the "inner compare".
+       * Also, assert here that the arg template and ITypeST template match, because phase 2A should have upcast things until they match. **This step does not think about upcasting.**
+ 2. Do the "inner compare". Do a recursive walk matching the incoming argument KindT and the function's param's ITypeST.
+    * When you come across a rune:
+       * Look first in the conclusions map, populated by previous steps and by phase 3 initial knowns.
+       * If rune not known, fill it with the corresponding part of the incoming KindT.
+       * If rune is known, compare against that known value instead of the ITypeST.
+    * When you come across anything else: keep recursing, comparing the two. Give an error if they don't match.
+If reach the end with no conflicts, success.
+(Note, when we substitute into a rune and then compare the substitution, that's comparing two KindTs, not comparing with ITypeST anymore. Different logic.)
+
+Example §4A1UV:
+```
+func store<T>(x T) { ... }
+store(make_ship_val()); // Hands in a `Ship`
+```
+Outer compare sees arg `Ship` and param's rune `T`, rune not known, so concludes T = `Ship`.
+
+Example §4A1UR:
+```
+func store<T>(x T) { ... }
+store(make_ship_ref()); // Hands in a `&Ship`
+```
+Outer compare sees arg `&Ship` and param's rune `T`, rune not known, so concludes T = `&Ship`.
+
+Example §4A1RVD:
+```
+func store<T>(x T) { ... }
+store<&Ship>(make_ship_val()); // Hands in a `Ship`
+```
+Assuming the experimental flag for auto-ref (making temporary locals) is disabled:
+ * Phase 3 concludes T = `&Ship`
+ * Outer compare sees arg `Ship` and param `&Ship`, stops with a compile error (which suggests adding an `&`).
+
+Example §4A1RVE:
+```
+func store<T>(x T) { ... }
+store<&Ship>(make_ship_val()); // Hands in a `Ship`
+```
+Assuming the experimental flag for auto-ref (auto making temporary locals) is enabled:
+ * Phase 3 concludes T = `&Ship`
+ * Outer compare sees arg `Ship` and param `&Ship`, strips off of param, proceeds to inner compare.
+ * Inner compare sees Ship = Ship, success.
+If the user didn't want to explicitly specify, they could have called it like `store(&make_ship_val())`.
+Note this experimental flag is different than the "mention = ref" flag (where `foo(x)` lowers to `foo(&x)`).
+
+Example §4A1VR:
+```
+func store<T>(x T) { ... }
+store<Ship>(make_ship_ref()); // Hands in a `&Ship`
+```
+ * Phase 3 concludes T = `&Ship`
+ * Outer compare sees arg `&Ship` and param `Ship`, enforces arg Copy/`__copy_prim`, proceeds to inner compare.
+ * Inner compare sees Ship = Ship, success.
+
+
+#### Phase 4's FuncBoundStep §4F
+
+Something similar to 4I.
+(fill this out a little more perhaps).
+
+We'll be resolving the function's header, to see what its return type is, so it can inform the rest of the steps.
+This usually just means resolving a function's header, but could also mean resolving an entire lambda's body.
+ * Note that un-verified types might make it into a lambda's body. I think it's safe, but might result in weird error messages.
+
+
+
+Check that that all of the callee's required bounds are met.
+
+To do this, it should:
+ 1. Do all substitutions into the bound.
+ 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
+    * Note that we *only* look in the rune substitution value's environment, no other environments (*not* the caller's environment anymore).
+       * This means that if a bound asks for a `foo(T)void`, and T = int, it can only be satisfied by functions in int.vale.
+    * Note that we *aren't* peeling references away from the rune substitution value, before looking in that type's environment.
+ 3. Error if not exactly one was found.
+
+value-drop example (§5.5):
+```
+-------- main.vale --------
+func foo(x Some<Ship>) {
+  drop(x^)
+}
+-------- some.vale --------
+func drop<D>(opt Some<D>) where exists drop(D)void { ... }
+-------- ship.vale --------
+struct Ship { }
+func drop(self Ship) { ... }
+-------- borrow.vale --------
+func drop<D>(r &D) { ... }   // <-- We don't want to call this
+```
+To properly compile `drop(x^)`, it should:
+ 1. Do all substitutions into the bound.
+    * Here, we turn `where exists drop(D)void` and D=Ship into `where exists drop(Ship)void`
+ 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
+    * Here, since we did D=Ship, the rune substitution value is `Ship`, so we look in `Ship`'s environment (ship.vale) for something named `drop`, and find `func drop(self Ship)`, stop.
+Note that we *only* looked in `Ship`'s environment ship.vale, we didn't even *consider* the `func drop<D>(r &D) { ... }` in borrow.vale.
+
+value-clone example (§5.6):
+```
+-------- main.vale --------
+func bar(z Some<Ship>) {
+  z2 = z.clone();
+}
+-------- some.vale --------
+func clone<T>(opt Some<T>) where exists clone(&T)T { ... }
+-------- ship.vale --------
+struct Ship { }
+func clone(self &Ship) Ship { ... }
+-------- borrow.vale --------
+func clone<T>(r &&T) &T { ... }   // <-- We don't want to call this.
+```
+To properly compile `z.clone()`, it should:
+ 1. Do all substitutions into the bound.
+    * Here, we turn `where exists clone(&T)T` and T=Ship into `where exists clone(&Ship)Ship`.
+ 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
+    * Here, since we did T=Ship, the rune substitution value is `Ship`, so we look in `Ship`'s environment (ship.vale) for something named `clone`, and find `func clone(self &Ship)Ship`, stop.
+Note that we *only* looked in `Ship`'s environment ship.vale, we didn't even *consider* the `func clone<T>(r &&T) &T` in borrow.vale.
+
+ref-clone example (§5.7):
+```
+-------- main.vale --------
+func bar(z Some<&Ship>) {
+  c = z.clone();
+}
+-------- some.vale --------
+func clone<T>(opt Some<T>) where exists clone(&T)T { ... }
+-------- ship.vale --------
+struct Ship { }
+func clone(self &Ship) Ship { ... }   // <-- We don't want to call this.
+-------- borrow.vale --------
+func clone<T>(r &&T) &T { ... }
+```
+To properly compile `z.clone()`, it should:
+ 1. Do all substitutions into the bound.
+    * Here, we turn `where exists clone(&T)T` and T=&Ship into `where exists clone(&&Ship)&Ship`.
+ 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
+    * Here, since we did T=&Ship, the rune substitution value is `&Ship`, so we look in the **borrow ref** environment (borrow.vale) for something named `clone`, and find `func clone<T>(r &&T) &T`, stop.
+Note that we *aren't* peeling references away from the rune substitution value (&Ship). We take it straight, and look in that type's environment. That's why we looked in borrow.vale for a `clone`, instead of finding the `func clone(self &Ship) Ship` in ship.vale.
+
+placeholder example (§5.8):
+```
+func bar<Y>(x Y) where exists drop(Y)void { ... }
+func foo<T>(x T) where exists drop(T)void {
+  bar(x)
+}
+```
+To properly compile `bar(x)`, it should:
+ 1. Do all substitutions into the bound.
+    * Here, we turn `where exists drop(T)void` and T=`foo$T` into `where exists drop(foo$T)void`.
+ 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
+    * Here, since we did T=`foo$T`, the rune substitution value is `foo$T`, so we look in `foo$T`'s environment for something named `drop`, and find `foo`'s `where exists drop(T)void`, stop.
+Note that this requires that bounds, like `foo`'s `func drop(T)void` need to be declared inside the `foo$T` placeholder's environment.
+
+#### Phase 4's ImplBoundStep §4I
+
+We'll process an ImplBoundStep, which points at a bound like `implements(T, IObserver<X, U>)`.
+The `T` is guaranteed already known by the time we get to this point.
+
+ * That ImplBoundS's super_interface_type is the "expected template".
+ * Find any impl in the argument type's file and any imported interfaces files, whose sub_citizen_type and super_interface_type match what we're looking for. In this example:
+   ```
+   fn callee<X, T, U>(x &T) where implements(T, IObserver<X, U>) { ... }
+   fn caller<A>(x MyController<A>) {
+     callee(&x)
+   }
+   ```
+   we're looking for the impl that turns `MyController` into an `IObserver`:
+   ```
+   impl<Z> MyController<Z> for IObserver<Z, int>;
+   ```
+ * If there is no impl, then give a compiler error and stop the whole callsite.
+ * For each one of those impls:
+    1. Look up the postparsed impl's `sub_citizen_type` (`MyController<Z>`) ITypeST and `super_interface_type` (`IObserver<Z, int>`) ITypeST.
+    2. Recursively compare the impl's sub_citizen_type (`MyController<Z>`) with the uncoerced argument type (`MyController<A>`). Note what runes in the former (`Z`) is matched with what in the latter (`A`). Build a map of impl_rune_to_argument_type (`Z` -> `A`).
+    3. Using that map (`Z` -> `A`), substitute into the impl's super_interface_type (`IObserver<Z, int>`) and note the result (`IObserver<A, int>`) which is phrased in terms of the caller.
+     * Assert that the result doesn't contain any impl runes (§2.5.1)
+    4. Match callee bound interface (`IObserver<X, U>`) against step 3's result (`IObserver<A, int>`). Note what runes in the former are matched with what in the latter (`X` with `A`, `U` with `int`). Build a map of callee_rune_to_argument_type (`X` -> `A`, `U` -> `int`).
+    5. Check for any conflicts with any explicit arguments. If any conflicts, dont issue a compile error, just reject this impl and hope that another one succeeds.
+    6. Remember the resulting parent (`IObserver<A, int>`), this is how Phase 4 knows about the impl's trait's generic args.
+ * Only one of those impls should have succeeded. Use its resulting parent.
+ * Note that the solve should not be registering any instantiation bounds yet. We must remember to do that at the end when we're sure this call will work.
+ * The upcast is one hop, not transitive.
 
 double-IObserver example (§2.6):
 This shows when we need explicit template args.
@@ -208,14 +468,14 @@ f<U = SignalA>(MyController())   // <-- User must specify SignalA here
 ```
 The user must specify that U = SignalA, for the compiler to know to choose the `impl IObserver<SignalA>`.
 For impl 1 (`impl IObserver<SignalA> for MyController`):
-  1. Look up impl's placeholdered struct (`MyController`), placeholdered interface (`IObserver<SignalA>`).
+  1. Look up impl's sub_citizen_type (`MyController`), super_interface_type (`IObserver<SignalA>`).
   2. Recursively compare `MyController` with `MyController`, resulting in empty map.
   3. Substitute nothing, get `IObserver<SignalA>`.
   4. Match callee bound interface (`IObserver<U>`) against (`IObserver<SignalA>`), get map `U` -> `SignalA`.
   5. Check that map (`U` -> `SignalA`) against explicit args (`U` -> `SignalA`). Agrees.
   6. Remember `IObserver<SignalA>`.
 For impl 2 (`impl IObserver<SignalB> for MyController`):
-  1. Look up impl's placeholdered struct (`MyController`), placeholdered interface (`IObserver<SignalB>`).
+  1. Look up impl's sub_citizen_type (`MyController`), super_interface_type (`IObserver<SignalB>`).
   2. Recursively compare `MyController` with `MyController`, resulting in empty map.
   3. Substitute nothing, get `IObserver<SignalB>`.
   4. Match callee bound interface (`IObserver<U>`) against (`IObserver<SignalB>`), get map `U` -> `SignalB`.
@@ -231,10 +491,10 @@ impl IHandler<IEvent<HoverEvent>> for Button;
 func handle<T, U>(x T) where implements(T, IHandler<IEvent<U>>) { ... }
 handle<Button, ClickEvent>(Button())
 ```
-This is why each bound (ImplBoundS, ResolveSR) carries its own rules list.
- * The first impl `impl IHandler<IEvent<ClickEvent>> for Button` contains its `IEvent<ClickEvent>` etc rules.
- * The second impl `impl IHandler<IEvent<HoverEvent>> for Button` contains its `IEvent<HoverEvent>` etc rules.
-And we can pull those in for the argument impl solve without pulling in everyone else's rules.
+This is why each bound (ImplBoundS, ResolveSR) carries the entire type (we used to have it reach into a central pool of rules, that was a mistake).
+ * The first impl `impl IHandler<IEvent<ClickEvent>> for Button` contains its `IEvent<ClickEvent>` type.
+ * The second impl `impl IHandler<IEvent<HoverEvent>> for Button` contains its `IEvent<HoverEvent>` type.
+And we can pull those in for the argument impl matching without pulling in any rules, like the old approach.
 
 impl-trait-generic-arg example (§2.8):
 ```
@@ -250,206 +510,273 @@ There could theoretically be some impls that have "interface independent runes":
     * Generalized: any sort of "empty variant" or sentinel value (`None`) of various kinds of generic interfaces (`Option<T>`).
  * `impl<T: ?Sized> RangeBounds<T> for RangeFull` (in Rust stdlib)
  * `unsafe impl<T> SliceIndex<[T]> for usize` (in Rust stdlib)
-We don't support these. If we wanted to, then we'd need to check for any unresolved impl placeholders at §2.5.1 and let them get to the next step, which would map callee runes to those, resolved by explicit args (or some solving).
+We don't support these. If we wanted to, then we'd need to check for any unresolved impl runes at §2.5.1 and let them get to the next step, which would map callee runes to those, resolved by explicit args (or some solving).
 
-### Phase 3: Rune-typing. §3
 
- * We use the rune-typing to determine the type of each rune.
+### Phase 5: Fine-Print Verifying/Resolving §5
 
-### Phase 4: Value-solve §4
+During phase 4 and other phases, we conjured a lot of types.
 
- * This solve uses ParameterS's value_type_rules and value_type_rune, NOT full_type_rune and type_outer_ref_rules. This solve doesn't know about full_type_rune or type_outer_ref_rules at all.
- * We run the solver, feeding in phase 2's coerced arguments as initial knowns for the value_type_rune runes.
- * We shouldn't register any instantiation bounds yet. We must remember to do that at the end when we're sure this call will work.
-
-Note that this phase's main goal is to work out the callee's runes and detect errors, like (§4.1):
- * Calling `f<T>(a T, b T)` like `f(5, true)` will error because `T` cannot be both int and bool.
- * Calling `func f<T>(x T) { }` like `f<int>(true)` will error because `T` cannot be both int and bool`
- * Calling `func zero<T>() T { ... }` like `zero()` will error because `T` wasn't specified.
-
-This phase only ever sees these rules:
- * Equals
- * Call
- * KindList
- * BorrowRef/WeakRef/OwnRef (the ones in value_type_rules, not the ones in type_outer_ref_rules)
-
-Note I'm not including **DefinitionFunc** in that list, because this doc is about the callsite, not about the definition site. We'll want a separate doc to talk about splitting apart the definition-side solve into phases, that could remove the DefinitionFunc from that solve.
-
-### Phase 5: Resolve §5
-
-Check that that all of the callee's required bounds are met.
-
-To do this, it should:
- 1. Do all substitutions into the bound.
- 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
-    * Note that we *only* look in the rune substitution value's environment, no other environments (*not* the caller's environment anymore).
-    * Note that we *aren't* peeling references away from the rune substitution value, before looking in that type's environment.
- 3. Error if not exactly one was found.
-
-value-drop example (§5.5):
+For example, MyStruct's `T`s must implement `Copy`:
 ```
--------- main.vale --------
-func foo(x Some<Ship>) {
-  drop(x^)
-}
--------- some.vale --------
-func drop<D>(opt Some<D>) where func drop(D)void { ... }
--------- ship.vale --------
-struct Ship { }
-func drop(self Ship) { ... }
--------- borrow.vale --------
-func drop<D>(r &D) { ... }   // <-- We don't want to call this
+struct MyStruct<T> where implements(T, Copy) { val T; }
 ```
-To properly compile `drop(x^)`, it should:
- 1. Do all substitutions into the bound.
-    * Here, we turn `where func drop(D)void` and D=Ship into `where func drop(Ship)void`
- 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
-    * Here, since we did D=Ship, the rune substitution value is `Ship`, so we look in `Ship`'s environment (ship.vale) for something named `drop`, and find `func drop(self Ship)`, stop.
-Note that we *only* looked in `Ship`'s environment ship.vale, we didn't even *consider* the `func drop<D>(r &D) { ... }` in borrow.vale.
+We have a feature where `wrap` doesn't need to declare those bounds:
+```
+func wrap<X>(x X) MyStruct<X> { ... }
+```
+We want `wrap(42)` to succeed.
+We want `wrap(Ship())` to fail.
 
-value-clone example (§5.6):
+Pretend that we had some sort of feature that repeated arguments' bounds, transforming `wrap` into this:
 ```
--------- main.vale --------
-func bar(z Some<Ship>) {
-  z2 = z.clone();
-}
--------- some.vale --------
-func clone<T>(opt Some<T>) where func clone(&T)T { ... }
--------- ship.vale --------
-struct Ship { }
-func clone(self &Ship) Ship { ... }
--------- borrow.vale --------
-func clone<T>(r &&T) &T { ... }   // <-- We don't want to call this.
+func wrap<X>(x X) MyStruct<X> where implements(X, Copy) { ... }
 ```
-To properly compile `z.clone()`, it should:
- 1. Do all substitutions into the bound.
-    * Here, we turn `where func clone(&T)T` and T=Ship into `where func clone(&Ship)Ship`.
- 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
-    * Here, since we did T=Ship, the rune substitution value is `Ship`, so we look in `Ship`'s environment (ship.vale) for something named `clone`, and find `func clone(self &Ship)Ship`, stop.
-Note that we *only* looked in `Ship`'s environment ship.vale, we didn't even *consider* the `func clone<T>(r &&T) &T` in borrow.vale.
+Those would have been processed in a step in phase 4.
+Alas, that didn't happen.
+So, we make up for that now.
 
-ref-clone example (§5.7):
-```
--------- main.vale --------
-func bar(z Some<&Ship>) {
-  c = z.clone();
-}
--------- some.vale --------
-func clone<T>(opt Some<T>) where func clone(&T)T { ... }
--------- ship.vale --------
-struct Ship { }
-func clone(self &Ship) Ship { ... }   // <-- We don't want to call this.
--------- borrow.vale --------
-func clone<T>(r &&T) &T { ... }
-```
-To properly compile `z.clone()`, it should:
- 1. Do all substitutions into the bound.
-    * Here, we turn `where func clone(&T)T` and T=&Ship into `where func clone(&&Ship)&Ship`.
- 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
-    * Here, since we did T=&Ship, the rune substitution value is `&Ship`, so we look in the **borrow ref** environment (borrow.vale) for something named `clone`, and find `func clone<T>(r &&T) &T`, stop.
-Note that we *aren't* peeling references away from the rune substitution value (&Ship). We take it straight, and look in that type's environment. That's why we looked in borrow.vale for a `clone`, instead of finding the `func clone(self &Ship) Ship` in ship.vale.
-
-placeholder example (§5.8):
-```
-func bar<Y>(x Y) where func drop(Y)void { ... }
-func foo<T>(x T) where func drop(T)void {
-  bar(x)
-}
-```
-To properly compile `bar(x)`, it should:
- 1. Do all substitutions into the bound.
-    * Here, we turn `where func drop(T)void` and T=`foo$T` into `where func drop(foo$T)void`.
- 2. Determine the envs to look in. For each rune substitution value, look for a method in that value's type's environment.
-    * Here, since we did T=`foo$T`, the rune substitution value is `foo$T`, so we look in `foo$T`'s environment for something named `drop`, and find `foo`'s `where func drop(T)void`, stop.
-Note that this requires that bounds, like `foo`'s `func drop(T)void` need to be declared inside the `foo$T` placeholder's environment.
+Basically, execute the ImplBoundStep/FuncBoundStep code here, for bounds pulled in via arguments.
 
 
-### Phase 6: Reference-solve §6
+### Phase 6: Substitute for final parameter type §6
 
- * Add the type_outer_ref_rules to the (completed) phase 4 solve.
- * Solve.
- * For each parameter, remember the type in its solved full_type_rune.
+ * Walk the ParameterS's type, using it and phase 4's conclusions, to construct the full final parameter type.
 
 ### Phase 7: Convert §7
 
- * Insert callsite instructions to upcast the argument to the expected full_type_rune type.
+ * Insert callsite instructions to upcast the argument to the expected parameter type.
  * If the language ever does auto-ref, that would happen here. For now, we'll require & at callsites.
+ * If the user handed in a raw literal `5`, but the callee was able to determine the expected type, this is where we'd convert the 5 into that expected type. (If the callee couldn't figure it out, then it's an error)
+
 
 ### Phase 8: Borrow check §8
 
  * (Not designed yet)
 
 
+### Post-cleanup
+
+ * Make it so Phase 4 produces rules from the ITypeST, instead of reading the ones from the postparser.
+ * Make it so the other phases use the ITypeST, not the rules from the postparser.
+ * Make it so the postparser doesn't produce rules, it just produces the ITypeST.
+
+### Future Notions
+
+One day we could have a:
+```
+func unzip<T, A, B>(iter T) (Vec<A>, Vec<B>)
+where implements(T, Iterator), Pair<A, B> = T.Item
+```
+Specifically the new `Pair<A, B> = T.Item` step, which takes a source (`T.Item`), and destructures it into the runes on the left (A and B).
+
+
 ## Strategic Directions Proposals
 
-§22: A bound declares a function in the placeholder's env.
+§29: **Uniform check-at-use: one `use()` operation; §5 becomes the registrar.**
 
- * User-defined functions satisfying bounds on primitives must live in that primitive's file.
-   `func moo(x int)` goes in int.vale. If it's not there, §5 can't find it.
- * No fallback to the full calling env.
+ * **One model, no special cases.** Every denizen — the callee, a bound-found function, a selected
+   impl, a constructed type — is the same shape: generic params, clauses, outputs. Each gets the
+   same §1G prep (clauses and trees sorted into steps, cached once). There is one operation,
+   `use(denizen, knowns)`: run its steps; they teach its runes and check its clauses as they run;
+   out come its outputs plus collected obligations. The call-site pipeline is just
+   `use(callee, args + explicits)`, and steps recurse: a FuncBoundStep is `use(found function)`,
+   an ImplBoundStep is `use(impl)`, building `MyStruct<Ship>` is `use(MyStruct)` — whose `Copy`
+   bound checks right there (the wrap example).
+ * **Everything checks at its use.** No §4-checks-these / §5-checks-those split, and no
+   productive-vs-restrictive clause classification to maintain (a drift hazard that every future
+   teaching feature would have eroded anyway). Errors attach to the exact use that caused them.
+   Which programs compile is unchanged: §1F is final, so a failure is terminal wherever it fires.
+ * **§5 shrinks to the registrar.** Obligations collect during the run and register once at the
+   end, keyed by the callee instantiation. A rejected candidate trial's collected obligations are
+   dropped, so reject-leaves-no-trace holds by construction instead of by rule. (Compiling real
+   declarations mid-trial is not trace — those are program facts, idempotent either way.)
+ * **The cycle-breaking invariant (STCMBDP, miniaturized).** The old "check calls later" deferral
+   broke the declare→check→resolve→declare cycle; its load-bearing core was never "batch checks
+   into §5" but "expose outputs before discharging own clauses." `use()` keeps it internally:
+   output steps run first, the under-construction prototype is memoized, then clause checks run.
+   A re-entry (mutual bounds; a recursive type's drop needing itself — `List<T>`'s drop needs
+   `drop(Opt<List<T>>)` needs itself) answers with the in-progress prototype; without that,
+   recursive types can't compile. A re-entry not satisfied that way falls to a named depth/cycle
+   error — today's recursion is unguarded (see Background), so this makes an existing hazard's
+   guard explicit rather than adding a new cost.
+ * **The lambda residue is a denizen property, not an architecture fork.** Most denizens' outputs
+   are declared trees (substitute to produce); a lambda's `__call` output is computed (compile the
+   body). Same rule — `use()` runs whatever output steps exist — different price. §4's
+   lambdas-only mid-run registration note stands.
+ * **On ratification this touches:** the §5 section rewrites as registrar-plus-invariant; the
+   FuncBoundStep and ImplBoundStep texts become two instances of `use()` (a FuncBoundStep is the
+   ImplBoundStep shape applied to a signature — match the parameter trees, substitute the declared
+   return tree; works because named functions declare returns); §2.9's ban becomes a language
+   choice rather than an architectural necessity (a productive impl clause would just be one of
+   the impl's own steps; if ever supported, clause failure stays an error, never try-next-impl);
+   and the Plan Details entries "No impl walk exists at match time" and "§5 collects…" get
+   re-derived from this.
 
-§23: **CallSR vs ImplBoundS difference:** When the parameter template came from a CallSR (e.g.
-  `x Opt<T>`), §2 changes the argument type (Some→Opt) and §7 emits an upcast. When it came from
-  an ImplBoundS (e.g. `x T where implements(T, IObserver<U>)`), §2 walks the impl to extract
-  conclusions for other runes (like U = SignalA) but does NOT change the argument type — T stays
-  the concrete type (MyController), and §7 emits no upcast. The walk is for discovering rune
-  values, not for converting the argument.
+**CORRECTION — §29's "STCMBDP, miniaturized" misreads the original.** *(Added after an
+archaeology pass over the 2022 primary sources. This supersedes the history in §29's
+cycle-breaking bullet; the §29 mechanism may still be sound — this corrects only what it
+attributes to STCMBDP.)*
 
-§25: §2B uses structural matching against impls, not per-impl solving.
+§29 claims STCMBDP's *"load-bearing core was never 'batch checks into §5' but 'expose outputs
+before discharging own clauses,'"* and motivates it with recursive types (`List<T>`'s drop
+needing itself). The 2022 record does not support that reading:
 
- * §2B already knows the concrete target super type (from explicit args + bound's rules) before it
-   searches for impls. So the question is "does this impl match this specific type?" not "what does
-   this impl produce?" Matching is sufficient; solving is for discovery.
- * For a concrete impl (`impl IObserver<SignalA> for MyController`): equality check.
- * For a generic impl (`impl<T> IObserver<T> for MyController`): compare the impl's super
-   (`IObserver<T>`) against the known target (`IObserver<SignalA>`) by recursing through template
-   args. T = SignalA falls out structurally.
- * Nested generics (`impl<T> MyTrait<BTrait<T>> for MyStruct<T>`) work the same way — match sub to
-   get T, substitute into super, compare against target. Just deeper recursion.
- * No environments, no CompilerOutputs, no side effects. Pure structural comparison.
- * When associated types land, this extends with a lookup-read-substitute step (find the impl, read
-   the associated type value, substitute). Still not a full solve.
+ * **STCMBDP was about plain declaration-ordering within one denizen, not recursion.** Its
+   motivating cycle (`docs/Generics.md`, the STCMBDP section — byte-for-byte unchanged since
+   commit `f184f4d85`, 2022-09-28) is: to declare a denizen we need its param/return types; to
+   know those we must check their `where` requirements; to check those the denizen's own bounds
+   must already be declared. One solve, two steps each wanting to go first. No self-reference and
+   no recursive type appears anywhere in it.
+ * **Its load-bearing core WAS "check calls later" — a deferral, the very thing §29 denies.** The
+   doc's conclusion is literally *"we do all the checking of calls later."* The 2022 mechanism is a
+   deferred queue — `DeferredEvaluatingFunction` / `DeferredEvaluatingFunctionBody`
+   (`CompilerOutputs.scala`), drained after declaration in `Compiler.scala`. The clearest
+   contemporaneous statement is `ImplCompiler.scala`'s *"Don't verify conclusions… we can't pull
+   in any declared function bounds that come from them. We'll check them later."*
+ * **Recursive-type self-reference appears in no 2022 source** — not the doc, not the
+   `// see STCMBDP` comments, not the tests. The motivating 2022 tests are plain
+   declaration-ordering (`templatedoption.vale`'s `struct MySome<T> where func drop(T)void`; the
+   `CompilerSolverTests` "concept function" cases). `List<T>`'s-drop-needs-itself is a later graft.
 
-§26: The postparser produces structured type trees (`ITypeST`), not solver rules, for types in
-  parameter positions, impl sub/super types, and bound operands.
+**What this means for the plan.** The original STCMBDP concern — header bound-vs-parameter ordering
+— is genuinely dissolved by §1G's topo sort plus §P's bound-in-placeholder-env (`:89`, `:347`). The
+predict/verify split that survives (§4 matches, §5 verifies) is justified by rejection-safety
+(`:256`) and cycle-detection (`:136`), not by recursion. If §29's in-progress-prototype memoization
+is worth keeping, keep it on its own merits as a recursion guard — but it is a **new** invariant,
+not STCMBDP's "load-bearing core."
 
- * Today the postparser lowers `IObserver<U>` to rules: `Lookup("IObserver") → r1, Call(r1, [U]) →
-   super_rune`. Getting the tree shape back requires traversing the rule chain or running the solver.
- * Instead, the postparser stores the tree directly: `ITypeST::Apply { template_name: "IObserver",
-   args: [ITypeST::Rune(U)] }`. The tree is available from the moment the bound is postparsed, with
-   no dependency on any denizen's definition-solve.
- * `ITypeST` is **read-only and never synthesized at runtime**. The typing pass reads it but never
-   creates new `ITypeST` values. It can build `KindT` values by walking an `ITypeST` and resolving
-   each rune — that's "read the pattern, produce a value," not mutating the pattern.
- * §4's solver privately builds rules from `ITypeST` when it needs them. Rules become an internal
-   implementation detail of the solver, not the shared representation between passes.
- * This is rustc's shape: `EarlyBinder<TraitRef { def_id, args }>` is their equivalent — a
-   structured type tree available from the collect phase, never modified, and the solver works with
-   it directly rather than evaluating rule chains.
- * **Why this is needed:** without it, §2B's structural matching has a chicken-and-egg: the bound's
-   super type is only available as a `KindT` after the callee's definition-solve runs (which creates
-   placeholders and evaluates the rules). But a call site can reach §2B before the callee's
-   definition-solve has run (the system is demand-driven and interleaves headers and bodies). Forcing
-   the definition-solve first leads to deadlocks. `ITypeST` breaks the dependency: the tree shape is
-   available from postparse time, no definition-solve needed.
- * Similarly, impl sub/super types should be stored as `ITypeST` rather than read from the impl's
-   definition-solve conclusions. This avoids impl placeholders leaking into the calling function's
-   context — placeholders are denizen-scoped (like rustc's Param indices), so the calling function
-   should never see them.
+§30: **Alternative to §29 — recursion needs no mechanism; just resolve-compile normally.**
+*(An alternative to §29, not an addition. §29 adds an in-progress-prototype memo to break a recursion
+cycle; §30's point is that the cycle isn't real for recursive types, so neither the memo nor the
+predict/verify split is needed. There is no "produce a handle vs. check its bounds" rule to maintain —
+just resolve-compile.)*
+
+Vocabulary (now in `docs/background/glossary.md`): a **define-compile** compiles a denizen's own
+definition in its `foo$` placeholders; a **resolve-compile** is a call site inside a define-compile,
+locally solving the *callee's* rules to get the callee's prototype.
+
+ * **Resolve-compile is normal, and never looks at the callee's members.** For `baz` to drop a
+   `List`, `baz` resolve-compiles `List`'s drop — its prototype plus its bounds — and stops. It never
+   looks at `List`'s members, because the `Opt<List>` inside is `drop(List)`'s own *body* business,
+   not `baz`'s. An explicit bound is the same normal process: define-compiling
+   `qfoo(y Vec<MyStruct>)` calling `qcopy<T>(v Vec<&T>) where copy(&T)T` resolve-compiles
+   `copy(&MyStruct)MyStruct` in full, exactly like any call.
+ * **A drop bounds only its abstract members; concrete members are body work.** `drop<T>(List<T>)`'s
+   only bound is `drop(T)void`, for the placeholder member `head T`. A concrete member like
+   `tail Opt<List<T>>` is dropped in the *body* — a resolve-compile of `drop(Opt<List<T>>)` — not
+   carried as a bound. So a recursive type produces no self-referential *bound*: recursion lives in
+   concrete member *types* (bodies), not in abstract-member *bounds*, and resolve-time bounds bottom
+   out at placeholder bounds.
+ * **So there is no recursion cycle to break.** The `drop(List)` ↔ `drop(Opt<List>)` "cycle" only
+   exists if `drop(List)` *requires* `drop(Opt<List>)` as a bound. It doesn't — `drop(List)`'s bounds
+   bottom out immediately, and the `Opt<List>` drop is a body call, each body define-compiled once.
+   Nothing to predict-then-verify, nothing to memo.
+ * **Recursion rides on ordinary machinery only.** All declarations are up front in the top-level map
+   (`compiler.rs:749`), so a recursive reference is a plain lookup. Each denizen is define-compiled
+   once; bodies drain from a uniform worklist (`compiler.rs:1246`, enqueue
+   `function_compiler_core.rs:119`) and a body resolve-compiles callees to prototypes, never into
+   their bodies — so mutual recursion is free. The monomorphizer (`instantiating/instantiator.rs`, a
+   separate pass) walks the concrete instantiation graph once with a visited-set, declaring an id
+   before its members (`instantiator.rs:1115`). All of this is declare-before-define and
+   do-each-once — what every program needs, recursive or not. None of it is recursion-specific.
+ * **The only genuine cycle is hand-written circular requirements.** `func f<T>(x T) where g(T)void`
+   beside `func g<T>(x T) where f(T)void` loops at resolve time. That is a *program error* — a named
+   "circular requirement" / depth error — not something to satisfy silently, and the same bucket as
+   polymorphic recursion (a type instantiating itself at ever-larger args). Neither is guarded today
+   (`resolve_impl → is_parent → resolve_impl` is unguarded, `:1111`; no test exercises either). A
+   termination error is worth adding for safety — but it guards against bad programs, it does not make
+   ordinary recursion work. Ordinary recursion already works.
+ * **What this means for §5.** The checking §5 does folds into the phase-4 steps: each step fully
+   resolve-compiles the satisfiers of its bound, in place — the *normal* resolve-compile, which in
+   turn checks the satisfier's own bounds, and which terminates because bounds bottom out (per the
+   bullets above). Building `MyStruct<X>` checks its `Copy` bound right there — `wrap(42)` passes,
+   `wrap(Ship())` fails at that step — and a `where copy(&T)T` bound fully resolve-compiles
+   `copy(&MyStruct)MyStruct` like any call. Since nothing is postponed, §5's SFWPRL-discharge job
+   disappears. What remains of §5 is the **registrar**: collect the satisfier prototypes found across
+   the steps and write the instantiation-bounds record once, keyed by the callee instantiation —
+   batched only because the write is one-shot (`add_instantiation_bounds` is write-once, MFBFDP-
+   merged), not because anything is deferred. So §5 stops being a verify-then-resolve phase; it
+   becomes a one-shot write of answers the steps already produced.
+ * **Where the return type is built — filling §5's one gap.** The §5 bullet says `MyStruct<X>` "is
+   built right there"; this names where. There is no separate "reachable bounds" mechanism — every
+   type the callee's signature mentions, parameters *and* return, is resolve-compiled at the call
+   site, and resolve-compiling a type checks that type's own declared bounds at the concluded runes.
+   §6 already builds the final parameter types this way (walk the `ITypeST`, substitute §4's
+   conclusions); the return type is built the same way, as part of producing the callee's prototype.
+   So `wrap`'s return `MyStruct<X>` is built at the concluded `X` — `MyStruct<int>` checks
+   `int: Copy` (passes), `MyStruct<Ship>` checks `Ship: Copy` (fails) — with no §5 reachable-bounds
+   pass. It cannot happen at `wrap`'s own define-compile, where the return is `MyStruct<wrap$X>` and
+   `wrap$X` carries no `Copy` bound; that is exactly why the check is per-call-site and why `wrap`
+   need not declare the bound.
+ * **Relation to §29 and the CORRECTION.** §29's memo, and the CORRECTION's tentative "keep it as a
+   guard," are unnecessary: there is no ordinary-recursion cycle to guard. What §29 rightly wants —
+   check-at-use, no §4/§5 split — stands on its own and doesn't need the memo to justify it.
+
+§31: **Handoff sync note (ratified here, stale there).** The handoff's "a generic argument that
+  needs an upcast must be written explicitly" ruling and its "no impl walking anywhere in phases
+  0–2" consequence are superseded by §2A/§4I: explicit args (or a §2.1 cast) are needed only when
+  several impls match. Narrow both passages at the next handoff sync, then delete this note.
+
 
 ## Plan Details
 
-**§3 and §6 split the rune set, not just the rules.** *(derived from §4 and §6)*
+**§6 is a walk; completeness and conflicts are step-side checks.** *(derived from §4 and §6)*
 
- * §4 does not know about `full_type_rune` or `type_outer_ref_rules`, so §3 must not put the wrap
-   runes into the map §4 solves against. Otherwise §5's completeness check rejects the call over a
-   rune §6 was going to conclude.
- * §6 runs its own `derive_rune_to_type` over the wrap rules (seeded with §3's rune-type results,
-   since `value_type_rune`'s type is already known), and hands `full_type_rune` to `commit_step` in
-   the same `new_runes` set as those rules.
- * Because §3 excluded the wrap runes, the solver is not "complete" from their perspective — adding
-   `full_type_rune` via `commit_step` gives the solver new work and `incrementally_solve` proceeds
-   normally. This is the same pattern as @DRSINI (adding work to a settled solve).
+ * §6 never touches a solver. It walks the ParameterS's `type: ITypeST`, replaces each rune with
+   §4's conclusion, and builds the final parameter `KindT` outside-in. No
+   `commit_step`/`incrementally_solve` resumption exists anywhere in the pipeline.
+ * Conflicts are inline: every rune is write-once, and a later writer must agree or it is an error
+   naming the rune and both values.
+ * Completeness runs after the steps: every rune must be valued, and the error names the unvalued
+   runes and says to write them (§1G's caller-must-supply classification gives the list up front).
+ * `full_type_rune` never receives a conclusion. Anything downstream that wants the parameter's
+   full type takes §6's walk result.
+
+**ArgumentStep semantics.** *(derived from §4)*
+
+ * Match the coerced argument's `KindT` against the parameter's `ITypeST`: holes bind, known runes
+   check, disagreement is a conflict error.
+ * Within a step, plain-rune positions bind before projection positions evaluate. That intra-step
+   rule is what makes `x MyThing<T, T.Spork>` self-contained in §1G's table.
+ * Projection positions only check; they never run backward (non-injective).
+ * An untyped-literal argument has no productive step; §7 coerces it against the concluded
+   parameter type, per §7's literal bullet.
+
+**FuncBoundStep semantics.** *(derived from §4)*
+
+ * Keys: every rune in the bound's parameter positions, plus any projections anywhere in it.
+   Teaches: return-position holes only, from the resolved function's return. For a closure that
+   means expanding the templated `__call`, which compiles the lambda body here (the
+   "Registration during §4" entry below covers why that's safe).
+ * A rune reachable only through a param-position hole is caller-must-supply; there is nothing to
+   search by.
+ * Name-uniqueness per env keeps the candidate set near one. Zero found: error naming the bound
+   and the substituted signature. Several: ambiguity error.
+
+**What §1G computes and caches, per declaration.** *(derived from §1G)*
+
+ * The steps and their topo order. The sort is purely structural (sub/super, param/return, and
+   projection-subject positions determine inputs and outputs), so it needs no name resolution.
+ * Name resolution of the declaration's trees, in the declaration's own env.
+ * Rune-sort well-formedness: each rune's declared sort (bare `<T>` is Kind, `<N Int>` Integer)
+   checked against its positions' demands, e.g. `N` against StaticArray's first parameter. This
+   replaces rune-typing; the rune-type solver retires with no successor.
+ * Classifications: env-supplied runes (§1G's parent_runes set), caller-must-supply runes (produced by no step), and
+   zero-input concrete bounds like `implements(MyStruct, ISerializable)`, which can be checked here
+   once rather than per call site.
+ * Cycle detection, per §1G's error-on-cycle rule.
+
+**The two-file impl search.** *(derived from §P's orphan rule)*
+
+ * Every impl lookup scans exactly two flat stores: the sub's file and the interface's file. Both
+   are nameable at the point of use (the argument supplies the sub; the bound or parameter tree
+   names the interface). The orphan rule is what makes the multiplicity check complete without any
+   global index.
+ * Coherence (decision 16's duplicate-impl detection) becomes a two-file scan at impl-compile time.
+ * §1F's default-method reach (step 2) walks only impls written in the type's own file,
+   transitively through files so reached. Impls living in the interface's file participate when
+   the interface is in view (named in the signature, or imported).
 
 **Primitive and BorrowRef env registration: use synthetic template IDs.** *(derived from Preparation)*
 
@@ -466,14 +793,39 @@ Note that this requires that bounds, like `foo`'s `func drop(T)void` need to be 
    rules in `header_rules`. §2 searches `value_type_rules` for the CallSR and finds nothing. The fix
    is in the macro: it should populate `value_type_rules` and `type_outer_ref_rules` the same way
    `translate_signature_templex` does for user-written functions.
+ * The macro must also construct each parameter's `type: ITypeST`, now that ParameterS carries one
+   (§P). Every ParameterS producer owes that field, macros included. (The rules half is
+   transitional and retires with Post-cleanup; the `ITypeST` is the load-bearing part.)
 
-**§2's template extraction requires a rule-chain traversal (temporary).** *(derived from §2)*
+**Enforce ITypeST's read-only rule with a construction seal.** *(derived from §P)*
 
- * ImplBoundS.super_rune is a kind rune (e.g. IObserver<U>), not a template (IObserver). Getting the
-   template requires: super_rune → find CallSR whose result_rune matches → read template_rune → find
-   LookupSR whose rune matches → read the name. Same indirection for the CallSR path.
- * This goes away when lowering-resolves-names lands (deferred, convo-38). At that point the template
-   identity is available directly with no rule traversal.
+ * Private constructors plus a `_sealed` field, the interner's existing `@SICZ` shape: only the
+   postparsing module can build one, so "substitution produces `KindT`, never a new tree" holds by
+   compile error rather than by review. A `KindT` can't hold unresolved runes, so half-substituted
+   types are impossible by construction; code that wants one is doing something the design forbids.
+
+**Engine disciplines.** *(standing build rules; each receipt is a documented 2021-era failure from
+the git-history dig)*
+
+ * **One shared match/substitute library.** Two functions — `match(KindT, ITypeST) → rune map` and
+   `substitute(ITypeST, rune map) → KindT` — in one module, called by §2A, §4's steps, §5's
+   re-checks, and §6's walk. Any new match-shaped loop over an `ITypeST` elsewhere is a defect.
+   Receipt: three near-identical Evaluator/Matcher pairs (~6,000 lines, identical copy-pasted
+   headers) drifted for years before `034bec27f` deleted them all.
+ * **Keep `ITypeST` minimal; a new node kind is a design decision.** Each kind costs a match arm, a
+   substitute arm, and a §1G input/output row. Receipt: the old tree rules died partly of
+   vocabulary bloat, forcing mirror-image thousand-line traversals (the 2021 flattening commits).
+ * **Every failure names the rune and the fix.** Completeness: the unvalued runes plus "write the
+   type argument." Conflict: the rune, both values, both sources. Zero impls: the sub, the super,
+   the two files searched. Receipt: the old matcher's flagship error was the string
+   "Not deeply satisfied!" with no rune named.
+
+**Template extraction reads the ITypeST, not a rule chain.** *(derived from §2A, §4I, and §P)*
+
+ * For a parameter like `x Opt<T>`, the template name sits directly on `ParameterS.type`
+   (`CallST`'s template name). No traversal.
+ * For an ImplBoundS, it sits on the bound's `super_interface_type` the same way. §P gives both,
+   so no rule-chain traversal exists anywhere in §2A or §4I.
 
 **One type per file is load-bearing for synthesized functions.** *(derived from the `as`/`try_as`/`drop` migration)*
 
@@ -487,33 +839,57 @@ Note that this requires that bounds, like `foo`'s `func drop(T)void` need to be 
    which unions all global namespaces. So searching Ship's env finds every function in every package.
    §1F needs a lookup that reads only the citizen's own `TemplatasStore` without walking parents.
 
-**Sends must target `value_type_rune`, not `full_type_rune`.** *(derived from §4)*
+**The sends machinery retires.** *(derived from §4)*
 
- * Today `assemble_initial_sends_from_args` sends to `param.full_type_rune`. §4 does not know about
-   `full_type_rune`, so the send must target `value_type_rune` instead, and the sent value must be the
-   peeled argument type (no `&`).
+ * ArgumentStep matching subsumes `assemble_initial_sends_from_args` and the
+   InitialKnown + Equals + rune_to_type triple. Do not extend them; they become archaeology when
+   §4 lands. Rejection arms of the send era (`KindIsNotBorrowRef` and kin) become ordinary match
+   failures.
 
-**§2 needs a read-only impl walk.** *(derived from §2)*
+**No impl walk exists at match time; the one real resolve is §5's.** *(derived from §2A, §4I, §5)*
 
- * `is_parent` and `get_impl_parent_given_sub_citizen` both write to `CompilerOutputs`.
-   `partial_resolve_impl` is the near-miss — same solve, no `check_resolving_conclusions_and_resolve`.
-   It still takes `&mut` and could write if the impl carries Resolve rules (`where func` bounds).
-   For the current corpus (Some/None/Ok/Err impls have no bounds) this is safe. For the general case,
-   either assert no Resolve rules or build a genuinely read-only solve variant.
+ * §2A and §4I match stored `ITypeST`s: no `partial_resolve_impl`, no environments, no
+   `CompilerOutputs`. `is_parent` / `get_impl_parent_given_sub_citizen` are not called for
+   matching.
+ * The winning impl is *resolved* exactly once, in §5: its own where-clauses discharged (§29) and
+   its instantiation bounds registered. Rejected candidates from a step's loop are never resolved
+   at all (§28).
 
-**§5 prerequisite: reference wrappers need env registration.** *(derived from §5)*
+**FuncBoundStep prerequisite: reference wrappers need env registration.** *(derived from §4 and §5)*
 
  * `BorrowRef` has no template ID and no `declare_type_outer_env` call. `get_outer_env_for_type`
-   panics on it. §5's non-peeling search needs to look in `borrow.vale`'s env for `drop<T>(&T)`,
-   which requires hardcoding BorrowRef's env the same way primitives and arrays need theirs.
-   The "Move `drop<T>(&T)` to `borrow.vale`" migration item is a prerequisite for §5, not
-   aspirational.
+   panics on it. The non-peeling bound search (§4's FuncBoundStep and §5's re-checks) needs to
+   look in `borrow.vale`'s env for `drop<T>(&T)`, which requires hardcoding BorrowRef's env the
+   same way primitives and arrays need theirs. The "Move `drop<T>(&T)` to `borrow.vale`" migration
+   item is a prerequisite, not aspirational.
 
-**§5 collects through its checks and registers once at the end.** *(derived from §5)*
+**Registration during §4: lambdas only, and why it's safe.** *(derived from §4's lambda exception)*
+
+ * Ordinary found functions register nothing at step time: the FuncBoundStep matches the found
+   function's parameter trees and substitutes into its declared return tree — pure tree work, the
+   ImplBoundStep shape applied to a signature. Their real resolution (own where-clauses, own
+   registration) happens in §5, uniformly with impls and built types. (Today's machinery resolves
+   eagerly — `attempt_candidate_banner` registers on every success path — so this is a behavior
+   change to build, not preserve.)
+ * The lambda is the one true exception: no declared return tree, so its return exists only by
+   compiling its body at the step — the only eager instantiation and the only mid-§4 registration.
+ * Why that's safe: §1F is final, so a later §5 failure is terminal rather than a backtrack;
+   nothing registered mid-§4 can appear in a successful build. Worst case is error ordering.
+ * The absolute part: within a step's candidate loop, a rejected trial must leave no trace.
+   Trials are pure matches, so this costs nothing.
+
+**§5 collects through its checks and registers once at the end.** *(derived from §5; obligation sets per §29)*
 
  * The registration cannot be incremental, so every answer has to be in hand before the first write.
  * `check_resolving_conclusions_and_resolve` already has this shape and can be followed rather than
    redesigned.
+
+**What retires.** *(derived from §4, §6, and §1G)*
+
+ * The sends machinery (see its entry above). The rune-type solver (§1G's declared-sorts check
+   replaces it; no successor). `commit_step`/`incrementally_solve` as pipeline machinery; @DRSINI
+   defaults move to §1G's GenericDefaultStep. `complex_solve` stays dead. Do not resurrect any of these
+   from the convo record; each has a named replacement here.
 
 **§7's upcast-through-wrap is already handled by `replace_value_type_in_ref`.** *(derived from §7)*
 
@@ -522,10 +898,10 @@ Note that this requires that bounds, like `foo`'s `func drop(T)void` need to be 
    the wraps and swap the innermost citizen. `&Some<int>` → `&Opt<int>` in one call. No additional
    composition logic needed.
 
-**How associated types would work without solving.** *(derived from §25, §26)*
+**How associated types work without solving.** *(derived from §4I, §26, §27)*
 
-Associated types are not in scope yet (they come with the trait system), but the architecture is
-designed to handle them without a full solve. This section records the design so it isn't lost.
+Associated types are coming soon, and the architecture accounts for them without a full solve: a
+projection is one more step input/output kind in §1G's table, and the read is one more move in §4I.
 
 **What an associated type is.** A trait declares a type member, and each impl provides a concrete
 value:
@@ -555,9 +931,9 @@ super types. These are read-only and available from postparse time:
 
 ```
 impl Iterator for Counter:
-    sub:   ITypeST::Apply("Counter", [])
-    super: ITypeST::Apply("Iterator", [])
-    associated_types: { "Item" → ITypeST::Apply("int", []) }
+    sub:   CallST("Counter", [])
+    super: CallST("Iterator", [])
+    associated_types: { "Item" → CallST("int", []) }
 ```
 
 When the associated type is generic — `impl<T> Iterator for Wrapper<T> { comptime Item = Pair<T>; }`
@@ -565,17 +941,17 @@ When the associated type is generic — `impl<T> Iterator for Wrapper<T> { compt
 
 ```
 impl<T> Iterator for Wrapper<T>:
-    sub:   ITypeST::Apply("Wrapper", [ITypeST::Rune(T)])
-    super: ITypeST::Apply("Iterator", [])
-    associated_types: { "Item" → ITypeST::Apply("Pair", [ITypeST::Rune(T)]) }
+    sub:   CallST("Wrapper", [ITypeST::Rune(T)])
+    super: CallST("Iterator", [])
+    associated_types: { "Item" → CallST("Pair", [ITypeST::Rune(T)]) }
 ```
 
-**How §2B handles it.** The existing structural matching steps stay the same. One additional step
+**How §4I handles it.** The existing structural matching steps stay the same. One additional step
 reads the associated type after the impl is selected:
 
  1. Walk impl's sub `ITypeST` against argument `KindT` → build impl rune map (e.g. `T → int`).
  2. Substitute into impl's super `ITypeST` → build super `KindT`.
- 3. Assert no impl placeholders remain (§2.5.1).
+ 3. Assert no impl runes remain (§2.5.1).
  4. Match super `KindT` against bound's super `ITypeST` → build callee rune map.
  5. Check for conflicts with explicit args.
  6. **New step: for each associated type constraint (e.g. `T.Item == I`), read the value from the
@@ -589,16 +965,16 @@ Step 6 is "lookup-read-substitute":
  * **Substitute**: walk the `ITypeST` using step 1's impl rune map to produce a `KindT`.
 
 No solving. No rules. No CompilerOutputs mutation. The associated type value is a static `ITypeST`
-on the impl, read and resolved through the same structural operations as everything else in §2B.
+on the impl, read and resolved through the same structural operations as everything else in §4I.
 
 **Example with a generic associated type.** `sum(Wrapper<int>())`:
 
  1. Walk `Wrapper<int>` against impl's sub `Wrapper<T>` → map = `{ T → int }`.
  2. Substitute into super → `Iterator` (no impl runes in super).
- 3. No unresolved placeholders. ✓
+ 3. No unresolved runes. ✓
  4. Match `Iterator` against bound's `Iterator` → match.
  5. No conflicts.
- 6. Read `Item` from impl: `ITypeST::Apply("Pair", [ITypeST::Rune(T)])`. Substitute `T → int` →
+ 6. Read `Item` from impl: `CallST("Pair", [ITypeST::Rune(T)])`. Substitute `T → int` →
     build `KindT = Pair<int>`. Conclude `I = Pair<int>`.
 
 §4 then has `I = Pair<int>` as an `InitialKnown`. If the function's body uses `I`, it's concrete.
@@ -607,21 +983,22 @@ on the impl, read and resolved through the same structural operations as everyth
 not a derivation. Rust confirms this architecture: `TraitRef.args` never contains associated types,
 and rustc processes associated type constraints through a separate pipeline
 (`ProjectionPredicate` → `project_and_unify_term`) that finds the impl, reads the value, and checks
-equality. Rustc's projection pipeline does call back into trait selection to find the impl, but §2B
+equality. Rustc's projection pipeline does call back into trait selection to find the impl, but §4I
 has already found it, so the read is a field access.
 
-**What WOULD need a solve.** If an associated type's value depended on another associated type from a
-different trait (e.g. `comptime Item = Other.Output` where `Other` is itself a bound), resolving it
-would require first resolving the other bound. That's a dependency chain between bounds, which could
-require iterating. Vale's `comptime` design may or may not allow this — if it does, the resolution
-order in §2B would need to handle dependencies between associated type reads across bounds. That is
-genuinely harder than a single read, but it's still lookup-read-substitute applied iteratively, not
-constraint solving.
+**Cross-bound chains are the sort's job, not a solve's.** If an associated type's value references
+another bound's output (`comptime Item = Other.Output`), that is a dependency edge between steps,
+which §1G's topo sort orders like any other; a true cycle errors per §1G's rule. Two impls whose
+`comptime` values reference each other (`Item = B.Item`, `Item = A.Item`) are a different beast: a
+value cycle at the definitions, detected exactly during normalization (we evaluate a finite impl
+set, so a revisit is a real diagnosis, unlike rustc's E0275 fuel gauge) and reported at the impls.
 
-**What this means for §25 and §26.** §25's structural matching handles impl selection. §26's
-`ITypeST` provides the read-only structured form for both the impl's sub/super types and its
-associated type values. Together they cover associated types with no new machinery — just one more
-field on the impl's stored `ITypeST` data, and one more step in §2B's flow.
+**What this rests on.** §4I's structural matching handles impl selection; the read-only `ITypeST`
+carries the impl's sub/super types and its associated type values. Associated types cost one more
+field on the impl and one more move in §4I. The optional destructuring-binding extension is parked
+under Future Notions (`Pair<A, B> = T.Item`); when it activates, note the edges: a template
+mismatch errors by name, a rune repeated in the pattern binds once and checks its second
+occurrence, and the right side must be fully computable (its runes are inputs).
 
 ## Discussed examples and test cases
 
@@ -708,8 +1085,9 @@ func callee<T>(x &Opt<T>) { ... }
 callee(&Some<int>(5))
 ```
 
-§2 finds CallSR on `value_type_rune` → template is `Opt`. Argument template is `Some`. Different.
-Walk impl `impl<T> Some<T> for Opt<T>` from `Some<int>`, get `Opt<int>`. Hand `Opt<int>` to §4.
+§2 reads the parameter's type tree → template is `Opt`. Argument template is `Some`. Different.
+Match `Some<int>` against the impl's sub_citizen_type `Some<T>` → T = int; substitute into its
+super_interface_type `Opt<T>` → `Opt<int>`. Hand `Opt<int>` to §4.
 §7 emits an upcast `&Some<int>` → `&Opt<int>`.
 
 ### §2 with an ImplBoundS parameter — walk extracts conclusions, no upcast (§2)
@@ -720,12 +1098,12 @@ func f<T, U>(x T) where implements(T, IObserver<U>) { ... }
 f(MyController())
 ```
 
-§2 finds ImplBoundS on `value_type_rune` → template is `IObserver`. Argument template is
-`MyController`. Different. Walk impl, get `IObserver<SignalA>`. Hand that to §4 as an initial known
-for the ImplBoundS's super_rune. Do NOT change the argument type — T stays MyController. §7 emits
-no upcast.
+§2 reads the bound's super_interface_type → template is `IObserver`. Argument template is
+`MyController`. Different. Match against the impl's trees, get `IObserver<SignalA>`. Hand that to
+§4 as an initial known for the bound's super rune. Do NOT change the argument type — T stays
+MyController. §7 emits no upcast.
 
-§4 then has a CallSR rule: `Call(IObserver, [U]) → super_rune`. It already knows super_rune =
+§4's private rules then include `Call(IObserver, [U]) → super_rune`. It already knows super_rune =
 `IObserver<SignalA>`. Runs the rule in reverse: U = SignalA. So §2 doesn't extract U itself — the
 solver does it naturally.
 
@@ -746,13 +1124,12 @@ func handle<T, U>(x T) where implements(T, IHandler<IEvent<U>>) { ... }
 handle<Button, ClickEvent>(Button())
 ```
 
-§2 finds ImplBoundS on `value_type_rune` → template is `IHandler`. Two impls from Button to
+§4I reads the bound's `super_interface_type` → template is `IHandler`. Two impls from Button to
 IHandler. Ambiguous.
 
-But the user wrote explicit template args: U = ClickEvent. Each ImplBoundS carries its own rules:
-`[Lookup("IEvent") → r46, Call(r46, [U]) → r45, Lookup("IHandler") → r44, Call(r44, [r45]) → super_rune]`.
-§2 runs these seeded with U = ClickEvent. The solver propagates:
-r45 = IEvent\<ClickEvent\>, super_rune = IHandler\<IEvent\<ClickEvent\>\>.
+But the user wrote explicit template args: U = ClickEvent. The bound's super_interface_type is
+`IHandler<IEvent<U>>`. Substitute U = ClickEvent into it: `IHandler<IEvent<ClickEvent>>`. No
+solver; the nesting lives in the tree and substitution recurses through it.
 
 §2 searches for `impl IHandler<IEvent<ClickEvent>> for Button`. One impl. Done.
 
@@ -763,8 +1140,8 @@ func f<T>(x Opt<T>) { ... }
 f(Dog())
 ```
 
-§2 finds CallSR → template is `Opt`. Argument template is `Dog`. Different. Search for impls from
-Dog to Opt. Zero found. Compiler error, stop.
+§2 reads the parameter's type tree → template is `Opt`. Argument template is `Dog`. Different.
+Search for impls from Dog to Opt. Zero found. Compiler error, stop.
 
 ### Common ancestor is not inferred (§4)
 
@@ -786,13 +1163,13 @@ contradicts this design.
 
 Three examples are in the Strategic Directions under §5 (§5.5, §5.6, §5.7). The key principle:
 §5 substitutes rune values into the bound, then searches each **rune value's** env — not the
-substituted parameter type's env. This is why `where func clone(&T)T` at T=Ship searches Ship's env
+substituted parameter type's env. This is why `where exists clone(&T)T` at T=Ship searches Ship's env
 (not &Ship's env), finding `clone(&Ship) Ship` in ship.vale.
 
 ### §5 with `==` bound — referent's env has the function (§5)
 
 ```vale
-func has<E>(arr &[]E, elem &E) bool where func ==(&E, &E)bool { ... }
+func has<E>(arr &[]E, elem &E) bool where exists ==(&E, &E)bool { ... }
 has(myIntArray, 5)
 ```
 
@@ -922,8 +1299,8 @@ overload resolver and seeing whether it finds anything. There is no assertion ru
 
 Three kinds exist:
 
-- **Function bounds**, written `where func drop(T)void`. `opt.vale` declares
-  `func drop<T>(opt Some<T>) where func drop(T)void`. Postparse lowers it to an `IRulexSR::Resolve`,
+- **Function bounds**, written `where exists drop(T)void`. `opt.vale` declares
+  `func drop<T>(opt Some<T>) where exists drop(T)void`. Postparse lowers it to an `IRulexSR::Resolve`,
   and `resolve_function_call_conclusion` (`typing/infer_compiler.rs`) discharges it: it reads the
   concluded parameter and return types out of the conclusions, calls `resolve_function` with
   `exact = true`, and then checks the found prototype's return type matches. Its two failures are
@@ -1191,13 +1568,14 @@ callers, all in that file:
   rule-level conflict naming a rune rather than "argument 0 is a `MyStruct`, expected an `Opt<T>`".
   That is the shape `opt_with_undroppable_mutable_ref_contents` produces today. Every candidate phase
   knows which argument each value came from, so any of them could say the better thing.
-- **Numbering.** The preamble lists eight phases. Phase 1 is now split into sub-phases (§1B, §1F,
-  §1H, §1L). The S1/S2 paragraph scheme from design-assistant is not yet in use, so Plan Details
-  cites phase tags instead.
-- **§2 ImplBoundS disambiguation with multiple impls.** When a struct implements one interface
-  template twice and the parameter is a bare rune with a bound, the user must write an explicit
-  template arg. §P's Preparation requires each bound to carry its own rules and runes, so §2 can
-  run them seeded with explicit-arg conclusions from §1B.
+- **Numbering.** The preamble lists eight phases; phase 1 is split into §1B, §1F, §1G, §1H. The
+  S1/S2 paragraph scheme from design-assistant is not yet in use, so Plan Details cites phase tags.
+- **Steps ordered only by their inputs leave one corner underdetermined.** A bound's super-side
+  rune that a *different bound* produces (e.g. `implements(T, IObserver<U>)` beside
+  `where exists moo(W)U`): input-only edges leave the two steps unordered, and whether the walk
+  filters by U or ambiguity-errors depends on the tiebreak. Written-position tiebreak is
+  deterministic and declaration-static; the alternative is also ordering a step after the producers
+  of runes it merely mentions, when acyclic. Rare; wants a ruling eventually.
 - **`assume_most_specific_common_ancestor` contradicts the design.** The test
   (`compiler_solver_tests.rs:706`) asserts that `moo(Firefly(), Serenity())` upcasts both to IShip.
   The design says no common ancestor — the user writes `moo<IShip>(...)`. Test needs updating to
@@ -1211,10 +1589,12 @@ callers, all in that file:
 
 ### Answerable from the code, unmeasured
 
-- **Is `partial_resolve_impl` genuinely read-only?** It still takes `&mut CompilerOutputs`, and
-  nothing has checked whether a rule reachable from its solve writes.
-- **Does §6's rune-typing pass need `value_type_rune`'s already-derived type seeded?** A `BorrowRef`
-  rule names it as its inner, so the second `derive_rune_to_type` may or may not reach it alone.
 - **How many call sites in the suite have a parameter with an unsolved rune and an argument that
-  needs an upcast to fill it?** That is the population §2's walk exists for, and it has never been
-  counted.
+  needs an upcast to fill it?** That is the population §2A/§4I's teaching exists for, and it has
+  never been counted.
+- **How many corpus bounds introduce runes their parameters don't mention** (the `U` in
+  `implements(T, IObserver<U>)`)? Zero would mean the teaching steps are pure future-proofing for
+  the current corpus.
+- **How many `Prot`-typed generic params survive in the corpus** (the HashMap-era `H`/`E`
+  prototype params)? They are the one existing feature that leans on func-bound teaching
+  (`CallSiteFuncSR` unpacking) today.

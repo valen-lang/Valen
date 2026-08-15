@@ -29,19 +29,22 @@ where func(&F, E)void
   }
   [] = ^arr;
 }
-func drop<E>(arr []E) void
-where func drop(E)void {
-  drop_into(^arr, &{ ^_; });
-}
+
+// VCOORD: re enable lambdas
+// func drop<E>(arr []E) void
+// where func drop(E)void {
+//   drop_into(^arr, &{ ^_; });
+// }
 
 extern("vale_static_sized_array_drop_into")
 func drop_into<S Int, E, F>(arr StaticArray<S, E>, consumer &F) void
 where func(&F, E)void;
 
-func drop<S Int, E>(arr StaticArray<S, E>) void
-where func drop(E)void {
-  drop_into(^arr, &{ ^_; });
-}
+// VCOORD: re-enable lambdas
+// func drop<S Int, E>(arr StaticArray<S, E>) void
+// where func drop(E)void {
+//   drop_into(^arr, &{ ^_; });
+// }
 
 func Array<E, G>(n int, generator G) []E
 where

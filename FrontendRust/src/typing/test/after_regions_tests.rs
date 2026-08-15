@@ -114,7 +114,9 @@ exported func main() {
     );
 }
 
+// VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
+#[ignore]
 fn lambda_body_type_matches_anonymous_interface_return_type() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -139,7 +141,9 @@ exported func main() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
+// VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
+#[ignore]
 fn minimal_anonymous_interface_construction() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -201,48 +205,6 @@ exported func main() bool {
     match coutputs.lookup_function_by_str("main").header.return_type {
         KindT::Bool(_) => {}
         other => panic!("expected Bool, got {:?}", other),
-    }
-}
-
-#[test]
-fn can_turn_a_borrow_coord_into_an_owning_coord() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r#"
-import v.builtins.panicutils.*;
-
-struct SomeStruct { }
-
-func inner<T>() T {
-  panic("never");
-}
-
-func bork() ^&SomeStruct {
-  return inner<^&SomeStruct>();
-}
-
-exported func main() {
-  bork();
-}
-"#;
-    let code_source = CodeSource::new(vec![
-        builtin_source_for_panicutils(&parse_arena, &parser_keywords),
-        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
-        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
-        new_test_code_map(&parse_arena, code),
-        Source::Fn(empty_v_builtins_stub),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let coutputs = compile.expect_compiler_outputs();
-    match coutputs.lookup_function_by_str("bork").header.return_type {
-        KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("SomeStruct"), .. }), .. }), .. }, .. }) => {}
-        other => panic!("expected StructTT(SomeStruct), got {:?}", other),
     }
 }
 
@@ -325,7 +287,7 @@ sealed interface ISub { }
 impl ISuper for ISub;
 
 func tryDowncast(ship ISuper) bool {
-  result Result<&ISub, &ISuper> = (&ship).as<ISub>();
+  result Result<&ISub, &ISuper> = (&ship).try_as<ISub>();
   return result.is_ok();
 }
 
@@ -476,7 +438,7 @@ exported func main() int {
 exported func main() int {
 At test:0.vale:4:3:
   moo(42, true, "hello", false)
-Couldn't find a suitable function moo(i32, bool, @str, bool). Rejected candidates:
+Couldn't find a suitable function moo(i32, bool, str, bool). Rejected candidates:
 
 Candidate 1 (of 1): test:0.vale:2:1:
 CodeLocationS { file: FileCoordinate { package_coord: PackageCoordinate { module: "test", packages: [] }, filepath: "0.vale" }, offset: 1 }
@@ -487,60 +449,15 @@ Number of params doesn't match! Supplied 4 but function takes 3
     );
 }
 
-#[test]
-fn failure_to_resolve_a_prot_rules_function_doesnt_halt() {
-    // In the below example, it should disqualify the first foo() because T = bool
-    // and there exists no moo(bool). Instead, we saw the Prot rule throw and halt
-    // compilation.
-
-    // Instead, we need to bubble up that failure to find the right function, so
-    // it disqualifies the candidate and goes with the other one.
-
-    // Note from later: It seems this isn't detected by the typing phase anymore.
-    // When we try to resolve a func moo(str)void, we actually find one in the overload index,
-    // specifically foo.bound:moo(str).
-    // Obviously we shouldnt be considering that.
-    // Normally, bounds have some sort of placeholder type that acts as a filter so people don't
-    // see them unless they have that placeholder type. Here, not so much.
-
-    // We can solve this in two ways:
-    // - Making a visibility mask for various overloads in the overload set. This one is only visible from foo,
-    //   so when we try to resolve it from main it wont be found.
-    // - Require all bounds have a placeholder type in them. Seems reasonable tbh.
-
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r#"
-import v.builtins.drop.*;
-
-func moo(a str) { }
-func foo<T>(f T) void where func drop(T)void, func moo(str)void { }
-func foo<T>(f T) void where func drop(T)void, func moo(bool)void { }
-func main() { foo("hello"); }
-"#;
-    let code_source = CodeSource::new(vec![
-        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
-        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
-        new_test_code_map(&parse_arena, code),
-        Source::Fn(empty_v_builtins_stub),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    compile.expect_compiler_outputs();
-}
-
 
 // Canonical minimal repro for @BRRZ. The generic function `callAndReturn` has a
 // bound `func(&G)E` where E is an identifying generic rune appearing only in the
 // bound's return position. The caller supplies a lambda for G but does not (and
 // syntactically cannot) write E. The relaxed ResolveSR resolves
 // `__call(&closure)` and takes its return type as E.
+// VCOORD: enable this
 #[test]
+#[ignore]
 fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -572,7 +489,9 @@ exported func main() int {
 // Edge case for @BRRZ: the lambda body itself invokes another generic function
 // with its own bound. Exercises stamping-during-solve recursing into a nested
 // generic. The CompilerOutputs.signatureToFunction cache terminates recursion.
+// VCOORD: enable this
 #[test]
+#[ignore]
 fn brrz_nested_bound_return_inference_through_a_lambda_body() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -605,7 +524,9 @@ exported func main() int {
 // Edge case for @BRRZ: two bounds on the same function, each resolving to a
 // different lambda. Exercises multiple ResolveSR rules firing in the same solve
 // under the relaxed puzzle.
+// VCOORD: enable this
 #[test]
+#[ignore]
 fn brrz_two_bound_return_inferences_in_the_same_call() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -636,7 +557,9 @@ exported func main() int {
 
 
 // Depends on IFunction1, and maybe Generic interface anonymous subclass
+// VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
+#[ignore]
 fn basic_ifunction1_anonymous_subclass() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

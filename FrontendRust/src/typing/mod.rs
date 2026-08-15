@@ -34,6 +34,7 @@ pub mod overload_resolver;
 pub mod reachability;
 pub mod sequence_compiler;
 pub mod templata_compiler;
+pub mod type_st_match;
 
 // Sub-compilers grouped by concern
 pub mod citizen;

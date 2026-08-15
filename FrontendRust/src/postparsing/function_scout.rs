@@ -32,7 +32,7 @@ use crate::postparsing::post_parser::{
 };
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::rules::rule_scout::translate_rulexes;
-use crate::postparsing::rules::templex_scout::{translate_maybe_type_into_maybe_rune, translate_signature_templex};
+use crate::postparsing::rules::templex_scout::{translate_maybe_type_into_maybe_rune, translate_templex_into_type_st, translate_signature_type_st};
 use crate::postparsing::rules::rules::{
   BorrowRefSR, ImplBoundS, IRulexSR, LookupSR, RegionSR, RuneUsage,
 };
@@ -415,21 +415,28 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                     // Per @PFVSZ, the param's type splits into its outer ref wraps (&/heap/etc)
                     // and the value type (Lookup/Call/etc.). translate_signature_templex fills
                     // both buckets. The destructure (if any) is a separate, body-level concern.
-                    let mut param_type_outer_ref_rules_vec: Vec<IRulexSR<'s>> = Vec::new();
-                    let mut param_value_type_rules_vec: Vec<IRulexSR<'s>> = Vec::new();
+                    // "Unfiltered" means the RuneEnvParentLookup rules havent been stripped out.
+                    let mut param_type_outer_ref_rules_unfiltered_vec: Vec<IRulexSR<'s>> = Vec::new();
+                    let mut param_value_type_rules_unfiltered_vec: Vec<IRulexSR<'s>> = Vec::new();
                     let (full_type_rune, value_type_rune, synthesized) = match &pattern.templex {
                       // A typed param, e.g. `foo(x &int)`.
                       Some(type_p) => {
-                        let (full, inner) = translate_signature_templex(
+                        // Route through the one canonical ITypeST deriver (the ITemplexPT split path retires).
+                        let type_tree = translate_templex_into_type_st(
+                          self.scout_arena,
+                          IEnvironmentS::FunctionEnvironment(function_environment.clone()),
+                          type_p,
+                        );
+                        let (full, inner, outer_vec, value_vec) = translate_signature_type_st(
                           self.scout_arena,
                           self.keywords,
                           IEnvironmentS::FunctionEnvironment(function_environment.clone()),
                           &mut pattern_lidb,
-                          &mut param_value_type_rules_vec,
-                          &mut param_type_outer_ref_rules_vec,
                           default_region_rune.clone(),
-                          type_p,
+                          &type_tree,
                         );
+                        param_value_type_rules_unfiltered_vec = value_vec;
+                        param_type_outer_ref_rules_unfiltered_vec = outer_vec;
                         (full, inner, None)
                       }
                       // An untyped param, e.g. a lambda `(a) => a`. Synthesize an implicit kind rune.
@@ -441,6 +448,15 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                         (kind_rune.clone(), kind_rune.clone(), Some(kind_rune))
                       }
                     };
+                    let (param_type_outer_ref_rules_vec, param_value_type_rules_vec) =
+                        match &maybe_parent {
+                          IFunctionParent::ParentCitizen(_) => (
+                            // VCOORD: if we're stripping these so soon, should they even have been added? Are they only for lambdas?
+                            strip_parent_env_lookups(param_type_outer_ref_rules_unfiltered_vec),
+                            strip_parent_env_lookups(param_value_type_rules_unfiltered_vec),
+                          ),
+                          _ => (param_type_outer_ref_rules_unfiltered_vec, param_value_type_rules_unfiltered_vec),
+                        };
                     let type_outer_ref_rules = self.scout_arena.alloc_slice_from_vec(param_type_outer_ref_rules_vec);
                     let value_type_rules = self.scout_arena.alloc_slice_from_vec(param_value_type_rules_vec);
 
@@ -587,6 +603,11 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       }
       Some(ret_type_p) => {
         let mut ret_lidb = lidb.child();
+        // Not yet routed through translate_signature_type_st: doing so regresses
+        // hash_map_style_return_type_inference_must_not_skip_caller_bound_args, because
+        // translate_maybe_type_into_maybe_rune produces a return rune that return-type inference relies
+        // on. Investigate before migrating this last slot.
+        // VCOORD: investigate
         let ret_rune = translate_maybe_type_into_maybe_rune(
           self.scout_arena,
           self.keywords,
@@ -812,10 +833,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 
     let unfiltered_rules_array: Vec<IRulexSR<'s>> = rules;
     let rules_array = match &maybe_parent {
-      IFunctionParent::ParentCitizen(_) => unfiltered_rules_array
-        .into_iter()
-        .filter(|rule| !matches!(rule, IRulexSR::RuneParentEnvLookup(_)))
-        .collect::<Vec<_>>(),
+      IFunctionParent::ParentCitizen(_) => strip_parent_env_lookups(unfiltered_rules_array),
       _ => unfiltered_rules_array,
     };
 
@@ -1129,3 +1147,9 @@ fn create_magic_parameters(
 
 }
 
+fn strip_parent_env_lookups<'s>(rules: Vec<IRulexSR<'s>>) -> Vec<IRulexSR<'s>> {
+  rules
+      .into_iter()
+      .filter(|rule| !matches!(rule, IRulexSR::RuneParentEnvLookup(_)))
+      .collect()
+}

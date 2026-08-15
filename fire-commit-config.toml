@@ -1,0 +1,57 @@
+# Machine-readable pre-flight facts for the Vale host repo, read by `commit-preflight`.
+# Converted from fire-commit-config.md. Each sweep's `allow` list is seeded from a tree scan
+# of where these markers legitimately appear today; tune it as real runs surface false hits.
+#
+# `external` is a top-level key. This repo has externals, so they're declared as self-delimiting
+# [[external]] blocks at the end (an empty `external = []` would have to precede [repo]).
+
+[repo]
+# rebase-ff (experimental family). Full sync: rebase onto target → ratchet the target
+# (git fetch . <branch>:<target>) → push target + push side branch. `temporary` does the same
+# minus the ratchet and the target push: it still rebases and still pushes the side branch to
+# origin, it just doesn't advance the shared target. So temporary commits ARE pushed.
+branch_model = "rebase-ff"
+
+[repo.sweeps]
+# DO-NOT-SUBMIT speculative markers. Exempt docs (convos and skills quote the phrase verbatim).
+do_not_submit         = { enabled = true, allow = ["docs/**"] }
+# Hardcoded machine paths. Exempt docs (convos/old/plans/skills carry path examples). Luz and
+# Guardian are gitignored here, so they never appear in the host's staged diff.
+absolute_paths        = { enabled = true, allow = ["docs/**"] }
+# Broken symlinks (a filesystem walk, so it ignores gitignore): exempt scratch and the external
+# subtrees, which are checked by their own configs, plus gitignored Guardian caches/logs.
+broken_symlinks       = { enabled = true, allow = ["tmp/**", "Luz/**", "Guardian/**", "guardian-cache/**", "guardian-logs/**"] }
+# Guardian temp-disable directives. Exempt docs, which discuss the directive.
+guardian_temp_disable = { enabled = true, allow = ["docs/**"] }
+# Test add/delete/modify report — always informational, nothing exempted.
+test_delta            = { enabled = true, allow = [] }
+# Newly-staged #[ignore]: catch every one; none is pre-approved.
+new_ignore            = { enabled = true, allow = [] }
+
+# Both backends are the gate. The tool emits these as plan steps (it never runs them) for the
+# operator to run and judge — the suite is slow and sometimes intentionally red mid-slice.
+[[repo.tests]]
+cmd = "cargo build --manifest-path FrontendRust/Cargo.toml"
+env = {}
+
+[[repo.tests]]
+cmd = "cargo nextest run --manifest-path FrontendRust/Cargo.toml"
+env = {}
+
+[[repo.tests]]
+cmd = "cargo nextest run --manifest-path FrontendRust/Cargo.toml"
+env = { VALE_TEST_BACKEND = "wasi" }
+
+# Externals, located by path; each carries its own fire-commit-config.toml. Both are plain clones
+# here (independent checkouts, gitignored in this repo), not submodules.
+[[external]]
+path = "Luz"
+remote = "Verdagon/Luz"
+branch = "main"
+kind = "clone"
+
+[[external]]
+path = "Guardian"
+remote = "Verdagon/Guardian"
+branch = "main"
+kind = "clone"

@@ -293,7 +293,7 @@ where 's: 't,
     ) {
         match self.return_types_by_signature.get(signature) {
             None => {}
-            Some(existing) => assert!(*existing == return_type_2),
+            Some(existing) => assert_eq!(*existing, return_type_2),
         }
         self.return_types_by_signature.insert(*signature, return_type_2);
     }

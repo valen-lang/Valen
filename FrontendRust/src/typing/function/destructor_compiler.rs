@@ -9,8 +9,7 @@ use crate::utils::range::RangeS;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::names::IImpreciseNameValS;
 use crate::postparsing::names::CodeNameS;
-
-
+use crate::utils::fx::IndexMap;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -40,7 +39,34 @@ where 's: 't,
         // type arguments. Or have the synthesizer write the argument here — it stands at the
         // binding holding the local's resolved type, so it is the one caller that never has to
         // infer, and Vale4's arch prescribes that shape as __vale_drop<T>(&local).
-        match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], &[], context_region, args, &[], true)?
+        let explicit_template_arg_rules_s = &[];
+        let positional_explicit_template_arg_runes_s = &[];
+        let receiving_rune_to_explicit_template_arg_rune = &[];
+        let extra_envs_to_look_in = &[];
+        let potential_banner = self.find_function(
+            env,
+            coutputs,
+            call_range,
+            call_location,
+            name,
+            explicit_template_arg_rules_s,
+            positional_explicit_template_arg_runes_s,
+            receiving_rune_to_explicit_template_arg_rune,
+            context_region,
+            args,
+            extra_envs_to_look_in,
+            true,
+            false)?;
+            // VCOORD: simplify
+        match (match potential_banner {
+            Err(e) => Ok(Err(e)),
+            Ok(potential_banner) => {
+                Ok(Ok(StampFunctionSuccess {
+                    prototype: potential_banner.prototype,
+                    inferences: IndexMap::default(),
+                }))
+            }
+        })?
         {
             Err(e) => Err(ICompileErrorT::CouldntFindFunctionToCallT {
                 range: self.typing_interner.alloc_slice_copy(call_range),
@@ -61,13 +87,18 @@ where 's: 't,
     ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let result_coord = undestructed_expr_2.result();
         let result_expr_2 = match result_coord {
-            KindT::Never(_) | KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Float(_)| KindT::OverloadSet(_) | KindT::BorrowRef(_) | KindT::OwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) => {
+            KindT::Never(_) => {
+                // Return the original Never-typed expr, so the current block still knows that it's unreachable.
+                undestructed_expr_2
+            }
+            KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Float(_)| KindT::OverloadSet(_) | KindT::BorrowRef(_) | KindT::OwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) => {
                 // Just discard
                 ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(undestructed_expr_2)))
             }
             KindT::Str(_) => {
-                // Decrement a reference count
-                unimplemented!()
+                // Discard here will drop the reference count.
+                // VCOORD: at some point we'll want to have more precise instructions for the backend for this probably
+                ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(undestructed_expr_2)))
             }
             // Every one of these resolves `drop` by name against the value's own kind, so they share
             // one body: an interface dispatches to its abstract drop, an array to arrays.vale's

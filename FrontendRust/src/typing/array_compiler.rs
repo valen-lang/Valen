@@ -36,7 +36,7 @@ use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::names::names::RuneNameT;
 use std::marker::PhantomData;
-
+use crate::typing::function::function_compiler::StampFunctionSuccess;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -265,20 +265,33 @@ where 's: 't,
         }
         let array_imprecise_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.array }));
-        let stamp = self.find_function(
-            IInDenizenEnvironmentT::Node(extended_env),
-            coutputs,
-            parent_ranges,
-            call_location,
-            array_imprecise_name,
-            &explicit_rules,
-            &positional_runes,
-            &[],
-            region,
-            &args,
-            &[],
-            true,
-        )?
+      let calling_env1 = IInDenizenEnvironmentT::Node(extended_env);
+      let receiving_rune_to_explicit_template_arg_rune = &[];
+      let extra_envs_to_look_in = &[];
+      let potential_banner = self.find_function(
+        calling_env1,
+        coutputs,
+        parent_ranges,
+        call_location,
+        array_imprecise_name,
+        &explicit_rules,
+        &positional_runes,
+        receiving_rune_to_explicit_template_arg_rune,
+        region,
+        &args,
+        extra_envs_to_look_in,
+        true,
+      false)?;
+      // VCOORD: simplify
+      let stamp = (match potential_banner {
+        Err(e) => Ok(Err(e)),
+        Ok(potential_banner) => {
+          Ok(Ok(StampFunctionSuccess {
+            prototype: potential_banner.prototype,
+            inferences: IndexMap::default(),
+          }))
+        }
+      })?
             .map_err(|e| ICompileErrorT::CouldntFindFunctionToCallT {
                 range: self.typing_interner.alloc_slice_copy(parent_ranges),
                 fff: e,

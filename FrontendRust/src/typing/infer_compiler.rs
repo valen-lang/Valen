@@ -30,6 +30,29 @@ use crate::typing::templata::templata::expect_integer;
 use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
+/// Per @ENECCLZ, a bound like `where func clone(&T)T` is satisfied by searching each rune's
+/// concluded value's namespace, unpeeled: at `T=Ship` search `Ship`'s env (ship.vale), at
+/// `T=&Ship` search `&Ship`'s env (borrow.vale).
+// VCOORD: inline?
+pub(crate) fn collect_bound_search_kinds<'s, 't>(
+    c: &ResolveSR<'s>, // VCOORD: this raw & is weird
+    conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+) -> Vec<KindT<'s, 't>> {
+    let mut runes: Vec<IRuneS<'s>> = vec![];
+    for param_type in c.params_types.iter() {
+        param_type.collect_rune_mentions(&mut runes);
+    }
+    let mut kinds: Vec<KindT<'s, 't>> = vec![];
+    for rune in runes {
+        if let Some(ITemplataT::Kind(KindTemplataT { kind })) = conclusions.get(&rune) {
+            if !kinds.contains(kind) {
+                kinds.push(*kind);
+            }
+        }
+    }
+    kinds
+}
+
 
 /// Temporary state (see @TFITCX)
 pub struct CompleteResolveSolve<'s, 't> {
@@ -258,6 +281,12 @@ where 's: 't,
         })
     }
 
+    // VCOORD: i feel like it would simplify things a lot if we, in the typing-postparser
+    // (the postparser that would move into typing pass), did the lookups to find the
+    // reachable bounds and just pasted them onto the current denizen. then they would
+    // basically be treated the same as normal bounds. or, we dont have to do that
+    // literally, but we could add *something* to make the solver see the denizen's
+    // bounds and its reachable bounds the same way, some sort of good abstraction.
     pub fn check_resolving_conclusions_and_resolve(
         &self,
         envs: InferEnv<'s, 't>,
@@ -330,7 +359,7 @@ where 's: 't,
                 KindT::Interface(i) => ICitizenTT::Interface(i),
                 _ => panic!("implement: reachableBounds — unexpected citizen kind"),
             };
-            let reachable = self.get_reachable_bounds(
+            let (reachable, citizen_rune_to_search_kinds) = self.get_reachable_bounds(
                 self.opts.global_options.sanity_check,
                 envs.original_calling_env.denizen_template_id(),
                 state,
@@ -344,10 +373,32 @@ where 's: 't,
                     .unwrap()
                     .template()
                     .human_name();
-                let func_success = match self.resolve_function(
-                    envs.original_calling_env, state, ranges, call_location,
-                    func_name, param_coords, envs.context_region, true,
-                )? {
+                let function_name = self.scout_arena.intern_imprecise_name(
+                    IImpreciseNameValS::CodeName(CodeNameS { name: func_name }));
+                // Per @ENECCLZ / plan §5: search the environments of the values the bound's generic
+                // runes concluded to (the closure's env for `func __call(&Lam)T` at Lam=closure), not
+                // the whole parameter type `&closure`, which contributes no namespace.
+                let search_kinds: &[KindT<'s, 't>] =
+                    citizen_rune_to_search_kinds.get(citizen_rune).map(|kinds| kinds.as_slice()).unwrap_or(&[]);
+                let extra_envs = self.get_param_environments(state, ranges, search_kinds, true);
+                let explicit_template_arg_rules_s = &[];
+                let positional_explicit_template_arg_runes_s = &[];
+                let receiving_rune_to_explicit_template_arg_rune = &[];
+                let potential_banner = self.find_function(
+                    envs.original_calling_env,
+                    state,
+                    ranges,
+                    call_location,
+                    function_name,
+                    explicit_template_arg_rules_s,
+                    positional_explicit_template_arg_runes_s,
+                    receiving_rune_to_explicit_template_arg_rune,
+                    envs.context_region,
+                    param_coords,
+                    &extra_envs,
+                    true,
+                    false)?;
+                let func_success = match potential_banner {
                     Err(e) => return Ok(Err(IResolvingError::ResolvingResolveConclusionError(Box::new(
                         IConclusionResolveError::CouldntFindFunctionForConclusionResolve { range: self.typing_interner.alloc_slice_copy(ranges), fff: e }
                     )))),
@@ -779,7 +830,31 @@ where 's: 't,
         let mut full_ranges = Vec::with_capacity(1 + ranges.len());
         full_ranges.push(c.range);
         full_ranges.extend_from_slice(ranges);
-        let func_success = match self.resolve_function(calling_env, state, &full_ranges, call_location, c.name, param_coords, context_region, true)? {
+        // Per ENECCLZ, we're searching *not* in the arguments' environments. We're searching in
+        // the generic parameters' (T, Y, etc) environments.
+        let search_kinds = collect_bound_search_kinds(&c, conclusions);
+        let extra_envs = self.get_param_environments(state, &full_ranges, &search_kinds, true);
+        let function_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: c.name }));
+        // Per @ENECCLZ, a bound is satisfied only by a function whose signature matches exactly (exact=true).
+        let explicit_template_arg_rules_s = &[];
+        let positional_explicit_template_arg_runes_s = &[];
+        let receiving_rune_to_explicit_template_arg_rune = &[];
+        let potential_banner = self.find_function(
+            calling_env,
+            state,
+            &full_ranges,
+            call_location,
+            function_name,
+            explicit_template_arg_rules_s,
+            positional_explicit_template_arg_runes_s,
+            receiving_rune_to_explicit_template_arg_rune,
+            context_region,
+            param_coords,
+            &extra_envs,
+            true,
+            false)?;
+        let func_success = match potential_banner {
             Err(e) => {
                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(full_ranges);
                 return Ok(Err(IConclusionResolveError::CouldntFindFunctionForConclusionResolve { range: ranges_slice, fff: e }));

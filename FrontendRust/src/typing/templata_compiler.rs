@@ -12,8 +12,8 @@ use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReacha
 use crate::postparsing::names::{IRuneS, IImpreciseNameS};
 use crate::postparsing::ast::{GenericParameterS, LocationInDenizen};
 use crate::postparsing::itemplatatype::ITemplataType;
-use crate::postparsing::rules::rules::{EqualsSR, IRulexSR, RuneUsage};
-use crate::typing::infer_compiler::include_rule_in_call_site_solve;
+use crate::postparsing::rules::rules::{EqualsSR, IRulexSR, ResolveSR, RuneUsage};
+use crate::typing::infer_compiler::{collect_bound_search_kinds, include_rule_in_call_site_solve};
 use crate::typing::rune_typing::rune_type_solver::IRuneTypeSolverEnv;
 use crate::utils::range::RangeS;
 use crate::utils::fx::IndexMap;
@@ -90,6 +90,20 @@ pub fn peel_all_references<'s, 't>(kind: KindT<'s, 't>) -> KindT<'s, 't> {
         current = inner;
     }
     current
+}
+
+// Strips exactly `n` reference layers, or None if the kind has fewer than `n`. Peeling an argument
+// by the parameter's own written wrap depth (rather than all the way) keeps any references the value
+// itself carries, so a `&Ship` argument at a bare-rune parameter binds its rune to `&Ship` rather
+// than over-peeling to `Ship`. None is the shape mismatch where the argument is shallower than the
+// parameter's written wraps, e.g. a bare value at a `&T` parameter.
+// VCOORD: get rid of this, this is temporary
+pub fn peel_n_references<'s, 't>(kind: KindT<'s, 't>, n: usize) -> Option<KindT<'s, 't>> {
+    let mut current = kind;
+    for _ in 0..n {
+        current = peel_one_reference(&current)?;
+    }
+    Some(current)
 }
 
 // Rebuilds `full_type_with_refs`'s chain of reference layers around `new_value_type`, so the result
@@ -996,9 +1010,6 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
     }
 }
 
-// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
-
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1015,30 +1026,14 @@ where 's: 't,
                 .unwrap_or_else(|_| panic!("get_placeholder_substituter: topLevelDenizenId.localName must be IInstantiationNameT, got {:?}", top_level_denizen_id.local_name));
         let template_args: &[ITemplataT<'s, 't>] = top_level_local_name.template_args();
         let top_level_denizen_template_id = Compiler::get_template(self.typing_interner, top_level_denizen_id);
-        self.get_placeholder_substituter_ext(
-            sanity_check,
-            original_calling_denizen_id,
-            *top_level_denizen_template_id,
-            template_args,
-            bound_arguments_source,
-        )
-    }
-
-    pub fn get_placeholder_substituter_ext(
-        &self,
-        sanity_check: bool,
-        original_calling_denizen_id: IdT<'s, 't>,
-        needle_template_name: IdT<'s, 't>,
-        new_substituting_templatas: &'t [ITemplataT<'s, 't>],
-        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
-    ) -> IPlaceholderSubstituter<'s, 'ctx, 't> {
+        let needle_template_name = *top_level_denizen_template_id;
         IPlaceholderSubstituter {
             sanity_check,
             interner: self.typing_interner,
             keywords: self.keywords,
             original_calling_denizen_id,
             needle_template_name,
-            new_substituting_templatas,
+            new_substituting_templatas: template_args,
             bound_arguments_source,
         }
     }
@@ -1049,7 +1044,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         citizen: ICitizenTT<'s, 't>,
-    ) -> InstantiationReachableBoundArgumentsT<'s, 't> {
+    ) -> (InstantiationReachableBoundArgumentsT<'s, 't>, IndexMap<IRuneS<'s>, Vec<KindT<'s, 't>>>) {
         let citizen_id = match citizen {
             ICitizenTT::Struct(s) => s.id,
             ICitizenTT::Interface(i) => i.id,
@@ -1062,6 +1057,44 @@ where 's: 't,
                 IBoundArgumentsSource::InheritBoundsFromTypeItself,
             );
         let citizen_template_id = self.get_citizen_template(citizen_id);
+
+        // VCOORD: turn this into a helper
+        let (foreign_generic_runes, foreign_citizen_header_rules) = match citizen {
+            ICitizenTT::Struct(_) => {
+                let struct_s = coutputs.get_postparsed_struct(&citizen_template_id);
+                let runes: Vec<_> = struct_s.generic_params.iter().map(|generic_param| generic_param.rune.rune).collect();
+                (runes, struct_s.header_rules)
+            }
+            ICitizenTT::Interface(_) => {
+                let interface_s = coutputs.get_postparsed_interface(&citizen_template_id);
+                let runes: Vec<_> = interface_s.generic_params.iter().map(|generic_param| generic_param.rune.rune).collect();
+                (runes, interface_s.rules)
+            }
+        };
+        // VCOORD: it's weird that here we're making a map of foreign rune to local conclusions,
+        // because that's kind of what a substituter *is*. Substituter just works off of
+        // indices though. We should either make a new ByNameSusbtituter, or augment Substituter,
+        // or do something here.
+        let foreign_rune_to_conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> =
+            foreign_generic_runes.into_iter()
+                .zip(substituter.new_substituting_templatas.iter().map(|t| *t))
+                .collect();
+        // This map contains, for each foreign resolve rule (well, its result_rune which identifies it)
+        // which local conclusions its type uses.
+        let foreign_resolve_rule_rune_to_mentioned_conclusions =
+            foreign_citizen_header_rules
+                .iter()
+                .filter_map(|rule| match rule {
+                    IRulexSR::Resolve(resolve_sr) => {
+                        // For this foreign ResolveSR rule, here's the local conclusions mentioned in it.
+                        let bound_search_kinds =
+                            collect_bound_search_kinds(resolve_sr, &foreign_rune_to_conclusions);
+                        Some((resolve_sr.result_rune.rune, bound_search_kinds))
+                    },
+                    _ => None,
+                })
+                .collect();
+
         let inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
         let citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> =
             inner_env.templatas().name_to_entry.iter()
@@ -1080,10 +1113,12 @@ where 's: 't,
                     }
                 })
                 .collect();
-        InstantiationReachableBoundArgumentsT {
+
+        let reachable = InstantiationReachableBoundArgumentsT {
             citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
                 citizen_rune_to_reachable_prototype.into_iter()),
-        }
+        };
+        (reachable, foreign_resolve_rule_rune_to_mentioned_conclusions)
     }
 
     pub fn get_first_unsolved_identifying_rune(
@@ -1166,6 +1201,26 @@ where
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // A `&X -> X` read-out copies X out of the borrow with no user-written clone, via a CopyPrim.
+    // True for primitives and str (KindT::is_implicitly_cloneable), and also for a bare `share`
+    // citizen (an RC bump). The citizen case needs the sharedness query, hence a Compiler method.
+    // VCOORD: temporary; once share citizens lower to ShareRef uniformly this collapses.
+    // VCOORD: unify this with other helpers perhaps
+    pub fn kind_is_implicitly_cloneable(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        kind: KindT<'s, 't>,
+    ) -> bool {
+        if kind.is_implicitly_cloneable() {
+            return true;
+        }
+        match kind {
+            KindT::Struct(s) => coutputs.lookup_struct(s.id, self).sharedness == SharednessT::Shared,
+            KindT::Interface(i) => coutputs.lookup_interface(*i, self).sharedness == SharednessT::Shared,
+            _ => false,
+        }
+    }
+
     pub fn is_type_convertible(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1184,20 +1239,49 @@ where 's: 't,
         if let (KindT::BorrowRef(s), KindT::BorrowRef(t)) = (source_type, target_type) {
             return self.is_type_convertible(coutputs, calling_env, parent_ranges, call_location, s.inner, t.inner);
         }
+        if let (KindT::ShareRef(s), KindT::ShareRef(t)) = (source_type, target_type) {
+            return self.is_type_convertible(coutputs, calling_env, parent_ranges, call_location, s.inner, t.inner);
+        }
 
         // VCOORD: revisit this
         if let KindT::BorrowRef(sb) = source_type {
             if sb.inner == target_type {
-                if sb.inner.is_primitive() {
-                    return true;
-                } else {
-                    panic!("is_type_convertible: unhandled borrow read-out {:?} -> {:?} (needs convert() unification)", source_type, target_type);
+                match sb.inner {
+                    p if p.is_primitive() => return true,
+                    // VCOORD: replace this with an "is implicitly cloneable" check
+                    KindT::Str(_) => return true,
+                    // A bare `share` citizen reads out of a borrow via an RC bump, like str.
+                    _ if self.kind_is_implicitly_cloneable(coutputs, sb.inner) => return true,
+                    // A non-cloneable read-out (e.g. a plain struct) isn't convertible; the caller
+                    // reports the honest "write .clone()" error rather than crashing here.
+                    _ => return false,
                 }
             }
         }
         if let KindT::BorrowRef(tb) = target_type {
             if source_type == tb.inner {
-                panic!("is_type_convertible: bare-to-borrow {:?} -> {:?} not yet handled (needs convert() unification)", source_type, target_type);
+                return false;
+                // panic!("is_type_convertible: bare-to-borrow {:?} -> {:?} not yet handled (needs convert() unification)", source_type, target_type);
+            }
+        }
+        if let KindT::ShareRef(sb) = source_type {
+            // This is saying, if we're trying to send a @str into a str.
+            // VCOORD: this is temporary, there should never be a bare mention of str.
+            if sb.inner == target_type {
+                return true;
+            }
+        }
+        if let KindT::ShareRef(tb) = target_type {
+            // This is saying, if we're trying to send a str into a @str.
+            // VCOORD: this is temporary, there should never be a bare mention of str.
+            if source_type == tb.inner {
+                return true;
+            }
+        }
+        if let (KindT::ShareRef(sb), KindT::BorrowRef(tb)) = (source_type, target_type) {
+            // Borrowing the pointee out of a share handle, e.g. sending a `@str` into a `&str` param.
+            if sb.inner == tb.inner {
+                return true;
             }
         }
         // /VCOORD
@@ -1417,6 +1501,9 @@ where 's: 't,
             ITemplataT::InterfaceDefinition(it) => *self.resolve_interface_template(coutputs, it),
             ITemplataT::Kind(kt) => {
                 match ISubKindTT::try_from(kt.kind) {
+                    // VCOORD: doublecheck. ISubKindTT::try_from accepts a KindPlaceholder, so a
+                    // generic T passed as expected_citizen_templata reaches get_citizen_template,
+                    // which panics on a placeholder id.
                     Ok(sub) => self.get_citizen_template(sub.id()),
                     Err(_) => return false,
                 }

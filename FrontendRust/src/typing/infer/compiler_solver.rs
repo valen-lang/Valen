@@ -588,13 +588,26 @@ where 's: 't,
                     None => {
                         let ranges = once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                        match self.resolve_function_from_infer_env(
-                            env,
+                        let function_name = self.scout_arena.intern_imprecise_name(
+                            IImpreciseNameValS::CodeName(CodeNameS { name: resolve.name }));
+                        let explicit_template_arg_rules_s = &[];
+                        let positional_explicit_template_arg_runes_s = &[];
+                        let receiving_rune_to_explicit_template_arg_rune = &[];
+                        let potential_banner = self.find_function(
+                            env.original_calling_env,
                             state,
                             ranges_slice,
-                            resolve.name,
+                            env.call_location,
+                            function_name,
+                            explicit_template_arg_rules_s,
+                            positional_explicit_template_arg_runes_s,
+                            receiving_rune_to_explicit_template_arg_rune,
+                            env.context_region,
                             param_coords,
-                        ).expect("CompileErrorExceptionT propagation") {
+                            &[],
+                            true,
+                            false).expect("CompileErrorExceptionT propagation");
+                        match potential_banner {
                             Ok(stamp_result) => {
                                 let return_type = stamp_result.prototype.return_type;
                                 let mut conclusions = IndexMap::default();

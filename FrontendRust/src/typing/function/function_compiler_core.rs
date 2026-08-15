@@ -84,7 +84,18 @@ where 's: 't,
             match maybe_ret_templata {
                 None => None,
                 Some(ITemplataT::Kind(coord_templata)) => {
-                    let ret_coord = coord_templata.kind;
+                    // A share citizen is only ever held ShareRef-wrapped (mirror
+                    // struct_constructor_macro.rs's SharednessT::Shared arm), so a bare share-struct
+                    // return type concluded from the rune must be wrapped to match the generated header.
+                    // VCOORD: this is effectively coercing to a coord so its fine for now, but
+                    // remove this once the postparser correctly peeks at sharedness and wraps.
+                    let ret_coord = match coord_templata.kind {
+                        KindT::Struct(struct_tt)
+                            if coutputs.lookup_struct(struct_tt.id, self).sharedness == SharednessT::Shared =>
+                            KindT::ShareRef(self.typing_interner.alloc(
+                                ShareRefT { inner: coord_templata.kind })),
+                        other => other,
+                    };
                     coutputs.declare_function_return_type(signature2, ret_coord);
                     Some(ret_coord)
                 }

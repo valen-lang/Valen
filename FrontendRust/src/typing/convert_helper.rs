@@ -5,6 +5,7 @@ use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::compiler_outputs::*;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::names::{CodeNameS, IImpreciseNameValS};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::compiler::Compiler;
 use crate::typing::citizen::impl_compiler::IsParentResult;
@@ -12,7 +13,6 @@ use crate::typing::ast::expressions::UpcastTE;
 use crate::typing::env::function_environment_t::NodeEnvironmentBox;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
-
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 
 
@@ -91,6 +91,12 @@ target:
                     // VCOORD: when regions get real, decide whether handing back the source is
                     // right. Its type still names the source's region, not the target's.
                     Ok(source_expr)
+                } else if matches!(source_borrow.inner, KindT::ShareRef(ss) if ss.inner == target_borrow.inner) {
+                    // `&@str` to `&str`: peel the share ref under the borrow. Same memory, so this
+                    // relabels the pointee rather than doing runtime work.
+                    // VCOORD: change this from a Reinterpret to an instruction custom made for turning @something into &something
+                    Ok(ExpressionTE::Reinterpret(self.typing_interner.alloc(
+                        ReinterpretTE::new(source_expr, target_pointer_type))))
                 } else {
                     // The borrow stays and the citizen widens, e.g. `&Dog` to `&Animal`.
                     self.convert_via_upcast(
@@ -99,25 +105,48 @@ target:
                 }
             }
             (source, KindT::BorrowRef(target_borrow)) if source == target_borrow.inner => {
-                // A bare value reaching a borrow parameter, e.g. `&2`. Give it a temporary local to
-                // live in, and lend that.
-
-                let defer = self.make_temporary_local_defer(
-                    coutputs, nenv, range, call_location, life, context_region, source_expr)?;
-                Ok(ExpressionTE::Defer(defer))
+              panic!("Temporary locals temporarily disabled until we remove overloading");
+                // // A bare value reaching a borrow parameter, e.g. `&2`. Give it a temporary local to
+                // // live in, and lend that.
+                // let defer = self.make_temporary_local_defer(
+                //     coutputs, nenv, range, call_location, life, context_region, source_expr)?;
+                // Ok(ExpressionTE::Defer(defer))
             }
             (KindT::BorrowRef(source_borrow), target) if source_borrow.inner == target => {
-                // Reading a borrow out into an owned value, e.g. `&int` to `int`. A builtin
-                // covers the primitives. Any other type needs the user to define its own
-                // `implicit_clone`.
-
-                self.convert_via_implicit_clone(
-                    nenv, coutputs, range, call_location, context_region,
-                    source_expr, source_kind, target_pointer_type)
+                match source_borrow.inner {
+                  x if self.kind_is_implicitly_cloneable(coutputs, x) => {
+                    let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(source_expr, target));
+                    Ok(ExpressionTE::CopyPrim(copy_prim_te))
+                  }
+                  _ => {
+                    self.convert_via_implicit_clone(
+                        nenv, coutputs, range, call_location, context_region,
+                        source_expr, source_kind, target_pointer_type)
+                  }
+                }
+            }
+            (source, KindT::ShareRef(target_share)) if source == target_share.inner => {
+              panic!("Temporary locals temporarily disabled until we remove overloading");
+                // // A bare value reaching a share parameter, e.g. `&2`. Give it a temporary local to
+                // // live in, and lend that.
+                // let defer = self.make_temporary_local_defer(
+                //     coutputs, nenv, range, call_location, life, context_region, source_expr)?;
+                // Ok(ExpressionTE::Defer(defer))
+            }
+            (KindT::ShareRef(source_share), target) if source_share.inner == target => {
+              let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(source_expr, target));
+              Ok(ExpressionTE::CopyPrim(copy_prim_te))
+            }
+            (KindT::ShareRef(source_share), KindT::BorrowRef(target_borrow)) if source_share.inner == target_borrow.inner => {
+              // `@str` to `&str`: borrow the pointee out of a share handle. Same memory, so this
+              // relabels the handle as a borrow rather than doing runtime work.
+              // VCOORD: change this from a Reinterpret to an instruction custom made for turning @something into &something
+              Ok(ExpressionTE::Reinterpret(self.typing_interner.alloc(
+                  ReinterpretTE::new(source_expr, target_pointer_type))))
             }
             (source, target) if !matches!(source, KindT::BorrowRef(_)) && !matches!(target, KindT::BorrowRef(_)) => {
+              // VCOORD: this case looks weird/gross
               // Upcast with no borrow in play: `Dog` -> `Animal`.
-
                 self.convert_via_upcast(
                     nenv, coutputs, range, call_location, source_expr, source, target)
             }
@@ -198,18 +227,29 @@ target:
       target_pointer_type: KindT<'s, 't>,
     ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let calling_env = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
-        // resolve_function's outer Err fires on internal-lookup failures;
-        // the "name not in scope" case comes back as Ok(Err(fff with rejected=[]))
-        // through the inner path (Err(fff) arm below), not the outer. No Vale
-        // program has been found that triggers the outer path here; if this
-        // panics, that's a real bug to surface.
-        let stamp_outcome = self.resolve_function(
-            calling_env, coutputs, range, call_location,
-            self.keywords.implicit_clone,
+        // find_function's outer Err is an internal-lookup failure, unreachable from
+        // Vale source (hence .expect). "Name not in scope" comes back as the inner
+        // Err(fff with rejected=[]), handled in the Err(fff) arm below.
+        let function_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.implicit_clone }));
+        let explicit_template_arg_rules_s = &[];
+        let positional_explicit_template_arg_runes_s = &[];
+        let receiving_rune_to_explicit_template_arg_rune = &[];
+        let potential_banner = self.find_function(
+            calling_env,
+            coutputs,
+            range,
+            call_location,
+            function_name,
+            explicit_template_arg_rules_s,
+            positional_explicit_template_arg_runes_s,
+            receiving_rune_to_explicit_template_arg_rune,
+            context_region,
             &[source_kind],
-            context_region, true,
-        ).expect("resolve_function(implicit_clone) outer Err is unreachable from Vale source");
-        match stamp_outcome {
+            &[],
+            true,
+            false).expect("resolve_function(implicit_clone) outer Err is unreachable from Vale source");
+        match potential_banner {
             Ok(stamp) => {
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp.prototype.id).is_some());
                 let args_te = self.typing_interner.alloc_slice_from_vec(vec![source_expr]);
