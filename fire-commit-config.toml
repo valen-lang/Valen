@@ -25,15 +25,13 @@ broken_symlinks       = { enabled = true, allow = ["tmp/**", "Luz/**", "Guardian
 guardian_temp_disable = { enabled = true, allow = ["docs/**"] }
 # Test add/delete/modify report — always informational, nothing exempted.
 test_delta            = { enabled = true, allow = [] }
-# Newly-staged #[ignore]: catch every one; none is pre-approved.
-new_ignore            = { enabled = true, allow = [] }
+# Newly-staged ignore attributes in code: catch every one. Exempt docs (handoffs and skills quote them verbatim in prose).
+new_ignore            = { enabled = true, allow = ["docs/**"] }
 
 # Both backends are the gate. The tool emits these as plan steps (it never runs them) for the
-# operator to run and judge — the suite is slow and sometimes intentionally red mid-slice.
-[[repo.tests]]
-cmd = "cargo build --manifest-path FrontendRust/Cargo.toml"
-env = {}
-
+# operator to run and judge — the suite is slow and sometimes intentionally red mid-slice. No
+# standalone `cargo build`: nextest rebuilds, so a build right before it is redundant (and the tool
+# drops such a step anyway).
 [[repo.tests]]
 cmd = "cargo nextest run --manifest-path FrontendRust/Cargo.toml"
 env = {}
