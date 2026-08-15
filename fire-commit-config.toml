@@ -11,6 +11,8 @@
 # minus the ratchet and the target push: it still rebases and still pushes the side branch to
 # origin, it just doesn't advance the shared target. So temporary commits ARE pushed.
 branch_model = "rebase-ff"
+# The host is one crate gated by the explicit [[repo.tests]] below — no per-subproject discovery.
+subproject_tests = { enabled = false, command = "", env = {} }
 
 [repo.sweeps]
 # DO-NOT-SUBMIT speculative markers. Exempt docs (convos and skills quote the phrase verbatim).
