@@ -6,7 +6,7 @@
 # [[external]] blocks at the end (an empty `external = []` would have to precede [repo]).
 
 [repo]
-# rebase-ff (valen family). Full sync: rebase onto target → ratchet the target
+# rebase-ff (main is the trunk; stable is a periodic FF snapshot). Full sync: rebase onto target → ratchet the target
 # (git fetch . <branch>:<target>) → push target + push side branch. `temporary` does the same
 # minus the ratchet and the target push: it still rebases and still pushes the side branch to
 # origin, it just doesn't advance the shared target. So temporary commits ARE pushed.

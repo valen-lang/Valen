@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master, stable, repair-vale]
+    branches: [stable]
   pull_request:
-    branches: [master, stable, repair-vale]
+    branches: [main]
   workflow_dispatch:
 
 env:
