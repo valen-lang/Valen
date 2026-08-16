@@ -59,7 +59,7 @@ use crate::typing::oracles::Oracles;
 use crate::typing::overload_resolver::FindFunctionFailure;
 #[cfg(feature = "rust_interop")]
 use crate::typing::rust_interop::{
-  create_postparsed_function, declare_rust_import, is_rust_backed,
+  create_postparsed_function, declare_rust_import, is_rust_backed, RustImportSeed,
 };
 use crate::typing::templata::templata::ImplDefinitionTemplataT;
 use crate::typing::templata::templata::{
@@ -907,8 +907,14 @@ where
             }
           };
           let (local_name, entry, seed) = declare_rust_import(self, name);
-          if let Some((struct_id, struct_s)) = seed {
-            template_id_to_postparsed_struct.insert(struct_id, struct_s);
+          match seed {
+            Some(RustImportSeed::Struct(id, s)) => {
+              template_id_to_postparsed_struct.insert(id, s);
+            }
+            Some(RustImportSeed::Interface(id, i)) => {
+              template_id_to_postparsed_interface.insert(id, i);
+            }
+            None => {}
           }
           let coord =
             self.scout_arena.intern_package_coordinate(name.module_name, name.package_names);

@@ -24,8 +24,8 @@ use crate::interner::StrI;
 use crate::parsing::ast::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::ast::{
   ExternBodyS, ExternS, FunctionS, GenericParameterS, IBodyS, ICitizenAttributeS,
-  IFunctionAttributeS, IGenericParameterTypeS, KindGenericParameterTypeS, MacroCallS, ParameterS,
-  StructS,
+  IFunctionAttributeS, IGenericParameterTypeS, InterfaceS, KindGenericParameterTypeS, MacroCallS,
+  ParameterS, SealedS, StructS,
 };
 use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
@@ -33,7 +33,7 @@ use crate::postparsing::itemplatatype::{
 use crate::postparsing::names::{
   ArgumentRuneS, CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
   IImpreciseNameValS, IRuneValS, IStructDeclarationNameS, IVarNameS, ReturnRuneS,
-  TopLevelStructDeclarationNameS,
+  TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::rules::rules::{
   BorrowRefSR, CallSR, EqualsSR, IRulexSR, LookupSR, RegionSR, RuneUsage,
@@ -457,6 +457,61 @@ where
     &[],
     &[],
     &[],
+  ))
+}
+
+/// The interface analog of `synthesize_extern_struct`: a Rust **enum** becomes an opaque, **sealed**
+/// `InterfaceS` with zero variants (Vale is an external consumer; no variant is projected yet, per
+/// §8.10), carrying the `Extern` attribute so it lowers to an extern denizen. Its methods and drop
+/// attach lazily in the type's outer env exactly like a struct's.
+pub fn synthesize_extern_interface<'s, 'ctx, 't>(
+  compiler: &Compiler<'s, 'ctx, 't>,
+  package_coord: &'s PackageCoordinate<'s>,
+  human_name: StrI<'s>,
+  generic_param_names: &[StrI<'s>],
+) -> &'s InterfaceS<'s>
+where
+  's: 't,
+{
+  let scout_arena = compiler.scout_arena;
+  let loc = CodeLocationS::internal(scout_arena, SYNTHESIZED_RANGE_OFFSET);
+  let range = RangeS::new(loc, loc);
+
+  let generic_params: Vec<&'s GenericParameterS<'s>> = generic_param_names
+    .iter()
+    .map(|name| {
+      let rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: *name }));
+      &*scout_arena.alloc(GenericParameterS {
+        range,
+        rune: RuneUsage { range, rune },
+        tyype: IGenericParameterTypeS::KindGenericParameterType(KindGenericParameterTypeS {}),
+        default: None,
+      })
+    })
+    .collect();
+
+  let tyype = TemplateTemplataType {
+    param_types: scout_arena.alloc_slice_from_vec::<ITemplataType<'s>>(
+      generic_params.iter().map(|p| p.tyype.tyype()).collect(),
+    ),
+    return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+  };
+
+  scout_arena.alloc(InterfaceS::new(
+    range,
+    scout_arena.alloc(TopLevelInterfaceDeclarationNameS { name: human_name, range }),
+    scout_arena.alloc_slice_from_vec(vec![
+      // The `extern` attribute the postparser attaches, plus `sealed`: a Rust enum is a closed sum.
+      ICitizenAttributeS::Extern(ExternS { package_coord }),
+      ICitizenAttributeS::Sealed(SealedS),
+    ]),
+    false, // not weakable
+    scout_arena.alloc_slice_from_vec(generic_params),
+    SharednessP::Single,
+    tyype,
+    &[], // rules
+    &[], // internal_methods
+    &[], // impl_bounds
   ))
 }
 

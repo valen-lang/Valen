@@ -308,6 +308,28 @@ pub fn consume_usize(_n: usize) -> i32 {
     8
 }
 
+/// A Rust **enum** for Vale to import as an opaque sealed interface (`KindT::Interface`). Its inherent
+/// method is the whole point of opaque enums: you can call it without the variants being represented —
+/// the `Option::unwrap` shape (`Vec::pop()` returns `Option<T>`; `.unwrap()` is an inherent method).
+pub enum Shade {
+    Dim,
+    Bright,
+}
+
+impl Shade {
+    /// By-value `self` (consuming), like the other fixture methods, so a case can call it on an rvalue.
+    pub fn level(self) -> i32 {
+        match self {
+            Shade::Dim => 1,
+            Shade::Bright => 2,
+        }
+    }
+}
+
+pub fn make_shade() -> Shade {
+    Shade::Bright
+}
+
 pub fn bool_holder_flag(h: Holder<bool>) -> i32 {
     if h.value {
         1

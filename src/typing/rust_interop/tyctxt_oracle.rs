@@ -117,6 +117,9 @@ fn package_coord_for<'s>(
 enum ItemKind {
   Function,
   Type,
+  /// A Rust enum — imported as an opaque sealed interface. Like `Type` it owns inherent methods and a
+  /// drop; it differs only in lowering to `KindT::Interface` instead of `KindT::Struct`.
+  Enum,
   /// A method, with the index of the type it hangs off.
   Method(usize),
 }
@@ -201,6 +204,7 @@ fn resolve_crate_qualified_path<'tcx>(tcx: TyCtxt<'tcx>, path: &str) -> Option<(
     let kind = match child.res {
       Res::Def(DefKind::Fn, _) => ItemKind::Function,
       Res::Def(DefKind::Struct, _) => ItemKind::Type,
+      Res::Def(DefKind::Enum, _) => ItemKind::Enum,
       _ => continue,
     };
     let Res::Def(_, def_id) = child.res else { continue };
@@ -266,7 +270,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     let type_indices: Vec<usize> = items
       .iter()
       .enumerate()
-      .filter(|(_, i)| i.kind == ItemKind::Type)
+      .filter(|(_, i)| matches!(i.kind, ItemKind::Type | ItemKind::Enum))
       .map(|(idx, _)| idx)
       .collect();
     for owner_idx in type_indices {
@@ -316,8 +320,6 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     's: 't,
   {
     let item = &self.items[idx];
-    let template_name =
-      interner.intern_struct_template_name(StructTemplateNameT { human_name: item.human_name });
     // Only type arguments. Lifetimes erase at the boundary (@ELASZ) and Vale's arg list has no
     // slot for them; a const generic would need one Vale does not have, and reaches
     // `lower_ty`'s catch-all rather than being silently skipped.
@@ -327,16 +329,34 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
         Ok(ITemplataT::Kind(interner.alloc(KindTemplataT { kind: self.lower_ty(arg, interner)? })))
       })
       .collect::<Result<Vec<_>, DeclineReason>>()?;
-    let struct_name = interner.intern_struct_name(StructNameValT {
-      template: IStructTemplateNameT::StructTemplate(template_name),
-      template_args: interner.alloc_slice_from_vec(template_args),
-    });
-    let id = interner.intern_id(IdValT {
-      package_coord: item.package,
-      init_steps: &[],
-      local_name: INameT::Struct(struct_name),
-    });
-    Ok(KindT::Struct(interner.intern_struct_tt(StructTTValT { id: *id })))
+    let template_args = interner.alloc_slice_from_vec(template_args);
+    // A Rust enum imports as an opaque sealed interface (`KindT::Interface`); everything else is a
+    // struct kind. Only the interned name and kind differ — the args ride identically.
+    if item.kind == ItemKind::Enum {
+      let template = interner
+        .intern_interface_template_name(InterfaceTemplateNameT { human_namee: item.human_name });
+      let interface_name =
+        interner.intern_interface_name(InterfaceNameValT { template, template_args });
+      let id = interner.intern_id(IdValT {
+        package_coord: item.package,
+        init_steps: &[],
+        local_name: INameT::Interface(interface_name),
+      });
+      Ok(KindT::Interface(interner.intern_interface_tt(InterfaceTTValT { id: *id })))
+    } else {
+      let template_name =
+        interner.intern_struct_template_name(StructTemplateNameT { human_name: item.human_name });
+      let struct_name = interner.intern_struct_name(StructNameValT {
+        template: IStructTemplateNameT::StructTemplate(template_name),
+        template_args,
+      });
+      let id = interner.intern_id(IdValT {
+        package_coord: item.package,
+        init_steps: &[],
+        local_name: INameT::Struct(struct_name),
+      });
+      Ok(KindT::Struct(interner.intern_struct_tt(StructTTValT { id: *id })))
+    }
   }
 
   /// Lowers one rustc type to a Vale kind.
@@ -403,7 +423,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
         let idx = self
           .items
           .iter()
-          .position(|i| i.kind == ItemKind::Type && i.def_id == did)
+          .position(|i| matches!(i.kind, ItemKind::Type | ItemKind::Enum) && i.def_id == did)
           .ok_or(DeclineReason::UnimportedType)?;
         let args: Vec<ValeSigType<'s, 't>> = adt_args
           .types()
@@ -463,7 +483,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
       TyKind::Str | TyKind::Slice(_) | TyKind::Dynamic(..) => Err(DeclineReason::Unsized),
       TyKind::Adt(adt_def, adt_args) => {
         let did = adt_def.did();
-        match self.items.iter().position(|i| i.kind == ItemKind::Type && i.def_id == did) {
+        match self.items.iter().position(|i| matches!(i.kind, ItemKind::Type | ItemKind::Enum) && i.def_id == did) {
           Some(idx) => self.type_kind(idx, adt_args, interner),
           None => Err(DeclineReason::UnimportedType),
         }
@@ -505,6 +525,7 @@ where
     let want_kind = match name.kind {
       ImportedItemKind::Type => ItemKind::Type,
       ImportedItemKind::Function => ItemKind::Function,
+      ImportedItemKind::Enum => ItemKind::Enum,
     };
     self
       .items
@@ -546,6 +567,7 @@ where
     let kind = match item.kind {
       ItemKind::Type => ImportedItemKind::Type,
       ItemKind::Function => ImportedItemKind::Function,
+      ItemKind::Enum => ImportedItemKind::Enum,
       ItemKind::Method(_) => return None,
     };
     Some(ResolvedName {

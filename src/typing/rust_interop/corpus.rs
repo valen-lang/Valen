@@ -693,6 +693,39 @@ exported func main() int {
   expect: Expect::Returns(0),
 };
 
+/// A Rust **enum** imported as an opaque sealed interface (`KindT::Interface`), with an inherent method
+/// called on it — the opaque tier's payoff (`Option::unwrap`'s shape: a method without the variants
+/// being represented). `make_shade()` returns the enum; `.level()` is its inherent `self` method.
+pub const CALLS_A_METHOD_ON_AN_IMPORTED_ENUM: Case = Case {
+    fixture: "fixtures",
+    name: "enum-method",
+    vale: r#"
+import rust.mycrate.Shade;
+import rust.mycrate.make_shade;
+exported func main() int {
+  return (make_shade()).level();
+}
+"#,
+    // `make_shade()` builds `Shade::Bright`; `level` returns 2.
+    expect: Expect::Returns(2),
+};
+
+/// An imported enum bound to a local and never consumed gets a scope-end drop — an interface's drop,
+/// synthesized on demand exactly like a struct's.
+pub const AN_IMPORTED_ENUM_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP: Case = Case {
+    fixture: "fixtures",
+    name: "enum-scope-end-drop",
+    vale: r#"
+import rust.mycrate.Shade;
+import rust.mycrate.make_shade;
+exported func main() int {
+  s = make_shade();
+  return 4;
+}
+"#,
+    expect: Expect::Returns(4),
+};
+
 /// A Rust `usize` imported as the Vale `usize` **primitive** (alongside `int`/`bool`/`float`), rather
 /// than declining as it used to. `some_size() -> usize` produces one and `consume_usize(usize) -> i32`
 /// takes it, so `usize` is exercised in both return and argument position. It is a distinct primitive —
@@ -727,6 +760,25 @@ exported func main() int {
 }
 "#,
   expect: Expect::Returns(0),
+};
+
+/// The capstone: real `Vec::pop() -> Option<int>` then `Option::unwrap() -> int`, tying every piece
+/// together — a `&mut self` method on a struct returning a real `std` **enum** (`Option`, imported as
+/// an opaque interface), whose inherent `unwrap` consumes it and hands back the element. `Option` comes
+/// from the real `core` crate. Nothing runs; this is a typecheck against live rustc.
+pub const CALLS_POP_THEN_UNWRAP_ON_A_REAL_VEC: Case = Case {
+    fixture: "fixtures",
+    name: "real-vec-pop-unwrap",
+    vale: r#"
+import rust.alloc.vec.Vec;
+import rust.alloc.alloc.Global;
+import rust.core.option.Option;
+exported func main() int {
+  v = Vec.new<int>();
+  return (v.pop()).unwrap();
+}
+"#,
+    expect: Expect::Returns(0),
 };
 
 /// Real `Vec` with a **`&self` method returning `usize`**: `v.len()`. Combines the borrow receiver

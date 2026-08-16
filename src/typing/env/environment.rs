@@ -59,6 +59,10 @@ pub struct ResolvedName<'s> {
 pub enum ImportedItemKind {
   Type,
   Function,
+  /// A Rust enum, imported as an opaque sealed Vale interface (`KindT::Interface`). Opaque for now:
+  /// no variants are represented, so it can be received/passed/dropped and have its inherent methods
+  /// called, but not matched or constructed. See §8.10 of the interop architecture.
+  Enum,
 }
 
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).

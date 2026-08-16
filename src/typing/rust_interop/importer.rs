@@ -18,7 +18,7 @@
 // in by `&mut`.
 
 use crate::interner::StrI;
-use crate::postparsing::ast::{FunctionS, StructS};
+use crate::postparsing::ast::{FunctionS, InterfaceS, StructS};
 use crate::postparsing::names::{FunctionNameS, IFunctionDeclarationNameS};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::StructDefinitionT;
@@ -29,11 +29,14 @@ use crate::typing::env::environment::{
   IInDenizenEnvironmentT, TemplatasStoreBuilder, TemplatasStoreT,
 };
 use crate::typing::env::environment::{ImportedItemKind, ResolvedName};
-use crate::typing::env::i_env_entry::{FunctionEnvEntry, IEnvEntryT, StructEnvEntry};
+use crate::typing::env::i_env_entry::{
+  FunctionEnvEntry, IEnvEntryT, InterfaceEnvEntry, StructEnvEntry,
+};
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::names::names::*;
 use crate::typing::rust_interop::declarations::{
-  synthesize_extern_function, synthesize_extern_struct, SYNTHESIZED_RANGE_OFFSET,
+  synthesize_extern_function, synthesize_extern_interface, synthesize_extern_struct,
+  SYNTHESIZED_RANGE_OFFSET,
 };
 use crate::typing::rust_interop::oracle::{RustItemId, RustOracle, ValeSig, ValeSigType};
 use crate::typing::rust_interop::reserved::is_rust_backed;
@@ -42,6 +45,14 @@ use crate::typing::types::types::*;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::fx::IndexMap;
 use crate::utils::range::CodeLocationS;
+
+/// The postparsed node a synthesized Rust type hands back for the `evaluate` loop to seed into the
+/// right cache: a `StructS` for a struct, an `InterfaceS` for an enum. A function seeds nothing — it
+/// synthesizes lazily on first call.
+pub enum RustImportSeed<'s, 't> {
+  Struct(&'t IdT<'s, 't>, &'s StructS<'s>),
+  Interface(&'t IdT<'s, 't>, &'s InterfaceS<'s>),
+}
 
 /// Turn one resolved Rust import into its top-level env entry for the reserved `rust` package.
 ///
@@ -59,7 +70,7 @@ use crate::utils::range::CodeLocationS;
 pub fn declare_rust_import<'s, 'ctx, 't>(
   compiler: &Compiler<'s, 'ctx, 't>,
   name: ResolvedName<'s>,
-) -> (INameT<'s, 't>, IEnvEntryT<'s, 't>, Option<(&'t IdT<'s, 't>, &'s StructS<'s>)>)
+) -> (INameT<'s, 't>, IEnvEntryT<'s, 't>, Option<RustImportSeed<'s, 't>>)
 where
   's: 't,
 {
@@ -100,7 +111,7 @@ where
           template_id: struct_template_id,
           tyype: struct_s.tyype,
         }),
-        Some((struct_template_id, struct_s)),
+        Some(RustImportSeed::Struct(struct_template_id, struct_s)),
       )
     }
     ImportedItemKind::Function => {
@@ -110,6 +121,27 @@ where
         function_local_name,
         IEnvEntryT::Function(FunctionEnvEntry { template_id: function_template_id }),
         None,
+      )
+    }
+    ImportedItemKind::Enum => {
+      // A Rust enum imports as an opaque sealed interface — the interface analog of the `Type` arm.
+      let template_name =
+        interner.intern_interface_template_name(InterfaceTemplateNameT { human_namee: human_name });
+      let interface_local_name = INameT::InterfaceTemplate(template_name);
+      let interface_s = synthesize_extern_interface(
+        compiler,
+        package_coord,
+        human_name,
+        oracle.type_generic_params(item, interner),
+      );
+      let interface_template_id = package_id.add_step(interner, interface_local_name);
+      (
+        interface_local_name,
+        IEnvEntryT::Interface(InterfaceEnvEntry {
+          template_id: interface_template_id,
+          tyype: interface_s.tyype,
+        }),
+        Some(RustImportSeed::Interface(interface_template_id, interface_s)),
       )
     }
   }
@@ -149,6 +181,7 @@ where
 {
   let (importee_name, kind) = match local_name {
     INameT::StructTemplate(t) => (t.human_name, ImportedItemKind::Type),
+    INameT::InterfaceTemplate(t) => (t.human_namee, ImportedItemKind::Enum),
     INameT::FunctionTemplate(t) => (t.human_name, ImportedItemKind::Function),
     _ => return None,
   };
@@ -210,6 +243,7 @@ where
       // resolved from the owner type item, exactly as the old eager drop built it.
       let owner_human_name = match owner_local_name {
         INameT::StructTemplate(t) => t.human_name,
+        INameT::InterfaceTemplate(t) => t.human_namee,
         _ => return None,
       };
       let generic_params = oracle.type_generic_params(owner_item, interner);

@@ -247,6 +247,17 @@ where
     let mut internal_methods: Vec<(PrototypeT<'s, 't>, usize)> = Vec::new();
     for (_name, entry) in outer_env.templatas().name_to_entry.iter() {
       if let IEnvEntryT::Function(FunctionEnvEntry { template_id: id }) = entry {
+        // Lazily compile a rust enum's methods — they are inherent, not virtual interface methods, so
+        // they must not enter the vtable, and force-compiling one here would reference this interface
+        // before it's registered. The same skip the struct-compile loop uses.
+        // VRI: Soon, we should lazily compile vale's internal methods too,
+        // getting rid of this whole loop.
+        #[cfg(feature = "rust_interop")]
+        {
+          if is_rust_backed(id) {
+            continue;
+          }
+        }
         let outer_env_ienv = IEnvironmentT::from(outer_env);
         let header = self.evaluate_generic_function_from_non_call_for_header(
           coutputs,

@@ -345,6 +345,27 @@ fn imports_usize_as_a_primitive() {
   assert_rust_callees(&CALLS_A_FUNCTION_RETURNING_USIZE, &["some_size", "consume_usize"]);
 }
 
+/// A Rust enum imports as an opaque sealed interface, and its inherent method resolves — the opaque
+/// tier's payoff (a method without variants, the `Option::unwrap` shape).
+#[test]
+fn calls_a_method_on_an_imported_enum() {
+  assert_rust_callees(&CALLS_A_METHOD_ON_AN_IMPORTED_ENUM, &["level"]);
+}
+
+/// An imported enum bound to a local and never consumed gets a scope-end drop — an interface's drop,
+/// synthesized like a struct's.
+#[test]
+fn an_imported_enum_bound_to_a_local_gets_a_scope_end_drop() {
+  let outcome = run_case(&AN_IMPORTED_ENUM_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP, callees_in_main);
+  let callees = outcome
+    .check(&AN_IMPORTED_ENUM_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "drop" && c.rust_backed),
+    "the bound enum got no scope-end drop: {callees:?}"
+  );
+}
+
 /// The capstone: real `std::vec::Vec` + `std::alloc::Global` from the actual `alloc` crate,
 /// `Vec.new<int>()` bound to a local with a scope-end drop, typechecked against live rustc.
 #[test]
@@ -362,6 +383,13 @@ fn calls_push_on_a_real_vec() {
 #[test]
 fn calls_len_on_a_real_vec() {
   assert_rust_callees(&CALLS_LEN_ON_A_REAL_VEC, &["len"]);
+}
+
+/// The capstone: real `Vec::pop() -> Option<int>` then `Option::unwrap() -> int` — a struct method
+/// returning a real `std` enum, whose inherent method hands back the element.
+#[test]
+fn calls_pop_then_unwrap_on_a_real_vec() {
+  assert_rust_callees(&CALLS_POP_THEN_UNWRAP_ON_A_REAL_VEC, &["pop", "unwrap"]);
 }
 
 /// A two-parameter generic value from an associated function, bound to a local and dropped at scope

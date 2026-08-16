@@ -16,7 +16,9 @@ pub mod reserved;
 pub mod tyctxt_oracle;
 
 pub use corpus::{Case, Expect};
-pub use importer::{create_postparsed_function, declare_rust_import, rust_method_entries};
+pub use importer::{
+  create_postparsed_function, declare_rust_import, rust_method_entries, RustImportSeed,
+};
 pub use logging_oracle::{LoggingOracle, OracleCall, OracleQuery, SigPosition, SigShape};
 pub use oracle::{RustItemId, RustOracle, ValeSig};
 pub use reserved::{citizen_id, is_rust_backed, is_rust_backed_kind, peel_refs, RUST_MODULE};
