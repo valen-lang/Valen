@@ -35,6 +35,8 @@ guardian_port.txt
 opencode_port.txt
 .guardian-build.lock
 opencode-serve.log
+guardian-logs
+zen/logs
 .DS_Store
 guardian-cache
 target

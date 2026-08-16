@@ -2,7 +2,7 @@
 
 Architecture and design decisions for the **instantiating pass**. Sister doc to `typing-pass-design-v3.md`. **Some design decisions here are recovered-from-code rather than architect-deliberated** — flagged inline where that's the case.
 
-For the operational status of the instantiator, see `FrontendRust/src/typing/typing-pass-todo.md`.
+For the operational status of the instantiator, see `src/typing/typing-pass-todo.md`.
 
 ---
 
@@ -441,21 +441,21 @@ Many of the CL bucket's Phase 2 tests landed instantiator body fills (`migrate_r
 |---|---|
 | `docs/architecture/typing-pass-design-v3.md` | Sister doc — the canonical architectural template this doc mirrors |
 | `docs/architecture/instantiator_design.md` | This doc |
-| `FrontendRust/src/instantiating/instantiator.rs` | 6,506 LOC — `InstantiatorI`, `InstantiatedOutputsI`, `DenizenBoundToDenizenCallerBoundArgI`, `translate` entry, 74 translation methods |
-| `FrontendRust/src/instantiating/instantiating_arena.rs` | `InstantiatingArena<'i>` newtype |
-| `FrontendRust/src/instantiating/instantiating_interner.rs` | 12-family interner (4 types × 3 region modes), `MustIntern` seal |
-| `FrontendRust/src/instantiating/reintern.rs` | T→I boundary helpers (**all stubbed**) |
-| `FrontendRust/src/instantiating/region_counter.rs` | `CounterI`, pure_height renumbering map |
-| `FrontendRust/src/instantiating/region_collapser_individual.rs` | sI → cI rewrite, single tree |
-| `FrontendRust/src/instantiating/region_collapser_consistent.rs` | sI → cI rewrite, paired/consistent numbering |
-| `FrontendRust/src/instantiating/collector.rs` | I-side `NodeRefI` + `all_in_*` / `only_in_*` |
-| `FrontendRust/src/instantiating/instantiated_compilation.rs` | Pipeline harness, caches `HinputsI` |
-| `FrontendRust/src/instantiating/instantiated_humanizer.rs` | I-side pretty-printer |
-| `FrontendRust/src/instantiating/ast/types.rs` | `sI`/`nI`/`cI` markers, `CoordI`, `KindIT`, `StructIT`, `InterfaceIT`, ownership/mutability/variability/location enums |
-| `FrontendRust/src/instantiating/ast/names.rs` | 2,539 LOC — all I-side name enums/structs |
-| `FrontendRust/src/instantiating/ast/ast.rs` | `FunctionDefinitionI`, `FunctionHeaderI`, `PrototypeI`/`SignatureI`, `EdgeI`, exports/externs, attributes, variables |
-| `FrontendRust/src/instantiating/ast/expressions.rs` | `ExpressionIE` + 3 expression enums + ~30 variant structs |
-| `FrontendRust/src/instantiating/ast/citizens.rs` | `ICitizenDefinitionI`, `StructDefinitionI`, `InterfaceDefinitionI` |
-| `FrontendRust/src/instantiating/ast/hinputs.rs` | `HinputsI`, `InstantiationBoundArgumentsI`, ~20 lookup methods (mostly stubs) |
-| `FrontendRust/src/instantiating/ast/templata.rs` | `ITemplataI` + 20 concrete templata structs |
+| `src/instantiating/instantiator.rs` | 6,506 LOC — `InstantiatorI`, `InstantiatedOutputsI`, `DenizenBoundToDenizenCallerBoundArgI`, `translate` entry, 74 translation methods |
+| `src/instantiating/instantiating_arena.rs` | `InstantiatingArena<'i>` newtype |
+| `src/instantiating/instantiating_interner.rs` | 12-family interner (4 types × 3 region modes), `MustIntern` seal |
+| `src/instantiating/reintern.rs` | T→I boundary helpers (**all stubbed**) |
+| `src/instantiating/region_counter.rs` | `CounterI`, pure_height renumbering map |
+| `src/instantiating/region_collapser_individual.rs` | sI → cI rewrite, single tree |
+| `src/instantiating/region_collapser_consistent.rs` | sI → cI rewrite, paired/consistent numbering |
+| `src/instantiating/collector.rs` | I-side `NodeRefI` + `all_in_*` / `only_in_*` |
+| `src/instantiating/instantiated_compilation.rs` | Pipeline harness, caches `HinputsI` |
+| `src/instantiating/instantiated_humanizer.rs` | I-side pretty-printer |
+| `src/instantiating/ast/types.rs` | `sI`/`nI`/`cI` markers, `CoordI`, `KindIT`, `StructIT`, `InterfaceIT`, ownership/mutability/variability/location enums |
+| `src/instantiating/ast/names.rs` | 2,539 LOC — all I-side name enums/structs |
+| `src/instantiating/ast/ast.rs` | `FunctionDefinitionI`, `FunctionHeaderI`, `PrototypeI`/`SignatureI`, `EdgeI`, exports/externs, attributes, variables |
+| `src/instantiating/ast/expressions.rs` | `ExpressionIE` + 3 expression enums + ~30 variant structs |
+| `src/instantiating/ast/citizens.rs` | `ICitizenDefinitionI`, `StructDefinitionI`, `InterfaceDefinitionI` |
+| `src/instantiating/ast/hinputs.rs` | `HinputsI`, `InstantiationBoundArgumentsI`, ~20 lookup methods (mostly stubs) |
+| `src/instantiating/ast/templata.rs` | `ITemplataI` + 20 concrete templata structs |
 | `Frontend/InstantiatingPass/src/dev/vale/instantiating/` | Scala source of truth |

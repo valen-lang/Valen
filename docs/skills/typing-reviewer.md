@@ -1,7 +1,7 @@
 ---
 name: typing-reviewer
 description: "Typing-pass reviewer notes: concise style rules for reviewing and writing typing-pass code."
-g_read_when: Read when reviewing or writing code in the typing pass (FrontendRust/src/typing/).
+g_read_when: Read when reviewing or writing code in the typing pass (src/typing/).
 g_mention_in:
   - CLAUDE.md
 ---

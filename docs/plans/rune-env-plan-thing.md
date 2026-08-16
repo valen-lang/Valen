@@ -209,12 +209,12 @@ inspect it with a **separate** command — never chain a heavy command with `| t
 
 2. Build (must be exit 0, zero new warnings):
    ```bash
-   cargo build --manifest-path /Volumes/V/Vale/exp-2-wipbx/FrontendRust/Cargo.toml --lib > ./tmp/rpel-strip.txt 2>&1
+   cargo build --manifest-path /Volumes/V/Vale/exp-2-wipbx/Cargo.toml --lib > ./tmp/rpel-strip.txt 2>&1
    ```
 
 3. Run the 6 target tests before AND after the change, into the same file:
    ```bash
-   cargo test --manifest-path /Volumes/V/Vale/exp-2-wipbx/FrontendRust/Cargo.toml --lib \
+   cargo test --manifest-path /Volumes/V/Vale/exp-2-wipbx/Cargo.toml --lib \
      upcasting_with_generic_bounds tests_calling_an_abstract_function \
      generic_interface_forwarder generic_interface_forwarder_with_bound \
      test_specializing_interface test_complex_interface > ./tmp/rpel-strip.txt 2>&1
@@ -228,7 +228,7 @@ inspect it with a **separate** command — never chain a heavy command with `| t
 
 4. **Full-suite regression guard (mandatory):**
    ```bash
-   cargo test --manifest-path /Volumes/V/Vale/exp-2-wipbx/FrontendRust/Cargo.toml --lib > ./tmp/rpel-strip.txt 2>&1
+   cargo test --manifest-path /Volumes/V/Vale/exp-2-wipbx/Cargo.toml --lib > ./tmp/rpel-strip.txt 2>&1
    ```
    ```bash
    grep "test result" ./tmp/rpel-strip.txt

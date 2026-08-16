@@ -33,10 +33,10 @@ ARG RECOPY_DUMMY=0
 COPY . /Vale
 WORKDIR /Vale
 
-RUN cargo build --manifest-path FrontendRust/Cargo.toml
+RUN cargo build --manifest-path Cargo.toml
 
 # Drop the built valec onto $PATH for the entrypoint
-RUN cp FrontendRust/target/debug/valec /usr/local/bin/valec
+RUN cp target/debug/valec /usr/local/bin/valec
 
 WORKDIR /work
 ENTRYPOINT ["valec"]

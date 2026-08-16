@@ -29,15 +29,15 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cargo build
-        run: cargo build --manifest-path FrontendRust/Cargo.toml
+        run: cargo build --manifest-path Cargo.toml
 
       - name: Cargo test
-        run: cargo test --manifest-path FrontendRust/Cargo.toml
+        run: cargo test --manifest-path Cargo.toml
 
       - name: Package release artifact
         run: |
           mkdir -p release/Vale-Ubuntu
-          cp FrontendRust/target/debug/valec release/Vale-Ubuntu/
+          cp target/debug/valec release/Vale-Ubuntu/
           cp scripts/all/README release/Vale-Ubuntu/
           cp -r Backend/builtins release/Vale-Ubuntu/builtins
           cp -r stdlib release/Vale-Ubuntu/stdlib
@@ -63,15 +63,15 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cargo build
-        run: cargo build --manifest-path FrontendRust/Cargo.toml
+        run: cargo build --manifest-path Cargo.toml
 
       - name: Cargo test
-        run: cargo test --manifest-path FrontendRust/Cargo.toml
+        run: cargo test --manifest-path Cargo.toml
 
       - name: Package release artifact
         run: |
           mkdir -p release/Vale-Mac
-          cp FrontendRust/target/debug/valec release/Vale-Mac/
+          cp target/debug/valec release/Vale-Mac/
           cp scripts/all/README release/Vale-Mac/
           cp -r Backend/builtins release/Vale-Mac/builtins
           cp -r stdlib release/Vale-Mac/stdlib
@@ -127,9 +127,9 @@ jobs:
           echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
 
       - name: Cargo build
-        run: cargo build --manifest-path FrontendRust/Cargo.toml
+        run: cargo build --manifest-path Cargo.toml
 
       - name: Cargo test (end_to_end under wasi)
         env:
           VALE_TEST_BACKEND: wasi
-        run: cargo test --manifest-path FrontendRust/Cargo.toml --lib end_to_end_tests -- --test-threads=4
+        run: cargo test --manifest-path Cargo.toml --lib end_to_end_tests -- --test-threads=4

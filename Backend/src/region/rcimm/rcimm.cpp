@@ -1035,7 +1035,7 @@ LLVMTypeRef RCImm::getExternalType(Reference* refMT) {
   // opaque handle.
   // The emitted handle typedefs (and the whole per-package C header ABI) are
   // pinned by the *_export_headers_golden tests in
-  // FrontendRust/src/end_to_end_tests/tests/externs.rs.
+  // src/end_to_end_tests/tests/externs.rs.
   if (dynamic_cast<InterfaceKind*>(refMT->kind)) {
     return globalState->getFfiHandleStructs()->getInterfaceHandleStructLT();
   }

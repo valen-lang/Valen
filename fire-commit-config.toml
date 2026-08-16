@@ -35,12 +35,12 @@ new_ignore            = { enabled = true, allow = ["docs/**"] }
 # standalone `cargo build`: nextest rebuilds, so a build right before it is redundant (and the tool
 # drops such a step anyway).
 [[repo.tests]]
-cmd = "cargo nextest run --manifest-path FrontendRust/Cargo.toml"
+cmd = "cargo nextest run --manifest-path Cargo.toml"
 env = {}
 when_changed = []
 
 [[repo.tests]]
-cmd = "cargo nextest run --manifest-path FrontendRust/Cargo.toml"
+cmd = "cargo nextest run --manifest-path Cargo.toml"
 env = { VALE_TEST_BACKEND = "wasi" }
 when_changed = []
 
@@ -49,9 +49,9 @@ when_changed = []
 # needs `rustc-dev` (`rustup component add rustc-dev --toolchain <pinned>`); without it this command
 # fails rather than skips — install it, or `fire override green` if the change is unrelated.
 [[repo.tests]]
-cmd = "cargo test --manifest-path FrontendRust/Cargo.toml --lib --features rust_interop"
+cmd = "cargo test --manifest-path Cargo.toml --lib --features rust_interop"
 env = {}
-when_changed = ["FrontendRust/src/typing/rust_interop/**"]
+when_changed = ["src/typing/rust_interop/**"]
 
 # Externals, located by path; each carries its own fire-commit-config.toml. Both are plain clones
 # here (independent checkouts, gitignored in this repo), not submodules.

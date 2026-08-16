@@ -65,8 +65,8 @@ The pattern: when the conflict spans a wholesale rewrite (e.g. clap CLI), `git c
 ### 5. After each resolution: fast checks
 
 ```
-cargo check --manifest-path ./FrontendRust/Cargo.toml --lib --bins
-cargo check --manifest-path ./FrontendRust/Cargo.toml --tests
+cargo check --manifest-path ./Cargo.toml --lib --bins
+cargo check --manifest-path ./Cargo.toml --tests
 ```
 
 Conflict resolution often leaves callsites that pass too many or too few args (because experimental trimmed a function signature that master's callsite still uses). `cargo check` catches those immediately. Fix, `git add -u`, `git cherry-pick --continue`.
@@ -75,7 +75,7 @@ Conflict resolution often leaves callsites that pass too many or too few args (b
 
 ### 6. Before sync: the full fire-commit test matrix
 
-`cargo check` is not sufficient. Before reporting done or asking for `fire commit`, run the full matrix from `docs/skills/fire-commit.md` — at minimum `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml`, plus any subtree the cherry-picked commits could have rippled into (Backend extern suite for VAST/CLI-flag changes, etc.). Skipping the matrix is the failure mode that ships broken tips to `experimental`.
+`cargo check` is not sufficient. Before reporting done or asking for `fire commit`, run the full matrix from `docs/skills/fire-commit.md` — at minimum `cargo nextest run --manifest-path ./Cargo.toml`, plus any subtree the cherry-picked commits could have rippled into (Backend extern suite for VAST/CLI-flag changes, etc.). Skipping the matrix is the failure mode that ships broken tips to `experimental`.
 
 ### 7. Don't sync until `fire commit`
 

@@ -1,6 +1,6 @@
 // POD C struct shared with FrontendRust across the backend FFI. Field
 // order and types must stay in sync with the Rust mirror in
-// FrontendRust/src/backend_ffi/mod.rs.
+// src/backend_ffi/mod.rs.
 
 #ifndef backend_options_ffi_h
 #define backend_options_ffi_h

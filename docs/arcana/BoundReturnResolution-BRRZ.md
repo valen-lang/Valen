@@ -12,7 +12,7 @@ BRRZ is a relaxation of `ResolveSR`'s puzzle in `compiler_solver.rs`, plus a sec
 
 **Mid-solve real resolution is safe here (unlike what SFWPRL might suggest).** `findFunction` reads only from caller's snapshotted env, settled `CompilerOutputs` caches, and freshly-constructed inner solvers. The outer solver's in-flight state is never read. The `CompilerOutputs.signatureToFunction` cache terminates nested stamping recursion. Per SROACSD, `ResolveSR` and `DefinitionFuncSR` never coexist in the same rule set, so there's no rule-ordering hazard with a sibling `DefinitionFuncSR` declaring something the lookup would need.
 
-**Where BRRZ is triggered today.** `where func(&G, int)E` bounds in `FrontendRust/src/builtins/resources/arrays.vale:36,52` (the `Array<M, E, G>` builtins). User-level calls like `Array<imm>(3, lambda)` and `#[](10, lambda)` both flow through these bounds and exercise BRRZ. The minimal non-array repro is in `FrontendRust/src/typing/test/after_regions_tests.rs` — "Bound-driven return rune cannot be inferred from lambda (MSAE general)".
+**Where BRRZ is triggered today.** `where func(&G, int)E` bounds in `src/builtins/resources/arrays.vale:36,52` (the `Array<M, E, G>` builtins). User-level calls like `Array<imm>(3, lambda)` and `#[](10, lambda)` both flow through these bounds and exercise BRRZ. The minimal non-array repro is in `src/typing/test/after_regions_tests.rs` — "Bound-driven return rune cannot be inferred from lambda (MSAE general)".
 
 **What callers gain.** The previously-required `Array<mut, int>(n, lambda)` can now be written `Array<mut>(n, lambda)` or even `#[](n, lambda)`, with the element type inferred from the lambda's return.
 

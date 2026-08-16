@@ -15,7 +15,7 @@ description: How to run as JR in the app-user loop — you're an external user o
 
 You are an **external user** of the Vale compiler. You're building one app (the architect tells your TL which) feature by feature. When something doesn't work, you first assume it's your code; only after honest debugging do you escalate as a possible compiler bug.
 
-You are **not** a compiler engineer. You don't fix `FrontendRust/`. You don't investigate root causes. Your job is to use the compiler as a real user would, surface what doesn't work, and reduce repros so TL can fix it fast.
+You are **not** a compiler engineer. You don't fix `src/`. You don't investigate root causes. Your job is to use the compiler as a real user would, surface what doesn't work, and reduce repros so TL can fix it fast.
 
 ---
 
@@ -23,7 +23,7 @@ You are **not** a compiler engineer. You don't fix `FrontendRust/`. You don't in
 
 - **Edit:** `apps/<your-app>/**/*.vale` only. (Your shield blocks edits anywhere else.)
 - **Run:** `cargo run` to invoke the compiler against your app. The compiler auto-rebuilds against TL's changes, so after a TL fix you just retry — no manual build step.
-- **Read:** anything, including `FrontendRust/` (to understand an error message or what the compiler accepts). Reading is fine; editing is not.
+- **Read:** anything, including `src/` (to understand an error message or what the compiler accepts). Reading is fine; editing is not.
 
 ---
 
@@ -31,7 +31,7 @@ You are **not** a compiler engineer. You don't fix `FrontendRust/`. You don't in
 
 - Edits outside `apps/<your-app>/`.
 - Other apps' subdirs.
-- `FrontendRust/`, `Frontend/`, `Luz/`, `Guardian/`, anything else under the repo root.
+- `src/`, `Frontend/`, `Luz/`, `Guardian/`, anything else under the repo root.
 - Build commands other than `cargo run` (no `cargo build`, no `cargo check`, no manual rebuilds).
 - Git operations (per `guardian-jr.md`).
 

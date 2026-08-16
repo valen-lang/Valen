@@ -65,8 +65,8 @@ The pattern: when the conflict spans a wholesale rewrite, take experimental's ve
 ### 5. After each resolution: fast checks
 
 ```
-cargo check --manifest-path ./FrontendRust/Cargo.toml --lib --bins
-cargo check --manifest-path ./FrontendRust/Cargo.toml --tests
+cargo check --manifest-path ./Cargo.toml --lib --bins
+cargo check --manifest-path ./Cargo.toml --tests
 ```
 
 Conflict resolution often leaves callsites that pass too many or too few args (because experimental trimmed a function signature that master's callsite still uses). `cargo check` catches those immediately. Fix, `git add -u`, `git cherry-pick --continue`.
@@ -75,7 +75,7 @@ Conflict resolution often leaves callsites that pass too many or too few args (b
 
 ### 6. Before sync: the full fire-commit test matrix
 
-`cargo check` is not sufficient. Before reporting done or asking for `fire commit`, run the full matrix from `docs/skills/fire-commit.md` — at minimum `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml`, plus any subtree the cherry-picked commits could have rippled into.
+`cargo check` is not sufficient. Before reporting done or asking for `fire commit`, run the full matrix from `docs/skills/fire-commit.md` — at minimum `cargo nextest run --manifest-path ./Cargo.toml`, plus any subtree the cherry-picked commits could have rippled into.
 
 **The load-bearing end-to-end probe for master is VerdagonSite.** Build valec (debug — release trips a pre-existing MIR-cycle ICE), use it to rebuild vmdsitegen with `--region_override resilient-v3`, then render all 71 pages via `bash build.sh build all ...`. See `VerdagonSite/README.md` for exact invocation. Zero `fail|error|panic` in the build log + 71 output pages = green.
 

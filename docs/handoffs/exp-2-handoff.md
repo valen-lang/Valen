@@ -102,7 +102,7 @@ Everything else is reference; skip it until you need it.
 
 ## ►► PICK UP HERE ◄◄
 
-**Measure before quoting any count.** `cargo test --manifest-path FrontendRust/Cargo.toml --lib
+**Measure before quoting any count.** `cargo test --manifest-path Cargo.toml --lib
 --no-fail-fast`, then census first blockers with
 `grep -o "panicked at src/typing/[a-z_/]*\.rs:[0-9]*" <file> | sort | uniq -c | sort -rn` — the census
 says where the work is, and it moves far more than the total does.
@@ -1010,7 +1010,7 @@ Grouped by what you would do with them. **Everything here is traced from source 
 5. **`inner_find_reachable_allocations` (`testvm/heap.rs`) is missing THREE arms, not one.** `KindV` has 8 variants and it handles 5, so **`Str`, `Opaque`, AND `ArrayInstance`** hit a bare `panic!()`. Latent (one call path, one test, empty members) — but the `ArrayInstance` gap means the leak check would panic on any array-rooted heap before `str` even enters. Fix as one arm-set.
 6. **Loops skip their move check when the body is `Never`** — a body that always returns or breaks can unstackify an outer local with no diagnostic and no propagation. The same `While` arm also contains a **verbatim duplicate** of its own preceding block, and both report the wrong local (`body_unstackified_` where `body_restackified_` was meant).
 7. **The plain `Block` arm lacks the `continues` guard the `if` arm has** — it propagates child unstackifications to the parent unconditionally, so a bare block ending in `return`/`break` still pushes its marks upward.
-8. **`&self` is a parse-level stub.** The parser recognizes it (a two-token lookahead in `pattern_parser.rs` setting `self_borrow`), but postparsing builds a **rule-free `ImplicitRune`** — nothing ties it to the enclosing citizen and **the borrow-ness is discarded**. Related: bare `self` inside a citizen body **panics** in `function_scout.rs` with `POSTPARSER_SCOUT_FUNCTION_PARAM_TYPE_REQUIRED_NOT_YET_IMPLEMENTED`, contradicting a stale parser comment claiming it defaults to the containing struct. **And there is no `Self` type to desugar to** — no `"Self"` string anywhere in `FrontendRust/src`; `SelfRuneS` is dead, `SelfFullTypeRuneS` is macro-only, and `SelfNameS` is a *variable* name that never meets a user-written `CodeVarName("self")`. **Sequencing: implementing `&self` requires inventing `Self` first.**
+8. **`&self` is a parse-level stub.** The parser recognizes it (a two-token lookahead in `pattern_parser.rs` setting `self_borrow`), but postparsing builds a **rule-free `ImplicitRune`** — nothing ties it to the enclosing citizen and **the borrow-ness is discarded**. Related: bare `self` inside a citizen body **panics** in `function_scout.rs` with `POSTPARSER_SCOUT_FUNCTION_PARAM_TYPE_REQUIRED_NOT_YET_IMPLEMENTED`, contradicting a stale parser comment claiming it defaults to the containing struct. **And there is no `Self` type to desugar to** — no `"Self"` string anywhere in `src`; `SelfRuneS` is dead, `SelfFullTypeRuneS` is macro-only, and `SelfNameS` is a *variable* name that never meets a user-written `CodeVarName("self")`. **Sequencing: implementing `&self` requires inventing `Self` first.**
 9. **`SharednessImplingMismatch` doesn't exist and never did.** `impl_compiler.rs` validates exactly one citizen attribute across an impl — weakability — and zero `sharedness`. Confirmed absent from the Scala era too (the compiled class files survive; only `WeakableImplingMismatch` exists). So **`look_for_override`'s blind shape-copy rests on a convention, not an invariant**, and the instantiator makes the same unbacked assumption, deriving impl sharedness purely from the super interface. A mismatched impl compiles cleanly and then panics downstream with no useful diagnostic. **The fix shape is obvious: a `SharednessImplingMismatch` three lines from its precedent.**
 10. **`stdlib/src/ifunction/ifunction1.vale`** reads `interface IFunction1<M Mutability, P1 Ref, R Ref> M {` — the trailing `M` sits in the sharedness slot but is a **generic Mutability parameter** from pre-migration syntax; the lexer accepts only the literal `share` there, so **the file is unbuildable as written**. It is also the **only trace anywhere that sharedness was once template-parametric**, which would contradict the parse-time-known assumption in `struct_compiler.rs`. Same stale shape in `stdlib/src/str.vale`. (This is also the `IFunction1` with **no implementors** and an arity mismatch against its local twin under `tests/ifunction/`.)
 
@@ -1388,7 +1388,7 @@ Conventions and shapes a change here could break:
   asserts the retired rule outright. **Do not read the coercion table as a description of the tree.**
 - **The resolver structural-consistency principle** (Augment DIR1 Shared-arm reject-on-contradiction) — the specific check migrates to whatever mechanism enforces onion-typing structural constraints in the solver. Preserve the spirit, not the check.
 - **The "drop(bare_local) is a compile error, drop(^local) is mandatory" rule** — semantics, not representation. Preserve.
-- **6 rune-type-inference test fixtures** preserved verbatim in `FrontendRust/docs/regression-fixtures-from-retired-higher-typing.md` — cover pack literal (`Refs(int, bool)`), empty pack + `Prot[P, str]`, plain-param "undefined name" error, param-position / template-call / recursive-field rune-type-map assertions. Re-author against `KindListSR` + `KindTemplataType` + on-demand rune-type derivation (`derive_rune_to_type`) when the typing slice lands the rune-type solver at `typing/rune_typing/`.
+- **6 rune-type-inference test fixtures** preserved verbatim in `docs/regression-fixtures-from-retired-higher-typing.md` — cover pack literal (`Refs(int, bool)`), empty pack + `Prot[P, str]`, plain-param "undefined name" error, param-position / template-call / recursive-field rune-type-map assertions. Re-author against `KindListSR` + `KindTemplataType` + on-demand rune-type derivation (`derive_rune_to_type`) when the typing slice lands the rune-type solver at `typing/rune_typing/`.
 
 ### Deferred test coverage (add after the main goals land)
 
@@ -1755,19 +1755,19 @@ Under onion typing, the borrow-of-share dispatch (sub-slice-4b) that would have 
 
 ```bash
 # Library build (fastest check)
-cargo check --manifest-path FrontendRust/Cargo.toml --lib > tmp/onion-arc.txt 2>&1
+cargo check --manifest-path Cargo.toml --lib > tmp/onion-arc.txt 2>&1
 
 # Full test suite
-cargo test --manifest-path FrontendRust/Cargo.toml --lib --no-fail-fast > tmp/onion-arc.txt 2>&1
+cargo test --manifest-path Cargo.toml --lib --no-fail-fast > tmp/onion-arc.txt 2>&1
 grep "test result" tmp/onion-arc.txt | tail -1
 
 # Specific test (fastest for diagnosing one failure)
-cargo test --manifest-path FrontendRust/Cargo.toml --lib <test_name_substring> --no-fail-fast > tmp/onion-arc.txt 2>&1
+cargo test --manifest-path Cargo.toml --lib <test_name_substring> --no-fail-fast > tmp/onion-arc.txt 2>&1
 ```
 
 **Per CLAUDE.md**: pipe build/test output to a single fixed file for the session, not a new file per command. Never chain heavy commands with `| tail` / `| grep` / `| head` — redirect fully, then inspect the file with a separate command.
 
-**Never use `cd FrontendRust && cargo ...`** — always `--manifest-path FrontendRust/Cargo.toml`.
+**Never use `cd FrontendRust && cargo ...`** — always `--manifest-path Cargo.toml`.
 
 **Suite state:** RED — typing is re-linked and mid-slice. PICK UP HERE gives the command that measures it. Before quoting any number, note the traps: `--lib` hides all tests, deleting a dead import raises the count, and a live parse error blanks a file's diagnostics.
 
@@ -1794,9 +1794,9 @@ Don't put in a comment marker (`// ZLOOK`, `// ZHERE`, `// VCOORD`, etc.) unless
 **Repo standards:**
 - `CLAUDE.md` (project root) — standing rules for this repo.
 - `~/.claude/CLAUDE.md` (your user global) — global rules (no `cd && cargo`, etc.).
-- `FrontendRust/docs/skills/valec-reviewer.md` — reviewer notes (never discard Err payload; no jargon-soup / historical / timeline comments; count-gating rules).
+- `docs/skills/valec-reviewer.md` — reviewer notes (never discard Err payload; no jargon-soup / historical / timeline comments; count-gating rules).
 - `Luz/skills/prose-reviewer.md` — comment/prose rules (invariant framing, active voice, front-loading, generalization).
-- `FrontendRust/src/typing/docs/skills/typing-reviewer.md` — typing-pass reviewer notes.
+- `src/typing/docs/skills/typing-reviewer.md` — typing-pass reviewer notes.
 - `docs/skills/tdd.md` — RFIGA workflow (R/F/I/G/A per slice).
 - `docs/skills/diagnose.md` — root-cause protocol.
 - `docs/skills/fire-commit.md` — commit + push protocol.

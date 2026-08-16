@@ -4,7 +4,7 @@
 
 `.github/workflows/ci.yml` runs three jobs on push and PR:
 
-1. **`build_and_test_ubuntu`**: installs LLVM 16 + clang-16, builds `FrontendRust/`, runs `cargo test`, packages a Linux release zip.
+1. **`build_and_test_ubuntu`**: installs LLVM 16 + clang-16, builds `src/`, runs `cargo test`, packages a Linux release zip.
 2. **`build_and_test_mac`**: same as Ubuntu but on `macos-latest` via Homebrew `llvm@16`.
 3. **`build_and_test_docker`**: builds the `scripts/docker/Dockerfile` image, runs `docker run valec --version` as a smoke test.
 
@@ -13,8 +13,8 @@ That's the whole story. **CI does not run the Backend extern suite, does not exe
 ## Reproducing CI locally
 
 ```
-cargo build --manifest-path FrontendRust/Cargo.toml
-cargo test --manifest-path FrontendRust/Cargo.toml
+cargo build --manifest-path Cargo.toml
+cargo test --manifest-path Cargo.toml
 ```
 
 These two commands are sufficient to predict CI's pass/fail. If both succeed locally, CI will almost certainly pass (modulo platform-specific LLVM/clang link issues).
@@ -22,7 +22,7 @@ These two commands are sufficient to predict CI's pass/fail. If both succeed loc
 For the faster, more informative test run:
 
 ```
-cargo nextest run --manifest-path FrontendRust/Cargo.toml
+cargo nextest run --manifest-path Cargo.toml
 ```
 
 The nextest output is parallelized and per-test-timed; `cargo test` is serial and noisier. Target: **1402/1402 + 22 skipped** on master as of June 2026.
@@ -32,7 +32,7 @@ The nextest output is parallelized and per-test-timed; `cargo test` is serial an
 ### Release build trips a MIR-cycle ICE
 
 ```
-cargo build --release --manifest-path FrontendRust/Cargo.toml --bin valec
+cargo build --release --manifest-path Cargo.toml --bin valec
 # error[E0391]: cycle detected when optimizing MIR for ...
 # at src/postparsing/expressions.rs:243 PartialEq derive
 ```
@@ -65,7 +65,7 @@ ls -d ../VmdSiteGen ../VmdParse ../ParseIter ../Snippet
 
 ```bash
 # 1. Build valec (debug — release trips the MIR cycle).
-cargo build --manifest-path FrontendRust/Cargo.toml --bin valec
+cargo build --manifest-path Cargo.toml --bin valec
 
 # 2. Compile vmdsitegen via valec.
 cd ../VmdSiteGen

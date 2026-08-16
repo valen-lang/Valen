@@ -1,12 +1,12 @@
 ---
-g_read_when: Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).
+g_read_when: Read when planning or making a large change to the typing pass (src/typing/).
 g_mention_in:
   - CLAUDE.md
 ---
 
 # Typing Pass — AI Change Guide
 
-**What this is.** The things to keep in mind *before and while* making any large change to the typing pass (`FrontendRust/src/typing/`). It is the "what's easy to get wrong / what to never do" layer that sits on top of the architecture. The authoritative architecture lives in `docs/architecture/typing-pass-design-v3.md` — this guide points into it rather than restating it.
+**What this is.** The things to keep in mind *before and while* making any large change to the typing pass (`src/typing/`). It is the "what's easy to get wrong / what to never do" layer that sits on top of the architecture. The authoritative architecture lives in `docs/architecture/typing-pass-design-v3.md` — this guide points into it rather than restating it.
 
 **Audience.** Whoever is reasoning about a non-trivial typing-pass change: the architect, the TL/reviewer, or an AI doing the work. (The migration junior "JR" does *not* have access to this file; when citing it to JR, paraphrase the rule inline.)
 
@@ -20,11 +20,11 @@ Before a large change, read these in full:
 
 1. **This file**, top to bottom.
 2. **`docs/architecture/typing-pass-design-v3.md`** — arena/lifetime model (Part 1), the god struct (Part 2), envs (Part 3), CompilerOutputs (Part 4), the type system (Part 6). This is the architecture; everything below assumes it.
-3. **`FrontendRust/docs/arcana/SealedInternedConstruction-SICZ.md`** — the `MustIntern` seal; `IdT`-style types are constructible only via the interner.
-4. **`FrontendRust/docs/arcana/IdentityEqualityOnIdentityBearingTypes-IEOIBZ.md`** — identity-bearing types impl `PartialEq` via `std::ptr::eq`; wrappers derive.
-5. **`FrontendRust/docs/arcana/WhenValuesShouldBeInterned-WVSBIZ.md`** — Interned vs Value-type, Scala-parity rule.
-6. **`FrontendRust/docs/arcana/IdenticalInputsIdenticalOutputs-IIIOZ.md`**.
-7. **`FrontendRust/zen/migration_principles.md`** — DCCR, RCSBASC, architect escape hatch.
+3. **`docs/arcana/SealedInternedConstruction-SICZ.md`** — the `MustIntern` seal; `IdT`-style types are constructible only via the interner.
+4. **`docs/arcana/IdentityEqualityOnIdentityBearingTypes-IEOIBZ.md`** — identity-bearing types impl `PartialEq` via `std::ptr::eq`; wrappers derive.
+5. **`docs/arcana/WhenValuesShouldBeInterned-WVSBIZ.md`** — Interned vs Value-type, Scala-parity rule.
+6. **`docs/arcana/IdenticalInputsIdenticalOutputs-IIIOZ.md`**.
+7. **`zen/migration_principles.md`** — DCCR, RCSBASC, architect escape hatch.
 8. **`Luz/shields/ScalaParityDuringMigration-SPDMX.md`** and **`.../ScalaCommentParity-SCPX.md`** — the two shields you'll fight most.
 
 ---
@@ -148,5 +148,5 @@ The TL ↔ JR ↔ architect loop — the roles, the `for-tl.md`/`for-jr.md` esca
 
 Two typing-pass-specific notes the skill doesn't cover:
 
-- **Test promotion.** Body migration is test-driven: pick the active (un-`#[ignore]`'d) test, run it (`cargo nextest run --manifest-path ./FrontendRust/Cargo.toml`), implement the panic it hits, then un-ignore the next-simplest test (roughly top-to-bottom within a file, simplest file first). Keep passed tests un-ignored as regression guards.
-- **Scope discipline.** When a design diverges from `docs/architecture/typing-pass-design-v3.md`, record it in `FrontendRust/docs/reasoning/<topic>.md` and then update the design doc; announce any doc edits in the hand-back summary rather than folding them into a diff.
+- **Test promotion.** Body migration is test-driven: pick the active (un-`#[ignore]`'d) test, run it (`cargo nextest run --manifest-path ./Cargo.toml`), implement the panic it hits, then un-ignore the next-simplest test (roughly top-to-bottom within a file, simplest file first). Keep passed tests un-ignored as regression guards.
+- **Scope discipline.** When a design diverges from `docs/architecture/typing-pass-design-v3.md`, record it in `docs/reasoning/<topic>.md` and then update the design doc; announce any doc edits in the hand-back summary rather than folding them into a diff.

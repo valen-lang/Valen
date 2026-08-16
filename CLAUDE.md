@@ -2,7 +2,7 @@
 
 **Never commit unless the architect says the literal phrase "fire commit" or "fire commit temporary" — no other phrasing ("just commit", "go ahead", "ship it", etc.) authorizes a commit.**
 
-This is the Vale compiler. The `FrontendRust/` tree is a Rust compiler frontend.
+This is the Vale compiler. The `src/` tree is a Rust compiler frontend.
 
 ## Build & Test
 
@@ -43,12 +43,12 @@ grep "error" ./tmp/fixing-bug-1047-quest.txt
 ```
 
 ```bash
-cargo test --manifest-path ./FrontendRust/Cargo.toml --lib > ./tmp/fixing-borrowing-test.txt 2>&1
+cargo test --manifest-path ./Cargo.toml --lib > ./tmp/fixing-borrowing-test.txt 2>&1
 grep "test result" ./tmp/fixing-borrowing-test.txt
 # Later, to see a different part:
 tail -30 ./tmp/fixing-borrowing-test.txt
 # Later, do some changes to the code, and then same command into same file:
-cargo test --manifest-path ./FrontendRust/Cargo.toml --lib > ./tmp/fixing-borrowing-test.txt 2>&1
+cargo test --manifest-path ./Cargo.toml --lib > ./tmp/fixing-borrowing-test.txt 2>&1
 grep "test result" ./tmp/fixing-borrowing-test.txt
 ```
 
@@ -64,10 +64,10 @@ Instead, they must be separate entire commands.
 DON'T use a different file for each build like this:
 
 ```bash
-cargo test --manifest-path ./FrontendRust/Cargo.toml --lib > ./tmp/borrowing-build1.txt 2>&1
+cargo test --manifest-path ./Cargo.toml --lib > ./tmp/borrowing-build1.txt 2>&1
 grep "test result" ./tmp/borrowing-build1.txt
 # BAD: Don't use a different file
-cargo test --manifest-path ./FrontendRust/Cargo.toml --lib > ./tmp/borrowing-build2.txt 2>&1
+cargo test --manifest-path ./Cargo.toml --lib > ./tmp/borrowing-build2.txt 2>&1
 grep "test result" ./tmp/borrowing-build2.txt
 ```
 
@@ -75,9 +75,9 @@ Instead, use the same file.
 
 ## SEE ALSO (auto)
 
-- **Read when writing an `r#"..."#` raw string containing embedded Vale source in a Rust test.** → FrontendRust/docs/shields/MultiLineValeFixtures-MLVFX.md
 - **Read when decoding the compact id shorthand used in docs/Generics.md, investigation notes, or comments — forms like `dis$0`, `Foo<^int>`, `MySome.bound:drop:66`.** → docs/arcana/IdShorthandNotation-ISNZ.md
-- **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
+- **Read when planning or making a large change to the typing pass (src/typing/).** → docs/architecture/typing-pass-ai-guide.md
+- **Read when writing an `r#"..."#` raw string containing embedded Vale source in a Rust test.** → docs/shields/MultiLineValeFixtures-MLVFX.md
 - **Read when reviewing a plan document or code, to flag suspicious patterns — newly-visible mutation, field mutation instead of methods, and fallbacks.** → docs/skills/approach-review.md
 - **Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.** → docs/skills/bug-repro.md
 - **Read when the human asks to close, end, or shut down the current Claude Code session.** → docs/skills/close-session.md
@@ -111,7 +111,7 @@ Instead, use the same file.
 - **Read when reviewing or writing typing-pass tests (or other tests that walk the AST with collect_ macros).** → docs/skills/test-review.md
 - **Read when the human asks for two-phase communication, or wants an answer followed by a plain-language restatement below a separator line.** → docs/skills/two-phase.md
 - **Read when an API has obligations callers must remember (call X before Y, don't forget Z), when the same construction is hand-rolled across many call sites, or when runtime assertions guard "did you do this yet".** → docs/skills/type-enforced-apis.md
-- **Read when reviewing or writing code in the typing pass (FrontendRust/src/typing/).** → docs/skills/typing-reviewer.md
+- **Read when reviewing or writing code in the typing pass (src/typing/).** → docs/skills/typing-reviewer.md
 - **Read when editing `vcoord-handoff.md` or any other long-lived handoff or plan doc.** → docs/skills/update-handoff.md
 - **Read when a human asks you to use the mailbox to send mail, or you have trouble arming a mail watcher.** → docs/skills/use-mailbox.md
 - **Read when reviewing a plan document or FrontendRust code, to flag suspicious patterns — new jargon, broken existing patterns, and creation-order changes that reduce decoupling.** → docs/skills/valec-approach-review.md

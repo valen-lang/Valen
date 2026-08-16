@@ -19,7 +19,7 @@ hashes are stable.
   function below exists there in working form. The pre-onion Rust is the best recovery source — it was
   a faithful, green port.
 - Files moved during the refactor. Recover bodies with (note the `./` — the git root is one level
-  above `FrontendRust/`):
+  above `src/`):
   - `git show f1dc30f48:./src/typing/expression/local_helper.rs`
   - `git show f1dc30f48:./src/typing/expression/expression_compiler.rs`
   - `git show f1dc30f48:./src/typing/overload_resolver.rs`

@@ -243,7 +243,7 @@ One instance per typing pass, allocated in `'t` early. Every env carries `global
 
 ### 3.8 Why Not Two-Tier Per-Denizen Arenas (Yet)
 
-The migration-phase design uses one `'t` typing arena. A post-migration redesign splits into a program-wide `'out` outputs arena and per-top-level-denizen `'scratch` arenas. Full write-up: `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`. Not in scope for this migration.
+The migration-phase design uses one `'t` typing arena. A post-migration redesign splits into a program-wide `'out` outputs arena and per-top-level-denizen `'scratch` arenas. Full write-up: `docs/reasoning/environments-per-denizen-long-term.md`. Not in scope for this migration.
 
 ---
 
@@ -375,7 +375,7 @@ Every lifetime-parameterized struct in this section has an implicit `where 's: '
 - `PlaceholderTemplataT[+T <: ITemplataType]` → `PlaceholderTemplataT<'s, 't>` with `tyype: ITemplataType<'s>` (the widest existing postparser enum, *not* `ITemplataT` — the field holds a type *descriptor*, not a templata value)
 - `PrototypeTemplataT[T <: IFunctionNameT]` → `PrototypeTemplataT<'s, 't>` (no inner generic; just holds `&'t PrototypeT`)
 
-Rationale + alternatives are recorded in `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md`.
+Rationale + alternatives are recorded in `docs/reasoning/idt-typed-view-alternatives.md`.
 
 **Erasure rule: widen the field to match the bound, not the enclosing trait.** `IdT[+T <: INameT]` has `local_name: T` — the bound is `INameT`, so the erased field is `INameT<'s, 't>`. `PlaceholderTemplataT[+T <: ITemplataType]` has `tyype: T` — the bound is `ITemplataType`, so the erased field is `ITemplataType<'s>`. A common mistake is widening to `ITemplataT<'s, 't>` (the *value* enum), but `ITemplataType` and `ITemplataT` are different type families: `ITemplataType<'s>` is a postparser-defined type *descriptor* ("what kind of templata?" — e.g. `IntegerTemplataType`, `MutabilityTemplataType`), while `ITemplataT<'s, 't>` is an actual templata *value* ("what does this templata hold?" — e.g. `Integer(42)`, `Kind(&'t StructTT)`). `ITemplataType` is `'s`-only because it never holds typing-pass data.
 
@@ -385,7 +385,7 @@ Rationale + alternatives are recorded in `FrontendRust/docs/reasoning/idt-typed-
 
 The Interned-vs-Value-type rule (Scala's `IInterning` is the spec, plus `IdT` as a Rust-side divergence), the `MustIntern` seal pattern, and the dual-enum (Val + canonical) lookup machinery are documented in @WVSBIZ ("Scala Parity Overrides The Heuristics"), @SICZ, and @DSAUIMZ. Read those before adding a new Interned type. The typing-pass-specific shape:
 
-**Currently sealed (21 types):** `IdT`, the 15 transient (slice-bearing) Name types (`ImplNameT`, `ImplBoundNameT`, `OverrideDispatcherNameT`, `OverrideDispatcherCaseNameT`, `ExternFunctionNameT`, `FunctionNameT`, `FunctionBoundNameT`, `PredictedFunctionNameT`, `LambdaCallFunctionTemplateNameT`, `LambdaCallFunctionNameT`, `StructNameT`, `InterfaceNameT`, `AnonymousSubstructImplNameT`, `AnonymousSubstructConstructorNameT`, `AnonymousSubstructNameT`), and the 5 kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT`). The ~57 simple Name types (`PrimitiveNameT`, `PackageTopLevelNameT`, etc.) are Interned per Scala-parity but **not yet sealed** — extending the seal requires `*NameValT` mirrors. Tracked in `FrontendRust/docs/todo.md`.
+**Currently sealed (21 types):** `IdT`, the 15 transient (slice-bearing) Name types (`ImplNameT`, `ImplBoundNameT`, `OverrideDispatcherNameT`, `OverrideDispatcherCaseNameT`, `ExternFunctionNameT`, `FunctionNameT`, `FunctionBoundNameT`, `PredictedFunctionNameT`, `LambdaCallFunctionTemplateNameT`, `LambdaCallFunctionNameT`, `StructNameT`, `InterfaceNameT`, `AnonymousSubstructImplNameT`, `AnonymousSubstructConstructorNameT`, `AnonymousSubstructNameT`), and the 5 kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT`). The ~57 simple Name types (`PrimitiveNameT`, `PackageTopLevelNameT`, etc.) are Interned per Scala-parity but **not yet sealed** — extending the seal requires `*NameValT` mirrors. Tracked in `docs/todo.md`.
 
 **Family-level `intern_*` HashMaps (4 families):**
 - `intern_name(INameValT) -> INameT` — names. The 15 transient ones above carry `'tmp` per @DSAUIMZ; the ~57 simple ones reuse the canonical as Val.
@@ -593,13 +593,13 @@ For the rest (`'s` outlives `'t`, AASSNCMCX, copy-out-before-`&mut`, speculative
 
 ## Risks / Open Questions
 
-- **LSP / long-running use**: scout arena retention through instantiation is memory-heavy; single-arena typing makes batch-only the safe mode. See `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
-- **Post-migration design revisits**: the inline-owned-wrapper philosophy makes casts free but gives up compile-time "this IdT's local_name is a FunctionName" assertions. See `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md`.
+- **LSP / long-running use**: scout arena retention through instantiation is memory-heavy; single-arena typing makes batch-only the safe mode. See `docs/reasoning/environments-per-denizen-long-term.md`.
+- **Post-migration design revisits**: the inline-owned-wrapper philosophy makes casts free but gives up compile-time "this IdT's local_name is a FunctionName" assertions. See `docs/reasoning/idt-typed-view-alternatives.md`.
 - **TypingInterner perf**: six hashbrown HashMap maps with heterogeneous `'tmp`→`'t` lookup via Equivalent. Works today but hasn't been measured. Profile before optimizing.
 - **Body migration ordering**: the panic stubs have implicit dependency ordering — some bodies call other stubbed methods. The test-driven approach naturally discovers this, but expect some batches to require implementing a chain of 3-5 bodies before a test passes end-to-end.
 - **Incremental compilation**: serializing HinputsT to disk requires a serialization boundary that breaks `'s` refs. Batch compilation only for now.
 - **Parallelization**: single-threaded design (`!Sync` arenas, stack CompilerOutputs). Per-function parallelization is a later topic.
-- **Typing storage → two-tier per-denizen arenas**: scheduled as a post-body-migration redesign. See `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
+- **Typing storage → two-tier per-denizen arenas**: scheduled as a post-body-migration redesign. See `docs/reasoning/environments-per-denizen-long-term.md`.
 
 ---
 
@@ -608,23 +608,23 @@ For the rest (`'s` outlives `'t`, AASSNCMCX, copy-out-before-`&mut`, speculative
 | Path | Purpose |
 |---|---|
 | `docs/architecture/typing-pass-design-v3.md` | this doc — architecture + design decisions |
-| `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md` | two-tier per-denizen target + LSP direction |
-| `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` | IdT monomorphic / typed-view decision |
-| `FrontendRust/docs/reasoning/` | other design-decision docs |
-| `FrontendRust/src/typing/names/names.rs` | ~3100 lines: all name types, IdT, From/TryFrom bridges, ValT companions |
-| `FrontendRust/src/typing/types/types.rs` | KindT + sub-enums + concrete Kind payloads |
-| `FrontendRust/src/typing/templata/templata.rs` | ITemplataT + payload structs |
-| `FrontendRust/src/typing/ast/ast.rs` | PrototypeT, SignatureT, IdT-holding structs |
-| `FrontendRust/src/typing/ast/expressions.rs` | ~2100 lines: 3 enums + 53 payload structs |
-| `FrontendRust/src/typing/compiler_outputs.rs` | CompilerOutputs 23-field struct + 54 methods |
-| `FrontendRust/src/typing/templata_compiler.rs` | all 49 method sigs; IBoundArgumentsSource enum + IPlaceholderSubstituter trait |
-| `FrontendRust/src/typing/compiler_error_reporter.rs` | ICompileErrorT 55-variant enum |
-| `FrontendRust/src/typing/typing_interner.rs` | 560 lines: 6-family HashMap design, ~84 wrappers |
-| `FrontendRust/src/typing/compiler.rs` | god struct (Compiler, 4 fields) |
-| `FrontendRust/src/typing/hinputs_t.rs` | HinputsT real-fielded with new() constructor |
-| `FrontendRust/src/typing/compilation.rs` | TypingPassOptions, run_typing_pass entry point |
-| `FrontendRust/src/typing/env/environment.rs` | 5 of 9 env types + wrapper enums + GlobalEnvironmentT + TemplatasStoreT |
-| `FrontendRust/src/typing/env/function_environment_t.rs` | 4 of 9 env types + builders + variables |
-| `FrontendRust/src/typing/env/i_env_entry.rs` | IEnvEntryT 5-variant enum |
-| `FrontendRust/src/typing/test/` | 14 test files; 173 test bodies ready to drive body migration |
+| `docs/reasoning/environments-per-denizen-long-term.md` | two-tier per-denizen target + LSP direction |
+| `docs/reasoning/idt-typed-view-alternatives.md` | IdT monomorphic / typed-view decision |
+| `docs/reasoning/` | other design-decision docs |
+| `src/typing/names/names.rs` | ~3100 lines: all name types, IdT, From/TryFrom bridges, ValT companions |
+| `src/typing/types/types.rs` | KindT + sub-enums + concrete Kind payloads |
+| `src/typing/templata/templata.rs` | ITemplataT + payload structs |
+| `src/typing/ast/ast.rs` | PrototypeT, SignatureT, IdT-holding structs |
+| `src/typing/ast/expressions.rs` | ~2100 lines: 3 enums + 53 payload structs |
+| `src/typing/compiler_outputs.rs` | CompilerOutputs 23-field struct + 54 methods |
+| `src/typing/templata_compiler.rs` | all 49 method sigs; IBoundArgumentsSource enum + IPlaceholderSubstituter trait |
+| `src/typing/compiler_error_reporter.rs` | ICompileErrorT 55-variant enum |
+| `src/typing/typing_interner.rs` | 560 lines: 6-family HashMap design, ~84 wrappers |
+| `src/typing/compiler.rs` | god struct (Compiler, 4 fields) |
+| `src/typing/hinputs_t.rs` | HinputsT real-fielded with new() constructor |
+| `src/typing/compilation.rs` | TypingPassOptions, run_typing_pass entry point |
+| `src/typing/env/environment.rs` | 5 of 9 env types + wrapper enums + GlobalEnvironmentT + TemplatasStoreT |
+| `src/typing/env/function_environment_t.rs` | 4 of 9 env types + builders + variables |
+| `src/typing/env/i_env_entry.rs` | IEnvEntryT 5-variant enum |
+| `src/typing/test/` | 14 test files; 173 test bodies ready to drive body migration |
 | `.claude/hooks/check-scala-comments` | pre-commit hook guarding `/* scala */` blocks |

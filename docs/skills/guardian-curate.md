@@ -72,7 +72,7 @@ convention.
 cargo run --manifest-path ./Guardian/Cargo.toml --release --bin guardian \
   -- test-shield \
   --shield <path/to/Shield-CODE.md> \
-  --config ./FrontendRust/guardian.toml \
+  --config ./guardian.toml \
   --cache-dir /tmp/guardian-cache \
   --log-level overview \
   > ./tmp/guardian-curate.txt 2>&1
@@ -151,7 +151,7 @@ For each shield with cases in `cases/need-implementor-changes/`:
 
 ### Step 7: Sweep Stale Temp-Disables
 
-Run `grep -rn "temp-disable:" FrontendRust/src/` to find any `Guardian:
+Run `grep -rn "temp-disable:" src/` to find any `Guardian:
 temp-disable:` annotations left in source files from previous sessions
 that didn't finish cleanup. These live inside `/* ... */` comment blocks.
 

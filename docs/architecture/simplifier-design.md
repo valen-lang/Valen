@@ -783,27 +783,27 @@ The caller can run either or both. `'h` stays alive as long as either consumer h
 | `docs/architecture/simplifier-design.md` | this doc — architecture + design decisions |
 | `docs/architecture/typing-pass-design-v3.md` | two passes upstream — foundational sister doc |
 | `docs/architecture/instantiator-design.md` | direct upstream pass — sister doc |
-| `FrontendRust/src/simplifying/hammer.rs` | god struct `Hammer` + top-level `translate` + `Locals` + `flatten_and_filter_voids` / `consecutive` / `consecrash` + mangling stubs |
-| `FrontendRust/src/simplifying/hammer_interner.rs` | `HammerInterner` — 3 HashMap families, `MustIntern` seal, arena utilities |
-| `FrontendRust/src/simplifying/hammer_arena.rs` | `HammerArena<'h>` thin newtype around `&'h Bump` |
-| `FrontendRust/src/simplifying/hammer_compilation.rs` | 6-lifetime driver wrapper, options, `get_hamuts` cache |
-| `FrontendRust/src/simplifying/hamuts.rs` | `Hamuts` 15-field accumulator + mutator API + paired accessors |
-| `FrontendRust/src/simplifying/name_hammer.rs` | name translation; `impl Hammer::translate_full_name` + free fns `simplify_id` / `simplify_name` / `simplify_kind` / `simplify_coord` / `simplify_templata` / `translate_package_coordinate` |
-| `FrontendRust/src/simplifying/type_hammer.rs` | `translate_kind` / `translate_coord` / `translate_coords` / `translate_prototype` / array translation |
-| `FrontendRust/src/simplifying/struct_hammer.rs` | struct/interface/edge translation + `make_box` for closure boxing |
-| `FrontendRust/src/simplifying/function_hammer.rs` | `translate_functions` + `translate_function` + attributes |
-| `FrontendRust/src/simplifying/block_hammer.rs` | block translation + `Mutabilify`/`Immutabilify` (mostly stubbed) |
-| `FrontendRust/src/simplifying/expression_hammer.rs` | the mega-match over `RE::*` + `translate_deferreds` + `translate_if` + `translate_while` + extern/interface calls |
-| `FrontendRust/src/simplifying/let_hammer.rs` | Let, restackify, destructuring lets; `BOX_MEMBER_INDEX` module const |
-| `FrontendRust/src/simplifying/load_hammer.rs` | local/member loads, address↔reference conversion |
-| `FrontendRust/src/simplifying/mutate_hammer.rs` | local/member stores |
-| `FrontendRust/src/simplifying/von_hammer.rs` | ~32 `vonify_*` methods; VON wire-format emission (largest file in the pass) |
-| `FrontendRust/src/simplifying/conversions.rs` | small I→H enum conversion table (Mutability/Variability/Ownership/Location) |
-| `FrontendRust/src/simplifying/test/test_compilation.rs` | standard test `HammerCompilation` builder |
-| `FrontendRust/src/final_ast/ast.rs` | `ProgramH`, `PackageH`, definitions, `PrototypeH`, `IdH`, `FunctionRefH`, exports/externs |
-| `FrontendRust/src/final_ast/types.rs` | `CoordH`, `KindHT` (11 variants), the 4 sealed kind payloads + `*ValH` mirrors, ownership/location/mutability/variability, `OpaqueHT`, `SimpleId`/`SimpleIdStep`, `CodeLocation` |
-| `FrontendRust/src/final_ast/instructions.rs` | `ExpressionH` (50 variants) + ~50 payload structs + `IExpressionH` 2-variant wrapper + `Local`/`VariableIdH` + `result_type` dispatcher |
-| `FrontendRust/src/final_ast/metal_printer.rs` | 4-line empty stub; the actual serializer is `von_hammer.rs`. Consider deleting. |
-| `FrontendRust/src/von/ast.rs` | `IVonData` + `VonObject`/`VonArray`/`VonMember`/`VonStr`/`VonInt`/`VonBool`/`VonFloat` — heap-owned, no lifetimes |
-| `FrontendRust/src/testvm/vivem.rs` | `execute_with_primitive_args` / `execute_with_heap` — testvm entry that reads `&'h ProgramH` |
+| `src/simplifying/hammer.rs` | god struct `Hammer` + top-level `translate` + `Locals` + `flatten_and_filter_voids` / `consecutive` / `consecrash` + mangling stubs |
+| `src/simplifying/hammer_interner.rs` | `HammerInterner` — 3 HashMap families, `MustIntern` seal, arena utilities |
+| `src/simplifying/hammer_arena.rs` | `HammerArena<'h>` thin newtype around `&'h Bump` |
+| `src/simplifying/hammer_compilation.rs` | 6-lifetime driver wrapper, options, `get_hamuts` cache |
+| `src/simplifying/hamuts.rs` | `Hamuts` 15-field accumulator + mutator API + paired accessors |
+| `src/simplifying/name_hammer.rs` | name translation; `impl Hammer::translate_full_name` + free fns `simplify_id` / `simplify_name` / `simplify_kind` / `simplify_coord` / `simplify_templata` / `translate_package_coordinate` |
+| `src/simplifying/type_hammer.rs` | `translate_kind` / `translate_coord` / `translate_coords` / `translate_prototype` / array translation |
+| `src/simplifying/struct_hammer.rs` | struct/interface/edge translation + `make_box` for closure boxing |
+| `src/simplifying/function_hammer.rs` | `translate_functions` + `translate_function` + attributes |
+| `src/simplifying/block_hammer.rs` | block translation + `Mutabilify`/`Immutabilify` (mostly stubbed) |
+| `src/simplifying/expression_hammer.rs` | the mega-match over `RE::*` + `translate_deferreds` + `translate_if` + `translate_while` + extern/interface calls |
+| `src/simplifying/let_hammer.rs` | Let, restackify, destructuring lets; `BOX_MEMBER_INDEX` module const |
+| `src/simplifying/load_hammer.rs` | local/member loads, address↔reference conversion |
+| `src/simplifying/mutate_hammer.rs` | local/member stores |
+| `src/simplifying/von_hammer.rs` | ~32 `vonify_*` methods; VON wire-format emission (largest file in the pass) |
+| `src/simplifying/conversions.rs` | small I→H enum conversion table (Mutability/Variability/Ownership/Location) |
+| `src/simplifying/test/test_compilation.rs` | standard test `HammerCompilation` builder |
+| `src/final_ast/ast.rs` | `ProgramH`, `PackageH`, definitions, `PrototypeH`, `IdH`, `FunctionRefH`, exports/externs |
+| `src/final_ast/types.rs` | `CoordH`, `KindHT` (11 variants), the 4 sealed kind payloads + `*ValH` mirrors, ownership/location/mutability/variability, `OpaqueHT`, `SimpleId`/`SimpleIdStep`, `CodeLocation` |
+| `src/final_ast/instructions.rs` | `ExpressionH` (50 variants) + ~50 payload structs + `IExpressionH` 2-variant wrapper + `Local`/`VariableIdH` + `result_type` dispatcher |
+| `src/final_ast/metal_printer.rs` | 4-line empty stub; the actual serializer is `von_hammer.rs`. Consider deleting. |
+| `src/von/ast.rs` | `IVonData` + `VonObject`/`VonArray`/`VonMember`/`VonStr`/`VonInt`/`VonBool`/`VonFloat` — heap-owned, no lifetimes |
+| `src/testvm/vivem.rs` | `execute_with_primitive_args` / `execute_with_heap` — testvm entry that reads `&'h ProgramH` |
 | `Frontend/SimplifyingPass/src/dev/vale/simplifying/` | Scala source of truth |

@@ -60,7 +60,7 @@ If the `contextified-diff` subcommand doesn't exist yet, fall back to a manual a
 1. Get the definition boundaries (find the fn/struct/enum block start and end)
 2. Run `git diff HEAD -- <file>` to get the raw diff
 3. Extract the portion relevant to this definition
-4. Format it similarly to the contextified diffs in `FrontendRust/guardian-logs/` (look at an example for the format)
+4. Format it similarly to the contextified diffs in `guardian-logs/` (look at an example for the format)
 
 **Verify the output.** Read the contextified diff and check that:
 - It contains the code around where the `// VV:` comment was

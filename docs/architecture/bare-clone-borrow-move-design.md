@@ -311,11 +311,11 @@ The original Phases A (target-side coercion in `convert_helper.rs`), A.5 (class-
 | D | Postfix `^` / `&` syntax: parser changes. Add `x^` and `x&` as expression suffixes; preserve prefix-`&` short-term during transition, then retire. | `parsing/expression_parser.rs`, `postparsing/expression_scout.rs` |
 | D.5 | `x&.foo()` / `x^.foo()` method-call receiver syntax. Lex/parse `&.` and `^.` as combined receiver-borrow / receiver-move tokens. | `parsing/expression_parser.rs` |
 | E | (LANDED) Q1 H-IR arc — `LocalLoadH(target=Borrow)` on primitive honestly produces `MutableBorrowH+YonderH+prim`, CopyPrimH does the borrow→value conversion. | — |
-| F | Backend: widen `primitives.h` asserts to accept primitive borrows; construct primitive borrow Refs ad-hoc at `metal_lowerer`. | `Backend/src/region/common/primitives.h`, `FrontendRust/src/backend_ffi/metal_lowerer.rs` |
+| F | Backend: widen `primitives.h` asserts to accept primitive borrows; construct primitive borrow Refs ad-hoc at `metal_lowerer`. | `Backend/src/region/common/primitives.h`, `src/backend_ffi/metal_lowerer.rs` |
 | G | Lambda capture list parser + typing-pass capture-mode handling for `[x]` / `[x&]` / `[x^]`. Also depends on the share-lambda / own-lambda syntactic split (see vcoord-handoff.md § "Future direction: split lambdas"). | `parsing/expression_parser.rs`, `postparsing/expression_scout.rs`, `typing/expression/expression_compiler.rs` (closure path) |
 | H | `share` → `class` keyword rename: lexer/parser. Intermediate accepts both `struct Foo share` and `struct Foo class`; eventually only the standalone `class Foo { ... }` form. Test-program sweep. | `parsing/parser.rs`, all `*.vale` files using `share` |
 | I | `@T` syntax retires. Remove from parser; sweep test programs that still use it. | `parsing/templex_parser.rs`, test programs |
-| J | TSUGAR sweep: remove `__copy_prim(...)` wraps in builtin Vale + test programs. Verify by running suite. Also delete source-level `__copy_prim` syntax (CopyPrimSE, IRulexSR::CopyPrim, scout handler, typing-pass syntax branch). Keep CopyPrimTE/IE/H/Backend::CopyPrim for the operation. | `FrontendRust/src/builtins/`, `FrontendRust/src/tests/`, `FrontendRust/src/integration_tests/`, postparsing/ |
+| J | TSUGAR sweep: remove `__copy_prim(...)` wraps in builtin Vale + test programs. Verify by running suite. Also delete source-level `__copy_prim` syntax (CopyPrimSE, IRulexSR::CopyPrim, scout handler, typing-pass syntax branch). Keep CopyPrimTE/IE/H/Backend::CopyPrim for the operation. | `src/builtins/`, `src/tests/`, `src/integration_tests/`, postparsing/ |
 
 **Estimated total scope:** ~3–5 days of focused work, plus the migration sweep (~250–350 site
 touches across builtins + test programs, net line-count reduction of ~100 lines). Each phase has
@@ -343,18 +343,18 @@ annotation of move-vs-clone intent.
 
 ## Verification at completion
 
-1. `cargo nextest run --manifest-path FrontendRust/Cargo.toml --lib --no-fail-fast` — must hold
+1. `cargo nextest run --manifest-path Cargo.toml --lib --no-fail-fast` — must hold
    1166 / 0 / N (N ≤ pre-arc skipped count).
-2. `git grep '__copy_prim'` in `FrontendRust/src/tests/` and `FrontendRust/src/integration_tests/`
+2. `git grep '__copy_prim'` in `src/tests/` and `src/integration_tests/`
    returns zero source-position hits (only in builtin definitions and as the intrinsic name).
-3. `git grep 'TSUGAR' FrontendRust/src/` — count roughly halved (only `&` / member-access markers
+3. `git grep 'TSUGAR' src/` — count roughly halved (only `&` / member-access markers
    remain).
 4. The 7 unresolved-marker comments in the cut's diff reduce to ≤1 (the `tup0.vale` design
    question if not resolved).
 5. `CoordT` / `CoordI` / `CoordH` constructors assert: kind is primitive ⇒ ownership ∈ {Own,
    Borrow, Weak}. Share+primitive becomes statically impossible to construct.
 6. `git grep '\bshare\b'` in test programs returns zero hits (all migrated to `class`).
-7. `git grep '@\w' FrontendRust/src/tests/programs/*.vale` returns zero `@T`-style usages.
+7. `git grep '@\w' src/tests/programs/*.vale` returns zero `@T`-style usages.
 
 ## Open questions
 
