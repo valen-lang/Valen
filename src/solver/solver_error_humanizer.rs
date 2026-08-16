@@ -1,10 +1,9 @@
-
-use crate::utils::range::{CodeLocationS, RangeS};
-use crate::solver::solver::ISolverError;
 use crate::solver::solver::FailedSolve;
-use std::cmp::max;
+use crate::solver::solver::ISolverError;
 use crate::utils::fx::HashMap;
 use crate::utils::fx::HashSet;
+use crate::utils::range::{CodeLocationS, RangeS};
+use std::cmp::max;
 use std::hash::Hash;
 
 pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType>(
@@ -29,10 +28,12 @@ where
 {
   let error_body = match &result.error {
     ISolverError::SolverConflict(c) => {
-      format!("Conflict, thought rune {} was {} but now concluding it's {}",
+      format!(
+        "Conflict, thought rune {} was {} but now concluding it's {}",
         humanize_rune(c.rune),
         humanize_conclusion(c.previous_conclusion),
-        humanize_conclusion(c.new_conclusion))
+        humanize_conclusion(c.new_conclusion)
+      )
     }
     ISolverError::SolveIncomplete(_) => {
       let names: Vec<String> = result.unsolved_runes.iter().map(|r| humanize_rune(*r)).collect();
@@ -41,24 +42,36 @@ where
     ISolverError::RuleError(rule_err) => humanize_rule_error(&rule_err.err),
   };
   let _verbose = true;
-  let rules_to_summarize: Vec<&Rule> = result.unsolved_rules.iter()
+  let rules_to_summarize: Vec<&Rule> = result
+    .unsolved_rules
+    .iter()
     .filter(|rule| !get_rule_range(rule).file().is_internal())
     .collect();
   let all_line_begin_locs: Vec<CodeLocationS<'a>> = {
-    let raw: Vec<CodeLocationS<'a>> = rules_to_summarize.iter().flat_map(|rule| {
-      let range = get_rule_range(rule);
-      lines_between(&range.begin, &range.end).into_iter().map(|r| r.begin)
-    }).collect();
+    let raw: Vec<CodeLocationS<'a>> = rules_to_summarize
+      .iter()
+      .flat_map(|rule| {
+        let range = get_rule_range(rule);
+        lines_between(&range.begin, &range.end).into_iter().map(|r| r.begin)
+      })
+      .collect();
     let mut distinct = Vec::<CodeLocationS<'a>>::new();
-    for item in raw { if !distinct.contains(&item) { distinct.push(item); } }
+    for item in raw {
+      if !distinct.contains(&item) {
+        distinct.push(item);
+      }
+    }
     distinct
   };
   let all_rune_usages: Vec<(RuneId, RangeS<'a>)> = {
-    let raw: Vec<(RuneId, RangeS<'a>)> = rules_to_summarize.iter()
-      .flat_map(|rule| get_rune_usages(rule))
-      .collect();
+    let raw: Vec<(RuneId, RangeS<'a>)> =
+      rules_to_summarize.iter().flat_map(|rule| get_rune_usages(rule)).collect();
     let mut distinct = Vec::<(RuneId, RangeS<'a>)>::new();
-    for item in raw { if !distinct.contains(&item) { distinct.push(item); } }
+    for item in raw {
+      if !distinct.contains(&item) {
+        distinct.push(item);
+      }
+    }
     distinct
   };
   let line_begin_loc_to_rune_usage: HashMap<i32, Vec<(RuneId, RangeS<'a>)>> = {
@@ -69,61 +82,91 @@ where
     }
     map
   };
-  let incomplete_conclusions: HashMap<RuneId, Conclusion> = result.steps.iter()
-    .flat_map(|step| step.conclusions.iter().map(|(r, c)| (*r, *c)))
-    .collect();
+  let incomplete_conclusions: HashMap<RuneId, Conclusion> =
+    result.steps.iter().flat_map(|step| step.conclusions.iter().map(|(r, c)| (*r, *c))).collect();
   let text_from_user_rules: String = {
     let mut sorted_locs = all_line_begin_locs.clone();
     sorted_locs.sort_by_key(|loc| loc.offset);
-    sorted_locs.iter().map(|loc| {
-      let line = line_containing(loc);
-      let rune_lines: String = line_begin_loc_to_rune_usage.get(&loc.offset).map(|usages| {
-        let mut sorted_usages = usages.clone();
-        sorted_usages.sort_by_key(|u| -u.1.begin.offset);
-        sorted_usages.iter().map(|(rune, range)| {
-          let num_spaces = range.begin.offset - loc.offset;
-          let num_arrows = max(range.end.offset - range.begin.offset, 1);
-          let rune_name = humanize_rune(*rune);
-          let conclusion_str = incomplete_conclusions.get(rune)
-            .map(|c| humanize_conclusion(*c))
-            .unwrap_or_else(|| "(unknown)".to_string());
-          format!("{}{} {}: {}\n",
-            " ".repeat(num_spaces as usize),
-            "^".repeat(num_arrows as usize),
-            rune_name,
-            conclusion_str)
-        }).collect()
-      }).unwrap_or_default();
-      format!("{}\n{}", line, rune_lines)
-    }).collect()
+    sorted_locs
+      .iter()
+      .map(|loc| {
+        let line = line_containing(loc);
+        let rune_lines: String = line_begin_loc_to_rune_usage
+          .get(&loc.offset)
+          .map(|usages| {
+            let mut sorted_usages = usages.clone();
+            sorted_usages.sort_by_key(|u| -u.1.begin.offset);
+            sorted_usages
+              .iter()
+              .map(|(rune, range)| {
+                let num_spaces = range.begin.offset - loc.offset;
+                let num_arrows = max(range.end.offset - range.begin.offset, 1);
+                let rune_name = humanize_rune(*rune);
+                let conclusion_str = incomplete_conclusions
+                  .get(rune)
+                  .map(|c| humanize_conclusion(*c))
+                  .unwrap_or_else(|| "(unknown)".to_string());
+                format!(
+                  "{}{} {}: {}\n",
+                  " ".repeat(num_spaces as usize),
+                  "^".repeat(num_arrows as usize),
+                  rune_name,
+                  conclusion_str
+                )
+              })
+              .collect()
+          })
+          .unwrap_or_default();
+        format!("{}\n{}", line, rune_lines)
+      })
+      .collect()
   };
   let text_from_steps: String = {
     let fold_result = result.steps.iter().fold(
       ("".to_string(), HashSet::<RuneId>::default()),
       |(string_so_far, previously_printed), step| {
-        let new_string = format!("{}{}{}{}{}",
+        let new_string = format!(
+          "{}{}{}{}{}",
           if !step.complex && step.solved_rules.is_empty() { "Supplied:" } else { "" },
-          if step.complex { if step.solved_rules.is_empty() { "(complex)" } else { "(complex)  " } } else { "" },
-          step.solved_rules.iter().map(|(_, r)| rule_to_string(r)).collect::<Vec<_>>().join("  ") + "\n",
+          if step.complex {
+            if step.solved_rules.is_empty() {
+              "(complex)"
+            } else {
+              "(complex)  "
+            }
+          } else {
+            ""
+          },
+          step.solved_rules.iter().map(|(_, r)| rule_to_string(r)).collect::<Vec<_>>().join("  ")
+            + "\n",
           {
-            let mut entries: Vec<(&RuneId, &Conclusion)> = step.conclusions.iter()
+            let mut entries: Vec<(&RuneId, &Conclusion)> = step
+              .conclusions
+              .iter()
               .filter(|(rune, _)| !previously_printed.contains(rune))
               .collect();
             entries.sort_by_key(|(rune, _)| humanize_rune(**rune));
-            entries.iter()
-              .map(|(rune, conclusion)| format!("  {}: {}\n", humanize_rune(**rune), humanize_conclusion(**conclusion)))
+            entries
+              .iter()
+              .map(|(rune, conclusion)| {
+                format!("  {}: {}\n", humanize_rune(**rune), humanize_conclusion(**conclusion))
+              })
               .collect::<String>()
           },
-          step.added_rules.iter()
+          step
+            .added_rules
+            .iter()
             .map(|r| format!("  added rule: {}\n", rule_to_string(r)))
             .collect::<String>(),
         );
         let mut new_printed = previously_printed;
         new_printed.extend(step.conclusions.keys().copied());
         (string_so_far + &new_string, new_printed)
-      }
+      },
     );
-    let unsolved_rules_str: String = result.unsolved_rules.iter()
+    let unsolved_rules_str: String = result
+      .unsolved_rules
+      .iter()
       .map(|r| format!("Unsolved rule: {}\n", rule_to_string(r)))
       .collect();
     let unsolved_runes_str = if !result.unsolved_runes.is_empty() {
@@ -137,4 +180,3 @@ where
   let text = format!("{}\n{}{}", error_body, text_from_user_rules, text_from_steps);
   (text, all_line_begin_locs)
 }
-

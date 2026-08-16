@@ -1,14 +1,13 @@
 // Run with: cargo test --manifest-path Cargo.toml --lib parsing::tests::rules::rule_tests
 
-
-use bumpalo::Bump;
 use crate::cast;
-use crate::parse_arena::ParseArena;
+use crate::collect_only_rulex;
 use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::tests::traverse::NodeRefP;
 use crate::parsing::tests::utils::*;
-use crate::collect_only_rulex;
+use bumpalo::Bump;
 
 fn compile<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -95,4 +94,3 @@ fn func() {
   assert!(func.parameters.is_empty());
   assert_templex_name(func.return_type, "T");
 }
-

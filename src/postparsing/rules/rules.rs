@@ -1,12 +1,11 @@
 use crate::interner::StrI;
-use crate::postparsing::names::IRuneS;
-use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, ITemplataType, IntegerTemplataType, StringTemplataType,
 };
+use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::names::IRuneS;
 use crate::postparsing::rules::types::ITypeST;
 use crate::utils::range::RangeS;
-
 
 /// A `where implements(Sub, Super)` clause. The bound itself is not a rule — it deduces nothing,
 /// so it is recorded on the denizen and judged after the solve rather than during it.
@@ -29,8 +28,6 @@ pub struct ImplBoundS<'s> {
   /// would demand a conclusion that never arrives.
   pub result_rune: RuneUsage<'s>,
 }
-
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IRulexSR<'s> {
@@ -66,7 +63,6 @@ impl<'s> IRulexSR<'s> {
     }
   }
 
-
   pub fn rune_usages<'r>(&'r self) -> Vec<RuneUsage<'s>> {
     match self {
       IRulexSR::Equals(x) => vec![x.left.clone(), x.right.clone()],
@@ -83,9 +79,15 @@ impl<'s> IRulexSR<'s> {
         usages.extend(x.members.iter().cloned());
         usages
       }
-      IRulexSR::CallSiteFunc(x) => vec![x.prototype_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
-      IRulexSR::DefinitionFunc(x) => vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
-      IRulexSR::Resolve(x) => vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
+      IRulexSR::CallSiteFunc(x) => {
+        vec![x.prototype_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()]
+      }
+      IRulexSR::DefinitionFunc(x) => {
+        vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()]
+      }
+      IRulexSR::Resolve(x) => {
+        vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()]
+      }
       IRulexSR::BorrowRef(x) => {
         let mut usages = vec![x.result_rune.clone(), x.inner_rune.clone()];
         if let RegionSR::Rune(region_rune) = &x.region {
@@ -97,9 +99,7 @@ impl<'s> IRulexSR<'s> {
       IRulexSR::OwnRef(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
     }
   }
-
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct EqualsSR<'s> {
@@ -116,7 +116,7 @@ pub struct ResolveSR<'s> {
   pub params_list_rune: RuneUsage<'s>, // VCOORD: get rid of this in favor of params_types
   pub params_types: &'s [ITypeST<'s>],
   pub return_rune: RuneUsage<'s>, // VCOORD: get rid of this in favor of return_type
-  pub return_type: ITypeST<'s>
+  pub return_type: ITypeST<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -143,7 +143,6 @@ pub struct LiteralSR<'s> {
   pub rune: RuneUsage<'s>,
   pub literal: ILiteralSL<'s>,
 }
-
 
 // A rule that looks up something by name in the enclosing environment.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -205,7 +204,6 @@ pub struct KindListSR<'s> {
   pub members: &'s [RuneUsage<'s>],
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RuneUsage<'s> {
   pub range: RangeS<'s>,
@@ -227,47 +225,37 @@ impl<'s> ILiteralSL<'s> {
       ILiteralSL::BoolLiteral(x) => x.get_type(),
     }
   }
-
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IntLiteralSL {
   pub value: i64,
 }
 
-
 impl IntLiteralSL {
   pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::IntegerTemplataType(IntegerTemplataType {})
   }
-
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StringLiteralSL<'s> {
   pub value: StrI<'s>,
 }
 
-
 impl<'s> StringLiteralSL<'s> {
   pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::StringTemplataType(StringTemplataType {})
   }
-
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BoolLiteralSL {
   pub value: bool,
 }
 
-
 impl BoolLiteralSL {
   pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::BooleanTemplataType(BooleanTemplataType {})
   }
-
 }

@@ -1,12 +1,11 @@
-
-use bumpalo::Bump;
 use crate::cast;
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::{INameDeclarationP, ITemplexPT, PatternPP};
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
+use bumpalo::Bump;
 
 fn compile<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -25,10 +24,7 @@ fn simple_int() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ int");
   let destination = pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
   assert!(pattern.destructure.is_none());
@@ -54,10 +50,7 @@ fn empty_pattern() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_");
   let destination = pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   assert!(pattern.templex.is_none());
   assert!(pattern.destructure.is_none());
@@ -132,4 +125,3 @@ fn capture_with_destructure_with_type_outside() {
   assert!(b_pattern.templex.is_none());
   assert!(b_pattern.destructure.is_none());
 }
-

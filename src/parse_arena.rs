@@ -1,13 +1,11 @@
-
-
 // AFTERM: figure out how to deduplicate all the common code across these interners
 // (ParseArena, ScoutArena, and future TypingArena all share string/coord interning)
 
 use crate::interner::{InternedSlice, StrI};
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
+use crate::utils::fx::HashMap;
 use bumpalo::Bump;
 use std::cell::RefCell;
-use crate::utils::fx::HashMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ptr::eq;
@@ -93,18 +91,12 @@ impl<'p> ParseArena<'p> {
     packages: &[StrI<'p>],
   ) -> &'p PackageCoordinate<'p> {
     let mut inner = self.inner.borrow_mut();
-    let lookup_coord = PackageCoordinate {
-      module,
-      packages: InternedSlice::new(packages),
-    };
+    let lookup_coord = PackageCoordinate { module, packages: InternedSlice::new(packages) };
     if let Some(existing) = inner.package_coord_to_ref.get(&lookup_coord) {
       return *existing;
     }
     let arena_packages = self.bump.alloc_slice_copy(packages);
-    let coord = PackageCoordinate {
-      module,
-      packages: InternedSlice::new(arena_packages),
-    };
+    let coord = PackageCoordinate { module, packages: InternedSlice::new(arena_packages) };
     let new_ref: &'p PackageCoordinate<'p> = self.bump.alloc(coord.clone());
     inner.package_coord_to_ref.insert(coord, new_ref);
     new_ref
@@ -117,23 +109,14 @@ impl<'p> ParseArena<'p> {
     filepath: &str,
   ) -> &'p FileCoordinate<'p> {
     let mut inner = self.inner.borrow_mut();
-    let lookup_key = FileCoordLookupKey {
-      package_coord,
-      filepath: filepath.to_string(),
-    };
+    let lookup_key = FileCoordLookupKey { package_coord, filepath: filepath.to_string() };
     if let Some(existing) = inner.file_coord_to_ref.get(&lookup_key) {
       return *existing;
     }
     let arena_filepath = self.bump.alloc_str(filepath);
-    let coord = FileCoordinate {
-      package_coord,
-      filepath: StrI(arena_filepath),
-    };
+    let coord = FileCoordinate { package_coord, filepath: StrI(arena_filepath) };
     let new_ref: &'p FileCoordinate<'p> = self.bump.alloc(coord.clone());
-    let insert_key = FileCoordLookupKey {
-      package_coord,
-      filepath: filepath.to_string(),
-    };
+    let insert_key = FileCoordLookupKey { package_coord, filepath: filepath.to_string() };
     inner.file_coord_to_ref.insert(insert_key, new_ref);
     new_ref
   }

@@ -1,8 +1,7 @@
-
-use std::hash::{Hash, Hasher};
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::fmt::Result;
+use std::hash::{Hash, Hasher};
 use std::ptr::eq;
 
 /// Value-type (see @TFITCX)
@@ -24,27 +23,29 @@ use std::ptr::eq;
 pub struct PtrKey<'t, T: ?Sized>(pub &'t T);
 
 impl<'t, T: ?Sized> PartialEq for PtrKey<'t, T> {
-    fn eq(&self, other: &Self) -> bool {
-        eq(self.0, other.0)
-    }
+  fn eq(&self, other: &Self) -> bool {
+    eq(self.0, other.0)
+  }
 }
 
 impl<'t, T: ?Sized> Eq for PtrKey<'t, T> {}
 
 impl<'t, T: ?Sized> Hash for PtrKey<'t, T> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.0 as *const T as *const ()).hash(state)
-    }
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    (self.0 as *const T as *const ()).hash(state)
+  }
 }
 
 impl<'t, T: ?Sized> Copy for PtrKey<'t, T> {}
 
 impl<'t, T: ?Sized> Clone for PtrKey<'t, T> {
-    fn clone(&self) -> Self { *self }
+  fn clone(&self) -> Self {
+    *self
+  }
 }
 
 impl<'t, T: ?Sized + Debug> Debug for PtrKey<'t, T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "PtrKey({:p})", self.0 as *const T)
-    }
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    write!(f, "PtrKey({:p})", self.0 as *const T)
+  }
 }

@@ -1,336 +1,384 @@
-use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
-use crate::typing::overload_resolver::{FindFunctionFailure, IFindFunctionFailureReason};
-use crate::typing::infer_compiler::IResolvingError;
-use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::solver::solver::{FailedSolve, ISolverError};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
+use crate::typing::compiler::Compiler;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::compiler_outputs::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::compiler_outputs::*;
-use crate::typing::templata::templata::*;
-use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::function::function_compiler::StampFunctionSuccess;
+use crate::typing::infer::compiler_solver::ITypingPassSolverError;
+use crate::typing::infer_compiler::IResolvingError;
+use crate::typing::names::names::*;
+use crate::typing::overload_resolver::{FindFunctionFailure, IFindFunctionFailureReason};
+use crate::typing::templata::templata::*;
+use crate::typing::types::types::*;
 use crate::utils::fx::IndexMap;
+use crate::utils::range::RangeS;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    pub fn evaluate_call(
-      &self,
-      coutputs: &mut CompilerOutputs<'s, 't>,
-      nenv: &mut NodeEnvironmentBox<'s, 't>,
-      life: LocationInFunctionEnvironmentT<'t>,
-      range: &[RangeS<'s>],
-      call_location: LocationInDenizen<'s>,
-      context_region: RegionT,
-      callable_expr: ExpressionTE<'s, 't>,
-      explicit_template_arg_rules_s: &[IRulexSR<'s>],
-      explicit_template_arg_runes_s: &[IRuneS<'s>],
-      receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
-      given_args_exprs_2: &[ExpressionTE<'s, 't>],
-    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        match callable_expr.result() {
-            KindT::Never(NeverT { from_break: true }) => { panic!("vwat"); }
-            KindT::Never(NeverT { from_break: false }) | KindT::Bool(_) => {
-                panic!("wot {:?}", callable_expr.result());
-            }
-            KindT::OverloadSet(overload_set) => {
-                let unconverted_args_pointer_types_2: Vec<KindT<'s, 't>> =
-                    given_args_exprs_2.iter().map(|e| e.result()).collect();
+  pub fn evaluate_call(
+    &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    nenv: &mut NodeEnvironmentBox<'s, 't>,
+    life: LocationInFunctionEnvironmentT<'t>,
+    range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    context_region: RegionT,
+    callable_expr: ExpressionTE<'s, 't>,
+    explicit_template_arg_rules_s: &[IRulexSR<'s>],
+    explicit_template_arg_runes_s: &[IRuneS<'s>],
+    receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
+    given_args_exprs_2: &[ExpressionTE<'s, 't>],
+  ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+    match callable_expr.result() {
+      KindT::Never(NeverT { from_break: true }) => {
+        panic!("vwat");
+      }
+      KindT::Never(NeverT { from_break: false }) | KindT::Bool(_) => {
+        panic!("wot {:?}", callable_expr.result());
+      }
+      KindT::OverloadSet(overload_set) => {
+        let unconverted_args_pointer_types_2: Vec<KindT<'s, 't>> =
+          given_args_exprs_2.iter().map(|e| e.result()).collect();
 
-                // We want to get the prototype here, not the entire header, because
-                // we might be in the middle of a recursive call like:
-                // func main():Int(main())
-              let calling_env = overload_set.env;
-              let function_name = *overload_set.name;
-              let extra_envs_to_look_in = &[];
-              let potential_banner = self.find_function(
-                calling_env,
-                coutputs,
-                range,
-                call_location,
-                function_name,
-                explicit_template_arg_rules_s,
-                explicit_template_arg_runes_s,
-                receiving_rune_to_explicit_template_arg_rune,
-                context_region,
-                &unconverted_args_pointer_types_2,
-                extra_envs_to_look_in,
-                false,
-                false)?;
-                // VCOORD: simplify
-              let stamp_result = match (match potential_banner {
-                Err(e) => Ok(Err(e)),
-                Ok(potential_banner) => {
-                  Ok(Ok(StampFunctionSuccess {
-                    prototype: potential_banner.prototype,
-                    inferences: IndexMap::default(),
-                  }))
-                }
-              })?
-                {
-                    Err(e @ FindFunctionFailure { name: IImpreciseNameS::CodeName(CodeNameS { name: as_name }), .. }) if *as_name == self.keywords.r#as => {
-                        let isa_failures: Vec<(KindT<'s, 't>, KindT<'s, 't>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>)> =
-                            e.rejected_callee_to_reason.iter().filter_map(|(_, reason)| {
-                                match reason {
-                                    IFindFunctionFailureReason::InferFailure { reason: fs } => {
-                                        match &fs.error {
-                                            ISolverError::RuleError(rule_err) => {
-                                                match &rule_err.err {
-                                                    ITypingPassSolverError::IsaFailed { sub, suuper } => Some((*sub, *suuper, fs.clone())),
-                                                    _ => None,
-                                                }
-                                            }
-                                            _ => None,
-                                        }
-                                    }
-                                    IFindFunctionFailureReason::FindFunctionResolveFailure { reason: IResolvingError::ResolvingSolveFailedOrIncomplete(fs) } => {
-                                        match &fs.error {
-                                            ISolverError::RuleError(rule_err) => {
-                                                match &rule_err.err {
-                                                    ITypingPassSolverError::IsaFailed { sub, suuper } => Some((*sub, *suuper, fs.clone())),
-                                                    _ => None,
-                                                }
-                                            }
-                                            _ => None,
-                                        }
-                                    }
-                                    _ => None,
-                                }
-                            }).collect();
-                        if !isa_failures.is_empty() {
-                            let (sub, suuper, _) = isa_failures[0].clone();
-                            // The error carries whole rejection reasons, so the solve failures we
-                            // sifted out above go back into their IResolvingError shape.
-                            let candidates: Vec<IResolvingError<'s, 't>> =
-                                isa_failures.into_iter()
-                                    .map(|(_, _, fs)| IResolvingError::ResolvingSolveFailedOrIncomplete(fs))
-                                    .collect();
-                            return Err(ICompileErrorT::CantDowncastUnrelatedTypes {
-                                range: self.typing_interner.alloc_slice_copy(range),
-                                source_kind: suuper,
-                                target_kind: sub,
-                                candidates: self.typing_interner.alloc_slice_from_vec(candidates),
-                            });
-                        } else {
-                            return Err(ICompileErrorT::CouldntFindFunctionToCallT {
-                                range: self.typing_interner.alloc_slice_copy(range),
-                                fff: e,
-                            });
-                        }
+        // We want to get the prototype here, not the entire header, because
+        // we might be in the middle of a recursive call like:
+        // func main():Int(main())
+        let calling_env = overload_set.env;
+        let function_name = *overload_set.name;
+        let extra_envs_to_look_in = &[];
+        let potential_banner = self.find_function(
+          calling_env,
+          coutputs,
+          range,
+          call_location,
+          function_name,
+          explicit_template_arg_rules_s,
+          explicit_template_arg_runes_s,
+          receiving_rune_to_explicit_template_arg_rune,
+          context_region,
+          &unconverted_args_pointer_types_2,
+          extra_envs_to_look_in,
+          false,
+          false,
+        )?;
+        // VCOORD: simplify
+        let stamp_result = match (match potential_banner {
+          Err(e) => Ok(Err(e)),
+          Ok(potential_banner) => Ok(Ok(StampFunctionSuccess {
+            prototype: potential_banner.prototype,
+            inferences: IndexMap::default(),
+          })),
+        })? {
+          Err(
+            e @ FindFunctionFailure {
+              name: IImpreciseNameS::CodeName(CodeNameS { name: as_name }),
+              ..
+            },
+          ) if *as_name == self.keywords.r#as => {
+            let isa_failures: Vec<(
+              KindT<'s, 't>,
+              KindT<'s, 't>,
+              FailedSolve<
+                IRulexSR<'s>,
+                IRuneS<'s>,
+                ITemplataT<'s, 't>,
+                ITypingPassSolverError<'s, 't>,
+              >,
+            )> = e
+              .rejected_callee_to_reason
+              .iter()
+              .filter_map(|(_, reason)| match reason {
+                IFindFunctionFailureReason::InferFailure { reason: fs } => match &fs.error {
+                  ISolverError::RuleError(rule_err) => match &rule_err.err {
+                    ITypingPassSolverError::IsaFailed { sub, suuper } => {
+                      Some((*sub, *suuper, fs.clone()))
                     }
-                    Err(e) => return Err(ICompileErrorT::CouldntFindFunctionToCallT {
-                        range: self.typing_interner.alloc_slice_copy(range),
-                        fff: e,
-                    }),
-                    Ok(x) => x,
-                };
-
-                let snapshot = nenv.snapshot(self.typing_interner);
-                let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
-                let param_types = stamp_result.prototype.param_types();
-                let args_exprs_2 =
-                    self.convert_exprs(
-                        nenv, life, coutputs, range, call_location,
-                        context_region, given_args_exprs_2, &param_types)?;
-
-                self.check_types(
-                    coutputs,
-                    snapshot_env,
-                    range,
-                    call_location,
-                    &param_types,
-                    &args_exprs_2.iter().map(|a| a.result()).collect::<Vec<_>>(),
-                    true);
-
-                assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id).is_some());
-                let result_te = stamp_result.prototype.return_type;
-                Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
-                    stamp_result.prototype,
-                    self.typing_interner.alloc_slice_from_vec(args_exprs_2),
-                    result_te,
-                ))))
+                    _ => None,
+                  },
+                  _ => None,
+                },
+                IFindFunctionFailureReason::FindFunctionResolveFailure {
+                  reason: IResolvingError::ResolvingSolveFailedOrIncomplete(fs),
+                } => match &fs.error {
+                  ISolverError::RuleError(rule_err) => match &rule_err.err {
+                    ITypingPassSolverError::IsaFailed { sub, suuper } => {
+                      Some((*sub, *suuper, fs.clone()))
+                    }
+                    _ => None,
+                  },
+                  _ => None,
+                },
+                _ => None,
+              })
+              .collect();
+            if !isa_failures.is_empty() {
+              let (sub, suuper, _) = isa_failures[0].clone();
+              // The error carries whole rejection reasons, so the solve failures we
+              // sifted out above go back into their IResolvingError shape.
+              let candidates: Vec<IResolvingError<'s, 't>> = isa_failures
+                .into_iter()
+                .map(|(_, _, fs)| IResolvingError::ResolvingSolveFailedOrIncomplete(fs))
+                .collect();
+              return Err(ICompileErrorT::CantDowncastUnrelatedTypes {
+                range: self.typing_interner.alloc_slice_copy(range),
+                source_kind: suuper,
+                target_kind: sub,
+                candidates: self.typing_interner.alloc_slice_from_vec(candidates),
+              });
+            } else {
+              return Err(ICompileErrorT::CouldntFindFunctionToCallT {
+                range: self.typing_interner.alloc_slice_copy(range),
+                fff: e,
+              });
             }
-            other => {
-                self.evaluate_custom_call(
-                    nenv,
-                    coutputs,
-                    life,
-                    range,
-                    call_location,
-                    context_region,
-                    other,
-                    explicit_template_arg_rules_s,
-                    explicit_template_arg_runes_s,
-                    receiving_rune_to_explicit_template_arg_rune,
-                    callable_expr,
-                    given_args_exprs_2)
-            }
-        }
-    }
+          }
+          Err(e) => {
+            return Err(ICompileErrorT::CouldntFindFunctionToCallT {
+              range: self.typing_interner.alloc_slice_copy(range),
+              fff: e,
+            })
+          }
+          Ok(x) => x,
+        };
 
-    pub fn evaluate_custom_call(
-      &self,
-      nenv: &mut NodeEnvironmentBox<'s, 't>,
-      coutputs: &mut CompilerOutputs<'s, 't>,
-      life: LocationInFunctionEnvironmentT<'t>,
-      range: &[RangeS<'s>],
-      call_location: LocationInDenizen<'s>,
-      context_region: RegionT,
-      _kind: KindT<'s, 't>, // VCOORD: remove?
-      explicit_template_arg_rules_s: &[IRulexSR<'s>],
-      explicit_template_arg_runes_s: &[IRuneS<'s>],
-      receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
-      given_callable_unborrowed_expr_2: ExpressionTE<'s, 't>,
-      given_args_exprs_2: &[ExpressionTE<'s, 't>],
-    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        // A borrowed or shared callable is already a reference to call through. An owned one is
-        // given a temporary local to live in, and we lend that.
-        let given_callable_borrow_expr_2: ExpressionTE<'s, 't> =
-            match given_callable_unborrowed_expr_2.result() {
-                KindT::BorrowRef(_) | KindT::ShareRef(_) => given_callable_unborrowed_expr_2,
-                _ => {
-                    let defer = self.make_temporary_local_defer(
-                        coutputs, nenv, range, call_location, life, context_region,
-                        given_callable_unborrowed_expr_2)?;
-                    ExpressionTE::Defer(defer)
-                }
-            };
+        let snapshot = nenv.snapshot(self.typing_interner);
+        let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
+        let param_types = stamp_result.prototype.param_types();
+        let args_exprs_2 = self.convert_exprs(
+          nenv,
+          life,
+          coutputs,
+          range,
+          call_location,
+          context_region,
+          given_args_exprs_2,
+          &param_types,
+        )?;
 
-        let env = nenv.snapshot(self.typing_interner);
+        self.check_types(
+          coutputs,
+          snapshot_env,
+          range,
+          call_location,
+          &param_types,
+          &args_exprs_2.iter().map(|a| a.result()).collect::<Vec<_>>(),
+          true,
+        );
 
-        let args_types_2: Vec<KindT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result()).collect();
-        // The `__call` function takes the callable the same way we're holding it.
-        let closure_param_type = given_callable_borrow_expr_2.result();
-        let mut param_filters = vec![closure_param_type];
-        param_filters.extend_from_slice(&args_types_2);
-
-        let env_ref = IInDenizenEnvironmentT::Node(env);
-      let function_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
-      let extra_envs_to_look_in = &[];
-      let potential_banner = self.find_function(
-        env_ref,
+        assert!(coutputs
+          .get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id)
+          .is_some());
+        let result_te = stamp_result.prototype.return_type;
+        Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+          stamp_result.prototype,
+          self.typing_interner.alloc_slice_from_vec(args_exprs_2),
+          result_te,
+        ))))
+      }
+      other => self.evaluate_custom_call(
+        nenv,
         coutputs,
+        life,
         range,
         call_location,
-        function_name,
+        context_region,
+        other,
         explicit_template_arg_rules_s,
         explicit_template_arg_runes_s,
         receiving_rune_to_explicit_template_arg_rune,
-        context_region,
-        &param_filters,
-        extra_envs_to_look_in,
-        false,
-        false)?;
-        // VCOORD: simplify
-      let resolved = match (match potential_banner {
-        Err(e) => Ok(Err(e)),
-        Ok(potential_banner) => {
-          Ok(Ok(StampFunctionSuccess {
-            prototype: potential_banner.prototype,
-            inferences: IndexMap::default(),
-          }))
+        callable_expr,
+        given_args_exprs_2,
+      ),
+    }
+  }
+
+  pub fn evaluate_custom_call(
+    &self,
+    nenv: &mut NodeEnvironmentBox<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    life: LocationInFunctionEnvironmentT<'t>,
+    range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    context_region: RegionT,
+    _kind: KindT<'s, 't>, // VCOORD: remove?
+    explicit_template_arg_rules_s: &[IRulexSR<'s>],
+    explicit_template_arg_runes_s: &[IRuneS<'s>],
+    receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
+    given_callable_unborrowed_expr_2: ExpressionTE<'s, 't>,
+    given_args_exprs_2: &[ExpressionTE<'s, 't>],
+  ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+    // A borrowed or shared callable is already a reference to call through. An owned one is
+    // given a temporary local to live in, and we lend that.
+    let given_callable_borrow_expr_2: ExpressionTE<'s, 't> =
+      match given_callable_unborrowed_expr_2.result() {
+        KindT::BorrowRef(_) | KindT::ShareRef(_) => given_callable_unborrowed_expr_2,
+        _ => {
+          let defer = self.make_temporary_local_defer(
+            coutputs,
+            nenv,
+            range,
+            call_location,
+            life,
+            context_region,
+            given_callable_unborrowed_expr_2,
+          )?;
+          ExpressionTE::Defer(defer)
         }
-      })?
-        {
-            Err(_e) => { panic!("CouldntFindFunctionToCallT"); }
-            Ok(x) => x,
-        };
+      };
 
-        assert!(matches!(given_callable_borrow_expr_2.result(),
-                         KindT::BorrowRef(_) | KindT::ShareRef(_)));
-        let actual_callable_expr_2 = given_callable_borrow_expr_2;
+    let env = nenv.snapshot(self.typing_interner);
 
-        let mut actual_args_exprs_2: Vec<ExpressionTE<'s, 't>> = vec![actual_callable_expr_2];
-        actual_args_exprs_2.extend_from_slice(given_args_exprs_2);
+    let args_types_2: Vec<KindT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result()).collect();
+    // The `__call` function takes the callable the same way we're holding it.
+    let closure_param_type = given_callable_borrow_expr_2.result();
+    let mut param_filters = vec![closure_param_type];
+    param_filters.extend_from_slice(&args_types_2);
 
-        let arg_types: Vec<KindT<'s, 't>> = actual_args_exprs_2.iter().map(|e| e.result()).collect();
-        if arg_types != resolved.prototype.param_types() {
-            panic!("arg param type mismatch. params: {:?} args: {:?}", resolved.prototype.param_types(), arg_types);
-        }
+    let env_ref = IInDenizenEnvironmentT::Node(env);
+    let function_name =
+      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: self.keywords.underscores_call,
+      }));
+    let extra_envs_to_look_in = &[];
+    let potential_banner = self.find_function(
+      env_ref,
+      coutputs,
+      range,
+      call_location,
+      function_name,
+      explicit_template_arg_rules_s,
+      explicit_template_arg_runes_s,
+      receiving_rune_to_explicit_template_arg_rune,
+      context_region,
+      &param_filters,
+      extra_envs_to_look_in,
+      false,
+      false,
+    )?;
+    // VCOORD: simplify
+    let resolved = match (match potential_banner {
+      Err(e) => Ok(Err(e)),
+      Ok(potential_banner) => Ok(Ok(StampFunctionSuccess {
+        prototype: potential_banner.prototype,
+        inferences: IndexMap::default(),
+      })),
+    })? {
+      Err(_e) => {
+        panic!("CouldntFindFunctionToCallT");
+      }
+      Ok(x) => x,
+    };
 
-        self.check_types(coutputs, env_ref, range, call_location, &resolved.prototype.param_types(), &arg_types, true);
+    assert!(matches!(
+      given_callable_borrow_expr_2.result(),
+      KindT::BorrowRef(_) | KindT::ShareRef(_)
+    ));
+    let actual_callable_expr_2 = given_callable_borrow_expr_2;
 
-        assert!(coutputs.get_instantiation_bounds(self.typing_interner, resolved.prototype.id).is_some());
-        let result_te = resolved.prototype.return_type;
-        Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
-            resolved.prototype,
-            self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
-            result_te,
-        ))))
+    let mut actual_args_exprs_2: Vec<ExpressionTE<'s, 't>> = vec![actual_callable_expr_2];
+    actual_args_exprs_2.extend_from_slice(given_args_exprs_2);
+
+    let arg_types: Vec<KindT<'s, 't>> = actual_args_exprs_2.iter().map(|e| e.result()).collect();
+    if arg_types != resolved.prototype.param_types() {
+      panic!(
+        "arg param type mismatch. params: {:?} args: {:?}",
+        resolved.prototype.param_types(),
+        arg_types
+      );
     }
 
-    pub fn check_types(
-      &self,
-      coutputs: &mut CompilerOutputs<'s, 't>,
-      calling_env: IInDenizenEnvironmentT<'s, 't>,
-      parent_ranges: &[RangeS<'s>],
-      call_location: LocationInDenizen<'s>,
-      params: &[KindT<'s, 't>],
-      args: &[KindT<'s, 't>],
-      exact: bool,
-    ) {
-        assert!(params.len() == args.len());
-        for (params_head, args_head) in params.iter().zip(args.iter()) {
-            if params_head == args_head {
-                // match, nothing to do
-            } else {
-                if !exact {
-                    panic!("implement: checkTypes non-exact isTypeConvertible");
-                    // val isConvertible = templataCompiler.isTypeConvertible(...) — handle false branch
-                } else {
-                    match args_head {
-                        KindT::Never(_) => {
-                            // This is fine, no conversion will ever actually happen.
-                            // This can be seen in this call: +(5, panic())
-                        }
-                        _ => {
-                            // do stuff here.
-                            // also there is one special case here, which is when we try to hand in
-                            // an owning when they just want a borrow, gotta account for that here
-                            panic!("do stuff {:?} and {:?}", args_head, params_head);
-                        }
-                    }
-                }
+    self.check_types(
+      coutputs,
+      env_ref,
+      range,
+      call_location,
+      &resolved.prototype.param_types(),
+      &arg_types,
+      true,
+    );
+
+    assert!(coutputs
+      .get_instantiation_bounds(self.typing_interner, resolved.prototype.id)
+      .is_some());
+    let result_te = resolved.prototype.return_type;
+    Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+      resolved.prototype,
+      self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
+      result_te,
+    ))))
+  }
+
+  pub fn check_types(
+    &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    calling_env: IInDenizenEnvironmentT<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    params: &[KindT<'s, 't>],
+    args: &[KindT<'s, 't>],
+    exact: bool,
+  ) {
+    assert!(params.len() == args.len());
+    for (params_head, args_head) in params.iter().zip(args.iter()) {
+      if params_head == args_head {
+        // match, nothing to do
+      } else {
+        if !exact {
+          panic!("implement: checkTypes non-exact isTypeConvertible");
+          // val isConvertible = templataCompiler.isTypeConvertible(...) — handle false branch
+        } else {
+          match args_head {
+            KindT::Never(_) => {
+              // This is fine, no conversion will ever actually happen.
+              // This can be seen in this call: +(5, panic())
             }
+            _ => {
+              // do stuff here.
+              // also there is one special case here, which is when we try to hand in
+              // an owning when they just want a borrow, gotta account for that here
+              panic!("do stuff {:?} and {:?}", args_head, params_head);
+            }
+          }
         }
+      }
     }
+  }
 
-    pub fn evaluate_prefix_call(
-      &self,
-      coutputs: &mut CompilerOutputs<'s, 't>,
-      nenv: &mut NodeEnvironmentBox<'s, 't>,
-      life: LocationInFunctionEnvironmentT<'t>,
-      range: &[RangeS<'s>],
-      call_location: LocationInDenizen<'s>,
-      region: RegionT,
-      callable_reference_expr_2: ExpressionTE<'s, 't>,
-      explicit_template_arg_rules_s: &[IRulexSR<'s>],
-      explicit_template_arg_runes_s: &[IRuneS<'s>],
-      receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
-      args_exprs_2: &[ExpressionTE<'s, 't>],
-    ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        let call_expr =
-            self.evaluate_call(
-                coutputs,
-                nenv,
-                life,
-                range,
-                call_location,
-                region,
-                callable_reference_expr_2,
-                explicit_template_arg_rules_s,
-                explicit_template_arg_runes_s,
-                receiving_rune_to_explicit_template_arg_rune,
-                args_exprs_2)?;
-        Ok(call_expr)
-    }
-
+  pub fn evaluate_prefix_call(
+    &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    nenv: &mut NodeEnvironmentBox<'s, 't>,
+    life: LocationInFunctionEnvironmentT<'t>,
+    range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    region: RegionT,
+    callable_reference_expr_2: ExpressionTE<'s, 't>,
+    explicit_template_arg_rules_s: &[IRulexSR<'s>],
+    explicit_template_arg_runes_s: &[IRuneS<'s>],
+    receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
+    args_exprs_2: &[ExpressionTE<'s, 't>],
+  ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+    let call_expr = self.evaluate_call(
+      coutputs,
+      nenv,
+      life,
+      range,
+      call_location,
+      region,
+      callable_reference_expr_2,
+      explicit_template_arg_rules_s,
+      explicit_template_arg_runes_s,
+      receiving_rune_to_explicit_template_arg_rune,
+      args_exprs_2,
+    )?;
+    Ok(call_expr)
+  }
 }

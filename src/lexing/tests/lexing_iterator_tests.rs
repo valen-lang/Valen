@@ -21,10 +21,10 @@ fn try_skip_str_through_multibyte() {
 
 #[test]
 fn angle_is_open_or_close_misreads_after_multibyte_drift() {
-  use bumpalo::Bump;
-  use crate::parse_arena::ParseArena;
   use crate::keywords::Keywords;
+  use crate::parse_arena::ParseArena;
   use crate::parsing::tests::utils::compile_file;
+  use bumpalo::Bump;
 
   let code = "\
 exported func main() int {\n\
@@ -40,4 +40,3 @@ exported func main() int {\n\
   let _ = compile_file(&parse_arena, &keywords, code)
     .unwrap_or_else(|e| panic!("UTF-8 angle misread reproduced: {:?}", e));
 }
-

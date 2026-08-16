@@ -5,9 +5,9 @@ pub mod function_scout;
 pub mod itemplatatype;
 pub mod loop_post_parser;
 pub mod names;
+pub mod patterns;
 pub mod post_parser;
 pub mod post_parser_error_humanizer;
-pub mod patterns;
 pub mod rules;
 pub mod variable_uses;
 

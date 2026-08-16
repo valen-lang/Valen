@@ -1,13 +1,12 @@
 // Run with: cargo test --manifest-path Cargo.toml --lib parsing::tests::patterns::destructure_parser_tests
 
-
-use bumpalo::Bump;
-use crate::parsing::ast::{INameDeclarationP, PatternPP};
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::parsing::ast::{INameDeclarationP, PatternPP};
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
+use bumpalo::Bump;
 
 fn compile<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -58,10 +57,7 @@ fn one_typed_element_destructure() {
   let destructure = pattern.destructure.as_ref().unwrap();
   let inner_pattern = expect_1(&destructure.patterns);
   assert!(matches!(
-    inner_pattern
-      .destination
-      .as_ref()
-      .map(|destination| &destination.decl),
+    inner_pattern.destination.as_ref().map(|destination| &destination.decl),
     None | Some(INameDeclarationP::IgnoredLocalNameDeclaration(_))
   ));
   assert_templex_name(inner_pattern.templex.as_ref().unwrap(), "A");
@@ -97,10 +93,7 @@ fn two_element_destructure_with_ignore() {
   let destructure = pattern.destructure.as_ref().unwrap();
   let (ignored_pattern, b_pattern) = expect_2(&destructure.patterns);
   let ignored_destination = ignored_pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    ignored_destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(ignored_destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(ignored_destination.mutate.is_none());
   assert!(ignored_pattern.templex.is_none());
   assert!(ignored_pattern.destructure.is_none());
@@ -174,19 +167,13 @@ fn capture_with_types_inside() {
   let destructure = pattern.destructure.as_ref().unwrap();
   let (int_pattern, bool_pattern) = expect_2(&destructure.patterns);
   assert!(matches!(
-    int_pattern
-      .destination
-      .as_ref()
-      .map(|destination| &destination.decl),
+    int_pattern.destination.as_ref().map(|destination| &destination.decl),
     None | Some(INameDeclarationP::IgnoredLocalNameDeclaration(_))
   ));
   assert_templex_name(int_pattern.templex.as_ref().unwrap(), "int");
   assert!(int_pattern.destructure.is_none());
   assert!(matches!(
-    bool_pattern
-      .destination
-      .as_ref()
-      .map(|destination| &destination.decl),
+    bool_pattern.destination.as_ref().map(|destination| &destination.decl),
     None | Some(INameDeclarationP::IgnoredLocalNameDeclaration(_))
   ));
   assert_templex_name(bool_pattern.templex.as_ref().unwrap(), "bool");
@@ -280,4 +267,3 @@ fn nested_destructures_c() {
   assert!(a_pattern.templex.is_none());
   assert!(a_pattern.destructure.is_none());
 }
-

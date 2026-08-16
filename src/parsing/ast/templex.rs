@@ -3,7 +3,6 @@ use super::rules::ITypePR;
 use crate::interner::StrI;
 use crate::lexing::RangeL;
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ITemplexPT<'p> {
   AnonymousRune(AnonymousRunePT),
@@ -46,12 +45,10 @@ impl ITemplexPT<'_> {
   }
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AnonymousRunePT {
   pub range: RangeL,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BoolPT {
@@ -59,14 +56,12 @@ pub struct BoolPT {
   pub value: bool,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CallPT<'p> {
   pub range: RangeL,
   pub template: &'p ITemplexPT<'p>,
   pub args: &'p [&'p ITemplexPT<'p>],
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FunctionPT<'p> {
@@ -76,13 +71,11 @@ pub struct FunctionPT<'p> {
   pub return_type: &'p ITemplexPT<'p>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IntPT {
   pub range: RangeL,
   pub value: i64,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RegionRunePT<'p> {
@@ -90,13 +83,11 @@ pub struct RegionRunePT<'p> {
   pub name: Option<NameP<'p>>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TuplePT<'p> {
   pub range: RangeL,
   pub elements: &'p [&'p ITemplexPT<'p>],
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct NameOrRunePT<'p> {
@@ -109,7 +100,6 @@ impl<'p> NameOrRunePT<'p> {
     Self { name, _sealed: () }
   }
 }
-
 
 /// The region of a borrow reference. `held` and an explicit region annotation are sibling values
 /// here alongside "no annotation", so a borrow's region lives in one slot.
@@ -124,7 +114,6 @@ pub enum RegionP<'p> {
   Rune(&'p RegionRunePT<'p>),
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BorrowRefPT<'p> {
   pub range: RangeL,
@@ -132,13 +121,11 @@ pub struct BorrowRefPT<'p> {
   pub region: RegionP<'p>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WeakRefPT<'p> {
   pub range: RangeL,
   pub inner: &'p ITemplexPT<'p>,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OwnRefPT<'p> {
@@ -146,14 +133,11 @@ pub struct OwnRefPT<'p> {
   pub inner: &'p ITemplexPT<'p>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PackPT<'p> {
   pub range: RangeL,
   pub members: &'p [&'p ITemplexPT<'p>],
 }
-
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FuncPT<'p> {
@@ -164,13 +148,11 @@ pub struct FuncPT<'p> {
   pub return_type: &'p ITemplexPT<'p>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RuntimeSizedArrayPT<'p> {
   pub range: RangeL,
   pub element: &'p ITemplexPT<'p>,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StringPT<'p> {
@@ -178,12 +160,9 @@ pub struct StringPT<'p> {
   pub str: StrI<'p>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TypedRunePT<'p> {
   pub range: RangeL,
   pub rune: NameP<'p>,
   pub tyype: ITypePR,
 }
-
-

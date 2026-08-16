@@ -1,13 +1,12 @@
-
 // Core entry point
 pub mod compilation;
 pub use compilation::{TypingPassCompilation, TypingPassOptions};
 
 // Type system and core data structures (high priority - needed for all others)
-pub mod types;
-pub mod names;
 pub mod ast;
+pub mod names;
 pub mod templata;
+pub mod types;
 
 // Environments and context
 pub mod env;
@@ -56,4 +55,3 @@ pub mod rust_interop;
 // Tests
 #[cfg(test)]
 pub mod test;
-

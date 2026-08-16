@@ -246,14 +246,17 @@ impl<'a> Keywords<'a> {
       free_generator: parse_arena.intern_str("freeGenerator"),
       drop_generator: parse_arena.intern_str("dropGenerator"),
       interface_free_generator: parse_arena.intern_str("interfaceFreeGenerator"),
-      vale_static_sized_array_drop_into: parse_arena.intern_str("vale_static_sized_array_drop_into"),
+      vale_static_sized_array_drop_into: parse_arena
+        .intern_str("vale_static_sized_array_drop_into"),
       vale_runtime_sized_array_push: parse_arena.intern_str("vale_runtime_sized_array_push"),
       vale_runtime_sized_array_pop: parse_arena.intern_str("vale_runtime_sized_array_pop"),
       vale_runtime_sized_array_new: parse_arena.intern_str("vale_runtime_sized_array_new"),
-      vale_runtime_sized_array_capacity: parse_arena.intern_str("vale_runtime_sized_array_capacity"),
+      vale_runtime_sized_array_capacity: parse_arena
+        .intern_str("vale_runtime_sized_array_capacity"),
       vale_runtime_sized_array_len: parse_arena.intern_str("vale_runtime_sized_array_len"),
       vale_runtime_sized_array_free: parse_arena.intern_str("vale_runtime_sized_array_free"),
-      vale_runtime_sized_array_drop_into: parse_arena.intern_str("vale_runtime_sized_array_drop_into"),
+      vale_runtime_sized_array_drop_into: parse_arena
+        .intern_str("vale_runtime_sized_array_drop_into"),
       abstract_body: parse_arena.intern_str("abstractBody"),
       vale_as_subtype: parse_arena.intern_str("vale_as_subtype"),
       vale_lock_weak: parse_arena.intern_str("vale_lock_weak"),
@@ -404,14 +407,17 @@ impl<'a> Keywords<'a> {
       free_generator: scout_arena.intern_str("freeGenerator"),
       drop_generator: scout_arena.intern_str("dropGenerator"),
       interface_free_generator: scout_arena.intern_str("interfaceFreeGenerator"),
-      vale_static_sized_array_drop_into: scout_arena.intern_str("vale_static_sized_array_drop_into"),
+      vale_static_sized_array_drop_into: scout_arena
+        .intern_str("vale_static_sized_array_drop_into"),
       vale_runtime_sized_array_push: scout_arena.intern_str("vale_runtime_sized_array_push"),
       vale_runtime_sized_array_pop: scout_arena.intern_str("vale_runtime_sized_array_pop"),
       vale_runtime_sized_array_new: scout_arena.intern_str("vale_runtime_sized_array_new"),
-      vale_runtime_sized_array_capacity: scout_arena.intern_str("vale_runtime_sized_array_capacity"),
+      vale_runtime_sized_array_capacity: scout_arena
+        .intern_str("vale_runtime_sized_array_capacity"),
       vale_runtime_sized_array_len: scout_arena.intern_str("vale_runtime_sized_array_len"),
       vale_runtime_sized_array_free: scout_arena.intern_str("vale_runtime_sized_array_free"),
-      vale_runtime_sized_array_drop_into: scout_arena.intern_str("vale_runtime_sized_array_drop_into"),
+      vale_runtime_sized_array_drop_into: scout_arena
+        .intern_str("vale_runtime_sized_array_drop_into"),
       abstract_body: scout_arena.intern_str("abstractBody"),
       vale_as_subtype: scout_arena.intern_str("vale_as_subtype"),
       vale_lock_weak: scout_arena.intern_str("vale_lock_weak"),

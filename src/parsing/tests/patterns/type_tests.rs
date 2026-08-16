@@ -1,16 +1,15 @@
-
-use bumpalo::Bump;
 use crate::cast;
-use crate::parse_arena::ParseArena;
-use crate::keywords::Keywords;
-use crate::parsing::ast::{
-  BorrowRefPT, INameDeclarationP, ITemplexPT, NameOrRunePT, NameP, OwnRefPT, RegionP,
-  SharednessP, PatternPP, WeakRefPT,
-};
 use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::parsing::ast::{
+  BorrowRefPT, INameDeclarationP, ITemplexPT, NameOrRunePT, NameP, OwnRefPT, PatternPP, RegionP,
+  SharednessP, WeakRefPT,
+};
 use crate::parsing::tests::utils::{
   assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
+use bumpalo::Bump;
 
 fn compile<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -30,10 +29,7 @@ fn ignoring_name() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ int");
   let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
   assert!(pattern.destructure.is_none());
@@ -46,15 +42,9 @@ fn runtime_sized_array() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ []int");
   let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
-  let rsa = cast!(
-    pattern.templex.as_ref().unwrap(),
-    ITemplexPT::RuntimeSizedArray
-  );
+  let rsa = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::RuntimeSizedArray);
   assert_templex_name(rsa.element, "int");
   assert!(pattern.destructure.is_none());
 }
@@ -66,10 +56,7 @@ fn sequence_type() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ (int, bool)");
   let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   let tuple = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Tuple);
   let (int_t, bool_t) = expect_2(&tuple.elements);
@@ -97,7 +84,9 @@ fn weak_prefix_type() {
   let pattern = compile(&parse_arena, &keywords, "_ weak T");
   match pattern.templex.as_ref().unwrap() {
     ITemplexPT::WeakRef(WeakRefPT {
-      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }), .. }) => {}
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
+      ..
+    }) => {}
     other => panic!("expected `weak T` → WeakRef(T), got {:?}", other),
   }
   assert!(pattern.destructure.is_none());
@@ -112,7 +101,9 @@ fn own_prefix_type() {
   let pattern = compile(&parse_arena, &keywords, "_ own T");
   match pattern.templex.as_ref().unwrap() {
     ITemplexPT::OwnRef(OwnRefPT {
-      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }), .. }) => {}
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
+      ..
+    }) => {}
     other => panic!("expected `own T` → OwnRef(T), got {:?}", other),
   }
   assert!(pattern.destructure.is_none());
@@ -127,7 +118,9 @@ fn borrow_with_region() {
   match pattern.templex.as_ref().unwrap() {
     ITemplexPT::BorrowRef(BorrowRefPT {
       region: RegionP::Rune(region),
-      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }), .. }) => {
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }),
+      ..
+    }) => {
       assert_eq!(region.name.as_ref().unwrap().as_str(), "i");
     }
     other => panic!("expected `&i'MyStruct` → BorrowRef(Rune, MyStruct), got {:?}", other),
@@ -144,7 +137,9 @@ fn held_ref_type() {
   match pattern.templex.as_ref().unwrap() {
     ITemplexPT::BorrowRef(BorrowRefPT {
       region: RegionP::Held,
-      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }), .. }) => {}
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }),
+      ..
+    }) => {}
     other => panic!("expected `held MyStruct` → BorrowRef(Held, MyStruct), got {:?}", other),
   }
   assert!(pattern.destructure.is_none());
@@ -159,10 +154,18 @@ fn held_and_borrow_ref_type() {
   match pattern.templex.as_ref().unwrap() {
     ITemplexPT::BorrowRef(BorrowRefPT {
       region: RegionP::Held,
-      inner: ITemplexPT::BorrowRef(BorrowRefPT {
-        region: RegionP::Unspecified,
-        inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }), .. }), .. }) => {}
-    other => panic!("expected `held &MyStruct` → BorrowRef(Held, BorrowRef(Unspecified, MyStruct)), got {:?}", other),
+      inner:
+        ITemplexPT::BorrowRef(BorrowRefPT {
+          region: RegionP::Unspecified,
+          inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }),
+          ..
+        }),
+      ..
+    }) => {}
+    other => panic!(
+      "expected `held &MyStruct` → BorrowRef(Held, BorrowRef(Unspecified, MyStruct)), got {:?}",
+      other
+    ),
   }
   assert!(pattern.destructure.is_none());
 }
@@ -174,10 +177,7 @@ fn call_type() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ MyOption<MyList<int>>");
   let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   let myoption_call = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Call);
   assert_templex_name(myoption_call.template, "MyOption");
@@ -188,4 +188,3 @@ fn call_type() {
   assert_templex_name(int_type, "int");
   assert!(pattern.destructure.is_none());
 }
-

@@ -1,9 +1,8 @@
 use super::ast::{FunctionP, NameP, UnitP};
-use crate::interner::StrI;
 use super::pattern::PatternPP;
 use super::templex::{ITemplexPT, RegionRunePT};
+use crate::interner::StrI;
 use crate::lexing::RangeL;
-
 
 #[derive(Debug, PartialEq)]
 pub enum IExpressionPE<'p> {
@@ -136,11 +135,9 @@ impl IExpressionPE<'_> {
       IExpressionPE::MagicParamLookup(_) => true,
       IExpressionPE::Lambda(_) => true,
       IExpressionPE::Block(_) => false,
-      IExpressionPE::Consecutor(x) => x
-        .inners
-        .last()
-        .unwrap()
-        .needs_semicolon_before_next_statement(),
+      IExpressionPE::Consecutor(x) => {
+        x.inners.last().unwrap().needs_semicolon_before_next_statement()
+      }
       IExpressionPE::Shortcall(_) => true,
     }
   }
@@ -190,19 +187,16 @@ impl IExpressionPE<'_> {
   }
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct VoidPE {
   pub range: RangeL,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct PackPE<'p> {
   pub range: RangeL,
   pub inners: &'p [&'p IExpressionPE<'p>],
 }
-
 
 // Parens that we use for precedence
 #[derive(Debug, PartialEq)]
@@ -211,7 +205,6 @@ pub struct SubExpressionPE<'p> {
   pub inner: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct AndPE<'p> {
   pub range: RangeL,
@@ -219,14 +212,12 @@ pub struct AndPE<'p> {
   pub right: &'p BlockPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct OrPE<'p> {
   pub range: RangeL,
   pub left: &'p IExpressionPE<'p>,
   pub right: &'p BlockPE<'p>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct IfPE<'p> {
@@ -236,14 +227,12 @@ pub struct IfPE<'p> {
   pub else_body: &'p BlockPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct WhilePE<'p> {
   pub range: RangeL,
   pub condition: &'p IExpressionPE<'p>,
   pub body: &'p BlockPE<'p>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct EachPE<'p> {
@@ -254,7 +243,6 @@ pub struct EachPE<'p> {
   pub body: &'p BlockPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct RangePE<'p> {
   pub range: RangeL,
@@ -262,20 +250,17 @@ pub struct RangePE<'p> {
   pub to_expr: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct DestructPE<'p> {
   pub range: RangeL,
   pub inner: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct UnletPE<'p> {
   pub range: RangeL,
   pub name: IImpreciseNameP<'p>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct MutatePE<'p> {
@@ -284,19 +269,16 @@ pub struct MutatePE<'p> {
   pub source: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct ReturnPE<'p> {
   pub range: RangeL,
   pub expr: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct BreakPE {
   pub range: RangeL,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct LetPE<'p> {
@@ -305,13 +287,11 @@ pub struct LetPE<'p> {
   pub source: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct TuplePE<'p> {
   pub range: RangeL,
   pub elements: &'p [&'p IExpressionPE<'p>],
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct StaticSizedArraySizeP<'p> {
@@ -324,7 +304,6 @@ pub enum IArraySizeP<'p> {
   StaticSized(StaticSizedArraySizeP<'p>),
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct ConstructArrayPE<'p> {
   pub range: RangeL,
@@ -334,7 +313,6 @@ pub struct ConstructArrayPE<'p> {
   pub args: &'p [&'p IExpressionPE<'p>],
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct ConstantIntPE {
   pub range: RangeL,
@@ -342,13 +320,11 @@ pub struct ConstantIntPE {
   pub bits: Option<i64>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct ConstantBoolPE {
   pub range: RangeL,
   pub value: bool,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct ConstantStrPE<'p> {
@@ -356,20 +332,17 @@ pub struct ConstantStrPE<'p> {
   pub value: StrI<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct ConstantFloatPE {
   pub range: RangeL,
   pub value: f64,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct StrInterpolatePE<'p> {
   pub range: RangeL,
   pub parts: &'p [&'p IExpressionPE<'p>],
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct DotPE<'p> {
@@ -379,14 +352,12 @@ pub struct DotPE<'p> {
   pub member: NameP<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct IndexPE<'p> {
   pub range: RangeL,
   pub left: &'p IExpressionPE<'p>,
   pub args: &'p [&'p IExpressionPE<'p>],
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionCallPE<'p> {
@@ -395,7 +366,6 @@ pub struct FunctionCallPE<'p> {
   pub callable_expr: &'p IExpressionPE<'p>,
   pub arg_exprs: &'p [&'p IExpressionPE<'p>],
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct BraceCallPE<'p> {
@@ -406,13 +376,11 @@ pub struct BraceCallPE<'p> {
   pub callable_readwrite: bool,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct NotPE<'p> {
   pub range: RangeL,
   pub inner: &'p IExpressionPE<'p>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct MovePE<'p> {
@@ -420,13 +388,11 @@ pub struct MovePE<'p> {
   pub inner: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct BorrowPE<'p> {
   pub range: RangeL,
   pub inner: &'p IExpressionPE<'p>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct WeakPE<'p> {
@@ -434,14 +400,12 @@ pub struct WeakPE<'p> {
   pub inner: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct TransmigratePE<'p> {
   pub range: RangeL,
   pub target_region: NameP<'p>,
   pub inner: &'p IExpressionPE<'p>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct BinaryCallPE<'p> {
@@ -451,7 +415,6 @@ pub struct BinaryCallPE<'p> {
   pub right_expr: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct MethodCallPE<'p> {
   pub range: RangeL,
@@ -460,7 +423,6 @@ pub struct MethodCallPE<'p> {
   pub method_lookup: &'p LookupPE<'p>,
   pub arg_exprs: &'p [&'p IExpressionPE<'p>],
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IImpreciseNameP<'p> {
@@ -480,13 +442,11 @@ impl IImpreciseNameP<'_> {
   }
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct LookupPE<'p> {
   pub name: IImpreciseNameP<'p>,
   pub template_args: Option<TemplateArgsP<'p>>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct TemplateArgsP<'p> {
@@ -494,19 +454,16 @@ pub struct TemplateArgsP<'p> {
   pub args: &'p [&'p ITemplexPT<'p>],
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct MagicParamLookupPE {
   pub range: RangeL,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct LambdaPE<'p> {
   pub captures: Option<UnitP>,
   pub function: FunctionP<'p>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct BlockPE<'p> {
@@ -515,16 +472,13 @@ pub struct BlockPE<'p> {
   pub inner: &'p IExpressionPE<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct ConsecutorPE<'p> {
   pub inners: &'p [&'p IExpressionPE<'p>],
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct ShortcallPE<'p> {
   pub range: RangeL,
   pub arg_exprs: &'p [&'p IExpressionPE<'p>],
 }
-

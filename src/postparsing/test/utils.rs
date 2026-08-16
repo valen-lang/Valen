@@ -5,7 +5,6 @@ use crate::postparsing::rules::rules::{CallSR, IRulexSR, LookupSR};
 use crate::postparsing::test::traverse::NodeRefS;
 use crate::{collect_only_snodes, collect_where_snodes};
 
-
 // The head expression of a normal (code) function body. Panics with the actual body if it isn't a
 // code body, since a wrong body variant (extern/abstract) means the test's setup is off.
 pub fn expect_code_body_expr<'s>(body: &'s IBodyS<'s>) -> &'s IExpressionSE<'s> {
@@ -46,5 +45,7 @@ pub fn assert_rune_absent_from_rules<'s>(rules: &'s [IRulexSR<'s>], rune: IRuneS
     &nodes, NodeRefS::RuneUsage(usage) if usage.rune == rune => Some(()));
   assert!(
     usages.is_empty(),
-    "expected no rule to mention the rune; found {} usage(s)", usages.len());
+    "expected no rule to mention the rune; found {} usage(s)",
+    usages.len()
+  );
 }

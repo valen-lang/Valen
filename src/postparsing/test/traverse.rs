@@ -1,24 +1,25 @@
 use crate::postparsing::ast::{
-  AbstractBodyS, BuiltinS, CodeBodyS, ExportAsS, ExportS, ExternBodyS, ExternS,
-  FileS, FunctionS, GeneratedBodyS, GenericParameterDefaultS, GenericParameterS, IBodyS, ICitizenAttributeS,
-  ICitizenDenizenS, ICitizenS, IDenizenS, IFunctionAttributeS, IGenericParameterTypeS, IStructMemberS, ImplS,
-  ImportS, InterfaceS, MacroCallS, NormalStructMemberS, ParameterS, ProgramS, SealedS,
-  StructS, TopLevelExportAsS, TopLevelFunctionS, TopLevelImplS, TopLevelImportS, TopLevelInterfaceS,
-  TopLevelStructS, UserFunctionS, VariadicStructMemberS,
+  AbstractBodyS, BuiltinS, CodeBodyS, ExportAsS, ExportS, ExternBodyS, ExternS, FileS, FunctionS,
+  GeneratedBodyS, GenericParameterDefaultS, GenericParameterS, IBodyS, ICitizenAttributeS,
+  ICitizenDenizenS, ICitizenS, IDenizenS, IFunctionAttributeS, IGenericParameterTypeS,
+  IStructMemberS, ImplS, ImportS, InterfaceS, MacroCallS, NormalStructMemberS, ParameterS,
+  ProgramS, SealedS, StructS, TopLevelExportAsS, TopLevelFunctionS, TopLevelImplS, TopLevelImportS,
+  TopLevelInterfaceS, TopLevelStructS, UserFunctionS, VariadicStructMemberS,
 };
 use crate::postparsing::expressions::{
   BlockSE, BodySE, DotSE, IExpressionSE, LocalS, OutsideLoadSE, OwnershippedSE, ReturnSE,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, ExportAsNameS as ExportAsNameFromNamesS, FunctionNameS,
-  IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarNameS, ImplDeclarationNameS, ImplicitRuneS,
-  LambdaDeclarationNameS, TopLevelCitizenDeclarationNameS, TopLevelInterfaceDeclarationNameS,
-  TopLevelStructDeclarationNameS, MagicParamRuneS,
+  CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, ExportAsNameS as ExportAsNameFromNamesS,
+  FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarNameS,
+  ImplDeclarationNameS, ImplicitRuneS, LambdaDeclarationNameS, MagicParamRuneS,
+  TopLevelCitizenDeclarationNameS, TopLevelInterfaceDeclarationNameS,
+  TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
-  BoolLiteralSL, CallSR, EqualsSR, ILiteralSL, IntLiteralSL,
-  IRulexSR, LiteralSR, LookupSR, RegionSR, StringLiteralSL,
+  BoolLiteralSL, CallSR, EqualsSR, ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, LookupSR,
+  RegionSR, StringLiteralSL,
 };
 use crate::postparsing::rules::{ImplBoundS, RuneUsage};
 
@@ -297,7 +298,9 @@ where
   collect_if(
     pred,
     out,
-    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(strukt.name.expect_top_level())),
+    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(
+      strukt.name.expect_top_level(),
+    )),
   );
   collect_if(pred, out, NodeRefS::TopLevelStructDeclarationName(strukt.name.expect_top_level()));
   for attribute in strukt.attributes {
@@ -426,8 +429,11 @@ where
   visit_rune_usage(pred, out, &parameter.full_type_rune);
 }
 
-fn visit_generic_parameter<'s, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'s GenericParameterS<'s>)
-where
+fn visit_generic_parameter<'s, T, F>(
+  pred: &F,
+  out: &mut Vec<T>,
+  parameter: &'s GenericParameterS<'s>,
+) where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::GenericParameter(parameter));
@@ -438,8 +444,11 @@ where
   }
 }
 
-fn visit_generic_parameter_default<'s, T, F>(pred: &F, out: &mut Vec<T>, default: &'s GenericParameterDefaultS<'s>)
-where
+fn visit_generic_parameter_default<'s, T, F>(
+  pred: &F,
+  out: &mut Vec<T>,
+  default: &'s GenericParameterDefaultS<'s>,
+) where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::GenericParameterDefault(default));
@@ -449,8 +458,11 @@ where
   }
 }
 
-fn visit_generic_parameter_type<'s, T, F>(pred: &F, out: &mut Vec<T>, tyype: &'s IGenericParameterTypeS<'s>)
-where
+fn visit_generic_parameter_type<'s, T, F>(
+  pred: &F,
+  out: &mut Vec<T>,
+  tyype: &'s IGenericParameterTypeS<'s>,
+) where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::GenericParameterType(tyype));
@@ -689,8 +701,11 @@ where
   }
 }
 
-fn visit_citizen_attribute<'s, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'s ICitizenAttributeS<'s>)
-where
+fn visit_citizen_attribute<'s, T, F>(
+  pred: &F,
+  out: &mut Vec<T>,
+  attribute: &'s ICitizenAttributeS<'s>,
+) where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::CitizenAttribute(attribute));
@@ -703,8 +718,11 @@ where
   }
 }
 
-fn visit_function_attribute<'s, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'s IFunctionAttributeS<'s>)
-where
+fn visit_function_attribute<'s, T, F>(
+  pred: &F,
+  out: &mut Vec<T>,
+  attribute: &'s IFunctionAttributeS<'s>,
+) where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::FunctionAttribute(attribute));
@@ -712,7 +730,9 @@ where
     IFunctionAttributeS::Extern(x) => collect_if(pred, out, NodeRefS::ExternAttribute(x)),
     IFunctionAttributeS::Builtin(x) => collect_if(pred, out, NodeRefS::BuiltinAttribute(x)),
     IFunctionAttributeS::Export(x) => collect_if(pred, out, NodeRefS::ExportAttribute(x)),
-    IFunctionAttributeS::UserFunction(x) => collect_if(pred, out, NodeRefS::UserFunctionAttribute(x)),
+    IFunctionAttributeS::UserFunction(x) => {
+      collect_if(pred, out, NodeRefS::UserFunctionAttribute(x))
+    }
   }
 }
 
@@ -801,8 +821,11 @@ where
   }
 }
 
-fn visit_function_declaration_name<'s, T, F>(pred: &F, out: &mut Vec<T>, name: &'s IFunctionDeclarationNameS<'s>)
-where
+fn visit_function_declaration_name<'s, T, F>(
+  pred: &F,
+  out: &mut Vec<T>,
+  name: &'s IFunctionDeclarationNameS<'s>,
+) where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::FunctionDeclarationName(name));
@@ -822,7 +845,9 @@ where
   collect_if(pred, out, NodeRefS::ImpreciseName(name));
   match name {
     IImpreciseNameS::CodeName(x) => collect_if(pred, out, NodeRefS::CodeName(x)),
-    IImpreciseNameS::LambdaStructImpreciseName(x) => visit_imprecise_name(pred, out, &x.lambda_name),
+    IImpreciseNameS::LambdaStructImpreciseName(x) => {
+      visit_imprecise_name(pred, out, &x.lambda_name)
+    }
     IImpreciseNameS::AnonymousSubstructTemplateImpreciseName(x) => {
       visit_imprecise_name(pred, out, &x.interface_imprecise_name)
     }
@@ -903,7 +928,9 @@ where
     INameS::FunctionDeclaration(x) => visit_function_declaration_name(pred, out, x),
     INameS::ImplDeclaration(x) => collect_if(pred, out, NodeRefS::ImplDeclarationName(x)),
     INameS::ExportAsName(x) => collect_if(pred, out, NodeRefS::ExportAsName(x)),
-    INameS::TopLevelStructDeclaration(x) => collect_if(pred, out, NodeRefS::TopLevelStructDeclarationName(x)),
+    INameS::TopLevelStructDeclaration(x) => {
+      collect_if(pred, out, NodeRefS::TopLevelStructDeclarationName(x))
+    }
     INameS::TopLevelInterfaceDeclaration(x) => {
       collect_if(pred, out, NodeRefS::TopLevelInterfaceDeclarationName(x))
     }
@@ -945,26 +972,20 @@ macro_rules! collect_in_snodes {
   ($expr:expr, $pattern:pat => $body:expr) => {{
     let mut out = Vec::new();
     for node in $expr {
-      out.extend($crate::postparsing::test::traverse::collect_in_snode(
-        node,
-        &|node| match node {
-          $pattern => $body,
-          _ => None,
-        },
-      ));
+      out.extend($crate::postparsing::test::traverse::collect_in_snode(node, &|node| match node {
+        $pattern => $body,
+        _ => None,
+      }));
     }
     out
   }};
   ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
     let mut out = Vec::new();
     for node in $expr {
-      out.extend($crate::postparsing::test::traverse::collect_in_snode(
-        node,
-        &|node| match node {
-          $pattern if $guard => $body,
-          _ => None,
-        },
-      ));
+      out.extend($crate::postparsing::test::traverse::collect_in_snode(node, &|node| match node {
+        $pattern if $guard => $body,
+        _ => None,
+      }));
     }
     out
   }};

@@ -1,32 +1,32 @@
 // Coordinates the Typing pass
 
-use bumpalo::Bump;
+use crate::code_source::CodeSource;
 use crate::compile_options::GlobalOptions;
-use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::FileP;
+use crate::postparsing::ast::ProgramS;
+use crate::postparsing::post_parser::ICompileErrorS;
+use crate::postparsing::ScoutCompilation;
+use crate::scout_arena::ScoutArena;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::hinputs_t::HinputsT;
+use crate::typing::oracles::Oracles;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::fx::HashMap;
 use crate::utils::source_code_utils::humanize_pos_code_map;
 use crate::utils::source_code_utils::line_containing;
 use crate::utils::source_code_utils::line_range_containing;
 use crate::utils::source_code_utils::lines_between;
-use crate::typing::hinputs_t::HinputsT;
-use crate::typing::typing_interner::TypingInterner;
-use crate::typing::oracles::Oracles;
-use crate::code_source::CodeSource;
-use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::utils::fx::HashMap;
-use std::sync::Arc;
-use crate::parse_arena::ParseArena;
-use crate::postparsing::ast::ProgramS;
-use crate::postparsing::post_parser::ICompileErrorS;
+use bumpalo::Bump;
 use std::marker::PhantomData;
-use crate::postparsing::ScoutCompilation;
+use std::sync::Arc;
 
 /// Miscellaneous (see @TFITCX)
 pub struct TypingPassOptions {
@@ -35,10 +35,10 @@ pub struct TypingPassOptions {
   pub tree_shaking_enabled: bool,
 }
 
-
 /// Miscellaneous (see @TFITCX)
 pub struct TypingPassCompilation<'s, 'ctx, 't, 'p>
-where 's: 't,
+where
+  's: 't,
 {
   scout_compilation: ScoutCompilation<'s, 'ctx, 'p>,
   hinputs_cache: Option<HinputsT<'s, 't>>,
@@ -52,7 +52,8 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't, 'p> TypingPassCompilation<'s, 'ctx, 't, 'p>
-where 's: 't,
+where
+  's: 't,
 {
   pub fn new(
     typing_interner: &'ctx TypingInterner<'s, 't>,
@@ -85,72 +86,80 @@ where 's: 't,
       oracles,
     }
   }
-  
 
-pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-  self.scout_compilation.get_code_map()
-}
-
-pub fn scout_arena_for_tests(&self) -> &'ctx ScoutArena<'s> {
-  self.scout_arena
-}
-
-pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
-  self.scout_compilation.get_parseds()
-}
-
-pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-  self.scout_compilation.get_vpst_map()
-}
-
-pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
-  self.scout_compilation.get_scoutput()
-}
-
-// VTRACE: hide
-pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
-  if self.hinputs_cache.is_some() {
-    return Ok(self.hinputs_cache.as_ref().unwrap());
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
+    self.scout_compilation.get_code_map()
   }
-  let code_map = self.get_code_map().expect("getCodeMap failed");
-  let astrouts = self.scout_compilation.expect_scoutput();
-  let compiler = Compiler::new(
-    self.scout_arena, &self.typing_interner, self.keywords, &self.options, self.oracles);
-  match compiler.evaluate(&code_map, astrouts) {
-    Err(e) => Err(e),
-    Ok(hinputs) => {
-      self.hinputs_cache = Some(hinputs);
-      Ok(self.hinputs_cache.as_ref().unwrap())
+
+  pub fn scout_arena_for_tests(&self) -> &'ctx ScoutArena<'s> {
+    self.scout_arena
+  }
+
+  pub fn get_parseds(
+    &mut self,
+  ) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
+    self.scout_compilation.get_parseds()
+  }
+
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
+    self.scout_compilation.get_vpst_map()
+  }
+
+  pub fn get_scoutput(
+    &mut self,
+  ) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
+    self.scout_compilation.get_scoutput()
+  }
+
+  // VTRACE: hide
+  pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
+    if self.hinputs_cache.is_some() {
+      return Ok(self.hinputs_cache.as_ref().unwrap());
+    }
+    let code_map = self.get_code_map().expect("getCodeMap failed");
+    let astrouts = self.scout_compilation.expect_scoutput();
+    let compiler = Compiler::new(
+      self.scout_arena,
+      &self.typing_interner,
+      self.keywords,
+      &self.options,
+      self.oracles,
+    );
+    match compiler.evaluate(&code_map, astrouts) {
+      Err(e) => Err(e),
+      Ok(hinputs) => {
+        self.hinputs_cache = Some(hinputs);
+        Ok(self.hinputs_cache.as_ref().unwrap())
+      }
     }
   }
-}
-  
-// VTRACE: hide
-pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
 
-  match self.get_compiler_outputs().err() {
+  // VTRACE: hide
+  pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
+    match self.get_compiler_outputs().err() {
+      Some(err) => {
+        let code_map = self.get_code_map().expect("getCodeMap failed");
+        let error_text = humanize(
+          self.scout_arena,
+          self.typing_interner,
+          true,
+          &|x| humanize_pos_code_map(&code_map, &x),
+          &|a, b| lines_between(&code_map, &a, &b),
+          &|x| line_range_containing(&code_map, &x),
+          &|x| line_containing(&code_map, &x),
+          err,
+        );
+        panic!("{}", error_text);
+      }
 
-    Some(err) => {
-      let code_map = self.get_code_map().expect("getCodeMap failed");
-      let error_text = humanize(
-        self.scout_arena, self.typing_interner, true,
-        &|x| humanize_pos_code_map(&code_map, &x),
-        &|a, b| lines_between(&code_map, &a, &b),
-        &|x| line_range_containing(&code_map, &x),
-        &|x| line_containing(&code_map, &x),
-        err);
-      panic!("{}", error_text);
+      None => self.hinputs_cache.as_ref().unwrap(),
     }
-
-    None => self.hinputs_cache.as_ref().unwrap(),
   }
-}
-  
+
   // `&self` read of the already-computed compiler outputs, so a caller can borrow it alongside
   // another field of this struct (`&mut expect_compiler_outputs` would conflict). Caller must
   // have run `expect_compiler_outputs` first.
   pub fn cached_compiler_outputs(&self) -> &HinputsT<'s, 't> {
     self.hinputs_cache.as_ref().expect("compiler outputs not computed")
   }
-  
 }

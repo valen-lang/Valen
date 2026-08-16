@@ -1,33 +1,41 @@
-use std::collections::HashMap as StdHashMap;
-use crate::utils::fx::HashSet;
-use crate::utils::fx::IndexMap;
 use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT, StructDefinitionTemplataT};
 use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::utils::fx::HashSet;
+use crate::utils::fx::IndexMap;
 use crate::utils::range::CodeLocationS;
+use std::collections::HashMap as StdHashMap;
 
-use crate::postparsing::names::{ArbitraryNameS, ClosureParamImpreciseNameS, CodeNameS, IImpreciseNameS, IImpreciseNameValS, LambdaImpreciseNameS, LambdaStructImpreciseNameValS, PlaceholderImpreciseNameS, PrototypeNameS, RuneNameValS, SelfNameS, AnonymousSubstructTemplateImpreciseNameValS};
-use crate::typing::names::names::{ICitizenTemplateNameT, IInterfaceTemplateNameT};
+use crate::interner::StrI;
+use crate::postparsing::names::ImplImpreciseNameValS;
+use crate::postparsing::names::ImplSubCitizenImpreciseNameValS;
+use crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS;
+use crate::postparsing::names::{
+  AnonymousSubstructTemplateImpreciseNameValS, ArbitraryNameS, ClosureParamImpreciseNameS,
+  CodeNameS, IImpreciseNameS, IImpreciseNameValS, LambdaImpreciseNameS,
+  LambdaStructImpreciseNameValS, PlaceholderImpreciseNameS, PrototypeNameS, RuneNameValS,
+  SelfNameS,
+};
 use crate::scout_arena::ScoutArena;
+use crate::typing::env::function_environment_t::lookup_with_imprecise_name_inner;
 use crate::typing::env::function_environment_t::{
   BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
   BuildingFunctionEnvironmentWithClosuredsT, FunctionEnvironmentT, NodeEnvironmentT,
 };
-use crate::typing::env::i_env_entry::{IEnvEntryT, FunctionEnvEntry, StructEnvEntry, InterfaceEnvEntry, ImplEnvEntry};
-use crate::typing::names::names::{IdT, INameT, IInstantiationNameT, ITemplateNameT, IImplTemplateNameT};
-use crate::typing::typing_interner::TypingInterner;
-use crate::typing::env::function_environment_t::lookup_with_imprecise_name_inner;
-use crate::interner::StrI;
+use crate::typing::env::i_env_entry::{
+  FunctionEnvEntry, IEnvEntryT, ImplEnvEntry, InterfaceEnvEntry, StructEnvEntry,
+};
 use crate::typing::macros::macros::FunctionBodyMacro;
-use crate::typing::templata::templata::InterfaceDefinitionTemplataT;
+use crate::typing::names::names::{ICitizenTemplateNameT, IInterfaceTemplateNameT};
+use crate::typing::names::names::{
+  IImplTemplateNameT, IInstantiationNameT, INameT, ITemplateNameT, IdT,
+};
 use crate::typing::templata::templata::ImplDefinitionTemplataT;
-use crate::postparsing::names::ImplImpreciseNameValS;
-use crate::postparsing::names::ImplSubCitizenImpreciseNameValS;
-use crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS;
+use crate::typing::templata::templata::InterfaceDefinitionTemplataT;
 use crate::typing::types::types::KindT;
+use crate::typing::typing_interner::TypingInterner;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::mem::discriminant;
-
 
 /// The *resolved* canonical name an `import` resolves to (post-re-export), as opposed to the raw
 /// written `ImportS` the parser produced. Vale-native: interned strings, no rustc `DefId`, so it
@@ -53,33 +61,33 @@ pub enum ImportedItemKind {
   Function,
 }
 
-
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IEnvironmentT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    Package(&'t PackageEnvironmentT<'s, 't>),
-    Citizen(&'t CitizenEnvironmentT<'s, 't>),
-    Function(&'t FunctionEnvironmentT<'s, 't>),
-    Node(&'t NodeEnvironmentT<'s, 't>),
-    BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
-    BuildingWithClosuredsAndTemplateArgs(&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>),
-    General(&'t GeneralEnvironmentT<'s, 't>),
-    Export(&'t ExportEnvironmentT<'s, 't>),
-    Extern(&'t ExternEnvironmentT<'s, 't>),
+  Package(&'t PackageEnvironmentT<'s, 't>),
+  Citizen(&'t CitizenEnvironmentT<'s, 't>),
+  Function(&'t FunctionEnvironmentT<'s, 't>),
+  Node(&'t NodeEnvironmentT<'s, 't>),
+  BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
+  BuildingWithClosuredsAndTemplateArgs(
+    &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
+  ),
+  General(&'t GeneralEnvironmentT<'s, 't>),
+  Export(&'t ExportEnvironmentT<'s, 't>),
+  Extern(&'t ExternEnvironmentT<'s, 't>),
 }
 
-
-impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+impl<'s, 't> IEnvironmentT<'s, 't>
+where
+  's: 't,
+{
   pub fn to_string(&self) -> String {
     panic!("Unimplemented: to_string");
     // "#Environment:" + id
   }
-  
-
-
-
 
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
     match self {
@@ -94,12 +102,10 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
       IEnvironmentT::Extern(e) => e.global_env,
     }
   }
-  
 
   pub fn templatas(&self) -> &TemplatasStoreT<'s, 't> {
     panic!("Unimplemented: templatas");
   }
-  
 
   pub fn lookup_with_imprecise_name_inner(
     &self,
@@ -109,18 +115,35 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     match self {
-      IEnvironmentT::Package(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::Citizen(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::Function(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::Node(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::BuildingWithClosureds(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::General(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::Export(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::Extern(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Package(e) => {
+        e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::Citizen(e) => {
+        e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::Function(e) => {
+        e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::Node(e) => {
+        e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::BuildingWithClosureds(e) => {
+        e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => {
+        e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::General(e) => {
+        e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::Export(e) => {
+        e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::Extern(e) => {
+        e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
     }
   }
-  
 
   pub fn lookup_with_name_inner(
     &self,
@@ -130,14 +153,21 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     match self {
-      IEnvironmentT::Citizen(c) => c.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::Node(e) => e.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::Function(e) => e.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      IEnvironmentT::Package(p) => p.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Citizen(c) => {
+        c.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::Node(e) => {
+        e.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::Function(e) => {
+        e.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
+      IEnvironmentT::Package(p) => {
+        p.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner)
+      }
       _ => panic!("implement: lookup_with_name_inner for {:?}", discriminant(self)),
     }
   }
-  
 
   pub fn lookup_all_with_imprecise_name(
     &self,
@@ -147,7 +177,6 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
   ) -> Vec<ITemplataT<'s, 't>> {
     self.lookup_with_imprecise_name_inner(name_s, lookup_filter, false, interner)
   }
-  
 
   pub fn lookup_all_with_name(
     &self,
@@ -159,7 +188,6 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     //   lookupWithNameInner(nameS, lookupFilter, false)
     // })
   }
-  
 
   pub fn lookup_nearest_with_name(
     &self,
@@ -174,8 +202,6 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
       _ => panic!("Too many with name {:?}: {:?}", name_s, results),
     }
   }
-  
-
 
   pub fn lookup_nearest_with_imprecise_name(
     &self,
@@ -204,25 +230,30 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
       IEnvironmentT::Extern(e) => e.id,
     }
   }
-  
 }
 
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInDenizenEnvironmentT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    Citizen(&'t CitizenEnvironmentT<'s, 't>),
-    Function(&'t FunctionEnvironmentT<'s, 't>),
-    Node(&'t NodeEnvironmentT<'s, 't>),
-    BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
-    BuildingWithClosuredsAndTemplateArgs(&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>),
-    General(&'t GeneralEnvironmentT<'s, 't>),
-    Export(&'t ExportEnvironmentT<'s, 't>),
-    Extern(&'t ExternEnvironmentT<'s, 't>),
+  Citizen(&'t CitizenEnvironmentT<'s, 't>),
+  Function(&'t FunctionEnvironmentT<'s, 't>),
+  Node(&'t NodeEnvironmentT<'s, 't>),
+  BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
+  BuildingWithClosuredsAndTemplateArgs(
+    &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
+  ),
+  General(&'t GeneralEnvironmentT<'s, 't>),
+  Export(&'t ExportEnvironmentT<'s, 't>),
+  Extern(&'t ExternEnvironmentT<'s, 't>),
 }
 
-impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
+impl<'s, 't> IInDenizenEnvironmentT<'s, 't>
+where
+  's: 't,
+{
   pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
     match self {
       IInDenizenEnvironmentT::Citizen(e) => e.root_compiling_denizen_env(),
@@ -235,7 +266,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::Extern(_) => *self,
     }
   }
-  
+
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     match self {
       IInDenizenEnvironmentT::Citizen(e) => e.template_id,
@@ -248,7 +279,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::Extern(e) => e.id,
     }
   }
-  
+
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     match self {
       IInDenizenEnvironmentT::Citizen(e) => e.template_id,
@@ -261,7 +292,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::Extern(e) => e.template_id,
     }
   }
-  
+
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -271,7 +302,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
     as_env.lookup_nearest_with_imprecise_name(name_s, lookup_filter, interner)
   }
-  
+
   pub fn lookup_nearest_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -281,7 +312,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
     as_env.lookup_nearest_with_name(name_s, lookup_filter, interner)
   }
-  
+
   pub fn lookup_all_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -290,7 +321,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
     as_env.lookup_all_with_name(name_s, lookup_filter)
   }
-  
+
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -311,7 +342,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
     as_env.lookup_with_name_inner(name_s, lookup_filter, get_only_nearest, interner)
   }
-  
+
   pub fn lookup_with_imprecise_name_inner(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -322,7 +353,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
     as_env.lookup_with_imprecise_name_inner(name_s, lookup_filter, get_only_nearest, interner)
   }
-  
+
   pub fn templatas(&self) -> &'t TemplatasStoreT<'s, 't> {
     match self {
       IInDenizenEnvironmentT::Citizen(e) => e.templatas,
@@ -335,11 +366,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::Extern(e) => e.templatas,
     }
   }
-  
-
-
-
-
 
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
     match self {
@@ -353,7 +379,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::Extern(e) => e.global_env,
     }
   }
-  
+
   pub fn id(&self) -> IdT<'s, 't> {
     match self {
       IInDenizenEnvironmentT::Citizen(e) => e.id,
@@ -366,7 +392,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::Extern(e) => e.id,
     }
   }
-  
 }
 /// Miscellaneous (see @TFITCX)
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -375,20 +400,16 @@ pub enum ILookupContext {
   ExpressionLookupContext,
 }
 
-
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct GlobalEnvironmentT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
-  pub name_to_top_level_environment:
-    &'t [(&'t IdT<'s, 't>, &'t TemplatasStoreT<'s, 't>)],
-  pub name_to_function_body_macro:
-    ArenaIndexMap<'t, StrI<'s>, FunctionBodyMacro>,
+  pub name_to_top_level_environment: &'t [(&'t IdT<'s, 't>, &'t TemplatasStoreT<'s, 't>)],
+  pub name_to_function_body_macro: ArenaIndexMap<'t, StrI<'s>, FunctionBodyMacro>,
   pub builtins: &'t TemplatasStoreT<'s, 't>,
 }
-
-
 
 /// Resolves a **path** — the last segment, looked up in whatever the earlier ones select.
 ///
@@ -404,7 +425,8 @@ pub fn lookup_nearest_with_path<'s, 't>(
   lookup_filter: HashSet<ILookupContext>,
   interner: &TypingInterner<'s, 't>,
 ) -> Option<ITemplataT<'s, 't>>
-where 's: 't,
+where
+  's: 't,
 {
   let (item_name, prefix) = parts.split_last()?;
   // VCOORD: This branch is the flat table showing through, not a special case worth keeping. Prefixes must
@@ -412,35 +434,33 @@ where 's: 't,
   // coordinates and no store answers to `rust` alone — and matching nothing against nothing selects
   // no store rather than every store. Once that table is a tree the identity falls out structurally
   // and this becomes `prefix.iter().try_fold(env, descend)?`, where zero segments is zero work.
-  let env =
-    if prefix.is_empty() {
-      env
-    } else {
-      let global_env = env.global_env();
-      let wanted: Vec<StrI<'s>> = prefix
-          .iter()
-          .map(|segment| match segment {
-            IImpreciseNameS::CodeName(code_name) => Some(code_name.name),
-            _ => None,
-          })
-          .collect::<Option<Vec<_>>>()?;
-      let store =
-          global_env
-              .name_to_top_level_environment
-              .iter()
-              .find(|(id, _)| {
-                let coord = id.package_coord;
-                std::iter::once(coord.module)
-                    .chain(coord.packages.iter().copied())
-                    .eq(wanted.iter().copied())
-              })
-              .map(|(_, store)| *store)?;
-      IEnvironmentT::Package(interner.alloc(PackageEnvironmentT {
-        global_env,
-        id: *store.templatas_store_name,
-        global_namespaces: interner.alloc_slice_copy(&[store]),
-      }))
-    };
+  let env = if prefix.is_empty() {
+    env
+  } else {
+    let global_env = env.global_env();
+    let wanted: Vec<StrI<'s>> = prefix
+      .iter()
+      .map(|segment| match segment {
+        IImpreciseNameS::CodeName(code_name) => Some(code_name.name),
+        _ => None,
+      })
+      .collect::<Option<Vec<_>>>()?;
+    let store = global_env
+      .name_to_top_level_environment
+      .iter()
+      .find(|(id, _)| {
+        let coord = id.package_coord;
+        std::iter::once(coord.module)
+          .chain(coord.packages.iter().copied())
+          .eq(wanted.iter().copied())
+      })
+      .map(|(_, store)| *store)?;
+    IEnvironmentT::Package(interner.alloc(PackageEnvironmentT {
+      global_env,
+      id: *store.templatas_store_name,
+      global_namespaces: interner.alloc_slice_copy(&[store]),
+    }))
+  };
   return env.lookup_nearest_with_imprecise_name(*item_name, lookup_filter, interner);
 }
 
@@ -453,66 +473,65 @@ pub fn entry_matches_filter<'s, 't>(
     IEnvEntryT::Impl(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
     IEnvEntryT::Struct(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
     IEnvEntryT::Interface(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-    IEnvEntryT::Templata(templata) => {
-      match templata {
-        ITemplataT::Placeholder(..) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::Isa(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::Kind(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::CoordList(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::Prototype(_) => true,
-        ITemplataT::Kind(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::StructDefinition(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::InterfaceDefinition(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::RuntimeSizedArrayTemplate(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::StaticSizedArrayTemplate(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::Boolean(_) => true,
-        ITemplataT::Function(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
-        ITemplataT::ImplDefinition(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
-        ITemplataT::Integer(_) => true,
-        ITemplataT::String(_) => true,
-        ITemplataT::ExternFunction(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
+    IEnvEntryT::Templata(templata) => match templata {
+      ITemplataT::Placeholder(..) => contexts.contains(&ILookupContext::TemplataLookupContext),
+      ITemplataT::Isa(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
+      ITemplataT::Kind(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
+      ITemplataT::CoordList(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
+      ITemplataT::Prototype(_) => true,
+      ITemplataT::Kind(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
+      ITemplataT::StructDefinition(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
+      ITemplataT::InterfaceDefinition(_) => {
+        contexts.contains(&ILookupContext::TemplataLookupContext)
       }
-    }
+      ITemplataT::RuntimeSizedArrayTemplate(_) => {
+        contexts.contains(&ILookupContext::TemplataLookupContext)
+      }
+      ITemplataT::StaticSizedArrayTemplate(_) => {
+        contexts.contains(&ILookupContext::TemplataLookupContext)
+      }
+      ITemplataT::Boolean(_) => true,
+      ITemplataT::Function(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
+      ITemplataT::ImplDefinition(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
+      ITemplataT::Integer(_) => true,
+      ITemplataT::String(_) => true,
+      ITemplataT::ExternFunction(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
+    },
   }
 }
-
 
 pub fn entry_to_templata<'s, 't>(
   defining_env: IEnvironmentT<'s, 't>,
   entry: IEnvEntryT<'s, 't>,
   interner: &TypingInterner<'s, 't>,
 ) -> ITemplataT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   match entry {
-    IEnvEntryT::Function(FunctionEnvEntry { template_id: id }) => {
-        ITemplataT::Function(interner.alloc(FunctionTemplataT {
-            outer_env: defining_env,
-            function_template_id: id,
-        }))
-    }
+    IEnvEntryT::Function(FunctionEnvEntry { template_id: id }) => ITemplataT::Function(
+      interner.alloc(FunctionTemplataT { outer_env: defining_env, function_template_id: id }),
+    ),
     IEnvEntryT::Struct(StructEnvEntry { template_id: id, tyype }) => {
-        ITemplataT::StructDefinition(interner.alloc(StructDefinitionTemplataT {
-            declaring_env: defining_env,
-            struct_template_id: id,
-            tyype,
-        }))
+      ITemplataT::StructDefinition(interner.alloc(StructDefinitionTemplataT {
+        declaring_env: defining_env,
+        struct_template_id: id,
+        tyype,
+      }))
     }
     IEnvEntryT::Interface(InterfaceEnvEntry { template_id: id, tyype }) => {
-        ITemplataT::InterfaceDefinition(interner.alloc(InterfaceDefinitionTemplataT {
-            declaring_env: defining_env,
-            interface_template_id: id,
-            tyype,
-        }))
+      ITemplataT::InterfaceDefinition(interner.alloc(InterfaceDefinitionTemplataT {
+        declaring_env: defining_env,
+        interface_template_id: id,
+        tyype,
+      }))
     }
-    IEnvEntryT::Impl(ImplEnvEntry { template_id: id, .. }) => ITemplataT::ImplDefinition(interner.alloc(ImplDefinitionTemplataT {
-        env: defining_env,
-        impl_template_id: id,
-    })),
+    IEnvEntryT::Impl(ImplEnvEntry { template_id: id, .. }) => ITemplataT::ImplDefinition(
+      interner.alloc(ImplDefinitionTemplataT { env: defining_env, impl_template_id: id }),
+    ),
     IEnvEntryT::Templata(templata) => templata,
   }
 }
-
 
 pub fn get_imprecise_name<'s, 't>(
   scout_arena: &ScoutArena<'s>,
@@ -588,7 +607,6 @@ pub fn get_imprecise_name<'s, 't>(
   }
 }
 
-
 pub fn code_locations_match<'s>(
   code_location_a: &CodeLocationS<'s>,
   code_location_b: &CodeLocationS<'s>,
@@ -603,7 +621,8 @@ pub fn code_locations_match<'s>(
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct TemplatasStoreT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub templatas_store_name: &'t IdT<'s, 't>,
   // Per @IIIOZ, env lookup tables are ArenaIndexMap so iteration order is insertion-deterministic across runs.
@@ -611,32 +630,38 @@ where 's: 't,
   pub imprecise_to_entries: ArenaIndexMap<'t, IImpreciseNameS<'s>, &'t [IEnvEntryT<'s, 't>]>,
 }
 
-impl<'s, 't> PartialEq for TemplatasStoreT<'s, 't> where 's: 't {
-  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: TemplatasStoreT.eq") }
-  
+impl<'s, 't> PartialEq for TemplatasStoreT<'s, 't>
+where
+  's: 't,
+{
+  fn eq(&self, _other: &Self) -> bool {
+    panic!("vcurious: TemplatasStoreT.eq")
+  }
 }
 impl<'s, 't> Eq for TemplatasStoreT<'s, 't> where 's: 't {}
-impl<'s, 't> Hash for TemplatasStoreT<'s, 't> where 's: 't {
+impl<'s, 't> Hash for TemplatasStoreT<'s, 't>
+where
+  's: 't,
+{
   fn hash<H: Hasher>(&self, _state: &mut H) {
     panic!("vcurious: TemplatasStoreT.hash")
   }
-  
 }
 
 /// Temporary state (see @TFITCX)
 pub struct TemplatasStoreBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub templatas_store_name: &'t IdT<'s, 't>,
   pub name_to_entry: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
   // Per @IIIOZ: IndexMap so build_in() iteration preserves insertion order (deterministic across runs).
-  pub imprecise_to_entries:
-    IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>>,
+  pub imprecise_to_entries: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>>,
 }
 
-
 impl<'s, 't> TemplatasStoreBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub fn new(templatas_store_name: &'t IdT<'s, 't>) -> Self {
     TemplatasStoreBuilder {
@@ -645,7 +670,6 @@ where 's: 't,
       imprecise_to_entries: IndexMap::default(),
     }
   }
-  
 
   pub fn add_entries(
     &mut self,
@@ -659,41 +683,111 @@ where 's: 't,
           if let Some(key_imprecise) = get_imprecise_name(scout_arena, *name) {
             self.imprecise_to_entries.entry(key_imprecise).or_insert_with(Vec::new).push(*entry);
           }
-          if let Some(local_imprecise) = get_imprecise_name(scout_arena, proto_templata.prototype.id.local_name) {
+          if let Some(local_imprecise) =
+            get_imprecise_name(scout_arena, proto_templata.prototype.id.local_name)
+          {
             self.imprecise_to_entries.entry(local_imprecise).or_insert_with(Vec::new).push(*entry);
           }
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameS {}))).or_insert_with(Vec::new).push(*entry);
+          self
+            .imprecise_to_entries
+            .entry(
+              scout_arena
+                .intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameS {})),
+            )
+            .or_insert_with(Vec::new)
+            .push(*entry);
         }
         IEnvEntryT::Impl(ImplEnvEntry { template_id: id }) => {
           let impl_template_name = IImplTemplateNameT::try_from(id.local_name)
             .expect("ImplEnvEntry id's local_name isn't an impl template name");
           let (sub, sup) = impl_template_name.imprecise_names();
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(ImplImpreciseNameValS { sub_citizen_imprecise_name: sub, super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub }))).or_insert_with(Vec::new).push(*entry);
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
+          self
+            .imprecise_to_entries
+            .entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(
+              ImplImpreciseNameValS {
+                sub_citizen_imprecise_name: sub,
+                super_interface_imprecise_name: sup,
+              },
+            )))
+            .or_insert_with(Vec::new)
+            .push(*entry);
+          self
+            .imprecise_to_entries
+            .entry(scout_arena.intern_imprecise_name(
+              IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS {
+                sub_citizen_imprecise_name: sub,
+              }),
+            ))
+            .or_insert_with(Vec::new)
+            .push(*entry);
+          self
+            .imprecise_to_entries
+            .entry(scout_arena.intern_imprecise_name(
+              IImpreciseNameValS::ImplSuperInterfaceImpreciseName(
+                ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: sup },
+              ),
+            ))
+            .or_insert_with(Vec::new)
+            .push(*entry);
         }
         IEnvEntryT::Templata(ITemplataT::Isa(isa)) => {
           let sub_local_name = match isa.sub_kind {
             KindT::Struct(stt) => stt.id.local_name,
             KindT::Interface(itt) => itt.id.local_name,
             KindT::KindPlaceholder(kp) => kp.id.local_name,
-            _ => panic!("vwat: unexpected sub_kind in IsaTemplataT add_entries: {:?}", isa.sub_kind),
+            _ => {
+              panic!("vwat: unexpected sub_kind in IsaTemplataT add_entries: {:?}", isa.sub_kind)
+            }
           };
           let super_local_name = match isa.super_kind {
             KindT::Interface(itt) => itt.id.local_name,
             KindT::KindPlaceholder(kp) => kp.id.local_name,
-            _ => panic!("vwat: unexpected super_kind in IsaTemplataT add_entries: {:?}", isa.super_kind),
+            _ => panic!(
+              "vwat: unexpected super_kind in IsaTemplataT add_entries: {:?}",
+              isa.super_kind
+            ),
           };
-          let sub_imprecise = get_imprecise_name(scout_arena, sub_local_name)
-            .unwrap_or_else(|| panic!("vassertSome: no imprecise name for sub_kind {:?}", isa.sub_kind));
-          let super_imprecise = get_imprecise_name(scout_arena, super_local_name)
-            .unwrap_or_else(|| panic!("vassertSome: no imprecise name for super_kind {:?}", isa.super_kind));
+          let sub_imprecise =
+            get_imprecise_name(scout_arena, sub_local_name).unwrap_or_else(|| {
+              panic!("vassertSome: no imprecise name for sub_kind {:?}", isa.sub_kind)
+            });
+          let super_imprecise =
+            get_imprecise_name(scout_arena, super_local_name).unwrap_or_else(|| {
+              panic!("vassertSome: no imprecise name for super_kind {:?}", isa.super_kind)
+            });
           if let Some(key_imprecise) = get_imprecise_name(scout_arena, *name) {
             self.imprecise_to_entries.entry(key_imprecise).or_insert_with(Vec::new).push(*entry);
           }
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(ImplImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise, super_interface_imprecise_name: super_imprecise }))).or_insert_with(Vec::new).push(*entry);
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise }))).or_insert_with(Vec::new).push(*entry);
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: super_imprecise }))).or_insert_with(Vec::new).push(*entry);
+          self
+            .imprecise_to_entries
+            .entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(
+              ImplImpreciseNameValS {
+                sub_citizen_imprecise_name: sub_imprecise,
+                super_interface_imprecise_name: super_imprecise,
+              },
+            )))
+            .or_insert_with(Vec::new)
+            .push(*entry);
+          self
+            .imprecise_to_entries
+            .entry(scout_arena.intern_imprecise_name(
+              IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS {
+                sub_citizen_imprecise_name: sub_imprecise,
+              }),
+            ))
+            .or_insert_with(Vec::new)
+            .push(*entry);
+          self
+            .imprecise_to_entries
+            .entry(scout_arena.intern_imprecise_name(
+              IImpreciseNameValS::ImplSuperInterfaceImpreciseName(
+                ImplSuperInterfaceImpreciseNameValS {
+                  super_interface_imprecise_name: super_imprecise,
+                },
+              ),
+            ))
+            .or_insert_with(Vec::new)
+            .push(*entry);
         }
         _ => {
           if let Some(imprecise) = get_imprecise_name(scout_arena, *name) {
@@ -703,18 +797,14 @@ where 's: 't,
       }
     }
   }
-  
 
-  pub fn build_in(
-    self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t TemplatasStoreT<'s, 't> {
+  pub fn build_in(self, interner: &TypingInterner<'s, 't>) -> &'t TemplatasStoreT<'s, 't> {
     let name_to_entry = interner.alloc_index_map_from_iter(self.name_to_entry);
     let imprecise_to_entries = interner.alloc_index_map_from_iter(
       self.imprecise_to_entries.into_iter().map(|(name, entries)| {
         let frozen: &'t [IEnvEntryT<'s, 't>] = interner.alloc_slice_from_vec(entries);
         (name, frozen)
-      })
+      }),
     );
     interner.alloc(TemplatasStoreT {
       templatas_store_name: self.templatas_store_name,
@@ -722,7 +812,6 @@ where 's: 't,
       imprecise_to_entries,
     })
   }
-  
 
   pub fn from_store(store: &TemplatasStoreT<'s, 't>) -> Self {
     let name_to_entry: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
@@ -738,18 +827,14 @@ where 's: 't,
       imprecise_to_entries,
     }
   }
-  
 
-  pub fn snapshot(
-    &self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t TemplatasStoreT<'s, 't> {
+  pub fn snapshot(&self, interner: &TypingInterner<'s, 't>) -> &'t TemplatasStoreT<'s, 't> {
     let name_to_entry = interner.alloc_index_map_from_iter(self.name_to_entry.iter().copied());
     let imprecise_to_entries = interner.alloc_index_map_from_iter(
       self.imprecise_to_entries.iter().map(|(name, entries)| {
         let frozen: &'t [IEnvEntryT<'s, 't>] = interner.alloc_slice_from_vec(entries.clone());
         (*name, frozen)
-      })
+      }),
     );
     interner.alloc(TemplatasStoreT {
       templatas_store_name: self.templatas_store_name,
@@ -757,14 +842,12 @@ where 's: 't,
       imprecise_to_entries,
     })
   }
-  
 }
 
-
-
-
-
-impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
+impl<'s, 't> TemplatasStoreT<'s, 't>
+where
+  's: 't,
+{
   pub fn add_entries(
     &self,
     interner: &TypingInterner<'s, 't>,
@@ -772,11 +855,13 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     new_entries_list: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
   ) -> TemplatasStoreT<'s, 't> {
     // Per @IIIOZ: IndexMap so iteration at line ~1007 preserves new_entries_list source order (deterministic).
-    let new_entries: IndexMap<INameT<'s, 't>, IEnvEntryT<'s, 't>> = new_entries_list.iter().cloned().collect();
+    let new_entries: IndexMap<INameT<'s, 't>, IEnvEntryT<'s, 't>> =
+      new_entries_list.iter().cloned().collect();
     assert!(new_entries.len() == new_entries_list.len());
 
     // combinedEntries = oldEntries ++ newEntries
-    let mut combined_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = self.name_to_entry.iter().map(|(k, v)| (*k, *v)).collect();
+    let mut combined_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+      self.name_to_entry.iter().map(|(k, v)| (*k, *v)).collect();
     // Intersection assertion
     for (key, _) in self.name_to_entry.iter() {
       if let Some(new_val) = new_entries.get(key) {
@@ -790,18 +875,25 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     }
 
     // newEntriesByNameS
-    let new_entries_by_name_s: Vec<(IImpreciseNameS<'s>, IEnvEntryT<'s, 't>)> =
-      new_entries.iter().flat_map(|(key, value)| {
+    let new_entries_by_name_s: Vec<(IImpreciseNameS<'s>, IEnvEntryT<'s, 't>)> = new_entries
+      .iter()
+      .flat_map(|(key, value)| {
         match value {
           IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata)) => {
             let mut entries = vec![];
             if let Some(key_imprecise) = get_imprecise_name(scout_arena, *key) {
               entries.push((key_imprecise, *value));
             }
-            if let Some(local_imprecise) = get_imprecise_name(scout_arena, proto_templata.prototype.id.local_name) {
+            if let Some(local_imprecise) =
+              get_imprecise_name(scout_arena, proto_templata.prototype.id.local_name)
+            {
               entries.push((local_imprecise, *value));
             }
-            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameS {})), *value));
+            entries.push((
+              scout_arena
+                .intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameS {})),
+              *value,
+            ));
             entries.into_iter().collect::<Vec<_>>()
           }
           IEnvEntryT::Impl(_) => {
@@ -816,31 +908,64 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
               KindT::Struct(stt) => stt.id.local_name,
               KindT::Interface(itt) => itt.id.local_name,
               KindT::KindPlaceholder(kp) => kp.id.local_name,
-              _ => panic!("vwat: unexpected sub_kind in IsaTemplataT add_entries: {:?}", isa.sub_kind),
+              _ => {
+                panic!("vwat: unexpected sub_kind in IsaTemplataT add_entries: {:?}", isa.sub_kind)
+              }
             };
             let super_local_name = match isa.super_kind {
               KindT::Interface(itt) => itt.id.local_name,
               KindT::KindPlaceholder(kp) => kp.id.local_name,
-              _ => panic!("vwat: unexpected super_kind in IsaTemplataT add_entries: {:?}", isa.super_kind),
+              _ => panic!(
+                "vwat: unexpected super_kind in IsaTemplataT add_entries: {:?}",
+                isa.super_kind
+              ),
             };
-            let sub_imprecise = get_imprecise_name(scout_arena, sub_local_name)
-              .unwrap_or_else(|| panic!("vassertSome: no imprecise name for sub_kind {:?}", isa.sub_kind));
-            let super_imprecise = get_imprecise_name(scout_arena, super_local_name)
-              .unwrap_or_else(|| panic!("vassertSome: no imprecise name for super_kind {:?}", isa.super_kind));
+            let sub_imprecise =
+              get_imprecise_name(scout_arena, sub_local_name).unwrap_or_else(|| {
+                panic!("vassertSome: no imprecise name for sub_kind {:?}", isa.sub_kind)
+              });
+            let super_imprecise =
+              get_imprecise_name(scout_arena, super_local_name).unwrap_or_else(|| {
+                panic!("vassertSome: no imprecise name for super_kind {:?}", isa.super_kind)
+              });
             let mut entries = vec![];
             if let Some(key_imprecise) = get_imprecise_name(scout_arena, *key) {
               entries.push((key_imprecise, *value));
             }
-            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(ImplImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise, super_interface_imprecise_name: super_imprecise })), *value));
-            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise })), *value));
-            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: super_imprecise })), *value));
+            entries.push((
+              scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(
+                ImplImpreciseNameValS {
+                  sub_citizen_imprecise_name: sub_imprecise,
+                  super_interface_imprecise_name: super_imprecise,
+                },
+              )),
+              *value,
+            ));
+            entries.push((
+              scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(
+                ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise },
+              )),
+              *value,
+            ));
+            entries.push((
+              scout_arena.intern_imprecise_name(
+                IImpreciseNameValS::ImplSuperInterfaceImpreciseName(
+                  ImplSuperInterfaceImpreciseNameValS {
+                    super_interface_imprecise_name: super_imprecise,
+                  },
+                ),
+              ),
+              *value,
+            ));
             entries
           }
-          _ => {
-            get_imprecise_name(scout_arena, *key).into_iter().map(|imprecise| (imprecise, *value)).collect::<Vec<_>>()
-          }
+          _ => get_imprecise_name(scout_arena, *key)
+            .into_iter()
+            .map(|imprecise| (imprecise, *value))
+            .collect::<Vec<_>>(),
         }
-      }).collect();
+      })
+      .collect();
 
     // Group by imprecise name
     // Per @IIIOZ: IndexMap so downstream iteration preserves new_entries_by_name_s source order.
@@ -856,7 +981,8 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     //     .map(key => (key -> (entriesByImpreciseNameS(key) ++ newEntriesByNameS(key)))).toMap
     // Per @IIIOZ: IndexMap so the alloc_index_map_from_iter freeze at line ~1072 inherits deterministic order
     // from upstream self.imprecise_to_entries (IndexMap) and grouped (IndexMap).
-    let mut combined_by_name_s: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> = IndexMap::default();
+    let mut combined_by_name_s: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> =
+      IndexMap::default();
     // Step 1: entriesByImpreciseNameS
     for (name, entries) in self.imprecise_to_entries.iter() {
       combined_by_name_s.insert(*name, entries.to_vec());
@@ -877,19 +1003,17 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
 
     // Build the final store
     let name_to_entry = interner.alloc_index_map_from_iter(combined_entries);
-    let imprecise_to_entries = interner.alloc_index_map_from_iter(
-      combined_by_name_s.into_iter().map(|(name, entries)| {
+    let imprecise_to_entries =
+      interner.alloc_index_map_from_iter(combined_by_name_s.into_iter().map(|(name, entries)| {
         let frozen: &'t [IEnvEntryT<'s, 't>] = interner.alloc_slice_from_vec(entries);
         (name, frozen)
-      })
-    );
+      }));
     TemplatasStoreT {
       templatas_store_name: self.templatas_store_name,
       name_to_entry,
       imprecise_to_entries,
     }
   }
-
 
   pub fn add_entry(
     &self,
@@ -901,7 +1025,6 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     self.add_entries(interner, scout_arena, vec![(name, entry)])
   }
 
-
   pub fn lookup_with_name_inner(
     &self,
     defining_env: IEnvironmentT<'s, 't>,
@@ -909,11 +1032,12 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     lookup_filter: &HashSet<ILookupContext>,
     interner: &TypingInterner<'s, 't>,
   ) -> Option<ITemplataT<'s, 't>> {
-    self.name_to_entry.get(&name)
+    self
+      .name_to_entry
+      .get(&name)
       .filter(|entry| entry_matches_filter(entry, lookup_filter))
       .map(|entry| entry_to_templata(defining_env, *entry, interner))
   }
-  
 
   pub fn lookup_with_imprecise_name_inner(
     &self,
@@ -924,12 +1048,11 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
   ) -> Vec<ITemplataT<'s, 't>> {
     let a1 = self.imprecise_to_entries.get(&name).copied().unwrap_or(&[]);
     let a2: Vec<_> = a1.iter().filter(|e| entry_matches_filter(e, lookup_filter)).collect();
-    let a3: Vec<ITemplataT<'s, 't>> = a2.iter().map(|e| entry_to_templata(defining_env, **e, interner)).collect();
+    let a3: Vec<ITemplataT<'s, 't>> =
+      a2.iter().map(|e| entry_to_templata(defining_env, **e, interner)).collect();
     a3
   }
-  
 }
-
 
 pub fn make_top_level_environment<'s, 't>(
   global_env: &'t GlobalEnvironmentT<'s, 't>,
@@ -939,32 +1062,28 @@ pub fn make_top_level_environment<'s, 't>(
   let global_namespaces: Vec<&'t TemplatasStoreT<'s, 't>> =
     global_env.name_to_top_level_environment.iter().map(|(_, ts)| *ts).collect();
   let global_namespaces = interner.alloc_slice_from_vec(global_namespaces);
-  interner.alloc(PackageEnvironmentT {
-    global_env,
-    id: namespace_name,
-    global_namespaces,
-  })
+  interner.alloc(PackageEnvironmentT { global_env, id: namespace_name, global_namespaces })
 }
 
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct PackageEnvironmentT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub id: IdT<'s, 't>,
   pub global_namespaces: &'t [&'t TemplatasStoreT<'s, 't>],
 }
 
-
-impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
+impl<'s, 't> PackageEnvironmentT<'s, 't>
+where
+  's: 't,
+{
   pub fn templatas(&self) -> &TemplatasStoreT<'s, 't> {
     panic!("Unimplemented: templatas");
     // vimpl()
   }
-  
-
-
 
   pub fn lookup_with_name_inner(
     &'t self,
@@ -975,7 +1094,11 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
   ) -> Vec<ITemplataT<'s, 't>> {
     let mut result: Vec<ITemplataT<'s, 't>> = Vec::new();
     result.extend(self.global_env.builtins.lookup_with_name_inner(
-      IEnvironmentT::Package(self), name, lookup_filter, interner));
+      IEnvironmentT::Package(self),
+      name,
+      lookup_filter,
+      interner,
+    ));
     for global_namespace in self.global_namespaces {
       let per_namespace_env = interner.alloc(PackageEnvironmentT {
         global_env: self.global_env,
@@ -983,11 +1106,14 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
         global_namespaces: self.global_namespaces,
       });
       result.extend(global_namespace.lookup_with_name_inner(
-        IEnvironmentT::Package(per_namespace_env), name, lookup_filter, interner));
+        IEnvironmentT::Package(per_namespace_env),
+        name,
+        lookup_filter,
+        interner,
+      ));
     }
     result
   }
-  
 
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
@@ -998,7 +1124,11 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
   ) -> Vec<ITemplataT<'s, 't>> {
     let mut result: Vec<ITemplataT<'s, 't>> = Vec::new();
     result.extend(self.global_env.builtins.lookup_with_imprecise_name_inner(
-      IEnvironmentT::Package(self), name, lookup_filter, interner));
+      IEnvironmentT::Package(self),
+      name,
+      lookup_filter,
+      interner,
+    ));
     for global_namespace in self.global_namespaces {
       let per_namespace_env = interner.alloc(PackageEnvironmentT {
         global_env: self.global_env,
@@ -1006,30 +1136,42 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
         global_namespaces: self.global_namespaces,
       });
       result.extend(global_namespace.lookup_with_imprecise_name_inner(
-        IEnvironmentT::Package(per_namespace_env), name, lookup_filter, interner));
+        IEnvironmentT::Package(per_namespace_env),
+        name,
+        lookup_filter,
+        interner,
+      ));
     }
     result
   }
-  
 }
 
 // Id-based Hash/PartialEq — documented exception to @IEOIBZ. Compared via
 // `self.id == other.id` (where `id: IdT` is sealed/canonical, so this is
 // itself ptr-eq) instead of `std::ptr::eq(self, other)`. Comparisons via
 // `IEnvironmentT` go through that enum's ptr-eq impl directly.
-impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-  
+impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't>
+where
+  's: 't,
+{
+  fn eq(&self, other: &Self) -> bool {
+    self.id == other.id
+  }
 }
 impl<'s, 't> Eq for PackageEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> Hash for PackageEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
-  
+impl<'s, 't> Hash for PackageEnvironmentT<'s, 't>
+where
+  's: 't,
+{
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.id.hash(state);
+  }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct CitizenEnvironmentT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub parent_env: IEnvironmentT<'s, 't>,
@@ -1038,48 +1180,41 @@ where 's: 't,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
 }
 
-
-
-impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
+impl<'s, 't> CitizenEnvironmentT<'s, 't>
+where
+  's: 't,
+{
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // templateId
   }
-  
 
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
-  
-
-
-
-
 
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     match (self.id.local_name, self.parent_env.id().local_name) {
       (id_local, parent_local)
         if IInstantiationNameT::try_from(id_local).is_ok()
-          && ITemplateNameT::try_from(parent_local).is_ok() => {
+          && ITemplateNameT::try_from(parent_local).is_ok() =>
+      {
         IInDenizenEnvironmentT::Citizen(self)
       }
-      (_, INameT::PackageTopLevel(_)) => {
-        IInDenizenEnvironmentT::Citizen(self)
-      }
-      _ => {
-        match IInDenizenEnvironmentT::try_from(self.parent_env) {
-          Ok(parent_in_denizen_env) => {
-            let result = parent_in_denizen_env.root_compiling_denizen_env();
-            assert!(IInstantiationNameT::try_from(result.id().local_name).is_ok(), "vwat");
-            result
-          }
-          Err(_) => { panic!("vwat: parent is not IInDenizenEnvironmentT"); }
+      (_, INameT::PackageTopLevel(_)) => IInDenizenEnvironmentT::Citizen(self),
+      _ => match IInDenizenEnvironmentT::try_from(self.parent_env) {
+        Ok(parent_in_denizen_env) => {
+          let result = parent_in_denizen_env.root_compiling_denizen_env();
+          assert!(IInstantiationNameT::try_from(result.id().local_name).is_ok(), "vwat");
+          result
         }
-      }
+        Err(_) => {
+          panic!("vwat: parent is not IInDenizenEnvironmentT");
+        }
+      },
     }
   }
-  
 
   pub fn lookup_with_name_inner(
     &'t self,
@@ -1088,18 +1223,24 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
     get_only_nearest: bool,
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    let result: Vec<_> = self.templatas.lookup_with_name_inner(
-      IEnvironmentT::Citizen(self), name, lookup_filter, interner,
-    ).into_iter().collect();
+    let result: Vec<_> = self
+      .templatas
+      .lookup_with_name_inner(IEnvironmentT::Citizen(self), name, lookup_filter, interner)
+      .into_iter()
+      .collect();
     if !result.is_empty() && get_only_nearest {
       result
     } else {
       let mut combined = result;
-      combined.extend(self.parent_env.lookup_with_name_inner(name, lookup_filter.clone(), get_only_nearest, interner));
+      combined.extend(self.parent_env.lookup_with_name_inner(
+        name,
+        lookup_filter.clone(),
+        get_only_nearest,
+        interner,
+      ));
       combined
     }
   }
-  
 
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
@@ -1109,27 +1250,42 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     let result = self.templatas.lookup_with_imprecise_name_inner(
-      IEnvironmentT::Citizen(self), name, lookup_filter, interner,
+      IEnvironmentT::Citizen(self),
+      name,
+      lookup_filter,
+      interner,
     );
     if !result.is_empty() && get_only_nearest {
       result
     } else {
       let mut combined = result;
-      combined.extend(self.parent_env.lookup_with_imprecise_name_inner(name, lookup_filter.clone(), get_only_nearest, interner));
+      combined.extend(self.parent_env.lookup_with_imprecise_name_inner(
+        name,
+        lookup_filter.clone(),
+        get_only_nearest,
+        interner,
+      ));
       combined
     }
   }
-  
 }
 
-impl<'s, 't> PartialEq for CitizenEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-  
+impl<'s, 't> PartialEq for CitizenEnvironmentT<'s, 't>
+where
+  's: 't,
+{
+  fn eq(&self, other: &Self) -> bool {
+    self.id == other.id
+  }
 }
 impl<'s, 't> Eq for CitizenEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> Hash for CitizenEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
-  
+impl<'s, 't> Hash for CitizenEnvironmentT<'s, 't>
+where
+  's: 't,
+{
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.id.hash(state);
+  }
 }
 pub fn child_of<'s, 't>(
   interner: &TypingInterner<'s, 't>,
@@ -1139,7 +1295,8 @@ pub fn child_of<'s, 't>(
   new_id: &'t IdT<'s, 't>,
   new_entries_list: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
 ) -> &'t GeneralEnvironmentT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   let mut builder = TemplatasStoreBuilder::new(new_id);
   builder.add_entries(scout_arena, new_entries_list);
@@ -1153,11 +1310,11 @@ where 's: 't,
   })
 }
 
-
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct ExportEnvironmentT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub parent_env: &'t PackageEnvironmentT<'s, 't>,
@@ -1166,25 +1323,24 @@ where 's: 't,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
 }
 
-
-impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
+impl<'s, 't> ExportEnvironmentT<'s, 't>
+where
+  's: 't,
+{
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
     // this
   }
-  
 
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // id
   }
-  
 
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
-  
 
   pub fn lookup_with_name_inner(
     &'t self,
@@ -1196,7 +1352,6 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
     // EnvironmentHelper.lookupWithNameInner(
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
-  
 
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
@@ -1206,32 +1361,48 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     let result = self.templatas.lookup_with_imprecise_name_inner(
-      IEnvironmentT::Export(self), name, lookup_filter, interner,
+      IEnvironmentT::Export(self),
+      name,
+      lookup_filter,
+      interner,
     );
     if !result.is_empty() && get_only_nearest {
       result
     } else {
       let mut combined = result;
-      combined.extend(self.parent_env.lookup_with_imprecise_name_inner(name, lookup_filter, get_only_nearest, interner));
+      combined.extend(self.parent_env.lookup_with_imprecise_name_inner(
+        name,
+        lookup_filter,
+        get_only_nearest,
+        interner,
+      ));
       combined
     }
   }
-  
 }
 
-impl<'s, 't> PartialEq for ExportEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-  
+impl<'s, 't> PartialEq for ExportEnvironmentT<'s, 't>
+where
+  's: 't,
+{
+  fn eq(&self, other: &Self) -> bool {
+    self.id == other.id
+  }
 }
 impl<'s, 't> Eq for ExportEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> Hash for ExportEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
-  
+impl<'s, 't> Hash for ExportEnvironmentT<'s, 't>
+where
+  's: 't,
+{
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.id.hash(state);
+  }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct ExternEnvironmentT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub parent_env: &'t PackageEnvironmentT<'s, 't>,
@@ -1240,26 +1411,24 @@ where 's: 't,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
 }
 
-
-
-impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
+impl<'s, 't> ExternEnvironmentT<'s, 't>
+where
+  's: 't,
+{
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
     // this
   }
-  
 
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // id
   }
-  
 
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
-  
 
   pub fn lookup_with_name_inner(
     &'t self,
@@ -1271,7 +1440,6 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
     // EnvironmentHelper.lookupWithNameInner(
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
-  
 
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
@@ -1284,22 +1452,30 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
     // EnvironmentHelper.lookupWithImpreciseNameInner(
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
-  
 }
 
-impl<'s, 't> PartialEq for ExternEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-  
+impl<'s, 't> PartialEq for ExternEnvironmentT<'s, 't>
+where
+  's: 't,
+{
+  fn eq(&self, other: &Self) -> bool {
+    self.id == other.id
+  }
 }
 impl<'s, 't> Eq for ExternEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> Hash for ExternEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
-  
+impl<'s, 't> Hash for ExternEnvironmentT<'s, 't>
+where
+  's: 't,
+{
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.id.hash(state);
+  }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct GeneralEnvironmentT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub parent_env: IInDenizenEnvironmentT<'s, 't>,
@@ -1308,28 +1484,23 @@ where 's: 't,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
 }
 
-
-impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
+impl<'s, 't> GeneralEnvironmentT<'s, 't>
+where
+  's: 't,
+{
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // id
   }
-  
 
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
-  
-
-
-
-
 
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     self.parent_env.root_compiling_denizen_env()
   }
-  
 
   pub fn lookup_with_name_inner(
     &'t self,
@@ -1341,7 +1512,6 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
     // EnvironmentHelper.lookupWithNameInner(
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
-  
 
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
@@ -1351,101 +1521,128 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     lookup_with_imprecise_name_inner(
-      IEnvironmentT::General(self), self.templatas, IEnvironmentT::from(self.parent_env), name, lookup_filter, get_only_nearest, interner)
+      IEnvironmentT::General(self),
+      self.templatas,
+      IEnvironmentT::from(self.parent_env),
+      name,
+      lookup_filter,
+      get_only_nearest,
+      interner,
+    )
   }
-  
 }
 
-impl<'s, 't> PartialEq for GeneralEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: GeneralEnvironmentT.eq") }
-  
+impl<'s, 't> PartialEq for GeneralEnvironmentT<'s, 't>
+where
+  's: 't,
+{
+  fn eq(&self, _other: &Self) -> bool {
+    panic!("vcurious: GeneralEnvironmentT.eq")
+  }
 }
 impl<'s, 't> Eq for GeneralEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> Hash for GeneralEnvironmentT<'s, 't> where 's: 't {
+impl<'s, 't> Hash for GeneralEnvironmentT<'s, 't>
+where
+  's: 't,
+{
   fn hash<H: Hasher>(&self, _state: &mut H) {
     panic!("vcurious: GeneralEnvironmentT.hash")
   }
-  
 }
 
 // Concrete → IEnvironmentT
 impl<'s, 't> From<&'t PackageEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t PackageEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Package(e) }
-  
+  fn from(e: &'t PackageEnvironmentT<'s, 't>) -> Self {
+    IEnvironmentT::Package(e)
+  }
 }
 impl<'s, 't> From<&'t CitizenEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Citizen(e) }
-  
+  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self {
+    IEnvironmentT::Citizen(e)
+  }
 }
 impl<'s, 't> From<&'t FunctionEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Function(e) }
-  
+  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self {
+    IEnvironmentT::Function(e)
+  }
 }
 impl<'s, 't> From<&'t NodeEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Node(e) }
-  
+  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self {
+    IEnvironmentT::Node(e)
+  }
 }
 impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>> for IEnvironmentT<'s, 't> {
   fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>) -> Self {
     IEnvironmentT::BuildingWithClosureds(e)
   }
-  
 }
-impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>> for IEnvironmentT<'s, 't> {
+impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>>
+  for IEnvironmentT<'s, 't>
+{
   fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>) -> Self {
     IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e)
   }
-  
 }
 impl<'s, 't> From<&'t GeneralEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self { IEnvironmentT::General(e) }
-  
+  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self {
+    IEnvironmentT::General(e)
+  }
 }
 impl<'s, 't> From<&'t ExportEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t ExportEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Export(e) }
-  
+  fn from(e: &'t ExportEnvironmentT<'s, 't>) -> Self {
+    IEnvironmentT::Export(e)
+  }
 }
 impl<'s, 't> From<&'t ExternEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t ExternEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Extern(e) }
-  
+  fn from(e: &'t ExternEnvironmentT<'s, 't>) -> Self {
+    IEnvironmentT::Extern(e)
+  }
 }
 
 // Concrete → IInDenizenEnvironmentT (8 variants; no Package)
 impl<'s, 't> From<&'t CitizenEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Citizen(e) }
-  
+  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self {
+    IInDenizenEnvironmentT::Citizen(e)
+  }
 }
 impl<'s, 't> From<&'t FunctionEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Function(e) }
-  
+  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self {
+    IInDenizenEnvironmentT::Function(e)
+  }
 }
 impl<'s, 't> From<&'t NodeEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Node(e) }
-  
+  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self {
+    IInDenizenEnvironmentT::Node(e)
+  }
 }
-impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>>
+  for IInDenizenEnvironmentT<'s, 't>
+{
   fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>) -> Self {
     IInDenizenEnvironmentT::BuildingWithClosureds(e)
   }
-  
 }
-impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>>
+  for IInDenizenEnvironmentT<'s, 't>
+{
   fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>) -> Self {
     IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e)
   }
-  
 }
 impl<'s, 't> From<&'t GeneralEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::General(e) }
-  
+  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self {
+    IInDenizenEnvironmentT::General(e)
+  }
 }
 impl<'s, 't> From<&'t ExportEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t ExportEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Export(e) }
-  
+  fn from(e: &'t ExportEnvironmentT<'s, 't>) -> Self {
+    IInDenizenEnvironmentT::Export(e)
+  }
 }
 impl<'s, 't> From<&'t ExternEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t ExternEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Extern(e) }
-  
+  fn from(e: &'t ExternEnvironmentT<'s, 't>) -> Self {
+    IInDenizenEnvironmentT::Extern(e)
+  }
 }
 
 // Widening: IInDenizenEnvironmentT → IEnvironmentT (always succeeds)
@@ -1456,14 +1653,14 @@ impl<'s, 't> From<IInDenizenEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
       IInDenizenEnvironmentT::Function(f) => IEnvironmentT::Function(f),
       IInDenizenEnvironmentT::Node(n) => IEnvironmentT::Node(n),
       IInDenizenEnvironmentT::BuildingWithClosureds(b) => IEnvironmentT::BuildingWithClosureds(b),
-      IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b) =>
-        IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b),
+      IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b) => {
+        IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b)
+      }
       IInDenizenEnvironmentT::General(g) => IEnvironmentT::General(g),
       IInDenizenEnvironmentT::Export(e) => IEnvironmentT::Export(e),
       IInDenizenEnvironmentT::Extern(e) => IEnvironmentT::Extern(e),
     }
   }
-  
 }
 
 // Narrowing: IEnvironmentT → IInDenizenEnvironmentT (errors only on Package)
@@ -1474,16 +1671,18 @@ impl<'s, 't> TryFrom<IEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
       IEnvironmentT::Citizen(c) => Ok(IInDenizenEnvironmentT::Citizen(c)),
       IEnvironmentT::Function(f) => Ok(IInDenizenEnvironmentT::Function(f)),
       IEnvironmentT::Node(n) => Ok(IInDenizenEnvironmentT::Node(n)),
-      IEnvironmentT::BuildingWithClosureds(b) => Ok(IInDenizenEnvironmentT::BuildingWithClosureds(b)),
-      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b) =>
-        Ok(IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b)),
+      IEnvironmentT::BuildingWithClosureds(b) => {
+        Ok(IInDenizenEnvironmentT::BuildingWithClosureds(b))
+      }
+      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b) => {
+        Ok(IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b))
+      }
       IEnvironmentT::General(g) => Ok(IInDenizenEnvironmentT::General(g)),
       IEnvironmentT::Export(e) => Ok(IInDenizenEnvironmentT::Export(e)),
       IEnvironmentT::Extern(e) => Ok(IInDenizenEnvironmentT::Extern(e)),
       other @ IEnvironmentT::Package(_) => Err(other),
     }
   }
-  
 }
 
 // ============================================================================
@@ -1494,21 +1693,19 @@ impl<'s, 't> TryFrom<IEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
 
 /// Temporary state (see @TFITCX)
 pub struct PackageEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub id: IdT<'s, 't>,
   pub global_namespaces: Vec<&'t TemplatasStoreT<'s, 't>>,
 }
 
-
 impl<'s, 't> PackageEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
-  pub fn build_in(
-    self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t PackageEnvironmentT<'s, 't> {
+  pub fn build_in(self, interner: &TypingInterner<'s, 't>) -> &'t PackageEnvironmentT<'s, 't> {
     let global_namespaces = interner.alloc_slice_from_vec(self.global_namespaces);
     interner.alloc(PackageEnvironmentT {
       global_env: self.global_env,
@@ -1516,12 +1713,12 @@ where 's: 't,
       global_namespaces,
     })
   }
-  
 }
 
 /// Temporary state (see @TFITCX)
 pub struct CitizenEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub parent_env: IEnvironmentT<'s, 't>,
@@ -1530,14 +1727,11 @@ where 's: 't,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
 }
 
-
 impl<'s, 't> CitizenEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
-  pub fn build_in(
-    self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t CitizenEnvironmentT<'s, 't> {
+  pub fn build_in(self, interner: &TypingInterner<'s, 't>) -> &'t CitizenEnvironmentT<'s, 't> {
     let templatas = self.templatas_builder.build_in(interner);
     interner.alloc(CitizenEnvironmentT {
       global_env: self.global_env,
@@ -1547,12 +1741,12 @@ where 's: 't,
       templatas,
     })
   }
-  
 }
 
 /// Temporary state (see @TFITCX)
 pub struct ExportEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub parent_env: &'t PackageEnvironmentT<'s, 't>,
@@ -1561,14 +1755,11 @@ where 's: 't,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
 }
 
-
 impl<'s, 't> ExportEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
-  pub fn build_in(
-    self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t ExportEnvironmentT<'s, 't> {
+  pub fn build_in(self, interner: &TypingInterner<'s, 't>) -> &'t ExportEnvironmentT<'s, 't> {
     let templatas = self.templatas_builder.build_in(interner);
     interner.alloc(ExportEnvironmentT {
       global_env: self.global_env,
@@ -1578,12 +1769,12 @@ where 's: 't,
       templatas,
     })
   }
-  
 }
 
 /// Temporary state (see @TFITCX)
 pub struct ExternEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub parent_env: &'t PackageEnvironmentT<'s, 't>,
@@ -1592,14 +1783,11 @@ where 's: 't,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
 }
 
-
 impl<'s, 't> ExternEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
-  pub fn build_in(
-    self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t ExternEnvironmentT<'s, 't> {
+  pub fn build_in(self, interner: &TypingInterner<'s, 't>) -> &'t ExternEnvironmentT<'s, 't> {
     let templatas = self.templatas_builder.build_in(interner);
     interner.alloc(ExternEnvironmentT {
       global_env: self.global_env,
@@ -1609,12 +1797,12 @@ where 's: 't,
       templatas,
     })
   }
-  
 }
 
 /// Temporary state (see @TFITCX)
 pub struct GeneralEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub parent_env: IInDenizenEnvironmentT<'s, 't>,
@@ -1623,14 +1811,11 @@ where 's: 't,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
 }
 
-
 impl<'s, 't> GeneralEnvironmentBuilder<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
-  pub fn build_in(
-    self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t GeneralEnvironmentT<'s, 't> {
+  pub fn build_in(self, interner: &TypingInterner<'s, 't>) -> &'t GeneralEnvironmentT<'s, 't> {
     let templatas = self.templatas_builder.build_in(interner);
     interner.alloc(GeneralEnvironmentT {
       global_env: self.global_env,
@@ -1640,5 +1825,4 @@ where 's: 't,
       templatas,
     })
   }
-  
 }

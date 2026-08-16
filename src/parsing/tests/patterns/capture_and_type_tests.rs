@@ -1,14 +1,13 @@
-
-use bumpalo::Bump;
-use crate::parse_arena::ParseArena;
+use crate::interner::StrI;
 use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::{
   BorrowRefPT, INameDeclarationP, ITemplexPT, NameOrRunePT, NameP, PatternPP, RegionP,
 };
-use crate::interner::StrI;
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect,
 };
+use bumpalo::Bump;
 
 fn compile<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -62,7 +61,9 @@ fn capture_with_borrow_tame() {
   match pattern.templex.as_ref().unwrap() {
     ITemplexPT::BorrowRef(BorrowRefPT {
       region: RegionP::Unspecified,
-      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("R")), .. }), .. }) => {}
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("R")), .. }),
+      ..
+    }) => {}
     other => panic!("expected `&R` → BorrowRef(Unspecified, R), got {:?}", other),
   }
   assert!(pattern.destructure.is_none());
@@ -85,11 +86,17 @@ fn capture_with_self_in_front() {
   match pattern.templex.as_ref().unwrap() {
     ITemplexPT::BorrowRef(BorrowRefPT {
       region: RegionP::Unspecified,
-      inner: ITemplexPT::BorrowRef(BorrowRefPT {
-        region: RegionP::Unspecified,
-        inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("R")), .. }), .. }), .. }) => {}
-    other => panic!("expected `&&R` → BorrowRef(Unspecified, BorrowRef(Unspecified, R)), got {:?}", other),
+      inner:
+        ITemplexPT::BorrowRef(BorrowRefPT {
+          region: RegionP::Unspecified,
+          inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("R")), .. }),
+          ..
+        }),
+      ..
+    }) => {}
+    other => {
+      panic!("expected `&&R` → BorrowRef(Unspecified, BorrowRef(Unspecified, R)), got {:?}", other)
+    }
   }
   assert!(pattern.destructure.is_none());
 }
-

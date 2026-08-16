@@ -1,19 +1,19 @@
 // Run with: cargo test --manifest-path Cargo.toml --lib parsing::tests::if_tests
 
-
-use bumpalo::Bump;
 use crate::cast;
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
+use bumpalo::Bump;
 
 #[test]
 fn ifs() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let expr = compile_expression_expect(&parse_arena, &keywords, "if true { doBlarks(&x) } else { }");
+  let expr =
+    compile_expression_expect(&parse_arena, &keywords, "if true { doBlarks(&x) } else { }");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let condition = cast!(if_.condition, IExpressionPE::ConstantBool);
@@ -110,16 +110,10 @@ fn if_with_condition_declarations_and_block_contents() {
   let equals = cast!(if_.condition, IExpressionPE::BinaryCall);
   assert_eq!(equals.function_name.as_str(), "==");
   assert_lookup_name(equals.left_expr, "num");
-  assert_eq!(
-    cast!(equals.right_expr, IExpressionPE::ConstantInt).value,
-    0
-  );
+  assert_eq!(cast!(equals.right_expr, IExpressionPE::ConstantInt).value, 0);
 
   assert!(if_.then_body.maybe_default_region.is_none());
-  assert_eq!(
-    cast!(if_.then_body.inner, IExpressionPE::ConstantInt).value,
-    1
-  );
+  assert_eq!(cast!(if_.then_body.inner, IExpressionPE::ConstantInt).value, 1);
   assert!(if_.else_body.maybe_default_region.is_none());
   let two = cast!(if_.else_body.inner, IExpressionPE::ConstantInt);
   assert_eq!(two.value, 2);
@@ -127,5 +121,3 @@ fn if_with_condition_declarations_and_block_contents() {
 
   cast!(final_void, IExpressionPE::Void);
 }
-
-

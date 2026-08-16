@@ -1,13 +1,12 @@
-
-use bumpalo::Bump;
 use crate::cast;
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, expect_1, expect_2,
 };
+use bumpalo::Bump;
 #[test]
 fn capture_with_destructure_with_type_inside() {
   let parse_bump = Bump::new();
@@ -77,4 +76,3 @@ fn destructure_with_nested_atom() {
   assert_templex_name(b_pattern.templex.as_ref().unwrap(), "int");
   assert!(b_pattern.destructure.is_none());
 }
-

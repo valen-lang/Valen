@@ -2,13 +2,11 @@ use crate::postparsing::names::IVarNameS;
 use crate::postparsing::rules::RuneUsage;
 use crate::utils::range::RangeS;
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CaptureS<'s> {
   pub name: IVarNameS<'s>,
   pub mutate: bool,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AtomSP<'s> {

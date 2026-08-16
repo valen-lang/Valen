@@ -1,12 +1,9 @@
-
-
+use std::fmt::Result;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
-use std::ops::Deref;
-use std::fmt::Result;
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::slice::Iter;
-
 
 /// Interned string: a by-value wrapper around arena-backed `&'a str`.
 /// Never arena-allocated; just holds a reference to canonical storage.

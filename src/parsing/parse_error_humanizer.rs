@@ -10,13 +10,7 @@ impl ParseErrorHumanizer {
     let pos_str = source_code_utils::humanize_pos(file_path, source, err.pos());
     let next_stuff = source_code_utils::next_thing_and_rest_of_line(source, err.pos() as usize);
 
-    format!(
-      "{} error {}: {}\n{}\n",
-      pos_str,
-      err.error_id(),
-      error_message,
-      next_stuff
-    )
+    format!("{} error {}: {}\n{}\n", pos_str, err.error_id(), error_message, next_stuff)
   }
 
   fn get_error_message(err: &ParseError) -> &str {
@@ -147,5 +141,3 @@ impl ParseErrorHumanizer {
     }
   }
 }
-
-

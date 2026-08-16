@@ -1,11 +1,10 @@
 use crate::keywords::Keywords;
 use crate::lexing::ast::*;
 use crate::lexing::errors::ParseError;
-use crate::parsing::ast::*;
-use crate::parsing::parse_utils::{parse_region, try_skip_past_equals_while};
-use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parse_arena::ParseArena;
-
+use crate::parsing::ast::*;
+use crate::parsing::expression_parser::ScrambleIterator;
+use crate::parsing::parse_utils::{parse_region, try_skip_past_equals_while};
 
 type ParseResult<T> = Result<T, ParseError>;
 
@@ -15,16 +14,12 @@ pub struct TemplexParser<'p, 'ctx> {
   keywords: &'ctx Keywords<'p>,
 }
 
-
 impl<'p, 'ctx> TemplexParser<'p, 'ctx>
 where
   'p: 'ctx,
 {
   pub fn new(parse_arena: &'ctx ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
-    TemplexParser {
-      parse_arena,
-      keywords,
-    }
+    TemplexParser { parse_arena, keywords }
   }
 
   /// Parse an array type expression
@@ -66,7 +61,6 @@ where
 
     Ok(Some(result))
   }
-  
 
   /// Parse a function name (including operator names)
   pub fn parse_function_name(&self, iter: &mut ScrambleIterator<'p, '_>) -> Option<NameP<'p>> {
@@ -88,10 +82,7 @@ where
             iter.advance();
             iter.advance();
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.triple_equals,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.triple_equals))
           }
           (
             Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))),
@@ -101,10 +92,7 @@ where
             iter.advance();
             iter.advance();
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.spaceship,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.spaceship))
           }
           (
             Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
@@ -113,10 +101,7 @@ where
           ) => {
             iter.advance();
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.double_equals,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.double_equals))
           }
           (
             Some(INodeLEEnum::Symbol(SymbolLE(_, '!'))),
@@ -125,10 +110,7 @@ where
           ) => {
             iter.advance();
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.not_equals,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.not_equals))
           }
           (
             Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))),
@@ -137,10 +119,7 @@ where
           ) => {
             iter.advance();
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.less_equals,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.less_equals))
           }
           (
             Some(INodeLEEnum::Symbol(SymbolLE(_, '>'))),
@@ -149,67 +128,42 @@ where
           ) => {
             iter.advance();
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.greater_equals,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.greater_equals))
           }
           (Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))), _, _) => {
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.less,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.less))
           }
           (Some(INodeLEEnum::Symbol(SymbolLE(_, '>'))), _, _) => {
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.greater,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.greater))
           }
           (Some(INodeLEEnum::Symbol(SymbolLE(_, '+'))), _, _) => {
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.plus,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.plus))
           }
           (Some(INodeLEEnum::Symbol(SymbolLE(_, '-'))), _, _) => {
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.minus,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.minus))
           }
           (Some(INodeLEEnum::Symbol(SymbolLE(_, '*'))), _, _) => {
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.asterisk,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.asterisk))
           }
           (Some(INodeLEEnum::Symbol(SymbolLE(_, '/'))), _, _) => {
             iter.advance();
-            Some(NameP(
-              RangeL::new(begin, iter.get_prev_end_pos()),
-              self.keywords.slash,
-            ))
+            Some(NameP(RangeL::new(begin, iter.get_prev_end_pos()), self.keywords.slash))
           }
           _ => None,
         }
       }
       Some(INodeLEEnum::Parend(ParendLE { range, .. })) => {
         // Don't advance, we do that elsewhere
-        Some(NameP(
-          RangeL::new(range.begin(), range.begin()),
-          self.keywords.underscores_call,
-        ))
+        Some(NameP(RangeL::new(range.begin(), range.begin()), self.keywords.underscores_call))
       }
       _ => None,
     }
   }
-  
 
   /// Parse a function prototype type
   pub fn parse_prototype(
@@ -247,8 +201,7 @@ where
 
     Ok(Some(result))
   }
-  
-  
+
   /// Parse a templex prefix (`&T`, `weak T`, `heap T`, `@T`) into the
   /// corresponding structural ref variant. Returns None if no prefix.
   pub fn parse_ref_prefix(
@@ -303,7 +256,6 @@ where
 
     Ok(None)
   }
-  
 
   /// Parse ending region suffix (type')
   pub fn parse_ending_region(
@@ -326,7 +278,6 @@ where
 
     Ok(Some(region))
   }
-  
 
   /// Parse templex atom and any following calls/prefixes/suffixes
   pub fn parse_templex_atom_and_call_and_prefixes_and_suffixes(
@@ -336,10 +287,12 @@ where
     let inner = self.parse_templex_atom_and_call_and_prefixes(original_iter)?;
     Ok(inner)
   }
-  
 
   /// Parse a templex atom (basic type expression)
-  pub fn parse_templex_atom(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<ITemplexPT<'p>> {
+  pub fn parse_templex_atom(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<ITemplexPT<'p>> {
     assert!(iter.peek_cloned().is_some());
     let _begin = iter.get_pos();
 
@@ -351,10 +304,7 @@ where
       return Ok(ITemplexPT::Bool(BoolPT { range, value: true }));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.faalse) {
-      return Ok(ITemplexPT::Bool(BoolPT {
-        range,
-        value: false,
-      }));
+      return Ok(ITemplexPT::Bool(BoolPT { range, value: false }));
     }
     // Try parsing prototype (lines 404-408)
     if let Some(proto) = self.parse_prototype(iter)? {
@@ -376,10 +326,9 @@ where
       INodeLEEnum::String(StringLE { range, parts }) => {
         iter.advance();
         match parts {
-          [StringPart::Literal { range, s }] => Ok(ITemplexPT::String(StringPT {
-            range: *range,
-            str: *s,
-          })),
+          [StringPart::Literal { range, s }] => {
+            Ok(ITemplexPT::String(StringPT { range: *range, str: *s }))
+          }
           _ => Err(ParseError::BadStringInTemplex(range.begin())),
         }
       }
@@ -402,7 +351,6 @@ where
       _ => Err(ParseError::BadTypeExpression(iter.get_pos())),
     }
   }
-  
 
   /// Parse template call arguments <...>
   pub fn parse_template_call_args(
@@ -429,7 +377,6 @@ where
 
     Ok(Some(self.parse_arena.alloc_slice_from_vec(elements_p)))
   }
-  
 
   /// Parse a tuple type
   pub fn parse_tuple(
@@ -460,7 +407,6 @@ where
       _ => Ok(None),
     }
   }
-  
 
   /// Parse templex atom and any following call
   pub fn parse_templex_atom_and_call(
@@ -484,7 +430,6 @@ where
 
     Ok(atom)
   }
-  
 
   /// Parse templex atom, call, and prefixes
   pub fn parse_templex_atom_and_call_and_prefixes(
@@ -516,13 +461,11 @@ where
     // Parse atom and call (line 537)
     self.parse_templex_atom_and_call(iter)
   }
-  
 
   /// Main entry point for parsing a templex
   pub fn parse_templex(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<ITemplexPT<'p>> {
     self.parse_templex_atom_and_call_and_prefixes_and_suffixes(iter)
   }
-  
 
   /// Parse a typed rune (T: Type)
   pub fn parse_typed_rune(
@@ -532,18 +475,13 @@ where
     match original_iter.peek2_cloned() {
       // Don't parse "func moo()void" (lines 550-552)
       (Some(INodeLEEnum::Word(WordLE { str: name_str, .. })), _)
-      if name_str == self.keywords.func =>
-        {
-          Ok(None)
-        }
+        if name_str == self.keywords.func =>
+      {
+        Ok(None)
+      }
       (
-        Some(INodeLEEnum::Word(WordLE {
-                                 range: name_range,
-                                 str: name_str,
-                               })),
-        Some(INodeLEEnum::Word(WordLE {
-                                 range: type_range, ..
-                               })),
+        Some(INodeLEEnum::Word(WordLE { range: name_range, str: name_str })),
+        Some(INodeLEEnum::Word(WordLE { range: type_range, .. })),
       ) => {
         // Parse the rune name (or underscore for anonymous)
         let maybe_name = if name_str == self.keywords.underscore {
@@ -569,23 +507,19 @@ where
       _ => Ok(None),
     }
   }
-  
 
   /// Parse a rule call
-  pub fn parse_rule_call(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<Option<IRulexPR<'p>>> {
+  pub fn parse_rule_call(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<Option<IRulexPR<'p>>> {
     match iter.peek2_cloned() {
       (Some(INodeLEEnum::Word(WordLE { str, .. })), _) if str == self.keywords.func => {
         return Ok(None);
       }
       (
-        Some(INodeLEEnum::Word(WordLE {
-                                 range: name_range,
-                                 str: name,
-                               })),
-        Some(INodeLEEnum::Parend(ParendLE {
-                                   range: args_range,
-                                   contents: args_lr,
-                                 })),
+        Some(INodeLEEnum::Word(WordLE { range: name_range, str: name })),
+        Some(INodeLEEnum::Parend(ParendLE { range: args_range, contents: args_lr })),
       ) => {
         let range = RangeL::new(name_range.begin(), args_range.end());
 
@@ -609,8 +543,6 @@ where
       _ => Ok(None),
     }
   }
-  
-
 
   /// Parse a rule atom
   pub fn parse_rule_atom(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<IRulexPR<'p>> {
@@ -630,7 +562,6 @@ where
     let t = self.parse_templex(iter)?;
     Ok(IRulexPR::Templex(t))
   }
-  
 
   /// Parse a rule up to equals precedence
   pub fn parse_rule_up_to_equals_precedence(
@@ -666,16 +597,17 @@ where
       }
     }
   }
-  
 
   /// Main entry point for parsing a rule
   pub fn parse_rule(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<IRulexPR<'p>> {
     self.parse_rule_up_to_equals_precedence(iter)
   }
-  
 
   /// Parse a rune type (Ref, Int, etc.)
-  pub fn parse_rune_type(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<Option<ITypePR>> {
+  pub fn parse_rune_type(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<Option<ITypePR>> {
     match iter.peek_cloned() {
       None => Ok(None),
 
@@ -694,5 +626,4 @@ where
       _ => Err(ParseError::BadRuneTypeError(iter.get_pos())),
     }
   }
-  
 }

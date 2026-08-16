@@ -59,170 +59,163 @@ const ALLOWED: &[&str] = &["add_two_numbers", "make_counter", "Counter", "pick",
 /// inside `'tcx`.
 #[derive(Default)]
 struct ValeCallbacks {
-    outcome: Option<Result<Vec<String>, String>>,
+  outcome: Option<Result<Vec<String>, String>>,
 }
 
 impl Callbacks for ValeCallbacks {
-    fn after_expansion<'tcx>(&mut self, _compiler: &Compiler, tcx: TyCtxt<'tcx>) -> Compilation {
-        // `after_expansion` rather than `after_analysis`: every crate is loaded and signatures,
-        // ADT defs and module children are all queryable here, but rustc has not yet
-        // typechecked bodies — which is everything a read-only typing pass needs and nothing
-        // it doesn't.
-        self.outcome = Some(compile_vale(tcx, ALLOWED));
-        Compilation::Stop
-    }
+  fn after_expansion<'tcx>(&mut self, _compiler: &Compiler, tcx: TyCtxt<'tcx>) -> Compilation {
+    // `after_expansion` rather than `after_analysis`: every crate is loaded and signatures,
+    // ADT defs and module children are all queryable here, but rustc has not yet
+    // typechecked bodies — which is everything a read-only typing pass needs and nothing
+    // it doesn't.
+    self.outcome = Some(compile_vale(tcx, ALLOWED));
+    Compilation::Stop
+  }
 }
 
 /// Runs Vale's typing pass over a program that uses Rust items, with `allowed` naming the
 /// importable Rust paths. Returns the oracle log on success.
 fn compile_vale(tcx: TyCtxt<'_>, allowed: &[&str]) -> Result<Vec<String>, String> {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let typing_interner = TypingInterner::new(&typing_bump);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let typing_interner = TypingInterner::new(&typing_bump);
 
-    // The arenas are created *inside* the callback on purpose: `'tcx` outlives them, so the
-    // nesting is sound and the reverse would not be. Nothing built here survives the callback,
-    // which is the containment property the design depends on.
-    //
-    // The program exercises the whole seam at once — a generic call, a free function, a Rust
-    // type reaching Vale by inference from a signature, a method, and a value that needs a
-    // scope-end drop. The corpus splits these apart so a failure localizes; here they are
-    // together on purpose, because this is a smoke run rather than a test.
-    let code = r"
+  // The arenas are created *inside* the callback on purpose: `'tcx` outlives them, so the
+  // nesting is sound and the reverse would not be. Nothing built here survives the callback,
+  // which is the containment property the design depends on.
+  //
+  // The program exercises the whole seam at once — a generic call, a free function, a Rust
+  // type reaching Vale by inference from a signature, a method, and a value that needs a
+  // scope-end drop. The corpus splits these apart so a failure localizes; here they are
+  // together on purpose, because this is a smoke run rather than a test.
+  let code = r"
 exported func main() int {
   x = pick<int, bool>(add_two_numbers(3, 4), true);
   c = make_counter();
   return (make_counter()).get();
 }";
-    let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
 
-    // No package coordinate is handed in: each item derives its own from `tcx.def_path`.
-    let real = TyCtxtOracle::new(tcx, &scout_arena, allowed);
-    // Tag the log with the crate this rustc invocation is compiling. Constant today because
-    // only one invocation runs the typing pass; it stops being constant the moment a second
-    // compile contributes entries.
-    let compiling = tcx.crate_name(rustc_span::def_id::LOCAL_CRATE).to_string();
-    let logging = LoggingOracle::new(&real, &compiling);
+  // No package coordinate is handed in: each item derives its own from `tcx.def_path`.
+  let real = TyCtxtOracle::new(tcx, &scout_arena, allowed);
+  // Tag the log with the crate this rustc invocation is compiling. Constant today because
+  // only one invocation runs the typing pass; it stops being constant the moment a second
+  // compile contributes entries.
+  let compiling = tcx.crate_name(rustc_span::def_id::LOCAL_CRATE).to_string();
+  let logging = LoggingOracle::new(&real, &compiling);
 
-    let mut global_options = GlobalOptions::apply();
-    global_options.sanity_check = true;
-    let options = TypingPassOptions {
-        global_options,
-        debug_out: Arc::new(|_: &str| {}),
-        tree_shaking_enabled: true,
-    };
-    // The package the source lives in. An empty list here compiles nothing at all and still
-    // returns `Ok` — which is the silent-success the oracle log exists to catch, and did.
-    let test_module = parse_arena.intern_str("test");
-    let test_tld = parse_arena.intern_package_coordinate(test_module, &[]);
+  let mut global_options = GlobalOptions::apply();
+  global_options.sanity_check = true;
+  let options = TypingPassOptions {
+    global_options,
+    debug_out: Arc::new(|_: &str| {}),
+    tree_shaking_enabled: true,
+  };
+  // The package the source lives in. An empty list here compiles nothing at all and still
+  // returns `Ok` — which is the silent-success the oracle log exists to catch, and did.
+  let test_module = parse_arena.intern_str("test");
+  let test_tld = parse_arena.intern_package_coordinate(test_module, &[]);
 
-    let mut compilation = TypingPassCompilation::new(
-        &typing_interner,
-        &scout_arena,
-        &keywords,
-        &parser_keywords,
-        &parse_arena,
-        vec![test_tld],
-        &code_source,
-        options,
-        Oracles::with_rust(&logging),
-    );
+  let mut compilation = TypingPassCompilation::new(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    vec![test_tld],
+    &code_source,
+    options,
+    Oracles::with_rust(&logging),
+  );
 
-    match compilation.get_compiler_outputs() {
-        Ok(_) => Ok(logging.calls().into_iter().map(|c| c.rendered).collect()),
-        Err(e) => Err(format!("{e:?}")),
-    }
+  match compilation.get_compiler_outputs() {
+    Ok(_) => Ok(logging.calls().into_iter().map(|c| c.rendered).collect()),
+    Err(e) => Err(format!("{e:?}")),
+  }
 }
 
 fn sysroot() -> String {
-    let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
-    let out = Command::new(rustc)
-        .args(["--print", "sysroot"])
-        .output()
-        .expect("could not run rustc to determine sysroot");
-    String::from_utf8(out.stdout)
-        .expect("rustc sysroot was not utf8")
-        .trim()
-        .to_string()
+  let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
+  let out = Command::new(rustc)
+    .args(["--print", "sysroot"])
+    .output()
+    .expect("could not run rustc to determine sysroot");
+  String::from_utf8(out.stdout).expect("rustc sysroot was not utf8").trim().to_string()
 }
 
 fn main() {
-    let mut args = std::env::args().skip(1);
-    let fixture_dir = PathBuf::from(
-        args.next()
-            .unwrap_or_else(|| panic!("usage: valec-rs <fixture-dir> <out-dir>")),
-    );
-    let out_dir = PathBuf::from(
-        args.next()
-            .unwrap_or_else(|| panic!("usage: valec-rs <fixture-dir> <out-dir>")),
-    );
-    std::fs::create_dir_all(&out_dir).expect("could not create out dir");
+  let mut args = std::env::args().skip(1);
+  let fixture_dir =
+    PathBuf::from(args.next().unwrap_or_else(|| panic!("usage: valec-rs <fixture-dir> <out-dir>")));
+  let out_dir =
+    PathBuf::from(args.next().unwrap_or_else(|| panic!("usage: valec-rs <fixture-dir> <out-dir>")));
+  std::fs::create_dir_all(&out_dir).expect("could not create out dir");
 
-    // Build the dependency rlib first, so the item Vale imports lives in an upstream crate
-    // rather than in the crate under compilation. Direct rustc rather than a generated cargo
-    // workspace: at one dep crate with one `pub fn`, a workspace generator is machinery we
-    // would be writing before we know its shape.
-    build_dep_rlib(&fixture_dir, &out_dir);
+  // Build the dependency rlib first, so the item Vale imports lives in an upstream crate
+  // rather than in the crate under compilation. Direct rustc rather than a generated cargo
+  // workspace: at one dep crate with one `pub fn`, a workspace generator is machinery we
+  // would be writing before we know its shape.
+  build_dep_rlib(&fixture_dir, &out_dir);
 
-    // Appropriate here, unlike in the test corpus: this process is rustc's, so an ICE really
-    // is rustc breaking and should say so. It matters more rather than less once we start
-    // overriding queries and genuine ICEs become possible.
-    rustc_driver::install_ice_hook("https://github.com/verdagon/Vale/issues", |_| {});
+  // Appropriate here, unlike in the test corpus: this process is rustc's, so an ICE really
+  // is rustc breaking and should say so. It matters more rather than less once we start
+  // overriding queries and genuine ICEs become possible.
+  rustc_driver::install_ice_hook("https://github.com/verdagon/Vale/issues", |_| {});
 
-    let stub = fixture_dir.join("stub.rs");
-    let rustc_args: Vec<String> = vec![
-        "valec-rs".to_string(),
-        stub.display().to_string(),
-        "--crate-type=lib".to_string(),
-        "--crate-name=stub".to_string(),
-        "--edition=2021".to_string(),
-        format!("--sysroot={}", sysroot()),
-        format!("-L{}", out_dir.display()),
-        format!("--extern=mycrate={}", out_dir.join("libmycrate.rlib").display()),
-        format!("--out-dir={}", out_dir.display()),
-    ];
+  let stub = fixture_dir.join("stub.rs");
+  let rustc_args: Vec<String> = vec![
+    "valec-rs".to_string(),
+    stub.display().to_string(),
+    "--crate-type=lib".to_string(),
+    "--crate-name=stub".to_string(),
+    "--edition=2021".to_string(),
+    format!("--sysroot={}", sysroot()),
+    format!("-L{}", out_dir.display()),
+    format!("--extern=mycrate={}", out_dir.join("libmycrate.rlib").display()),
+    format!("--out-dir={}", out_dir.display()),
+  ];
 
-    let mut callbacks = ValeCallbacks::default();
-    let rustc_exit = rustc_driver::catch_with_exit_code(|| {
-        rustc_driver::run_compiler(&rustc_args, &mut callbacks);
-    });
-    if rustc_exit != 0 {
-        // rustc itself failed. Nothing of ours to report.
-        exit(rustc_exit);
+  let mut callbacks = ValeCallbacks::default();
+  let rustc_exit = rustc_driver::catch_with_exit_code(|| {
+    rustc_driver::run_compiler(&rustc_args, &mut callbacks);
+  });
+  if rustc_exit != 0 {
+    // rustc itself failed. Nothing of ours to report.
+    exit(rustc_exit);
+  }
+
+  match callbacks.outcome {
+    None => {
+      eprintln!("valec-rs: rustc returned without ever reaching after_expansion");
+      exit(1);
     }
-
-    match callbacks.outcome {
-        None => {
-            eprintln!("valec-rs: rustc returned without ever reaching after_expansion");
-            exit(1);
-        }
-        Some(Err(e)) => {
-            eprintln!("valec-rs: the Vale program failed to typecheck: {e}");
-            exit(1);
-        }
-        Some(Ok(log)) => {
-            println!("OK: typechecked against a real TyCtxt");
-            println!("--- oracle log ---");
-            for line in log {
-                println!("{line}");
-            }
-        }
+    Some(Err(e)) => {
+      eprintln!("valec-rs: the Vale program failed to typecheck: {e}");
+      exit(1);
     }
+    Some(Ok(log)) => {
+      println!("OK: typechecked against a real TyCtxt");
+      println!("--- oracle log ---");
+      for line in log {
+        println!("{line}");
+      }
+    }
+  }
 }
 
 fn build_dep_rlib(fixture_dir: &Path, out_dir: &Path) {
-    let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
-    let status = Command::new(rustc)
-        .arg(fixture_dir.join("mycrate.rs"))
-        .args(["--crate-type=lib", "--crate-name=mycrate", "--edition=2021"])
-        .arg("--out-dir")
-        .arg(out_dir)
-        .status()
-        .expect("could not run rustc to build the dependency rlib");
-    assert!(status.success(), "building the dependency rlib failed");
+  let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
+  let status = Command::new(rustc)
+    .arg(fixture_dir.join("mycrate.rs"))
+    .args(["--crate-type=lib", "--crate-name=mycrate", "--edition=2021"])
+    .arg("--out-dir")
+    .arg(out_dir)
+    .status()
+    .expect("could not run rustc to build the dependency rlib");
+  assert!(status.success(), "building the dependency rlib failed");
 }

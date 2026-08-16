@@ -1,19 +1,21 @@
+use crate::code_source::CodeSource;
 use crate::compile_options::GlobalOptions;
 use crate::keywords::Keywords;
 use crate::lexing::ast::*;
 use crate::lexing::errors::FailedParse;
 use crate::lexing::errors::ParseError;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::expression_parser::ExpressionParser;
-use crate::parsing::parse_utils::{parse_region as parse_region_shared, try_skip_past_keyword_while};
-use crate::parsing::pattern_parser::PatternParser;
 use crate::parsing::expression_parser::ScrambleIterator;
-use crate::parsing::templex_parser::TemplexParser;
-use crate::code_source::CodeSource;
-use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
-use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::parsing::parse_and_explore;
-use crate::parse_arena::ParseArena;
+use crate::parsing::parse_utils::{
+  parse_region as parse_region_shared, try_skip_past_keyword_while,
+};
+use crate::parsing::pattern_parser::PatternParser;
+use crate::parsing::templex_parser::TemplexParser;
+use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::fx::HashSet;
 type ParseResult<T> = Result<T, ParseError>;
 
@@ -28,7 +30,7 @@ pub struct Parser<'p, 'ctx> {
 
 impl<'p, 'ctx> Parser<'p, 'ctx>
 where
-    'p: 'ctx,
+  'p: 'ctx,
 {
   /// Parse a single generic parameter
   fn parse_generic_parameter(
@@ -85,9 +87,7 @@ where
           tyype: ITypePR::RegionType,
         };
 
-        let region_name = region
-          .name
-          .ok_or(ParseError::BadRuneNameError(iter.get_pos()))?;
+        let region_name = region.name.ok_or(ParseError::BadRuneNameError(iter.get_pos()))?;
 
         (region_name, Some(tyype), attributes)
       }
@@ -111,31 +111,18 @@ where
       maybe_default,
     })
   }
-  
 
-  pub fn new(
-    parse_arena: &'ctx ParseArena<'p>,
-    keywords: &'ctx Keywords<'p>,
-  ) -> Self {
+  pub fn new(parse_arena: &'ctx ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
     let templex_parser = TemplexParser::new(parse_arena, keywords);
     let pattern_parser = PatternParser::new(parse_arena, keywords);
     let expression_parser = ExpressionParser::new(parse_arena, keywords);
 
-    Parser {
-      parse_arena,
-      keywords,
-      templex_parser,
-      pattern_parser,
-      expression_parser,
-    }
+    Parser { parse_arena, keywords, templex_parser, pattern_parser, expression_parser }
   }
 
   /// Parse a complete file from lexer output
   pub fn parse_file(&self, file: FileL<'p>) -> ParseResult<FileP<'p>> {
-    let FileL {
-      denizens,
-      comment_ranges,
-    } = file;
+    let FileL { denizens, comment_ranges } = file;
 
     let mut parsed_denizens = Vec::new();
 
@@ -201,10 +188,12 @@ where
       params: self.parse_arena.alloc_slice_from_vec(params),
     })
   }
-  
 
   /// Parse struct member
-  fn parse_struct_member(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<IStructContent<'p>> {
+  fn parse_struct_member(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<IStructContent<'p>> {
     let begin = iter.get_pos();
 
     // Parse name (can be a word or integer for variadic)
@@ -223,10 +212,7 @@ where
     // Check for variadic (..)
     let variadic = matches!(
       iter.peek2_cloned(),
-      (
-        Some(INodeLEEnum::Symbol(SymbolLE(_, '.'))),
-        Some(INodeLEEnum::Symbol(SymbolLE(_, '.')))
-      )
+      (Some(INodeLEEnum::Symbol(SymbolLE(_, '.'))), Some(INodeLEEnum::Symbol(SymbolLE(_, '.'))))
     );
     if variadic {
       iter.advance();
@@ -241,12 +227,10 @@ where
         return Err(ParseError::VariadicStructMemberHasName(iter.get_pos()));
       }
 
-      Ok(IStructContent::VariadicStructMember(
-        VariadicStructMemberP {
-          range: RangeL::new(begin, iter.get_prev_end_pos()),
-          tyype,
-        },
-      ))
+      Ok(IStructContent::VariadicStructMember(VariadicStructMemberP {
+        range: RangeL::new(begin, iter.get_prev_end_pos()),
+        tyype,
+      }))
     } else {
       Ok(IStructContent::NormalStructMember(NormalStructMemberP::<'p> {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
@@ -255,7 +239,6 @@ where
       }))
     }
   }
-  
 
   /// Parse a struct definition
   pub fn parse_struct(&self, struct_l: StructL<'p>) -> ParseResult<StructP<'p>> {
@@ -328,7 +311,6 @@ where
     })
   }
 
-  
   /// Parse an interface definition
   pub fn parse_interface(&self, interface_l: InterfaceL<'p>) -> ParseResult<InterfaceP<'p>> {
     let InterfaceL {
@@ -391,7 +373,6 @@ where
     })
   }
 
-  
   /// Parse an impl block
   pub fn parse_impl(&self, impl_l: ImplL<'p>) -> ParseResult<ImplP<'p>> {
     let ImplL {
@@ -458,13 +439,11 @@ where
       attributes: self.parse_arena.alloc_slice_from_vec(attributes_p),
     })
   }
-  
 
   /// Helper to convert WordLE to NameP
   fn to_name(&self, word: WordLE<'p>) -> NameP<'p> {
     NameP(word.range, word.str)
   }
-
 
   /// Parse an export-as declaration
   pub fn parse_export_as(&self, export_l: ExportAsL<'p>) -> ParseResult<ExportAsP<'p>> {
@@ -518,13 +497,8 @@ where
       _ => return Err(ParseError::BadExportEnd(iter.get_pos())),
     };
 
-    Ok(ExportAsP {
-      range: export_l.range,
-      struct_: exportee,
-      exported_name: name,
-    })
+    Ok(ExportAsP { range: export_l.range, struct_: exportee, exported_name: name })
   }
-  
 
   /// Parse an import declaration
   pub fn parse_import(&self, import_l: ImportL<'p>) -> ParseResult<ImportP<'p>> {
@@ -551,7 +525,6 @@ where
       importee_name: importee_name_p,
     })
   }
-  
 
   /// Parse an attribute
   fn parse_attribute(&self, attr_l: IAttributeL<'p>) -> ParseResult<IAttributeP<'p>> {
@@ -562,11 +535,7 @@ where
       IAttributeL::SealedAttribute(range) => {
         Ok(IAttributeP::SealedAttribute(SealedAttributeP { range }))
       }
-      IAttributeL::MacroCall {
-        range,
-        inclusion,
-        name,
-      } => Ok(IAttributeP::MacroCall(MacroCallP {
+      IAttributeL::MacroCall { range, inclusion, name } => Ok(IAttributeP::MacroCall(MacroCallP {
         range,
         inclusion: match inclusion {
           IMacroInclusionL::CallMacro => IMacroInclusionP::CallMacro,
@@ -577,10 +546,7 @@ where
       IAttributeL::AbstractAttribute(range) => {
         Ok(IAttributeP::AbstractAttribute(AbstractAttributeP { range }))
       }
-      IAttributeL::ExternAttribute {
-        range,
-        maybe_custom_name,
-      } => {
+      IAttributeL::ExternAttribute { range, maybe_custom_name } => {
         match maybe_custom_name {
           None => Ok(IAttributeP::ExternAttribute(ExternAttributeP { range })),
           Some(parend) => {
@@ -610,7 +576,6 @@ where
       }
     }
   }
-  
 
   /// Parse a function
   pub fn parse_function(
@@ -618,11 +583,7 @@ where
     func_l: FunctionL<'p>,
     is_in_citizen: bool,
   ) -> ParseResult<FunctionP<'p>> {
-    let FunctionL {
-      range: func_range_l,
-      header: header_l,
-      body: maybe_body_l,
-    } = func_l;
+    let FunctionL { range: func_range_l, header: header_l, body: maybe_body_l } = func_l;
 
     let FunctionHeaderL {
       range: header_range_l,
@@ -647,11 +608,7 @@ where
     let param_iters = params_iter.split_on_symbol(',', false);
 
     // Use field splitting to borrow parsers separately
-    let Self {
-      pattern_parser,
-      templex_parser,
-      ..
-    } = self;
+    let Self { pattern_parser, templex_parser, .. } = self;
 
     for (index, pattern_iter) in param_iters.into_iter().enumerate() {
       let mut iter = pattern_iter.clone();
@@ -675,8 +632,7 @@ where
       self.parse_body_default_region(original_trailing_details_l.clone());
 
     // TODO: simplify this. It's really just trying to split on "where".
-    let mut return_and_where_iter =
-      ScrambleIterator::new(&trailing_details_with_return_and_where);
+    let mut return_and_where_iter = ScrambleIterator::new(&trailing_details_with_return_and_where);
 
     let (maybe_return_iter, return_end_pos, maybe_rules_iter) =
       match try_skip_past_keyword_while(&mut return_and_where_iter, self.keywords.r#where, |it| {
@@ -749,12 +705,7 @@ where
 
     // Parse body if present
     // Use field splitting to borrow parsers separately
-    let Self {
-      expression_parser,
-      templex_parser,
-      pattern_parser,
-      ..
-    } = self;
+    let Self { expression_parser, templex_parser, pattern_parser, .. } = self;
 
     let body_p = match maybe_body_l {
       Some(body_l) => {
@@ -770,13 +721,8 @@ where
       None => None,
     };
 
-    Ok(FunctionP {
-      range: func_range_l,
-      header,
-      body: body_p,
-    })
+    Ok(FunctionP { range: func_range_l, header, body: body_p })
   }
-  
 
   /// Parse body default region from trailing details
   fn parse_body_default_region(
@@ -793,10 +739,9 @@ where
       1 => {
         // Check if it's just a single apostrophe
         match &*input_scramble.elements[0] {
-          INodeLEEnum::Symbol(SymbolLE(symbol_range, '\'')) => Some(RegionRunePT {
-            range: *symbol_range,
-            name: None,
-          }),
+          INodeLEEnum::Symbol(SymbolLE(symbol_range, '\'')) => {
+            Some(RegionRunePT { range: *symbol_range, name: None })
+          }
           _ => None,
         }
       }
@@ -805,17 +750,11 @@ where
         let last_two = &input_scramble.elements[n - 2..n];
         match (&*last_two[0], &*last_two[1]) {
           (
-            INodeLEEnum::Word(WordLE {
-              range: word_range,
-              str: region_name,
-            }),
+            INodeLEEnum::Word(WordLE { range: word_range, str: region_name }),
             INodeLEEnum::Symbol(SymbolLE(symbol_range, '\'')),
           ) => {
             let range = RangeL::new(word_range.begin(), symbol_range.end());
-            Some(RegionRunePT {
-              range,
-            name: Some(NameP(*word_range, *region_name)),
-            })
+            Some(RegionRunePT { range, name: Some(NameP(*word_range, *region_name)) })
           }
           _ => None,
         }
@@ -833,8 +772,8 @@ where
       _ => 2, // Word and apostrophe
     };
 
-    let preceding_elements = &input_scramble.elements
-      [..input_scramble.elements.len() - elements_to_remove];
+    let preceding_elements =
+      &input_scramble.elements[..input_scramble.elements.len() - elements_to_remove];
 
     let preceding_elements_range = if preceding_elements.is_empty() {
       RangeL::new(input_scramble.range.begin(), input_scramble.range.begin())
@@ -845,16 +784,12 @@ where
       )
     };
 
-    let preceding_elements_scramble = ScrambleLE {
-      range: preceding_elements_range,
-      elements: preceding_elements,
-    };
+    let preceding_elements_scramble =
+      ScrambleLE { range: preceding_elements_range, elements: preceding_elements };
 
     (preceding_elements_scramble, default_region)
   }
-  
 }
-
 
 // 'p: interner
 // 'p: parsed arena (parsed data outlives 'p; interner outlives parsed)
@@ -873,8 +808,6 @@ impl<'p, 'ctx> ParserCompilation<'p, 'ctx>
 where
   'p: 'ctx,
 {
-
-
   pub fn new(
     opts: GlobalOptions,
     parse_arena: &'ctx ParseArena<'p>,
@@ -899,10 +832,7 @@ where
     needed_packages: &[&'p PackageCoordinate<'p>],
     source: &CodeSource<'p>,
   ) -> Result<
-    (
-      FileCoordinateMap<'p, String>,
-      FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>,
-    ),
+    (FileCoordinateMap<'p, String>, FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>),
     FailedParse<'p>,
   > {
     let unique_packages: HashSet<_> = needed_packages.iter().collect();
@@ -913,80 +843,67 @@ where
     );
 
     let mut found_code_map: FileCoordinateMap<'p, String> = FileCoordinateMap::<String>::new();
-    let mut parsed_map: FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)> =
-      FileCoordinateMap::new();
+    let mut parsed_map: FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)> = FileCoordinateMap::new();
 
     let parser = Parser::new(self.parse_arena, self.keywords);
     parse_and_explore::parse_and_explore(
-            self.parse_arena,
-            self.keywords,
-            self.opts.clone(),
-            &parser,
-            needed_packages.to_vec(),
-            source,
-            |_file_coord, _code, _imports, denizen| denizen,
-            |file_coord: &'p FileCoordinate<'p>, code, comment_ranges, denizens: Vec<IDenizenP<'p>>| {
-                found_code_map.put(file_coord, code.to_string());
-                let comments_slice = self.parse_arena.alloc_slice_copy(comment_ranges);
-                let denizens_slice = self.parse_arena.alloc_slice_from_vec(denizens);
-                let file = FileP {
-                    file_coord: file_coord,
-                    comments_ranges: comments_slice,
-                    denizens: denizens_slice,
-                };
+      self.parse_arena,
+      self.keywords,
+      self.opts.clone(),
+      &parser,
+      needed_packages.to_vec(),
+      source,
+      |_file_coord, _code, _imports, denizen| denizen,
+      |file_coord: &'p FileCoordinate<'p>, code, comment_ranges, denizens: Vec<IDenizenP<'p>>| {
+        found_code_map.put(file_coord, code.to_string());
+        let comments_slice = self.parse_arena.alloc_slice_copy(comment_ranges);
+        let denizens_slice = self.parse_arena.alloc_slice_from_vec(denizens);
+        let file = FileP {
+          file_coord: file_coord,
+          comments_ranges: comments_slice,
+          denizens: denizens_slice,
+        };
 
-                parsed_map.put(file_coord, (file, comment_ranges.to_vec()));
-            },
-        ).map_err(|e| e)?;
+        parsed_map.put(file_coord, (file, comment_ranges.to_vec()));
+      },
+    )
+    .map_err(|e| e)?;
 
     Ok((found_code_map, parsed_map))
   }
-  
 
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.get_parseds()?;
     Ok(self.code_map_cache.clone().unwrap())
   }
-  
 
   pub fn expect_code_map(&self) -> FileCoordinateMap<'p, String> {
-    self
-      .code_map_cache
-      .clone()
-      .expect("code_map_cache should be populated")
+    self.code_map_cache.clone().expect("code_map_cache should be populated")
   }
 
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
+  pub fn get_parseds(
+    &mut self,
+  ) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     if let Some(ref parseds) = self.parseds_cache {
       return Ok(parseds.clone());
     }
 
     let packages = self.packages_to_build.clone();
-    let (code_map, program_p_map) =
-      self.load_and_parse(&packages, self.code_source)?;
+    let (code_map, program_p_map) = self.load_and_parse(&packages, self.code_source)?;
 
     self.code_map_cache = Some(code_map);
     self.parseds_cache = Some(program_p_map);
     Ok(self.parseds_cache.clone().unwrap())
   }
-  
 
   pub fn expect_parseds(&mut self) -> FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)> {
     match self.get_parseds() {
-      Err(FailedParse {
-        code: _code,
-        file_coord: _file_coord,
-        error,
-      }) => {
-        panic!(
-          "Parse error: {:?} - need ParseErrorHumanizer.humanize",
-          error
-        )
+      Err(FailedParse { code: _code, file_coord: _file_coord, error }) => {
+        panic!("Parse error: {:?} - need ParseErrorHumanizer.humanize", error)
       }
       Ok(x) => x,
     }
   }
-  
 
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     if let Some(ref vpst) = self.vpst_map_cache {
@@ -996,18 +913,15 @@ where
     let _parseds = self.get_parseds()?;
     panic!("ParserCompilation.get_vpst_map not yet fully implemented - need to vonify and print")
   }
-  
 
   pub fn expect_vpst_map(&mut self) -> FileCoordinateMap<'p, String> {
     self.get_vpst_map().expect("getVpstMap should succeed")
   }
-  
 }
-
 
 impl<'p, 'ctx> Parser<'p, 'ctx>
 where
-    'p: 'ctx,
+  'p: 'ctx,
 {
   /// Parse optional prefixing region (e.g., `'a`)
   fn parse_prefixing_region(
@@ -1030,7 +944,6 @@ where
     original_iter.skip_to(&tentative_iter);
     Ok(Some(region))
   }
-  
 
   fn parse_region(
     &self,
@@ -1038,6 +951,4 @@ where
   ) -> ParseResult<Option<RegionRunePT<'p>>> {
     parse_region_shared(original_iter)
   }
-  
 }
-

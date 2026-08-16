@@ -1,12 +1,15 @@
 use crate::interner::StrI;
 use crate::postparsing::ast::*;
-use crate::postparsing::itemplatatype::{BooleanTemplataType, ITemplataType, ImplTemplataType, IntegerTemplataType, KindTemplataType, StringTemplataType, TemplateTemplataType};
+use crate::postparsing::itemplatatype::{
+  BooleanTemplataType, ITemplataType, ImplTemplataType, IntegerTemplataType, KindTemplataType,
+  StringTemplataType, TemplateTemplataType,
+};
+use crate::scout_arena::ScoutArena;
 use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
 use crate::typing::env::environment::*;
 use crate::typing::names::names::IdT;
 use crate::typing::types::types::*;
 use crate::utils::range::RangeS;
-use crate::scout_arena::ScoutArena;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::fmt::Result;
@@ -14,14 +17,14 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::marker::PhantomData;
 
-
-
 pub fn expect_integer<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   match templata {
     // case t @ IntegerTemplataT(_) => t
     t @ ITemplataT::Integer(_) => t,
     // case PlaceholderTemplataT(idT, IntegerTemplataType()) => PlaceholderTemplataT(idT, IntegerTemplataType())
-    ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::IntegerTemplataType(_)) => templata,
+    ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::IntegerTemplataType(_)) => {
+      templata
+    }
     // case other => vfail(other)
     _ => panic!("expect_integer: not an integer"),
   }
@@ -81,7 +84,10 @@ pub enum ITemplataT<'s, 't> {
   ImplDefinition(&'t ImplDefinitionTemplataT<'s, 't>),
   ExternFunction(&'t ExternFunctionTemplataT<'s, 't>),
 }
-impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
+impl<'s, 't> ITemplataT<'s, 't>
+where
+  's: 't,
+{
   pub fn tyype(&self, scout_arena: &ScoutArena<'s>) -> ITemplataType<'s> {
     match self {
       ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
@@ -98,19 +104,22 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
         panic!("Unimplemented: tyype on CoordList");
         // override def tyype = PackTemplataType(KindTemplataType())
       }
-      ITemplataT::RuntimeSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
-        param_types: scout_arena.alloc_slice_copy(&[
-          ITemplataType::KindTemplataType(KindTemplataType {}),
-        ]),
-        return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
-      }),
-      ITemplataT::StaticSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
-        param_types: scout_arena.alloc_slice_copy(&[
-          ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
-          ITemplataType::KindTemplataType(KindTemplataType {}),
-        ]),
-        return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
-      }),
+      ITemplataT::RuntimeSizedArrayTemplate(_) => {
+        ITemplataType::TemplateTemplataType(TemplateTemplataType {
+          param_types: scout_arena
+            .alloc_slice_copy(&[ITemplataType::KindTemplataType(KindTemplataType {})]),
+          return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+        })
+      }
+      ITemplataT::StaticSizedArrayTemplate(_) => {
+        ITemplataType::TemplateTemplataType(TemplateTemplataType {
+          param_types: scout_arena.alloc_slice_copy(&[
+            ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
+            ITemplataType::KindTemplataType(KindTemplataType {}),
+          ]),
+          return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+        })
+      }
       ITemplataT::Function(_) => {
         panic!("Unimplemented: tyype on Function");
         // vfail()
@@ -141,31 +150,33 @@ pub struct KindTemplataT<'s, 't> {
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RuntimeSizedArrayTemplateTemplataT {
-}
+pub struct RuntimeSizedArrayTemplateTemplataT {}
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StaticSizedArrayTemplateTemplataT {
-}
+pub struct StaticSizedArrayTemplateTemplataT {}
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct FunctionTemplataT<'s, 't> where 's: 't {
+pub struct FunctionTemplataT<'s, 't>
+where
+  's: 't,
+{
   pub outer_env: IEnvironmentT<'s, 't>,
   pub function_template_id: &'t IdT<'s, 't>,
 }
 
-
-impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
+impl<'s, 't> FunctionTemplataT<'s, 't>
+where
+  's: 't,
+{
   pub fn get_template_name(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: get_template_name");
   }
-  
+
   pub fn debug_string(&self) -> String {
     panic!("Unimplemented: debug_string");
   }
-  
 }
 
 // AFTERM: figure out why some templatas compare environment and some don't —
@@ -173,12 +184,14 @@ impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
 // equality includes `declaring_env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StructDefinitionTemplataT<'s, 't> where 's: 't {
+pub struct StructDefinitionTemplataT<'s, 't>
+where
+  's: 't,
+{
   pub declaring_env: IEnvironmentT<'s, 't>,
   pub struct_template_id: &'t IdT<'s, 't>,
   pub tyype: TemplateTemplataType<'s>,
 }
-
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -197,8 +210,7 @@ pub struct ContainerInterface<'s> {
 }
 impl<'s> PartialEq for ContainerInterface<'s> {
   fn eq(&self, other: &Self) -> bool {
-    self.interface.range == other.interface.range
-      && self.interface.name == other.interface.name
+    self.interface.range == other.interface.range && self.interface.name == other.interface.name
   }
 }
 impl<'s> Eq for ContainerInterface<'s> {}
@@ -217,8 +229,7 @@ pub struct ContainerStruct<'s> {
 }
 impl<'s> PartialEq for ContainerStruct<'s> {
   fn eq(&self, other: &Self) -> bool {
-    self.struct_.range == other.struct_.range
-      && self.struct_.name == other.struct_.name
+    self.struct_.range == other.struct_.range && self.struct_.name == other.struct_.name
   }
 }
 impl<'s> Eq for ContainerStruct<'s> {}
@@ -237,8 +248,7 @@ pub struct ContainerFunction<'s> {
 }
 impl<'s> PartialEq for ContainerFunction<'s> {
   fn eq(&self, other: &Self) -> bool {
-    self.function.range == other.function.range
-      && self.function.name == other.function.name
+    self.function.range == other.function.range && self.function.name == other.function.name
   }
 }
 impl<'s> Eq for ContainerFunction<'s> {}
@@ -257,8 +267,7 @@ pub struct ContainerImpl<'s> {
 }
 impl<'s> PartialEq for ContainerImpl<'s> {
   fn eq(&self, other: &Self) -> bool {
-    self.impl_.range == other.impl_.range
-      && self.impl_.name == other.impl_.name
+    self.impl_.range == other.impl_.range && self.impl_.name == other.impl_.name
   }
 }
 impl<'s> Eq for ContainerImpl<'s> {}
@@ -276,34 +285,42 @@ pub enum CitizenDefinitionTemplataT<'s, 't> {
   Interface(&'t InterfaceDefinitionTemplataT<'s, 't>),
 }
 
-impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
+impl<'s, 't> CitizenDefinitionTemplataT<'s, 't>
+where
+  's: 't,
+{
   pub fn declaring_env(&self) -> IEnvironmentT<'s, 't> {
     panic!("Unimplemented: declaring_env");
   }
-  
+
   pub fn origin_citizen(&self) -> &'s ICitizenS<'s> {
     panic!("Unimplemented: origin_citizen");
   }
-  
 }
 
-
-fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmentT<'s, 't>, &'s ICitizenS<'s>)> {
+fn unapply<'s, 't>(
+  c: CitizenDefinitionTemplataT<'s, 't>,
+) -> Option<(IEnvironmentT<'s, 't>, &'s ICitizenS<'s>)> {
   panic!("Unimplemented: unapply");
 }
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct InterfaceDefinitionTemplataT<'s, 't> where 's: 't {
+pub struct InterfaceDefinitionTemplataT<'s, 't>
+where
+  's: 't,
+{
   pub declaring_env: IEnvironmentT<'s, 't>,
   pub interface_template_id: &'t IdT<'s, 't>,
   pub tyype: TemplateTemplataType<'s>,
 }
 
-
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplDefinitionTemplataT<'s, 't> where 's: 't {
+pub struct ImplDefinitionTemplataT<'s, 't>
+where
+  's: 't,
+{
   pub env: IEnvironmentT<'s, 't>,
   pub impl_template_id: &'t IdT<'s, 't>,
 }
@@ -311,19 +328,19 @@ pub struct ImplDefinitionTemplataT<'s, 't> where 's: 't {
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BooleanTemplataT {
-    pub value: bool,
+  pub value: bool,
 }
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntegerTemplataT {
-    pub value: i64,
+  pub value: i64,
 }
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StringTemplataT<'s> {
-    pub value: StrI<'s>,
+  pub value: StrI<'s>,
 }
 
 /// Value-type (see @TFITCX)
@@ -347,7 +364,6 @@ pub struct KindListTemplataT<'s, 't> {
   pub kinds: &'t [KindT<'s, 't>],
 }
 
-
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ExternFunctionTemplataT<'s, 't> {
@@ -358,11 +374,8 @@ pub struct ExternFunctionTemplataT<'s, 't> {
 // cross-run determinism — pointer addresses vary across runs due to ASLR.
 impl<'s, 't> Debug for ExternFunctionTemplataT<'s, 't> {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-    f.debug_struct("ExternFunctionTemplataT")
-      .field("header_id", &self.header.id)
-      .finish()
+    f.debug_struct("ExternFunctionTemplataT").field("header_id", &self.header.id).finish()
   }
-  
 }
 
 // (Templata payload interning family removed — types are TFITCX Value-type;

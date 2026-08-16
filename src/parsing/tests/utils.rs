@@ -1,18 +1,18 @@
-use bumpalo::Bump;
 use crate::cast;
-use crate::parse_arena::ParseArena;
+use crate::collect_only;
 use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
 use crate::lexing::lexer::Lexer;
 use crate::lexing::lexing_iterator::LexingIterator;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::expression_parser::ExpressionParser;
+use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::parser::Parser;
 use crate::parsing::pattern_parser::PatternParser;
-use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::tests::traverse::NodeRefP;
-use crate::collect_only;
+use bumpalo::Bump;
 
 pub fn compile_file<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -62,7 +62,8 @@ pub fn compile<'p, 'ctx>(
 where
   'p: 'ctx,
 {
-  compile_file(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse file: {:?}", e))
+  compile_file(parse_arena, keywords, code)
+    .unwrap_or_else(|e| panic!("Failed to parse file: {:?}", e))
 }
 
 /// Compile denizens (top-level declarations) from code
@@ -100,7 +101,8 @@ pub fn compile_denizen_expect<'p, 'ctx>(
 where
   'p: 'ctx,
 {
-  compile_denizen(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse denizen: {:?}", e))
+  compile_denizen(parse_arena, keywords, code)
+    .unwrap_or_else(|e| panic!("Failed to parse denizen: {:?}", e))
 }
 
 /// Compile a single denizen and expect it to fail with an error, passing the error to a callback
@@ -109,8 +111,7 @@ pub fn compile_denizen_for_error<'p, 'ctx, F>(
   keywords: &'ctx Keywords<'p>,
   code: &str,
   callback: F,
-)
-where
+) where
   'p: 'ctx,
   F: FnOnce(ParseError),
 {
@@ -149,7 +150,8 @@ pub fn compile_expression_expect<'p, 'ctx>(
 where
   'p: 'ctx,
 {
-  compile_expression(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse expression: {:?}", e))
+  compile_expression(parse_arena, keywords, code)
+    .unwrap_or_else(|e| panic!("Failed to parse expression: {:?}", e))
 }
 
 /// Compile an expression and expect it to fail, returning the error
@@ -193,7 +195,8 @@ pub fn compile_statement_expect<'p, 'ctx>(
 where
   'p: 'ctx,
 {
-  compile_statement(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse statement: {:?}", e))
+  compile_statement(parse_arena, keywords, code)
+    .unwrap_or_else(|e| panic!("Failed to parse statement: {:?}", e))
 }
 
 /// Compile block contents from code
@@ -228,7 +231,8 @@ pub fn compile_block_contents_expect<'p, 'ctx>(
 where
   'p: 'ctx,
 {
-  compile_block_contents(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse block contents: {:?}", e))
+  compile_block_contents(parse_arena, keywords, code)
+    .unwrap_or_else(|e| panic!("Failed to parse block contents: {:?}", e))
 }
 
 /// Compile a pattern from code
@@ -268,7 +272,8 @@ pub fn compile_pattern_expect<'p, 'ctx>(
 where
   'p: 'ctx,
 {
-  compile_pattern(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse pattern: {:?}", e))
+  compile_pattern(parse_arena, keywords, code)
+    .unwrap_or_else(|e| panic!("Failed to parse pattern: {:?}", e))
 }
 
 /// Compile a templex (type expression) from code
@@ -298,7 +303,8 @@ pub fn compile_templex_expect<'p, 'ctx>(
 where
   'p: 'ctx,
 {
-  compile_templex(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse templex: {:?}", e))
+  compile_templex(parse_arena, keywords, code)
+    .unwrap_or_else(|e| panic!("Failed to parse templex: {:?}", e))
 }
 
 /// Compile a rulex (rule expression) from code
@@ -328,7 +334,8 @@ pub fn compile_rulex_expect<'p, 'ctx>(
 where
   'p: 'ctx,
 {
-  compile_rulex(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse rulex: {:?}", e))
+  compile_rulex(parse_arena, keywords, code)
+    .unwrap_or_else(|e| panic!("Failed to parse rulex: {:?}", e))
 }
 
 /// Compile a struct from code
@@ -356,7 +363,8 @@ pub fn compile_struct_expect<'p, 'ctx>(
 where
   'p: 'ctx,
 {
-  compile_struct(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse struct: {:?}", e))
+  compile_struct(parse_arena, keywords, code)
+    .unwrap_or_else(|e| panic!("Failed to parse struct: {:?}", e))
 }
 
 /// Returns the function with the given name.
@@ -384,10 +392,10 @@ fn test_find_func_named_returns_function() {
 }
 
 /// Returns the struct with the given name. See find_func_named's test for a similar example.
-  pub fn find_struct_named<'p, 'f>(file: &'f FileP<'p>, name: &str) -> &'f StructP<'p>
-  where
-    'f: 'p,
-  {
+pub fn find_struct_named<'p, 'f>(file: &'f FileP<'p>, name: &str) -> &'f StructP<'p>
+where
+  'f: 'p,
+{
   collect_only!(
       file,
       NodeRefP::Struct(struct_ @ StructP {
@@ -456,26 +464,13 @@ pub fn expect_4<T>(elements: &[T]) -> (&T, &T, &T, &T) {
 /// Asserts that a slice has exactly 5 elements and returns them.
 pub fn expect_5<T>(elements: &[T]) -> (&T, &T, &T, &T, &T) {
   assert_eq!(elements.len(), 5, "Expected exactly 5 elements, got {}", elements.len());
-  (
-    &elements[0],
-    &elements[1],
-    &elements[2],
-    &elements[3],
-    &elements[4],
-  )
+  (&elements[0], &elements[1], &elements[2], &elements[3], &elements[4])
 }
 
 /// Asserts that a slice has exactly 6 elements and returns them.
 pub fn expect_6<T>(elements: &[T]) -> (&T, &T, &T, &T, &T, &T) {
   assert_eq!(elements.len(), 6, "Expected exactly 6 elements, got {}", elements.len());
-  (
-    &elements[0],
-    &elements[1],
-    &elements[2],
-    &elements[3],
-    &elements[4],
-    &elements[5],
-  )
+  (&elements[0], &elements[1], &elements[2], &elements[3], &elements[4], &elements[5])
 }
 
 /// Unwraps an ESCCD-compliant enum (single field enum) and returns a reference to the thing

@@ -19,8 +19,8 @@ pub use corpus::{Case, Expect};
 pub use importer::{create_postparsed_function, declare_rust_import, rust_method_entries};
 pub use logging_oracle::{LoggingOracle, OracleCall, OracleQuery, SigPosition, SigShape};
 pub use oracle::{RustItemId, RustOracle, ValeSig};
-pub use tyctxt_oracle::TyCtxtOracle;
 pub use reserved::{citizen_id, is_rust_backed, is_rust_backed_kind, peel_refs, RUST_MODULE};
+pub use tyctxt_oracle::TyCtxtOracle;
 
 // `fixture.rs` lived here: a hand-written `RustOracle` answering from a canned table, so a test
 // could exercise the seam without rustc. It is gone because it could not produce a `ty::Param`,

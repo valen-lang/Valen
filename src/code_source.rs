@@ -29,10 +29,7 @@ impl<'a> Source<'a> {
   }
 
   /// Build a `CodeMap` source holding the compiler's built-in vale sources.
-  pub fn builtins<'ctx>(
-    parse_arena: &'ctx ParseArena<'a>,
-    keywords: &'ctx Keywords<'a>,
-  ) -> Self
+  pub fn builtins<'ctx>(parse_arena: &'ctx ParseArena<'a>, keywords: &'ctx Keywords<'a>) -> Self
   where
     'a: 'ctx,
   {
@@ -55,7 +52,6 @@ impl<'a> Source<'a> {
     let map = builtin_module_code_map(parse_arena, keywords, name);
     Source::CodeMap(flatten_code_map(&map))
   }
-
 }
 
 pub struct CodeSource<'a> {
@@ -67,7 +63,10 @@ impl<'a> CodeSource<'a> {
     CodeSource { sources }
   }
 
-  pub fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<HashMap<String, String>> {
+  pub fn resolve(
+    &self,
+    package_coord: &'a PackageCoordinate<'a>,
+  ) -> Option<HashMap<String, String>> {
     for source in &self.sources {
       let hit = match source {
         Source::CodeMap(m) => m.get(package_coord).cloned(),
@@ -81,19 +80,15 @@ impl<'a> CodeSource<'a> {
   }
 }
 
-
 fn flatten_code_map<'a>(
   map: &FileCoordinateMap<'a, String>,
 ) -> HashMap<&'a PackageCoordinate<'a>, HashMap<String, String>> {
-  let mut result: HashMap<&'a PackageCoordinate<'a>, HashMap<String, String>> =
-    HashMap::default();
+  let mut result: HashMap<&'a PackageCoordinate<'a>, HashMap<String, String>> = HashMap::default();
   for (package_coord, file_coords) in &map.package_coord_to_file_coords {
     let mut file_map = HashMap::default();
     for fc in file_coords {
-      let contents = map
-        .file_coord_to_contents
-        .get(fc)
-        .expect("flatten_code_map - file coord missing");
+      let contents =
+        map.file_coord_to_contents.get(fc).expect("flatten_code_map - file coord missing");
       file_map.insert(fc.filepath.as_str().to_string(), contents.clone());
     }
     result.insert(*package_coord, file_map);

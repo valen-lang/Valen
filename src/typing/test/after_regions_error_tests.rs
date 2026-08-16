@@ -1,25 +1,24 @@
-use bumpalo::Bump;
+use crate::builtins::builtins::{builtin_source_for_as, empty_v_builtins_stub};
+use crate::code_source::{CodeSource, Source};
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::code_source::{CodeSource, Source};
 use crate::scout_arena::ScoutArena;
-use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
-use crate::typing::typing_interner::TypingInterner;
-use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::tests::tests::new_test_code_map;
-use crate::builtins::builtins::{builtin_source_for_as, empty_v_builtins_stub};
 use crate::solver::solver::FailedSolve;
 use crate::solver::solver::ISolverError;
 use crate::solver::solver::RuleError;
+use crate::tests::tests::new_test_code_map;
 use crate::tests::tests::new_test_package_source;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::typing::infer_compiler::IConclusionResolveError;
 use crate::typing::infer_compiler::IResolvingError;
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
-use crate::typing::types::types::KindT;
+use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::types::types::IntT;
-
+use crate::typing::types::types::KindT;
+use crate::typing::typing_interner::TypingInterner;
+use bumpalo::Bump;
 
 pub struct AfterRegionsErrorTests {}
 
@@ -28,15 +27,15 @@ pub struct AfterRegionsErrorTests {}
 #[test]
 #[ignore]
 fn report_when_downcasting_between_unrelated_types() {
-    // This test does not pass yet, use #[ignore].
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  // This test does not pass yet.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 import v.builtins.as.*;
 import panicutils.*;
 
@@ -48,47 +47,54 @@ exported func main() {
   ship.try_as<Spoon>();
 }
 ";
-    let code_source = CodeSource::new(vec![
-        builtin_source_for_as(&parse_arena, &parser_keywords),
-        new_test_code_map(&parse_arena, code),
-        new_test_package_source(&parse_arena, "panicutils"),
-        new_test_package_source(&parse_arena, "printutils"),
-        new_test_package_source(&parse_arena, "castutils"),
-        Source::Fn(empty_v_builtins_stub),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("Expected Err(CantDowncastUnrelatedTypes), got Ok"));
-    match &err {
-        ICompileErrorT::CantDowncastUnrelatedTypes { .. } => {}
-        other => panic!("Expected CantDowncastUnrelatedTypes, got Err({:?})", other),
-    }
-    assert_humanized_eq(
-        &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:8:1:
+  let code_source = CodeSource::new(vec![
+    builtin_source_for_as(&parse_arena, &parser_keywords),
+    new_test_code_map(&parse_arena, code),
+    new_test_package_source(&parse_arena, "panicutils"),
+    new_test_package_source(&parse_arena, "printutils"),
+    new_test_package_source(&parse_arena, "castutils"),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .unwrap_or_else(|| panic!("Expected Err(CantDowncastUnrelatedTypes), got Ok"));
+  match &err {
+    ICompileErrorT::CantDowncastUnrelatedTypes { .. } => {}
+    other => panic!("Expected CantDowncastUnrelatedTypes, got Err({:?})", other),
+  }
+  assert_humanized_eq(
+    &humanize_compile_error(&mut compile, err),
+    r#"At test:0.vale:8:1:
 exported func main() {
 At test:0.vale:10:7:
   ship.try_as<Spoon>();
 Can't downcast `ISpaceship` to unrelated `Spoon`
 "#,
-    );
+  );
 }
 
 // VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
 #[ignore]
 fn lambda_body_type_mismatches_anonymous_interface_return_type() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 interface AFunction1<P> {
   func __call(virtual this &AFunction1<P>, a P) int;
 }
@@ -96,25 +102,30 @@ exported func main() {
   arr = AFunction1<int>((_) => { true });
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    // The compiler rejects this not via a body-vs-return-type comparison on the
-    // synthesized forwarder, but earlier: the substruct constructor's __call bound
-    // (emitted by AnonymousInterfaceMacro) checks the lambda's __call return type
-    // during inference and reports a ReturnTypeConflictInConclusionResolve. See
-    // investigations/family1_4_body_result_doesnt_match_unreachable.md.
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
-    match &err {
-        ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
-            let rejection_reasons: Vec<&IFindFunctionFailureReason<'_, '_>> =
-                fff.rejected_callee_to_reason.iter().map(|p| &p.1).collect();
-            match rejection_reasons.as_slice() {
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  // The compiler rejects this not via a body-vs-return-type comparison on the
+  // synthesized forwarder, but earlier: the substruct constructor's __call bound
+  // (emitted by AnonymousInterfaceMacro) checks the lambda's __call return type
+  // during inference and reports a ReturnTypeConflictInConclusionResolve. See
+  // investigations/family1_4_body_result_doesnt_match_unreachable.md.
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
+  match &err {
+    ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
+      let rejection_reasons: Vec<&IFindFunctionFailureReason<'_, '_>> =
+        fff.rejected_callee_to_reason.iter().map(|p| &p.1).collect();
+      match rejection_reasons.as_slice() {
                 [IFindFunctionFailureReason::FindFunctionResolveFailure {
                     reason: IResolvingError::ResolvingResolveConclusionError(boxed),
                 }] => {
@@ -134,12 +145,12 @@ exported func main() {
                 }
                 other => panic!("expected Vec[FindFunctionResolveFailure(ResolvingResolveConclusionError(...))], got {:?}", other),
             }
-        }
-        other => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", other),
     }
-    assert_humanized_eq(
-        &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:5:1:
+    other => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", other),
+  }
+  assert_humanized_eq(
+    &humanize_compile_error(&mut compile, err),
+    r#"At test:0.vale:5:1:
 exported func main() {
 At test:0.vale:6:9:
   arr = AFunction1<int>((_) => { true });
@@ -151,21 +162,20 @@ Found function: main.λC:test:0.vale:6:25.λF:test:0.vale:6:25<i32>(&main.λC:te
 
 
 "#,
-    );
+  );
 }
-
 
 // This test does not pass yet, use #[ignore].
 #[test]
 fn detects_sending_non_citizen_to_citizen() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 import v.builtins.panic.*;
 
 interface MyInterface {}
@@ -178,46 +188,64 @@ exported func main() {
   moo(7);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
-        new_test_code_map(&parse_arena, code),
-        Source::Fn(empty_v_builtins_stub),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
-    match &err {
-        ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
-            match &fff.rejected_callee_to_reason[0].1 {
-                IFindFunctionFailureReason::FindFunctionResolveFailure {
-                    reason: IResolvingError::ResolvingSolveFailedOrIncomplete(FailedSolve {
-                        error: ISolverError::RuleError(RuleError {
-                            err: ITypingPassSolverError::BadIsaSubKind { kind: KindT::Int(IntT { bits: 32, .. }) },
-                            ..
-                        }),
-                        ..
-                    }),
-                } => {}
-                IFindFunctionFailureReason::InferFailure {
-                    reason: FailedSolve {
-                        error: ISolverError::RuleError(RuleError {
-                            err: ITypingPassSolverError::SendingNonCitizen { kind: KindT::Int(IntT { bits: 32, .. }) },
-                            ..
-                        }),
-                        ..
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
+  match &err {
+    ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
+      match &fff.rejected_callee_to_reason[0].1 {
+        IFindFunctionFailureReason::FindFunctionResolveFailure {
+          reason:
+            IResolvingError::ResolvingSolveFailedOrIncomplete(FailedSolve {
+              error:
+                ISolverError::RuleError(RuleError {
+                  err:
+                    ITypingPassSolverError::BadIsaSubKind { kind: KindT::Int(IntT { bits: 32, .. }) },
+                  ..
+                }),
+              ..
+            }),
+        } => {}
+        IFindFunctionFailureReason::InferFailure {
+          reason:
+            FailedSolve {
+              error:
+                ISolverError::RuleError(RuleError {
+                  err:
+                    ITypingPassSolverError::SendingNonCitizen {
+                      kind: KindT::Int(IntT { bits: 32, .. }),
                     },
-                } => {}
-                other => panic!("expected BadIsaSubKind(Int(32)) or SendingNonCitizen(Int(32)), got {:?}", other),
-            }
+                  ..
+                }),
+              ..
+            },
+        } => {}
+        other => {
+          panic!("expected BadIsaSubKind(Int(32)) or SendingNonCitizen(Int(32)), got {:?}", other)
         }
-        other => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", other),
+      }
     }
-    assert_humanized_eq( // VCOORD: this is super fragile, we need to improve this once we have phased calls
-        &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:10:1:
+    other => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", other),
+  }
+  assert_humanized_eq(
+    // VCOORD: this is super fragile, we need to improve this once we have phased calls
+    &humanize_compile_error(&mut compile, err),
+    r#"At test:0.vale:10:1:
 exported func main() {
 At test:0.vale:11:3:
   moo(7);
@@ -245,21 +273,20 @@ _4 = "void"
 
 
 "#,
-    );
+  );
 }
-
 
 // This test does not pass yet, use #[ignore].
 #[test]
 fn accidentally_mention_type_rune() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 func moo<Z>(z &Z) {
   drop(Z);
 }
@@ -268,72 +295,81 @@ exported func main() void {
   moo(4);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("expected Err(CantUseRuneValueAsExpression), got Ok"));
-    match &err {
-        ICompileErrorT::CantUseRuneValueAsExpression { .. } => {}
-        e => panic!("expected CantUseRuneValueAsExpression, got Err({:?})", e),
-    }
-    assert_humanized_eq(
-        &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:2:1:
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .unwrap_or_else(|| panic!("expected Err(CantUseRuneValueAsExpression), got Ok"));
+  match &err {
+    ICompileErrorT::CantUseRuneValueAsExpression { .. } => {}
+    e => panic!("expected CantUseRuneValueAsExpression, got Err({:?})", e),
+  }
+  assert_humanized_eq(
+    &humanize_compile_error(&mut compile, err),
+    r#"At test:0.vale:2:1:
 func moo<Z>(z &Z) {
 At test:0.vale:3:8:
   drop(Z);
 Can't use rune `Z` as a value expression. Did you mean a local variable with a similar name?
 "#,
-    );
+  );
 }
-
 
 // This test does not pass yet, use #[ignore].
 #[test]
 fn call_bound_with_wrong_arguments() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 func add<X>(i int, x &X) where func str(&X)str {
   str(true);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
-    match &err {
-        ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
-            assert!(fff.rejected_callee_to_reason.len() >= 1);
-            match &fff.rejected_callee_to_reason[0].1 {
-                IFindFunctionFailureReason::SpecificParamDoesntSend {
-                    index: 0,
-                    argument: KindT::Bool(_),
-                    ..
-                } => {}
-                other => panic!("expected SpecificParamDoesntSend(0, Bool, _), got {:?}", other),
-            }
-        }
-        e => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", e),
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
+  match &err {
+    ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
+      assert!(fff.rejected_callee_to_reason.len() >= 1);
+      match &fff.rejected_callee_to_reason[0].1 {
+        IFindFunctionFailureReason::SpecificParamDoesntSend {
+          index: 0,
+          argument: KindT::Bool(_),
+          ..
+        } => {}
+        other => panic!("expected SpecificParamDoesntSend(0, Bool, _), got {:?}", other),
+      }
     }
-    assert_humanized_eq(
-        &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:2:1:
+    e => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", e),
+  }
+  assert_humanized_eq(
+    &humanize_compile_error(&mut compile, err),
+    r#"At test:0.vale:2:1:
 func add<X>(i int, x &X) where func str(&X)str {
 At test:0.vale:3:3:
   str(true);
@@ -344,21 +380,20 @@ Candidate 1 (of 1): str(&Kind$add.X):
 
 
 "#,
-    );
+  );
 }
 
 #[test]
 fn ambiguous_call() {
-    // This test does not pass yet, use #[ignore].
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    // TSUGAR: both params take &int/&X; call sends &3, &4 to match both overloads
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  // TSUGAR: both params take &int/&X; call sends &3, &4 to match both overloads
+  let code = r"
 func add<X>(i &int, x &X) { }
 func add<X>(x &X, i &int) { }
 
@@ -366,24 +401,29 @@ exported func main() void {
   add(&3, &4);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("Expected Err(CouldntNarrowDownCandidates), got Ok"));
-    match &err {
-        ICompileErrorT::CouldntNarrowDownCandidates { candidates, .. } => {
-            assert_eq!(candidates.len(), 2);
-        }
-        other => panic!("Expected CouldntNarrowDownCandidates, got Err({:?})", other),
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .unwrap_or_else(|| panic!("Expected Err(CouldntNarrowDownCandidates), got Ok"));
+  match &err {
+    ICompileErrorT::CouldntNarrowDownCandidates { candidates, .. } => {
+      assert_eq!(candidates.len(), 2);
     }
-    assert_humanized_eq(
-        &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:5:1:
+    other => panic!("Expected CouldntNarrowDownCandidates, got Err({:?})", other),
+  }
+  assert_humanized_eq(
+    &humanize_compile_error(&mut compile, err),
+    r#"At test:0.vale:5:1:
 exported func main() void {
 At test:0.vale:6:3:
   add(&3, &4);
@@ -391,100 +431,115 @@ Multiple candidates for call:
   add<i32>(&i32, &i32)
   add<i32>(&i32, &i32)
 "#,
-    );
+  );
 }
-
 
 // This test does not pass yet, use #[ignore].
 #[test]
 fn cant_make_non_weakable_extend_a_weakable() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 weakable interface IUnit {}
 struct Muta { hp int; }
 impl IUnit for Muta;
 func main(muta Muta) int  { return 7; }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("expected Err(WeakableImplingMismatch(false, true)), got Ok"));
-    match &err {
-        ICompileErrorT::WeakableImplingMismatch { struct_weakable: false, interface_weakable: true, .. } => {}
-        e => panic!("expected WeakableImplingMismatch(false, true), got Err({:?})", e),
-    }
-    assert_humanized_eq(
-        &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:4:1:
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .unwrap_or_else(|| panic!("expected Err(WeakableImplingMismatch(false, true)), got Ok"));
+  match &err {
+    ICompileErrorT::WeakableImplingMismatch {
+      struct_weakable: false,
+      interface_weakable: true,
+      ..
+    } => {}
+    e => panic!("expected WeakableImplingMismatch(false, true), got Err({:?})", e),
+  }
+  assert_humanized_eq(
+    &humanize_compile_error(&mut compile, err),
+    r#"At test:0.vale:4:1:
 impl IUnit for Muta;
 Weakable mismatch in impl: struct is not weakable, but interface is.
 "#,
-    );
+  );
 }
-
 
 // This test does not pass yet, use #[ignore].
 #[test]
 fn cant_make_weakable_extend_a_non_weakable() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 interface IUnit {}
 weakable struct Muta { hp int; }
 impl IUnit for Muta;
 func main(muta Muta) int  { return 7; }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("expected Err(WeakableImplingMismatch(true, false)), got Ok"));
-    match &err {
-        ICompileErrorT::WeakableImplingMismatch { struct_weakable: true, interface_weakable: false, .. } => {}
-        e => panic!("expected WeakableImplingMismatch(true, false), got Err({:?})", e),
-    }
-    assert_humanized_eq(
-        &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:4:1:
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .unwrap_or_else(|| panic!("expected Err(WeakableImplingMismatch(true, false)), got Ok"));
+  match &err {
+    ICompileErrorT::WeakableImplingMismatch {
+      struct_weakable: true,
+      interface_weakable: false,
+      ..
+    } => {}
+    e => panic!("expected WeakableImplingMismatch(true, false), got Err({:?})", e),
+  }
+  assert_humanized_eq(
+    &humanize_compile_error(&mut compile, err),
+    r#"At test:0.vale:4:1:
 impl IUnit for Muta;
 Weakable mismatch in impl: struct is weakable, but interface is not.
 "#,
-    );
+  );
 }
-
 
 // This test does not pass yet, use #[ignore].
 #[test]
 #[ignore = "blocked - typing pass produces Ok where TookWeakRefOfNonWeakableError is expected for `&&m` on non-weakable struct"]
 fn cant_make_weak_ref_to_non_weakable() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 struct Muta { hp int; }
 exported func main() int {
   m = Muta(7);
@@ -492,36 +547,39 @@ exported func main() int {
   return m.hp;
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    match compile.get_compiler_outputs() {
-        Err(ICompileErrorT::TookWeakRefOfNonWeakableError { .. }) => {}
-        Err(e) => panic!("expected TookWeakRefOfNonWeakableError, got Err({:?})", e),
-        Ok(_) => panic!("expected TookWeakRefOfNonWeakableError, got Ok"),
-    }
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  match compile.get_compiler_outputs() {
+    Err(ICompileErrorT::TookWeakRefOfNonWeakableError { .. }) => {}
+    Err(e) => panic!("expected TookWeakRefOfNonWeakableError, got Err({:?})", e),
+    Ok(_) => panic!("expected TookWeakRefOfNonWeakableError, got Ok"),
+  }
 }
 
 #[test]
 fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args() {
-    // Regression guard for @BRRZ. Reproduces the shape from docs/Generics.md:531-539
-    // that motivated removing return-type inference. With the relaxed ResolveSR puzzle
-    // the solver no longer stalls on K and V, but the post-solve bound-arg check
-    // (InferCompiler.checkResolvingConclusionsAndResolve:295) must still reject this
-    // because main doesn't supply enough to determine K and V. If this test ever
-    // passes, the safety property of BRRZ has drifted and needs immediate investigation.
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  // Regression guard for @BRRZ. Reproduces the shape from docs/Generics.md:531-539
+  // that motivated removing return-type inference. With the relaxed ResolveSR puzzle
+  // the solver no longer stalls on K and V, but the post-solve bound-arg check
+  // (InferCompiler.checkResolvingConclusionsAndResolve:295) must still reject this
+  // because main doesn't supply enough to determine K and V. If this test ever
+  // passes, the safety property of BRRZ has drifted and needs immediate investigation.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 struct MyStruct<K, V, H> { }
 
 func make<K, V, H>(h H) MyStruct<K, V, H>
@@ -534,19 +592,25 @@ exported func main() int {
   return 0;
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source,
-    );
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("Expected HashMap-style K/V inference from return type to fail, but compilation succeeded."));
-    // expected — K and V cannot be inferred; any Err variant is acceptable structurally.
-    assert_humanized_eq(
-        &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:9:1:
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile.get_compiler_outputs().err().unwrap_or_else(|| {
+    panic!(
+      "Expected HashMap-style K/V inference from return type to fail, but compilation succeeded."
+    )
+  });
+  // expected — K and V cannot be inferred; any Err variant is acceptable structurally.
+  assert_humanized_eq(
+    &humanize_compile_error(&mut compile, err),
+    r#"At test:0.vale:9:1:
 exported func main() int {
 At test:0.vale:10:7:
   m = make(7);
@@ -590,6 +654,5 @@ Unsolved runes: K V _6111
 
 
 "#,
-    );
+  );
 }
-

@@ -38,15 +38,15 @@ pub mod compile_options;
 // pub mod instantiating;
 pub mod interner;
 pub mod keywords;
-pub mod parse_arena;
-pub mod scout_arena;
 pub mod lexing;
+pub mod parse_arena;
 pub mod parsing;
 pub mod pass_manager;
 pub mod postparsing;
+pub mod scout_arena;
 // pub mod simplifying;
-pub mod typing;
 pub mod tests;
+pub mod typing;
 // #[cfg(test)]
 // pub mod testvm;
 pub mod utils;

@@ -1,16 +1,14 @@
-use bumpalo::Bump;
-use crate::parse_arena::ParseArena;
-use crate::keywords::Keywords;
-use crate::parsing::tests::parser_test_compilation;
 use crate::code_source::{CodeSource, Source};
-use std::fs;
-use std::path::PathBuf;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::parsing::tests::parser_test_compilation;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate};
 use crate::utils::fx::HashMap;
+use bumpalo::Bump;
+use std::fs;
+use std::path::PathBuf;
 fn load_expected(path: &str) -> String {
-  let full_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-    .join("src/tests")
-    .join(path);
+  let full_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/tests").join(path);
   fs::read_to_string(&full_path)
     .unwrap_or_else(|e| panic!("Failed to load sample '{}': {} ({:?})", path, e, full_path))
 }
@@ -21,11 +19,11 @@ fn parse<'p, 'ctx>(
   keywords: &'ctx Keywords<'p>,
   code_source: &'ctx CodeSource<'p>,
   test_package_coord: &'p PackageCoordinate<'p>,
-)
-where
+) where
   'p: 'ctx,
 {
-  let mut compilation = parser_test_compilation::test(parse_arena, keywords, code_source, test_package_coord);
+  let mut compilation =
+    parser_test_compilation::test(parse_arena, keywords, code_source, test_package_coord);
   compilation
     .get_parseds()
     .unwrap_or_else(|e| panic!("Failed to parse sample '{}': {:?}", path, e));
@@ -52,19 +50,14 @@ macro_rules! parse_sample_test {
 
       let mut code_map = FileCoordinateMap::new();
       for (index, contents) in code.iter().enumerate() {
-        let filepath = if code.len() == 1 {
-          "test.vale".to_string()
-        } else {
-          format!("{}.vale", index)
-        };
+        let filepath =
+          if code.len() == 1 { "test.vale".to_string() } else { format!("{}.vale", index) };
         let file_coord = parse_arena.intern_file_coordinate(test_package_coord, &filepath);
         code_map.put(&file_coord, contents.clone());
       }
 
-      let code_source = CodeSource::new(vec![
-        Source::from_code_map(&code_map),
-        Source::Fn(empty_package_fallback),
-      ]);
+      let code_source =
+        CodeSource::new(vec![Source::from_code_map(&code_map), Source::Fn(empty_package_fallback)]);
 
       parse($path, &parse_arena, &keywords, &code_source, &test_package_coord);
     }
@@ -217,5 +210,3 @@ parse_sample_test!(parse_sample_159, "ifunction/ifunction1/ifunction1.vale");
 parse_sample_test!(parse_sample_160, "string/string.vale");
 parse_sample_test!(parse_sample_161, "panicutils/panicutils.vale");
 parse_sample_test!(parse_sample_162, "castutils/castutils.vale");
-
-

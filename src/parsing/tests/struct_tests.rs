@@ -1,11 +1,10 @@
-
-use bumpalo::Bump;
 use crate::cast;
 use crate::interner::StrI;
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
+use bumpalo::Bump;
 
 #[test]
 fn simple_struct() {
@@ -75,10 +74,11 @@ fn struct_with_rsa_member() {
   match expect_1(&struct_.members.contents) {
     IStructContent::NormalStructMember(NormalStructMemberP {
       name: NameP(_, StrI("a")),
-      tyype: ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
-        element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
-        ..
-      }),
+      tyype:
+        ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
+          element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
+          ..
+        }),
       ..
     }) => {}
     _ => panic!("expected struct Mork {{ a []T; }} member structure"),
@@ -113,22 +113,27 @@ fn struct_with_double_borrow() {
       sharedness: SharednessP::Single,
       identifying_runes: None,
       template_rules: None,
-      members: StructMembersP {
-        contents: [IStructContent::NormalStructMember(NormalStructMemberP {
-          name: NameP(_, StrI("x")),
-          tyype: ITemplexPT::BorrowRef(BorrowRefPT {
-            region: RegionP::Unspecified,
-            inner: ITemplexPT::BorrowRef(BorrowRefPT {
-              region: RegionP::Unspecified,
-              inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
+      members:
+        StructMembersP {
+          contents:
+            [IStructContent::NormalStructMember(NormalStructMemberP {
+              name: NameP(_, StrI("x")),
+              tyype:
+                ITemplexPT::BorrowRef(BorrowRefPT {
+                  region: RegionP::Unspecified,
+                  inner:
+                    ITemplexPT::BorrowRef(BorrowRefPT {
+                      region: RegionP::Unspecified,
+                      inner:
+                        ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
+                      ..
+                    }),
+                  ..
+                }),
               ..
-            }),
-            ..
-          }),
+            })],
           ..
-        })],
-        ..
-      },
+        },
       ..
     }) => {}
     _ => panic!("expected struct Moo {{ x &&int; }} full structure"),
@@ -148,17 +153,20 @@ fn struct_with_weak() {
       sharedness: SharednessP::Single,
       identifying_runes: None,
       template_rules: None,
-      members: StructMembersP {
-        contents: [IStructContent::NormalStructMember(NormalStructMemberP {
-          name: NameP(_, StrI("x")),
-          tyype: ITemplexPT::WeakRef(WeakRefPT {
-            inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
-            ..
-          }),
+      members:
+        StructMembersP {
+          contents:
+            [IStructContent::NormalStructMember(NormalStructMemberP {
+              name: NameP(_, StrI("x")),
+              tyype:
+                ITemplexPT::WeakRef(WeakRefPT {
+                  inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
+                  ..
+                }),
+              ..
+            })],
           ..
-        })],
-        ..
-      },
+        },
       ..
     }) => {}
     _ => panic!("expected struct Moo {{ x weak int; }} full structure"),
@@ -178,18 +186,21 @@ fn export_struct() {
       sharedness: SharednessP::Single,
       identifying_runes: None,
       template_rules: None,
-      members: StructMembersP {
-        contents: [IStructContent::NormalStructMember(NormalStructMemberP {
-          name: NameP(_, StrI("x")),
-          tyype: ITemplexPT::BorrowRef(BorrowRefPT {
-            region: RegionP::Unspecified,
-            inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
-            ..
-          }),
+      members:
+        StructMembersP {
+          contents:
+            [IStructContent::NormalStructMember(NormalStructMemberP {
+              name: NameP(_, StrI("x")),
+              tyype:
+                ITemplexPT::BorrowRef(BorrowRefPT {
+                  region: RegionP::Unspecified,
+                  inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
+                  ..
+                }),
+              ..
+            })],
           ..
-        })],
-        ..
-      },
+        },
       ..
     }) => {}
     _ => panic!("expected exported struct Moo {{ x &int; }} full structure"),
@@ -216,37 +227,40 @@ fn struct_with_rune() {
       name: NameP(_, StrI("ListNode")),
       attributes: [],
       sharedness: SharednessP::Single,
-      identifying_runes: Some(GenericParametersP {
-        params: [GenericParameterP {
-          name: NameP(_, StrI("E")),
-          maybe_type: None,
-          coord_region: None,
-          attributes: [],
-          maybe_default: None,
-          ..
-        }],
-        ..
-      }),
-      template_rules: None,
-      members: StructMembersP {
-        contents: [
-          IStructContent::NormalStructMember(NormalStructMemberP {
-            name: NameP(_, StrI("value")),
-                  tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("E")), .. }),
-            ..
-          }),
-          IStructContent::NormalStructMember(NormalStructMemberP {
-            name: NameP(_, StrI("next")),
-                  tyype: ITemplexPT::Call(CallPT {
-              template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("ListNode")), .. }),
-              args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("E")), .. })],
+      identifying_runes:
+        Some(GenericParametersP {
+          params:
+            [GenericParameterP {
+              name: NameP(_, StrI("E")),
+              maybe_type: None,
+              coord_region: None,
+              attributes: [],
+              maybe_default: None,
               ..
-            }),
-            ..
-          }),
-        ],
-        ..
-      },
+            }],
+          ..
+        }),
+      template_rules: None,
+      members:
+        StructMembersP {
+          contents:
+            [IStructContent::NormalStructMember(NormalStructMemberP {
+              name: NameP(_, StrI("value")),
+              tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("E")), .. }),
+              ..
+            }), IStructContent::NormalStructMember(NormalStructMemberP {
+              name: NameP(_, StrI("next")),
+              tyype:
+                ITemplexPT::Call(CallPT {
+                  template:
+                    ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("ListNode")), .. }),
+                  args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("E")), .. })],
+                  ..
+                }),
+              ..
+            })],
+          ..
+        },
       ..
     }) => {}
     _ => panic!("expected struct ListNode<E> full structure"),
@@ -273,43 +287,48 @@ fn struct_with_int_rune() {
       name: NameP(_, StrI("Vecf")),
       attributes: [],
       sharedness: SharednessP::Single,
-      identifying_runes: Some(GenericParametersP {
-        params: [GenericParameterP {
-          name: NameP(_, StrI("N")),
-          maybe_type: None,
-          coord_region: None,
-          attributes: [],
-          maybe_default: None,
+      identifying_runes:
+        Some(GenericParametersP {
+          params:
+            [GenericParameterP {
+              name: NameP(_, StrI("N")),
+              maybe_type: None,
+              coord_region: None,
+              attributes: [],
+              maybe_default: None,
+              ..
+            }],
           ..
-        }],
-        ..
-      }),
-      template_rules: Some(TemplateRulesP {
-        rules: [IRulexPR::Typed(TypedPR {
-          rune: Some(NameP(_, StrI("N"))),
-          tyype: ITypePR::IntType,
+        }),
+      template_rules:
+        Some(TemplateRulesP {
+          rules:
+            [IRulexPR::Typed(TypedPR {
+              rune: Some(NameP(_, StrI("N"))), tyype: ITypePR::IntType, ..
+            })],
           ..
-        })],
-        ..
-      }),
-      members: StructMembersP {
-        contents: [IStructContent::NormalStructMember(NormalStructMemberP {
-          name: NameP(_, StrI("values")),
-              tyype: ITemplexPT::Call(CallPT {
-            template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("StaticArray")), .. }),
-            args: [
-              ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
-              ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("float")), .. }),
-            ],
-            ..
-          }),
+        }),
+      members:
+        StructMembersP {
+          contents:
+            [IStructContent::NormalStructMember(NormalStructMemberP {
+              name: NameP(_, StrI("values")),
+              tyype:
+                ITemplexPT::Call(CallPT {
+                  template:
+                    ITemplexPT::NameOrRune(NameOrRunePT {
+                      name: NameP(_, StrI("StaticArray")), ..
+                    }),
+                  args:
+                    [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }), ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("float")), .. })],
+                  ..
+                }),
+              ..
+            })],
           ..
-        })],
-        ..
-      },
+        },
       ..
     }) => {}
     _ => panic!("expected struct Vecf<N> full structure"),
   }
 }
-

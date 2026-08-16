@@ -1,8 +1,8 @@
 use std::path::Path;
 
+use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::code_hierarchy::{FileCoordinate, FileCoordinateMap};
 use crate::utils::range::{CodeLocationS, RangeS};
-use crate::utils::code_hierarchy::PackageCoordinate;
 
 pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> String {
   let mut line = 0;
@@ -17,15 +17,8 @@ pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> S
     i += 1;
   }
 
-  format!(
-    "{}:{}:{}",
-    humanized_file_path,
-    line + 1,
-    i - line_begin + 1
-  )
+  format!("{}:{}:{}", humanized_file_path, line + 1, i - line_begin + 1)
 }
-
-
 
 pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String {
   let mut result = package_coord.module.as_str().to_string();
@@ -36,15 +29,9 @@ pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String 
   result
 }
 
-
 pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
-  format!(
-    "{}:{}",
-    humanize_package(coordinate.package_coord),
-    coordinate.filepath.as_str()
-  )
+  format!("{}:{}", humanize_package(coordinate.package_coord), coordinate.filepath.as_str())
 }
-
 
 pub fn humanize_pos_code_map<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
@@ -54,17 +41,14 @@ pub fn humanize_pos_code_map<'a, 'b>(
   if code_location_s.offset < 0 {
     return format!("{}:{}", humanize_file(file), code_location_s.offset);
   }
-  let source = code_map
-    .get_by_value(file)
-    .expect("humanize_pos_code_map: coordinate not found in code map");
+  let source =
+    code_map.get_by_value(file).expect("humanize_pos_code_map: coordinate not found in code map");
   humanize_pos_path(&humanize_file(file), source, code_location_s.offset)
 }
-
 
 pub fn humanize_pos(file_path: &Path, source: &str, pos: i32) -> String {
   humanize_pos_path(&file_path.display().to_string(), source, pos)
 }
-
 
 fn next_thing_and_rest_of_line_code_map<'a>(
   _code_map: &FileCoordinateMap<'a, String>,
@@ -74,17 +58,10 @@ fn next_thing_and_rest_of_line_code_map<'a>(
   panic!("Unimplemented: next_thing_and_rest_of_line");
 }
 
-
 pub fn next_thing_and_rest_of_line(source: &str, pos: usize) -> String {
   let remaining = &source[pos..];
-  remaining
-    .split('\n')
-    .next()
-    .unwrap_or("")
-    .trim()
-    .to_string()
+  remaining.split('\n').next().unwrap_or("").trim().to_string()
 }
-
 
 fn line_begin<'a>(
   _code_map: &FileCoordinateMap<'a, String>,
@@ -93,7 +70,6 @@ fn line_begin<'a>(
   panic!("Unimplemented: line_begin");
 }
 
-
 pub fn line_range_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
   code_location_s: &CodeLocationS<'b>,
@@ -101,10 +77,7 @@ pub fn line_range_containing<'a, 'b>(
   let file = code_location_s.file;
   let offset = code_location_s.offset;
   if offset < 0 {
-    return RangeS::new(
-      CodeLocationS { file, offset: -1 },
-      CodeLocationS { file, offset: 0 },
-    );
+    return RangeS::new(CodeLocationS { file, offset: -1 }, CodeLocationS { file, offset: 0 });
   }
   let text = code_map
     .get_by_value(code_location_s.file)
@@ -133,7 +106,6 @@ pub fn line_range_containing<'a, 'b>(
   panic!("line_range_containing: offset beyond text");
 }
 
-
 pub fn lines_between<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
   begin_code_loc: &CodeLocationS<'b>,
@@ -153,9 +125,7 @@ pub fn lines_between<'a, 'b>(
     CodeLocationS { file: file, offset: line_begin },
     CodeLocationS { file: file, offset: line_end },
   )];
-  let text = code_map
-    .get_by_value(file)
-    .expect("lines_between: coordinate not found in code map");
+  let text = code_map.get_by_value(file).expect("lines_between: coordinate not found in code map");
   let text_len = text.len() as i32;
   while line_begin < end_code_loc.offset && line_begin < text_len {
     line_end = match text[line_begin as usize..].find('\n') {
@@ -170,7 +140,6 @@ pub fn lines_between<'a, 'b>(
   }
   result
 }
-
 
 pub fn line_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
@@ -187,5 +156,3 @@ pub fn line_containing<'a, 'b>(
   let end = range.end.offset as usize;
   text[begin..end].to_string()
 }
-
-

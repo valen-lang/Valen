@@ -1,231 +1,265 @@
 use crate::interner::StrI;
-use crate::utils::range::RangeS;
+use crate::postparsing::ast::FunctionS;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::ast::*;
+use crate::postparsing::ast::{GeneratedBodyS, IBodyS, IStructMemberS, ParameterS};
+use crate::postparsing::itemplatatype::{
+  FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
+};
+use crate::postparsing::names::IFunctionDeclarationNameS;
+use crate::postparsing::names::{
+  ConstructorNameS, ICitizenDeclarationNameS, IFunctionDeclarationNameValS, INameValS, IRuneValS,
+  IStructDeclarationNameS, IVarNameS, ReturnRuneS, StructNameRuneS,
+};
+use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
+use crate::postparsing::rules::rules::{CallSR, IRulexSR, LookupSR, RuneUsage};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
+use crate::typing::compiler::Compiler;
+use crate::typing::compiler_outputs::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::compiler_outputs::*;
-use crate::typing::compiler::Compiler;
 use crate::typing::macros::macros::GeneratedAhtDenizen;
-use crate::typing::templata::templata::*;
-use crate::typing::templata_compiler::{IBoundArgumentsSource, peel_all_references};
-use crate::postparsing::ast::*;
-use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ICitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
-use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
-use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
-use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS, IStructMemberS};
-use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
-use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::names::names::IdValT;
-use crate::postparsing::ast::FunctionS;
-use crate::postparsing::names::IFunctionDeclarationNameS;
-
+use crate::typing::names::names::*;
+use crate::typing::templata::templata::*;
+use crate::typing::templata_compiler::{peel_all_references, IBoundArgumentsSource};
+use crate::typing::types::types::*;
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::utils::range::RangeS;
 
 // A constructor param mirrors a user-written param: it carries the member's @PFVSZ split verbatim, so
 // downstream (e.g. §2A's expected-value-type-template scan) sees a constructor param exactly as it would
 // a hand-written one. Pure: reads only the member's fields and calls the sealed ParameterS::new.
 // VCOORD: inline?
 fn parameter_from_normal_member<'s>(member: &NormalStructMemberS<'s>) -> ParameterS<'s> {
-    ParameterS::new(
-        member.range,
-        None,
-        false,
-        IVarNameS::CodeVarName(member.name),
-        member.type_rune,
-        member.value_type_rune,
-        member.type_outer_ref_rules,
-        member.value_type_rules,
-    )
+  ParameterS::new(
+    member.range,
+    None,
+    false,
+    IVarNameS::CodeVarName(member.name),
+    member.type_rune,
+    member.value_type_rune,
+    member.type_outer_ref_rules,
+    member.value_type_rules,
+  )
 }
 
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    pub fn get_struct_sibling_entries_struct_constructor(
-        &self,
-        struct_name: IdT<'s, 't>,
-        struct_a: &'s StructS<'s>,
-    ) -> Vec<GeneratedAhtDenizen<'s, 't>> {
+  pub fn get_struct_sibling_entries_struct_constructor(
+    &self,
+    struct_name: IdT<'s, 't>,
+    struct_a: &'s StructS<'s>,
+  ) -> Vec<GeneratedAhtDenizen<'s, 't>> {
+    if struct_a.members.iter().any(|m| matches!(m, IStructMemberS::VariadicStructMember(_))) {
+      // Dont generate constructors for variadic structs, not supported yet.
+      // Only one we have right now is tuple, which has its own special syntax for constructing.
+      return vec![];
+    }
+    let mut rules: Vec<IRulexSR<'s>> = Vec::new();
 
-        if struct_a.members.iter().any(|m| matches!(m, IStructMemberS::VariadicStructMember(_))) {
-            // Dont generate constructors for variadic structs, not supported yet.
-            // Only one we have right now is tuple, which has its own special syntax for constructing.
-            return vec![];
+    // We dont need these, they really just contain bounds and stuff, which we'd inherit from our parameters anyway.
+    // However, if we leave it out, then this (from an IRAGP test):
+    //   struct Bork<T, Y> where T = Y { t T; y Y; }
+    // thing's constructor would be:
+    //   func Bork<T, Y>(t T, y Y) Bork<T, Y> { ... }
+    // and it fails to resolve that return type there because it doesn't meet the struct's conditions, because it didn't
+    // repeat the rules from the struct's header, specifically the T = Y rule.
+    // So, we just include all the rules from the constructor's header.
+    // If we ever need to drop that functionality (the T = Y nonsense) then we can probably take out the inheriting of
+    // the header rules.
+    for r in struct_a.header_rules.iter() {
+      rules.push(*r);
+    }
+
+    let struct_name_range = struct_a.name.range();
+    let ret_rune_s = self.scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {}));
+    let ret_rune = RuneUsage { range: struct_name_range, rune: ret_rune_s };
+
+    let struct_name_as_citizen: ICitizenDeclarationNameS<'s> = struct_a.name.into();
+    let struct_generic_rune_s =
+      self.scout_arena.intern_rune(IRuneValS::StructNameRune(StructNameRuneS {
+        struct_name: struct_name_as_citizen,
+      }));
+    let struct_generic_rune = RuneUsage { range: struct_name_range, rune: struct_generic_rune_s };
+
+    let struct_imprecise_name = struct_a.name.get_imprecise_name(self.scout_arena);
+    rules.push(IRulexSR::Lookup(LookupSR {
+      range: struct_name_range,
+      rune: struct_generic_rune,
+      parts: self.scout_arena.alloc_slice_copy(&[struct_imprecise_name]),
+    }));
+
+    // Instantiate the struct template; the resulting kind is the constructor's return type,
+    // since an owned value is a bare kind.
+    let generic_param_runes: Vec<_> = struct_a.generic_params.iter().map(|p| p.rune).collect();
+    let generic_param_runes_slice = self.scout_arena.alloc_slice_copy(&generic_param_runes);
+    rules.push(IRulexSR::Call(CallSR {
+      range: struct_name_range,
+      result_rune: ret_rune,
+      template_rune: struct_generic_rune,
+      args: generic_param_runes_slice,
+    }));
+
+    let params: Vec<ParameterS<'s>> = struct_a
+      .members
+      .iter()
+      .flat_map(|m| match m {
+        IStructMemberS::NormalStructMember(member) => {
+          vec![parameter_from_normal_member(member)]
         }
-        let mut rules: Vec<IRulexSR<'s>> = Vec::new();
+        IStructMemberS::VariadicStructMember(_) => vec![],
+      })
+      .collect();
 
-        // We dont need these, they really just contain bounds and stuff, which we'd inherit from our parameters anyway.
-        // However, if we leave it out, then this (from an IRAGP test):
-        //   struct Bork<T, Y> where T = Y { t T; y Y; }
-        // thing's constructor would be:
-        //   func Bork<T, Y>(t T, y Y) Bork<T, Y> { ... }
-        // and it fails to resolve that return type there because it doesn't meet the struct's conditions, because it didn't
-        // repeat the rules from the struct's header, specifically the T = Y rule.
-        // So, we just include all the rules from the constructor's header.
-        // If we ever need to drop that functionality (the T = Y nonsense) then we can probably take out the inheriting of
-        // the header rules.
-        for r in struct_a.header_rules.iter() { rules.push(*r); }
+    let params_slice = self.scout_arena.alloc_slice_from_vec(params);
+    let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
+    let function_a = self.scout_arena.alloc(FunctionS::new(
+      struct_a.range,
+      IFunctionDeclarationNameS::ConstructorName(
+        &*self.scout_arena.alloc(ConstructorNameS { tlcd: struct_name_as_citizen }),
+      ),
+      &[],
+      struct_a.generic_params,
+      TemplateTemplataType {
+        param_types: struct_a.tyype.param_types,
+        return_type: self
+          .scout_arena
+          .alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
+      },
+      params_slice,
+      Some(ret_rune),
+      rules_slice,
+      &[],
+      self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS {
+        generator_id: self.keywords.struct_constructor_generator,
+      })),
+    ));
+    let function_name_s = self.scout_arena.intern_name(INameValS::FunctionDeclaration(
+      IFunctionDeclarationNameValS::ConstructorName(ConstructorNameS {
+        tlcd: struct_name_as_citizen,
+      }),
+    ));
+    let translated_local_name = self.translate_name_step(function_name_s);
+    let result_template_id_ref = self.typing_interner.intern_id(IdValT {
+      package_coord: struct_name.package_coord,
+      init_steps: struct_name.init_steps,
+      local_name: translated_local_name,
+    });
+    vec![GeneratedAhtDenizen::Function(result_template_id_ref, function_a)]
+  }
 
+  pub fn generate_function_body_struct_constructor(
+    &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    env: &'t FunctionEnvironmentT<'s, 't>,
+    generator_id: StrI<'s>,
+    life: LocationInFunctionEnvironmentT<'t>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    origin_function: Option<&FunctionS<'s>>,
+    param_coords: &[ParameterT<'s, 't>],
+    maybe_ret_coord: Option<KindT<'s, 't>>,
+  ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
+    let ret_coord = maybe_ret_coord.expect("vassertSome: maybeRetCoord");
+    // The return coord arrives ShareRef-wrapped for a share citizen (see the share-wrap in
+    // function_compiler_core); peel to the struct kind to construct it. The return type is
+    // re-wrapped from sharedness below.
+    // VCOORD: revisit this
+    let struct_tt = match peel_all_references(ret_coord) {
+      KindT::Struct(s) => s,
+      _ => panic!("Expected struct kind in generate_function_body_struct_constructor"),
+    };
+    let definition = coutputs.lookup_struct(struct_tt.id, self);
+    let instantiation_bound_params = definition.instantiation_bound_params;
+    let instantiation_bounds = coutputs
+      .get_instantiation_bounds(self.typing_interner, struct_tt.id)
+      .expect("vassertSome: getInstantiationBounds");
+    let bound_arguments_source = IBoundArgumentsSource::UseBoundsFromContainer {
+      instantiation_bound_params,
+      instantiation_bound_arguments: instantiation_bounds,
+    };
+    let members: Vec<(IVarNameT<'s, 't>, KindT<'s, 't>)> = {
+      let placeholder_substituter = self.get_placeholder_substituter(
+        false, // sanity_check
+        env.template_id,
+        struct_tt.id,
+        bound_arguments_source,
+      );
+      definition
+        .members
+        .iter()
+        .map(|member| {
+          (member.name, placeholder_substituter.substitute_for_kind(coutputs, member.tyype))
+        })
+        .collect()
+    };
 
-        let struct_name_range = struct_a.name.range();
-        let ret_rune_s = self.scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {}));
-        let ret_rune = RuneUsage { range: struct_name_range, rune: ret_rune_s };
+    let constructor_id = env.id;
+    assert!(
+      constructor_id.local_name.parameters().len() == members.len(),
+      "vassert: constructorId.localName.parameters.size == members.size"
+    );
 
-        let struct_name_as_citizen: ICitizenDeclarationNameS<'s> = struct_a.name.into();
-        let struct_generic_rune_s = self.scout_arena.intern_rune(IRuneValS::StructNameRune(StructNameRuneS { struct_name: struct_name_as_citizen }));
-        let struct_generic_rune = RuneUsage { range: struct_name_range, rune: struct_generic_rune_s };
+    let constructor_params: Vec<ParameterT<'s, 't>> = members
+      .iter()
+      .map(|(name, coord)| ParameterT {
+        name: *name,
+        virtuality: None,
+        pre_checked: false,
+        tyype: *coord,
+      })
+      .collect();
 
-        let struct_imprecise_name = struct_a.name.get_imprecise_name(self.scout_arena);
-        rules.push(IRulexSR::Lookup(LookupSR {
-            range: struct_name_range,
-            rune: struct_generic_rune,
-            parts: self.scout_arena.alloc_slice_copy(&[struct_imprecise_name]),
-        }));
+    let bound_arguments_source2 = IBoundArgumentsSource::UseBoundsFromContainer {
+      instantiation_bound_params,
+      instantiation_bound_arguments: instantiation_bounds,
+    };
+    let mutability = self.struct_compiler_get_sharedness(
+      false, // sanity_check
+      coutputs,
+      env.template_id,
+      RegionT::Default,
+      *struct_tt,
+      bound_arguments_source2,
+    );
+    // A share citizen is only ever held ShareRef-wrapped; a single one is held bare.
+    let constructor_return_type = match mutability {
+      SharednessT::Single => KindT::Struct(struct_tt),
+      SharednessT::Shared => {
+        KindT::ShareRef(self.typing_interner.alloc(ShareRefT { inner: KindT::Struct(struct_tt) }))
+      }
+    };
 
-        // Instantiate the struct template; the resulting kind is the constructor's return type,
-        // since an owned value is a bare kind.
-        let generic_param_runes: Vec<_> = struct_a.generic_params.iter().map(|p| p.rune).collect();
-        let generic_param_runes_slice = self.scout_arena.alloc_slice_copy(&generic_param_runes);
-        rules.push(IRulexSR::Call(CallSR {
-            range: struct_name_range,
-            result_rune: ret_rune,
-            template_rune: struct_generic_rune,
-            args: generic_param_runes_slice,
-        }));
+    let constructor_params_slice = self.typing_interner.alloc_slice_from_vec(constructor_params);
+    let header = FunctionHeaderT {
+      id: constructor_id,
+      attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
+      params: constructor_params_slice,
+      return_type: constructor_return_type,
+      maybe_origin_function_templata: Some(env.templata()),
+    };
 
-        let params: Vec<ParameterS<'s>> = struct_a.members.iter().flat_map(|m| {
-            match m {
-                IStructMemberS::NormalStructMember(member) => {
-                    vec![parameter_from_normal_member(member)]
-                }
-                IStructMemberS::VariadicStructMember(_) => vec![],
-            }
-        }).collect();
-
-        let params_slice = self.scout_arena.alloc_slice_from_vec(params);
-        let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
-        let function_a = self.scout_arena.alloc(FunctionS::new(
-            struct_a.range,
-            IFunctionDeclarationNameS::ConstructorName(
-                &*self.scout_arena.alloc(ConstructorNameS { tlcd: struct_name_as_citizen })
-            ),
-            &[],
-            struct_a.generic_params,
-            TemplateTemplataType { param_types: struct_a.tyype.param_types, return_type: self.scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})) },
-            params_slice,
-            Some(ret_rune),
-            rules_slice,
-            &[],
-            self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.struct_constructor_generator })),
-        ));
-        let function_name_s = self.scout_arena.intern_name(INameValS::FunctionDeclaration(IFunctionDeclarationNameValS::ConstructorName(
-            ConstructorNameS { tlcd: struct_name_as_citizen }
-        )));
-        let translated_local_name = self.translate_name_step(function_name_s);
-        let result_template_id_ref = self.typing_interner.intern_id(IdValT {
-            package_coord: struct_name.package_coord,
-            init_steps: struct_name.init_steps,
-            local_name: translated_local_name,
-        });
-        vec![GeneratedAhtDenizen::Function(result_template_id_ref, function_a)]
-    }
-
-    pub fn generate_function_body_struct_constructor(
-      &self,
-      coutputs: &mut CompilerOutputs<'s, 't>,
-      env: &'t FunctionEnvironmentT<'s, 't>,
-      generator_id: StrI<'s>,
-      life: LocationInFunctionEnvironmentT<'t>,
-      call_range: &[RangeS<'s>],
-      call_location: LocationInDenizen<'s>,
-      origin_function: Option<&FunctionS<'s>>,
-      param_coords: &[ParameterT<'s, 't>],
-      maybe_ret_coord: Option<KindT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ExpressionTE<'s, 't>) {
-        let ret_coord = maybe_ret_coord.expect("vassertSome: maybeRetCoord");
-        // The return coord arrives ShareRef-wrapped for a share citizen (see the share-wrap in
-        // function_compiler_core); peel to the struct kind to construct it. The return type is
-        // re-wrapped from sharedness below.
-        // VCOORD: revisit this
-        let struct_tt = match peel_all_references(ret_coord) {
-            KindT::Struct(s) => s,
-            _ => panic!("Expected struct kind in generate_function_body_struct_constructor"),
-        };
-        let definition = coutputs.lookup_struct(struct_tt.id, self);
-        let instantiation_bound_params = definition.instantiation_bound_params;
-        let instantiation_bounds = coutputs.get_instantiation_bounds(self.typing_interner, struct_tt.id).expect("vassertSome: getInstantiationBounds");
-        let bound_arguments_source = IBoundArgumentsSource::UseBoundsFromContainer {
-            instantiation_bound_params,
-            instantiation_bound_arguments: instantiation_bounds,
-        };
-        let members: Vec<(IVarNameT<'s, 't>, KindT<'s, 't>)> = {
-            let placeholder_substituter = self.get_placeholder_substituter(
-                false, // sanity_check
-                env.template_id,
-                struct_tt.id,
-                bound_arguments_source,
-            );
-            definition.members.iter().map(|member| {
-                (member.name, placeholder_substituter.substitute_for_kind(coutputs, member.tyype))
-            }).collect()
-        };
-
-        let constructor_id = env.id;
-        assert!(
-            constructor_id.local_name.parameters().len() == members.len(),
-            "vassert: constructorId.localName.parameters.size == members.size"
-        );
-
-        let constructor_params: Vec<ParameterT<'s, 't>> = members.iter().map(|(name, coord)| {
-            ParameterT { name: *name, virtuality: None, pre_checked: false, tyype: *coord }
-        }).collect();
-
-        let bound_arguments_source2 = IBoundArgumentsSource::UseBoundsFromContainer {
-            instantiation_bound_params,
-            instantiation_bound_arguments: instantiation_bounds,
-        };
-        let mutability = self.struct_compiler_get_sharedness(
-          false, // sanity_check
-          coutputs,
-          env.template_id,
-          RegionT::Default,
-          *struct_tt,
-          bound_arguments_source2,
-        );
-        // A share citizen is only ever held ShareRef-wrapped; a single one is held bare.
-        let constructor_return_type = match mutability {
-            SharednessT::Single => KindT::Struct(struct_tt),
-            SharednessT::Shared =>
-                KindT::ShareRef(self.typing_interner.alloc(
-                    ShareRefT { inner: KindT::Struct(struct_tt) })),
-        };
-
-        let constructor_params_slice = self.typing_interner.alloc_slice_from_vec(constructor_params);
-        let header = FunctionHeaderT {
-            id: constructor_id,
-            attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
-            params: constructor_params_slice,
-            return_type: constructor_return_type,
-            maybe_origin_function_templata: Some(env.templata()),
-        };
-
-        let args: Vec<ExpressionTE<'s, 't>> = constructor_params_slice.iter().enumerate().map(|(index, p)| {
-            ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(index as i32, p.tyype)))
-        }).collect();
-        let args_slice = self.typing_interner.alloc_slice_from_vec(args);
-        let struct_tt_ref = self.typing_interner.alloc(struct_tt);
-        let construct_expr = ExpressionTE::Construct(self.typing_interner.alloc(ConstructTE::new(
-            struct_tt_ref,
-            constructor_return_type,
-            args_slice,
-        )));
-        let return_expr = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(construct_expr)));
-        let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(return_expr)));
-        (header, body)
-    }
-
+    let args: Vec<ExpressionTE<'s, 't>> = constructor_params_slice
+      .iter()
+      .enumerate()
+      .map(|(index, p)| {
+        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(index as i32, p.tyype)))
+      })
+      .collect();
+    let args_slice = self.typing_interner.alloc_slice_from_vec(args);
+    let struct_tt_ref = self.typing_interner.alloc(struct_tt);
+    let construct_expr = ExpressionTE::Construct(self.typing_interner.alloc(ConstructTE::new(
+      struct_tt_ref,
+      constructor_return_type,
+      args_slice,
+    )));
+    let return_expr =
+      ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(construct_expr)));
+    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(return_expr)));
+    (header, body)
+  }
 }

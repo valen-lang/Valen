@@ -1,5 +1,4 @@
 use crate::interner::StrI;
-use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::parsing::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::expressions::BodySE;
 use crate::postparsing::itemplatatype::{
@@ -7,20 +6,19 @@ use crate::postparsing::itemplatatype::{
 };
 use crate::postparsing::names::{
   ExportAsNameS, IFunctionDeclarationNameS, IImplDeclarationNameS, IImpreciseNameS, IRuneS,
-  IStructDeclarationNameS, IVarNameS, TopLevelCitizenDeclarationNameS,
-  TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS, ImplDeclarationNameS,
+  IStructDeclarationNameS, IVarNameS, ImplDeclarationNameS, TopLevelCitizenDeclarationNameS,
+  TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::patterns::AtomSP;
-use crate::postparsing::rules::{ImplBoundS, IRulexSR, RuneUsage};
 use crate::postparsing::rules::types::ITypeST;
+use crate::postparsing::rules::{IRulexSR, ImplBoundS, RuneUsage};
+use crate::scout_arena::ScoutArena;
+use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
-use crate::scout_arena::ScoutArena;
-
 
 pub trait IExpressionSE<'s> {
   fn range(&self) -> RangeS<'s>;
-  
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -33,7 +31,6 @@ pub struct ProgramS<'s> {
   pub exports: &'s [&'s ExportAsS<'s>],
   pub imports: &'s [&'s ImportS<'s>],
 }
-
 
 impl<'s> ProgramS<'s> {
   pub fn lookup_function(&'s self, name: &str) -> &'s FunctionS<'s> {
@@ -49,18 +46,12 @@ impl<'s> ProgramS<'s> {
     assert_eq!(matches.len(), 1);
     matches[0]
   }
-  
 
   pub fn lookup_interface(&self, name: &str) -> &'s InterfaceS<'s> {
-    let matches = self
-      .interfaces
-      .iter()
-      .copied()
-      .find(|i| i.name.name.as_str() == name);
+    let matches = self.interfaces.iter().copied().find(|i| i.name.name.as_str() == name);
     assert_eq!(matches.is_some(), true);
     matches.unwrap()
   }
-  
 
   pub fn lookup_struct(&self, name: &str) -> &'s StructS<'s> {
     let matches: Vec<&'s StructS<'s>> = self
@@ -72,7 +63,6 @@ impl<'s> ProgramS<'s> {
     assert_eq!(matches.len(), 1);
     matches[0]
   }
-  
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -84,7 +74,6 @@ pub enum ICitizenAttributeS<'s> {
   Export(ExportS<'s>),
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IFunctionAttributeS<'s> {
   Extern(ExternS<'s>),
@@ -93,16 +82,13 @@ pub enum IFunctionAttributeS<'s> {
   UserFunction(UserFunctionS),
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExternS<'s> {
   pub package_coord: &'s PackageCoordinate<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SealedS;
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BuiltinS<'s> {
@@ -111,7 +97,6 @@ pub struct BuiltinS<'s> {
   pub generator_name: StrI<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MacroCallS<'s> {
   pub range: RangeS<'s>,
@@ -119,23 +104,19 @@ pub struct MacroCallS<'s> {
   pub macro_name: StrI<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExportS<'s> {
   pub package_coordinate: &'s PackageCoordinate<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UserFunctionS;
-
 
 #[derive(Debug, PartialEq)]
 pub enum ICitizenS<'s> {
   Struct(StructS<'s>),
   Interface(InterfaceS<'s>),
 }
-
 
 impl<'s> ICitizenS<'s> {
   pub fn name(&self) -> TopLevelCitizenDeclarationNameS<'_> {
@@ -144,7 +125,6 @@ impl<'s> ICitizenS<'s> {
       ICitizenS::Interface(i) => TopLevelCitizenDeclarationNameS::from(i.name),
     }
   }
-  
 
   pub fn tyype(&self) -> &TemplateTemplataType<'s> {
     match self {
@@ -152,7 +132,6 @@ impl<'s> ICitizenS<'s> {
       ICitizenS::Interface(i) => &i.tyype,
     }
   }
-  
 
   pub fn generic_params(&self) -> &'s [&'s GenericParameterS<'s>] {
     match self {
@@ -160,9 +139,7 @@ impl<'s> ICitizenS<'s> {
       ICitizenS::Interface(i) => i.generic_params,
     }
   }
-  
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct StructS<'s> {
@@ -202,10 +179,18 @@ impl<'s> StructS<'s> {
       "vassert: generic_params should not contain DenizenDefaultRegionRuneS"
     );
     Self {
-      range, name, attributes, weakable, generic_params, sharedness,
+      range,
+      name,
+      attributes,
+      weakable,
+      generic_params,
+      sharedness,
       tyype,
       header_rules,
-      member_rules, members, internal_methods, impl_bounds,
+      member_rules,
+      members,
+      internal_methods,
+      impl_bounds,
       _sealed: (),
     }
   }
@@ -224,7 +209,6 @@ impl<'s> IStructMemberS<'s> {
       IStructMemberS::VariadicStructMember(m) => m.range.clone(),
     }
   }
-  
 
   pub fn type_rune(&self) -> &RuneUsage<'s> {
     match self {
@@ -232,9 +216,7 @@ impl<'s> IStructMemberS<'s> {
       IStructMemberS::VariadicStructMember(m) => &m.type_rune,
     }
   }
-  
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct NormalStructMemberS<'s> {
@@ -249,14 +231,12 @@ pub struct NormalStructMemberS<'s> {
   pub value_type_rules: &'s [IRulexSR<'s>],
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct VariadicStructMemberS<'s> {
   pub range: RangeS<'s>,
   pub type_rune: RuneUsage<'s>, // VCOORD: remove this in favor of the ITypeST
   pub tyype: ITypeST<'s>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct InterfaceS<'s> {
@@ -297,9 +277,16 @@ impl<'s> InterfaceS<'s> {
       );
     }
     Self {
-      range, name, attributes, weakable, generic_params,
+      range,
+      name,
+      attributes,
+      weakable,
+      generic_params,
       sharedness,
-      tyype, rules, internal_methods, impl_bounds,
+      tyype,
+      rules,
+      internal_methods,
+      impl_bounds,
       _sealed: (),
     }
   }
@@ -339,16 +326,22 @@ impl<'s> ImplS<'s> {
     impl_bounds: &'s [ImplBoundS<'s>],
   ) -> Self {
     Self {
-      range, name, user_specified_identifying_runes, rules,
+      range,
+      name,
+      user_specified_identifying_runes,
+      rules,
       tyype,
-      struct_kind_rune, sub_citizen_imprecise_name, sub_citizen_type,
-      interface_kind_rune, super_interface_imprecise_name, super_interface_type,
+      struct_kind_rune,
+      sub_citizen_imprecise_name,
+      sub_citizen_type,
+      interface_kind_rune,
+      super_interface_imprecise_name,
+      super_interface_type,
       impl_bounds,
       _sealed: (),
     }
   }
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct ExportAsS<'s> {
@@ -359,7 +352,6 @@ pub struct ExportAsS<'s> {
   pub exported_name: StrI<'s>,
   pub tyype: ITypeST<'s>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct ImportS<'s> {
@@ -373,11 +365,9 @@ pub fn interface_s_name<'s>(interface_s: &InterfaceS<'s>) -> TopLevelCitizenDecl
   TopLevelCitizenDeclarationNameS::from(interface_s.name)
 }
 
-
 pub fn struct_s_name<'s>(struct_s: &StructS<'s>) -> TopLevelCitizenDeclarationNameS<'s> {
   TopLevelCitizenDeclarationNameS::from(struct_s.name.expect_top_level())
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct ParameterS<'s> {
@@ -417,17 +407,20 @@ impl<'s> ParameterS<'s> {
     value_type_rules: &'s [IRulexSR<'s>],
   ) -> Self {
     debug_assert!(
-      matches!(name,
-        IVarNameS::CodeVarName(_) | IVarNameS::ConstructingMemberName(_)
-        | IVarNameS::ClosureParamName(_) | IVarNameS::MagicParamName(_)
-        | IVarNameS::DesugaredParamName(_)
+      matches!(
+        name,
+        IVarNameS::CodeVarName(_)
+          | IVarNameS::ConstructingMemberName(_)
+          | IVarNameS::ClosureParamName(_)
+          | IVarNameS::MagicParamName(_)
+          | IVarNameS::DesugaredParamName(_)
       ),
       "ParameterS.name must be a param name (real, or synthetic DesugaredParamName)"
     );
     debug_assert!(
-      type_outer_ref_rules.iter().all(|r| matches!(r,
-        IRulexSR::BorrowRef(_) | IRulexSR::WeakRef(_) | IRulexSR::OwnRef(_)
-      )),
+      type_outer_ref_rules
+        .iter()
+        .all(|r| matches!(r, IRulexSR::BorrowRef(_) | IRulexSR::WeakRef(_) | IRulexSR::OwnRef(_))),
       "type_outer_ref_rules may only contain onion ref wraps"
     );
     debug_assert!(
@@ -435,9 +428,14 @@ impl<'s> ParameterS<'s> {
       "full_type_rune must equal value_type_rune when type_outer_ref_rules is empty"
     );
     Self {
-      range, virtuality, pre_checked, name,
-      full_type_rune, value_type_rune,
-      type_outer_ref_rules, value_type_rules,
+      range,
+      virtuality,
+      pre_checked,
+      name,
+      full_type_rune,
+      value_type_rune,
+      type_outer_ref_rules,
+      value_type_rules,
       _sealed: (),
     }
   }
@@ -449,7 +447,6 @@ pub struct AbstractSP<'s> {
   pub is_internal_method: bool,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IBodyS<'s> {
   ExternBody(ExternBodyS),
@@ -458,26 +455,21 @@ pub enum IBodyS<'s> {
   CodeBody(CodeBodyS<'s>),
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExternBodyS {}
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AbstractBodyS {}
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GeneratedBodyS<'s> {
   pub generator_id: StrI<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CodeBodyS<'s> {
   pub body: &'s BodySE<'s>,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IGenericParameterTypeS<'s> {
@@ -485,7 +477,6 @@ pub enum IGenericParameterTypeS<'s> {
   KindGenericParameterType(KindGenericParameterTypeS),
   OtherGenericParameterType(OtherGenericParameterTypeS<'s>),
 }
-
 
 impl<'s> IGenericParameterTypeS<'s> {
   pub fn expect_region(&self) -> &RegionGenericParameterTypeS {
@@ -495,7 +486,6 @@ impl<'s> IGenericParameterTypeS<'s> {
     }
   }
 
-
   pub fn tyype(&self) -> ITemplataType<'s> {
     match self {
       IGenericParameterTypeS::RegionGenericParameterType(x) => x.tyype(),
@@ -503,33 +493,25 @@ impl<'s> IGenericParameterTypeS<'s> {
       IGenericParameterTypeS::OtherGenericParameterType(x) => x.tyype.clone(),
     }
   }
-
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RegionGenericParameterTypeS {}
-
 
 impl RegionGenericParameterTypeS {
   pub fn tyype<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::RegionTemplataType(RegionTemplataType {})
   }
-
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct KindGenericParameterTypeS {}
-
 
 impl KindGenericParameterTypeS {
   pub fn tyype<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::KindTemplataType(KindTemplataType {})
   }
-
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OtherGenericParameterTypeS<'s> {
@@ -546,7 +528,6 @@ impl<'s> OtherGenericParameterTypeS<'s> {
   }
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParameterS<'s> {
   pub range: RangeS<'s>,
@@ -554,7 +535,6 @@ pub struct GenericParameterS<'s> {
   pub tyype: IGenericParameterTypeS<'s>,
   pub default: Option<GenericParameterDefaultS<'s>>,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParameterDefaultS<'s> {
@@ -615,9 +595,16 @@ impl<'s> FunctionS<'s> {
       }
     }
     Self {
-      range, name, attributes, generic_params,
-      tyype, params, maybe_ret_kind_rune,
-      header_rules: rules, impl_bounds, body,
+      range,
+      name,
+      attributes,
+      generic_params,
+      tyype,
+      params,
+      maybe_ret_kind_rune,
+      header_rules: rules,
+      impl_bounds,
+      body,
       _sealed: (),
     }
   }
@@ -632,9 +619,7 @@ impl<'s> FunctionS<'s> {
   pub fn is_lambda(&self) -> bool {
     matches!(self.name, IFunctionDeclarationNameS::LambdaDeclarationName(_))
   }
-
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct LocationInDenizenBuilder {
@@ -643,17 +628,11 @@ pub struct LocationInDenizenBuilder {
   next_child: i32,
 }
 
-
 impl LocationInDenizenBuilder {
   // MIGALLOW: new -> new
   pub fn new(path: Vec<i32>) -> Self {
-    Self {
-      path,
-      consumed: false,
-      next_child: 1,
-    }
+    Self { path, consumed: false, next_child: 1 }
   }
-  
 
   pub fn child(&mut self) -> LocationInDenizenBuilder {
     let child = self.next_child;
@@ -662,7 +641,6 @@ impl LocationInDenizenBuilder {
     child_path.push(child);
     LocationInDenizenBuilder::new(child_path)
   }
-  
 
   // Per @DSAUIMZ, this is for NON-interned uses only (expression AST nodes).
   pub fn consume_in<'x>(&mut self, arena: &'x bumpalo::Bump) -> LocationInDenizen<'x> {
@@ -671,9 +649,7 @@ impl LocationInDenizenBuilder {
       "Location in denizen was already used for something, add a .child() somewhere."
     );
     self.consumed = true;
-    LocationInDenizen {
-      path: arena.alloc_slice_copy(&self.path),
-    }
+    LocationInDenizen { path: arena.alloc_slice_copy(&self.path) }
   }
 
   // Per @DSAUIMZ, this is for NON-interned uses only (expression AST nodes).
@@ -687,11 +663,8 @@ impl LocationInDenizenBuilder {
       "Location in denizen was already used for something, add a .child() somewhere."
     );
     self.consumed = true;
-    LocationInDenizen {
-      path: arena.alloc_slice_copy(&self.path),
-    }
+    LocationInDenizen { path: arena.alloc_slice_copy(&self.path) }
   }
-  
 
   // Per @DSAUIMZ, this is the only way to construct a LocationInDenizenVal.
   // Borrows from the builder's Vec, so 'tmp is a stack lifetime, not 's.
@@ -704,7 +677,6 @@ impl LocationInDenizenBuilder {
     LocationInDenizenVal { path: &self.path }
   }
 }
-
 
 /// A path identifying a specific location within a denizen (function, struct, etc.).
 /// Each element in the path is a child index, forming a tree address.
@@ -722,7 +694,6 @@ impl LocationInDenizenBuilder {
 pub struct LocationInDenizen<'x> {
   pub path: &'x [i32],
 }
-
 
 /// Borrowed view of a LocationInDenizen path, for use as an intern lookup key.
 /// Per @DSAUIMZ, fields are private to prevent pre-allocation.
@@ -768,10 +739,7 @@ impl<'x> LocationInDenizen<'x> {
     }
     false
   }
-
-
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum IDenizenS<'s> {
@@ -783,30 +751,25 @@ pub enum IDenizenS<'s> {
   TopLevelInterface(TopLevelInterfaceS<'s>),
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct TopLevelFunctionS<'s> {
   pub function: FunctionS<'s>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct TopLevelImplS<'s> {
   pub impl_: ImplS<'s>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct TopLevelExportAsS<'s> {
   pub export: ExportAsS<'s>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct TopLevelImportS<'s> {
   pub imporrt: ImportS<'s>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum ICitizenDenizenS<'s> {
@@ -814,32 +777,26 @@ pub enum ICitizenDenizenS<'s> {
   TopLevelInterface(TopLevelInterfaceS<'s>),
 }
 
-
 impl<'s> ICitizenDenizenS<'s> {
   pub fn citizen(&self) -> ! {
     panic!("ICitizenDenizenS::citizen is dead code")
   }
-  
 }
-
 
 // MIGALLOW: unapply -> as_citizen_denizen
 pub fn as_citizen_denizen<'s>(_x: &IDenizenS<'s>) -> Option<ICitizenDenizenS<'s>> {
   panic!("as_citizen_denizen is dead code")
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct TopLevelStructS<'s> {
   pub strukt: StructS<'s>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct TopLevelInterfaceS<'s> {
   pub interface: InterfaceS<'s>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct FileS<'s> {

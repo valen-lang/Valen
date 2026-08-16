@@ -1,6 +1,3 @@
-
-
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RegionTemplataType {}
 
@@ -54,5 +51,3 @@ pub enum ITemplataType<'s> {
   PackTemplataType(PackTemplataType<'s>),
   TemplateTemplataType(TemplateTemplataType<'s>),
 }
-
-

@@ -1,17 +1,15 @@
-
-
 // # Don't Use Ellipses In Matches (DUEIM)
 // By default, don't like using ellipses in matches. We prefer to use explicit matches.
 // Only the human should use ellipses. This is because explicit matches are a signal of when we
 // might need to consider extra code at the pattern site whenever we add a new field to the struct.
 
-use bumpalo::Bump;
-use crate::lexing::RangeL;
 use crate::interner::StrI;
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
+use crate::lexing::RangeL;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::compile;
+use bumpalo::Bump;
 
 fn collect_if<'p, T, F>(pred: &F, out: &mut Vec<T>, node: NodeRefP<'p>)
 where
@@ -113,11 +111,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::ExportAs(export_as));
-  let ExportAsP {
-    range: _range,
-    struct_,
-    exported_name,
-  } = export_as;
+  let ExportAsP { range: _range, struct_, exported_name } = export_as;
   visit_templex(pred, out, struct_);
   visit_name(pred, out, exported_name);
 }
@@ -127,12 +121,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Import(import));
-  let ImportP {
-    range: _range,
-    module_name,
-    package_steps,
-    importee_name,
-  } = import;
+  let ImportP { range: _range, module_name, package_steps, importee_name } = import;
   visit_name(pred, out, module_name);
   for step in *package_steps {
     visit_name(pred, out, step);
@@ -161,25 +150,21 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::StructMembers(members));
-  let StructMembersP {
-    range: _range,
-    contents,
-  } = members;
+  let StructMembersP { range: _range, contents } = members;
   for member in *contents {
     visit_struct_member(pred, out, member);
   }
 }
 
-fn visit_normal_struct_member<'p, T, F>(pred: &F, out: &mut Vec<T>, member: &'p NormalStructMemberP<'p>)
-where
+fn visit_normal_struct_member<'p, T, F>(
+  pred: &F,
+  out: &mut Vec<T>,
+  member: &'p NormalStructMemberP<'p>,
+) where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::NormalStructMember(member));
-  let NormalStructMemberP {
-    range: _range,
-    name,
-    tyype,
-  } = member;
+  let NormalStructMemberP { range: _range, name, tyype } = member;
   visit_name(pred, out, name);
   visit_templex(pred, out, tyype);
 }
@@ -192,10 +177,7 @@ fn visit_variadic_struct_member<'p, T, F>(
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::VariadicStructMember(member));
-  let VariadicStructMemberP {
-    range: _range,
-    tyype,
-  } = member;
+  let VariadicStructMemberP { range: _range, tyype } = member;
   visit_templex(pred, out, tyype);
 }
 
@@ -239,11 +221,7 @@ where
 {
   collect_if(pred, out, NodeRefP::Function(function));
   // Recurse down into function's fields
-  let FunctionP {
-    range: _range,
-    header,
-    body,
-  } = function;
+  let FunctionP { range: _range, header, body } = function;
   visit_function_header(pred, out, header);
   if let Some(body) = body {
     visit_block(pred, out, body);
@@ -287,11 +265,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Block(block));
-  let BlockPE {
-    range: _range,
-    maybe_default_region,
-    inner,
-  } = block;
+  let BlockPE { range: _range, maybe_default_region, inner } = block;
   if let Some(maybe_default_region) = maybe_default_region {
     visit_region_rune(pred, out, maybe_default_region);
   }
@@ -303,10 +277,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::FunctionReturn(return_));
-  let FunctionReturnP {
-    range: _range,
-    ret_type,
-  } = return_;
+  let FunctionReturnP { range: _range, ret_type } = return_;
   if let Some(ret_type) = ret_type {
     visit_templex(pred, out, ret_type);
   }
@@ -320,10 +291,7 @@ fn visit_generic_parameters<'p, T, F>(
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::GenericParameters(generic_parameters));
-  let GenericParametersP {
-    range: _range,
-    params,
-  } = generic_parameters;
+  let GenericParametersP { range: _range, params } = generic_parameters;
   for param in *params {
     visit_generic_parameter(pred, out, param);
   }
@@ -357,15 +325,15 @@ where
   }
 }
 
-fn visit_template_rules<'p, T, F>(pred: &F, out: &mut Vec<T>, template_rules: &'p TemplateRulesP<'p>)
-where
+fn visit_template_rules<'p, T, F>(
+  pred: &F,
+  out: &mut Vec<T>,
+  template_rules: &'p TemplateRulesP<'p>,
+) where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::TemplateRules(template_rules));
-  let TemplateRulesP {
-    range: _range,
-    rules,
-  } = template_rules;
+  let TemplateRulesP { range: _range, rules } = template_rules;
   for rule in *rules {
     visit_rulex(pred, out, rule);
   }
@@ -376,10 +344,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Params(params));
-  let ParamsP {
-    range: _range,
-    params,
-  } = params;
+  let ParamsP { range: _range, params } = params;
   for param in *params {
     visit_parameter(pred, out, param);
   }
@@ -390,12 +355,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Parameter(parameter));
-  let ParameterP {
-    range: _range,
-    virtuality,
-    self_borrow: _self_borrow,
-    pattern,
-  } = parameter;
+  let ParameterP { range: _range, virtuality, self_borrow: _self_borrow, pattern } = parameter;
   if let Some(virtuality) = virtuality {
     visit_abstract(pred, out, virtuality);
   }
@@ -409,12 +369,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Pattern(pattern));
-  let PatternPP {
-    range: _range,
-    destination,
-    templex,
-    destructure,
-  } = pattern;
+  let PatternPP { range: _range, destination, templex, destructure } = pattern;
   if let Some(destination) = destination {
     visit_destination(pred, out, destination);
   }
@@ -431,10 +386,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::DestinationLocal(destination));
-  let DestinationLocalP {
-    decl,
-    mutate: _mutate,
-  } = destination;
+  let DestinationLocalP { decl, mutate: _mutate } = destination;
   visit_name_declaration(pred, out, decl);
 }
 
@@ -443,17 +395,17 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Destructure(destructure));
-  let DestructureP {
-    range: _range,
-    patterns,
-  } = destructure;
+  let DestructureP { range: _range, patterns } = destructure;
   for pattern in *patterns {
     visit_pattern(pred, out, pattern);
   }
 }
 
-fn visit_name_declaration<'p, T, F>(pred: &F, out: &mut Vec<T>, declaration: &'p INameDeclarationP<'p>)
-where
+fn visit_name_declaration<'p, T, F>(
+  pred: &F,
+  out: &mut Vec<T>,
+  declaration: &'p INameDeclarationP<'p>,
+) where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::NameDeclaration(declaration));
@@ -475,10 +427,7 @@ fn visit_generic_parameter_type<'p, T, F>(
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::GenericParameterType(param_type));
-  let GenericParameterTypeP {
-    range: _range,
-    tyype: _tyype,
-  } = param_type;
+  let GenericParameterTypeP { range: _range, tyype: _tyype } = param_type;
 }
 
 fn visit_abstract<'p, T, F>(pred: &F, out: &mut Vec<T>, abstract_: &'p AbstractP)
@@ -509,10 +458,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::RegionRune(region_rune));
-  let RegionRunePT {
-    range: _range,
-    name,
-  } = region_rune;
+  let RegionRunePT { range: _range, name } = region_rune;
   if let Some(name) = name {
     visit_name(pred, out, name);
   }
@@ -530,11 +476,9 @@ where
     IAttributeP::SealedAttribute(SealedAttributeP { range }) => {
       visit_sealed_attribute(pred, out, range)
     }
-    IAttributeP::MacroCall(MacroCallP {
-      range,
-      inclusion,
-      name,
-    }) => visit_macro_call(pred, out, range, inclusion, name),
+    IAttributeP::MacroCall(MacroCallP { range, inclusion, name }) => {
+      visit_macro_call(pred, out, range, inclusion, name)
+    }
     _ => {}
   }
 }
@@ -577,64 +521,36 @@ where
   collect_if(pred, out, NodeRefP::Templex(templex));
   match templex {
     ITemplexPT::AnonymousRune(AnonymousRunePT { range: _range }) => {}
-    ITemplexPT::Bool(BoolPT {
-      range: _range,
-      value: _value,
-    }) => {}
-    ITemplexPT::Call(CallPT {
-      range: _range,
-      template,
-      args,
-    }) => {
+    ITemplexPT::Bool(BoolPT { range: _range, value: _value }) => {}
+    ITemplexPT::Call(CallPT { range: _range, template, args }) => {
       visit_templex(pred, out, template);
       for arg in *args {
         visit_templex(pred, out, arg);
       }
     }
-    ITemplexPT::Function(FunctionPT {
-      range: _range,
-      mutability,
-      parameters,
-      return_type,
-    }) => {
+    ITemplexPT::Function(FunctionPT { range: _range, mutability, parameters, return_type }) => {
       if let Some(mutability) = mutability {
         visit_templex(pred, out, mutability);
       }
       visit_pack(pred, out, parameters);
       visit_templex(pred, out, return_type);
     }
-    ITemplexPT::Int(IntPT {
-      range: _range,
-      value: _value,
-    }) => {}
+    ITemplexPT::Int(IntPT { range: _range, value: _value }) => {}
     ITemplexPT::RegionRune(region_rune) => visit_region_rune(pred, out, region_rune),
-    ITemplexPT::Tuple(TuplePT {
-      range: _range,
-      elements,
-    }) => {
+    ITemplexPT::Tuple(TuplePT { range: _range, elements }) => {
       for element in *elements {
         visit_templex(pred, out, element);
       }
     }
     ITemplexPT::NameOrRune(NameOrRunePT { name, .. }) => visit_name(pred, out, name),
-    ITemplexPT::BorrowRef(BorrowRefPT {
-      range: _range,
-      inner,
-      region,
-    }) => {
+    ITemplexPT::BorrowRef(BorrowRefPT { range: _range, inner, region }) => {
       if let RegionP::Rune(region) = region {
         visit_region_rune(pred, out, region);
       }
       visit_templex(pred, out, inner);
     }
-    ITemplexPT::WeakRef(WeakRefPT {
-      range: _range,
-      inner,
-    }) => visit_templex(pred, out, inner),
-    ITemplexPT::OwnRef(OwnRefPT {
-      range: _range,
-      inner,
-    }) => visit_templex(pred, out, inner),
+    ITemplexPT::WeakRef(WeakRefPT { range: _range, inner }) => visit_templex(pred, out, inner),
+    ITemplexPT::OwnRef(OwnRefPT { range: _range, inner }) => visit_templex(pred, out, inner),
     ITemplexPT::Pack(pack) => {
       visit_pack(pred, out, pack);
     }
@@ -651,21 +567,13 @@ where
       }
       visit_templex(pred, out, return_type);
     }
-    ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
-      range: _range,
-      element,
-    }) => {
+    ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT { range: _range, element }) => {
       visit_templex(pred, out, element);
     }
-    ITemplexPT::String(StringPT {
-      range: _range,
-      str: _str,
-    }) => {}
-    ITemplexPT::TypedRune(TypedRunePT {
-      range: _range,
-      rune,
-      tyype: _tyype,
-    }) => visit_name(pred, out, rune),
+    ITemplexPT::String(StringPT { range: _range, str: _str }) => {}
+    ITemplexPT::TypedRune(TypedRunePT { range: _range, rune, tyype: _tyype }) => {
+      visit_name(pred, out, rune)
+    }
   }
 }
 
@@ -675,54 +583,32 @@ where
 {
   collect_if(pred, out, NodeRefP::Rulex(rulex));
   match rulex {
-    IRulexPR::Equals(EqualsPR {
-      range: _range,
-      left,
-      right,
-    }) => {
+    IRulexPR::Equals(EqualsPR { range: _range, left, right }) => {
       visit_rulex(pred, out, left);
       visit_rulex(pred, out, right);
     }
-    IRulexPR::Or(OrPR {
-      range: _range,
-      possibilities,
-    }) => {
+    IRulexPR::Or(OrPR { range: _range, possibilities }) => {
       for possibility in *possibilities {
         visit_rulex(pred, out, possibility);
       }
     }
-    IRulexPR::Dot(DotPR {
-      range: _range,
-      container,
-      member_name,
-    }) => {
+    IRulexPR::Dot(DotPR { range: _range, container, member_name }) => {
       visit_rulex(pred, out, container);
       visit_name(pred, out, member_name);
     }
-    IRulexPR::Typed(TypedPR {
-      range: _range,
-      rune,
-      tyype: _tyype,
-    }) => {
+    IRulexPR::Typed(TypedPR { range: _range, rune, tyype: _tyype }) => {
       if let Some(rune) = rune {
         visit_name(pred, out, rune);
       }
     }
     IRulexPR::Templex(templex) => visit_templex(pred, out, templex),
-    IRulexPR::BuiltinCall(BuiltinCallPR {
-      range: _range,
-      name,
-      args,
-    }) => {
+    IRulexPR::BuiltinCall(BuiltinCallPR { range: _range, name, args }) => {
       visit_name(pred, out, name);
       for arg in *args {
         visit_rulex(pred, out, arg);
       }
     }
-    IRulexPR::Pack(PackPR {
-      range: _range,
-      elements,
-    }) => {
+    IRulexPR::Pack(PackPR { range: _range, elements }) => {
       for element in *elements {
         visit_rulex(pred, out, element);
       }
@@ -738,56 +624,33 @@ where
   match expr {
     IExpressionPE::Void(_void) => {}
     IExpressionPE::Pack(pack) => {
-      let PackPE {
-        range: _range,
-        inners,
-      } = pack;
+      let PackPE { range: _range, inners } = pack;
       for inner in *inners {
         visit_expression(pred, out, inner);
       }
     }
     IExpressionPE::SubExpression(sub_expression) => {
-      let SubExpressionPE {
-        range: _range,
-        inner,
-      } = sub_expression;
+      let SubExpressionPE { range: _range, inner } = sub_expression;
       visit_expression(pred, out, inner);
     }
     IExpressionPE::And(and_expr) => {
-      let AndPE {
-        range: _range,
-        left,
-        right,
-      } = and_expr;
+      let AndPE { range: _range, left, right } = and_expr;
       visit_expression(pred, out, left);
       visit_block(pred, out, right);
     }
     IExpressionPE::Or(or_expr) => {
-      let OrPE {
-        range: _range,
-        left,
-        right,
-      } = or_expr;
+      let OrPE { range: _range, left, right } = or_expr;
       visit_expression(pred, out, left);
       visit_block(pred, out, right);
     }
     IExpressionPE::If(if_expr) => {
-      let IfPE {
-        range: _range,
-        condition,
-        then_body,
-        else_body,
-      } = if_expr;
+      let IfPE { range: _range, condition, then_body, else_body } = if_expr;
       visit_expression(pred, out, condition);
       visit_block(pred, out, then_body);
       visit_block(pred, out, else_body);
     }
     IExpressionPE::While(while_expr) => {
-      let WhilePE {
-        range: _range,
-        condition,
-        body,
-      } = while_expr;
+      let WhilePE { range: _range, condition, body } = while_expr;
       visit_expression(pred, out, condition);
       visit_block(pred, out, body);
     }
@@ -804,59 +667,35 @@ where
       visit_block(pred, out, body);
     }
     IExpressionPE::Range(range_expr) => {
-      let RangePE {
-        range: _range,
-        from_expr,
-        to_expr,
-      } = range_expr;
+      let RangePE { range: _range, from_expr, to_expr } = range_expr;
       visit_expression(pred, out, from_expr);
       visit_expression(pred, out, to_expr);
     }
     IExpressionPE::Destruct(destruct_expr) => {
-      let DestructPE {
-        range: _range,
-        inner,
-      } = destruct_expr;
+      let DestructPE { range: _range, inner } = destruct_expr;
       visit_expression(pred, out, inner);
     }
     IExpressionPE::Unlet(unlet_expr) => {
-      let UnletPE {
-        range: _range,
-        name,
-      } = unlet_expr;
+      let UnletPE { range: _range, name } = unlet_expr;
       visit_imprecise_name(pred, out, name);
     }
     IExpressionPE::Mutate(mutate_expr) => {
-      let MutatePE {
-        range: _range,
-        mutatee,
-        source,
-      } = mutate_expr;
+      let MutatePE { range: _range, mutatee, source } = mutate_expr;
       visit_expression(pred, out, mutatee);
       visit_expression(pred, out, source);
     }
     IExpressionPE::Return(return_expr) => {
-      let ReturnPE {
-        range: _range,
-        expr,
-      } = return_expr;
+      let ReturnPE { range: _range, expr } = return_expr;
       visit_expression(pred, out, expr);
     }
     IExpressionPE::Break(_break_expr) => {}
     IExpressionPE::Let(let_expr) => {
-      let LetPE {
-        range: _range,
-        pattern,
-        source,
-      } = let_expr;
+      let LetPE { range: _range, pattern, source } = let_expr;
       visit_pattern(pred, out, pattern);
       visit_expression(pred, out, source);
     }
     IExpressionPE::Tuple(tuple_expr) => {
-      let TuplePE {
-        range: _range,
-        elements,
-      } = tuple_expr;
+      let TuplePE { range: _range, elements } = tuple_expr;
       for element in *elements {
         visit_expression(pred, out, element);
       }
@@ -882,30 +721,18 @@ where
     IExpressionPE::ConstantStr(_constant_str_expr) => {}
     IExpressionPE::ConstantFloat(_constant_float_expr) => {}
     IExpressionPE::StrInterpolate(str_interpolate_expr) => {
-      let StrInterpolatePE {
-        range: _range,
-        parts,
-      } = str_interpolate_expr;
+      let StrInterpolatePE { range: _range, parts } = str_interpolate_expr;
       for part in *parts {
         visit_expression(pred, out, part);
       }
     }
     IExpressionPE::Dot(dot_expr) => {
-      let DotPE {
-        range: _range,
-        left,
-        operator_range: _operator_range,
-        member,
-      } = dot_expr;
+      let DotPE { range: _range, left, operator_range: _operator_range, member } = dot_expr;
       visit_expression(pred, out, left);
       visit_name(pred, out, member);
     }
     IExpressionPE::Index(index_expr) => {
-      let IndexPE {
-        range: _range,
-        left,
-        args,
-      } = index_expr;
+      let IndexPE { range: _range, left, args } = index_expr;
       visit_expression(pred, out, left);
       for arg in *args {
         visit_expression(pred, out, arg);
@@ -937,10 +764,7 @@ where
       }
     }
     IExpressionPE::Not(not_expr) => {
-      let NotPE {
-        range: _range,
-        inner,
-      } = not_expr;
+      let NotPE { range: _range, inner } = not_expr;
       visit_expression(pred, out, inner);
     }
     IExpressionPE::Move(MovePE { range: _range, inner }) => {
@@ -953,21 +777,12 @@ where
       visit_expression(pred, out, inner);
     }
     IExpressionPE::Transmigrate(transmigrate_expr) => {
-      let TransmigratePE {
-        range: _range,
-        target_region,
-        inner,
-      } = transmigrate_expr;
+      let TransmigratePE { range: _range, target_region, inner } = transmigrate_expr;
       visit_name(pred, out, target_region);
       visit_expression(pred, out, inner);
     }
     IExpressionPE::BinaryCall(binary_call_expr) => {
-      let BinaryCallPE {
-        range: _range,
-        function_name,
-        left_expr,
-        right_expr,
-      } = binary_call_expr;
+      let BinaryCallPE { range: _range, function_name, left_expr, right_expr } = binary_call_expr;
       visit_name(pred, out, function_name);
       visit_expression(pred, out, left_expr);
       visit_expression(pred, out, right_expr);
@@ -991,10 +806,7 @@ where
     }
     IExpressionPE::MagicParamLookup(_magic_param_lookup_expr) => {}
     IExpressionPE::Lambda(lambda_expr) => {
-      let LambdaPE {
-        captures: _captures,
-        function,
-      } = lambda_expr;
+      let LambdaPE { captures: _captures, function } = lambda_expr;
       visit_function(pred, out, function);
     }
     IExpressionPE::Block(block_expr) => {
@@ -1007,10 +819,7 @@ where
       }
     }
     IExpressionPE::Shortcall(shortcall_expr) => {
-      let ShortcallPE {
-        range: _range,
-        arg_exprs,
-      } = shortcall_expr;
+      let ShortcallPE { range: _range, arg_exprs } = shortcall_expr;
       for arg in *arg_exprs {
         visit_expression(pred, out, arg);
       }
@@ -1023,10 +832,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Lookup(lookup));
-  let LookupPE {
-    name,
-    template_args,
-  } = lookup;
+  let LookupPE { name, template_args } = lookup;
   visit_imprecise_name(pred, out, name);
   if let Some(template_args) = template_args {
     visit_template_args(pred, out, template_args);
@@ -1038,10 +844,7 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::TemplateArgs(template_args));
-  let TemplateArgsP {
-    range: _range,
-    args,
-  } = template_args;
+  let TemplateArgsP { range: _range, args } = template_args;
   for arg in *args {
     visit_templex(pred, out, arg);
   }
@@ -1079,15 +882,11 @@ where
   F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Pack(pack));
-  let PackPT {
-    range: _range,
-    members,
-  } = pack;
+  let PackPT { range: _range, members } = pack;
   for member in *members {
     visit_templex(pred, out, member);
   }
 }
-
 
 pub enum NodeRefP<'p> {
   Struct(&'p StructP<'p>),

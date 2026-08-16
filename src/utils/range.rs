@@ -1,23 +1,21 @@
-use crate::utils::code_hierarchy::FileCoordinate;
 use crate::scout_arena::ScoutArena;
-
+use crate::utils::code_hierarchy::FileCoordinate;
 
 impl<'a> RangeS<'a> {
   pub fn internal(scout_arena: &ScoutArena<'a>, internal_num: i32) -> RangeS<'a> {
     assert!(internal_num < 0, "RangeS::internal - internal_num must be negative");
     RangeS::new(
       CodeLocationS::internal(scout_arena, internal_num),
-      CodeLocationS::internal(scout_arena, internal_num))
+      CodeLocationS::internal(scout_arena, internal_num),
+    )
   }
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeLocationS<'a> {
   pub file: &'a FileCoordinate<'a>,
   pub offset: i32,
 }
-
 
 impl<'a> CodeLocationS<'a> {
   // Keep in sync with CodeLocation2
@@ -28,13 +26,9 @@ impl<'a> CodeLocationS<'a> {
   // SPORK
   pub fn internal(scout_arena: &ScoutArena<'a>, internal_num: i32) -> CodeLocationS<'a> {
     assert!(internal_num < 0, "CodeLocationS::internal - internal_num must be negative");
-    let package_coord =
-      scout_arena.intern_package_coordinate(scout_arena.intern_str(""), &[]);
+    let package_coord = scout_arena.intern_package_coordinate(scout_arena.intern_str(""), &[]);
     let file = scout_arena.intern_file_coordinate(package_coord, "internal");
-    CodeLocationS {
-      file,
-      offset: internal_num,
-    }
+    CodeLocationS { file, offset: internal_num }
   }
 }
 
@@ -63,5 +57,3 @@ impl<'a> RangeS<'a> {
     self.begin.file
   }
 }
-
-

@@ -8,7 +8,6 @@ pub struct GlobalOptions {
 }
 
 impl GlobalOptions {
-
   pub fn apply() -> GlobalOptions {
     GlobalOptions {
       sanity_check: false,
@@ -18,7 +17,7 @@ impl GlobalOptions {
       debug_output: false,
     }
   }
-  
+
   pub fn test() -> GlobalOptions {
     GlobalOptions {
       sanity_check: true,
@@ -28,7 +27,4 @@ impl GlobalOptions {
       debug_output: true,
     }
   }
-  
 }
-
-

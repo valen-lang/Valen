@@ -1,4 +1,3 @@
-use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, PatternPP};
 use crate::postparsing::ast::LocationInDenizenBuilder;
@@ -8,11 +7,9 @@ use crate::postparsing::post_parser::{IEnvironmentS, PostParser, StackFrame};
 use crate::postparsing::rules::rules::IRulexSR;
 use crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune;
 use crate::postparsing::variable_uses::VariableDeclarationS;
+use crate::scout_arena::ScoutArena;
 
-
-pub(crate) fn get_parameter_captures<'s>(
-  pattern: &AtomSP<'s>,
-) -> Vec<VariableDeclarationS<'s>> {
+pub(crate) fn get_parameter_captures<'s>(pattern: &AtomSP<'s>) -> Vec<VariableDeclarationS<'s>> {
   let mut captures = Vec::new();
   if let Some(capture) = &pattern.name {
     captures.extend(get_capture_captures(capture));
@@ -25,15 +22,11 @@ pub(crate) fn get_parameter_captures<'s>(
   captures
 }
 
-fn get_capture_captures<'s>(
-  capture: &CaptureS<'s>,
-) -> Vec<VariableDeclarationS<'s>> {
+fn get_capture_captures<'s>(capture: &CaptureS<'s>) -> Vec<VariableDeclarationS<'s>> {
   if capture.mutate {
     Vec::new()
   } else {
-    vec![VariableDeclarationS {
-      name: capture.name.clone(),
-    }]
+    vec![VariableDeclarationS { name: capture.name.clone() }]
   }
 }
 

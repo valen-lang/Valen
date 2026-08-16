@@ -10,8 +10,8 @@ pub mod string_parser;
 pub mod templex_parser;
 
 pub use ast::*;
-pub use parser::*;
 pub use expression_parser::ScrambleIterator;
+pub use parser::*;
 // Don't re-export parsers to avoid name conflicts
 // Use explicit imports: templex_parser::TemplexParser, etc.
 

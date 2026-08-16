@@ -1,23 +1,22 @@
-use bumpalo::Bump;
 use crate::cast;
+use crate::collect_only_snode;
 use crate::compile_options::GlobalOptions;
 use crate::interner::StrI;
+use crate::parse_arena::ParseArena;
 use crate::parsing::tests::utils::compile_file;
 use crate::postparsing::ast::{IBodyS, ProgramS};
+use crate::postparsing::expressions::BlockSE;
 use crate::postparsing::expressions::{
   ConsecutorSE, FunctionCallSE, FunctionSE, IExpressionSE, IVariableUseCertainty, LetSE, LocalS,
   OwnershippedSE,
 };
 use crate::postparsing::names::IVarNameS;
-use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
-use crate::Keywords;
-use crate::parse_arena::ParseArena;
-use crate::scout_arena::ScoutArena;
-use crate::postparsing::test::traverse::NodeRefS;
 use crate::postparsing::post_parser::VariableNameAlreadyExists;
-use crate::postparsing::expressions::BlockSE;
-use crate::collect_only_snode;
-
+use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
+use crate::postparsing::test::traverse::NodeRefS;
+use crate::scout_arena::ScoutArena;
+use crate::Keywords;
+use bumpalo::Bump;
 
 fn compile_for_error<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
@@ -25,7 +24,8 @@ fn compile_for_error<'s, 'ctx, 'p>(
   parse_arena: &'ctx ParseArena<'p>,
   code: &str,
 ) -> ICompileErrorS<'s>
-where 'p: 's,
+where
+  'p: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -41,7 +41,13 @@ where 'p: 's,
   let file_coord_s = scout_arena.intern_file_coordinate(
     scout_arena.intern_package_coordinate(
       scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
-      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+      &only_file
+        .file_coord
+        .package_coord
+        .packages
+        .iter()
+        .map(|s| scout_arena.intern_str(s.as_str()))
+        .collect::<Vec<_>>(),
     ),
     only_file.file_coord.filepath.as_str(),
   );
@@ -58,7 +64,8 @@ fn compile<'s, 'ctx, 'p>(
   parse_arena: &'ctx ParseArena<'p>,
   code: &str,
 ) -> ProgramS<'s>
-where 'p: 's,
+where
+  'p: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -74,14 +81,18 @@ where 'p: 's,
   let file_coord_s = scout_arena.intern_file_coordinate(
     scout_arena.intern_package_coordinate(
       scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
-      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+      &only_file
+        .file_coord
+        .package_coord
+        .packages
+        .iter()
+        .map(|s| scout_arena.intern_str(s.as_str()))
+        .collect::<Vec<_>>(),
     ),
     only_file.file_coord.filepath.as_str(),
   );
   let post_parser = PostParser::new(options, scout_arena, keywords, &keywords_p, parse_arena);
-  post_parser
-    .scout_program(file_coord_s, &only_file)
-    .unwrap()
+  post_parser.scout_program(file_coord_s, &only_file).unwrap()
 }
 
 #[test]
@@ -91,12 +102,8 @@ fn regular_variable() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program1 = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func main() int { x = 4; }",
-  );
+  let program1 =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func main() int { x = 4; }");
   let main = program1.lookup_function("main");
   let code_body = cast!(&main.body, IBodyS::CodeBody);
   let locals = &code_body.body.block.locals;
@@ -123,12 +130,8 @@ fn typeless_local_has_no_kind_rune() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program1 = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func main() int { x = 4; }",
-  );
+  let program1 =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func main() int { x = 4; }");
   let main = program1.lookup_function("main");
   let local = collect_only_snode!(
     NodeRefS::Function(main),
@@ -153,12 +156,10 @@ fn reports_defining_same_name_variable() {
     "exported func main() { x = 4; x = 5; }",
   );
   match &err {
-    ICompileErrorS::VariableNameAlreadyExists(
-      VariableNameAlreadyExists {
-        name: IVarNameS::CodeVarName(StrI("x")),
-        ..
-      },
-    ) => {}
+    ICompileErrorS::VariableNameAlreadyExists(VariableNameAlreadyExists {
+      name: IVarNameS::CodeVarName(StrI("x")),
+      ..
+    }) => {}
     _ => panic!("expected VariableNameAlreadyExists(_, CodeVarName(\"x\")), got {:?}", err),
   }
 }
@@ -1228,9 +1229,7 @@ exported func main() int {
   }
 }
 
-fn extract_lambda_block_from_main<'s>(
-  body: &'s IBodyS<'s>,
-) -> &'s BlockSE<'s> {
+fn extract_lambda_block_from_main<'s>(body: &'s IBodyS<'s>) -> &'s BlockSE<'s> {
   let code_body = cast!(body, IBodyS::CodeBody);
   let block = code_body.body.block;
   let exprs: &[&IExpressionSE] = match block.expr {
@@ -1248,9 +1247,7 @@ fn extract_lambda_block_from_main<'s>(
   panic!("no lambda call found in main body")
 }
 
-fn try_extract_block_from_lambda_call<'s>(
-  fc: &FunctionCallSE<'s>,
-) -> Option<&'s BlockSE<'s>> {
+fn try_extract_block_from_lambda_call<'s>(fc: &FunctionCallSE<'s>) -> Option<&'s BlockSE<'s>> {
   let inner = match fc.callable_expr {
     IExpressionSE::Ownershipped(OwnershippedSE { inner_expr, .. }) => inner_expr,
     IExpressionSE::Function(func_se) => return extract_block_from_func_se(func_se),
@@ -1262,9 +1259,7 @@ fn try_extract_block_from_lambda_call<'s>(
   }
 }
 
-fn extract_block_from_func_se<'s>(
-  func_se: &FunctionSE<'s>,
-) -> Option<&'s BlockSE<'s>> {
+fn extract_block_from_func_se<'s>(func_se: &FunctionSE<'s>) -> Option<&'s BlockSE<'s>> {
   let code_body = match &func_se.function.body {
     IBodyS::CodeBody(c) => c,
     _ => return None,
@@ -1272,9 +1267,7 @@ fn extract_block_from_func_se<'s>(
   Some(code_body.body.block)
 }
 
-fn extract_block_from_lambda_call<'s>(
-  fc: &FunctionCallSE<'s>,
-) -> &'s BlockSE<'s> {
+fn extract_block_from_lambda_call<'s>(fc: &FunctionCallSE<'s>) -> &'s BlockSE<'s> {
   try_extract_block_from_lambda_call(fc).expect("callable is not lambda")
 }
 #[test]
@@ -1346,4 +1339,3 @@ fn include_underscore_in_locals() {
     _ => panic!("expected LocalS(ClosureParamNameS(_), NotUsed x6)"),
   }
 }
-

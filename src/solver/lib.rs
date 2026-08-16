@@ -7,9 +7,9 @@ pub use simple_solver_state::SimpleSolverState;
 pub use solver::*;
 
 pub mod test {
-    pub mod solver_tests;
-    pub mod test_rule_solver;
-    pub mod test_rules;
+  pub mod solver_tests;
+  pub mod test_rule_solver;
+  pub mod test_rules;
 
-    pub use test_rules::{TestRule, IRule};
+  pub use test_rules::{IRule, TestRule};
 }

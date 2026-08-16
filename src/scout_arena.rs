@@ -1,42 +1,36 @@
-
-
 // ScoutArena: arena + interning maps for the postparsing (scout) pass.
 // Has string/coord interning (like ParseArena) plus name/rune/imprecise-name interning.
 
 use crate::interner::{InternedSlice, StrI};
-use crate::postparsing::names::{
-  IImpreciseNameS, IImpreciseNameValS, INameS, INameValS, IRuneS, IRuneValS,
-  IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IVarNameS, IVarNameValS,
-  ImplicitRegionRuneS,
-  RuneNameS, TopLevelStructDeclarationNameS, TopLevelInterfaceDeclarationNameS,
-  ImplicitCoercionTemplateRuneS, AnonymousSubstructMethodInheritedRuneS,
-  DispatcherRuneFromImplS, CaseRuneFromImplS,
-  LambdaStructImpreciseNameS,
-  AnonymousSubstructTemplateImpreciseNameS,
-  AnonymousSubstructConstructorTemplateImpreciseNameS, ImplImpreciseNameS,
-  ImplSubCitizenImpreciseNameS, ImplSuperInterfaceImpreciseNameS,
-  ImplicitRuneValS, CallRegionRuneValS,
-  CallPureMergeRegionRuneValS, LetImplicitRuneValS, MagicParamRuneValS,
-  LocalDefaultRegionRuneValS,
-  ImplicitRuneS, CallRegionRuneS,
-  CallPureMergeRegionRuneS, LetImplicitRuneS, MagicParamRuneS,
-  LocalDefaultRegionRuneS,
-};
 use crate::postparsing::ast::LocationInDenizenVal;
-use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
-use bumpalo::Bump;
-use std::cell::RefCell;
-use crate::utils::fx::HashMap;
-use crate::postparsing::names::IImpreciseNameValS::*;
-use crate::postparsing::names::{ForwarderFunctionDeclarationNameS, ForwarderFunctionDeclarationNameValS};
-use IRuneValS::*;
-use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::postparsing::names::AnonymousSubstructImplDeclarationNameS;
 use crate::postparsing::names::AnonymousSubstructTemplateNameS;
+use crate::postparsing::names::IImpreciseNameValS::*;
 use crate::postparsing::names::RuneValQuery;
+use crate::postparsing::names::{
+  AnonymousSubstructConstructorTemplateImpreciseNameS, AnonymousSubstructMethodInheritedRuneS,
+  AnonymousSubstructTemplateImpreciseNameS, CallPureMergeRegionRuneS, CallPureMergeRegionRuneValS,
+  CallRegionRuneS, CallRegionRuneValS, CaseRuneFromImplS, DispatcherRuneFromImplS,
+  IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IImpreciseNameS, IImpreciseNameValS,
+  INameS, INameValS, IRuneS, IRuneValS, IVarNameS, IVarNameValS, ImplImpreciseNameS,
+  ImplSubCitizenImpreciseNameS, ImplSuperInterfaceImpreciseNameS, ImplicitCoercionTemplateRuneS,
+  ImplicitRegionRuneS, ImplicitRuneS, ImplicitRuneValS, LambdaStructImpreciseNameS,
+  LetImplicitRuneS, LetImplicitRuneValS, LocalDefaultRegionRuneS, LocalDefaultRegionRuneValS,
+  MagicParamRuneS, MagicParamRuneValS, RuneNameS, TopLevelInterfaceDeclarationNameS,
+  TopLevelStructDeclarationNameS,
+};
+use crate::postparsing::names::{
+  ForwarderFunctionDeclarationNameS, ForwarderFunctionDeclarationNameValS,
+};
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
+use crate::utils::fx::HashMap;
+use bumpalo::Bump;
+use std::cell::RefCell;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ptr::eq;
+use IRuneValS::*;
 
 #[derive(Clone)]
 struct FileCoordLookupKey<'s> {
@@ -107,7 +101,10 @@ impl<'s> ScoutArena<'s> {
   }
 
   /// Create an ArenaIndexMap from an iterator, allocated in this arena.
-  pub fn alloc_index_map_from_iter<K: Hash + Eq + Clone, V, I: IntoIterator<Item = (K, V)>>(&self, iter: I) -> ArenaIndexMap<'s, K, V> {
+  pub fn alloc_index_map_from_iter<K: Hash + Eq + Clone, V, I: IntoIterator<Item = (K, V)>>(
+    &self,
+    iter: I,
+  ) -> ArenaIndexMap<'s, K, V> {
     ArenaIndexMap::from_iter_in(iter, self.bump)
   }
 
@@ -131,18 +128,12 @@ impl<'s> ScoutArena<'s> {
     packages: &[StrI<'s>],
   ) -> &'s PackageCoordinate<'s> {
     let mut inner = self.inner.borrow_mut();
-    let lookup_coord = PackageCoordinate {
-      module,
-      packages: InternedSlice::new(packages),
-    };
+    let lookup_coord = PackageCoordinate { module, packages: InternedSlice::new(packages) };
     if let Some(existing) = inner.package_coord_to_ref.get(&lookup_coord) {
       return *existing;
     }
     let arena_packages = self.bump.alloc_slice_copy(packages);
-    let coord = PackageCoordinate {
-      module,
-      packages: InternedSlice::new(arena_packages),
-    };
+    let coord = PackageCoordinate { module, packages: InternedSlice::new(arena_packages) };
     let new_ref: &'s PackageCoordinate<'s> = self.bump.alloc(coord.clone());
     inner.package_coord_to_ref.insert(coord, new_ref);
     new_ref
@@ -154,23 +145,14 @@ impl<'s> ScoutArena<'s> {
     filepath: &str,
   ) -> &'s FileCoordinate<'s> {
     let mut inner = self.inner.borrow_mut();
-    let lookup_key = FileCoordLookupKey {
-      package_coord,
-      filepath: filepath.to_string(),
-    };
+    let lookup_key = FileCoordLookupKey { package_coord, filepath: filepath.to_string() };
     if let Some(existing) = inner.file_coord_to_ref.get(&lookup_key) {
       return *existing;
     }
     let arena_filepath = self.bump.alloc_str(filepath);
-    let coord = FileCoordinate {
-      package_coord,
-      filepath: StrI(arena_filepath),
-    };
+    let coord = FileCoordinate { package_coord, filepath: StrI(arena_filepath) };
     let new_ref: &'s FileCoordinate<'s> = self.bump.alloc(coord.clone());
-    let insert_key = FileCoordLookupKey {
-      package_coord,
-      filepath: filepath.to_string(),
-    };
+    let insert_key = FileCoordLookupKey { package_coord, filepath: filepath.to_string() };
     inner.file_coord_to_ref.insert(insert_key, new_ref);
     new_ref
   }
@@ -202,26 +184,40 @@ impl<'s> ScoutArena<'s> {
         let payload = LambdaStructImpreciseNameS { lambda_name: v.lambda_name };
         IImpreciseNameS::LambdaStructImpreciseName(self.bump.alloc(payload))
       }
-      ClosureParamImpreciseName(p) => IImpreciseNameS::ClosureParamImpreciseName(self.bump.alloc(p)),
+      ClosureParamImpreciseName(p) => {
+        IImpreciseNameS::ClosureParamImpreciseName(self.bump.alloc(p))
+      }
       PrototypeName(p) => IImpreciseNameS::PrototypeName(self.bump.alloc(p)),
       AnonymousSubstructTemplateImpreciseName(v) => {
-        let payload = AnonymousSubstructTemplateImpreciseNameS { interface_imprecise_name: v.interface_imprecise_name };
+        let payload = AnonymousSubstructTemplateImpreciseNameS {
+          interface_imprecise_name: v.interface_imprecise_name,
+        };
         IImpreciseNameS::AnonymousSubstructTemplateImpreciseName(self.bump.alloc(payload))
       }
       AnonymousSubstructConstructorTemplateImpreciseName(v) => {
-        let payload = AnonymousSubstructConstructorTemplateImpreciseNameS { interface_imprecise_name: v.interface_imprecise_name };
-        IImpreciseNameS::AnonymousSubstructConstructorTemplateImpreciseName(self.bump.alloc(payload))
+        let payload = AnonymousSubstructConstructorTemplateImpreciseNameS {
+          interface_imprecise_name: v.interface_imprecise_name,
+        };
+        IImpreciseNameS::AnonymousSubstructConstructorTemplateImpreciseName(
+          self.bump.alloc(payload),
+        )
       }
       ImplImpreciseName(v) => {
-        let payload = ImplImpreciseNameS { sub_citizen_imprecise_name: v.sub_citizen_imprecise_name, super_interface_imprecise_name: v.super_interface_imprecise_name };
+        let payload = ImplImpreciseNameS {
+          sub_citizen_imprecise_name: v.sub_citizen_imprecise_name,
+          super_interface_imprecise_name: v.super_interface_imprecise_name,
+        };
         IImpreciseNameS::ImplImpreciseName(self.bump.alloc(payload))
       }
       ImplSubCitizenImpreciseName(v) => {
-        let payload = ImplSubCitizenImpreciseNameS { sub_citizen_imprecise_name: v.sub_citizen_imprecise_name };
+        let payload =
+          ImplSubCitizenImpreciseNameS { sub_citizen_imprecise_name: v.sub_citizen_imprecise_name };
         IImpreciseNameS::ImplSubCitizenImpreciseName(self.bump.alloc(payload))
       }
       ImplSuperInterfaceImpreciseName(v) => {
-        let payload = ImplSuperInterfaceImpreciseNameS { super_interface_imprecise_name: v.super_interface_imprecise_name };
+        let payload = ImplSuperInterfaceImpreciseNameS {
+          super_interface_imprecise_name: v.super_interface_imprecise_name,
+        };
         IImpreciseNameS::ImplSuperInterfaceImpreciseName(self.bump.alloc(payload))
       }
       SelfName(p) => IImpreciseNameS::SelfName(self.bump.alloc(p)),
@@ -235,14 +231,20 @@ impl<'s> ScoutArena<'s> {
 
   // --- Name interning ---
 
-  pub fn intern_struct_declaration_name(&self, val: TopLevelStructDeclarationNameS<'s>) -> &'s TopLevelStructDeclarationNameS<'s> {
+  pub fn intern_struct_declaration_name(
+    &self,
+    val: TopLevelStructDeclarationNameS<'s>,
+  ) -> &'s TopLevelStructDeclarationNameS<'s> {
     match self.intern_name(INameValS::TopLevelStructDeclaration(val)) {
       INameS::TopLevelStructDeclaration(r) => r,
       _ => unreachable!(),
     }
   }
 
-  pub fn intern_interface_declaration_name(&self, val: TopLevelInterfaceDeclarationNameS<'s>) -> &'s TopLevelInterfaceDeclarationNameS<'s> {
+  pub fn intern_interface_declaration_name(
+    &self,
+    val: TopLevelInterfaceDeclarationNameS<'s>,
+  ) -> &'s TopLevelInterfaceDeclarationNameS<'s> {
     match self.intern_name(INameValS::TopLevelInterfaceDeclaration(val)) {
       INameS::TopLevelInterfaceDeclaration(r) => r,
       _ => unreachable!(),
@@ -272,16 +274,24 @@ impl<'s> ScoutArena<'s> {
         INameS::FunctionDeclaration(self.bump.alloc(inner))
       }
       INameValS::ImplDeclaration(p) => INameS::ImplDeclaration(self.bump.alloc(p)),
-      INameValS::AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameValS { interface }) => {
+      INameValS::AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameValS {
+        interface,
+      }) => {
         let payload = AnonymousSubstructImplDeclarationNameS { interface: interface.clone() };
         INameS::AnonymousSubstructImplDeclaration(self.bump.alloc(payload))
       }
       INameValS::ExportAsName(p) => INameS::ExportAsName(self.bump.alloc(p)),
       INameValS::LetName(p) => INameS::LetName(self.bump.alloc(p)),
-      INameValS::TopLevelStructDeclaration(p) => INameS::TopLevelStructDeclaration(self.bump.alloc(p)),
-      INameValS::TopLevelInterfaceDeclaration(p) => INameS::TopLevelInterfaceDeclaration(self.bump.alloc(p)),
+      INameValS::TopLevelStructDeclaration(p) => {
+        INameS::TopLevelStructDeclaration(self.bump.alloc(p))
+      }
+      INameValS::TopLevelInterfaceDeclaration(p) => {
+        INameS::TopLevelInterfaceDeclaration(self.bump.alloc(p))
+      }
       INameValS::LambdaStructDeclaration(p) => INameS::LambdaStructDeclaration(self.bump.alloc(p)),
-      INameValS::AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameValS { interface_name }) => {
+      INameValS::AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameValS {
+        interface_name,
+      }) => {
         let payload = AnonymousSubstructTemplateNameS { interface_name: interface_name.clone() };
         INameS::AnonymousSubstructTemplateName(self.bump.alloc(payload))
       }
@@ -289,9 +299,15 @@ impl<'s> ScoutArena<'s> {
         let payload = RuneNameS { rune: v.rune };
         INameS::RuneName(self.bump.alloc(payload))
       }
-      INameValS::RuntimeSizedArrayDeclarationName(p) => INameS::RuntimeSizedArrayDeclarationName(self.bump.alloc(p)),
-      INameValS::StaticSizedArrayDeclarationName(p) => INameS::StaticSizedArrayDeclarationName(self.bump.alloc(p)),
-      INameValS::GlobalFunctionFamilyName(p) => INameS::GlobalFunctionFamilyName(self.bump.alloc(p)),
+      INameValS::RuntimeSizedArrayDeclarationName(p) => {
+        INameS::RuntimeSizedArrayDeclarationName(self.bump.alloc(p))
+      }
+      INameValS::StaticSizedArrayDeclarationName(p) => {
+        INameS::StaticSizedArrayDeclarationName(self.bump.alloc(p))
+      }
+      INameValS::GlobalFunctionFamilyName(p) => {
+        INameS::GlobalFunctionFamilyName(self.bump.alloc(p))
+      }
       INameValS::ArbitraryName(p) => INameS::ArbitraryName(self.bump.alloc(p)),
       INameValS::VarName(v) => {
         let inner = self.alloc_var_name_canonical(v);
@@ -300,17 +316,30 @@ impl<'s> ScoutArena<'s> {
     }
   }
 
-  fn alloc_function_declaration_name_canonical(&self, val: IFunctionDeclarationNameValS<'s>) -> IFunctionDeclarationNameS<'s> {
+  fn alloc_function_declaration_name_canonical(
+    &self,
+    val: IFunctionDeclarationNameValS<'s>,
+  ) -> IFunctionDeclarationNameS<'s> {
     match val {
       IFunctionDeclarationNameValS::FunctionName(p) => IFunctionDeclarationNameS::FunctionName(p),
-      IFunctionDeclarationNameValS::LambdaDeclarationName(p) => IFunctionDeclarationNameS::LambdaDeclarationName(p),
-      IFunctionDeclarationNameValS::ForwarderFunctionDeclarationName(ForwarderFunctionDeclarationNameValS { inner, index }) => {
+      IFunctionDeclarationNameValS::LambdaDeclarationName(p) => {
+        IFunctionDeclarationNameS::LambdaDeclarationName(p)
+      }
+      IFunctionDeclarationNameValS::ForwarderFunctionDeclarationName(
+        ForwarderFunctionDeclarationNameValS { inner, index },
+      ) => {
         let payload = ForwarderFunctionDeclarationNameS { inner: inner.clone(), index };
         IFunctionDeclarationNameS::ForwarderFunctionDeclarationName(self.bump.alloc(payload))
       }
-      IFunctionDeclarationNameValS::ConstructorName(p) => IFunctionDeclarationNameS::ConstructorName(self.bump.alloc(p)),
-      IFunctionDeclarationNameValS::ImmConcreteDestructorName(p) => IFunctionDeclarationNameS::ImmConcreteDestructorName(self.bump.alloc(p)),
-      IFunctionDeclarationNameValS::ImmInterfaceDestructorName(p) => IFunctionDeclarationNameS::ImmInterfaceDestructorName(self.bump.alloc(p)),
+      IFunctionDeclarationNameValS::ConstructorName(p) => {
+        IFunctionDeclarationNameS::ConstructorName(self.bump.alloc(p))
+      }
+      IFunctionDeclarationNameValS::ImmConcreteDestructorName(p) => {
+        IFunctionDeclarationNameS::ImmConcreteDestructorName(self.bump.alloc(p))
+      }
+      IFunctionDeclarationNameValS::ImmInterfaceDestructorName(p) => {
+        IFunctionDeclarationNameS::ImmInterfaceDestructorName(self.bump.alloc(p))
+      }
     }
   }
 
@@ -338,7 +367,7 @@ impl<'s> ScoutArena<'s> {
       let inner = self.inner.borrow();
       let query = RuneValQuery(&val);
       if let Some(existing) = inner.rune_val_to_ref.get(&query) {
-        return existing.clone();  // HIT — zero allocation
+        return existing.clone(); // HIT — zero allocation
       }
     }
     // MISS — promote val (arena-alloc slices) and build canonical
@@ -351,38 +380,73 @@ impl<'s> ScoutArena<'s> {
   /// Promotes a Val (which may borrow temporaries via 'tmp) into an arena-allocated
   /// canonical IRuneS and a stored key IRuneValS<'s, 's>.
   /// Per @DSAUIMZ, this is where lid slices get arena-allocated — only on intern miss.
-  fn alloc_rune_canonical<'tmp>(&self, val: IRuneValS<'s, 'tmp>) -> (IRuneValS<'s, 's>, IRuneS<'s>) {
+  fn alloc_rune_canonical<'tmp>(
+    &self,
+    val: IRuneValS<'s, 'tmp>,
+  ) -> (IRuneValS<'s, 's>, IRuneS<'s>) {
     match val {
       // ── 7 lid variants: promote LocationInDenizenVal → LocationInDenizen ──
       ImplicitRune(v) => {
         let lid = v.lid().promote_in(self.bump);
         let canonical = IRuneS::ImplicitRune(self.bump.alloc(ImplicitRuneS { lid }));
-        (IRuneValS::ImplicitRune(ImplicitRuneValS::new(LocationInDenizenVal::from_canonical(&lid))), canonical)
+        (
+          IRuneValS::ImplicitRune(ImplicitRuneValS::new(LocationInDenizenVal::from_canonical(
+            &lid,
+          ))),
+          canonical,
+        )
       }
       CallRegionRune(v) => {
         let lid = v.lid().promote_in(self.bump);
         let canonical = IRuneS::CallRegionRune(self.bump.alloc(CallRegionRuneS { lid }));
-        (IRuneValS::CallRegionRune(CallRegionRuneValS::new(LocationInDenizenVal::from_canonical(&lid))), canonical)
+        (
+          IRuneValS::CallRegionRune(CallRegionRuneValS::new(LocationInDenizenVal::from_canonical(
+            &lid,
+          ))),
+          canonical,
+        )
       }
       CallPureMergeRegionRune(v) => {
         let lid = v.lid().promote_in(self.bump);
-        let canonical = IRuneS::CallPureMergeRegionRune(self.bump.alloc(CallPureMergeRegionRuneS { lid }));
-        (IRuneValS::CallPureMergeRegionRune(CallPureMergeRegionRuneValS::new(LocationInDenizenVal::from_canonical(&lid))), canonical)
+        let canonical =
+          IRuneS::CallPureMergeRegionRune(self.bump.alloc(CallPureMergeRegionRuneS { lid }));
+        (
+          IRuneValS::CallPureMergeRegionRune(CallPureMergeRegionRuneValS::new(
+            LocationInDenizenVal::from_canonical(&lid),
+          )),
+          canonical,
+        )
       }
       LetImplicitRune(v) => {
         let lid = v.lid().promote_in(self.bump);
         let canonical = IRuneS::LetImplicitRune(self.bump.alloc(LetImplicitRuneS { lid }));
-        (IRuneValS::LetImplicitRune(LetImplicitRuneValS::new(LocationInDenizenVal::from_canonical(&lid))), canonical)
+        (
+          IRuneValS::LetImplicitRune(LetImplicitRuneValS::new(
+            LocationInDenizenVal::from_canonical(&lid),
+          )),
+          canonical,
+        )
       }
       MagicParamRune(v) => {
         let lid = v.lid().promote_in(self.bump);
         let canonical = IRuneS::MagicParamRune(self.bump.alloc(MagicParamRuneS { lid }));
-        (IRuneValS::MagicParamRune(MagicParamRuneValS::new(LocationInDenizenVal::from_canonical(&lid))), canonical)
+        (
+          IRuneValS::MagicParamRune(MagicParamRuneValS::new(LocationInDenizenVal::from_canonical(
+            &lid,
+          ))),
+          canonical,
+        )
       }
       LocalDefaultRegionRune(v) => {
         let lid = v.lid().promote_in(self.bump);
-        let canonical = IRuneS::LocalDefaultRegionRune(self.bump.alloc(LocalDefaultRegionRuneS { lid }));
-        (IRuneValS::LocalDefaultRegionRune(LocalDefaultRegionRuneValS::new(LocationInDenizenVal::from_canonical(&lid))), canonical)
+        let canonical =
+          IRuneS::LocalDefaultRegionRune(self.bump.alloc(LocalDefaultRegionRuneS { lid }));
+        (
+          IRuneValS::LocalDefaultRegionRune(LocalDefaultRegionRuneValS::new(
+            LocationInDenizenVal::from_canonical(&lid),
+          )),
+          canonical,
+        )
       }
       // ── Shallow Val variants (already have separate Val structs) ──
       // Clone v for the stored key before moving fields into the canonical payload.
@@ -395,13 +459,20 @@ impl<'s> ScoutArena<'s> {
       }
       ImplicitCoercionTemplateRune(v) => {
         let key = v.clone();
-        let payload = ImplicitCoercionTemplateRuneS { range: v.range, original_kind_rune: v.original_kind_rune };
+        let payload = ImplicitCoercionTemplateRuneS {
+          range: v.range,
+          original_kind_rune: v.original_kind_rune,
+        };
         let canonical = IRuneS::ImplicitCoercionTemplateRune(self.bump.alloc(payload));
         (IRuneValS::ImplicitCoercionTemplateRune(key), canonical)
       }
       AnonymousSubstructMethodInheritedRune(v) => {
         let key = v.clone();
-        let payload = AnonymousSubstructMethodInheritedRuneS { interface: v.interface, method: v.method, inner: v.inner };
+        let payload = AnonymousSubstructMethodInheritedRuneS {
+          interface: v.interface,
+          method: v.method,
+          inner: v.inner,
+        };
         let canonical = IRuneS::AnonymousSubstructMethodInheritedRune(self.bump.alloc(payload));
         (IRuneValS::AnonymousSubstructMethodInheritedRune(key), canonical)
       }
@@ -418,48 +489,174 @@ impl<'s> ScoutArena<'s> {
         (IRuneValS::CaseRuneFromImpl(key), canonical)
       }
       // ── Simple Val variants (same struct in both enums) ──
-      CodeRune(p) => { let c = IRuneS::CodeRune(self.bump.alloc(p.clone())); (IRuneValS::CodeRune(p), c) }
-      ImplDropKindRune(p) => { let c = IRuneS::ImplDropKindRune(self.bump.alloc(p.clone())); (IRuneValS::ImplDropKindRune(p), c) }
-      ImplDropVoidRune(p) => { let c = IRuneS::ImplDropVoidRune(self.bump.alloc(p.clone())); (IRuneValS::ImplDropVoidRune(p), c) }
-      ReachablePrototypeRune(p) => { let c = IRuneS::ReachablePrototypeRune(self.bump.alloc(p.clone())); (IRuneValS::ReachablePrototypeRune(p), c) }
-      FreeOverrideStructTemplateRune(p) => { let c = IRuneS::FreeOverrideStructTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::FreeOverrideStructTemplateRune(p), c) }
-      FreeOverrideStructRune(p) => { let c = IRuneS::FreeOverrideStructRune(self.bump.alloc(p.clone())); (IRuneValS::FreeOverrideStructRune(p), c) }
-      FreeOverrideInterfaceRune(p) => { let c = IRuneS::FreeOverrideInterfaceRune(self.bump.alloc(p.clone())); (IRuneValS::FreeOverrideInterfaceRune(p), c) }
-      MemberRune(p) => { let c = IRuneS::MemberRune(self.bump.alloc(p.clone())); (IRuneValS::MemberRune(p), c) }
-      DenizenDefaultRegionRune(p) => { let c = IRuneS::DenizenDefaultRegionRune(self.bump.alloc(p.clone())); (IRuneValS::DenizenDefaultRegionRune(p), c) }
-      ExportDefaultRegionRune(p) => { let c = IRuneS::ExportDefaultRegionRune(self.bump.alloc(p.clone())); (IRuneValS::ExportDefaultRegionRune(p), c) }
-      ExternDefaultRegionRune(p) => { let c = IRuneS::ExternDefaultRegionRune(self.bump.alloc(p.clone())); (IRuneValS::ExternDefaultRegionRune(p), c) }
-      ArraySizeImplicitRune(p) => { let c = IRuneS::ArraySizeImplicitRune(self.bump.alloc(p.clone())); (IRuneValS::ArraySizeImplicitRune(p), c) }
-      ArrayMutabilityImplicitRune(p) => { let c = IRuneS::ArrayMutabilityImplicitRune(self.bump.alloc(p.clone())); (IRuneValS::ArrayMutabilityImplicitRune(p), c) }
-      ReturnRune(p) => { let c = IRuneS::ReturnRune(self.bump.alloc(p.clone())); (IRuneValS::ReturnRune(p), c) }
-      StructNameRune(p) => { let c = IRuneS::StructNameRune(self.bump.alloc(p.clone())); (IRuneValS::StructNameRune(p), c) }
-      InterfaceNameRune(p) => { let c = IRuneS::InterfaceNameRune(self.bump.alloc(p.clone())); (IRuneValS::InterfaceNameRune(p), c) }
-      SelfRune(p) => { let c = IRuneS::SelfRune(self.bump.alloc(p.clone())); (IRuneValS::SelfRune(p), c) }
-      SelfKindRune(p) => { let c = IRuneS::SelfKindRune(self.bump.alloc(p.clone())); (IRuneValS::SelfKindRune(p), c) }
-      SelfFullTypeRune(p) => { let c = IRuneS::SelfFullTypeRune(self.bump.alloc(p.clone())); (IRuneValS::SelfFullTypeRune(p), c) }
-      SelfKindTemplateRune(p) => { let c = IRuneS::SelfKindTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::SelfKindTemplateRune(p), c) }
-      MacroVoidKindRune(p) => { let c = IRuneS::MacroVoidKindRune(self.bump.alloc(p.clone())); (IRuneValS::MacroVoidKindRune(p), c) }
-      MacroSelfKindRune(p) => { let c = IRuneS::MacroSelfKindRune(self.bump.alloc(p.clone())); (IRuneValS::MacroSelfKindRune(p), c) }
-      MacroSelfKindTemplateRune(p) => { let c = IRuneS::MacroSelfKindTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::MacroSelfKindTemplateRune(p), c) }
-      ArgumentRune(p) => { let c = IRuneS::ArgumentRune(self.bump.alloc(p.clone())); (IRuneValS::ArgumentRune(p), c) }
-      PatternInputRune(p) => { let c = IRuneS::PatternInputRune(self.bump.alloc(p.clone())); (IRuneValS::PatternInputRune(p), c) }
-      ExplicitTemplateArgRune(p) => { let c = IRuneS::ExplicitTemplateArgRune(self.bump.alloc(p.clone())); (IRuneValS::ExplicitTemplateArgRune(p), c) }
-      AnonymousSubstructParentInterfaceTemplateRune(p) => { let c = IRuneS::AnonymousSubstructParentInterfaceTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructParentInterfaceTemplateRune(p), c) }
-      AnonymousSubstructParentInterfaceKindRune(p) => { let c = IRuneS::AnonymousSubstructParentInterfaceKindRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructParentInterfaceKindRune(p), c) }
-      AnonymousSubstructTemplateRune(p) => { let c = IRuneS::AnonymousSubstructTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructTemplateRune(p), c) }
-      AnonymousSubstructKindRune(p) => { let c = IRuneS::AnonymousSubstructKindRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructKindRune(p), c) }
-      AnonymousSubstructVoidKindRune(p) => { let c = IRuneS::AnonymousSubstructVoidKindRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructVoidKindRune(p), c) }
-      AnonymousSubstructMemberRune(p) => { let c = IRuneS::AnonymousSubstructMemberRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructMemberRune(p), c) }
-      AnonymousSubstructMethodSelfBorrowKindRune(p) => { let c = IRuneS::AnonymousSubstructMethodSelfBorrowKindRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructMethodSelfBorrowKindRune(p), c) }
-      AnonymousSubstructDropBoundPrototypeRune(p) => { let c = IRuneS::AnonymousSubstructDropBoundPrototypeRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructDropBoundPrototypeRune(p), c) }
-      AnonymousSubstructDropBoundParamsListRune(p) => { let c = IRuneS::AnonymousSubstructDropBoundParamsListRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructDropBoundParamsListRune(p), c) }
-      AnonymousSubstructFunctionBoundPrototypeRune(p) => { let c = IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructFunctionBoundPrototypeRune(p), c) }
-      AnonymousSubstructFunctionBoundParamsListRune(p) => { let c = IRuneS::AnonymousSubstructFunctionBoundParamsListRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructFunctionBoundParamsListRune(p), c) }
-      AnonymousSubstructFunctionInterfaceTemplateRune(p) => { let c = IRuneS::AnonymousSubstructFunctionInterfaceTemplateRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructFunctionInterfaceTemplateRune(p), c) }
-      AnonymousSubstructFunctionInterfaceKindRune(p) => { let c = IRuneS::AnonymousSubstructFunctionInterfaceKindRune(self.bump.alloc(p.clone())); (IRuneValS::AnonymousSubstructFunctionInterfaceKindRune(p), c) }
-      FunctorPrototypeRuneName(p) => { let c = IRuneS::FunctorPrototypeRuneName(self.bump.alloc(p.clone())); (IRuneValS::FunctorPrototypeRuneName(p), c) }
-      FunctorParamRuneName(p) => { let c = IRuneS::FunctorParamRuneName(self.bump.alloc(p.clone())); (IRuneValS::FunctorParamRuneName(p), c) }
-      FunctorReturnRuneName(p) => { let c = IRuneS::FunctorReturnRuneName(self.bump.alloc(p.clone())); (IRuneValS::FunctorReturnRuneName(p), c) }
+      CodeRune(p) => {
+        let c = IRuneS::CodeRune(self.bump.alloc(p.clone()));
+        (IRuneValS::CodeRune(p), c)
+      }
+      ImplDropKindRune(p) => {
+        let c = IRuneS::ImplDropKindRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ImplDropKindRune(p), c)
+      }
+      ImplDropVoidRune(p) => {
+        let c = IRuneS::ImplDropVoidRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ImplDropVoidRune(p), c)
+      }
+      ReachablePrototypeRune(p) => {
+        let c = IRuneS::ReachablePrototypeRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ReachablePrototypeRune(p), c)
+      }
+      FreeOverrideStructTemplateRune(p) => {
+        let c = IRuneS::FreeOverrideStructTemplateRune(self.bump.alloc(p.clone()));
+        (IRuneValS::FreeOverrideStructTemplateRune(p), c)
+      }
+      FreeOverrideStructRune(p) => {
+        let c = IRuneS::FreeOverrideStructRune(self.bump.alloc(p.clone()));
+        (IRuneValS::FreeOverrideStructRune(p), c)
+      }
+      FreeOverrideInterfaceRune(p) => {
+        let c = IRuneS::FreeOverrideInterfaceRune(self.bump.alloc(p.clone()));
+        (IRuneValS::FreeOverrideInterfaceRune(p), c)
+      }
+      MemberRune(p) => {
+        let c = IRuneS::MemberRune(self.bump.alloc(p.clone()));
+        (IRuneValS::MemberRune(p), c)
+      }
+      DenizenDefaultRegionRune(p) => {
+        let c = IRuneS::DenizenDefaultRegionRune(self.bump.alloc(p.clone()));
+        (IRuneValS::DenizenDefaultRegionRune(p), c)
+      }
+      ExportDefaultRegionRune(p) => {
+        let c = IRuneS::ExportDefaultRegionRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ExportDefaultRegionRune(p), c)
+      }
+      ExternDefaultRegionRune(p) => {
+        let c = IRuneS::ExternDefaultRegionRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ExternDefaultRegionRune(p), c)
+      }
+      ArraySizeImplicitRune(p) => {
+        let c = IRuneS::ArraySizeImplicitRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ArraySizeImplicitRune(p), c)
+      }
+      ArrayMutabilityImplicitRune(p) => {
+        let c = IRuneS::ArrayMutabilityImplicitRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ArrayMutabilityImplicitRune(p), c)
+      }
+      ReturnRune(p) => {
+        let c = IRuneS::ReturnRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ReturnRune(p), c)
+      }
+      StructNameRune(p) => {
+        let c = IRuneS::StructNameRune(self.bump.alloc(p.clone()));
+        (IRuneValS::StructNameRune(p), c)
+      }
+      InterfaceNameRune(p) => {
+        let c = IRuneS::InterfaceNameRune(self.bump.alloc(p.clone()));
+        (IRuneValS::InterfaceNameRune(p), c)
+      }
+      SelfRune(p) => {
+        let c = IRuneS::SelfRune(self.bump.alloc(p.clone()));
+        (IRuneValS::SelfRune(p), c)
+      }
+      SelfKindRune(p) => {
+        let c = IRuneS::SelfKindRune(self.bump.alloc(p.clone()));
+        (IRuneValS::SelfKindRune(p), c)
+      }
+      SelfFullTypeRune(p) => {
+        let c = IRuneS::SelfFullTypeRune(self.bump.alloc(p.clone()));
+        (IRuneValS::SelfFullTypeRune(p), c)
+      }
+      SelfKindTemplateRune(p) => {
+        let c = IRuneS::SelfKindTemplateRune(self.bump.alloc(p.clone()));
+        (IRuneValS::SelfKindTemplateRune(p), c)
+      }
+      MacroVoidKindRune(p) => {
+        let c = IRuneS::MacroVoidKindRune(self.bump.alloc(p.clone()));
+        (IRuneValS::MacroVoidKindRune(p), c)
+      }
+      MacroSelfKindRune(p) => {
+        let c = IRuneS::MacroSelfKindRune(self.bump.alloc(p.clone()));
+        (IRuneValS::MacroSelfKindRune(p), c)
+      }
+      MacroSelfKindTemplateRune(p) => {
+        let c = IRuneS::MacroSelfKindTemplateRune(self.bump.alloc(p.clone()));
+        (IRuneValS::MacroSelfKindTemplateRune(p), c)
+      }
+      ArgumentRune(p) => {
+        let c = IRuneS::ArgumentRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ArgumentRune(p), c)
+      }
+      PatternInputRune(p) => {
+        let c = IRuneS::PatternInputRune(self.bump.alloc(p.clone()));
+        (IRuneValS::PatternInputRune(p), c)
+      }
+      ExplicitTemplateArgRune(p) => {
+        let c = IRuneS::ExplicitTemplateArgRune(self.bump.alloc(p.clone()));
+        (IRuneValS::ExplicitTemplateArgRune(p), c)
+      }
+      AnonymousSubstructParentInterfaceTemplateRune(p) => {
+        let c = IRuneS::AnonymousSubstructParentInterfaceTemplateRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructParentInterfaceTemplateRune(p), c)
+      }
+      AnonymousSubstructParentInterfaceKindRune(p) => {
+        let c = IRuneS::AnonymousSubstructParentInterfaceKindRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructParentInterfaceKindRune(p), c)
+      }
+      AnonymousSubstructTemplateRune(p) => {
+        let c = IRuneS::AnonymousSubstructTemplateRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructTemplateRune(p), c)
+      }
+      AnonymousSubstructKindRune(p) => {
+        let c = IRuneS::AnonymousSubstructKindRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructKindRune(p), c)
+      }
+      AnonymousSubstructVoidKindRune(p) => {
+        let c = IRuneS::AnonymousSubstructVoidKindRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructVoidKindRune(p), c)
+      }
+      AnonymousSubstructMemberRune(p) => {
+        let c = IRuneS::AnonymousSubstructMemberRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructMemberRune(p), c)
+      }
+      AnonymousSubstructMethodSelfBorrowKindRune(p) => {
+        let c = IRuneS::AnonymousSubstructMethodSelfBorrowKindRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructMethodSelfBorrowKindRune(p), c)
+      }
+      AnonymousSubstructDropBoundPrototypeRune(p) => {
+        let c = IRuneS::AnonymousSubstructDropBoundPrototypeRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructDropBoundPrototypeRune(p), c)
+      }
+      AnonymousSubstructDropBoundParamsListRune(p) => {
+        let c = IRuneS::AnonymousSubstructDropBoundParamsListRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructDropBoundParamsListRune(p), c)
+      }
+      AnonymousSubstructFunctionBoundPrototypeRune(p) => {
+        let c = IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructFunctionBoundPrototypeRune(p), c)
+      }
+      AnonymousSubstructFunctionBoundParamsListRune(p) => {
+        let c = IRuneS::AnonymousSubstructFunctionBoundParamsListRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructFunctionBoundParamsListRune(p), c)
+      }
+      AnonymousSubstructFunctionInterfaceTemplateRune(p) => {
+        let c = IRuneS::AnonymousSubstructFunctionInterfaceTemplateRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructFunctionInterfaceTemplateRune(p), c)
+      }
+      AnonymousSubstructFunctionInterfaceKindRune(p) => {
+        let c = IRuneS::AnonymousSubstructFunctionInterfaceKindRune(self.bump.alloc(p.clone()));
+        (IRuneValS::AnonymousSubstructFunctionInterfaceKindRune(p), c)
+      }
+      FunctorPrototypeRuneName(p) => {
+        let c = IRuneS::FunctorPrototypeRuneName(self.bump.alloc(p.clone()));
+        (IRuneValS::FunctorPrototypeRuneName(p), c)
+      }
+      FunctorParamRuneName(p) => {
+        let c = IRuneS::FunctorParamRuneName(self.bump.alloc(p.clone()));
+        (IRuneValS::FunctorParamRuneName(p), c)
+      }
+      FunctorReturnRuneName(p) => {
+        let c = IRuneS::FunctorReturnRuneName(self.bump.alloc(p.clone()));
+        (IRuneValS::FunctorReturnRuneName(p), c)
+      }
     }
   }
 }

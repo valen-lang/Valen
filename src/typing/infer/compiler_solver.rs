@@ -1,368 +1,448 @@
-use crate::utils::fx::{IndexMap, IndexSet};
-use crate::utils::fx::{HashMap, HashSet};
-use crate::utils::range::RangeS;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
+use crate::postparsing::ast::*;
 use crate::postparsing::itemplatatype::ITemplataType;
-use crate::postparsing::rules::rules::*;
 use crate::postparsing::names::*;
+use crate::postparsing::post_parser_error_humanizer::humanize_rune;
+use crate::postparsing::rules::rules::*;
 use crate::postparsing::*;
-use crate::solver::solver::*;
 use crate::solver::simple_solver_state::*;
-use crate::typing::compiler::Compiler;
-use crate::typing::citizen::impl_compiler::IsParentResult;
+use crate::solver::solver::make_solver_state;
+use crate::solver::solver::*;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
+use crate::typing::citizen::impl_compiler::IsParentResult;
+use crate::typing::citizen::impl_compiler::IsntParent;
+use crate::typing::citizen::struct_compiler::ResolveFailure;
+use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::*;
-use crate::typing::templata::templata::*;
-use crate::typing::types::types::*;
-use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
-use crate::postparsing::ast::*;
-use crate::interner::Interner;
-use crate::keywords::Keywords;
 use crate::typing::infer_compiler::InferEnv;
-use crate::postparsing::post_parser_error_humanizer::humanize_rune;
+use crate::typing::names::names::*;
 use crate::typing::overload_resolver::FindFunctionFailure;
-use crate::typing::citizen::impl_compiler::IsntParent;
-use crate::typing::citizen::struct_compiler::ResolveFailure;
-use crate::typing::templata::templata::KindTemplataT;
-use crate::typing::typing_interner::TypingInterner;
-use crate::solver::solver::make_solver_state;
 use crate::typing::templata::templata::expect_integer;
+use crate::typing::templata::templata::KindTemplataT;
+use crate::typing::templata::templata::*;
+use crate::typing::types::types::*;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::fx::{HashMap, HashSet};
+use crate::utils::fx::{IndexMap, IndexSet};
+use crate::utils::range::RangeS;
 use std::iter::once;
 use std::marker::PhantomData;
 
 #[derive(Copy, Clone, Debug)]
 pub enum ITypingPassSolverError<'s, 't> {
-    KindIsNotConcrete { kind: KindT<'s, 't> },
-    KindIsNotInterface { kind: KindT<'s, 't> },
-    KindIsNotStruct { kind: KindT<'s, 't> },
-    KindIsNotBorrowRef { kind: KindT<'s, 't> },
-    KindIsNotWeakRef { kind: KindT<'s, 't> },
-    KindIsNotOwnRef { kind: KindT<'s, 't> },
-    KindIsNotFromATemplate { kind: KindT<'s, 't> },
-    CouldntFindFunction { range: &'t [RangeS<'s>], fff: FindFunctionFailure<'s, 't> },
-    CouldntFindImpl { range: &'t [RangeS<'s>], fail: &'t IsntParent<'s, 't> },
-    CouldntResolveKind { rf: &'t ResolveFailure<'s, 't, KindT<'s, 't>> },
-    CantShareMutable { kind: KindT<'s, 't> },
-    CantSharePlaceholder { kind: KindT<'s, 't> },
-    BadIsaSubKind { kind: KindT<'s, 't> },
-    BadIsaSuperKind { kind: KindT<'s, 't> },
-    SendingNonCitizen { kind: KindT<'s, 't> },
-    CantCheckPlaceholder { range: &'t [RangeS<'s>] },
-    ReceivingDifferentOwnerships { params: &'t [(IRuneS<'s>, KindT<'s, 't>)] },
-    SendingNonIdenticalKinds { send_coord: KindT<'s, 't>, receive_coord: KindT<'s, 't> },
-    NoCommonAncestors { params: &'t [(IRuneS<'s>, KindT<'s, 't>)] },
-    LookupFailed { path: &'s [IImpreciseNameS<'s>] },
-    NoAncestorsSatisfyCall { params: &'t [(IRuneS<'s>, KindT<'s, 't>)] },
-    CantDetermineNarrowestKind { kinds: &'t [KindT<'s, 't>] },
-    // OwnershipDidntMatch { coord: CoordT<'s, 't>, expected_ownership: OwnershipT },
-    CallResultWasntExpectedType { expected: ITemplataT<'s, 't>, actual: ITemplataT<'s, 't> },
-    CallResultIsntCallable { result: ITemplataT<'s, 't> },
-    // OneOfFailed { rule: OneOfSR<'s> },
-    IsaFailed { sub: KindT<'s, 't>, suuper: KindT<'s, 't> },
-    WrongNumberOfTemplateArgs { expected_min_num_args: i32, expected_max_num_args: i32 },
-    FunctionDoesntHaveName { range: &'t [RangeS<'s>], name: IFunctionNameT<'s, 't> },
-    CantGetComponentsOfPlaceholderPrototype { range: &'t [RangeS<'s>] },
-    ReturnTypeConflict { range: &'t [RangeS<'s>], expected_return_type: KindT<'s, 't>, actual: PrototypeT<'s, 't> },
-    InternalSolverError { range: &'t [RangeS<'s>], err: &'t ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>> },
+  KindIsNotConcrete {
+    kind: KindT<'s, 't>,
+  },
+  KindIsNotInterface {
+    kind: KindT<'s, 't>,
+  },
+  KindIsNotStruct {
+    kind: KindT<'s, 't>,
+  },
+  KindIsNotBorrowRef {
+    kind: KindT<'s, 't>,
+  },
+  KindIsNotWeakRef {
+    kind: KindT<'s, 't>,
+  },
+  KindIsNotOwnRef {
+    kind: KindT<'s, 't>,
+  },
+  KindIsNotFromATemplate {
+    kind: KindT<'s, 't>,
+  },
+  CouldntFindFunction {
+    range: &'t [RangeS<'s>],
+    fff: FindFunctionFailure<'s, 't>,
+  },
+  CouldntFindImpl {
+    range: &'t [RangeS<'s>],
+    fail: &'t IsntParent<'s, 't>,
+  },
+  CouldntResolveKind {
+    rf: &'t ResolveFailure<'s, 't, KindT<'s, 't>>,
+  },
+  CantShareMutable {
+    kind: KindT<'s, 't>,
+  },
+  CantSharePlaceholder {
+    kind: KindT<'s, 't>,
+  },
+  BadIsaSubKind {
+    kind: KindT<'s, 't>,
+  },
+  BadIsaSuperKind {
+    kind: KindT<'s, 't>,
+  },
+  SendingNonCitizen {
+    kind: KindT<'s, 't>,
+  },
+  CantCheckPlaceholder {
+    range: &'t [RangeS<'s>],
+  },
+  ReceivingDifferentOwnerships {
+    params: &'t [(IRuneS<'s>, KindT<'s, 't>)],
+  },
+  SendingNonIdenticalKinds {
+    send_coord: KindT<'s, 't>,
+    receive_coord: KindT<'s, 't>,
+  },
+  NoCommonAncestors {
+    params: &'t [(IRuneS<'s>, KindT<'s, 't>)],
+  },
+  LookupFailed {
+    path: &'s [IImpreciseNameS<'s>],
+  },
+  NoAncestorsSatisfyCall {
+    params: &'t [(IRuneS<'s>, KindT<'s, 't>)],
+  },
+  CantDetermineNarrowestKind {
+    kinds: &'t [KindT<'s, 't>],
+  },
+  // OwnershipDidntMatch { coord: CoordT<'s, 't>, expected_ownership: OwnershipT },
+  CallResultWasntExpectedType {
+    expected: ITemplataT<'s, 't>,
+    actual: ITemplataT<'s, 't>,
+  },
+  CallResultIsntCallable {
+    result: ITemplataT<'s, 't>,
+  },
+  // OneOfFailed { rule: OneOfSR<'s> },
+  IsaFailed {
+    sub: KindT<'s, 't>,
+    suuper: KindT<'s, 't>,
+  },
+  WrongNumberOfTemplateArgs {
+    expected_min_num_args: i32,
+    expected_max_num_args: i32,
+  },
+  FunctionDoesntHaveName {
+    range: &'t [RangeS<'s>],
+    name: IFunctionNameT<'s, 't>,
+  },
+  CantGetComponentsOfPlaceholderPrototype {
+    range: &'t [RangeS<'s>],
+  },
+  ReturnTypeConflict {
+    range: &'t [RangeS<'s>],
+    expected_return_type: KindT<'s, 't>,
+    actual: PrototypeT<'s, 't>,
+  },
+  InternalSolverError {
+    range: &'t [RangeS<'s>],
+    err: &'t ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>,
+  },
 }
 
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    pub fn get_runes(&self, rule: IRulexSR<'s>) -> Vec<IRuneS<'s>> {
-        let result: Vec<IRuneS<'s>> = rule.rune_usages().iter().map(|ru| ru.rune).collect();
-        if self.opts.global_options.sanity_check {
-            // val sanityChecked: Vector[RuneUsage] =
-            //   rule match {
-            let sanity_checked: Vec<RuneUsage<'s>> =
-                match rule {
-                    //     case LookupSR(range, rune, literal) => Vector(rune)
-                    IRulexSR::Lookup(r) => vec![r.rune],
-                    //     case RuneParentEnvLookupSR(range, rune) => Vector(rune)
-                    IRulexSR::RuneParentEnvLookup(r) => vec![r.rune],
-                    //     case EqualsSR(range, left, right) => Vector(left, right)
-                    IRulexSR::Equals(r) => vec![r.left, r.right],
-                    //     case DefinitionCoordIsaSR(range, result, sub, suuper) => Vector(result, sub, suuper)
-                    // IRulexSR::DefinitionCoordIsa(r) => vec![r.result_rune, r.sub_rune, r.super_rune],
-                    //     case CallSiteCoordIsaSR(range, result, sub, suuper) => result.toVector ++ Vector(sub, suuper)
-                    // IRulexSR::CallSiteCoordIsa(r) => {
-                        // let mut v: Vec<RuneUsage<'s>> = r.result_rune.into_iter().collect();
-                        // v.push(r.sub_rune);
-                        // v.push(r.super_rune);
-                        // v
-                    // }
-                    //     case KindComponentsSR(range, resultRune, mutabilityRune) => Vector(resultRune, mutabilityRune)
-                    // IRulexSR::KindComponents(r) => vec![r.kind_rune],
-                    //     case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => Vector(resultRune, ownershipRune, kindRune)
-                    // IRulexSR::CoordComponents(r) => vec![r.result_rune, r.ownership_rune, r.kind_rune],
-                    //     case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => Vector(resultRune, paramsRune, returnRune)
-                    // IRulexSR::PrototypeComponents(r) => vec![r.result_rune, r.params_rune, r.return_rune],
-                    //     case DefinitionFuncSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
-                    IRulexSR::DefinitionFunc(r) => vec![r.result_rune, r.params_list_rune, r.return_rune],
-                    //     case CallSiteFuncSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
-                    IRulexSR::CallSiteFunc(r) => vec![r.prototype_rune, r.params_list_rune, r.return_rune],
-                    //     case ResolveSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
-                    IRulexSR::Resolve(r) => vec![r.result_rune, r.params_list_rune, r.return_rune],
-                    //     case OneOfSR(range, rune, literals) => Vector(rune)
-                    // IRulexSR::OneOf(r) => vec![r.rune],
-                    //     case IsConcreteSR(range, rune) => Vector(rune)
-                    // IRulexSR::IsConcrete(r) => vec![r.rune],
-                    //     case IsInterfaceSR(range, rune) => Vector(rune)
-                    // IRulexSR::IsInterface(r) => vec![r.rune],
-                    //     case IsStructSR(range, rune) => Vector(rune)
-                    // IRulexSR::IsStruct(r) => vec![r.rune],
-                    //     case CoerceToCoordSR(range, coordRune, kindRune) => Vector(coordRune, kindRune)
-                    // IRulexSR::CoerceToCoord(r) => vec![r.coord_rune, r.kind_rune],
-                    //     case LiteralSR(range, rune, literal) => Vector(rune)
-                    IRulexSR::Literal(r) => vec![r.rune],
-                    //     case AugmentSR(range, resultRune, ownership, innerRune) => Vector(resultRune, innerRune)
-                    // IRulexSR::Augment(r) => vec![r.result_rune, r.inner_rune],
-                    //     case CallSR(range, resultRune, templateRune, args) => Vector(resultRune, templateRune) ++ args
-                    IRulexSR::Call(r) => {
-                        let mut v = vec![r.result_rune, r.template_rune];
-                        v.extend_from_slice(r.args);
-                        v
-                    }
-                    //     case KindListSR(range, resultRune, members) => Vector(resultRune) ++ members
-                    // IRulexSR::Pack(r) => {
-                        // let mut v = vec![r.result_rune];
-                        // v.extend_from_slice(r.members);
-                        // v
-                    // }
-                    //     case CoordSendSR(range, senderRune, receiverRune) => Vector(senderRune, receiverRune)
-                    // IRulexSR::CoordSend(r) => vec![r.sender_rune, r.receiver_rune],
-                    //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(resultRune, coordListRune)
-                    // IRulexSR::RefListCompoundMutability(r) => vec![r.result_rune, r.coord_list_rune],
-                    //     case other => vimpl(other)
-                    IRulexSR::BorrowRef(r) => {
-                        let mut runes = vec![r.result_rune, r.inner_rune];
-                        match r.region {
-                            RegionSR::Unspecified => { }
-                            RegionSR::Held => { }
-                            RegionSR::Rune(ru) => runes.push(ru.clone()),
-                        }
-                        runes
-                    },
-                    IRulexSR::WeakRef(r)   => vec![r.result_rune, r.inner_rune],
-                    IRulexSR::OwnRef(r)    => vec![r.result_rune, r.inner_rune],
-                    IRulexSR::KindList(r)  => {
-                        let mut things = Vec::new();
-                        things.push(r.result_rune);
-                        things.extend_from_slice(r.members);
-                        things
-                    } ,
-                    // This whole sanity_checked block is a debug-mode hand-duplicate of
-                    // rune_usages(); it could be deleted outright, leaving rune_usages() the single
-                    // source of truth.
-                    other => panic!("get_runes sanity check: unhandled rule {:?}", other),
-                };
-            //   vassert(result sameElements sanityChecked.map(_.rune))
-            let sanity_runes: Vec<IRuneS<'s>> = sanity_checked.iter().map(|ru| ru.rune).collect();
-            assert!(result.iter().zip(sanity_runes.iter()).all(|(a, b)| a == b) && result.len() == sanity_runes.len());
+  pub fn get_runes(&self, rule: IRulexSR<'s>) -> Vec<IRuneS<'s>> {
+    let result: Vec<IRuneS<'s>> = rule.rune_usages().iter().map(|ru| ru.rune).collect();
+    if self.opts.global_options.sanity_check {
+      // val sanityChecked: Vector[RuneUsage] =
+      //   rule match {
+      let sanity_checked: Vec<RuneUsage<'s>> = match rule {
+        //     case LookupSR(range, rune, literal) => Vector(rune)
+        IRulexSR::Lookup(r) => vec![r.rune],
+        //     case RuneParentEnvLookupSR(range, rune) => Vector(rune)
+        IRulexSR::RuneParentEnvLookup(r) => vec![r.rune],
+        //     case EqualsSR(range, left, right) => Vector(left, right)
+        IRulexSR::Equals(r) => vec![r.left, r.right],
+        //     case DefinitionCoordIsaSR(range, result, sub, suuper) => Vector(result, sub, suuper)
+        // IRulexSR::DefinitionCoordIsa(r) => vec![r.result_rune, r.sub_rune, r.super_rune],
+        //     case CallSiteCoordIsaSR(range, result, sub, suuper) => result.toVector ++ Vector(sub, suuper)
+        // IRulexSR::CallSiteCoordIsa(r) => {
+        // let mut v: Vec<RuneUsage<'s>> = r.result_rune.into_iter().collect();
+        // v.push(r.sub_rune);
+        // v.push(r.super_rune);
+        // v
+        // }
+        //     case KindComponentsSR(range, resultRune, mutabilityRune) => Vector(resultRune, mutabilityRune)
+        // IRulexSR::KindComponents(r) => vec![r.kind_rune],
+        //     case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => Vector(resultRune, ownershipRune, kindRune)
+        // IRulexSR::CoordComponents(r) => vec![r.result_rune, r.ownership_rune, r.kind_rune],
+        //     case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => Vector(resultRune, paramsRune, returnRune)
+        // IRulexSR::PrototypeComponents(r) => vec![r.result_rune, r.params_rune, r.return_rune],
+        //     case DefinitionFuncSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
+        IRulexSR::DefinitionFunc(r) => vec![r.result_rune, r.params_list_rune, r.return_rune],
+        //     case CallSiteFuncSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
+        IRulexSR::CallSiteFunc(r) => vec![r.prototype_rune, r.params_list_rune, r.return_rune],
+        //     case ResolveSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
+        IRulexSR::Resolve(r) => vec![r.result_rune, r.params_list_rune, r.return_rune],
+        //     case OneOfSR(range, rune, literals) => Vector(rune)
+        // IRulexSR::OneOf(r) => vec![r.rune],
+        //     case IsConcreteSR(range, rune) => Vector(rune)
+        // IRulexSR::IsConcrete(r) => vec![r.rune],
+        //     case IsInterfaceSR(range, rune) => Vector(rune)
+        // IRulexSR::IsInterface(r) => vec![r.rune],
+        //     case IsStructSR(range, rune) => Vector(rune)
+        // IRulexSR::IsStruct(r) => vec![r.rune],
+        //     case CoerceToCoordSR(range, coordRune, kindRune) => Vector(coordRune, kindRune)
+        // IRulexSR::CoerceToCoord(r) => vec![r.coord_rune, r.kind_rune],
+        //     case LiteralSR(range, rune, literal) => Vector(rune)
+        IRulexSR::Literal(r) => vec![r.rune],
+        //     case AugmentSR(range, resultRune, ownership, innerRune) => Vector(resultRune, innerRune)
+        // IRulexSR::Augment(r) => vec![r.result_rune, r.inner_rune],
+        //     case CallSR(range, resultRune, templateRune, args) => Vector(resultRune, templateRune) ++ args
+        IRulexSR::Call(r) => {
+          let mut v = vec![r.result_rune, r.template_rune];
+          v.extend_from_slice(r.args);
+          v
         }
-        result
+        //     case KindListSR(range, resultRune, members) => Vector(resultRune) ++ members
+        // IRulexSR::Pack(r) => {
+        // let mut v = vec![r.result_rune];
+        // v.extend_from_slice(r.members);
+        // v
+        // }
+        //     case CoordSendSR(range, senderRune, receiverRune) => Vector(senderRune, receiverRune)
+        // IRulexSR::CoordSend(r) => vec![r.sender_rune, r.receiver_rune],
+        //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(resultRune, coordListRune)
+        // IRulexSR::RefListCompoundMutability(r) => vec![r.result_rune, r.coord_list_rune],
+        //     case other => vimpl(other)
+        IRulexSR::BorrowRef(r) => {
+          let mut runes = vec![r.result_rune, r.inner_rune];
+          match r.region {
+            RegionSR::Unspecified => {}
+            RegionSR::Held => {}
+            RegionSR::Rune(ru) => runes.push(ru.clone()),
+          }
+          runes
+        }
+        IRulexSR::WeakRef(r) => vec![r.result_rune, r.inner_rune],
+        IRulexSR::OwnRef(r) => vec![r.result_rune, r.inner_rune],
+        IRulexSR::KindList(r) => {
+          let mut things = Vec::new();
+          things.push(r.result_rune);
+          things.extend_from_slice(r.members);
+          things
+        }
+        // This whole sanity_checked block is a debug-mode hand-duplicate of
+        // rune_usages(); it could be deleted outright, leaving rune_usages() the single
+        // source of truth.
+        other => panic!("get_runes sanity check: unhandled rule {:?}", other),
+      };
+      //   vassert(result sameElements sanityChecked.map(_.rune))
+      let sanity_runes: Vec<IRuneS<'s>> = sanity_checked.iter().map(|ru| ru.rune).collect();
+      assert!(
+        result.iter().zip(sanity_runes.iter()).all(|(a, b)| a == b)
+          && result.len() == sanity_runes.len()
+      );
     }
-
+    result
+  }
 }
 
 pub fn get_puzzles<'s>(rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
-    //   rule match {
-    match rule {
-            //     // This means we can solve this puzzle and dont need anything to do it.
-            //     case LookupSR(range, _, _) => Vector(Vector())
-            IRulexSR::Lookup(_) => vec![vec![]],
-            //     case RuneParentEnvLookupSR(range, rune) => Vector(Vector())
-            IRulexSR::RuneParentEnvLookup(_) => vec![vec![]],
-            //     case CallSR(range, resultRune, templateRune, args) => {
-            //       Vector(
-            //         Vector(templateRune.rune) ++ args.map(_.rune),
-            //         Vector(resultRune.rune, templateRune.rune))
-            //     }
-            IRulexSR::Call(r) => {
-                let mut first = vec![r.template_rune.rune];
-                first.extend(r.args.iter().map(|a| a.rune));
-                vec![first, vec![r.result_rune.rune, r.template_rune.rune]]
-            }
-            //     case KindListSR(range, resultRune, members) => Vector(Vector(resultRune.rune), members.map(_.rune))
-            // IRulexSR::Pack(r) => {
-                // vec![vec![r.result_rune.rune], r.members.iter().map(|m| m.rune).collect()]
-            // }
-            //     case KindComponentsSR(range, kindRune, mutabilityRune) => Vector(Vector(kindRune.rune))
-            // IRulexSR::KindComponents(r) => vec![vec![r.kind_rune.rune]],
-            //     case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => Vector(Vector(resultRune.rune), Vector(ownershipRune.rune, kindRune.rune))
-            // IRulexSR::CoordComponents(r) => vec![vec![r.result_rune.rune], vec![r.ownership_rune.rune, r.kind_rune.rune]],
-            //     case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => Vector(Vector(resultRune.rune))
-            // IRulexSR::PrototypeComponents(r) => vec![vec![r.result_rune.rune]],
-            //     case CallSiteFuncSR(range, resultRune, name, paramListRune, returnRune) => Vector(Vector(resultRune.rune))
-            IRulexSR::CallSiteFunc(r) => vec![vec![r.prototype_rune.rune]],
-            //     // Definition doesn't need the placeholder to be present, it's what populates the placeholder.
-            //     case DefinitionFuncSR(range, placeholderRune, name, paramListRune, returnRune) => Vector(Vector(paramListRune.rune, returnRune.rune))
-            IRulexSR::DefinitionFunc(r) => vec![vec![r.params_list_rune.rune, r.return_rune.rune]],
-            //     // Per @BRRZ, ResolveSR fires in one of two modes: when both params and return
-            //     // are known (existing predict path, postponing real resolution per SFWPRL), or
-            //     // when only params are known (real overload lookup to discover the return).
-            //     // Handler below branches on which condition triggered.
-            //     case ResolveSR(range, resultRune, name, paramsListRune, returnRune) =>
-            //       Vector(
-            //         Vector(paramsListRune.rune, returnRune.rune),
-            //         Vector(paramsListRune.rune))
-            IRulexSR::Resolve(r) => vec![
-                vec![r.params_list_rune.rune, r.return_rune.rune],
-                vec![r.params_list_rune.rune],
-            ],
-            //     case OneOfSR(range, rune, literals) => Vector(Vector(rune.rune))
-            // IRulexSR::OneOf(r) => vec![vec![r.rune.rune]],
-            //     case EqualsSR(range, leftRune, rightRune) => Vector(Vector(leftRune.rune), Vector(rightRune.rune))
-            IRulexSR::Equals(r) => vec![vec![r.left.rune], vec![r.right.rune]],
-            //     case IsConcreteSR(range, rune) => Vector(Vector(rune.rune))
-            // IRulexSR::IsConcrete(r) => vec![vec![r.rune.rune]],
-            //     case IsInterfaceSR(range, rune) => Vector(Vector(rune.rune))
-            // IRulexSR::IsInterface(r) => vec![vec![r.rune.rune]],
-            //     case IsStructSR(range, rune) => Vector(Vector(rune.rune))
-            // IRulexSR::IsStruct(r) => vec![vec![r.rune.rune]],
-            //     case CoerceToCoordSR(range, coordRune, kindRune) => Vector(Vector(coordRune.rune), Vector(kindRune.rune))
-            // IRulexSR::CoerceToCoord(r) => vec![vec![r.coord_rune.rune], vec![r.kind_rune.rune]],
-            //     case LiteralSR(range, rune, literal) => Vector(Vector())
-            IRulexSR::Literal(_) => vec![vec![]],
-            //     case AugmentSR(range, resultRune, ownership, innerRune) => Vector(Vector(innerRune.rune), Vector(resultRune.rune))
-            // IRulexSR::Augment(r) => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
-            //     // See SAIRFU, this will replace itself with other rules.
-            //     case CoordSendSR(range, senderRune, receiverRune) => Vector(Vector(senderRune.rune), Vector(receiverRune.rune))
-            // IRulexSR::CoordSend(r) => vec![vec![r.sender_rune.rune], vec![r.receiver_rune.rune]],
-            //     case DefinitionCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
-            // IRulexSR::DefinitionCoordIsa(r) => vec![vec![r.sub_rune.rune, r.super_rune.rune]],
-            //     case CallSiteCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
-            // IRulexSR::CallSiteCoordIsa(r) => vec![vec![r.sub_rune.rune, r.super_rune.rune]],
-            //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(Vector(coordListRune.rune))
-            // IRulexSR::RefListCompoundMutability(r) => vec![vec![r.coord_list_rune.rune]],
-            IRulexSR::BorrowRef(r) => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
-            IRulexSR::WeakRef(r)   => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
-            IRulexSR::OwnRef(r)    => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
-            IRulexSR::KindList(r)  => vec![vec![r.result_rune.rune], r.members.iter().map(|m| m.rune).collect()],
-            other => panic!("get_puzzles: unhandled rule {:?}", other),
-        }
+  //   rule match {
+  match rule {
+    //     // This means we can solve this puzzle and dont need anything to do it.
+    //     case LookupSR(range, _, _) => Vector(Vector())
+    IRulexSR::Lookup(_) => vec![vec![]],
+    //     case RuneParentEnvLookupSR(range, rune) => Vector(Vector())
+    IRulexSR::RuneParentEnvLookup(_) => vec![vec![]],
+    //     case CallSR(range, resultRune, templateRune, args) => {
+    //       Vector(
+    //         Vector(templateRune.rune) ++ args.map(_.rune),
+    //         Vector(resultRune.rune, templateRune.rune))
+    //     }
+    IRulexSR::Call(r) => {
+      let mut first = vec![r.template_rune.rune];
+      first.extend(r.args.iter().map(|a| a.rune));
+      vec![first, vec![r.result_rune.rune, r.template_rune.rune]]
     }
-
+    //     case KindListSR(range, resultRune, members) => Vector(Vector(resultRune.rune), members.map(_.rune))
+    // IRulexSR::Pack(r) => {
+    // vec![vec![r.result_rune.rune], r.members.iter().map(|m| m.rune).collect()]
+    // }
+    //     case KindComponentsSR(range, kindRune, mutabilityRune) => Vector(Vector(kindRune.rune))
+    // IRulexSR::KindComponents(r) => vec![vec![r.kind_rune.rune]],
+    //     case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => Vector(Vector(resultRune.rune), Vector(ownershipRune.rune, kindRune.rune))
+    // IRulexSR::CoordComponents(r) => vec![vec![r.result_rune.rune], vec![r.ownership_rune.rune, r.kind_rune.rune]],
+    //     case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => Vector(Vector(resultRune.rune))
+    // IRulexSR::PrototypeComponents(r) => vec![vec![r.result_rune.rune]],
+    //     case CallSiteFuncSR(range, resultRune, name, paramListRune, returnRune) => Vector(Vector(resultRune.rune))
+    IRulexSR::CallSiteFunc(r) => vec![vec![r.prototype_rune.rune]],
+    //     // Definition doesn't need the placeholder to be present, it's what populates the placeholder.
+    //     case DefinitionFuncSR(range, placeholderRune, name, paramListRune, returnRune) => Vector(Vector(paramListRune.rune, returnRune.rune))
+    IRulexSR::DefinitionFunc(r) => vec![vec![r.params_list_rune.rune, r.return_rune.rune]],
+    //     // Per @BRRZ, ResolveSR fires in one of two modes: when both params and return
+    //     // are known (existing predict path, postponing real resolution per SFWPRL), or
+    //     // when only params are known (real overload lookup to discover the return).
+    //     // Handler below branches on which condition triggered.
+    //     case ResolveSR(range, resultRune, name, paramsListRune, returnRune) =>
+    //       Vector(
+    //         Vector(paramsListRune.rune, returnRune.rune),
+    //         Vector(paramsListRune.rune))
+    IRulexSR::Resolve(r) => {
+      vec![vec![r.params_list_rune.rune, r.return_rune.rune], vec![r.params_list_rune.rune]]
+    }
+    //     case OneOfSR(range, rune, literals) => Vector(Vector(rune.rune))
+    // IRulexSR::OneOf(r) => vec![vec![r.rune.rune]],
+    //     case EqualsSR(range, leftRune, rightRune) => Vector(Vector(leftRune.rune), Vector(rightRune.rune))
+    IRulexSR::Equals(r) => vec![vec![r.left.rune], vec![r.right.rune]],
+    //     case IsConcreteSR(range, rune) => Vector(Vector(rune.rune))
+    // IRulexSR::IsConcrete(r) => vec![vec![r.rune.rune]],
+    //     case IsInterfaceSR(range, rune) => Vector(Vector(rune.rune))
+    // IRulexSR::IsInterface(r) => vec![vec![r.rune.rune]],
+    //     case IsStructSR(range, rune) => Vector(Vector(rune.rune))
+    // IRulexSR::IsStruct(r) => vec![vec![r.rune.rune]],
+    //     case CoerceToCoordSR(range, coordRune, kindRune) => Vector(Vector(coordRune.rune), Vector(kindRune.rune))
+    // IRulexSR::CoerceToCoord(r) => vec![vec![r.coord_rune.rune], vec![r.kind_rune.rune]],
+    //     case LiteralSR(range, rune, literal) => Vector(Vector())
+    IRulexSR::Literal(_) => vec![vec![]],
+    //     case AugmentSR(range, resultRune, ownership, innerRune) => Vector(Vector(innerRune.rune), Vector(resultRune.rune))
+    // IRulexSR::Augment(r) => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
+    //     // See SAIRFU, this will replace itself with other rules.
+    //     case CoordSendSR(range, senderRune, receiverRune) => Vector(Vector(senderRune.rune), Vector(receiverRune.rune))
+    // IRulexSR::CoordSend(r) => vec![vec![r.sender_rune.rune], vec![r.receiver_rune.rune]],
+    //     case DefinitionCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
+    // IRulexSR::DefinitionCoordIsa(r) => vec![vec![r.sub_rune.rune, r.super_rune.rune]],
+    //     case CallSiteCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
+    // IRulexSR::CallSiteCoordIsa(r) => vec![vec![r.sub_rune.rune, r.super_rune.rune]],
+    //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(Vector(coordListRune.rune))
+    // IRulexSR::RefListCompoundMutability(r) => vec![vec![r.coord_list_rune.rune]],
+    IRulexSR::BorrowRef(r) => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
+    IRulexSR::WeakRef(r) => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
+    IRulexSR::OwnRef(r) => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
+    IRulexSR::KindList(r) => {
+      vec![vec![r.result_rune.rune], r.members.iter().map(|m| m.rune).collect()]
+    }
+    other => panic!("get_puzzles: unhandled rule {:?}", other),
+  }
+}
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    pub fn make_solver_state_solver(
-        &self,
-        _range: Vec<RangeS<'s>>,
-        env: InferEnv<'s, 't>,
-        state: &mut CompilerOutputs<'s, 't>,
-        rules: Vec<IRulexSR<'s>>,
-        rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>>,
-        initially_known_rune_to_templata: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
-    ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
-        for rule in &rules {
-            for rune_usage in rule.rune_usages() {
-                assert!(
-                    rune_to_type.contains_key(&rune_usage.rune),
-                    "rune {} is used by a rule but has no type: {:?}",
-                    humanize_rune(rune_usage.rune), rule);
-            }
-        }
-
-        // These two shouldn't both be in the rules, see SROACSD.
+  pub fn make_solver_state_solver(
+    &self,
+    _range: Vec<RangeS<'s>>,
+    env: InferEnv<'s, 't>,
+    state: &mut CompilerOutputs<'s, 't>,
+    rules: Vec<IRulexSR<'s>>,
+    rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>>,
+    initially_known_rune_to_templata: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+  ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
+    for rule in &rules {
+      for rune_usage in rule.rune_usages() {
         assert!(
-            rules.iter().all(|r| !matches!(r, IRulexSR::CallSiteFunc(_))) ||
-            rules.iter().all(|r| !matches!(r, IRulexSR::DefinitionFunc(_))));
-
-        for (rune, templata) in &initially_known_rune_to_templata {
-            if self.opts.global_options.sanity_check {
-                self.sanity_check_conclusion(&env, state, *rune, *templata);
-            }
-            assert_eq!(templata.tyype(self.scout_arena), *rune_to_type.get(rune).unwrap());
-        }
-
-        let all_runes: Vec<IRuneS<'s>> = rune_to_type.keys().copied().collect();
-
-        let rule_to_puzzles: Box<dyn Fn(&IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>>> =
-            Box::new(|rule| get_puzzles(*rule));
-        let rule_to_runes: &dyn Fn(&IRulexSR<'s>) -> Vec<IRuneS<'s>> =
-            &|rule| self.get_runes(*rule);
-
-        make_solver_state(
-            self.opts.global_options.sanity_check,
-            self.opts.global_options.use_optimized_solver,
-            rule_to_puzzles,
-            rule_to_runes,
-            rules,
-            initially_known_rune_to_templata,
-            all_runes,
-        )
+          rune_to_type.contains_key(&rune_usage.rune),
+          "rune {} is used by a rule but has no type: {:?}",
+          humanize_rune(rune_usage.rune),
+          rule
+        );
+      }
     }
 
-    pub fn advance_infer(
-        &self,
-        env: InferEnv<'s, 't>,
-        state: &mut CompilerOutputs<'s, 't>,
-        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-    ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        solver_state.sanity_check();
-        let solving_rule_index =
-            match solver_state.get_next_solvable() {
-                None => return Ok(false),
-                Some(s) => s
-            };
-        let rule = *solver_state.get_rule(solving_rule_index);
-        let steps_before = solver_state.get_steps().len();
-        match self.solve(state, env, solver_state, solving_rule_index, rule) {
-            Ok(()) => {}
-            Err(e) => return Err(FailedSolve {
-                steps: solver_state.get_steps(),
-                conclusions: solver_state.get_conclusions().into_iter().collect(),
-                unsolved_rules: solver_state.get_unsolved_rules(),
-                unsolved_runes: solver_state.get_unsolved_runes(),
-                error: e,
-            }),
-        }
-        let steps_after = solver_state.get_steps().len();
-        assert!(steps_after == steps_before + 1);
-        // Per @CSCDSRZ, only true after simple solve.
-        assert!(solver_state.rule_is_solved(solving_rule_index));
-        solver_state.sanity_check();
-        Ok(true)
+    // These two shouldn't both be in the rules, see SROACSD.
+    assert!(
+      rules.iter().all(|r| !matches!(r, IRulexSR::CallSiteFunc(_)))
+        || rules.iter().all(|r| !matches!(r, IRulexSR::DefinitionFunc(_)))
+    );
+
+    for (rune, templata) in &initially_known_rune_to_templata {
+      if self.opts.global_options.sanity_check {
+        self.sanity_check_conclusion(&env, state, *rune, *templata);
+      }
+      assert_eq!(templata.tyype(self.scout_arena), *rune_to_type.get(rune).unwrap());
     }
 
-    pub fn continue_solver(
-        &self,
-        env: InferEnv<'s, 't>,
-        state: &mut CompilerOutputs<'s, 't>,
-        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-    ) -> Result<(), FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        //   while ( {
-        while {
-            //     advanceInfer(
-            //       env, state, solverState, delegate
-            //     ) match {
-            //       case Ok(continue) => continue
-            //       case Err(f@FailedSolve(_, _, _, _, _)) => return Err(f)
-            //     }
-            self.advance_infer(env, state, solver_state)?
-        } {}
-        //   // If we get here, then there's nothing more the solver can do.
-        //   Ok(Unit)
-        Ok(())
-    }
+    let all_runes: Vec<IRuneS<'s>> = rune_to_type.keys().copied().collect();
 
+    let rule_to_puzzles: Box<dyn Fn(&IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>>> =
+      Box::new(|rule| get_puzzles(*rule));
+    let rule_to_runes: &dyn Fn(&IRulexSR<'s>) -> Vec<IRuneS<'s>> = &|rule| self.get_runes(*rule);
+
+    make_solver_state(
+      self.opts.global_options.sanity_check,
+      self.opts.global_options.use_optimized_solver,
+      rule_to_puzzles,
+      rule_to_runes,
+      rules,
+      initially_known_rune_to_templata,
+      all_runes,
+    )
+  }
+
+  pub fn advance_infer(
+    &self,
+    env: InferEnv<'s, 't>,
+    state: &mut CompilerOutputs<'s, 't>,
+    solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+  ) -> Result<
+    bool,
+    FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>,
+  > {
+    solver_state.sanity_check();
+    let solving_rule_index = match solver_state.get_next_solvable() {
+      None => return Ok(false),
+      Some(s) => s,
+    };
+    let rule = *solver_state.get_rule(solving_rule_index);
+    let steps_before = solver_state.get_steps().len();
+    match self.solve(state, env, solver_state, solving_rule_index, rule) {
+      Ok(()) => {}
+      Err(e) => {
+        return Err(FailedSolve {
+          steps: solver_state.get_steps(),
+          conclusions: solver_state.get_conclusions().into_iter().collect(),
+          unsolved_rules: solver_state.get_unsolved_rules(),
+          unsolved_runes: solver_state.get_unsolved_runes(),
+          error: e,
+        })
+      }
+    }
+    let steps_after = solver_state.get_steps().len();
+    assert!(steps_after == steps_before + 1);
+    // Per @CSCDSRZ, only true after simple solve.
+    assert!(solver_state.rule_is_solved(solving_rule_index));
+    solver_state.sanity_check();
+    Ok(true)
+  }
+
+  pub fn continue_solver(
+    &self,
+    env: InferEnv<'s, 't>,
+    state: &mut CompilerOutputs<'s, 't>,
+    solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+  ) -> Result<
+    (),
+    FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>,
+  > {
+    //   while ( {
+    while {
+      //     advanceInfer(
+      //       env, state, solverState, delegate
+      //     ) match {
+      //       case Ok(continue) => continue
+      //       case Err(f@FailedSolve(_, _, _, _, _)) => return Err(f)
+      //     }
+      self.advance_infer(env, state, solver_state)?
+    } {}
+    //   // If we get here, then there's nothing more the solver can do.
+    //   Ok(Unit)
+    Ok(())
+  }
 }
 
 pub fn sanity_check_conclusion<'s, 't>(
-    env: InferEnv<'s, 't>,
-    state: CompilerOutputs<'s, 't>,
-    rune: IRuneS<'s>,
-    conclusion: ITemplataT<'s, 't>,
+  env: InferEnv<'s, 't>,
+  state: CompilerOutputs<'s, 't>,
+  rune: IRuneS<'s>,
+  conclusion: ITemplataT<'s, 't>,
 ) {
-    panic!("Unimplemented: sanity_check_conclusion");
-    // delegate.sanityCheckConclusion(env, state, rune, conclusion)
+  panic!("Unimplemented: sanity_check_conclusion");
+  // delegate.sanityCheckConclusion(env, state, rune, conclusion)
 }
 
 // fn solve_receives<'s, 'ctx, 't>(
@@ -420,63 +500,66 @@ pub fn sanity_check_conclusion<'s, 't>(
 // }
 
 fn narrow<'s, 'ctx, 't, 'a>(
-    compiler: &'a Compiler<'s, 'ctx, 't>,
-    typing_interner: &'a TypingInterner<'s, 't>,
-    env: InferEnv<'s, 't>,
-    state: &mut CompilerOutputs<'s, 't>,
-    kinds: HashSet<KindT<'s, 't>>,
+  compiler: &'a Compiler<'s, 'ctx, 't>,
+  typing_interner: &'a TypingInterner<'s, 't>,
+  env: InferEnv<'s, 't>,
+  state: &mut CompilerOutputs<'s, 't>,
+  kinds: HashSet<KindT<'s, 't>>,
 ) -> Result<KindT<'s, 't>, ITypingPassSolverError<'s, 't>>
-where 's: 't,
+where
+  's: 't,
 {
-    assert!(kinds.len() > 1);
-    let mut narrowed_ancestors: HashSet<KindT<'s, 't>> = kinds.iter().copied().collect();
-    for kind in kinds.iter() {
-        let ancestors = compiler.get_ancestors(env, state, *kind, false);
-        for ancestor in ancestors {
-            narrowed_ancestors.remove(&ancestor);
-        }
+  assert!(kinds.len() > 1);
+  let mut narrowed_ancestors: HashSet<KindT<'s, 't>> = kinds.iter().copied().collect();
+  for kind in kinds.iter() {
+    let ancestors = compiler.get_ancestors(env, state, *kind, false);
+    for ancestor in ancestors {
+      narrowed_ancestors.remove(&ancestor);
     }
-    if narrowed_ancestors.is_empty() {
-        panic!("vwat: narrowed_ancestors empty in narrow");
-    } else if narrowed_ancestors.len() == 1 {
-        Ok(*narrowed_ancestors.iter().next().unwrap())
-    } else {
-        let kinds_slice = typing_interner.alloc_slice_from_vec(narrowed_ancestors.into_iter().collect());
-        Err(ITypingPassSolverError::CantDetermineNarrowestKind { kinds: kinds_slice })
-    }
+  }
+  if narrowed_ancestors.is_empty() {
+    panic!("vwat: narrowed_ancestors empty in narrow");
+  } else if narrowed_ancestors.len() == 1 {
+    Ok(*narrowed_ancestors.iter().next().unwrap())
+  } else {
+    let kinds_slice =
+      typing_interner.alloc_slice_from_vec(narrowed_ancestors.into_iter().collect());
+    Err(ITypingPassSolverError::CantDetermineNarrowestKind { kinds: kinds_slice })
+  }
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    fn solve(
-        &self,
-        state: &mut CompilerOutputs<'s, 't>,
-        env: InferEnv<'s, 't>,
-        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-        rule_index: i32,
-        rule: IRulexSR<'s>,
-    ) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        //   solveRule(delegate, state, env, ruleIndex, rule, solverState) match {
-        //     case Ok(x) => Ok(x)
-        //     case Err(e) => Err(RuleError(e))
-        //   }
-        match self.solve_rule(state, env, rule_index, rule, solver_state) {
-            Ok(x) => Ok(x),
-            Err(e) => Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData })),
-        }
+  fn solve(
+    &self,
+    state: &mut CompilerOutputs<'s, 't>,
+    env: InferEnv<'s, 't>,
+    solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+    rule_index: i32,
+    rule: IRulexSR<'s>,
+  ) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+    //   solveRule(delegate, state, env, ruleIndex, rule, solverState) match {
+    //     case Ok(x) => Ok(x)
+    //     case Err(e) => Err(RuleError(e))
+    //   }
+    match self.solve_rule(state, env, rule_index, rule, solver_state) {
+      Ok(x) => Ok(x),
+      Err(e) => Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData })),
     }
+  }
 
-    fn solve_rule(
-        &self,
-        state: &mut CompilerOutputs<'s, 't>,
-        env: InferEnv<'s, 't>,
-        rule_index: i32,
-        rule: IRulexSR<'s>,
-        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-    ) -> Result<(), ITypingPassSolverError<'s, 't>> {
-        //   rule match {
-        match rule {
+  fn solve_rule(
+    &self,
+    state: &mut CompilerOutputs<'s, 't>,
+    env: InferEnv<'s, 't>,
+    rule_index: i32,
+    rule: IRulexSR<'s>,
+    solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+  ) -> Result<(), ITypingPassSolverError<'s, 't>> {
+    //   rule match {
+    match rule {
             //     case KindComponentsSR(...) =>
             //     case KindComponentsSR(range, kindRune, mutabilityRune) => {
             // IRulexSR::KindComponents(kc) => {
@@ -1342,24 +1425,25 @@ where 's: 't,
             }
             other => unreachable!("solve_rule: {:?} — MaybeCoercingLookup/MaybeCoercingCall/IndexList are desugared before reaching the typing-pass solver", other),
         }
-    }
+  }
 
-    fn solve_call_rule(
-        &self,
-        state: &mut CompilerOutputs<'s, 't>,
-        env: &InferEnv<'s, 't>,
-        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-        rule_index: i32,
-        range: RangeS<'s>,
-        result_rune: RuneUsage<'s>,
-        template_rune: RuneUsage<'s>,
-        arg_runes: &[RuneUsage<'s>],
-    ) -> Result<(), ITypingPassSolverError<'s, 't>> {
-        match solver_state.get_conclusion(&result_rune.rune) {
-            Some(result) => {
-                let ranges: Vec<RangeS<'s>> = once(range).chain(env.parent_ranges.iter().copied()).collect();
-                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                match result {
+  fn solve_call_rule(
+    &self,
+    state: &mut CompilerOutputs<'s, 't>,
+    env: &InferEnv<'s, 't>,
+    solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+    rule_index: i32,
+    range: RangeS<'s>,
+    result_rune: RuneUsage<'s>,
+    template_rune: RuneUsage<'s>,
+    arg_runes: &[RuneUsage<'s>],
+  ) -> Result<(), ITypingPassSolverError<'s, 't>> {
+    match solver_state.get_conclusion(&result_rune.rune) {
+      Some(result) => {
+        let ranges: Vec<RangeS<'s>> =
+          once(range).chain(env.parent_ranges.iter().copied()).collect();
+        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+        match result {
                     ITemplataT::Kind(kt) => {
                         match kt.kind {
                             KindT::Struct(struct_tt) => {
@@ -1471,119 +1555,232 @@ where 's: 't,
                     }
                     _ => unreachable!("solve_call_rule Some branch handles only Kind result; other ITemplataT variants deferred"),
                 }
+      }
+      None => {
+        let template = solver_state
+          .get_conclusion(&template_rune.rune)
+          .expect("vassertSome: template_rune not solved in solve_call_rule None branch");
+        match template {
+          ITemplataT::RuntimeSizedArrayTemplate(_) => {
+            let args: Vec<ITemplataT<'s, 't>> = arg_runes
+              .iter()
+              .map(|arg_rune| {
+                solver_state.get_conclusion(&arg_rune.rune).expect(
+                  "vassertSome: arg_rune not solved in solve_call_rule RuntimeSizedArrayTemplate",
+                )
+              })
+              .collect();
+            let coord = match args[0] {
+              ITemplataT::Kind(ct) => ct.kind,
+              _ => panic!(
+                "Expected KindTemplataT as first arg in solve_call_rule RuntimeSizedArrayTemplate"
+              ),
+            };
+            let context_region = RegionT::Default;
+            let rsa_kind =
+              self.predict_runtime_sized_array_kind(*env, state, coord, context_region);
+            let mut conclusions = IndexMap::default();
+            conclusions.insert(
+              result_rune.rune,
+              ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
+                kind:
+                  KindT::RuntimeSizedArray(
+                    self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT {
+                      name: rsa_kind.name,
+                    }),
+                  ),
+              })),
+            );
+            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
+              false,
+              vec![rule_index],
+              conclusions,
+              vec![],
+              IndexSet::default(),
+            ) {
+              Ok(_) => Ok(()),
+              Err(e) => {
+                let ranges =
+                  once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                let error = self.typing_interner.alloc(e);
+                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+              }
             }
-            None => {
-                let template = solver_state.get_conclusion(&template_rune.rune).expect("vassertSome: template_rune not solved in solve_call_rule None branch");
-                match template {
-                    ITemplataT::RuntimeSizedArrayTemplate(_) => {
-                        let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
-                            solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule RuntimeSizedArrayTemplate")
-                        }).collect();
-                        let coord = match args[0] {
-                            ITemplataT::Kind(ct) => ct.kind,
-                            _ => panic!("Expected KindTemplataT as first arg in solve_call_rule RuntimeSizedArrayTemplate"),
-                        };
-                        let context_region = RegionT::Default;
-                        let rsa_kind = self.predict_runtime_sized_array_kind(*env, state, coord, context_region);
-                        let mut conclusions = IndexMap::default();
-                        conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: rsa_kind.name })) })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
-                            Ok(_) => Ok(()),
-                            Err(e) => {
-                                let ranges = once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
-                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                                let error = self.typing_interner.alloc(e);
-                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
-                            }
-                        }
-                    }
-                    ITemplataT::StaticSizedArrayTemplate(_) => {
-                        let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
-                            solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule StaticSizedArrayTemplate")
-                        }).collect();
-                        let s = args[0];
-                        let coord = match args[1] {
-                            ITemplataT::Kind(ct) => ct.kind,
-                            _ => panic!("Expected KindTemplataT as second arg in solve_call_rule StaticSizedArrayTemplate"),
-                        };
-                        let context_region = RegionT::Default;
-                        let size = expect_integer(s);
-                        let ssa_kind = self.predict_static_sized_array_kind(*env, state, size, coord, context_region);
-                        let mut conclusions = IndexMap::default();
-                        conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::StaticSizedArray(self.typing_interner.intern_static_sized_array_tt(StaticSizedArrayTTValT { name: ssa_kind.name })) })));
-                        let ranges: Vec<RangeS<'s>> = once(range).chain(env.parent_ranges.iter().copied()).collect();
-                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
-                            Ok(_) => Ok(()),
-                            Err(e) => {
-                                let error = self.typing_interner.alloc(e);
-                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
-                            }
-                        }
-                    }
-                    ITemplataT::StructDefinition(it) => {
-                        let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
-                            solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule")
-                        }).collect();
-                        let kind = self.predict_struct(state, env.original_calling_env, env.parent_ranges, env.call_location, *it, &args);
-                        let mut conclusions = IndexMap::default();
-                        conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(self.typing_interner.intern_struct_tt(StructTTValT { id: kind.id })) })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
-                            Ok(_) => Ok(()),
-                            Err(e) => {
-                                let ranges = once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
-                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                                let error = self.typing_interner.alloc(e);
-                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
-                            }
-                        }
-                    }
-                    ITemplataT::InterfaceDefinition(it) => {
-                        let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
-                            solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule")
-                        }).collect();
-                        // See SFWPRL for why we're calling predict_interface instead of resolve_interface
-                        let kind = self.predict_interface(state, env.original_calling_env, env.parent_ranges, env.call_location, *it, &args);
-                        let mut conclusions = IndexMap::default();
-                        conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Interface(self.typing_interner.intern_interface_tt(InterfaceTTValT { id: kind.id })) })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
-                            Ok(_) => Ok(()),
-                            Err(e) => {
-                                let ranges = once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
-                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                                let error = self.typing_interner.alloc(e);
-                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
-                            }
-                        }
-                    }
-                    // The value-solver twin of the rune-type solver's Kind arm: only primitives are
-                    // held in the environment as a finished kind, so only they arrive with a Kind in
-                    // template position, via the zero-arg Call @TNLTZACZ emits for a bare `int`.
-                    // Applying zero args to a kind is the identity.
-                    ITemplataT::Kind(kt) => {
-                        match solver_state.commit_step(false, vec![rule_index], [(result_rune.rune, ITemplataT::Kind(kt))].into_iter().collect(), vec![], IndexSet::default()) {
-                            Ok(_) => return Ok(()),
-                            Err(e) => {
-                                let error = self.typing_interner.alloc(e);
-                                return Err(ITypingPassSolverError::InternalSolverError { range: env.parent_ranges, err: error });
-                            }
-                        }
-                    }
-                    other => panic!("vimpl: solve_call_rule None {:?}", other),
-                }
+          }
+          ITemplataT::StaticSizedArrayTemplate(_) => {
+            let args: Vec<ITemplataT<'s, 't>> = arg_runes
+              .iter()
+              .map(|arg_rune| {
+                solver_state.get_conclusion(&arg_rune.rune).expect(
+                  "vassertSome: arg_rune not solved in solve_call_rule StaticSizedArrayTemplate",
+                )
+              })
+              .collect();
+            let s = args[0];
+            let coord = match args[1] {
+              ITemplataT::Kind(ct) => ct.kind,
+              _ => panic!(
+                "Expected KindTemplataT as second arg in solve_call_rule StaticSizedArrayTemplate"
+              ),
+            };
+            let context_region = RegionT::Default;
+            let size = expect_integer(s);
+            let ssa_kind =
+              self.predict_static_sized_array_kind(*env, state, size, coord, context_region);
+            let mut conclusions = IndexMap::default();
+            conclusions.insert(
+              result_rune.rune,
+              ITemplataT::Kind(self.typing_interner.alloc(
+                KindTemplataT {
+                  kind:
+                    KindT::StaticSizedArray(
+                      self.typing_interner.intern_static_sized_array_tt(StaticSizedArrayTTValT {
+                        name: ssa_kind.name,
+                      }),
+                    ),
+                },
+              )),
+            );
+            let ranges: Vec<RangeS<'s>> =
+              once(range).chain(env.parent_ranges.iter().copied()).collect();
+            let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
+              false,
+              vec![rule_index],
+              conclusions,
+              vec![],
+              IndexSet::default(),
+            ) {
+              Ok(_) => Ok(()),
+              Err(e) => {
+                let error = self.typing_interner.alloc(e);
+                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+              }
             }
+          }
+          ITemplataT::StructDefinition(it) => {
+            let args: Vec<ITemplataT<'s, 't>> = arg_runes
+              .iter()
+              .map(|arg_rune| {
+                solver_state
+                  .get_conclusion(&arg_rune.rune)
+                  .expect("vassertSome: arg_rune not solved in solve_call_rule")
+              })
+              .collect();
+            let kind = self.predict_struct(
+              state,
+              env.original_calling_env,
+              env.parent_ranges,
+              env.call_location,
+              *it,
+              &args,
+            );
+            let mut conclusions = IndexMap::default();
+            conclusions.insert(
+              result_rune.rune,
+              ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
+                kind: KindT::Struct(
+                  self.typing_interner.intern_struct_tt(StructTTValT { id: kind.id }),
+                ),
+              })),
+            );
+            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
+              false,
+              vec![rule_index],
+              conclusions,
+              vec![],
+              IndexSet::default(),
+            ) {
+              Ok(_) => Ok(()),
+              Err(e) => {
+                let ranges =
+                  once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                let error = self.typing_interner.alloc(e);
+                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+              }
+            }
+          }
+          ITemplataT::InterfaceDefinition(it) => {
+            let args: Vec<ITemplataT<'s, 't>> = arg_runes
+              .iter()
+              .map(|arg_rune| {
+                solver_state
+                  .get_conclusion(&arg_rune.rune)
+                  .expect("vassertSome: arg_rune not solved in solve_call_rule")
+              })
+              .collect();
+            // See SFWPRL for why we're calling predict_interface instead of resolve_interface
+            let kind = self.predict_interface(
+              state,
+              env.original_calling_env,
+              env.parent_ranges,
+              env.call_location,
+              *it,
+              &args,
+            );
+            let mut conclusions = IndexMap::default();
+            conclusions.insert(
+              result_rune.rune,
+              ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
+                kind: KindT::Interface(
+                  self.typing_interner.intern_interface_tt(InterfaceTTValT { id: kind.id }),
+                ),
+              })),
+            );
+            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
+              false,
+              vec![rule_index],
+              conclusions,
+              vec![],
+              IndexSet::default(),
+            ) {
+              Ok(_) => Ok(()),
+              Err(e) => {
+                let ranges =
+                  once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                let error = self.typing_interner.alloc(e);
+                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+              }
+            }
+          }
+          // The value-solver twin of the rune-type solver's Kind arm: only primitives are
+          // held in the environment as a finished kind, so only they arrive with a Kind in
+          // template position, via the zero-arg Call @TNLTZACZ emits for a bare `int`.
+          // Applying zero args to a kind is the identity.
+          ITemplataT::Kind(kt) => {
+            match solver_state.commit_step(
+              false,
+              vec![rule_index],
+              [(result_rune.rune, ITemplataT::Kind(kt))].into_iter().collect(),
+              vec![],
+              IndexSet::default(),
+            ) {
+              Ok(_) => return Ok(()),
+              Err(e) => {
+                let error = self.typing_interner.alloc(e);
+                return Err(ITypingPassSolverError::InternalSolverError {
+                  range: env.parent_ranges,
+                  err: error,
+                });
+              }
+            }
+          }
+          other => panic!("vimpl: solve_call_rule None {:?}", other),
         }
+      }
     }
+  }
 
-    fn literal_to_templata(&self, literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
-        match literal {
+  fn literal_to_templata(&self, literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
+    match literal {
             // ILiteralSL::OwnershipLiteral(o) => ITemplataT::Ownership(OwnershipTemplataT { ownership: evaluate_ownership(o.ownership) }),
             ILiteralSL::StringLiteral(s) => ITemplataT::String(s.value),
             ILiteralSL::IntLiteral(i) => ITemplataT::Integer(i.value),
             ILiteralSL::BoolLiteral(_) => unreachable!("literalToTemplata: BoolLiteral constructed by TemplexScout but never reaches solver in practice"),
             // ILiteralSL::LocationLiteral(_) => unreachable!("literalToTemplata: LocationLiteral constructed by TemplexScout but never reaches solver in practice"),
         }
-    }
-    
+  }
 }
-

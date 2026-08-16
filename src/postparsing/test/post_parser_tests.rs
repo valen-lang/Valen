@@ -1,39 +1,42 @@
 // Run with: cargo test --manifest-path Cargo.toml --lib postparsing::test::post_parser_tests
 
-use bumpalo::Bump;
 use crate::cast;
-use crate::compile_options::GlobalOptions;
-use crate::interner::StrI;
-use crate::Keywords;
-use crate::parse_arena::ParseArena;
-use crate::scout_arena::ScoutArena;
-use crate::parsing::ast::{IMacroInclusionP, LoadAsP};
-use crate::postparsing::ast::{IFunctionAttributeS, IStructMemberS, ProgramS};
-use crate::postparsing::expressions::{
-  ConstantIntSE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LetSE, LoadPartSE, LocalLoadSE,
-  LocalS, OutsideLoadSE, OverloadSetSE, OwnershippedSE, ReturnSE,
-};
-use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
-use crate::postparsing::names::{CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS, IVarNameS};
-use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
-use crate::postparsing::rules::rules::{CallSR, ILiteralSL, ImplBoundS, LiteralSR, LookupSR};
-use crate::postparsing::test::traverse::NodeRefS;
-use crate::parsing::tests::utils::compile_file;
-use crate::parsing::tests::utils::{expect_1, expect_2, expect_3};
-use crate::postparsing::ast::IBodyS;
-use crate::parsing::ast::SharednessP;
-use crate::postparsing::ast::IGenericParameterTypeS;
-use crate::postparsing::expressions::ConstantBoolSE;
-use crate::postparsing::ast::ParameterS;
-use crate::postparsing::rules::RuneUsage;
-use crate::postparsing::expressions::ConsecutorSE;
-use crate::postparsing::post_parser::VariableNameAlreadyExists;
 use crate::collect_only_snode;
 use crate::collect_only_snodes;
 use crate::collect_where_snode;
 use crate::collect_where_snodes;
-use crate::postparsing::test::utils::{assert_rune_absent_from_rules, assert_rune_resolves_to, expect_code_body_expr};
-
+use crate::compile_options::GlobalOptions;
+use crate::interner::StrI;
+use crate::parse_arena::ParseArena;
+use crate::parsing::ast::SharednessP;
+use crate::parsing::ast::{IMacroInclusionP, LoadAsP};
+use crate::parsing::tests::utils::compile_file;
+use crate::parsing::tests::utils::{expect_1, expect_2, expect_3};
+use crate::postparsing::ast::IBodyS;
+use crate::postparsing::ast::IGenericParameterTypeS;
+use crate::postparsing::ast::ParameterS;
+use crate::postparsing::ast::{IFunctionAttributeS, IStructMemberS, ProgramS};
+use crate::postparsing::expressions::ConsecutorSE;
+use crate::postparsing::expressions::ConstantBoolSE;
+use crate::postparsing::expressions::{
+  ConstantIntSE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LetSE, LoadPartSE,
+  LocalLoadSE, LocalS, OutsideLoadSE, OverloadSetSE, OwnershippedSE, ReturnSE,
+};
+use crate::postparsing::names::{
+  CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS, IVarNameS,
+};
+use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
+use crate::postparsing::post_parser::VariableNameAlreadyExists;
+use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
+use crate::postparsing::rules::rules::{CallSR, ILiteralSL, ImplBoundS, LiteralSR, LookupSR};
+use crate::postparsing::rules::RuneUsage;
+use crate::postparsing::test::traverse::NodeRefS;
+use crate::postparsing::test::utils::{
+  assert_rune_absent_from_rules, assert_rune_resolves_to, expect_code_body_expr,
+};
+use crate::scout_arena::ScoutArena;
+use crate::Keywords;
+use bumpalo::Bump;
 
 fn compile<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
@@ -41,7 +44,8 @@ fn compile<'s, 'ctx, 'p>(
   parse_arena: &'ctx ParseArena<'p>,
   code: &str,
 ) -> ProgramS<'s>
-where 'p: 's,
+where
+  'p: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -57,14 +61,18 @@ where 'p: 's,
   let file_coord_s = scout_arena.intern_file_coordinate(
     scout_arena.intern_package_coordinate(
       scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
-      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+      &only_file
+        .file_coord
+        .package_coord
+        .packages
+        .iter()
+        .map(|s| scout_arena.intern_str(s.as_str()))
+        .collect::<Vec<_>>(),
     ),
     only_file.file_coord.filepath.as_str(),
   );
   let post_parser = PostParser::new(options, scout_arena, keywords, &keywords_p, parse_arena);
-  post_parser
-    .scout_program(file_coord_s, &only_file)
-    .unwrap()
+  post_parser.scout_program(file_coord_s, &only_file).unwrap()
 }
 
 fn compile_for_error<'s, 'ctx, 'p>(
@@ -73,7 +81,8 @@ fn compile_for_error<'s, 'ctx, 'p>(
   parse_arena: &'ctx ParseArena<'p>,
   code: &str,
 ) -> ICompileErrorS<'s>
-where 'p: 's,
+where
+  'p: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -89,7 +98,13 @@ where 'p: 's,
   let file_coord_s = scout_arena.intern_file_coordinate(
     scout_arena.intern_package_coordinate(
       scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
-      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+      &only_file
+        .file_coord
+        .package_coord
+        .packages
+        .iter()
+        .map(|s| scout_arena.intern_str(s.as_str()))
+        .collect::<Vec<_>>(),
     ),
     only_file.file_coord.filepath.as_str(),
   );
@@ -100,7 +115,6 @@ where 'p: 's,
   }
 }
 
-
 #[test]
 fn lookup_plus() {
   let parse_bump = Bump::new();
@@ -108,12 +122,8 @@ fn lookup_plus() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func main() int { return +(3, 4); }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func main() int { return +(3, 4); }");
   let main = program.lookup_function("main");
   let code_body = cast!(&main.body, IBodyS::CodeBody);
   match code_body.body.block.expr {
@@ -121,9 +131,7 @@ fn lookup_plus() {
       inner:
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
-            IExpressionSE::OverloadSet(OverloadSetSE {
-              lookup: OutsideLoadSE { parts, .. },
-            }),
+            IExpressionSE::OverloadSet(OverloadSetSE { lookup: OutsideLoadSE { parts, .. } }),
           ..
         }),
       ..
@@ -203,16 +211,7 @@ fn lambda() {
               ..
             }),
           arg_exprs:
-            [
-              IExpressionSE::ConstantInt(ConstantIntSE {
-                value: 4,
-                ..
-              }),
-              IExpressionSE::ConstantInt(ConstantIntSE {
-                value: 6,
-                ..
-              }),
-            ],
+            [IExpressionSE::ConstantInt(ConstantIntSE { value: 4, .. }), IExpressionSE::ConstantInt(ConstantIntSE { value: 6, .. })],
           ..
         }),
       ..
@@ -221,8 +220,14 @@ fn lambda() {
   };
 
   let (first_generic_param, second_generic_param) = expect_2(lambda.generic_params);
-  assert!(matches!(&first_generic_param.tyype, IGenericParameterTypeS::KindGenericParameterType(_)));
-  assert!(matches!(&second_generic_param.tyype, IGenericParameterTypeS::KindGenericParameterType(_)));
+  assert!(matches!(
+    &first_generic_param.tyype,
+    IGenericParameterTypeS::KindGenericParameterType(_)
+  ));
+  assert!(matches!(
+    &second_generic_param.tyype,
+    IGenericParameterTypeS::KindGenericParameterType(_)
+  ));
   let first_magic_param_rune = match first_generic_param.rune.rune {
     IRuneS::MagicParamRune(magic_param_rune) => magic_param_rune,
     _ => panic!("expected first lambda generic param to be a magic param rune"),
@@ -244,7 +249,12 @@ fn interface() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(&scout_arena, &keywords, &parse_arena, "interface IMoo { func blork(virtual this &IMoo, a bool)void; }");
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "interface IMoo { func blork(virtual this &IMoo, a bool)void; }",
+  );
   let imoo = program.lookup_interface("IMoo");
   let blork = expect_1(&imoo.internal_methods);
   let function_name = cast!(&blork.name, IFunctionDeclarationNameS::FunctionName);
@@ -430,10 +440,7 @@ fn function_with_magic_lambda_and_regular_lambda() {
   let code_body = cast!(&main.body, IBodyS::CodeBody);
   let block = &code_body.body.block;
   let things = cast!(&block.expr, IExpressionSE::Consecutor).exprs;
-  let thing_nodes = things
-    .iter()
-    .map(|thing| NodeRefS::Expression(*thing))
-    .collect::<Vec<_>>();
+  let thing_nodes = things.iter().map(|thing| NodeRefS::Expression(*thing)).collect::<Vec<_>>();
   let lambdas = collect_where_snodes!(
     &thing_nodes,
     NodeRefS::Expression(IExpressionSE::Function(function)) => Some(function)
@@ -457,7 +464,10 @@ fn function_with_magic_lambda_and_regular_lambda() {
       full_type_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
       ..
     }] => {}
-    other => panic!("expected second lambda's 2nd param to be code var a with implicit rune, got {:?}", other),
+    other => panic!(
+      "expected second lambda's 2nd param to be code var a with implicit rune, got {:?}",
+      other
+    ),
   }
 }
 
@@ -482,26 +492,23 @@ fn constructing_members() {
   let block = &code_body.body.block;
 
   match &block.locals[..] {
-    [
-      LocalS {
-        var_name: IVarNameS::ConstructingMemberName(StrI("x")),
-        self_borrowed: IVariableUseCertainty::NotUsed,
-        self_moved: IVariableUseCertainty::Used,
-        self_mutated: IVariableUseCertainty::NotUsed,
-        child_borrowed: IVariableUseCertainty::NotUsed,
-        child_moved: IVariableUseCertainty::NotUsed,
-        child_mutated: IVariableUseCertainty::NotUsed,
-      },
-      LocalS {
-        var_name: IVarNameS::ConstructingMemberName(StrI("y")),
-        self_borrowed: IVariableUseCertainty::NotUsed,
-        self_moved: IVariableUseCertainty::Used,
-        self_mutated: IVariableUseCertainty::NotUsed,
-        child_borrowed: IVariableUseCertainty::NotUsed,
-        child_moved: IVariableUseCertainty::NotUsed,
-        child_mutated: IVariableUseCertainty::NotUsed,
-      },
-    ] => {}
+    [LocalS {
+      var_name: IVarNameS::ConstructingMemberName(StrI("x")),
+      self_borrowed: IVariableUseCertainty::NotUsed,
+      self_moved: IVariableUseCertainty::Used,
+      self_mutated: IVariableUseCertainty::NotUsed,
+      child_borrowed: IVariableUseCertainty::NotUsed,
+      child_moved: IVariableUseCertainty::NotUsed,
+      child_mutated: IVariableUseCertainty::NotUsed,
+    }, LocalS {
+      var_name: IVarNameS::ConstructingMemberName(StrI("y")),
+      self_borrowed: IVariableUseCertainty::NotUsed,
+      self_moved: IVariableUseCertainty::Used,
+      self_mutated: IVariableUseCertainty::NotUsed,
+      child_borrowed: IVariableUseCertainty::NotUsed,
+      child_moved: IVariableUseCertainty::NotUsed,
+      child_mutated: IVariableUseCertainty::NotUsed,
+    }] => {}
     other => panic!("unexpected constructing_members locals: {:?}", other),
   }
 
@@ -509,10 +516,7 @@ fn constructing_members() {
     IExpressionSE::Consecutor(ConsecutorSE { exprs }) => exprs,
     _ => panic!("expected consecutor in constructing_members"),
   };
-  let expr_nodes = exprs
-    .iter()
-    .map(|expr| NodeRefS::Expression(*expr))
-    .collect::<Vec<_>>();
+  let expr_nodes = exprs.iter().map(|expr| NodeRefS::Expression(*expr)).collect::<Vec<_>>();
 
   let _ = collect_only_snodes!(
     &expr_nodes,
@@ -597,10 +601,7 @@ fn initializing_runtime_sized_array_requires_size_and_callable_too_few() {
   );
   match &err {
     ICompileErrorS::InitializingRuntimeSizedArrayRequiresSizeAndCallable(_) => {}
-    _ => panic!(
-      "expected InitializingRuntimeSizedArrayRequiresSizeAndCallable(_), got {:?}",
-      err
-    ),
+    _ => panic!("expected InitializingRuntimeSizedArrayRequiresSizeAndCallable(_), got {:?}", err),
   }
 }
 
@@ -619,10 +620,7 @@ fn initializing_runtime_sized_array_requires_size_and_callable_too_many() {
   );
   match &err {
     ICompileErrorS::InitializingRuntimeSizedArrayRequiresSizeAndCallable(_) => {}
-    _ => panic!(
-      "expected InitializingRuntimeSizedArrayRequiresSizeAndCallable(_), got {:?}",
-      err
-    ),
+    _ => panic!("expected InitializingRuntimeSizedArrayRequiresSizeAndCallable(_), got {:?}", err),
   }
 }
 
@@ -641,10 +639,7 @@ fn initializing_static_sized_array_requires_size_and_callable_too_few() {
   );
   match &err {
     ICompileErrorS::InitializingStaticSizedArrayRequiresSizeAndCallable(_) => {}
-    _ => panic!(
-      "expected InitializingStaticSizedArrayRequiresSizeAndCallable(_), got {:?}",
-      err
-    ),
+    _ => panic!("expected InitializingStaticSizedArrayRequiresSizeAndCallable(_), got {:?}", err),
   }
 }
 
@@ -663,10 +658,7 @@ fn initializing_static_sized_array_requires_size_and_callable_too_many() {
   );
   match &err {
     ICompileErrorS::InitializingStaticSizedArrayRequiresSizeAndCallable(_) => {}
-    _ => panic!(
-      "expected InitializingStaticSizedArrayRequiresSizeAndCallable(_), got {:?}",
-      err
-    ),
+    _ => panic!("expected InitializingStaticSizedArrayRequiresSizeAndCallable(_), got {:?}", err),
   }
 }
 
@@ -768,26 +760,23 @@ fn constructing_members_borrowing_another_member() {
   let block = &code_body.body.block;
 
   match &*block.locals {
-    [
-      LocalS {
-        var_name: IVarNameS::ConstructingMemberName(StrI("x")),
-        self_borrowed: IVariableUseCertainty::Used,
-        self_moved: IVariableUseCertainty::Used,
-        self_mutated: IVariableUseCertainty::NotUsed,
-        child_borrowed: IVariableUseCertainty::NotUsed,
-        child_moved: IVariableUseCertainty::NotUsed,
-        child_mutated: IVariableUseCertainty::NotUsed,
-      },
-      LocalS {
-        var_name: IVarNameS::ConstructingMemberName(StrI("y")),
-        self_borrowed: IVariableUseCertainty::NotUsed,
-        self_moved: IVariableUseCertainty::Used,
-        self_mutated: IVariableUseCertainty::NotUsed,
-        child_borrowed: IVariableUseCertainty::NotUsed,
-        child_moved: IVariableUseCertainty::NotUsed,
-        child_mutated: IVariableUseCertainty::NotUsed,
-      },
-    ] => {}
+    [LocalS {
+      var_name: IVarNameS::ConstructingMemberName(StrI("x")),
+      self_borrowed: IVariableUseCertainty::Used,
+      self_moved: IVariableUseCertainty::Used,
+      self_mutated: IVariableUseCertainty::NotUsed,
+      child_borrowed: IVariableUseCertainty::NotUsed,
+      child_moved: IVariableUseCertainty::NotUsed,
+      child_mutated: IVariableUseCertainty::NotUsed,
+    }, LocalS {
+      var_name: IVarNameS::ConstructingMemberName(StrI("y")),
+      self_borrowed: IVariableUseCertainty::NotUsed,
+      self_moved: IVariableUseCertainty::Used,
+      self_mutated: IVariableUseCertainty::NotUsed,
+      child_borrowed: IVariableUseCertainty::NotUsed,
+      child_moved: IVariableUseCertainty::NotUsed,
+      child_mutated: IVariableUseCertainty::NotUsed,
+    }] => {}
     other => panic!("unexpected locals: {:?}", other),
   }
 
@@ -1154,12 +1143,8 @@ fn reports_when_extern_function_has_body() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let err = compile_for_error(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "extern func bork() int {\n  3\n}",
-  );
+  let err =
+    compile_for_error(&scout_arena, &keywords, &parse_arena, "extern func bork() int {\n  3\n}");
   match &err {
     ICompileErrorS::ExternHasBodyS(_) => {}
     _ => panic!("expected ExternHasBody(_), got {:?}", err),
@@ -1184,12 +1169,10 @@ exported func main() {
 }"#,
   );
   match &err {
-    ICompileErrorS::VariableNameAlreadyExists(
-      VariableNameAlreadyExists {
-        name: IVarNameS::CodeVarName(StrI("x")),
-        ..
-      },
-    ) => {}
+    ICompileErrorS::VariableNameAlreadyExists(VariableNameAlreadyExists {
+      name: IVarNameS::CodeVarName(StrI("x")),
+      ..
+    }) => {}
     _ => panic!("expected VariableNameAlreadyExists(_, CodeVarName(\"x\")), got {:?}", err),
   }
 }
@@ -1269,7 +1252,6 @@ fn foreach_expr() {
   assert_eq!(while_exprs.len(), 0);
 }
 
-
 #[test]
 fn destruct_expression() {
   let parse_bump = Bump::new();
@@ -1312,12 +1294,8 @@ fn tuple_expression() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func main() { x = (3, 4); }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func main() { x = (3, 4); }");
   let main = program.lookup_function("main");
   let _code_body = cast!(&main.body, IBodyS::CodeBody);
 }
@@ -1329,12 +1307,8 @@ fn str_interpolate_expression() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func main() str { return \"\"; }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func main() str { return \"\"; }");
   let main = program.lookup_function("main");
   let _code_body = cast!(&main.body, IBodyS::CodeBody);
   // Just ensure scout completed without panicking.
@@ -1349,12 +1323,8 @@ fn test_named_param_keeps_its_name_at_postparse() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(x int) int { return x; }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x int) int { return x; }");
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS { name: IVarNameS::CodeVarName(StrI("x")), .. }] => {}
@@ -1375,12 +1345,7 @@ fn test_param_no_outer_wrap_routing() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(x int) void { }",
-  );
+  let program = compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x int) void { }");
   let foo = program.lookup_function("foo");
   // Per @TNLTZACZ `int` lowers to Lookup(int) + Call([]), as does the explicit `void` return, so
   // value_type_rune is the Call's result rune.
@@ -1414,12 +1379,8 @@ fn test_template_part_in_call_stays_a_template() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(x Opt<int>) void { }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x Opt<int>) void { }");
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS {
@@ -1449,22 +1410,25 @@ fn test_param_single_ref_wrap_routing() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(x &int) int { return 0; }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x &int) int { return 0; }");
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS {
-        value_type_rules: [
-          IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })], .. }),
-          IRulexSR::Call(CallSR { args: [], .. }),
-        ],
-        type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
-        full_type_rune, value_type_rune, .. }] => {
-      assert_ne!(full_type_rune.rune, value_type_rune.rune, "full != value when there IS an outer wrap");
+      value_type_rules:
+        [IRulexSR::Lookup(LookupSR {
+          parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })],
+          ..
+        }), IRulexSR::Call(CallSR { args: [], .. })],
+      type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
+      full_type_rune,
+      value_type_rune,
+      ..
+    }] => {
+      assert_ne!(
+        full_type_rune.rune, value_type_rune.rune,
+        "full != value when there IS an outer wrap"
+      );
       assert_eq!(br.result_rune.rune, full_type_rune.rune);
       assert_eq!(br.inner_rune.rune, value_type_rune.rune);
     }
@@ -1492,18 +1456,27 @@ exported func foo(x held int) int { return 0; }
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS {
-        value_type_rules: [
-          IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })], .. }),
-          IRulexSR::Call(CallSR { args: [], .. }),
-        ],
-        type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
-        full_type_rune, value_type_rune, .. }] => {
+      value_type_rules:
+        [IRulexSR::Lookup(LookupSR {
+          parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })],
+          ..
+        }), IRulexSR::Call(CallSR { args: [], .. })],
+      type_outer_ref_rules: [IRulexSR::BorrowRef(br)],
+      full_type_rune,
+      value_type_rune,
+      ..
+    }] => {
       assert_eq!(br.region, RegionSR::Held);
-      assert_ne!(full_type_rune.rune, value_type_rune.rune, "full != value when there IS an outer wrap");
+      assert_ne!(
+        full_type_rune.rune, value_type_rune.rune,
+        "full != value when there IS an outer wrap"
+      );
       assert_eq!(br.result_rune.rune, full_type_rune.rune);
       assert_eq!(br.inner_rune.rune, value_type_rune.rune);
     }
-    other => panic!("expected `x held int`: one BorrowRef(Held) wrapping [Lookup(int)]; got {:?}", other),
+    other => {
+      panic!("expected `x held int`: one BorrowRef(Held) wrapping [Lookup(int)]; got {:?}", other)
+    }
   }
 }
 
@@ -1527,13 +1500,20 @@ exported func foo(x own int) int { return 0; }
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS {
-        value_type_rules: [
-          IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })], .. }),
-          IRulexSR::Call(CallSR { args: [], .. }),
-        ],
-        type_outer_ref_rules: [IRulexSR::OwnRef(or)],
-        full_type_rune, value_type_rune, .. }] => {
-      assert_ne!(full_type_rune.rune, value_type_rune.rune, "full != value when there IS an outer wrap");
+      value_type_rules:
+        [IRulexSR::Lookup(LookupSR {
+          parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })],
+          ..
+        }), IRulexSR::Call(CallSR { args: [], .. })],
+      type_outer_ref_rules: [IRulexSR::OwnRef(or)],
+      full_type_rune,
+      value_type_rune,
+      ..
+    }] => {
+      assert_ne!(
+        full_type_rune.rune, value_type_rune.rune,
+        "full != value when there IS an outer wrap"
+      );
       assert_eq!(or.result_rune.rune, full_type_rune.rune);
       assert_eq!(or.inner_rune.rune, value_type_rune.rune);
     }
@@ -1550,17 +1530,16 @@ fn test_param_nested_ref_wrap_routing() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(x &&int) int { return 0; }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x &&int) int { return 0; }");
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS {
-        type_outer_ref_rules: [IRulexSR::BorrowRef(inner_br), IRulexSR::BorrowRef(outer_br)],
-        full_type_rune, value_type_rune, .. }] => {
+      type_outer_ref_rules: [IRulexSR::BorrowRef(inner_br), IRulexSR::BorrowRef(outer_br)],
+      full_type_rune,
+      value_type_rune,
+      ..
+    }] => {
       assert_eq!(outer_br.result_rune.rune, full_type_rune.rune);
       assert_eq!(outer_br.inner_rune.rune, inner_br.result_rune.rune);
       assert_eq!(inner_br.inner_rune.rune, value_type_rune.rune);
@@ -1579,16 +1558,14 @@ fn test_function_rules_no_longer_contains_param_rules() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(x int, y bool) void { }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x int, y bool) void { }");
   let foo = program.lookup_function("foo");
   match foo.header_rules {
-    [IRulexSR::Lookup(LookupSR { parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. })], .. }),
-     IRulexSR::Call(CallSR { args: [], .. })] => {}
+    [IRulexSR::Lookup(LookupSR {
+      parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("void"), .. })],
+      ..
+    }), IRulexSR::Call(CallSR { args: [], .. })] => {}
     other => panic!("FunctionS.rules should be exactly [Lookup(void), Call([])]; got {:?}", other),
   }
 }
@@ -1620,7 +1597,9 @@ fn test_function_where_implements_becomes_an_impl_bound() {
       result_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
       ..
     } => {}
-    other => panic!("expected implements(T, <lookup>) with an implicit result rune; got {:?}", other),
+    other => {
+      panic!("expected implements(T, <lookup>) with an implicit result rune; got {:?}", other)
+    }
   }
 
   assert_rune_resolves_to(launch.header_rules, bound.super_rune.rune, "IShip");
@@ -1645,10 +1624,14 @@ fn test_function_where_func_bound_carries_an_itypest() {
     "exported func bar<T>(x T) where func foo(&T)bool { }",
   );
   let bar = program.lookup_function("bar");
-  let resolve: &ResolveSR = bar.header_rules.iter().find_map(|rule| match rule {
-    IRulexSR::Resolve(r) => Some(r),
-    _ => None,
-  }).expect("expected a Resolve rule from `where func foo(&T)bool`");
+  let resolve: &ResolveSR = bar
+    .header_rules
+    .iter()
+    .find_map(|rule| match rule {
+      IRulexSR::Resolve(r) => Some(r),
+      _ => None,
+    })
+    .expect("expected a Resolve rule from `where func foo(&T)bool`");
 
   // params_types is `[&T]`: one BorrowRef whose inner is the generic rune `T`.
   match expect_1(resolve.params_types) {
@@ -1685,8 +1668,8 @@ fn test_generic_default_carries_an_itypest() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let program = compile(&scout_arena, &keywords, &parse_arena, "func bar<N Int = 5>() { }");
   let bar = program.lookup_function("bar");
-  let default = expect_1(bar.generic_params).default.as_ref()
-    .expect("expected a `= 5` default on N");
+  let default =
+    expect_1(bar.generic_params).default.as_ref().expect("expected a `= 5` default on N");
   match default.tyype {
     ITypeST::Int(int_literal) => assert_eq!(int_literal.value.value, 5),
     other => panic!("expected default tyype to be an Int literal; got {:?}", other),
@@ -1837,12 +1820,7 @@ fn test_bare_param_keeps_name_and_gets_no_body_let() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(x int) void { }",
-  );
+  let program = compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x int) void { }");
   let foo = program.lookup_function("foo");
   // The bare param keeps its real name; no synthetic DesugaredParamName.
   match foo.params {
@@ -1867,26 +1845,33 @@ fn test_destructure_param_desugars_to_let_with_destructure() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(Pair[a, b]) void { }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(Pair[a, b]) void { }");
   let foo = program.lookup_function("foo");
   match expect_code_body_expr(&foo.body) {
-    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
-      IExpressionSE::Let(LetSE {
-        pattern: AtomSP {
-          name: None,
-          destructure: Some([
-            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }), .. },
-            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }), .. },
-          ]), .. },
-        expr: IExpressionSE::LocalLoad(LocalLoadSE { name: IVarNameS::DesugaredParamName(_), .. }),
-        .. }),
+    IExpressionSE::Consecutor(ConsecutorSE {
+      exprs:
+        [IExpressionSE::Let(LetSE {
+          pattern:
+            AtomSP {
+              name: None,
+              destructure:
+                Some(
+                  [AtomSP {
+                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }),
+                    ..
+                  }, AtomSP {
+                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }),
+                    ..
+                  }],
+                ),
+              ..
+            },
+          expr: IExpressionSE::LocalLoad(LocalLoadSE { name: IVarNameS::DesugaredParamName(_), .. }),
+          ..
+        }), ..],
       ..
-    ], .. }) => {}
+    }) => {}
     other => panic!("expected body head `let [a, b] = load(<param>)`, got {:?}", other),
   }
 }
@@ -1901,30 +1886,38 @@ fn test_named_destructure_param_keeps_name_and_gets_let() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(p Pair[a, b]) void { }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(p Pair[a, b]) void { }");
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS { name: IVarNameS::CodeVarName(StrI("p")), .. }] => {}
     other => panic!("expected one param named p, got {:?}", other),
   }
   match expect_code_body_expr(&foo.body) {
-    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
-      IExpressionSE::Let(LetSE {
-        pattern: AtomSP {
-          name: None,
-          destructure: Some([
-            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }), .. },
-            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }), .. },
-          ]), .. },
-        expr: IExpressionSE::LocalLoad(LocalLoadSE { name: IVarNameS::CodeVarName(StrI("p")), .. }),
-        .. }),
+    IExpressionSE::Consecutor(ConsecutorSE {
+      exprs:
+        [IExpressionSE::Let(LetSE {
+          pattern:
+            AtomSP {
+              name: None,
+              destructure:
+                Some(
+                  [AtomSP {
+                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }),
+                    ..
+                  }, AtomSP {
+                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }),
+                    ..
+                  }],
+                ),
+              ..
+            },
+          expr:
+            IExpressionSE::LocalLoad(LocalLoadSE { name: IVarNameS::CodeVarName(StrI("p")), .. }),
+          ..
+        }), ..],
       ..
-    ], .. }) => {}
+    }) => {}
     other => panic!("expected body head `let [a, b] = load(p)`, got {:?}", other),
   }
 }
@@ -1940,25 +1933,42 @@ fn test_nested_destructure_preserved() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(Pair[a, [b, c]]) void { }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(Pair[a, [b, c]]) void { }");
   let foo = program.lookup_function("foo");
   match expect_code_body_expr(&foo.body) {
-    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
-      IExpressionSE::Let(LetSE {
-        pattern: AtomSP { name: None, destructure: Some([
-          AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }), .. },
-          AtomSP { name: None, destructure: Some([
-            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }), .. },
-            AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("c")), .. }), .. },
-          ]), .. },
-        ]), .. }, .. }),
+    IExpressionSE::Consecutor(ConsecutorSE {
+      exprs:
+        [IExpressionSE::Let(LetSE {
+          pattern:
+            AtomSP {
+              name: None,
+              destructure:
+                Some(
+                  [AtomSP {
+                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }),
+                    ..
+                  }, AtomSP {
+                    name: None,
+                    destructure:
+                      Some(
+                        [AtomSP {
+                          name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }),
+                          ..
+                        }, AtomSP {
+                          name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("c")), .. }),
+                          ..
+                        }],
+                      ),
+                    ..
+                  }],
+                ),
+              ..
+            },
+          ..
+        }), ..],
       ..
-    ], .. }) => {}
+    }) => {}
     other => panic!("expected body head `let [a, [b, c]] = load(<param>)`, got {:?}", other),
   }
 }
@@ -1972,22 +1982,29 @@ fn test_destructure_ignore() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(Pair[_, b]) void { }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(Pair[_, b]) void { }");
   let foo = program.lookup_function("foo");
   match expect_code_body_expr(&foo.body) {
-    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
-      IExpressionSE::Let(LetSE {
-        pattern: AtomSP { name: None, destructure: Some([
-          AtomSP { name: None, .. },
-          AtomSP { name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }), .. },
-        ]), .. }, .. }),
+    IExpressionSE::Consecutor(ConsecutorSE {
+      exprs:
+        [IExpressionSE::Let(LetSE {
+          pattern:
+            AtomSP {
+              name: None,
+              destructure:
+                Some(
+                  [AtomSP { name: None, .. }, AtomSP {
+                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }),
+                    ..
+                  }],
+                ),
+              ..
+            },
+          ..
+        }), ..],
       ..
-    ], .. }) => {}
+    }) => {}
     other => panic!("expected body head `let [_, b] = load(<param>)`, got {:?}", other),
   }
 }
@@ -2001,19 +2018,16 @@ fn test_empty_destructure() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func foo(int[]) void { }",
-  );
+  let program = compile(&scout_arena, &keywords, &parse_arena, "exported func foo(int[]) void { }");
   let foo = program.lookup_function("foo");
   match expect_code_body_expr(&foo.body) {
-    IExpressionSE::Consecutor(ConsecutorSE { exprs: [
-      IExpressionSE::Let(LetSE {
-        pattern: AtomSP { name: None, destructure: Some([]), .. }, .. }),
+    IExpressionSE::Consecutor(ConsecutorSE {
+      exprs:
+        [IExpressionSE::Let(LetSE {
+          pattern: AtomSP { name: None, destructure: Some([]), .. }, ..
+        }), ..],
       ..
-    ], .. }) => {}
+    }) => {}
     other => panic!("expected body head `[] = load(<param>)`, got {:?}", other),
   }
 }
@@ -2027,12 +2041,8 @@ fn test_extern_param_destructure_rejected() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let err = compile_for_error(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "extern func foo(Pair[a, b]);",
-  );
+  let err =
+    compile_for_error(&scout_arena, &keywords, &parse_arena, "extern func foo(Pair[a, b]);");
   match err {
     ICompileErrorS::ParamDestructureRequiresBody { .. } => {}
     other => panic!("expected ParamDestructureRequiresBody, got {:?}", other),
@@ -2048,12 +2058,7 @@ fn test_extern_bare_param_ok() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "extern func foo(x int);",
-  );
+  let program = compile(&scout_arena, &keywords, &parse_arena, "extern func foo(x int);");
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS { name: IVarNameS::CodeVarName(StrI("x")), .. }] => {}
@@ -2072,16 +2077,13 @@ fn plain_function_is_marked_user_function() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "func helper() int { return 3; }",
-  );
+  let program = compile(&scout_arena, &keywords, &parse_arena, "func helper() int { return 3; }");
   let helper = program.lookup_function("helper");
   assert!(
     helper.attributes.iter().any(|a| matches!(a, IFunctionAttributeS::UserFunction(_))),
-    "expected a UserFunction attribute, got {:?}", helper.attributes);
+    "expected a UserFunction attribute, got {:?}",
+    helper.attributes
+  );
 }
 
 #[test]
@@ -2091,18 +2093,18 @@ fn exported_function_keeps_export_and_is_user_function() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
-  let program = compile(
-    &scout_arena,
-    &keywords,
-    &parse_arena,
-    "exported func main() int { return 3; }",
-  );
+  let program =
+    compile(&scout_arena, &keywords, &parse_arena, "exported func main() int { return 3; }");
   let main = program.lookup_function("main");
   // The source-written Export attribute survives, and UserFunction is stamped alongside it.
   assert!(
     main.attributes.iter().any(|a| matches!(a, IFunctionAttributeS::Export(_))),
-    "expected the source-written Export attribute to survive, got {:?}", main.attributes);
+    "expected the source-written Export attribute to survive, got {:?}",
+    main.attributes
+  );
   assert!(
     main.attributes.iter().any(|a| matches!(a, IFunctionAttributeS::UserFunction(_))),
-    "expected a UserFunction attribute, got {:?}", main.attributes);
+    "expected a UserFunction attribute, got {:?}",
+    main.attributes
+  );
 }

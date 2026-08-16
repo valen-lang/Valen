@@ -1,14 +1,15 @@
-use crate::postparsing::names::{INameS, ICitizenDeclarationNameS, IFunctionDeclarationNameS, IStructDeclarationNameS, IVarNameS};
-use crate::postparsing::post_parser::ICompileErrorS;
-use crate::utils::range::{CodeLocationS, RangeS};
+use crate::parsing::ast::SharednessP;
+use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::names::IRuneS;
-use crate::postparsing::rules::rules::IRulexSR;
-use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::names::{
+  ICitizenDeclarationNameS, IFunctionDeclarationNameS, INameS, IStructDeclarationNameS, IVarNameS,
+};
+use crate::postparsing::post_parser::ICompileErrorS;
 use crate::postparsing::rules::rules::ILiteralSL;
-use crate::parsing::ast::SharednessP;
+use crate::postparsing::rules::rules::IRulexSR;
 use crate::postparsing::rules::rules::RuneUsage;
-
+use crate::utils::range::{CodeLocationS, RangeS};
 
 pub fn humanize<'s, HP, LB, LRC, LC>(
   humanize_pos: HP,
@@ -112,7 +113,9 @@ fn humanize_function_declaration_name<'s>(name: IFunctionDeclarationNameS<'s>) -
 pub fn humanize_name_for_struct_declaration<'s>(name: IStructDeclarationNameS<'s>) -> String {
   match name {
     IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n.name.as_str().to_string(),
-    IStructDeclarationNameS::AnonymousSubstructTemplateName(n) => n.interface_name.name.as_str().to_string() + ".anonymous",
+    IStructDeclarationNameS::AnonymousSubstructTemplateName(n) => {
+      n.interface_name.name.as_str().to_string() + ".anonymous"
+    }
   }
 }
 
@@ -120,14 +123,13 @@ pub fn humanize_citizen_declaration_name<'s>(name: ICitizenDeclarationNameS<'s>)
   match name {
     ICitizenDeclarationNameS::TopLevelStructDeclarationName(n) => n.name.as_str().to_string(),
     ICitizenDeclarationNameS::TopLevelInterfaceDeclarationName(n) => n.name.as_str().to_string(),
-    ICitizenDeclarationNameS::AnonymousSubstructTemplateName(n) =>
-      n.interface_name.name.as_str().to_string() + ".anonymous",
+    ICitizenDeclarationNameS::AnonymousSubstructTemplateName(n) => {
+      n.interface_name.name.as_str().to_string() + ".anonymous"
+    }
   }
 }
 
-pub fn humanize_imprecise_name<'s>(
-  name: IImpreciseNameS<'s>,
-) -> String {
+pub fn humanize_imprecise_name<'s>(name: IImpreciseNameS<'s>) -> String {
   match name {
     IImpreciseNameS::ArbitraryName(_) => "_arby".to_string(),
     IImpreciseNameS::SelfName(_) => "_Self".to_string(),
@@ -136,18 +138,22 @@ pub fn humanize_imprecise_name<'s>(
     IImpreciseNameS::AnonymousSubstructTemplateImpreciseName(n) => {
       humanize_imprecise_name(n.interface_imprecise_name) + "._AnonSub"
     }
-    IImpreciseNameS::LambdaStructImpreciseName(n) => humanize_imprecise_name(n.lambda_name) + ".struct",
+    IImpreciseNameS::LambdaStructImpreciseName(n) => {
+      humanize_imprecise_name(n.lambda_name) + ".struct"
+    }
     IImpreciseNameS::LambdaImpreciseName(_) => "_Lam".to_string(),
     _ => panic!("implement: humanize_imprecise_name other"),
   }
 }
 
-pub fn humanize_rune<'s>(
-  rune: IRuneS<'s>,
-) -> String {
+pub fn humanize_rune<'s>(rune: IRuneS<'s>) -> String {
   match rune {
-    IRuneS::ImplicitRune(r) => "_".to_string() + &r.lid.path.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(""),
-    IRuneS::MagicParamRune(r) => "_".to_string() + &r.lid.path.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(""),
+    IRuneS::ImplicitRune(r) => {
+      "_".to_string() + &r.lid.path.iter().map(|p| p.to_string()).collect::<Vec<_>>().join("")
+    }
+    IRuneS::MagicParamRune(r) => {
+      "_".to_string() + &r.lid.path.iter().map(|p| p.to_string()).collect::<Vec<_>>().join("")
+    }
     IRuneS::CodeRune(r) => r.name.0.to_string(),
     IRuneS::ArgumentRune(r) => "(arg ".to_string() + &r.arg_index.to_string() + ")",
     IRuneS::SelfKindRune(_) => "(self kind)".to_string(),
@@ -156,71 +162,126 @@ pub fn humanize_rune<'s>(
     IRuneS::PatternInputRune(_) => panic!("implement: humanize_rune PatternInputRune"),
     IRuneS::SelfRune(_) => panic!("implement: humanize_rune SelfRune"),
     IRuneS::ReturnRune(_) => "(return)".to_string(),
-    IRuneS::AnonymousSubstructParentInterfaceTemplateRune(_) => panic!("implement: humanize_rune AnonymousSubstructParentInterfaceTemplateRune"),
+    IRuneS::AnonymousSubstructParentInterfaceTemplateRune(_) => {
+      panic!("implement: humanize_rune AnonymousSubstructParentInterfaceTemplateRune")
+    }
     IRuneS::ImplDropVoidRune(_) => panic!("implement: humanize_rune ImplDropVoidRune"),
     IRuneS::ImplDropKindRune(_) => panic!("implement: humanize_rune ImplDropKindRune"),
-    IRuneS::FreeOverrideInterfaceRune(_) => panic!("implement: humanize_rune FreeOverrideInterfaceRune"),
+    IRuneS::FreeOverrideInterfaceRune(_) => {
+      panic!("implement: humanize_rune FreeOverrideInterfaceRune")
+    }
     IRuneS::FreeOverrideStructRune(_) => panic!("implement: humanize_rune FreeOverrideStructRune"),
-    IRuneS::AnonymousSubstructKindRune(_) => panic!("implement: humanize_rune AnonymousSubstructKindRune"),
-    IRuneS::AnonymousSubstructTemplateRune(_) => panic!("implement: humanize_rune AnonymousSubstructTemplateRune"),
-    IRuneS::AnonymousSubstructParentInterfaceKindRune(_) => panic!("implement: humanize_rune AnonymousSubstructParentInterfaceKindRune"),
+    IRuneS::AnonymousSubstructKindRune(_) => {
+      panic!("implement: humanize_rune AnonymousSubstructKindRune")
+    }
+    IRuneS::AnonymousSubstructTemplateRune(_) => {
+      panic!("implement: humanize_rune AnonymousSubstructTemplateRune")
+    }
+    IRuneS::AnonymousSubstructParentInterfaceKindRune(_) => {
+      panic!("implement: humanize_rune AnonymousSubstructParentInterfaceKindRune")
+    }
     IRuneS::StructNameRune(r) => humanize_citizen_declaration_name(r.struct_name),
-    IRuneS::FreeOverrideStructTemplateRune(_) => panic!("implement: humanize_rune FreeOverrideStructTemplateRune"),
-    IRuneS::FunctorPrototypeRuneName(_) => panic!("implement: humanize_rune FunctorPrototypeRuneName"),
+    IRuneS::FreeOverrideStructTemplateRune(_) => {
+      panic!("implement: humanize_rune FreeOverrideStructTemplateRune")
+    }
+    IRuneS::FunctorPrototypeRuneName(_) => {
+      panic!("implement: humanize_rune FunctorPrototypeRuneName")
+    }
     IRuneS::MacroSelfKindRune(_) => "_MSelfK".to_string(),
     IRuneS::MacroVoidKindRune(_) => "_MVoidK".to_string(),
     IRuneS::MacroSelfKindTemplateRune(_) => "_MSelfKT".to_string(),
-    IRuneS::AnonymousSubstructMemberRune(r) =>
-      "$".to_string() + r.interface.name.as_str() + ".anon." +
-        &humanize_function_declaration_name(r.method) + ".functor",
-    IRuneS::AnonymousSubstructFunctionBoundParamsListRune(r) =>
-      "$".to_string() + r.interface.name.as_str() + ".anon." +
-        &humanize_function_declaration_name(r.method) + ".params",
-    IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(r) =>
-      "$".to_string() + r.interface.name.as_str() + ".anon." +
-        &humanize_function_declaration_name(r.method) + ".proto",
-    IRuneS::AnonymousSubstructFunctionInterfaceTemplateRune(r) =>
-      "$".to_string() + r.interface.name.as_str() + ".anon." +
-        &humanize_function_declaration_name(r.method) + ".itemplate",
-    IRuneS::AnonymousSubstructFunctionInterfaceKindRune(r) =>
-      "$".to_string() + r.interface.name.as_str() + ".anon." +
-        &humanize_function_declaration_name(r.method) + ".ikind",
-    IRuneS::AnonymousSubstructDropBoundParamsListRune(r) =>
-      "$".to_string() + r.interface.name.as_str() + ".anon.drop.params",
-    IRuneS::AnonymousSubstructDropBoundPrototypeRune(r) =>
-      "$".to_string() + r.interface.name.as_str() + ".anon.drop.proto",
-    IRuneS::AnonymousSubstructMethodInheritedRune(r) =>
-      "$".to_string() + r.interface.name.as_str() + ".anon." +
-        &humanize_function_declaration_name(r.method) + ":" + &humanize_rune(r.inner),
-    IRuneS::AnonymousSubstructMethodSelfBorrowKindRune(r) =>
-      "$".to_string() + r.interface.name.as_str() + ".anon." +
-        &humanize_function_declaration_name(r.method) + ".borrowself",
-    IRuneS::DenizenDefaultRegionRune(_) => panic!("implement: humanize_rune DenizenDefaultRegionRune"),
-    IRuneS::ExternDefaultRegionRune(_) => panic!("implement: humanize_rune ExternDefaultRegionRune"),
+    IRuneS::AnonymousSubstructMemberRune(r) => {
+      "$".to_string()
+        + r.interface.name.as_str()
+        + ".anon."
+        + &humanize_function_declaration_name(r.method)
+        + ".functor"
+    }
+    IRuneS::AnonymousSubstructFunctionBoundParamsListRune(r) => {
+      "$".to_string()
+        + r.interface.name.as_str()
+        + ".anon."
+        + &humanize_function_declaration_name(r.method)
+        + ".params"
+    }
+    IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(r) => {
+      "$".to_string()
+        + r.interface.name.as_str()
+        + ".anon."
+        + &humanize_function_declaration_name(r.method)
+        + ".proto"
+    }
+    IRuneS::AnonymousSubstructFunctionInterfaceTemplateRune(r) => {
+      "$".to_string()
+        + r.interface.name.as_str()
+        + ".anon."
+        + &humanize_function_declaration_name(r.method)
+        + ".itemplate"
+    }
+    IRuneS::AnonymousSubstructFunctionInterfaceKindRune(r) => {
+      "$".to_string()
+        + r.interface.name.as_str()
+        + ".anon."
+        + &humanize_function_declaration_name(r.method)
+        + ".ikind"
+    }
+    IRuneS::AnonymousSubstructDropBoundParamsListRune(r) => {
+      "$".to_string() + r.interface.name.as_str() + ".anon.drop.params"
+    }
+    IRuneS::AnonymousSubstructDropBoundPrototypeRune(r) => {
+      "$".to_string() + r.interface.name.as_str() + ".anon.drop.proto"
+    }
+    IRuneS::AnonymousSubstructMethodInheritedRune(r) => {
+      "$".to_string()
+        + r.interface.name.as_str()
+        + ".anon."
+        + &humanize_function_declaration_name(r.method)
+        + ":"
+        + &humanize_rune(r.inner)
+    }
+    IRuneS::AnonymousSubstructMethodSelfBorrowKindRune(r) => {
+      "$".to_string()
+        + r.interface.name.as_str()
+        + ".anon."
+        + &humanize_function_declaration_name(r.method)
+        + ".borrowself"
+    }
+    IRuneS::DenizenDefaultRegionRune(_) => {
+      panic!("implement: humanize_rune DenizenDefaultRegionRune")
+    }
+    IRuneS::ExternDefaultRegionRune(_) => {
+      panic!("implement: humanize_rune ExternDefaultRegionRune")
+    }
     IRuneS::AnonymousSubstructVoidKindRune(_) => "anon.void.kind".to_string(),
     IRuneS::ImplicitCoercionTemplateRune(inner) => humanize_rune(inner.original_kind_rune) + ".gen",
     IRuneS::ImplicitRegionRune(_) => panic!("implement: humanize_rune ImplicitRegionRune"),
     IRuneS::CallRegionRune(_) => panic!("implement: humanize_rune CallRegionRune"),
     IRuneS::CaseRuneFromImpl(r) => "case:".to_string() + &humanize_rune(r.inner_rune),
     IRuneS::DispatcherRuneFromImpl(r) => "dis:".to_string() + &humanize_rune(r.inner_rune),
-    IRuneS::CallPureMergeRegionRune(_) => panic!("implement: humanize_rune CallPureMergeRegionRune"),
+    IRuneS::CallPureMergeRegionRune(_) => {
+      panic!("implement: humanize_rune CallPureMergeRegionRune")
+    }
     IRuneS::ReachablePrototypeRune(_) => panic!("implement: humanize_rune ReachablePrototypeRune"),
     IRuneS::MemberRune(_) => panic!("implement: humanize_rune MemberRune"),
     IRuneS::LocalDefaultRegionRune(_) => panic!("implement: humanize_rune LocalDefaultRegionRune"),
-    IRuneS::ExportDefaultRegionRune(_) => panic!("implement: humanize_rune ExportDefaultRegionRune"),
+    IRuneS::ExportDefaultRegionRune(_) => {
+      panic!("implement: humanize_rune ExportDefaultRegionRune")
+    }
     IRuneS::ArraySizeImplicitRune(_) => panic!("implement: humanize_rune ArraySizeImplicitRune"),
-    IRuneS::ArrayMutabilityImplicitRune(_) => panic!("implement: humanize_rune ArrayMutabilityImplicitRune"),
+    IRuneS::ArrayMutabilityImplicitRune(_) => {
+      panic!("implement: humanize_rune ArrayMutabilityImplicitRune")
+    }
     IRuneS::InterfaceNameRune(_) => panic!("implement: humanize_rune InterfaceNameRune"),
     IRuneS::LetImplicitRune(_) => panic!("implement: humanize_rune LetImplicitRune"),
-    IRuneS::ExplicitTemplateArgRune(_) => panic!("implement: humanize_rune ExplicitTemplateArgRune"),
+    IRuneS::ExplicitTemplateArgRune(_) => {
+      panic!("implement: humanize_rune ExplicitTemplateArgRune")
+    }
     IRuneS::FunctorParamRuneName(_) => panic!("implement: humanize_rune FunctorParamRuneName"),
     IRuneS::FunctorReturnRuneName(_) => panic!("implement: humanize_rune FunctorReturnRuneName"),
   }
 }
 
-pub fn humanize_templata_type(
-  tyype: &ITemplataType,
-) -> String {
+pub fn humanize_templata_type(tyype: &ITemplataType) -> String {
   match tyype {
     ITemplataType::KindTemplataType(_) => "Kind".to_string(),
     ITemplataType::FunctionTemplataType(_) => "Func".to_string(),
@@ -228,39 +289,75 @@ pub fn humanize_templata_type(
     ITemplataType::RegionTemplataType(_) => "Region".to_string(),
     ITemplataType::BooleanTemplataType(_) => "Bool".to_string(),
     ITemplataType::StringTemplataType(_) => "Str".to_string(),
-    ITemplataType::PackTemplataType(p) => "Pack<".to_string() + &humanize_templata_type(p.element_type) + ">",
+    ITemplataType::PackTemplataType(p) => {
+      "Pack<".to_string() + &humanize_templata_type(p.element_type) + ">"
+    }
     ITemplataType::PrototypeTemplataType(_) => "Prot".to_string(),
-    ITemplataType::TemplateTemplataType(t) => humanize_templata_type(t.return_type) + "<" + &t.param_types.iter().map(humanize_templata_type).collect::<Vec<_>>().join(",") + ">",
-    ITemplataType::ImplTemplataType(_) => panic!("implement: humanize_templata_type ImplTemplataType"),
+    ITemplataType::TemplateTemplataType(t) => {
+      humanize_templata_type(t.return_type)
+        + "<"
+        + &t.param_types.iter().map(humanize_templata_type).collect::<Vec<_>>().join(",")
+        + ">"
+    }
+    ITemplataType::ImplTemplataType(_) => {
+      panic!("implement: humanize_templata_type ImplTemplataType")
+    }
   }
 }
 
-pub fn humanize_rule<'s>(
-  rule: &IRulexSR<'s>,
-) -> String {
+pub fn humanize_rule<'s>(rule: &IRulexSR<'s>) -> String {
   match rule {
     IRulexSR::BorrowRef(r) => "&".to_string() + &humanize_rune(r.inner_rune.rune),
     IRulexSR::WeakRef(r) => "weak ".to_string() + &humanize_rune(r.inner_rune.rune),
     IRulexSR::OwnRef(r) => "own ".to_string() + &humanize_rune(r.inner_rune.rune),
-    IRulexSR::Call(r) => humanize_rune(r.result_rune.rune) + " = " + &humanize_rune(r.template_rune.rune) + "<" + &r.args.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ") + ">",
+    IRulexSR::Call(r) => {
+      humanize_rune(r.result_rune.rune)
+        + " = "
+        + &humanize_rune(r.template_rune.rune)
+        + "<"
+        + &r.args.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ")
+        + ">"
+    }
     // Joined rather than asserted-single: a humanizer runs while reporting a failure, so it must
     // render whatever it is handed rather than adding a second failure on top of the first.
-    IRulexSR::Lookup(r) => humanize_rune(r.rune.rune) + " = \""
+    IRulexSR::Lookup(r) => {
+      humanize_rune(r.rune.rune)
+        + " = \""
         + &r.parts.iter().map(|p| humanize_imprecise_name(*p)).collect::<Vec<_>>().join(".")
-        + "\"",
+        + "\""
+    }
     IRulexSR::Literal(r) => humanize_rune(r.rune.rune) + " = " + &humanize_literal(&r.literal),
     IRulexSR::Equals(r) => humanize_rune(r.left.rune) + " = " + &humanize_rune(r.right.rune),
     IRulexSR::RuneParentEnvLookup(r) => "inherit ".to_string() + &humanize_rune(r.rune.rune),
-    IRulexSR::KindList(r) => humanize_rune(r.result_rune.rune) + " = (" + &r.members.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ") + ")",
-    IRulexSR::Resolve(r) => humanize_rune(r.result_rune.rune) + " = resolve-func " + r.name.0 + "(" + &humanize_rune(r.params_list_rune.rune) + ")" + &humanize_rune(r.return_rune.rune),
-    IRulexSR::CallSiteFunc(r) => humanize_rune(r.prototype_rune.rune) + " = callsite-func " + r.name.0 + "(" + &humanize_rune(r.params_list_rune.rune) + ")" + &humanize_rune(r.return_rune.rune),
+    IRulexSR::KindList(r) => {
+      humanize_rune(r.result_rune.rune)
+        + " = ("
+        + &r.members.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ")
+        + ")"
+    }
+    IRulexSR::Resolve(r) => {
+      humanize_rune(r.result_rune.rune)
+        + " = resolve-func "
+        + r.name.0
+        + "("
+        + &humanize_rune(r.params_list_rune.rune)
+        + ")"
+        + &humanize_rune(r.return_rune.rune)
+    }
+    IRulexSR::CallSiteFunc(r) => {
+      humanize_rune(r.prototype_rune.rune)
+        + " = callsite-func "
+        + r.name.0
+        + "("
+        + &humanize_rune(r.params_list_rune.rune)
+        + ")"
+        + &humanize_rune(r.return_rune.rune)
+    }
     IRulexSR::DefinitionFunc(_) => panic!("implement: humanize_rule DefinitionFunc"),
   }
 }
 
-fn humanize_literal(
-  literal: &ILiteralSL,
-) -> String {
+fn humanize_literal(literal: &ILiteralSL) -> String {
   match literal {
     ILiteralSL::IntLiteral(x) => x.value.to_string(),
     ILiteralSL::StringLiteral(_) => {
@@ -271,8 +368,6 @@ fn humanize_literal(
   }
 }
 
-fn _humanize_region<'s>(
-  _r: &RuneUsage<'s>,
-) -> String {
+fn _humanize_region<'s>(_r: &RuneUsage<'s>) -> String {
   panic!("Unimplemented humanize_region");
 }

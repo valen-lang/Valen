@@ -2,12 +2,10 @@ use super::ast::NameP;
 use super::templex::ITemplexPT;
 use crate::lexing::RangeL;
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AbstractP {
   pub range: RangeL,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct ParameterP<'p> {
@@ -18,13 +16,11 @@ pub struct ParameterP<'p> {
   pub pattern: Option<PatternPP<'p>>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DestinationLocalP<'p> {
   pub decl: INameDeclarationP<'p>,
   pub mutate: Option<RangeL>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct PatternPP<'p> {
@@ -34,13 +30,11 @@ pub struct PatternPP<'p> {
   pub destructure: Option<DestructureP<'p>>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DestructureP<'p> {
   pub range: RangeL,
   pub patterns: &'p [PatternPP<'p>],
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum INameDeclarationP<'p> {
@@ -63,6 +57,3 @@ impl INameDeclarationP<'_> {
     }
   }
 }
-
-
-

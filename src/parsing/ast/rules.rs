@@ -2,7 +2,6 @@ use super::ast::NameP;
 use super::templex::ITemplexPT;
 use crate::lexing::RangeL;
 
-
 #[derive(Debug, PartialEq)]
 pub enum IRulexPR<'p> {
   Equals(EqualsPR<'p>),
@@ -14,7 +13,6 @@ pub enum IRulexPR<'p> {
   Pack(PackPR<'p>),
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct EqualsPR<'p> {
   pub range: RangeL,
@@ -22,13 +20,11 @@ pub struct EqualsPR<'p> {
   pub right: &'p IRulexPR<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct OrPR<'p> {
   pub range: RangeL,
   pub possibilities: &'p [IRulexPR<'p>],
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct DotPR<'p> {
@@ -37,14 +33,12 @@ pub struct DotPR<'p> {
   pub member_name: NameP<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct TypedPR<'p> {
   pub range: RangeL,
   pub rune: Option<NameP<'p>>,
   pub tyype: ITypePR,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct BuiltinCallPR<'p> {
@@ -53,13 +47,11 @@ pub struct BuiltinCallPR<'p> {
   pub args: &'p [IRulexPR<'p>],
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct PackPR<'p> {
   pub range: RangeL,
   pub elements: &'p [IRulexPR<'p>],
 }
-
 
 impl IRulexPR<'_> {
   pub fn range(&self) -> RangeL {
@@ -84,31 +76,32 @@ pub enum ITypePR {
   CitizenTemplateType,
 }
 
-
-
 pub fn get_ordered_rune_declarations_from_rulexes_with_duplicates<'p>(
   rulexes: &[IRulexPR<'p>],
 ) -> Vec<NameP<'p>> {
-  rulexes
-    .iter()
-    .flat_map(get_ordered_rune_declarations_from_rulex_with_duplicates)
-    .collect()
+  rulexes.iter().flat_map(get_ordered_rune_declarations_from_rulex_with_duplicates).collect()
 }
 
 pub fn get_ordered_rune_declarations_from_rulex_with_duplicates<'p>(
   rulex: &IRulexPR<'p>,
 ) -> Vec<NameP<'p>> {
   match rulex {
-    IRulexPR::Pack(pack) => get_ordered_rune_declarations_from_rulexes_with_duplicates(pack.elements),
+    IRulexPR::Pack(pack) => {
+      get_ordered_rune_declarations_from_rulexes_with_duplicates(pack.elements)
+    }
     IRulexPR::Equals(equals) => {
       let mut out = get_ordered_rune_declarations_from_rulex_with_duplicates(equals.left);
       out.extend(get_ordered_rune_declarations_from_rulex_with_duplicates(equals.right));
       out
     }
-    IRulexPR::Or(or) => get_ordered_rune_declarations_from_rulexes_with_duplicates(or.possibilities),
+    IRulexPR::Or(or) => {
+      get_ordered_rune_declarations_from_rulexes_with_duplicates(or.possibilities)
+    }
     IRulexPR::Dot(dot) => get_ordered_rune_declarations_from_rulex_with_duplicates(dot.container),
     IRulexPR::Typed(typed) => typed.rune.iter().cloned().collect(),
-    IRulexPR::Templex(templex) => get_ordered_rune_declarations_from_templex_with_duplicates(templex),
+    IRulexPR::Templex(templex) => {
+      get_ordered_rune_declarations_from_templex_with_duplicates(templex)
+    }
     IRulexPR::BuiltinCall(builtin_call) => {
       get_ordered_rune_declarations_from_rulexes_with_duplicates(builtin_call.args)
     }
@@ -141,12 +134,10 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
     | ITemplexPT::Int(_)
     | ITemplexPT::Bool(_)
     | ITemplexPT::NameOrRune(_)
-    | ITemplexPT::AnonymousRune(_) => {
-      Vec::new()
+    | ITemplexPT::AnonymousRune(_) => Vec::new(),
+    ITemplexPT::RegionRune(_) => {
+      panic!("PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_REGION_RUNE_UNIMPLEMENTED_MATCH_ARM")
     }
-    ITemplexPT::RegionRune(_) => panic!(
-      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_REGION_RUNE_UNIMPLEMENTED_MATCH_ARM"
-    ),
     ITemplexPT::TypedRune(typed_rune) => vec![typed_rune.rune.clone()],
     ITemplexPT::Call(call) => {
       let mut templexes: Vec<&'p ITemplexPT<'p>> = vec![call.template];
@@ -154,19 +145,12 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
     }
     ITemplexPT::Function(function) => {
-      let mutability_refs: Vec<&'p ITemplexPT<'p>> = function
-        .mutability
-        .iter()
-        .copied()
-        .collect();
-      let mut out =
-        get_ordered_rune_declarations_from_templexes_with_duplicates(&mutability_refs);
+      let mutability_refs: Vec<&'p ITemplexPT<'p>> = function.mutability.iter().copied().collect();
+      let mut out = get_ordered_rune_declarations_from_templexes_with_duplicates(&mutability_refs);
       out.extend(get_ordered_rune_declarations_from_templexes_with_duplicates(
         function.parameters.members,
       ));
-      out.extend(get_ordered_rune_declarations_from_templex_with_duplicates(
-        function.return_type,
-      ));
+      out.extend(get_ordered_rune_declarations_from_templex_with_duplicates(function.return_type));
       out
     }
     ITemplexPT::Func(func) => {
@@ -174,14 +158,15 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
       templexes.push(func.return_type);
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
     }
-    ITemplexPT::Pack(pack) => get_ordered_rune_declarations_from_templexes_with_duplicates(pack.members),
+    ITemplexPT::Pack(pack) => {
+      get_ordered_rune_declarations_from_templexes_with_duplicates(pack.members)
+    }
     ITemplexPT::RuntimeSizedArray(runtime_sized_array) => {
-      let templexes: Vec<&'p ITemplexPT<'p>> = vec![
-        runtime_sized_array.element,
-      ];
+      let templexes: Vec<&'p ITemplexPT<'p>> = vec![runtime_sized_array.element];
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
     }
-    ITemplexPT::Tuple(tuple) => get_ordered_rune_declarations_from_templexes_with_duplicates(tuple.elements),
+    ITemplexPT::Tuple(tuple) => {
+      get_ordered_rune_declarations_from_templexes_with_duplicates(tuple.elements)
+    }
   }
 }
-

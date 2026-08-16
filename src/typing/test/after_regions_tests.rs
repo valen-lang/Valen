@@ -1,28 +1,20 @@
-use bumpalo::Bump;
-use crate::interner::StrI;
-use crate::keywords::Keywords;
+use crate::builtins::builtins::{
+  builtin_source_for_as, builtin_source_for_panicutils, empty_v_builtins_stub,
+};
 use crate::code_source::{CodeSource, Source};
-use crate::parse_arena::ParseArena;
-use crate::scout_arena::ScoutArena;
-use crate::typing::ast::ast::PrototypeT;
-use crate::typing::ast::expressions::FunctionCallTE;
-use crate::typing::names::names::{FunctionNameT, FunctionTemplateNameT, IdT, INameT, IStructTemplateNameT, StructNameT, StructTemplateNameT};
-use crate::typing::templata::templata::{KindTemplataT, ITemplataT};
-use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
-use crate::typing::test::traverse::NodeRefT;
-use crate::typing::types::types::{KindT, StructTT};
-use crate::typing::typing_interner::TypingInterner;
-use crate::tests::tests::new_test_code_map;
-use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::utils::fx::HashMap;
-use crate::builtins::builtins::{builtin_source_for_as, builtin_source_for_panicutils, empty_v_builtins_stub};
 use crate::collect_only_tnode;
 use crate::collect_where_tnode;
+use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::postparsing::names::CodeRuneS;
 use crate::postparsing::names::IRuneS;
+use crate::scout_arena::ScoutArena;
+use crate::tests::tests::new_test_code_map;
 use crate::tests::tests::new_test_package_source;
+use crate::typing::ast::ast::PrototypeT;
 use crate::typing::ast::citizens::StructMemberT;
+use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::names::names::IFunctionNameT;
 use crate::typing::names::names::InterfaceNameT;
@@ -31,23 +23,36 @@ use crate::typing::names::names::KindPlaceholderNameT;
 use crate::typing::names::names::KindPlaceholderTemplateNameT;
 use crate::typing::names::names::LambdaCallFunctionNameT;
 use crate::typing::names::names::LambdaCallFunctionTemplateNameT;
+use crate::typing::names::names::{
+  FunctionNameT, FunctionTemplateNameT, INameT, IStructTemplateNameT, IdT, StructNameT,
+  StructTemplateNameT,
+};
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
+use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
+use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
+use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::InterfaceTT;
 use crate::typing::types::types::KindPlaceholderT;
+use crate::typing::types::types::{KindT, StructTT};
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::fx::HashMap;
 use crate::utils::fx::HashSet;
+use bumpalo::Bump;
 
 pub struct AfterRegionsTests {}
 
 #[test]
 fn method_call_on_generic_data() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 import v.builtins.drop.*;
 
 sealed interface IShip {
@@ -68,64 +73,71 @@ exported func main() {
   launchGeneric(&Raza(42));
 }
 ";
-    let code_source = CodeSource::new(vec![
-        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
-        new_test_code_map(&parse_arena, code),
-        Source::Fn(empty_v_builtins_stub),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
 
-    let launch_generic = coutputs.lookup_function_by_str("launchGeneric");
-    collect_only_tnode!(
-        NodeRefT::FunctionDefinition(launch_generic),
-        NodeRefT::FunctionCall(FunctionCallTE {
-            callable: PrototypeT {
-                id: IdT { local_name: INameT::Function(FunctionNameT { template: FunctionTemplateNameT { human_name: StrI("launch"), .. }, .. }), .. },
-                ..
-            },
-            ..
-        }) => Some(())
-    );
+  let launch_generic = coutputs.lookup_function_by_str("launchGeneric");
+  collect_only_tnode!(
+      NodeRefT::FunctionDefinition(launch_generic),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT { local_name: INameT::Function(FunctionNameT { template: FunctionTemplateNameT { human_name: StrI("launch"), .. }, .. }), .. },
+              ..
+          },
+          ..
+      }) => Some(())
+  );
 
-    let main = coutputs.lookup_function_by_str("main");
-    let upcasts: Vec<_> = collect_where_tnode!(
-        NodeRefT::FunctionDefinition(main),
-        NodeRefT::Upcast(u) => Some(u)
-    );
-    assert_eq!(upcasts.len(), 0);
-    collect_only_tnode!(
-        NodeRefT::FunctionDefinition(main),
-        NodeRefT::FunctionCall(FunctionCallTE {
-            callable: PrototypeT {
-                id: IdT {
-                    local_name: INameT::Function(FunctionNameT {
-                        template: FunctionTemplateNameT { human_name: StrI("launchGeneric"), .. },
-                        template_args: &[ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }), .. }), .. }, .. }) })],
-                        ..
-                    }),
-                    ..
-                },
-                ..
-            },
-            ..
-        }) => Some(())
-    );
+  let main = coutputs.lookup_function_by_str("main");
+  let upcasts: Vec<_> = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::Upcast(u) => Some(u)
+  );
+  assert_eq!(upcasts.len(), 0);
+  collect_only_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT {
+                  local_name: INameT::Function(FunctionNameT {
+                      template: FunctionTemplateNameT { human_name: StrI("launchGeneric"), .. },
+                      template_args: &[ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }), .. }), .. }, .. }) })],
+                      ..
+                  }),
+                  ..
+              },
+              ..
+          },
+          ..
+      }) => Some(())
+  );
 }
 
 // VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
 #[ignore]
 fn lambda_body_type_matches_anonymous_interface_return_type() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 interface AFunction1<P> {
   func __call(virtual this &AFunction1<P>, a P) int;
 }
@@ -133,52 +145,64 @@ exported func main() {
   arr = AFunction1<int>((_) => { 4 });
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let _coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let _coutputs = compile.expect_compiler_outputs();
 }
 
 // VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
 #[ignore]
 fn minimal_anonymous_interface_construction() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 interface AFn { func __call(virtual this &AFn); }
 exported func main() { AFn(() => { }); }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let _coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let _coutputs = compile.expect_compiler_outputs();
 }
 
 #[test]
 #[ignore = "unimplemented"]
-fn tuple_with_all_imm_fields_is_imm() { panic!("Unimplemented test: tuple_with_all_imm_fields_is_imm"); }
+fn tuple_with_all_imm_fields_is_imm() {
+  panic!("Unimplemented test: tuple_with_all_imm_fields_is_imm");
+}
 
 #[test]
 fn can_destructure_and_assemble_tuple() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    // TSUGAR: swap((5, true)).0 is &bool
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  // TSUGAR: swap((5, true)).0 is &bool
+  let code = r"
 import v.builtins.tup2.*;
 import v.builtins.drop.*;
 
@@ -191,33 +215,40 @@ exported func main() bool {
   return __copy_prim(&swap((5, true)).0);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        Source::builtin_module(&parse_arena, &parser_keywords, "tup2"),
-        Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
-        Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
-        new_test_code_map(&parse_arena, code),
-        Source::Fn(empty_v_builtins_stub),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "tup2"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
 
-    match coutputs.lookup_function_by_str("main").header.return_type {
-        KindT::Bool(_) => {}
-        other => panic!("expected Bool, got {:?}", other),
-    }
+  match coutputs.lookup_function_by_str("main").header.return_type {
+    KindT::Bool(_) => {}
+    other => panic!("expected Bool, got {:?}", other),
+  }
 }
 
 #[test]
 fn impl_rule() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 interface IShip {
   func getFuel(virtual self &IShip) int;
 }
@@ -234,48 +265,72 @@ exported func main() int {
   return genericGetFuel(&Firefly());
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let coutputs = compile.expect_compiler_outputs();
-    let generic_get_fuel = coutputs.lookup_function_by_str("genericGetFuel");
-    let template_args = IFunctionNameT::try_from(generic_get_fuel.header.id.local_name).unwrap().template_args();
-    match template_args.last().unwrap() {
-        ITemplataT::Kind(KindTemplataT { kind: KindT::KindPlaceholder(KindPlaceholderT { id: IdT { local_name: INameT::KindPlaceholder(KindPlaceholderNameT { template: KindPlaceholderTemplateNameT { index: 0, rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }), .. } }), .. }, .. }) }) => {}
-        other => panic!("expected KindTemplataT(KindPlaceholderT(T)), got {:?}", other),
-    }
-    let main = coutputs.lookup_function_by_str("main");
-    collect_only_tnode!(
-        NodeRefT::FunctionDefinition(main),
-        NodeRefT::FunctionCall(FunctionCallTE {
-            callable: PrototypeT {
-                id: IdT {
-                    local_name: INameT::Function(FunctionNameT {
-                        template: FunctionTemplateNameT { human_name: StrI("genericGetFuel"), .. },
-                        template_args: &[ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Firefly"), .. }), .. }), .. }, .. }) })],
-                        ..
-                    }),
-                    ..
-                },
-                ..
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let generic_get_fuel = coutputs.lookup_function_by_str("genericGetFuel");
+  let template_args =
+    IFunctionNameT::try_from(generic_get_fuel.header.id.local_name).unwrap().template_args();
+  match template_args.last().unwrap() {
+    ITemplataT::Kind(KindTemplataT {
+      kind:
+        KindT::KindPlaceholder(KindPlaceholderT {
+          id:
+            IdT {
+              local_name:
+                INameT::KindPlaceholder(KindPlaceholderNameT {
+                  template:
+                    KindPlaceholderTemplateNameT {
+                      index: 0,
+                      rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }),
+                      ..
+                    },
+                }),
+              ..
             },
-            ..
-        }) => Some(())
-    );
+          ..
+        }),
+    }) => {}
+    other => panic!("expected KindTemplataT(KindPlaceholderT(T)), got {:?}", other),
+  }
+  let main = coutputs.lookup_function_by_str("main");
+  collect_only_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT {
+                  local_name: INameT::Function(FunctionNameT {
+                      template: FunctionTemplateNameT { human_name: StrI("genericGetFuel"), .. },
+                      template_args: &[ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Firefly"), .. }), .. }), .. }, .. }) })],
+                      ..
+                  }),
+                  ..
+              },
+              ..
+          },
+          ..
+      }) => Some(())
+  );
 }
 
 #[test]
 fn can_downcast_interface_to_interface_through_registered_impl() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 import v.builtins.as.*;
 import v.builtins.result.*;
 import v.builtins.logic.*;
@@ -295,35 +350,42 @@ exported func main() bool {
   return tryDowncast(__pretend<ISuper>());
 }
 ";
-    let code_source = CodeSource::new(vec![
-        builtin_source_for_as(&parse_arena, &parser_keywords),
-        new_test_code_map(&parse_arena, code),
-        new_test_package_source(&parse_arena, "panicutils"),
-        new_test_package_source(&parse_arena, "printutils"),
-        new_test_package_source(&parse_arena, "castutils"),
-        Source::Fn(empty_v_builtins_stub),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![
+    builtin_source_for_as(&parse_arena, &parser_keywords),
+    new_test_code_map(&parse_arena, code),
+    new_test_package_source(&parse_arena, "panicutils"),
+    new_test_package_source(&parse_arena, "printutils"),
+    new_test_package_source(&parse_arena, "castutils"),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
 
-    match coutputs.lookup_function_by_str("tryDowncast").header.return_type {
-        KindT::Bool(_) => {}
-        other => panic!("expected Bool, got {:?}", other),
-    }
+  match coutputs.lookup_function_by_str("tryDowncast").header.return_type {
+    KindT::Bool(_) => {}
+    other => panic!("expected Bool, got {:?}", other),
+  }
 }
 
 #[test]
 #[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn test_two_instantiations_of_anonymous_param_lambda() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 import v.builtins.arith.*;
 import v.builtins.logic.*;
 
@@ -338,103 +400,126 @@ exported func main() {
   doThing(^lam, true, false);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
 
-    let lambda_funcs = coutputs.lookup_lambdas_in("main");
-    assert_eq!(lambda_funcs.len(), 2);
+  let lambda_funcs = coutputs.lookup_lambdas_in("main");
+  assert_eq!(lambda_funcs.len(), 2);
 
-    let param_type_tuples: HashSet<&[KindT]> = lambda_funcs.iter().map(|f| match f.header.id.local_name {
-        INameT::LambdaCallFunction(LambdaCallFunctionNameT { template: LambdaCallFunctionTemplateNameT { param_types, .. }, .. }) => *param_types,
-        _ => panic!("expected LambdaCallFunctionNameT"),
-    }).collect();
-    assert_eq!(param_type_tuples.len(), 2);
+  let param_type_tuples: HashSet<&[KindT]> = lambda_funcs
+    .iter()
+    .map(|f| match f.header.id.local_name {
+      INameT::LambdaCallFunction(LambdaCallFunctionNameT {
+        template: LambdaCallFunctionTemplateNameT { param_types, .. },
+        ..
+      }) => *param_types,
+      _ => panic!("expected LambdaCallFunctionNameT"),
+    })
+    .collect();
+  assert_eq!(param_type_tuples.len(), 2);
 }
 
 #[test]
 fn test_interface_default_generic_argument_in_type() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 sealed interface MyInterface<K, H Int = 5> { }
 struct MyStruct {
   x MyInterface<bool>;
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let coutputs = compile.expect_compiler_outputs();
-    let moo = coutputs.lookup_struct_by_str("MyStruct");
-    let tyype: KindT = collect_only_tnode!(
-        NodeRefT::StructDefinition(moo),
-        NodeRefT::StructMember(StructMemberT { tyype, .. }) => Some(*tyype)
-    );
-    match tyype {
-        KindT::Interface(InterfaceTT {
-            id: IdT {
-                local_name: INameT::Interface(InterfaceNameT {
-                    template: InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
-                    template_args: &[
-                        ITemplataT::Kind(KindTemplataT { kind: KindT::Bool(_) }),
-                        ITemplataT::Integer(5),
-                    ],
-                    ..
-                }),
-                ..
-            },
-            ..
-        }) => {}
-        other => panic!("expected InterfaceTT(MyInterface<bool,5>), got {:?}", other),
-    }
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let moo = coutputs.lookup_struct_by_str("MyStruct");
+  let tyype: KindT = collect_only_tnode!(
+      NodeRefT::StructDefinition(moo),
+      NodeRefT::StructMember(StructMemberT { tyype, .. }) => Some(*tyype)
+  );
+  match tyype {
+    KindT::Interface(InterfaceTT {
+      id:
+        IdT {
+          local_name:
+            INameT::Interface(InterfaceNameT {
+              template: InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
+              template_args:
+                &[ITemplataT::Kind(KindTemplataT { kind: KindT::Bool(_) }), ITemplataT::Integer(5)],
+              ..
+            }),
+          ..
+        },
+      ..
+    }) => {}
+    other => panic!("expected InterfaceTT(MyInterface<bool,5>), got {:?}", other),
+  }
 }
 
 #[test]
 fn reports_when_we_give_too_many_args() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r#"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r#"
 func moo(a int, b bool, s str) int { ^a }
 exported func main() int {
   moo(42, true, "hello", false)
 }
 "#;
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let err = compile.get_compiler_outputs().err()
-        .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
-    match &err {
-        ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
-            assert!(fff.rejected_callee_to_reason.len() == 1);
-            match fff.rejected_callee_to_reason[0].1 {
-                IFindFunctionFailureReason::WrongNumberOfArguments { supplied: 4, expected: 3 } => {}
-                _ => panic!("expected WrongNumberOfArguments(4, 3)"),
-            }
-        }
-        _ => panic!("expected CouldntFindFunctionToCallT"),
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
+  match &err {
+    ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
+      assert!(fff.rejected_callee_to_reason.len() == 1);
+      match fff.rejected_callee_to_reason[0].1 {
+        IFindFunctionFailureReason::WrongNumberOfArguments { supplied: 4, expected: 3 } => {}
+        _ => panic!("expected WrongNumberOfArguments(4, 3)"),
+      }
     }
-    assert_humanized_eq(
-        &humanize_compile_error(&mut compile, err),
-        r##"At test:0.vale:3:1:
+    _ => panic!("expected CouldntFindFunctionToCallT"),
+  }
+  assert_humanized_eq(
+    &humanize_compile_error(&mut compile, err),
+    r##"At test:0.vale:3:1:
 exported func main() int {
 At test:0.vale:4:3:
   moo(42, true, "hello", false)
@@ -446,9 +531,8 @@ Number of params doesn't match! Supplied 4 but function takes 3
 
 
 "##,
-    );
+  );
 }
-
 
 // Canonical minimal repro for @BRRZ. The generic function `callAndReturn` has a
 // bound `func(&G)E` where E is an identifying generic rune appearing only in the
@@ -459,14 +543,14 @@ Number of params doesn't match! Supplied 4 but function takes 3
 #[test]
 #[ignore]
 fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 func callAndReturn<E, G>(g &G) E
 where func(&G)E {
   return g();
@@ -477,14 +561,18 @@ exported func main() int {
   return callAndReturn(&f);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let _coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let _coutputs = compile.expect_compiler_outputs();
 }
-
 
 // Edge case for @BRRZ: the lambda body itself invokes another generic function
 // with its own bound. Exercises stamping-during-solve recursing into a nested
@@ -493,14 +581,14 @@ exported func main() int {
 #[test]
 #[ignore]
 fn brrz_nested_bound_return_inference_through_a_lambda_body() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 func callAndReturn<E, G>(g &G) E
 where func(&G)E {
   return g();
@@ -512,14 +600,18 @@ exported func main() int {
   return callAndReturn(&g);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let _coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let _coutputs = compile.expect_compiler_outputs();
 }
-
 
 // Edge case for @BRRZ: two bounds on the same function, each resolving to a
 // different lambda. Exercises multiple ResolveSR rules firing in the same solve
@@ -528,14 +620,14 @@ exported func main() int {
 #[test]
 #[ignore]
 fn brrz_two_bound_return_inferences_in_the_same_call() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 func applyTwo<E, F, G, H>(g &G, h &H) E
 where func(&G)E, func(&H)F {
   return g();
@@ -547,28 +639,32 @@ exported func main() int {
   return applyTwo(&a, &b);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let _coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let _coutputs = compile.expect_compiler_outputs();
 }
-
 
 // Depends on IFunction1, and maybe Generic interface anonymous subclass
 // VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
 #[ignore]
 fn basic_ifunction1_anonymous_subclass() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
 import ifunction.ifunction1.*;
 
 exported func main() int {
@@ -576,12 +672,18 @@ exported func main() int {
   return (^f)(7);
 }
 ";
-    let code_source = CodeSource::new(vec![
-        new_test_code_map(&parse_arena, code),
-        new_test_package_source(&parse_arena, "ifunction.ifunction1"),
-    ]);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &code_source);
-    let _coutputs = compile.expect_compiler_outputs();
+  let code_source = CodeSource::new(vec![
+    new_test_code_map(&parse_arena, code),
+    new_test_package_source(&parse_arena, "ifunction.ifunction1"),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let _coutputs = compile.expect_compiler_outputs();
 }
-

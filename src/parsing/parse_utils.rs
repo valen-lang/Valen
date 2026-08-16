@@ -1,15 +1,14 @@
-use crate::StrI;
 use crate::lexing::ast::INodeLE;
 use crate::lexing::ast::INodeLEEnum;
-use crate::lexing::ast::SymbolLE;
-use crate::lexing::WordLE;
 use crate::lexing::ast::RangeL;
+use crate::lexing::ast::SymbolLE;
 use crate::lexing::errors::ParseError;
+use crate::lexing::WordLE;
 use crate::parsing::ast::{NameP, RegionRunePT};
 use crate::parsing::ScrambleIterator;
+use crate::StrI;
 
 type ParseResult<T> = Result<T, ParseError>;
-
 
 pub fn parse_region<'p>(
   original_iter: &mut ScrambleIterator<'p, '_>,
@@ -55,7 +54,8 @@ where
   while continue_while(&scouting_iter) {
     match scouting_iter.peek3_cloned() {
       (Some(prev), Some(INodeLEEnum::Symbol(SymbolLE(range, '='))), Some(next)) => {
-        let surrounded_by_spaces = prev.range().end() < range.begin() && range.end() < next.range().begin();
+        let surrounded_by_spaces =
+          prev.range().end() < range.begin() && range.end() < next.range().begin();
         if surrounded_by_spaces {
           // We'll return this iterator for the things that come before the =
           let mut before_iter = iter.clone();
@@ -76,7 +76,6 @@ where
 
   None
 }
-
 
 /// Try to skip past a keyword, returning the portion before it
 pub fn try_skip_past_keyword_while<'p, 's, F>(
@@ -109,5 +108,3 @@ where
 
   None
 }
-
-

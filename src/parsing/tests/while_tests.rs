@@ -1,10 +1,9 @@
-
-use bumpalo::Bump;
 use crate::cast;
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
+use bumpalo::Bump;
 
 #[test]
 fn simple_while_loop() {

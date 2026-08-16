@@ -300,5 +300,3 @@ impl ParseError {
     }
   }
 }
-
-

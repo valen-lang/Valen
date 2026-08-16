@@ -2,10 +2,9 @@ use super::expressions::BlockPE;
 use super::pattern::ParameterP;
 use super::rules::{IRulexPR, ITypePR};
 use super::templex::{ITemplexPT, RegionRunePT};
-use crate::StrI;
 use crate::lexing::RangeL;
 use crate::utils::code_hierarchy::FileCoordinate;
-
+use crate::StrI;
 
 /// Something that exists in the source code. An Option[UnitP] is better than a boolean
 /// because it also contains the range it was found.
@@ -13,7 +12,6 @@ use crate::utils::code_hierarchy::FileCoordinate;
 pub struct UnitP {
   pub range: RangeL,
 }
-
 
 /// Name in source code
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -34,7 +32,6 @@ impl<'p> NameP<'p> {
   }
 }
 
-
 /// Parsed file
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FileP<'p> {
@@ -42,7 +39,6 @@ pub struct FileP<'p> {
   pub comments_ranges: &'p [RangeL],
   pub denizens: &'p [IDenizenP<'p>],
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum IDenizenP<'p> {
@@ -53,7 +49,6 @@ pub enum IDenizenP<'p> {
   TopLevelExportAs(ExportAsP<'p>),
   TopLevelImport(ImportP<'p>),
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct ImplP<'p> {
@@ -66,14 +61,12 @@ pub struct ImplP<'p> {
   pub attributes: &'p [IAttributeP<'p>],
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct ExportAsP<'p> {
   pub range: RangeL,
   pub struct_: ITemplexPT<'p>,
   pub exported_name: NameP<'p>,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ImportP<'p> {
@@ -82,7 +75,6 @@ pub struct ImportP<'p> {
   pub package_steps: &'p [NameP<'p>],
   pub importee_name: NameP<'p>,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WeakableAttributeP {
@@ -93,7 +85,6 @@ pub struct WeakableAttributeP {
 pub struct SealedAttributeP {
   pub range: RangeL,
 }
-
 
 impl IRuneAttributeP {
   pub fn range(&self) -> RangeL {
@@ -113,7 +104,6 @@ pub enum IMacroInclusionP {
   CallMacro,
   DontCallMacro,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MacroCallP<'p> {
@@ -135,13 +125,11 @@ pub struct StructP<'p> {
   pub members: StructMembersP<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct StructMembersP<'p> {
   pub range: RangeL,
   pub contents: &'p [IStructContent<'p>],
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum IStructContent<'p> {
@@ -161,7 +149,6 @@ pub struct VariadicStructMemberP<'p> {
   pub tyype: ITemplexPT<'p>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct InterfaceP<'p> {
   pub range: RangeL,
@@ -175,7 +162,6 @@ pub struct InterfaceP<'p> {
   pub members: &'p [FunctionP<'p>],
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IAttributeP<'p> {
   WeakableAttribute(WeakableAttributeP),
@@ -186,7 +172,6 @@ pub enum IAttributeP<'p> {
   BuiltinAttribute(BuiltinAttributeP<'p>),
   ExportAttribute(ExportAttributeP),
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AbstractAttributeP {
@@ -209,8 +194,6 @@ pub struct ExportAttributeP {
   pub range: RangeL,
 }
 
-
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IRuneAttributeP {
   ImmutableRuneAttribute(RangeL),
@@ -220,7 +203,6 @@ pub enum IRuneAttributeP {
   ArenaRuneAttribute(RangeL),
   BumpRuneAttribute(RangeL),
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct GenericParameterP<'p> {
@@ -232,13 +214,11 @@ pub struct GenericParameterP<'p> {
   pub maybe_default: Option<ITemplexPT<'p>>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParameterTypeP {
   pub range: RangeL,
   pub tyype: ITypePR,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParametersP<'p> {
@@ -246,20 +226,17 @@ pub struct GenericParametersP<'p> {
   pub params: &'p [GenericParameterP<'p>],
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TemplateRulesP<'p> {
   pub range: RangeL,
   pub rules: &'p [IRulexPR<'p>],
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ParamsP<'p> {
   pub range: RangeL,
   pub params: &'p [ParameterP<'p>],
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionP<'p> {
@@ -268,13 +245,11 @@ pub struct FunctionP<'p> {
   pub body: Option<&'p BlockPE<'p>>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct FunctionReturnP<'p> {
   pub range: RangeL,
   pub ret_type: Option<ITemplexPT<'p>>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionHeaderP<'p> {
@@ -288,13 +263,11 @@ pub struct FunctionHeaderP<'p> {
   pub ret: FunctionReturnP<'p>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SharednessP {
   Single,
   Shared,
 }
-
 
 /// The load intent for a value-level use — how the scout should interpret
 /// identifier occurrences. The prefix expression variants (Move / Borrow /
@@ -307,6 +280,3 @@ pub enum LoadAsP {
   LoadAsWeak,
   Use,
 }
-
-
-

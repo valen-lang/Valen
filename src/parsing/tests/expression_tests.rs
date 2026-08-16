@@ -1,13 +1,12 @@
 // cargo test --manifest-path Cargo.toml --lib parsing::tests::expression_tests
 
 use crate::interner::StrI;
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 use bumpalo::Bump;
-
 
 #[test]
 fn simple_int() {
@@ -280,13 +279,15 @@ fn double_borrow_expression() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "&&x");
   match &expr {
     IExpressionPE::Borrow(BorrowPE {
-      inner: IExpressionPE::Borrow(BorrowPE {
-        inner: IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-          template_args: None,
+      inner:
+        IExpressionPE::Borrow(BorrowPE {
+          inner:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+              template_args: None,
+            }),
+          ..
         }),
-        ..
-      }),
       ..
     }) => {}
     _ => panic!("expected &&x → nested Borrow(Borrow(x)) structure"),
@@ -301,10 +302,11 @@ fn weak_expression() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "weak x");
   match &expr {
     IExpressionPE::Weak(WeakPE {
-      inner: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-        template_args: None,
-      }),
+      inner:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
       ..
     }) => {}
     _ => panic!("expected weak x → Weak(x) structure"),
@@ -415,8 +417,7 @@ fn templated_function_call() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let expr =
-    compile_expression_expect(&parse_arena, &keywords, "toArray<T>( &result)");
+  let expr = compile_expression_expect(&parse_arena, &keywords, "toArray<T>( &result)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
       callable_expr:
@@ -449,8 +450,7 @@ fn templated_method_call() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let expr =
-    compile_expression_expect(&parse_arena, &keywords, "result.toArray <T> ()");
+  let expr = compile_expression_expect(&parse_arena, &keywords, "result.toArray <T> ()");
   match &expr {
     IExpressionPE::MethodCall(MethodCallPE {
       subject_expr:
@@ -561,13 +561,15 @@ fn template_calling() {
     let expr = compile_expression_expect(&parse_arena, &keywords, "MyNone< int >()");
     match &expr {
       IExpressionPE::FunctionCall(FunctionCallPE {
-        callable_expr: IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("MyNone"))),
-          template_args: Some(TemplateArgsP {
-            args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..],
-            ..
+        callable_expr:
+          IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("MyNone"))),
+            template_args:
+              Some(TemplateArgsP {
+                args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..],
+                ..
+              }),
           }),
-        }),
         arg_exprs: [],
         ..
       }) => {}
@@ -576,25 +578,28 @@ fn template_calling() {
   }
 
   {
-    let expr =
-      compile_expression_expect(&parse_arena, &keywords, "MySome< MyNone <int> >()");
+    let expr = compile_expression_expect(&parse_arena, &keywords, "MySome< MyNone <int> >()");
     match &expr {
       IExpressionPE::FunctionCall(FunctionCallPE {
-        callable_expr: IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("MySome"))),
-          template_args: Some(TemplateArgsP {
-            args: [ITemplexPT::Call(CallPT {
-              template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyNone")), .. }),
-              args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..],
-              ..
-            }), ..],
-            ..
+        callable_expr:
+          IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("MySome"))),
+            template_args:
+              Some(TemplateArgsP {
+                args:
+                  [ITemplexPT::Call(CallPT {
+                    template:
+                      ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyNone")), .. }),
+                    args:
+                      [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..],
+                    ..
+                  }), ..],
+                ..
+              }),
           }),
-        }),
         arg_exprs: [],
         ..
-      }) =>
-      {}
+      }) => {}
       _ => panic!("expected MySome<MyNone<int>>() structure"),
     }
   }
@@ -628,10 +633,11 @@ fn indexing() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "arr [4]");
   match &expr {
     IExpressionPE::BraceCall(BraceCallPE {
-      subject_expr: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("arr"))),
-        template_args: None,
-      }),
+      subject_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("arr"))),
+          template_args: None,
+        }),
       arg_exprs: [IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), ..],
       ..
     }) => {}
@@ -647,32 +653,40 @@ fn single_arg_brace_lambda() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "x => { x }");
   match &expr {
     IExpressionPE::Lambda(LambdaPE {
-      function: FunctionP {
-        header: FunctionHeaderP {
-          params: Some(ParamsP {
-            params: [ParameterP {
-              pattern: Some(PatternPP {
-                destination: Some(DestinationLocalP {
-                  decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+      function:
+        FunctionP {
+          header:
+            FunctionHeaderP {
+              params:
+                Some(ParamsP {
+                  params:
+                    [ParameterP {
+                      pattern:
+                        Some(PatternPP {
+                          destination:
+                            Some(DestinationLocalP {
+                              decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                              ..
+                            }),
+                          ..
+                        }),
+                      ..
+                    }, ..],
                   ..
                 }),
-                ..
-              }),
               ..
-            }, ..],
-            ..
-          }),
+            },
+          body:
+            Some(BlockPE {
+              inner:
+                IExpressionPE::Lookup(LookupPE {
+                  name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+                  template_args: None,
+                }),
+              ..
+            }),
           ..
         },
-        body: Some(BlockPE {
-          inner: IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-            template_args: None,
-          }),
-          ..
-        }),
-        ..
-      },
       ..
     }) => {}
     _ => panic!("expected x => {{ x }} structure"),
@@ -687,32 +701,40 @@ fn single_arg_no_brace_lambda() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "x => x");
   match &expr {
     IExpressionPE::Lambda(LambdaPE {
-      function: FunctionP {
-        header: FunctionHeaderP {
-          params: Some(ParamsP {
-            params: [ParameterP {
-              pattern: Some(PatternPP {
-                destination: Some(DestinationLocalP {
-                  decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+      function:
+        FunctionP {
+          header:
+            FunctionHeaderP {
+              params:
+                Some(ParamsP {
+                  params:
+                    [ParameterP {
+                      pattern:
+                        Some(PatternPP {
+                          destination:
+                            Some(DestinationLocalP {
+                              decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                              ..
+                            }),
+                          ..
+                        }),
+                      ..
+                    }, ..],
                   ..
                 }),
-                ..
-              }),
               ..
-            }, ..],
-            ..
-          }),
+            },
+          body:
+            Some(BlockPE {
+              inner:
+                IExpressionPE::Lookup(LookupPE {
+                  name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+                  template_args: None,
+                }),
+              ..
+            }),
           ..
         },
-        body: Some(BlockPE {
-          inner: IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-            template_args: None,
-          }),
-          ..
-        }),
-        ..
-      },
       ..
     }) => {}
     _ => panic!("expected x => x structure"),
@@ -727,33 +749,45 @@ fn single_arg_typed_brace_lambda() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "(x int) => { x }");
   match &expr {
     IExpressionPE::Lambda(LambdaPE {
-      function: FunctionP {
-        header: FunctionHeaderP {
-          params: Some(ParamsP {
-            params: [ParameterP {
-              pattern: Some(PatternPP {
-                destination: Some(DestinationLocalP {
-                  decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+      function:
+        FunctionP {
+          header:
+            FunctionHeaderP {
+              params:
+                Some(ParamsP {
+                  params:
+                    [ParameterP {
+                      pattern:
+                        Some(PatternPP {
+                          destination:
+                            Some(DestinationLocalP {
+                              decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                              ..
+                            }),
+                          templex:
+                            Some(ITemplexPT::NameOrRune(NameOrRunePT {
+                              name: NameP(_, StrI("int")),
+                              ..
+                            })),
+                          ..
+                        }),
+                      ..
+                    }, ..],
                   ..
                 }),
-                templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. })),
-                ..
-              }),
               ..
-            }, ..],
-            ..
-          }),
+            },
+          body:
+            Some(BlockPE {
+              inner:
+                IExpressionPE::Lookup(LookupPE {
+                  name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+                  template_args: None,
+                }),
+              ..
+            }),
           ..
         },
-        body: Some(BlockPE {
-          inner: IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-            template_args: None,
-          }),
-          ..
-        }),
-        ..
-      },
       ..
     }) => {}
     _ => panic!("expected (x int) => {{ x }} structure"),
@@ -768,11 +802,12 @@ fn argless_lambda() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "{_}");
   match &expr {
     IExpressionPE::Lambda(LambdaPE {
-      function: FunctionP {
-        header: FunctionHeaderP { params: None, ret: FunctionReturnP { ret_type: None, .. }, .. },
-        body: Some(BlockPE { inner: IExpressionPE::MagicParamLookup(_), .. }),
-        ..
-      },
+      function:
+        FunctionP {
+          header: FunctionHeaderP { params: None, ret: FunctionReturnP { ret_type: None, .. }, .. },
+          body: Some(BlockPE { inner: IExpressionPE::MagicParamLookup(_), .. }),
+          ..
+        },
       ..
     }) => {}
     _ => panic!("expected {{_}} structure"),
@@ -787,44 +822,51 @@ fn multi_arg_typed_brace_lambda() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "(x, y) => x");
   match &expr {
     IExpressionPE::Lambda(LambdaPE {
-      function: FunctionP {
-        header: FunctionHeaderP {
-          params: Some(ParamsP {
-            params: [
-              ParameterP {
-                pattern: Some(PatternPP {
-                  destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
-                    ..
-                  }),
+      function:
+        FunctionP {
+          header:
+            FunctionHeaderP {
+              params:
+                Some(ParamsP {
+                  params:
+                    [ParameterP {
+                      pattern:
+                        Some(PatternPP {
+                          destination:
+                            Some(DestinationLocalP {
+                              decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                              ..
+                            }),
+                          ..
+                        }),
+                      ..
+                    }, ParameterP {
+                      pattern:
+                        Some(PatternPP {
+                          destination:
+                            Some(DestinationLocalP {
+                              decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("y"))),
+                              ..
+                            }),
+                          ..
+                        }),
+                      ..
+                    }],
                   ..
                 }),
-                ..
-              },
-              ParameterP {
-                pattern: Some(PatternPP {
-                  destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("y"))),
-                    ..
-                  }),
-                  ..
+              ..
+            },
+          body:
+            Some(BlockPE {
+              inner:
+                IExpressionPE::Lookup(LookupPE {
+                  name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+                  template_args: None,
                 }),
-                ..
-              },
-            ],
-            ..
-          }),
+              ..
+            }),
           ..
         },
-        body: Some(BlockPE {
-          inner: IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-            template_args: None,
-          }),
-          ..
-        }),
-        ..
-      },
       ..
     }) => {}
     _ => panic!("expected (x, y) => x structure"),
@@ -839,49 +881,59 @@ fn destructuring_lambda() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "([x, y]) => x");
   match &expr {
     IExpressionPE::Lambda(LambdaPE {
-      function: FunctionP {
-        header: FunctionHeaderP {
-          params: Some(ParamsP {
-            params: [ParameterP {
-              pattern: Some(PatternPP {
-                destination: None,
-                templex: None,
-                destructure: Some(DestructureP {
-                  patterns: [
-                    PatternPP {
-                      destination: Some(DestinationLocalP {
-                        decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
-                        ..
-                      }),
+      function:
+        FunctionP {
+          header:
+            FunctionHeaderP {
+              params:
+                Some(ParamsP {
+                  params:
+                    [ParameterP {
+                      pattern:
+                        Some(PatternPP {
+                          destination: None,
+                          templex: None,
+                          destructure:
+                            Some(DestructureP {
+                              patterns:
+                                [PatternPP {
+                                  destination:
+                                    Some(DestinationLocalP {
+                                      decl:
+                                        INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                                      ..
+                                    }),
+                                  ..
+                                }, PatternPP {
+                                  destination:
+                                    Some(DestinationLocalP {
+                                      decl:
+                                        INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("y"))),
+                                      ..
+                                    }),
+                                  ..
+                                }],
+                              ..
+                            }),
+                          ..
+                        }),
                       ..
-                    },
-                    PatternPP {
-                      destination: Some(DestinationLocalP {
-                        decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("y"))),
-                        ..
-                      }),
-                      ..
-                    },
-                  ],
+                    }, ..],
                   ..
                 }),
-                ..
-              }),
               ..
-            }, ..],
-            ..
-          }),
+            },
+          body:
+            Some(BlockPE {
+              inner:
+                IExpressionPE::Lookup(LookupPE {
+                  name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+                  template_args: None,
+                }),
+              ..
+            }),
           ..
         },
-        body: Some(BlockPE {
-          inner: IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-            template_args: None,
-          }),
-          ..
-        }),
-        ..
-      },
       ..
     }) => {}
     _ => panic!("expected ([x, y]) => x structure"),
@@ -896,14 +948,13 @@ fn dot_symbol() {
   let expr = compile_expression_expect(&parse_arena, &keywords, r#"myPath./("subdir")"#);
   match &expr {
     IExpressionPE::MethodCall(MethodCallPE {
-      subject_expr: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("myPath"))),
-        template_args: None,
-      }),
-      method_lookup: LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("/"))),
-        template_args: None,
-      },
+      subject_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("myPath"))),
+          template_args: None,
+        }),
+      method_lookup:
+        LookupPE { name: IImpreciseNameP::LookupName(NameP(_, StrI("/"))), template_args: None },
       arg_exprs: [IExpressionPE::ConstantStr(ConstantStrPE { value: StrI("subdir"), .. }), ..],
       ..
     }) => {}
@@ -936,10 +987,11 @@ fn set_call_isnt_interpreted_as_a_set_expression() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "set(true)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
-      callable_expr: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("set"))),
-        template_args: None,
-      }),
+      callable_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("set"))),
+          template_args: None,
+        }),
       arg_exprs: [IExpressionPE::ConstantBool(ConstantBoolPE { value: true, .. }), ..],
       ..
     }) => {}
@@ -956,14 +1008,16 @@ fn two_d_array_access() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "arr.2.1");
   match &expr {
     IExpressionPE::Dot(DotPE {
-      left: IExpressionPE::Dot(DotPE {
-        left: IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("arr"))),
-          template_args: None,
+      left:
+        IExpressionPE::Dot(DotPE {
+          left:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("arr"))),
+              template_args: None,
+            }),
+          member: NameP(_, StrI("2")),
+          ..
         }),
-        member: NameP(_, StrI("2")),
-        ..
-      }),
       member: NameP(_, StrI("1")),
       ..
     }) => {}
@@ -995,14 +1049,16 @@ fn function_call() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "call(sum)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
-      callable_expr: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("call"))),
-        template_args: None,
-      }),
-      arg_exprs: [IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("sum"))),
-        template_args: None,
-      }), ..],
+      callable_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("call"))),
+          template_args: None,
+        }),
+      arg_exprs:
+        [IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("sum"))),
+          template_args: None,
+        }), ..],
       ..
     }) => {}
     _ => panic!("expected call(sum) structure"),
@@ -1017,14 +1073,16 @@ fn test_inner_expression_unlet() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "destroy(unlet enemy)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
-      callable_expr: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("destroy"))),
-        template_args: None,
-      }),
-      arg_exprs: [IExpressionPE::Unlet(UnletPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("enemy"))),
-        ..
-      }), ..],
+      callable_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("destroy"))),
+          template_args: None,
+        }),
+      arg_exprs:
+        [IExpressionPE::Unlet(UnletPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("enemy"))),
+          ..
+        }), ..],
       ..
     }) => {}
     _ => panic!("expected destroy(unlet enemy) structure"),
@@ -1061,15 +1119,17 @@ fn parens() {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI("*")),
       left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
-      right_expr: IExpressionPE::SubExpression(SubExpressionPE {
-        inner: IExpressionPE::BinaryCall(BinaryCallPE {
-          function_name: NameP(_, StrI("-")),
-          left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
-          right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 7, .. }),
+      right_expr:
+        IExpressionPE::SubExpression(SubExpressionPE {
+          inner:
+            IExpressionPE::BinaryCall(BinaryCallPE {
+              function_name: NameP(_, StrI("-")),
+              left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+              right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 7, .. }),
+              ..
+            }),
           ..
         }),
-        ..
-      }),
       ..
     }) => {}
     _ => panic!("expected 2 * (5 - 7) structure"),
@@ -1085,15 +1145,17 @@ fn precedence_1() {
   match &expr {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI("*")),
-      left_expr: IExpressionPE::SubExpression(SubExpressionPE {
-        inner: IExpressionPE::BinaryCall(BinaryCallPE {
-          function_name: NameP(_, StrI("-")),
-          left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
-          right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 7, .. }),
+      left_expr:
+        IExpressionPE::SubExpression(SubExpressionPE {
+          inner:
+            IExpressionPE::BinaryCall(BinaryCallPE {
+              function_name: NameP(_, StrI("-")),
+              left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+              right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 7, .. }),
+              ..
+            }),
           ..
         }),
-        ..
-      }),
       right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
       ..
     }) => {}
@@ -1111,12 +1173,13 @@ fn precedence_2() {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI("-")),
       left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
-      right_expr: IExpressionPE::BinaryCall(BinaryCallPE {
-        function_name: NameP(_, StrI("*")),
-        left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 7, .. }),
-        right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
-        ..
-      }),
+      right_expr:
+        IExpressionPE::BinaryCall(BinaryCallPE {
+          function_name: NameP(_, StrI("*")),
+          left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 7, .. }),
+          right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
+          ..
+        }),
       ..
     }) => {}
     _ => panic!("expected 5 - 7 * 2 structure"),
@@ -1162,9 +1225,10 @@ fn static_array_from_callable_with_rune() {
   match &expr {
     IExpressionPE::ConstructArray(ConstructArrayPE {
       type_pt: None,
-      size: IArraySizeP::StaticSized(StaticSizedArraySizeP {
-        size_pt: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. })),
-      }),
+      size:
+        IArraySizeP::StaticSized(StaticSizedArraySizeP {
+          size_pt: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. })),
+        }),
       initializing_individual_elements: false,
       args: [IExpressionPE::Lambda(_), ..],
       ..
@@ -1182,14 +1246,16 @@ fn less_than_or_equal() {
   match &expr {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI("<=")),
-      left_expr: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
-        template_args: None,
-      }),
-      right_expr: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
-        template_args: None,
-      }),
+      left_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+          template_args: None,
+        }),
+      right_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
+          template_args: None,
+        }),
       ..
     }) => {}
     _ => panic!("expected a <= b structure"),
@@ -1205,9 +1271,10 @@ fn static_array_from_callable() {
   match &expr {
     IExpressionPE::ConstructArray(ConstructArrayPE {
       type_pt: None,
-      size: IArraySizeP::StaticSized(StaticSizedArraySizeP {
-        size_pt: Some(ITemplexPT::Int(IntPT { value: 3, .. })),
-      }),
+      size:
+        IArraySizeP::StaticSized(StaticSizedArraySizeP {
+          size_pt: Some(ITemplexPT::Int(IntPT { value: 3, .. })),
+        }),
       initializing_individual_elements: false,
       args: [_, ..],
       ..
@@ -1260,10 +1327,11 @@ fn double_rsa_with_type() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "[][]bool(42)");
   match &expr {
     IExpressionPE::ConstructArray(ConstructArrayPE {
-      type_pt: Some(ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
-        element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("bool")), .. }),
-        ..
-      })),
+      type_pt:
+        Some(ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
+          element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("bool")), .. }),
+          ..
+        })),
       size: IArraySizeP::RuntimeSized,
       initializing_individual_elements: false,
       args: [IExpressionPE::ConstantInt(ConstantIntPE { value: 42, .. }), ..],
@@ -1308,11 +1376,8 @@ fn two_element_tuple() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "(3,4)");
   match &expr {
     IExpressionPE::Tuple(TuplePE {
-      elements: [
-        IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
-        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
-        ..
-      ],
+      elements:
+        [IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }), IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), ..],
       ..
     }) => {}
     _ => panic!("expected (3,4) structure"),
@@ -1327,12 +1392,8 @@ fn three_element_tuple() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "(3,4,5)");
   match &expr {
     IExpressionPE::Tuple(TuplePE {
-      elements: [
-        IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
-        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
-        IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
-        ..
-      ],
+      elements:
+        [IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }), IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }), ..],
       ..
     }) => {}
     _ => panic!("expected (3,4,5) structure"),
@@ -1347,12 +1408,8 @@ fn three_element_tuple_trailing_comma() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "(3,4,5,)");
   match &expr {
     IExpressionPE::Tuple(TuplePE {
-      elements: [
-        IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
-        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
-        IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
-        ..
-      ],
+      elements:
+        [IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }), IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }), ..],
       ..
     }) => {}
     _ => panic!("expected (3,4,5,) structure"),
@@ -1368,10 +1425,11 @@ fn transmigrate() {
   match &expr {
     IExpressionPE::Transmigrate(TransmigratePE {
       target_region: NameP(_, StrI("a")),
-      inner: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-        template_args: None,
-      }),
+      inner:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
       ..
     }) => {}
     _ => panic!("expected a'x structure"),
@@ -1383,21 +1441,23 @@ fn call_callable_expr() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let expr =
-    compile_expression_expect(&parse_arena, &keywords, "(something.callable)(3)");
+  let expr = compile_expression_expect(&parse_arena, &keywords, "(something.callable)(3)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
-      callable_expr: IExpressionPE::SubExpression(SubExpressionPE {
-        inner: IExpressionPE::Dot(DotPE {
-          left: IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP(_, StrI("something"))),
-            template_args: None,
-          }),
-          member: NameP(_, StrI("callable")),
+      callable_expr:
+        IExpressionPE::SubExpression(SubExpressionPE {
+          inner:
+            IExpressionPE::Dot(DotPE {
+              left:
+                IExpressionPE::Lookup(LookupPE {
+                  name: IImpreciseNameP::LookupName(NameP(_, StrI("something"))),
+                  template_args: None,
+                }),
+              member: NameP(_, StrI("callable")),
+              ..
+            }),
           ..
         }),
-        ..
-      }),
       arg_exprs: [_arg, ..],
       ..
     }) => {}
@@ -1413,14 +1473,16 @@ fn array_indexing() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "board[i]");
   match &expr {
     IExpressionPE::BraceCall(BraceCallPE {
-      subject_expr: IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("board"))),
-        template_args: None,
-      }),
-      arg_exprs: [IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
-        template_args: None,
-      }), ..],
+      subject_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("board"))),
+          template_args: None,
+        }),
+      arg_exprs:
+        [IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
+          template_args: None,
+        }), ..],
       callable_readwrite: false,
       ..
     }) => {}
@@ -1430,18 +1492,21 @@ fn array_indexing() {
   let expr2 = compile_expression_expect(&parse_arena, &keywords, "this.board[i]");
   match &expr2 {
     IExpressionPE::BraceCall(BraceCallPE {
-      subject_expr: IExpressionPE::Dot(DotPE {
-        left: IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("this"))),
-          template_args: None,
+      subject_expr:
+        IExpressionPE::Dot(DotPE {
+          left:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("this"))),
+              template_args: None,
+            }),
+          member: NameP(_, StrI("board")),
+          ..
         }),
-        member: NameP(_, StrI("board")),
-        ..
-      }),
-      arg_exprs: [IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
-        template_args: None,
-      }), ..],
+      arg_exprs:
+        [IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
+          template_args: None,
+        }), ..],
       callable_readwrite: false,
       ..
     }) => {}
@@ -1458,12 +1523,13 @@ fn mod_and_equal_precedence() {
   match &expr {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI("==")),
-      left_expr: IExpressionPE::BinaryCall(BinaryCallPE {
-        function_name: NameP(_, StrI("mod")),
-        left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 8, .. }),
-        right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
-        ..
-      }),
+      left_expr:
+        IExpressionPE::BinaryCall(BinaryCallPE {
+          function_name: NameP(_, StrI("mod")),
+          left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 8, .. }),
+          right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
+          ..
+        }),
       right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 0, .. }),
       ..
     }) => {}
@@ -1479,16 +1545,14 @@ fn or_and_equal_precedence() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "2 == 0 or false");
   match &expr {
     IExpressionPE::Or(OrPE {
-      left: IExpressionPE::BinaryCall(BinaryCallPE {
-        function_name: NameP(_, StrI("==")),
-        left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
-        right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 0, .. }),
-        ..
-      }),
-      right: BlockPE {
-        inner: IExpressionPE::ConstantBool(ConstantBoolPE { value: false, .. }),
-        ..
-      },
+      left:
+        IExpressionPE::BinaryCall(BinaryCallPE {
+          function_name: NameP(_, StrI("==")),
+          left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
+          right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 0, .. }),
+          ..
+        }),
+      right: BlockPE { inner: IExpressionPE::ConstantBool(ConstantBoolPE { value: false, .. }), .. },
       ..
     }) => {}
     _ => panic!("expected 2 == 0 or false structure"),
@@ -1503,53 +1567,64 @@ fn test_templated_lambda_param() {
   let expr = compile_expression_expect(&parse_arena, &keywords, "(a => a + a)(3)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
-      callable_expr: IExpressionPE::SubExpression(SubExpressionPE {
-        inner: IExpressionPE::Lambda(LambdaPE {
-          function: FunctionP {
-            header: FunctionHeaderP {
-              params: Some(ParamsP {
-                params: [ParameterP {
-                  pattern: Some(PatternPP {
-                    destination: Some(DestinationLocalP {
-                      decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+      callable_expr:
+        IExpressionPE::SubExpression(SubExpressionPE {
+          inner:
+            IExpressionPE::Lambda(LambdaPE {
+              function:
+                FunctionP {
+                  header:
+                    FunctionHeaderP {
+                      params:
+                        Some(ParamsP {
+                          params:
+                            [ParameterP {
+                              pattern:
+                                Some(PatternPP {
+                                  destination:
+                                    Some(DestinationLocalP {
+                                      decl:
+                                        INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+                                      ..
+                                    }),
+                                  templex: None,
+                                  destructure: None,
+                                  ..
+                                }),
+                              ..
+                            }, ..],
+                          ..
+                        }),
+                      ..
+                    },
+                  body:
+                    Some(BlockPE {
+                      inner:
+                        IExpressionPE::BinaryCall(BinaryCallPE {
+                          function_name: NameP(_, StrI("+")),
+                          left_expr:
+                            IExpressionPE::Lookup(LookupPE {
+                              name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+                              template_args: None,
+                            }),
+                          right_expr:
+                            IExpressionPE::Lookup(LookupPE {
+                              name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+                              template_args: None,
+                            }),
+                          ..
+                        }),
                       ..
                     }),
-                    templex: None,
-                    destructure: None,
-                    ..
-                  }),
                   ..
-                }, ..],
-                ..
-              }),
-              ..
-            },
-            body: Some(BlockPE {
-              inner: IExpressionPE::BinaryCall(BinaryCallPE {
-                function_name: NameP(_, StrI("+")),
-                left_expr: IExpressionPE::Lookup(LookupPE {
-                  name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
-                  template_args: None,
-                }),
-                right_expr: IExpressionPE::Lookup(LookupPE {
-                  name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
-                  template_args: None,
-                }),
-                ..
-              }),
+                },
               ..
             }),
-            ..
-          },
           ..
         }),
-        ..
-      }),
       arg_exprs: [IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }), ..],
       ..
     }) => {}
     _ => panic!("expected (a => a + a)(3) structure"),
   }
 }
-
-

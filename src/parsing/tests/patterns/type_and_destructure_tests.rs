@@ -1,14 +1,13 @@
 // Run with: cargo test --manifest-path Cargo.toml --lib parsing::tests::patterns::type_and_destructure_tests
 
-
-use bumpalo::Bump;
 use crate::cast;
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::{INameDeclarationP, ITemplexPT, PatternPP};
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
+use bumpalo::Bump;
 
 fn compile<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -27,10 +26,7 @@ fn empty_destructure() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ Muta[]");
   let destination = pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   assert_templex_name(pattern.templex.as_ref().unwrap(), "Muta");
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -45,10 +41,7 @@ fn templated_destructure() {
   {
     let pattern = compile(&parse_arena, &keywords, "_ Muta<int>[]");
     let destination = pattern.destination.as_ref().unwrap();
-    assert!(matches!(
-      destination.decl,
-      INameDeclarationP::IgnoredLocalNameDeclaration(_)
-    ));
+    assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
     assert!(destination.mutate.is_none());
     let call = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Call);
     assert_templex_name(call.template, "Muta");
@@ -61,10 +54,7 @@ fn templated_destructure() {
   {
     let pattern = compile(&parse_arena, &keywords, "_ Muta<R>[]");
     let destination = pattern.destination.as_ref().unwrap();
-    assert!(matches!(
-      destination.decl,
-      INameDeclarationP::IgnoredLocalNameDeclaration(_)
-    ));
+    assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
     assert!(destination.mutate.is_none());
     let call = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Call);
     assert_templex_name(call.template, "Muta");
@@ -82,10 +72,7 @@ fn destructure_with_type_outside() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ (int, bool)[a, b]");
   let destination = pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   let tuple = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Tuple);
   let (int_, bool_) = expect_2(&tuple.elements);
@@ -112,10 +99,7 @@ fn destructure_with_typeless_capture() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ Muta[b]");
   let destination = pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   assert_templex_name(pattern.templex.as_ref().unwrap(), "Muta");
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -134,10 +118,7 @@ fn destructure_with_typed_capture() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ Muta[b Marine]");
   let destination = pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   assert_templex_name(pattern.templex.as_ref().unwrap(), "Muta");
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -156,19 +137,13 @@ fn destructure_with_unnamed_capture() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ Muta[_ Marine]");
   let destination = pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   assert_templex_name(pattern.templex.as_ref().unwrap(), "Muta");
   let destructure = pattern.destructure.as_ref().unwrap();
   let unnamed_pattern = expect_1(&destructure.patterns);
   let unnamed_destination = unnamed_pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    unnamed_destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(unnamed_destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(unnamed_destination.mutate.is_none());
   assert_templex_name(unnamed_pattern.templex.as_ref().unwrap(), "Marine");
   assert!(unnamed_pattern.destructure.is_none());
@@ -181,21 +156,14 @@ fn destructure_with_runed_capture() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   let pattern = compile(&parse_arena, &keywords, "_ Muta[_ R]");
   let destination = pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(destination.mutate.is_none());
   assert_templex_name(pattern.templex.as_ref().unwrap(), "Muta");
   let destructure = pattern.destructure.as_ref().unwrap();
   let unnamed_pattern = expect_1(&destructure.patterns);
   let unnamed_destination = unnamed_pattern.destination.as_ref().unwrap();
-  assert!(matches!(
-    unnamed_destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
+  assert!(matches!(unnamed_destination.decl, INameDeclarationP::IgnoredLocalNameDeclaration(_)));
   assert!(unnamed_destination.mutate.is_none());
   assert_templex_name(unnamed_pattern.templex.as_ref().unwrap(), "R");
   assert!(unnamed_pattern.destructure.is_none());
 }
-

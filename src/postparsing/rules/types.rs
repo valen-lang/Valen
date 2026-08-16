@@ -1,11 +1,9 @@
 use crate::interner::StrI;
-use crate::postparsing::names::IRuneS;
 use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::names::IRuneS;
 use crate::postparsing::rules::rules::IntLiteralSL;
 use crate::postparsing::rules::RuneUsage;
 use crate::utils::range::RangeS;
-
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ITypeST<'s> {
@@ -56,34 +54,45 @@ impl<'s> ITypeST<'s> {
       ITypeST::RuntimeSizedArray(r) => r.element.collect_rune_mentions(out),
       ITypeST::Call(r) => {
         r.template.collect_rune_mentions(out);
-        for arg in r.args.iter().copied() { arg.collect_rune_mentions(out); }
+        for arg in r.args.iter().copied() {
+          arg.collect_rune_mentions(out);
+        }
       }
-      ITypeST::Tuple(r) => { for e in r.elements.iter().copied() { e.collect_rune_mentions(out); } }
-      ITypeST::Pack(r) => { for m in r.members.iter().copied() { m.collect_rune_mentions(out); } }
+      ITypeST::Tuple(r) => {
+        for e in r.elements.iter().copied() {
+          e.collect_rune_mentions(out);
+        }
+      }
+      ITypeST::Pack(r) => {
+        for m in r.members.iter().copied() {
+          m.collect_rune_mentions(out);
+        }
+      }
       ITypeST::Function(r) => {
-        for m in r.parameters.members.iter().copied() { m.collect_rune_mentions(out); }
+        for m in r.parameters.members.iter().copied() {
+          m.collect_rune_mentions(out);
+        }
         r.return_type.collect_rune_mentions(out);
       }
-      ITypeST::AnonymousRune(_) | ITypeST::Name(_) | ITypeST::Int(_)
-      | ITypeST::Bool(_) | ITypeST::String(_) => {}
+      ITypeST::AnonymousRune(_)
+      | ITypeST::Name(_)
+      | ITypeST::Int(_)
+      | ITypeST::Bool(_)
+      | ITypeST::String(_) => {}
     }
   }
 }
-
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AnonymousRuneST<'s> {
   pub range: RangeS<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BoolST<'s> {
   pub range: RangeS<'s>,
   pub value: bool,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CallST<'s> {
@@ -92,7 +101,6 @@ pub struct CallST<'s> {
   pub args: &'s [&'s ITypeST<'s>],
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FunctionST<'s> {
   pub range: RangeS<'s>,
@@ -100,13 +108,11 @@ pub struct FunctionST<'s> {
   pub return_type: &'s ITypeST<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IntST<'s> {
   pub range: RangeS<'s>,
   pub value: IntLiteralSL,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TupleST<'s> {
@@ -114,19 +120,16 @@ pub struct TupleST<'s> {
   pub elements: &'s [&'s ITypeST<'s>],
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct NameST<'s> {
   pub range: RangeS<'s>,
   pub name: IImpreciseNameS<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RuneUsageST<'s> {
   pub rune: RuneUsage<'s>,
 }
-
 
 /// The region of a borrow reference. `held` and an explicit region annotation are sibling values
 /// here alongside "no annotation", so a borrow's region lives in one slot.
@@ -141,7 +144,6 @@ pub enum RegionS<'s> {
   Rune(Option<&'s RuneUsage<'s>>),
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BorrowRefST<'s> {
   pub range: RangeS<'s>,
@@ -149,13 +151,11 @@ pub struct BorrowRefST<'s> {
   pub region: RegionS<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WeakRefST<'s> {
   pub range: RangeS<'s>,
   pub inner: &'s ITypeST<'s>,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OwnRefST<'s> {
@@ -163,20 +163,17 @@ pub struct OwnRefST<'s> {
   pub inner: &'s ITypeST<'s>,
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PackST<'s> {
   pub range: RangeS<'s>,
   pub members: &'s [&'s ITypeST<'s>],
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RuntimeSizedArrayST<'s> {
   pub range: RangeS<'s>,
   pub element: &'s ITypeST<'s>,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StringST<'s> {

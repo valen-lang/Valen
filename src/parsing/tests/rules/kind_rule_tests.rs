@@ -1,12 +1,11 @@
 // Run with: cargo test --manifest-path Cargo.toml --lib parsing::tests::rules::kind_rule_tests
-use bumpalo::Bump;
 use crate::cast;
-use crate::parse_arena::ParseArena;
-use crate::keywords::Keywords;
 use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
-
+use bumpalo::Bump;
 
 fn compile<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -81,7 +80,8 @@ fn templated_struct_one_arg() {
     IRulexPR::Templex(ITemplexPT::Call(CallPT {
       template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("Moo")), .. }),
       args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. })],
-      .. })) => {}
+      ..
+    })) => {}
     other => panic!("expected `Moo<int>` → Call(Moo, [int]), got {:?}", other),
   }
 }
@@ -186,10 +186,8 @@ fn static_array_type() {
   match compile_templex_expect(&parse_arena, &keywords, "StaticArray<3, int>") {
     ITemplexPT::Call(CallPT {
       template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("StaticArray")), .. }),
-      args: [
-        ITemplexPT::Int(IntPT { value: 3, .. }),
-        ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
-      ],
+      args:
+        [ITemplexPT::Int(IntPT { value: 3, .. }), ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. })],
       ..
     }) => {}
     other => panic!("unexpected: {:?}", other),
@@ -198,10 +196,8 @@ fn static_array_type() {
   match compile_templex_expect(&parse_arena, &keywords, "StaticArray<N, T>") {
     ITemplexPT::Call(CallPT {
       template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("StaticArray")), .. }),
-      args: [
-        ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
-        ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
-      ],
+      args:
+        [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }), ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. })],
       ..
     }) => {}
     other => panic!("unexpected: {:?}", other),
@@ -213,38 +209,25 @@ fn regular_sequence() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let tuple = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "()"),
-    ITemplexPT::Tuple
-  );
+  let tuple = cast!(compile_templex_expect(&parse_arena, &keywords, "()"), ITemplexPT::Tuple);
   assert_eq!(tuple.elements.len(), 0);
 
-  let tuple = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "(int)"),
-    ITemplexPT::Tuple
-  );
+  let tuple = cast!(compile_templex_expect(&parse_arena, &keywords, "(int)"), ITemplexPT::Tuple);
   assert_templex_name(*expect_1(tuple.elements), "int");
 
-  let tuple = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "(int, bool)"),
-    ITemplexPT::Tuple
-  );
+  let tuple =
+    cast!(compile_templex_expect(&parse_arena, &keywords, "(int, bool)"), ITemplexPT::Tuple);
   let (int_, bool_) = expect_2(tuple.elements);
   assert_templex_name(int_, "int");
   assert_templex_name(bool_, "bool");
 
-  let tuple = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "(_, bool)"),
-    ITemplexPT::Tuple
-  );
+  let tuple =
+    cast!(compile_templex_expect(&parse_arena, &keywords, "(_, bool)"), ITemplexPT::Tuple);
   let (anonymous_, bool_) = expect_2(tuple.elements);
   cast!(anonymous_, ITemplexPT::AnonymousRune);
   assert_templex_name(bool_, "bool");
 
-  let tuple = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "(_, _)"),
-    ITemplexPT::Tuple
-  );
+  let tuple = cast!(compile_templex_expect(&parse_arena, &keywords, "(_, _)"), ITemplexPT::Tuple);
   let (anonymous1_, anonymous2_) = expect_2(tuple.elements);
   cast!(anonymous1_, ITemplexPT::AnonymousRune);
   cast!(anonymous2_, ITemplexPT::AnonymousRune);

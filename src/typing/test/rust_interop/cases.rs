@@ -26,14 +26,14 @@ use std::path::PathBuf;
 use crate::collect_where_tnode;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::hinputs_t::HinputsT;
-use crate::typing::names::names::{IdT, INameT};
+use crate::typing::names::names::{INameT, IdT};
 use crate::typing::rust_interop::corpus::*;
 use crate::typing::rust_interop::{
-    citizen_id, is_rust_backed, peel_refs, Case, OracleQuery, RustItemId, SigPosition,
+  citizen_id, is_rust_backed, peel_refs, Case, OracleQuery, RustItemId, SigPosition,
 };
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::test::rust_interop::harness::{
-    compile_check_fixture, run_case, run_case_in_package, try_run_case, CaseOutcome,
+  compile_check_fixture, run_case, run_case_in_package, try_run_case, CaseOutcome,
 };
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::*;
@@ -42,18 +42,18 @@ use crate::typing::types::types::*;
 /// instead of keying on `Debug` shape. Reference wraps are peeled: no case here is about
 /// borrow-vs-own, and the fixture is by-value throughout (see `mycrate.rs`).
 fn describe_kind(kind: KindT) -> String {
-    match peel_refs(kind) {
-        KindT::Int(i) => format!("int{}", i.bits),
-        KindT::Bool(_) => "bool".to_string(),
-        KindT::Void(_) => "void".to_string(),
-        KindT::Str(_) => "str".to_string(),
-        KindT::Float(_) => "float".to_string(),
-        other => match citizen_id(other) {
-            Some(id) if is_rust_backed(id) => format!("rust-citizen{}", describe_args(id)),
-            Some(id) => format!("vale-citizen{}", describe_args(id)),
-            None => "non-citizen".to_string(),
-        },
-    }
+  match peel_refs(kind) {
+    KindT::Int(i) => format!("int{}", i.bits),
+    KindT::Bool(_) => "bool".to_string(),
+    KindT::Void(_) => "void".to_string(),
+    KindT::Str(_) => "str".to_string(),
+    KindT::Float(_) => "float".to_string(),
+    other => match citizen_id(other) {
+      Some(id) if is_rust_backed(id) => format!("rust-citizen{}", describe_args(id)),
+      Some(id) => format!("vale-citizen{}", describe_args(id)),
+      None => "non-citizen".to_string(),
+    },
+  }
 }
 
 /// A citizen's template arguments, rendered the way source writes them, or empty for none.
@@ -62,100 +62,96 @@ fn describe_kind(kind: KindT) -> String {
 /// arguments can only assert "these two differ", which says nothing about *how* — and the whole
 /// defect this pins was two instantiations rendering identically.
 fn describe_args(id: &IdT) -> String {
-    let args = match id.local_name {
-        INameT::Struct(name) => name.template_args,
-        _ => &[],
-    };
-    if args.is_empty() {
-        return String::new();
-    }
-    let rendered: Vec<String> = args
-        .iter()
-        .map(|arg| match arg {
-            ITemplataT::Kind(k) => describe_kind(k.kind),
-            _ => "non-kind".to_string(),
-        })
-        .collect();
-    format!("<{}>", rendered.join(", "))
+  let args = match id.local_name {
+    INameT::Struct(name) => name.template_args,
+    _ => &[],
+  };
+  if args.is_empty() {
+    return String::new();
+  }
+  let rendered: Vec<String> = args
+    .iter()
+    .map(|arg| match arg {
+      ITemplataT::Kind(k) => describe_kind(k.kind),
+      _ => "non-kind".to_string(),
+    })
+    .collect();
+  format!("<{}>", rendered.join(", "))
 }
 
 /// The facts about one resolved callee that survive the callback — owned, so they can escape.
 #[derive(Debug, PartialEq, Eq)]
 struct Callee {
-    name: String,
-    /// Whether the callee itself lives in the reserved `rust` package. Only the interop seam
-    /// mints ids there, so this *is* the proof that resolution came from Rust rather than from
-    /// some Vale-side coincidence.
-    rust_backed: bool,
-    params: Vec<String>,
-    ret: String,
+  name: String,
+  /// Whether the callee itself lives in the reserved `rust` package. Only the interop seam
+  /// mints ids there, so this *is* the proof that resolution came from Rust rather than from
+  /// some Vale-side coincidence.
+  rust_backed: bool,
+  params: Vec<String>,
+  ret: String,
 }
 
 fn describe_callee(p: &PrototypeT) -> Callee {
-    // A Rust callee resolves to an ordinary Vale `Function` — the extern *wrapper* that
-    // `make_extern_function` builds. The `ExternFunctionNameT` prototype still exists, one level
-    // down, as the target of the `ExternFunctionCallTE` in that wrapper's body. Seeing an
-    // `ExternFunction` here would mean a prototype leaked into a call site, which is the shape
-    // the synthesized-declaration design exists to prevent — so it is worth failing loudly on.
-    match p.id.local_name {
-        INameT::Function(f) => Callee {
-            name: f.template.human_name.0.to_string(),
-            rust_backed: is_rust_backed(&p.id),
-            // Params ride the name because `PrototypeT::param_types` is name-derived; a name that
-            // disagreed with the signature would report wrong types at every call site.
-            params: f.parameters.iter().map(|k| describe_kind(*k)).collect(),
-            ret: describe_kind(p.return_type),
-        },
-        other => panic!("expected the callee to be an ordinary Vale function, got {other:?}"),
-    }
+  // A Rust callee resolves to an ordinary Vale `Function` — the extern *wrapper* that
+  // `make_extern_function` builds. The `ExternFunctionNameT` prototype still exists, one level
+  // down, as the target of the `ExternFunctionCallTE` in that wrapper's body. Seeing an
+  // `ExternFunction` here would mean a prototype leaked into a call site, which is the shape
+  // the synthesized-declaration design exists to prevent — so it is worth failing loudly on.
+  match p.id.local_name {
+    INameT::Function(f) => Callee {
+      name: f.template.human_name.0.to_string(),
+      rust_backed: is_rust_backed(&p.id),
+      // Params ride the name because `PrototypeT::param_types` is name-derived; a name that
+      // disagreed with the signature would report wrong types at every call site.
+      params: f.parameters.iter().map(|k| describe_kind(*k)).collect(),
+      ret: describe_kind(p.return_type),
+    },
+    other => panic!("expected the callee to be an ordinary Vale function, got {other:?}"),
+  }
 }
 
 /// Every call `main`'s body makes, in traversal order.
 fn callees_in_main(coutputs: &HinputsT) -> Vec<Callee> {
-    let main = coutputs.lookup_function_by_str("main");
-    let callees: Vec<&PrototypeT> = collect_where_tnode!(
-        NodeRefT::FunctionDefinition(main),
-        NodeRefT::FunctionCall(call) => Some(call.callable)
-    );
-    callees.iter().map(|p| describe_callee(p)).collect()
+  let main = coutputs.lookup_function_by_str("main");
+  let callees: Vec<&PrototypeT> = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(call) => Some(call.callable)
+  );
+  callees.iter().map(|p| describe_callee(p)).collect()
 }
 
 /// The handle the oracle offered under `name`, from whichever enumerating query offered it.
 fn offered<R>(outcome: &CaseOutcome<R>, name: &str) -> RustItemId {
-    outcome
-        .oracle_log
-        .iter()
-        .find_map(|c| c.query.offered(name))
-        .unwrap_or_else(|| {
-            panic!(
-                "the oracle never offered an item named {name:?}, so anything this case \
+  outcome.oracle_log.iter().find_map(|c| c.query.offered(name)).unwrap_or_else(|| {
+    panic!(
+      "the oracle never offered an item named {name:?}, so anything this case \
                  concludes about it is vacuous:\n--- oracle log ---\n{}",
-                outcome.rendered_log()
-            )
-        })
+      outcome.rendered_log()
+    )
+  })
 }
 
 #[test]
 fn calls_a_rust_free_function() {
-    let outcome = run_case(&CALLS_A_RUST_FREE_FUNCTION, callees_in_main);
+  let outcome = run_case(&CALLS_A_RUST_FREE_FUNCTION, callees_in_main);
 
-    assert_eq!(
-        &vec![Callee {
-            name: "add_two_numbers".to_string(),
-            rust_backed: true,
-            params: vec!["int32".to_string(), "int32".to_string()],
-            ret: "int32".to_string(),
-        }],
-        outcome.check(&CALLS_A_RUST_FREE_FUNCTION).expect("the case declares it compiles")
-    );
+  assert_eq!(
+    &vec![Callee {
+      name: "add_two_numbers".to_string(),
+      rust_backed: true,
+      params: vec!["int32".to_string(), "int32".to_string()],
+      ret: "int32".to_string(),
+    }],
+    outcome.check(&CALLS_A_RUST_FREE_FUNCTION).expect("the case declares it compiles")
+  );
 
-    // Vacuity: the program above would compile just as happily if a Vale `add_two_numbers` were
-    // in scope. This is what says the name came from Rust.
-    assert!(
-        outcome.asked(|q| q.offered("add_two_numbers").is_some()),
-        "the oracle was never asked for the function this program calls:\n{}",
-        outcome.rendered_log()
-    );
+  // Vacuity: the program above would compile just as happily if a Vale `add_two_numbers` were
+  // in scope. This is what says the name came from Rust.
+  assert!(
+    outcome.asked(|q| q.offered("add_two_numbers").is_some()),
+    "the oracle was never asked for the function this program calls:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// Laziness, proven positively: importing three representable free functions and calling one queries
@@ -163,31 +159,31 @@ fn calls_a_rust_free_function() {
 /// — importing a type with a hundred methods must not pay `fn_sig` for the ones never called.
 #[test]
 fn lazy_synthesis_only_queries_called_functions() {
-    let outcome = run_case(&LAZY_SYNTHESIS_ONLY_QUERIES_CALLED_FUNCTIONS, callees_in_main);
+  let outcome = run_case(&LAZY_SYNTHESIS_ONLY_QUERIES_CALLED_FUNCTIONS, callees_in_main);
 
-    outcome.check(&LAZY_SYNTHESIS_ONLY_QUERIES_CALLED_FUNCTIONS);
+  outcome.check(&LAZY_SYNTHESIS_ONLY_QUERIES_CALLED_FUNCTIONS);
 
-    let add_two_numbers = offered(&outcome, "add_two_numbers");
-    let seven = offered(&outcome, "seven");
-    let is_positive = offered(&outcome, "is_positive");
+  let add_two_numbers = offered(&outcome, "add_two_numbers");
+  let seven = offered(&outcome, "seven");
+  let is_positive = offered(&outcome, "is_positive");
 
-    // The called function's signature is queried — it must be, to compile the call.
-    assert!(
-        outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == add_two_numbers)),
-        "the called function's signature was never queried:\n{}",
-        outcome.rendered_log()
-    );
-    // The two imported-but-uncalled functions are never queried — the laziness guarantee.
-    assert!(
-        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == seven)),
-        "`seven` was imported but never called, yet its signature was queried:\n{}",
-        outcome.rendered_log()
-    );
-    assert!(
-        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == is_positive)),
-        "`is_positive` was imported but never called, yet its signature was queried:\n{}",
-        outcome.rendered_log()
-    );
+  // The called function's signature is queried — it must be, to compile the call.
+  assert!(
+    outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == add_two_numbers)),
+    "the called function's signature was never queried:\n{}",
+    outcome.rendered_log()
+  );
+  // The two imported-but-uncalled functions are never queried — the laziness guarantee.
+  assert!(
+    !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == seven)),
+    "`seven` was imported but never called, yet its signature was queried:\n{}",
+    outcome.rendered_log()
+  );
+  assert!(
+    !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == is_positive)),
+    "`is_positive` was imported but never called, yet its signature was queried:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// The common shape: the case compiles, and each named callee resolved to a **Rust-backed**
@@ -195,84 +191,84 @@ fn lazy_synthesis_only_queries_called_functions() {
 /// satisfy "it compiled" just as well, and only the reserved `rust` package coordinate says where
 /// resolution actually came from.
 fn assert_rust_callees(case: &Case, expected: &[&str]) {
-    let outcome = run_case(case, callees_in_main);
-    let callees = outcome.check(case).expect("the case declares it compiles");
-    for name in expected {
-        assert!(
-            callees.iter().any(|c| c.name == *name && c.rust_backed),
-            "`{name}` did not resolve to a Rust callee: {callees:?}"
-        );
-    }
+  let outcome = run_case(case, callees_in_main);
+  let callees = outcome.check(case).expect("the case declares it compiles");
+  for name in expected {
+    assert!(
+      callees.iter().any(|c| c.name == *name && c.rust_backed),
+      "`{name}` did not resolve to a Rust callee: {callees:?}"
+    );
+  }
 }
 
 #[test]
 fn calls_a_zero_arg_rust_function() {
-    assert_rust_callees(&CALLS_A_ZERO_ARG_RUST_FUNCTION, &["seven"]);
+  assert_rust_callees(&CALLS_A_ZERO_ARG_RUST_FUNCTION, &["seven"]);
 }
 
 #[test]
 fn calls_a_rust_function_returning_unit() {
-    assert_rust_callees(&CALLS_A_RUST_FUNCTION_RETURNING_UNIT, &["do_nothing"]);
+  assert_rust_callees(&CALLS_A_RUST_FUNCTION_RETURNING_UNIT, &["do_nothing"]);
 }
 
 #[test]
 fn passes_and_returns_a_bool() {
-    assert_rust_callees(&PASSES_AND_RETURNS_A_BOOL, &["is_positive", "to_int"]);
+  assert_rust_callees(&PASSES_AND_RETURNS_A_BOOL, &["is_positive", "to_int"]);
 }
 
 /// A Rust citizen in argument position of a free function — a different lowering path from return
 /// position, and a different discovery path from a method.
 #[test]
 fn takes_a_rust_type_as_a_parameter() {
-    let outcome = run_case(&TAKES_A_RUST_TYPE_AS_A_PARAMETER, callees_in_main);
+  let outcome = run_case(&TAKES_A_RUST_TYPE_AS_A_PARAMETER, callees_in_main);
 
-    let callees =
-        outcome.check(&TAKES_A_RUST_TYPE_AS_A_PARAMETER).expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| {
-            c.name == "value_of_counter" && c.rust_backed && c.params == vec!["rust-citizen".to_string()]
-        }),
-        "the free function did not take the Rust citizen as its parameter: {callees:?}"
-    );
+  let callees =
+    outcome.check(&TAKES_A_RUST_TYPE_AS_A_PARAMETER).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| {
+      c.name == "value_of_counter" && c.rust_backed && c.params == vec!["rust-citizen".to_string()]
+    }),
+    "the free function did not take the Rust citizen as its parameter: {callees:?}"
+  );
 }
 
 /// The same citizen identity on both sides of one signature.
 #[test]
 fn takes_and_returns_a_rust_type() {
-    let outcome = run_case(&TAKES_AND_RETURNS_A_RUST_TYPE, callees_in_main);
+  let outcome = run_case(&TAKES_AND_RETURNS_A_RUST_TYPE, callees_in_main);
 
-    let callees =
-        outcome.check(&TAKES_AND_RETURNS_A_RUST_TYPE).expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| {
-            c.name == "bump"
-                && c.rust_backed
-                && c.params == vec!["rust-citizen".to_string()]
-                && c.ret == "rust-citizen"
-        }),
-        "`bump` did not both take and return the Rust citizen: {callees:?}"
-    );
+  let callees =
+    outcome.check(&TAKES_AND_RETURNS_A_RUST_TYPE).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| {
+      c.name == "bump"
+        && c.rust_backed
+        && c.params == vec!["rust-citizen".to_string()]
+        && c.ret == "rust-citizen"
+    }),
+    "`bump` did not both take and return the Rust citizen: {callees:?}"
+  );
 }
 
 /// The mirror canary for the generic index mapping. Together with
 /// `reads_a_generic_signature_structurally`, no single wrong mapping satisfies both.
 #[test]
 fn binds_the_second_generic_parameter() {
-    let outcome = run_case(&BINDS_THE_SECOND_GENERIC_PARAMETER, callees_in_main);
+  let outcome = run_case(&BINDS_THE_SECOND_GENERIC_PARAMETER, callees_in_main);
 
-    let callees =
-        outcome.check(&BINDS_THE_SECOND_GENERIC_PARAMETER).expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "pick_second" && c.rust_backed && c.ret == "int32"),
-        "`pick_second<bool, int>` did not return int, so `B` bound to the wrong slot: {callees:?}"
-    );
+  let callees =
+    outcome.check(&BINDS_THE_SECOND_GENERIC_PARAMETER).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "pick_second" && c.rust_backed && c.ret == "int32"),
+    "`pick_second<bool, int>` did not return int, so `B` bound to the wrong slot: {callees:?}"
+  );
 }
 
 /// A floor, not a canary: `id<T>` passes under any index mapping, so it says only that
 /// substitution happens at all.
 #[test]
 fn instantiates_a_generic_at_one_parameter() {
-    assert_rust_callees(&INSTANTIATES_A_GENERIC_AT_ONE_PARAMETER, &["id"]);
+  assert_rust_callees(&INSTANTIATES_A_GENERIC_AT_ONE_PARAMETER, &["id"]);
 }
 
 /// A generic function whose parameter is the generic type applied to its own parameter.
@@ -280,51 +276,50 @@ fn instantiates_a_generic_at_one_parameter() {
 /// Isolates the backward inference that a generic type's `drop` also needs, away from drop.
 #[test]
 fn calls_a_generic_function_taking_a_generic_type() {
-    let outcome = run_case(&CALLS_A_GENERIC_FUNCTION_TAKING_A_GENERIC_TYPE, callees_in_main);
+  let outcome = run_case(&CALLS_A_GENERIC_FUNCTION_TAKING_A_GENERIC_TYPE, callees_in_main);
 
-    let callees = outcome
-        .check(&CALLS_A_GENERIC_FUNCTION_TAKING_A_GENERIC_TYPE)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| {
-            c.name == "holder_ignore"
-                && c.rust_backed
-                && c.params == vec!["rust-citizen<int32>".to_string()]
-        }),
-        "the parameter did not resolve to `Holder<int>`: {callees:?}"
-    );
+  let callees = outcome
+    .check(&CALLS_A_GENERIC_FUNCTION_TAKING_A_GENERIC_TYPE)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| {
+      c.name == "holder_ignore"
+        && c.rust_backed
+        && c.params == vec!["rust-citizen<int32>".to_string()]
+    }),
+    "the parameter did not resolve to `Holder<int>`: {callees:?}"
+  );
 }
 
 /// A Rust citizen as a **generic argument**, rather than as a parameter or return type.
 #[test]
 fn instantiates_a_generic_at_a_rust_type() {
-    let outcome = run_case(&INSTANTIATES_A_GENERIC_AT_A_RUST_TYPE, callees_in_main);
+  let outcome = run_case(&INSTANTIATES_A_GENERIC_AT_A_RUST_TYPE, callees_in_main);
 
-    let callees = outcome
-        .check(&INSTANTIATES_A_GENERIC_AT_A_RUST_TYPE)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "id" && c.rust_backed && c.ret == "rust-citizen"),
-        "`id<Counter>` did not return the Rust citizen: {callees:?}"
-    );
+  let callees =
+    outcome.check(&INSTANTIATES_A_GENERIC_AT_A_RUST_TYPE).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "id" && c.rust_backed && c.ret == "rust-citizen"),
+    "`id<Counter>` did not return the Rust citizen: {callees:?}"
+  );
 }
 
 /// An associated function with no receiver — the `Vec::new` shape — is an ordinary declaration
 /// that happens to take no parameters.
 #[test]
 fn calls_an_associated_function_with_no_receiver() {
-    let outcome = run_case(&CALLS_AN_ASSOCIATED_FUNCTION_WITH_NO_RECEIVER, callees_in_main);
+  let outcome = run_case(&CALLS_AN_ASSOCIATED_FUNCTION_WITH_NO_RECEIVER, callees_in_main);
 
-    let callees = outcome
-        .check(&CALLS_AN_ASSOCIATED_FUNCTION_WITH_NO_RECEIVER)
-        .expect("the case declares it compiles");
-    assert!(
-        callees
-            .iter()
-            .any(|c| c.name == "new" && c.rust_backed && c.params.is_empty() && c.ret == "rust-citizen"),
-        "the associated function did not resolve as a no-parameter function returning the \
+  let callees = outcome
+    .check(&CALLS_AN_ASSOCIATED_FUNCTION_WITH_NO_RECEIVER)
+    .expect("the case declares it compiles");
+  assert!(
+    callees
+      .iter()
+      .any(|c| c.name == "new" && c.rust_backed && c.params.is_empty() && c.ret == "rust-citizen"),
+    "the associated function did not resolve as a no-parameter function returning the \
          citizen: {callees:?}"
-    );
+  );
 }
 
 /// An associated function whose impl **fixes** one of the type's parameters (`impl<T> Boxed<T, Fixed>`,
@@ -333,40 +328,40 @@ fn calls_an_associated_function_with_no_receiver() {
 /// subtraction (the `1 - 2` underflow the over-specified `Boxed<int, Fixed>.new()` form would hit).
 #[test]
 fn calls_an_assoc_fn_with_a_fixed_impl_param_method_generic() {
-    assert_rust_callees(&CALLS_AN_ASSOC_FN_FIXED_IMPL_PARAM_METHOD_GENERIC, &["new"]);
+  assert_rust_callees(&CALLS_AN_ASSOC_FN_FIXED_IMPL_PARAM_METHOD_GENERIC, &["new"]);
 }
 
 /// The same fixed-impl-param associated function, called with the generic on the type:
 /// `Boxed<int>.new()` — the `Vec<int>.with_capacity()` form.
 #[test]
 fn calls_an_assoc_fn_with_a_fixed_impl_param_type_generic() {
-    assert_rust_callees(&CALLS_AN_ASSOC_FN_FIXED_IMPL_PARAM_TYPE_GENERIC, &["new"]);
+  assert_rust_callees(&CALLS_AN_ASSOC_FN_FIXED_IMPL_PARAM_TYPE_GENERIC, &["new"]);
 }
 
 /// A Rust `usize` imported as the Vale `usize` primitive (`Vec::len`'s shape): `some_size() -> usize`
 /// produces one, `consume_usize(usize) -> i32` takes it. `usize` used to decline as `UnsignedInteger`.
 #[test]
 fn imports_usize_as_a_primitive() {
-    assert_rust_callees(&CALLS_A_FUNCTION_RETURNING_USIZE, &["some_size", "consume_usize"]);
+  assert_rust_callees(&CALLS_A_FUNCTION_RETURNING_USIZE, &["some_size", "consume_usize"]);
 }
 
 /// The capstone: real `std::vec::Vec` + `std::alloc::Global` from the actual `alloc` crate,
 /// `Vec.new<int>()` bound to a local with a scope-end drop, typechecked against live rustc.
 #[test]
 fn imports_real_vec_and_constructs_it() {
-    assert_rust_callees(&IMPORTS_REAL_VEC_AND_CONSTRUCTS_IT, &["new"]);
+  assert_rust_callees(&IMPORTS_REAL_VEC_AND_CONSTRUCTS_IT, &["new"]);
 }
 
 /// Real `Vec` `&mut self` method: `v.push(42)`.
 #[test]
 fn calls_push_on_a_real_vec() {
-    assert_rust_callees(&CALLS_PUSH_ON_A_REAL_VEC, &["push"]);
+  assert_rust_callees(&CALLS_PUSH_ON_A_REAL_VEC, &["push"]);
 }
 
 /// Real `Vec` `&self` method returning `usize`: `v.len()`.
 #[test]
 fn calls_len_on_a_real_vec() {
-    assert_rust_callees(&CALLS_LEN_ON_A_REAL_VEC, &["len"]);
+  assert_rust_callees(&CALLS_LEN_ON_A_REAL_VEC, &["len"]);
 }
 
 /// A two-parameter generic value from an associated function, bound to a local and dropped at scope
@@ -374,15 +369,15 @@ fn calls_len_on_a_real_vec() {
 /// `T` must come from the value.
 #[test]
 fn a_generic_assoc_result_bound_to_a_local_gets_a_scope_end_drop() {
-    let outcome =
-        run_case(&A_GENERIC_ASSOC_RESULT_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP, callees_in_main);
-    let callees = outcome
-        .check(&A_GENERIC_ASSOC_RESULT_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "drop" && c.rust_backed),
-        "the bound generic Rust value got no scope-end drop: {callees:?}"
-    );
+  let outcome =
+    run_case(&A_GENERIC_ASSOC_RESULT_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP, callees_in_main);
+  let callees = outcome
+    .check(&A_GENERIC_ASSOC_RESULT_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "drop" && c.rust_backed),
+    "the bound generic Rust value got no scope-end drop: {callees:?}"
+  );
 }
 
 /// A method on a generic type whose signature names the type's own parameter (`into_value(self) -> T`).
@@ -390,65 +385,65 @@ fn a_generic_assoc_result_bound_to_a_local_gets_a_scope_end_drop() {
 /// as `InheritedParameter` before the oracle reported parent-inclusive generic params for methods.
 #[test]
 fn calls_a_method_naming_the_types_generic() {
-    let outcome = run_case(&CALLS_A_METHOD_NAMING_THE_TYPES_GENERIC, callees_in_main);
-    outcome.check(&CALLS_A_METHOD_NAMING_THE_TYPES_GENERIC);
+  let outcome = run_case(&CALLS_A_METHOD_NAMING_THE_TYPES_GENERIC, callees_in_main);
+  outcome.check(&CALLS_A_METHOD_NAMING_THE_TYPES_GENERIC);
 }
 
 /// Method discovery is a list, not a lucky single — and it is lazy per method.
 #[test]
 fn calls_two_methods_on_one_type() {
-    assert_rust_callees(&CALLS_TWO_METHODS_ON_ONE_TYPE, &["get", "doubled"]);
+  assert_rust_callees(&CALLS_TWO_METHODS_ON_ONE_TYPE, &["get", "doubled"]);
 
-    // Method laziness: Counter has four methods (get, doubled, or_else, new); this program calls only
-    // `get` and `doubled`. Those two are queried; `or_else` and `new` are imported but uncalled, so their
-    // signatures are never asked for. This is the payoff for methods — a hundred-method type costs
-    // `fn_sig` only for the methods you actually call.
-    let outcome = run_case(&CALLS_TWO_METHODS_ON_ONE_TYPE, callees_in_main);
-    for called in ["get", "doubled"] {
-        let item = offered(&outcome, called);
-        assert!(
-            outcome.asked(|q| matches!(q, OracleQuery::FnSig { item: i, .. } if *i == item)),
-            "called method `{called}` was never queried:\n{}",
-            outcome.rendered_log()
-        );
-    }
-    for uncalled in ["or_else", "new"] {
-        let item = offered(&outcome, uncalled);
-        assert!(
-            !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item: i, .. } if *i == item)),
-            "uncalled method `{uncalled}` was queried, so per-method laziness is broken:\n{}",
-            outcome.rendered_log()
-        );
-    }
+  // Method laziness: Counter has four methods (get, doubled, or_else, new); this program calls only
+  // `get` and `doubled`. Those two are queried; `or_else` and `new` are imported but uncalled, so their
+  // signatures are never asked for. This is the payoff for methods — a hundred-method type costs
+  // `fn_sig` only for the methods you actually call.
+  let outcome = run_case(&CALLS_TWO_METHODS_ON_ONE_TYPE, callees_in_main);
+  for called in ["get", "doubled"] {
+    let item = offered(&outcome, called);
+    assert!(
+      outcome.asked(|q| matches!(q, OracleQuery::FnSig { item: i, .. } if *i == item)),
+      "called method `{called}` was never queried:\n{}",
+      outcome.rendered_log()
+    );
+  }
+  for uncalled in ["or_else", "new"] {
+    let item = offered(&outcome, uncalled);
+    assert!(
+      !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item: i, .. } if *i == item)),
+      "uncalled method `{uncalled}` was queried, so per-method laziness is broken:\n{}",
+      outcome.rendered_log()
+    );
+  }
 }
 
 /// A method carrying its own type parameter, on top of the container's.
 #[test]
 fn calls_a_generic_method() {
-    let outcome = run_case(&CALLS_A_GENERIC_METHOD, callees_in_main);
+  let outcome = run_case(&CALLS_A_GENERIC_METHOD, callees_in_main);
 
-    let callees = outcome.check(&CALLS_A_GENERIC_METHOD).expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "or_else" && c.rust_backed && c.ret == "int32"),
-        "the generic method did not resolve at its own type argument: {callees:?}"
-    );
+  let callees = outcome.check(&CALLS_A_GENERIC_METHOD).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "or_else" && c.rust_backed && c.ret == "int32"),
+    "the generic method did not resolve at its own type argument: {callees:?}"
+  );
 }
 
 /// Excess type arguments do not resolve — three named against `pick<A, B>`'s two slots.
 #[test]
 fn wrong_generic_arity_does_not_resolve() {
-    let outcome = run_case(&WRONG_GENERIC_ARITY_DOES_NOT_RESOLVE, callees_in_main);
+  let outcome = run_case(&WRONG_GENERIC_ARITY_DOES_NOT_RESOLVE, callees_in_main);
 
-    assert!(outcome.check(&WRONG_GENERIC_ARITY_DOES_NOT_RESOLVE).is_none());
+  assert!(outcome.check(&WRONG_GENERIC_ARITY_DOES_NOT_RESOLVE).is_none());
 }
 
 /// A Vale function and a Rust function sharing a name do **not** collide — candidate collection is
 /// plural, so the outcome is a designed error rather than the panic a *type*-name collision gives.
 #[test]
 fn a_vale_function_and_a_rust_function_with_the_same_name() {
-    let outcome = run_case(&A_VALE_FUNCTION_AND_A_RUST_FUNCTION_WITH_THE_SAME_NAME, callees_in_main);
+  let outcome = run_case(&A_VALE_FUNCTION_AND_A_RUST_FUNCTION_WITH_THE_SAME_NAME, callees_in_main);
 
-    assert!(outcome.check(&A_VALE_FUNCTION_AND_A_RUST_FUNCTION_WITH_THE_SAME_NAME).is_none());
+  assert!(outcome.check(&A_VALE_FUNCTION_AND_A_RUST_FUNCTION_WITH_THE_SAME_NAME).is_none());
 }
 
 /// The negative control for the case above. If the same program compiled with nothing importable,
@@ -457,9 +452,9 @@ fn a_vale_function_and_a_rust_function_with_the_same_name() {
 /// The case declares which `ICompileErrorT` arm it must fail with, so `check` is the whole test.
 #[test]
 fn an_empty_allowlist_makes_nothing_importable() {
-    let outcome = run_case(&AN_EMPTY_ALLOWLIST_MAKES_NOTHING_IMPORTABLE, callees_in_main);
+  let outcome = run_case(&AN_EMPTY_ALLOWLIST_MAKES_NOTHING_IMPORTABLE, callees_in_main);
 
-    assert!(outcome.check(&AN_EMPTY_ALLOWLIST_MAKES_NOTHING_IMPORTABLE).is_none());
+  assert!(outcome.check(&AN_EMPTY_ALLOWLIST_MAKES_NOTHING_IMPORTABLE).is_none());
 }
 
 /// A generic Rust function is read **structurally** — parameters intact, not collapsed to one
@@ -467,68 +462,64 @@ fn an_empty_allowlist_makes_nothing_importable() {
 /// the arc pivoted.
 #[test]
 fn reads_a_generic_signature_structurally() {
-    let outcome = run_case(&READS_A_GENERIC_SIGNATURE_STRUCTURALLY, callees_in_main);
+  let outcome = run_case(&READS_A_GENERIC_SIGNATURE_STRUCTURALLY, callees_in_main);
 
-    // The strong half of this assertion is that the program compiled at all: it calls
-    // `pick<int, bool>` and returns the result from `main() int`, so binding `A` to the wrong slot
-    // yields `bool` where `int` belongs and fails to resolve. `id<T>(x: T) -> T` would pass under
-    // either mapping and prove nothing.
-    let callees = outcome
-        .check(&READS_A_GENERIC_SIGNATURE_STRUCTURALLY)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "pick" && c.rust_backed && c.ret == "int32"),
-        "the generic call did not resolve to a Rust callee returning int: {callees:?}"
-    );
+  // The strong half of this assertion is that the program compiled at all: it calls
+  // `pick<int, bool>` and returns the result from `main() int`, so binding `A` to the wrong slot
+  // yields `bool` where `int` belongs and fails to resolve. `id<T>(x: T) -> T` would pass under
+  // either mapping and prove nothing.
+  let callees =
+    outcome.check(&READS_A_GENERIC_SIGNATURE_STRUCTURALLY).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "pick" && c.rust_backed && c.ret == "int32"),
+    "the generic call did not resolve to a Rust callee returning int: {callees:?}"
+  );
 
-    let pick = offered(&outcome, "pick");
-    match outcome.find_query(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == pick)) {
-        Some(OracleQuery::FnSig { answer: Some(shape), .. }) => {
-            assert_eq!(vec!["A".to_string(), "B".to_string()], shape.generic_params);
-            assert_eq!(
-                vec![SigPosition::Generic(0), SigPosition::Generic(1)],
-                shape.params
-            );
-            assert_eq!(SigPosition::Generic(0), shape.ret);
-        }
-        other => panic!(
-            "expected a structural signature for `pick`, got {other:?}:\n{}",
-            outcome.rendered_log()
-        ),
+  let pick = offered(&outcome, "pick");
+  match outcome.find_query(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == pick)) {
+    Some(OracleQuery::FnSig { answer: Some(shape), .. }) => {
+      assert_eq!(vec!["A".to_string(), "B".to_string()], shape.generic_params);
+      assert_eq!(vec![SigPosition::Generic(0), SigPosition::Generic(1)], shape.params);
+      assert_eq!(SigPosition::Generic(0), shape.ret);
     }
+    other => panic!(
+      "expected a structural signature for `pick`, got {other:?}:\n{}",
+      outcome.rendered_log()
+    ),
+  }
 }
 
 /// A Rust type reaches Vale by inference from a signature — never by name — and its method lives in
 /// the type's outer environment, resolved via the receiver when `v.get()` desugars to `get(v)`.
 #[test]
 fn calls_a_method_on_a_rust_type() {
-    let outcome = run_case(&CALLS_A_METHOD_ON_A_RUST_TYPE, callees_in_main);
+  let outcome = run_case(&CALLS_A_METHOD_ON_A_RUST_TYPE, callees_in_main);
 
-    let callees =
-        outcome.check(&CALLS_A_METHOD_ON_A_RUST_TYPE).expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "make_counter" && c.rust_backed && c.ret == "rust-citizen"),
-        "no call returned a Rust citizen, so the type never reached Vale: {callees:?}"
-    );
-    assert!(
-        callees.iter().any(|c| {
-            c.name == "get" && c.rust_backed && c.params == vec!["rust-citizen".to_string()]
-        }),
-        "the method did not resolve as a function taking the receiver as parameter zero: {callees:?}"
-    );
+  let callees =
+    outcome.check(&CALLS_A_METHOD_ON_A_RUST_TYPE).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "make_counter" && c.rust_backed && c.ret == "rust-citizen"),
+    "no call returned a Rust citizen, so the type never reached Vale: {callees:?}"
+  );
+  assert!(
+    callees.iter().any(|c| {
+      c.name == "get" && c.rust_backed && c.params == vec!["rust-citizen".to_string()]
+    }),
+    "the method did not resolve as a function taking the receiver as parameter zero: {callees:?}"
+  );
 
-    assert!(
-        outcome.asked(|q| matches!(q, OracleQuery::Methods { .. }) && q.offered("get").is_some()),
-        "the method was never discovered from the Rust side:\n{}",
-        outcome.rendered_log()
-    );
+  assert!(
+    outcome.asked(|q| matches!(q, OracleQuery::Methods { .. }) && q.offered("get").is_some()),
+    "the method was never discovered from the Rust side:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// A `&self` (borrow-receiver) method called on a local. A local read is a `BorrowRef`, so this only
 /// resolves if a borrow receiver matches `&self` — the shape every real `Vec::len`/`push` takes.
 #[test]
 fn calls_a_borrow_self_method_on_a_local() {
-    assert_rust_callees(&CALLS_A_BORROW_SELF_METHOD_ON_A_LOCAL, &["peek"]);
+  assert_rust_callees(&CALLS_A_BORROW_SELF_METHOD_ON_A_LOCAL, &["peek"]);
 }
 
 /// A Rust value bound to a local and never consumed needs a scope-end drop. `Compiler::drop`'s
@@ -537,43 +528,43 @@ fn calls_a_borrow_self_method_on_a_local() {
 /// named `drop` would answer `None`.
 #[test]
 fn a_rust_value_bound_to_a_local_gets_a_scope_end_drop() {
-    let outcome = run_case(&A_RUST_VALUE_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP, callees_in_main);
+  let outcome = run_case(&A_RUST_VALUE_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP, callees_in_main);
 
-    let callees = outcome
-        .check(&A_RUST_VALUE_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "drop" && c.rust_backed),
-        "the bound Rust value got no scope-end drop: {callees:?}"
-    );
+  let callees = outcome
+    .check(&A_RUST_VALUE_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "drop" && c.rust_backed),
+    "the bound Rust value got no scope-end drop: {callees:?}"
+  );
 }
 
 /// A generic Rust value bound to a local and never consumed needs a scope-end drop.
 #[test]
 fn a_generic_rust_type_gets_a_scope_end_drop() {
-    let outcome = run_case(&A_GENERIC_RUST_TYPE_GETS_A_SCOPE_END_DROP, callees_in_main);
+  let outcome = run_case(&A_GENERIC_RUST_TYPE_GETS_A_SCOPE_END_DROP, callees_in_main);
 
-    let callees = outcome
-        .check(&A_GENERIC_RUST_TYPE_GETS_A_SCOPE_END_DROP)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "drop" && c.rust_backed),
-        "the bound generic Rust value got no scope-end drop: {callees:?}"
-    );
+  let callees = outcome
+    .check(&A_GENERIC_RUST_TYPE_GETS_A_SCOPE_END_DROP)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "drop" && c.rust_backed),
+    "the bound generic Rust value got no scope-end drop: {callees:?}"
+  );
 }
 
 /// Hand-written Vale naming a Rust type in a parameter and calling a method on it.
 #[test]
 fn vale_source_calls_a_method_on_a_named_rust_parameter() {
-    let outcome = run_case(&VALE_SOURCE_CALLS_A_METHOD_ON_A_NAMED_RUST_PARAMETER, callees_in_main);
+  let outcome = run_case(&VALE_SOURCE_CALLS_A_METHOD_ON_A_NAMED_RUST_PARAMETER, callees_in_main);
 
-    let callees = outcome
-        .check(&VALE_SOURCE_CALLS_A_METHOD_ON_A_NAMED_RUST_PARAMETER)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "value_of" && !c.rust_backed),
-        "the Vale function taking a Rust-typed parameter did not resolve: {callees:?}"
-    );
+  let callees = outcome
+    .check(&VALE_SOURCE_CALLS_A_METHOD_ON_A_NAMED_RUST_PARAMETER)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "value_of" && !c.rust_backed),
+    "the Vale function taking a Rust-typed parameter did not resolve: {callees:?}"
+  );
 }
 
 /// A value returned and immediately discarded still gets dropped — the temporary path.
@@ -583,15 +574,15 @@ fn vale_source_calls_a_method_on_a_named_rust_parameter() {
 /// — so the assertion has to be on the callee list rather than on the outcome.
 #[test]
 fn a_rust_value_returned_and_discarded_gets_dropped() {
-    let outcome = run_case(&A_RUST_VALUE_RETURNED_AND_DISCARDED_GETS_DROPPED, callees_in_main);
+  let outcome = run_case(&A_RUST_VALUE_RETURNED_AND_DISCARDED_GETS_DROPPED, callees_in_main);
 
-    let callees = outcome
-        .check(&A_RUST_VALUE_RETURNED_AND_DISCARDED_GETS_DROPPED)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "drop" && c.rust_backed),
-        "the discarded Rust temporary got no drop: {callees:?}"
-    );
+  let callees = outcome
+    .check(&A_RUST_VALUE_RETURNED_AND_DISCARDED_GETS_DROPPED)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "drop" && c.rust_backed),
+    "the discarded Rust temporary got no drop: {callees:?}"
+  );
 }
 
 /// Two types' methods coexist, each resolving to its own receiver.
@@ -601,36 +592,36 @@ fn a_rust_value_returned_and_discarded_gets_dropped() {
 /// resolution failure rather than a wrong answer.
 #[test]
 fn calls_methods_on_two_different_rust_types() {
-    let outcome = run_case(&CALLS_METHODS_ON_TWO_DIFFERENT_RUST_TYPES, callees_in_main);
+  let outcome = run_case(&CALLS_METHODS_ON_TWO_DIFFERENT_RUST_TYPES, callees_in_main);
 
-    let callees = outcome
-        .check(&CALLS_METHODS_ON_TWO_DIFFERENT_RUST_TYPES)
-        .expect("the case declares it compiles");
+  let callees = outcome
+    .check(&CALLS_METHODS_ON_TWO_DIFFERENT_RUST_TYPES)
+    .expect("the case declares it compiles");
 
-    // Both `get`s resolved, and both are Rust-backed — one call each, so a single shared
-    // declaration serving both receivers would show up as one callee rather than two.
-    let gets: Vec<_> = callees.iter().filter(|c| c.name == "get" && c.rust_backed).collect();
-    assert_eq!(2, gets.len(), "expected one `get` per receiver type, got: {callees:?}");
+  // Both `get`s resolved, and both are Rust-backed — one call each, so a single shared
+  // declaration serving both receivers would show up as one callee rather than two.
+  let gets: Vec<_> = callees.iter().filter(|c| c.name == "get" && c.rust_backed).collect();
+  assert_eq!(2, gets.len(), "expected one `get` per receiver type, got: {callees:?}");
 }
 
 /// Two Rust types imported in one compilation — the importer is a loop, not a single-item path.
 #[test]
 fn imports_two_rust_types_at_once() {
-    let outcome = run_case(&IMPORTS_TWO_RUST_TYPES_AT_ONCE, callees_in_main);
+  let outcome = run_case(&IMPORTS_TWO_RUST_TYPES_AT_ONCE, callees_in_main);
 
-    outcome.check(&IMPORTS_TWO_RUST_TYPES_AT_ONCE);
+  outcome.check(&IMPORTS_TWO_RUST_TYPES_AT_ONCE);
 
-    // Vacuity: both types must have been walked, not just the one whose value is returned.
-    assert!(
-        outcome.asked(|q| q.offered("value_of_counter").is_some()),
-        "`Counter`'s items were never offered:\n{}",
-        outcome.rendered_log()
-    );
-    assert!(
-        outcome.asked(|q| q.offered("gauge_reading").is_some()),
-        "`Gauge`'s items were never offered:\n{}",
-        outcome.rendered_log()
-    );
+  // Vacuity: both types must have been walked, not just the one whose value is returned.
+  assert!(
+    outcome.asked(|q| q.offered("value_of_counter").is_some()),
+    "`Counter`'s items were never offered:\n{}",
+    outcome.rendered_log()
+  );
+  assert!(
+    outcome.asked(|q| q.offered("gauge_reading").is_some()),
+    "`Gauge`'s items were never offered:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// A Rust citizen produced by one call and consumed by another, with a third in between.
@@ -639,15 +630,14 @@ fn imports_two_rust_types_at_once() {
 /// fail only here, where the same type has to be recognised across a call boundary twice.
 #[test]
 fn a_rust_type_flows_through_two_calls() {
-    let outcome = run_case(&A_RUST_TYPE_FLOWS_THROUGH_TWO_CALLS, callees_in_main);
+  let outcome = run_case(&A_RUST_TYPE_FLOWS_THROUGH_TWO_CALLS, callees_in_main);
 
-    let callees = outcome
-        .check(&A_RUST_TYPE_FLOWS_THROUGH_TWO_CALLS)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "bump" && c.rust_backed),
-        "the intermediate call is not in the chain: {callees:?}"
-    );
+  let callees =
+    outcome.check(&A_RUST_TYPE_FLOWS_THROUGH_TWO_CALLS).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "bump" && c.rust_backed),
+    "the intermediate call is not in the chain: {callees:?}"
+  );
 }
 
 /// An item in a nested module, named by a dotted path — the shape `Vec` needs.
@@ -656,98 +646,94 @@ fn a_rust_type_flows_through_two_calls() {
 /// one-level walk fails. Every other case sits at a root, which is the degenerate path.
 #[test]
 fn imports_an_item_from_a_nested_module() {
-    let outcome = run_case(&IMPORTS_AN_ITEM_FROM_A_NESTED_MODULE, callees_in_main);
+  let outcome = run_case(&IMPORTS_AN_ITEM_FROM_A_NESTED_MODULE, callees_in_main);
 
-    let callees = outcome
-        .check(&IMPORTS_AN_ITEM_FROM_A_NESTED_MODULE)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "depth_reading" && c.rust_backed),
-        "the nested function did not resolve as a Rust-backed callee: {callees:?}"
-    );
+  let callees =
+    outcome.check(&IMPORTS_AN_ITEM_FROM_A_NESTED_MODULE).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "depth_reading" && c.rust_backed),
+    "the nested function did not resolve as a Rust-backed callee: {callees:?}"
+  );
 }
 
 /// A type in a nested module, plus its method — a different `DefKind` and therefore a different arm.
 #[test]
 fn imports_a_type_from_a_nested_module() {
-    let outcome = run_case(&IMPORTS_A_TYPE_FROM_A_NESTED_MODULE, callees_in_main);
+  let outcome = run_case(&IMPORTS_A_TYPE_FROM_A_NESTED_MODULE, callees_in_main);
 
-    let callees = outcome
-        .check(&IMPORTS_A_TYPE_FROM_A_NESTED_MODULE)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "depth_of" && c.rust_backed),
-        "the nested type's method did not resolve: {callees:?}"
-    );
+  let callees =
+    outcome.check(&IMPORTS_A_TYPE_FROM_A_NESTED_MODULE).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "depth_of" && c.rust_backed),
+    "the nested type's method did not resolve: {callees:?}"
+  );
 }
 
 /// An item reached through a re-exported name — the shape `std::vec::Vec` actually has.
 #[test]
 fn imports_through_a_re_exported_item() {
-    let outcome = run_case(&IMPORTS_THROUGH_A_RE_EXPORTED_ITEM, callees_in_main);
+  let outcome = run_case(&IMPORTS_THROUGH_A_RE_EXPORTED_ITEM, callees_in_main);
 
-    let callees = outcome
-        .check(&IMPORTS_THROUGH_A_RE_EXPORTED_ITEM)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "depth_reading" && c.rust_backed),
-        "the re-exported function did not resolve: {callees:?}"
-    );
+  let callees =
+    outcome.check(&IMPORTS_THROUGH_A_RE_EXPORTED_ITEM).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "depth_reading" && c.rust_backed),
+    "the re-exported function did not resolve: {callees:?}"
+  );
 }
 
 /// Descending **through** a re-exported module, rather than landing on a re-exported item.
 #[test]
 fn imports_through_a_re_exported_module() {
-    let outcome = run_case(&IMPORTS_THROUGH_A_RE_EXPORTED_MODULE, callees_in_main);
+  let outcome = run_case(&IMPORTS_THROUGH_A_RE_EXPORTED_MODULE, callees_in_main);
 
-    let callees = outcome
-        .check(&IMPORTS_THROUGH_A_RE_EXPORTED_MODULE)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "depth_of" && c.rust_backed),
-        "the method on a type behind a re-exported module did not resolve: {callees:?}"
-    );
+  let callees =
+    outcome.check(&IMPORTS_THROUGH_A_RE_EXPORTED_MODULE).expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "depth_of" && c.rust_backed),
+    "the method on a type behind a re-exported module did not resolve: {callees:?}"
+  );
 }
 
 /// A re-export whose target lives in another crate, reached by a path through the re-exporting one.
 #[test]
 fn imports_through_a_cross_crate_re_exported_item() {
-    let outcome = run_case(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_ITEM, callees_in_main);
+  let outcome = run_case(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_ITEM, callees_in_main);
 
-    let callees = outcome
-        .check(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_ITEM)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "gadget_value" && c.rust_backed),
-        "the method on a cross-crate re-exported type did not resolve: {callees:?}"
-    );
+  let callees = outcome
+    .check(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_ITEM)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "gadget_value" && c.rust_backed),
+    "the method on a cross-crate re-exported type did not resolve: {callees:?}"
+  );
 }
 
 /// Descending through a re-exported **module** whose target is in another crate — `std::vec`'s form.
 #[test]
 fn imports_through_a_cross_crate_re_exported_module() {
-    let outcome = run_case(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_MODULE, callees_in_main);
+  let outcome = run_case(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_MODULE, callees_in_main);
 
-    let callees = outcome
-        .check(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_MODULE)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "spanner_size" && c.rust_backed),
-        "the method behind a cross-crate re-exported module did not resolve: {callees:?}"
-    );
+  let callees = outcome
+    .check(&IMPORTS_THROUGH_A_CROSS_CRATE_RE_EXPORTED_MODULE)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "spanner_size" && c.rust_backed),
+    "the method behind a cross-crate re-exported module did not resolve: {callees:?}"
+  );
 }
 
 /// An item defined in the compiled crate itself is not importable — the walk sees dependencies.
 #[test]
 fn an_item_in_the_compiled_crate_is_not_importable() {
-    let outcome = run_case(&AN_ITEM_IN_THE_COMPILED_CRATE_IS_NOT_IMPORTABLE, callees_in_main);
+  let outcome = run_case(&AN_ITEM_IN_THE_COMPILED_CRATE_IS_NOT_IMPORTABLE, callees_in_main);
 
-    assert!(outcome.check(&AN_ITEM_IN_THE_COMPILED_CRATE_IS_NOT_IMPORTABLE).is_none());
-    assert!(
-        !outcome.asked(|q| q.offered("stub_only").is_some()),
-        "the compiled crate's own item was offered for import: {}",
-        outcome.rendered_log()
-    );
+  assert!(outcome.check(&AN_ITEM_IN_THE_COMPILED_CRATE_IS_NOT_IMPORTABLE).is_none());
+  assert!(
+    !outcome.asked(|q| q.offered("stub_only").is_some()),
+    "the compiled crate's own item was offered for import: {}",
+    outcome.rendered_log()
+  );
 }
 
 /// A Vale package compiled as the reserved `rust` module is refused.
@@ -760,7 +746,7 @@ fn an_item_in_the_compiled_crate_is_not_importable() {
 #[test]
 #[should_panic(expected = "reserved `rust` module")]
 fn a_vale_package_may_not_claim_the_rust_module() {
-    run_case_in_package(&A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE, "rust", callees_in_main);
+  run_case_in_package(&A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE, "rust", callees_in_main);
 }
 
 /// The control for the case above: the identical program under an ordinary package name compiles.
@@ -769,15 +755,15 @@ fn a_vale_package_may_not_claim_the_rust_module() {
 /// keep passing if the program itself went bad.
 #[test]
 fn the_reserved_module_case_compiles_under_an_ordinary_package() {
-    let outcome = run_case(&A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE, callees_in_main);
+  let outcome = run_case(&A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE, callees_in_main);
 
-    let callees = outcome
-        .check(&A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().any(|c| c.name == "add_two_numbers" && c.rust_backed),
-        "the control program did not resolve its Rust call: {callees:?}"
-    );
+  let callees = outcome
+    .check(&A_VALE_PACKAGE_MAY_NOT_CLAIM_THE_RUST_MODULE)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().any(|c| c.name == "add_two_numbers" && c.rust_backed),
+    "the control program did not resolve its Rust call: {callees:?}"
+  );
 }
 
 /// **Everything at once** — the composition case.
@@ -791,68 +777,67 @@ fn the_reserved_module_case_compiles_under_an_ordinary_package() {
 /// could return 31 while silently having resolved half its calls to the wrong thing.
 #[test]
 fn a_program_using_everything_at_once() {
-    let outcome = run_case(&A_PROGRAM_USING_EVERYTHING_AT_ONCE, callees_in_main);
+  let outcome = run_case(&A_PROGRAM_USING_EVERYTHING_AT_ONCE, callees_in_main);
 
-    let callees = outcome
-        .check(&A_PROGRAM_USING_EVERYTHING_AT_ONCE)
-        .expect("the case declares it compiles");
+  let callees =
+    outcome.check(&A_PROGRAM_USING_EVERYTHING_AT_ONCE).expect("the case declares it compiles");
 
-    // One representative of each mechanism, so a regression names which one broke.
-    for expected in [
-        "add_two_numbers",   // free function
-        "seven",             // zero-arg
-        "make_counter",      // type inferred from a signature
-        "get",               // method, and the one whose name collides across two types
-        "doubled",           // a second method on one type
-        "or_else",           // method with its own type parameter
-        "new",               // associated function, no receiver
-        "bump",              // citizen flowing through two calls
-        "pick",              // generic function at concrete types
-        "id",                // generic function at a Rust type
-        "holder_ignore",     // generic type at one argument
-        "bool_holder_flag",  // the same generic type at another
-        "depth_reading",     // nested module, by path
-        "depth_of",          // method on a nested type
-        "make_sonar",        // reached through a re-export
-        "drop",              // scope-end drop on the bound Rust values
-    ] {
-        assert!(
-            callees.iter().any(|c| c.name == expected && c.rust_backed),
-            "`{expected}` did not resolve as a Rust-backed callee in the composite program: \
+  // One representative of each mechanism, so a regression names which one broke.
+  for expected in [
+    "add_two_numbers",  // free function
+    "seven",            // zero-arg
+    "make_counter",     // type inferred from a signature
+    "get",              // method, and the one whose name collides across two types
+    "doubled",          // a second method on one type
+    "or_else",          // method with its own type parameter
+    "new",              // associated function, no receiver
+    "bump",             // citizen flowing through two calls
+    "pick",             // generic function at concrete types
+    "id",               // generic function at a Rust type
+    "holder_ignore",    // generic type at one argument
+    "bool_holder_flag", // the same generic type at another
+    "depth_reading",    // nested module, by path
+    "depth_of",         // method on a nested type
+    "make_sonar",       // reached through a re-export
+    "drop",             // scope-end drop on the bound Rust values
+  ] {
+    assert!(
+      callees.iter().any(|c| c.name == expected && c.rust_backed),
+      "`{expected}` did not resolve as a Rust-backed callee in the composite program: \
              {callees:?}"
-        );
-    }
-
-    // The three declined items sit in the allowlist and must not have been imported.
-    for declined in ["first", "unsigned_count", "half_of"] {
-        assert!(
-            !callees.iter().any(|c| c.name == declined),
-            "`{declined}` should have been declined, but reached the callee list: {callees:?}"
-        );
-    }
-
-    // A Vale function taking a Rust-typed parameter, resolving alongside everything else. Not
-    // Rust-backed: it is the caller, and the point is that it coexists with the callees.
-    assert!(
-        callees.iter().any(|c| c.name == "vale_counter_value" && !c.rust_backed),
-        "the Vale function over a Rust type did not resolve in the composite program: {callees:?}"
     );
+  }
 
-    // Drop is the mechanism most likely to break only in company, so it is asserted by shape
-    // rather than by presence: four non-generic citizens and one generic one fall out of scope
-    // here, and the generic drop is the one that needs `T` deduced from the value.
-    let drops: Vec<&Vec<String>> =
-        callees.iter().filter(|c| c.name == "drop" && c.rust_backed).map(|c| &c.params).collect();
+  // The three declined items sit in the allowlist and must not have been imported.
+  for declined in ["first", "unsigned_count", "half_of"] {
     assert!(
-        drops.iter().any(|params| params.iter().any(|p| p.contains('<'))),
-        "no generic citizen was dropped in the composite program, so the generic drop never \
+      !callees.iter().any(|c| c.name == declined),
+      "`{declined}` should have been declined, but reached the callee list: {callees:?}"
+    );
+  }
+
+  // A Vale function taking a Rust-typed parameter, resolving alongside everything else. Not
+  // Rust-backed: it is the caller, and the point is that it coexists with the callees.
+  assert!(
+    callees.iter().any(|c| c.name == "vale_counter_value" && !c.rust_backed),
+    "the Vale function over a Rust type did not resolve in the composite program: {callees:?}"
+  );
+
+  // Drop is the mechanism most likely to break only in company, so it is asserted by shape
+  // rather than by presence: four non-generic citizens and one generic one fall out of scope
+  // here, and the generic drop is the one that needs `T` deduced from the value.
+  let drops: Vec<&Vec<String>> =
+    callees.iter().filter(|c| c.name == "drop" && c.rust_backed).map(|c| &c.params).collect();
+  assert!(
+    drops.iter().any(|params| params.iter().any(|p| p.contains('<'))),
+    "no generic citizen was dropped in the composite program, so the generic drop never \
          composed with the others: {drops:?}"
-    );
-    assert!(
-        drops.iter().any(|params| params.iter().all(|p| !p.contains('<'))),
-        "no non-generic citizen was dropped, so the two drop shapes were not exercised \
+  );
+  assert!(
+    drops.iter().any(|params| params.iter().all(|p| !p.contains('<'))),
+    "no non-generic citizen was dropped, so the two drop shapes were not exercised \
          together: {drops:?}"
-    );
+  );
 }
 
 /// A signature Vale cannot represent costs nothing when it is imported but never called: with lazy
@@ -864,33 +849,33 @@ fn a_program_using_everything_at_once() {
 /// it is offered but uncalled, so it is never forced.
 #[test]
 fn declines_an_unrepresentable_signature() {
-    let outcome = run_case(&DECLINES_AN_UNREPRESENTABLE_SIGNATURE, callees_in_main);
+  let outcome = run_case(&DECLINES_AN_UNREPRESENTABLE_SIGNATURE, callees_in_main);
 
-    // An uncalled unrepresentable import must not disturb the rest of the import.
-    outcome.check(&DECLINES_AN_UNREPRESENTABLE_SIGNATURE);
+  // An uncalled unrepresentable import must not disturb the rest of the import.
+  outcome.check(&DECLINES_AN_UNREPRESENTABLE_SIGNATURE);
 
-    let first = offered(&outcome, "first");
-    assert!(
-        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == first)),
-        "`first` is imported but never called, so its signature must never be queried:\n{}",
-        outcome.rendered_log()
-    );
+  let first = offered(&outcome, "first");
+  assert!(
+    !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == first)),
+    "`first` is imported but never called, so its signature must never be queried:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// The same unrepresentable type in **argument** position, offered but uncalled: still never queried.
 #[test]
 fn declines_an_unrepresentable_parameter() {
-    let outcome = run_case(&DECLINES_AN_UNREPRESENTABLE_PARAMETER, callees_in_main);
+  let outcome = run_case(&DECLINES_AN_UNREPRESENTABLE_PARAMETER, callees_in_main);
 
-    // An uncalled unrepresentable import must not disturb the rest of the import.
-    outcome.check(&DECLINES_AN_UNREPRESENTABLE_PARAMETER);
+  // An uncalled unrepresentable import must not disturb the rest of the import.
+  outcome.check(&DECLINES_AN_UNREPRESENTABLE_PARAMETER);
 
-    let take_first = offered(&outcome, "take_first");
-    assert!(
-        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == take_first)),
-        "`take_first` is imported but never called, so its signature must never be queried:\n{}",
-        outcome.rendered_log()
-    );
+  let take_first = offered(&outcome, "take_first");
+  assert!(
+    !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == take_first)),
+    "`take_first` is imported but never called, so its signature must never be queried:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// An unsigned integer would decline if forced — its signature is `u32`-shaped, and `IntT` carries a
@@ -898,34 +883,34 @@ fn declines_an_unrepresentable_parameter() {
 /// it is never forced, so it is never queried.
 #[test]
 fn declines_an_unsigned_integer() {
-    let outcome = run_case(&DECLINES_AN_UNSIGNED_INTEGER, callees_in_main);
+  let outcome = run_case(&DECLINES_AN_UNSIGNED_INTEGER, callees_in_main);
 
-    // An uncalled unrepresentable import must not disturb the rest of the import.
-    outcome.check(&DECLINES_AN_UNSIGNED_INTEGER);
+  // An uncalled unrepresentable import must not disturb the rest of the import.
+  outcome.check(&DECLINES_AN_UNSIGNED_INTEGER);
 
-    let unsigned_count = offered(&outcome, "unsigned_count");
-    assert!(
-        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == unsigned_count)),
-        "`unsigned_count` is imported but never called, so its signature must never be queried:\n{}",
-        outcome.rendered_log()
-    );
+  let unsigned_count = offered(&outcome, "unsigned_count");
+  assert!(
+    !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == unsigned_count)),
+    "`unsigned_count` is imported but never called, so its signature must never be queried:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// A float would decline if forced — `FloatT` has no width, so `f32` and `f64` would intern
 /// identically. Offered but uncalled, it is never forced.
 #[test]
 fn declines_a_float() {
-    let outcome = run_case(&DECLINES_A_FLOAT, callees_in_main);
+  let outcome = run_case(&DECLINES_A_FLOAT, callees_in_main);
 
-    // An uncalled unrepresentable import must not disturb the rest of the import.
-    outcome.check(&DECLINES_A_FLOAT);
+  // An uncalled unrepresentable import must not disturb the rest of the import.
+  outcome.check(&DECLINES_A_FLOAT);
 
-    let half_of = offered(&outcome, "half_of");
-    assert!(
-        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == half_of)),
-        "`half_of` is imported but never called, so its signature must never be queried:\n{}",
-        outcome.rendered_log()
-    );
+  let half_of = offered(&outcome, "half_of");
+  assert!(
+    !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == half_of)),
+    "`half_of` is imported but never called, so its signature must never be queried:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// @RTMEIZ from the side that is easy to miss: reaching a type through another item's signature does
@@ -933,17 +918,17 @@ fn declines_a_float() {
 /// forced — but offered and uncalled, it is never forced, so it is never queried.
 #[test]
 fn declines_a_signature_naming_an_unimported_type() {
-    let outcome = run_case(&DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE, callees_in_main);
+  let outcome = run_case(&DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE, callees_in_main);
 
-    // An uncalled unrepresentable import must not disturb the rest of the import.
-    outcome.check(&DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE);
+  // An uncalled unrepresentable import must not disturb the rest of the import.
+  outcome.check(&DECLINES_A_SIGNATURE_NAMING_AN_UNIMPORTED_TYPE);
 
-    let takes_hidden = offered(&outcome, "takes_hidden");
-    assert!(
-        !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == takes_hidden)),
-        "`takes_hidden` is imported but never called, so its signature must never be queried:\n{}",
-        outcome.rendered_log()
-    );
+  let takes_hidden = offered(&outcome, "takes_hidden");
+  assert!(
+    !outcome.asked(|q| matches!(q, OracleQuery::FnSig { item, .. } if *item == takes_hidden)),
+    "`takes_hidden` is imported but never called, so its signature must never be queried:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// **Vale source can name a Rust type** — hand-written, by bare name, with no import statement.
@@ -967,9 +952,9 @@ fn declines_a_signature_naming_an_unimported_type() {
 /// and generic Rust *types* (we have generic functions only).
 #[test]
 fn vale_source_can_name_a_rust_type() {
-    let outcome = run_case(&VALE_SOURCE_CAN_NAME_A_RUST_TYPE, callees_in_main);
+  let outcome = run_case(&VALE_SOURCE_CAN_NAME_A_RUST_TYPE, callees_in_main);
 
-    outcome.check(&VALE_SOURCE_CAN_NAME_A_RUST_TYPE);
+  outcome.check(&VALE_SOURCE_CAN_NAME_A_RUST_TYPE);
 }
 
 /// A generic Rust type imports **with its arguments intact**.
@@ -987,73 +972,70 @@ fn vale_source_can_name_a_rust_type() {
 /// `IEnvEntryT::Struct` rather than a finished `ITemplataT::Kind`.
 #[test]
 fn a_generic_rust_type_carries_its_arguments() {
-    let same_kind = run_case(
-        &A_GENERIC_RUST_TYPE_CARRIES_ITS_ARGUMENTS,
-        |coutputs| {
-            let main = coutputs.lookup_function_by_str("main");
-            let callees: Vec<&PrototypeT> = collect_where_tnode!(
-                NodeRefT::FunctionDefinition(main),
-                NodeRefT::FunctionCall(call) => Some(call.callable)
-            );
-            let ret_of = |name: &str| {
-                describe_kind(
-                    callees
-                        .iter()
-                        .find(|p| describe_callee(p).name == name)
-                        .unwrap_or_else(|| panic!("no call to {name} resolved"))
-                        .return_type,
-                )
-            };
-            (ret_of("make_holder"), ret_of("make_bool_holder"))
-        },
+  let same_kind = run_case(&A_GENERIC_RUST_TYPE_CARRIES_ITS_ARGUMENTS, |coutputs| {
+    let main = coutputs.lookup_function_by_str("main");
+    let callees: Vec<&PrototypeT> = collect_where_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(call) => Some(call.callable)
     );
+    let ret_of = |name: &str| {
+      describe_kind(
+        callees
+          .iter()
+          .find(|p| describe_callee(p).name == name)
+          .unwrap_or_else(|| panic!("no call to {name} resolved"))
+          .return_type,
+      )
+    };
+    (ret_of("make_holder"), ret_of("make_bool_holder"))
+  });
 
-    // Asserting the arguments rather than merely that the two differ: "they differ" would also be
-    // satisfied by two wrong-but-distinct answers, and the defect this replaced was precisely two
-    // instantiations rendering the same.
-    assert_eq!(
-        &("rust-citizen<int32>".to_string(), "rust-citizen<bool>".to_string()),
-        same_kind
-            .check(&A_GENERIC_RUST_TYPE_CARRIES_ITS_ARGUMENTS)
-            .expect("the case declares it compiles")
-    );
+  // Asserting the arguments rather than merely that the two differ: "they differ" would also be
+  // satisfied by two wrong-but-distinct answers, and the defect this replaced was precisely two
+  // instantiations rendering the same.
+  assert_eq!(
+    &("rust-citizen<int32>".to_string(), "rust-citizen<bool>".to_string()),
+    same_kind
+      .check(&A_GENERIC_RUST_TYPE_CARRIES_ITS_ARGUMENTS)
+      .expect("the case declares it compiles")
+  );
 }
 
 /// The mirror of the empty-allowlist control: the crate exports `seven`, and leaving it out of the
 /// allowlist is enough to make it unreachable.
 #[test]
 fn an_item_not_in_the_allowlist_is_not_importable() {
-    let outcome = run_case(&AN_ITEM_NOT_IN_THE_ALLOWLIST_IS_NOT_IMPORTABLE, callees_in_main);
+  let outcome = run_case(&AN_ITEM_NOT_IN_THE_ALLOWLIST_IS_NOT_IMPORTABLE, callees_in_main);
 
-    assert!(outcome.check(&AN_ITEM_NOT_IN_THE_ALLOWLIST_IS_NOT_IMPORTABLE).is_none());
+  assert!(outcome.check(&AN_ITEM_NOT_IN_THE_ALLOWLIST_IS_NOT_IMPORTABLE).is_none());
 }
 
 /// A stale allowlist entry is inert. An `import` list outlives the crate versions it was written
 /// against, so a name that stops existing must not take the compilation down.
 #[test]
 fn an_allowlist_entry_the_crate_does_not_export_is_ignored() {
-    // Importing an item the crate does not export now fails the compile (`UnresolvableRustImport`)
-    // rather than being silently ignored.
-    let outcome = run_case(&AN_ALLOWLIST_ENTRY_THE_CRATE_DOES_NOT_EXPORT_IS_IGNORED, callees_in_main);
-    assert!(outcome.check(&AN_ALLOWLIST_ENTRY_THE_CRATE_DOES_NOT_EXPORT_IS_IGNORED).is_none());
+  // Importing an item the crate does not export now fails the compile (`UnresolvableRustImport`)
+  // rather than being silently ignored.
+  let outcome = run_case(&AN_ALLOWLIST_ENTRY_THE_CRATE_DOES_NOT_EXPORT_IS_IGNORED, callees_in_main);
+  assert!(outcome.check(&AN_ALLOWLIST_ENTRY_THE_CRATE_DOES_NOT_EXPORT_IS_IGNORED).is_none());
 }
 
 /// A crate's module children include its own `extern crate std`. Without the `DefKind` filter, a
 /// name match would hand back a module where a function or type was asked for.
 #[test]
 fn a_module_named_in_the_allowlist_is_filtered_by_defkind() {
-    // A module (not a fn/struct) fails the `DefKind` filter, so the import resolves to nothing and the
-    // compile fails (`UnresolvableRustImport`) rather than the entry being silently ignored.
-    let outcome = run_case(&A_MODULE_NAMED_IN_THE_ALLOWLIST_IS_FILTERED_BY_DEFKIND, callees_in_main);
-    assert!(outcome.check(&A_MODULE_NAMED_IN_THE_ALLOWLIST_IS_FILTERED_BY_DEFKIND).is_none());
+  // A module (not a fn/struct) fails the `DefKind` filter, so the import resolves to nothing and the
+  // compile fails (`UnresolvableRustImport`) rather than the entry being silently ignored.
+  let outcome = run_case(&A_MODULE_NAMED_IN_THE_ALLOWLIST_IS_FILTERED_BY_DEFKIND, callees_in_main);
+  assert!(outcome.check(&A_MODULE_NAMED_IN_THE_ALLOWLIST_IS_FILTERED_BY_DEFKIND).is_none());
 }
 
 /// A Rust callee competes on `params_match` like any other candidate.
 #[test]
 fn wrong_argument_types_do_not_resolve() {
-    let outcome = run_case(&WRONG_ARGUMENT_TYPES_DO_NOT_RESOLVE, callees_in_main);
+  let outcome = run_case(&WRONG_ARGUMENT_TYPES_DO_NOT_RESOLVE, callees_in_main);
 
-    assert!(outcome.check(&WRONG_ARGUMENT_TYPES_DO_NOT_RESOLVE).is_none());
+  assert!(outcome.check(&WRONG_ARGUMENT_TYPES_DO_NOT_RESOLVE).is_none());
 }
 
 /// An oracle in scope costs an ordinary Vale program nothing.
@@ -1063,21 +1045,21 @@ fn wrong_argument_types_do_not_resolve() {
 /// referring to any of them.
 #[test]
 fn a_program_using_no_rust_items_compiles_with_an_oracle_present() {
-    let outcome =
-        run_case(&A_PROGRAM_USING_NO_RUST_ITEMS_COMPILES_WITH_AN_ORACLE_PRESENT, callees_in_main);
+  let outcome =
+    run_case(&A_PROGRAM_USING_NO_RUST_ITEMS_COMPILES_WITH_AN_ORACLE_PRESENT, callees_in_main);
 
-    let callees = outcome
-        .check(&A_PROGRAM_USING_NO_RUST_ITEMS_COMPILES_WITH_AN_ORACLE_PRESENT)
-        .expect("the case declares it compiles");
-    assert!(
-        callees.iter().all(|c| !c.rust_backed),
-        "a program mentioning no Rust item resolved a Rust callee anyway: {callees:?}"
-    );
-    assert!(
-        outcome.asked(|q| q.offered("add_two_numbers").is_some()),
-        "the oracle was never consulted, so this says nothing about its presence being free:\n{}",
-        outcome.rendered_log()
-    );
+  let callees = outcome
+    .check(&A_PROGRAM_USING_NO_RUST_ITEMS_COMPILES_WITH_AN_ORACLE_PRESENT)
+    .expect("the case declares it compiles");
+  assert!(
+    callees.iter().all(|c| !c.rust_backed),
+    "a program mentioning no Rust item resolved a Rust callee anyway: {callees:?}"
+  );
+  assert!(
+    outcome.asked(|q| q.offered("add_two_numbers").is_some()),
+    "the oracle was never consulted, so this says nothing about its presence being free:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// Two crates' items reach Vale in one compilation, and stay two types.
@@ -1087,15 +1069,15 @@ fn a_program_using_no_rust_items_compiles_with_an_oracle_present() {
 /// so the two land in different packages and therefore in different top-level stores.
 #[test]
 fn imports_from_two_crates() {
-    let outcome = run_case(&IMPORTS_FROM_TWO_CRATES, callees_in_main);
+  let outcome = run_case(&IMPORTS_FROM_TWO_CRATES, callees_in_main);
 
-    let callees = outcome.check(&IMPORTS_FROM_TWO_CRATES).expect("the case declares it compiles");
-    for name in ["make_gadget", "make_doohickey", "gadget_value", "doohickey_value"] {
-        assert!(
-            callees.iter().any(|c| c.name == name && c.rust_backed),
-            "`{name}` did not resolve to a Rust callee: {callees:?}"
-        );
-    }
+  let callees = outcome.check(&IMPORTS_FROM_TWO_CRATES).expect("the case declares it compiles");
+  for name in ["make_gadget", "make_doohickey", "gadget_value", "doohickey_value"] {
+    assert!(
+      callees.iter().any(|c| c.name == name && c.rust_backed),
+      "`{name}` did not resolve to a Rust callee: {callees:?}"
+    );
+  }
 }
 
 /// Two crates each exporting a `Widget`: **the name-collision trigger, firing.**
@@ -1128,21 +1110,21 @@ fn imports_from_two_crates() {
 /// `a_type_from_one_crate_does_not_satisfy_the_others_parameter`.
 #[test]
 fn two_crates_exporting_the_same_short_name_stay_distinct() {
-    run_case(&TWO_CRATES_EXPORTING_THE_SAME_SHORT_NAME_STAY_DISTINCT, |coutputs| {
-        let main = coutputs.lookup_function_by_str("main");
-        let callees: Vec<&PrototypeT> = collect_where_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::FunctionCall(call) => Some(call.callable)
-        );
-        let ret_of = |name: &str| {
-            callees
-                .iter()
-                .find(|p| describe_callee(p).name == name)
-                .unwrap_or_else(|| panic!("no call to {name} resolved"))
-                .return_type
-        };
-        ret_of("make_widget") != ret_of("make_other_widget")
-    });
+  run_case(&TWO_CRATES_EXPORTING_THE_SAME_SHORT_NAME_STAY_DISTINCT, |coutputs| {
+    let main = coutputs.lookup_function_by_str("main");
+    let callees: Vec<&PrototypeT> = collect_where_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(call) => Some(call.callable)
+    );
+    let ret_of = |name: &str| {
+      callees
+        .iter()
+        .find(|p| describe_callee(p).name == name)
+        .unwrap_or_else(|| panic!("no call to {name} resolved"))
+        .return_type
+    };
+    ret_of("make_widget") != ret_of("make_other_widget")
+  });
 }
 
 /// The distinctness half — and the only shape that can observe it.
@@ -1157,18 +1139,18 @@ fn two_crates_exporting_the_same_short_name_stay_distinct() {
 /// compiler rejected the program."
 #[test]
 fn a_type_from_one_crate_does_not_satisfy_the_others_parameter() {
-    let outcome =
-        run_case(&A_TYPE_FROM_ONE_CRATE_DOES_NOT_SATISFY_THE_OTHERS_PARAMETER, callees_in_main);
+  let outcome =
+    run_case(&A_TYPE_FROM_ONE_CRATE_DOES_NOT_SATISFY_THE_OTHERS_PARAMETER, callees_in_main);
 
-    outcome.check(&A_TYPE_FROM_ONE_CRATE_DOES_NOT_SATISFY_THE_OTHERS_PARAMETER);
+  outcome.check(&A_TYPE_FROM_ONE_CRATE_DOES_NOT_SATISFY_THE_OTHERS_PARAMETER);
 
-    // Vacuity: the callee must have been *offered*, or the case would pass for the boring reason
-    // that nothing named `widget_value` was importable at all.
-    assert!(
-        outcome.asked(|q| q.offered("widget_value").is_some()),
-        "`widget_value` was never offered, so the rejection proves nothing:\n{}",
-        outcome.rendered_log()
-    );
+  // Vacuity: the callee must have been *offered*, or the case would pass for the boring reason
+  // that nothing named `widget_value` was importable at all.
+  assert!(
+    outcome.asked(|q| q.offered("widget_value").is_some()),
+    "`widget_value` was never offered, so the rejection proves nothing:\n{}",
+    outcome.rendered_log()
+  );
 }
 
 /// **@ATAFLBZ fence: nothing in `rust_interop/` may take a Rust item's identity from its human
@@ -1190,51 +1172,50 @@ fn a_type_from_one_crate_does_not_satisfy_the_others_parameter() {
 /// **identity** — the allowlist is name-shaped by its own semantics, and that is fine.
 #[test]
 fn no_rust_item_identity_comes_from_a_human_name() {
-    const ALLOW: &str = "ataflbz-allow";
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/typing/rust_interop");
+  const ALLOW: &str = "ataflbz-allow";
+  let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/typing/rust_interop");
 
-    let mut offenders: Vec<String> = Vec::new();
-    let mut walk = vec![dir];
-    while let Some(path) = walk.pop() {
-        for entry in read_dir(&path).expect("could not read rust_interop dir") {
-            let entry = entry.expect("could not read dir entry").path();
-            if entry.is_dir() {
-                walk.push(entry);
-                continue;
-            }
-            // Fixture crates are Rust *input*, not compiler source.
-            if entry.extension().is_none_or(|e| e != "rs")
-                || entry.to_string_lossy().contains("fixtures")
-            {
-                continue;
-            }
-            let source = read_to_string(&entry).expect("could not read source");
-            for (number, line) in source.lines().enumerate() {
-                if line.contains(ALLOW) {
-                    continue;
-                }
-                let compares_a_name = (line.contains("human_name") || line.contains(".ident"))
-                    && (line.contains("==") || line.contains("!=") || line.contains(".contains("));
-                if compares_a_name {
-                    offenders.push(format!(
-                        "{}:{}: {}",
-                        entry.file_name().expect("a file has a name").to_string_lossy(),
-                        number + 1,
-                        line.trim()
-                    ));
-                }
-            }
+  let mut offenders: Vec<String> = Vec::new();
+  let mut walk = vec![dir];
+  while let Some(path) = walk.pop() {
+    for entry in read_dir(&path).expect("could not read rust_interop dir") {
+      let entry = entry.expect("could not read dir entry").path();
+      if entry.is_dir() {
+        walk.push(entry);
+        continue;
+      }
+      // Fixture crates are Rust *input*, not compiler source.
+      if entry.extension().is_none_or(|e| e != "rs") || entry.to_string_lossy().contains("fixtures")
+      {
+        continue;
+      }
+      let source = read_to_string(&entry).expect("could not read source");
+      for (number, line) in source.lines().enumerate() {
+        if line.contains(ALLOW) {
+          continue;
         }
+        let compares_a_name = (line.contains("human_name") || line.contains(".ident"))
+          && (line.contains("==") || line.contains("!=") || line.contains(".contains("));
+        if compares_a_name {
+          offenders.push(format!(
+            "{}:{}: {}",
+            entry.file_name().expect("a file has a name").to_string_lossy(),
+            number + 1,
+            line.trim()
+          ));
+        }
+      }
     }
+  }
 
-    assert!(
-        offenders.is_empty(),
-        "these lines take a Rust item's identity from a human name (@ATAFLBZ). Key on `DefId` or \
+  assert!(
+    offenders.is_empty(),
+    "these lines take a Rust item's identity from a human name (@ATAFLBZ). Key on `DefId` or \
          on the `tcx.def_path`-derived package coordinate instead; if the comparison is about \
          which items the allowlist *admits* rather than which item something *is*, add a \
          `{ALLOW}` comment on the line:\n  {}",
-        offenders.join("\n  ")
-    );
+    offenders.join("\n  ")
+  );
 }
 
 /// Every `Case`'s `name` must be unique.
@@ -1246,37 +1227,36 @@ fn no_rust_item_identity_comes_from_a_human_name() {
 /// asserts uniqueness so a future collision fails loudly and locally instead of flaking the suite.
 #[test]
 fn every_case_name_is_unique() {
-    let corpus = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("src/typing/rust_interop/corpus.rs");
-    let source = read_to_string(&corpus).expect("could not read corpus.rs");
+  let corpus = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/typing/rust_interop/corpus.rs");
+  let source = read_to_string(&corpus).expect("could not read corpus.rs");
 
-    // Match the `Case` struct field `name: "…",` exactly, so prose and Vale source are not counted.
-    let mut names: Vec<String> = Vec::new();
-    for line in source.lines() {
-        let trimmed = line.trim();
-        let Some(rest) = trimmed.strip_prefix("name: \"") else { continue };
-        let Some(name) = rest.strip_suffix("\",") else { continue };
-        names.push(name.to_string());
-    }
-    // A floor guards against the extraction silently matching nothing and passing vacuously.
-    assert!(
-        names.len() > 40,
-        "found only {} case names — the `name:` extraction likely broke",
-        names.len()
-    );
+  // Match the `Case` struct field `name: "…",` exactly, so prose and Vale source are not counted.
+  let mut names: Vec<String> = Vec::new();
+  for line in source.lines() {
+    let trimmed = line.trim();
+    let Some(rest) = trimmed.strip_prefix("name: \"") else { continue };
+    let Some(name) = rest.strip_suffix("\",") else { continue };
+    names.push(name.to_string());
+  }
+  // A floor guards against the extraction silently matching nothing and passing vacuously.
+  assert!(
+    names.len() > 40,
+    "found only {} case names — the `name:` extraction likely broke",
+    names.len()
+  );
 
-    let mut sorted = names.clone();
-    sorted.sort();
-    let mut dups: Vec<String> =
-        sorted.windows(2).filter(|w| w[0] == w[1]).map(|w| w[0].clone()).collect();
-    dups.dedup();
-    assert!(
-        dups.is_empty(),
-        "these Case names are used more than once. The name is the per-case build out_dir \
+  let mut sorted = names.clone();
+  sorted.sort();
+  let mut dups: Vec<String> =
+    sorted.windows(2).filter(|w| w[0] == w[1]).map(|w| w[0].clone()).collect();
+  dups.dedup();
+  assert!(
+    dups.is_empty(),
+    "these Case names are used more than once. The name is the per-case build out_dir \
          (vale-interop-cases/<name>), so a duplicate races two test threads on one libmycrate.rlib \
          and flakes the suite. Give each Case a unique name:\n  {}",
-        dups.join("\n  ")
-    );
+    dups.join("\n  ")
+  );
 }
 
 /// Every fixture's `stub.rs` must be **valid Rust**, not merely parseable.
@@ -1291,11 +1271,11 @@ fn every_case_name_is_unique() {
 /// it, or they break the case that proves a broken fixture costs one test rather than the run.
 #[test]
 fn every_fixture_stub_is_valid_rust() {
-    for fixture in ["fixtures", "fixtures_two_crates"] {
-        if let Err(stderr) = compile_check_fixture(fixture) {
-            panic!("fixture `{fixture}`'s stub.rs does not compile:\n{stderr}");
-        }
+  for fixture in ["fixtures", "fixtures_two_crates"] {
+    if let Err(stderr) = compile_check_fixture(fixture) {
+      panic!("fixture `{fixture}`'s stub.rs does not compile:\n{stderr}");
     }
+  }
 }
 
 /// The surviving hazard of hosting rustc in `cargo test --lib`, pinned as a regression test.
@@ -1310,10 +1290,10 @@ fn every_fixture_stub_is_valid_rust() {
 /// returns `Compilation::Stop`, so a type error would never be reached.
 #[test]
 fn a_fatal_rustc_error_costs_one_case() {
-    let outcome = try_run_case(&A_FATAL_RUSTC_ERROR_COSTS_ONE_CASE, callees_in_main);
+  let outcome = try_run_case(&A_FATAL_RUSTC_ERROR_COSTS_ONE_CASE, callees_in_main);
 
-    assert!(
-        outcome.is_none(),
-        "rustc was expected to fail before after_expansion, but the callback ran"
-    );
+  assert!(
+    outcome.is_none(),
+    "rustc was expected to fail before after_expansion, but the callback ran"
+  );
 }

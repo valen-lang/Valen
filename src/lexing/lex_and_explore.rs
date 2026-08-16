@@ -1,16 +1,13 @@
+use crate::code_source::CodeSource;
 use crate::interner::StrI;
-use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::lexing::ast::{IDenizenL, ImportL, RangeL};
 use crate::lexing::errors::FailedParse;
 use crate::lexing::lexer::Lexer;
 use crate::lexing::lexing_iterator::LexingIterator;
-use crate::code_source::CodeSource;
-use crate::utils::code_hierarchy::{
-  FileCoordinate, FileCoordinateMap, PackageCoordinate,
-};
+use crate::parse_arena::ParseArena;
+use crate::utils::code_hierarchy::{FileCoordinate, FileCoordinateMap, PackageCoordinate};
 use crate::utils::fx::{HashMap, HashSet};
-
 
 /// Main lexing function with import-driven package discovery
 pub fn lex_and_explore<'p, 'ctx, D, F>(
@@ -24,8 +21,7 @@ pub fn lex_and_explore<'p, 'ctx, D, F>(
 where
   'p: 'ctx,
 {
-  let mut unexplored_packages: HashSet<&'p PackageCoordinate<'p>> =
-    packages.into_iter().collect();
+  let mut unexplored_packages: HashSet<&'p PackageCoordinate<'p>> = packages.into_iter().collect();
   let mut started_packages: HashSet<PackageCoordinate<'p>> = HashSet::default();
   let mut already_found_file_to_code = FileCoordinateMap::<String>::new();
 
@@ -36,24 +32,23 @@ where
     unexplored_packages.remove(&needed_package_coord);
     started_packages.insert(needed_package_coord.clone());
 
-    let filepaths_and_contents: Vec<(&'p FileCoordinate<'p>, String)> = match source.resolve(&needed_package_coord) {
-      None => {
-        panic!("Couldn't find: {:?}", needed_package_coord);
-      }
-      Some(filepath_to_code) => {
-        let mut result = Vec::new();
-        for (filepath, code) in filepath_to_code {
-          let file_coord = parse_arena.intern_file_coordinate(needed_package_coord, &filepath);
-          result.push((file_coord, code));
+    let filepaths_and_contents: Vec<(&'p FileCoordinate<'p>, String)> =
+      match source.resolve(&needed_package_coord) {
+        None => {
+          panic!("Couldn't find: {:?}", needed_package_coord);
         }
-        result
-      }
-    };
+        Some(filepath_to_code) => {
+          let mut result = Vec::new();
+          for (filepath, code) in filepath_to_code {
+            let file_coord = parse_arena.intern_file_coordinate(needed_package_coord, &filepath);
+            result.push((file_coord, code));
+          }
+          result
+        }
+      };
 
-    let filepaths_map: HashMap<&'p FileCoordinate<'p>, String> = filepaths_and_contents
-      .iter()
-    .map(|(fc, code)| (*fc, code.clone()))
-      .collect();
+    let filepaths_map: HashMap<&'p FileCoordinate<'p>, String> =
+      filepaths_and_contents.iter().map(|(fc, code)| (*fc, code.clone())).collect();
     already_found_file_to_code.put_package(needed_package_coord, filepaths_map);
 
     for (file_coord, code) in filepaths_and_contents {
@@ -120,9 +115,7 @@ where
               }
             }
 
-            let imports = maybe_imports
-              .as_ref()
-              .expect("maybe_imports should be Some");
+            let imports = maybe_imports.as_ref().expect("maybe_imports should be Some");
             let denizen_result = denizen_handler(file_coord, &code, imports, &denizen);
             result_acc.push(denizen_result);
           }
@@ -133,7 +126,8 @@ where
       for (module_str, package_strs) in packages_to_explore {
         let package_steps: Vec<StrI<'p>> =
           package_strs.iter().map(|s| parse_arena.intern_str(s)).collect();
-        let coord = parse_arena.intern_package_coordinate(parse_arena.intern_str(&module_str), &package_steps);
+        let coord = parse_arena
+          .intern_package_coordinate(parse_arena.intern_str(&module_str), &package_steps);
         if !started_packages.contains(&*coord) {
           unexplored_packages.insert(&*coord);
         }

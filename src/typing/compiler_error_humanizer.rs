@@ -1,41 +1,49 @@
-use crate::utils::range::{RangeS, CodeLocationS};
 use crate::interner::Interner;
-use crate::postparsing::*;
-use crate::postparsing::names::*;
-use crate::postparsing::itemplatatype::ITemplataType;
-use crate::scout_arena::ScoutArena;
-use crate::typing::typing_interner::TypingInterner;
-use crate::postparsing::rules::rules::*;
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::compiler_error_reporter::*;
-use crate::typing::compiler_outputs::*;
-use crate::typing::infer::compiler_solver::*;
-use crate::typing::infer_compiler::*;
-use crate::typing::overload_resolver::*;
-use crate::typing::compilation::TypingPassOptions;
-use crate::solver::solver::*;
-use crate::postparsing::ast::*;
 use crate::postparsing::ast::FunctionS;
-use crate::typing::citizen::struct_compiler::*;
-use crate::utils::code_hierarchy::FileCoordinate;
+use crate::postparsing::ast::*;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::names::*;
 use crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name;
 use crate::postparsing::post_parser_error_humanizer::humanize_name_for_struct_declaration;
 use crate::postparsing::post_parser_error_humanizer::humanize_rule;
 use crate::postparsing::post_parser_error_humanizer::humanize_rune;
 use crate::postparsing::post_parser_error_humanizer::humanize_templata_type;
-use crate::typing::rune_typing::rune_type_solver::IRuneTypeRuleError;
-use crate::typing::rune_typing::higher_typing_error_humanizer::humanize_rune_type_error;
+use crate::postparsing::rules::rules::*;
+use crate::postparsing::*;
+use crate::scout_arena::ScoutArena;
+use crate::solver::solver::*;
 use crate::solver::solver_error_humanizer::humanize_failed_solve as solver_humanize_failed_solve;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::citizen::struct_compiler::*;
+use crate::typing::compilation::TypingPassOptions;
+use crate::typing::compiler_error_reporter::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::infer::compiler_solver::*;
+use crate::typing::infer_compiler::*;
+use crate::typing::names::names::*;
+use crate::typing::overload_resolver::*;
+use crate::typing::rune_typing::higher_typing_error_humanizer::humanize_rune_type_error;
+use crate::typing::rune_typing::rune_type_solver::IRuneTypeRuleError;
+use crate::typing::templata::templata::*;
+use crate::typing::types::types::*;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::FileCoordinate;
+use crate::utils::range::{CodeLocationS, RangeS};
 use crate::utils::source_code_utils::humanize_package;
 use std::iter::once;
 
-
-pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, err: ICompileErrorT<'s, 't>) -> String {
+pub fn humanize<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  verbose: bool,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  err: ICompileErrorT<'s, 't>,
+) -> String {
   let error_str_body = match &err {
     ICompileErrorT::TypingPassDefiningError { range: _, inner } => {
       humanize_defining_error(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, inner)
@@ -291,84 +299,248 @@ that wasn't exported from package {}",
     }
   };
   // err.range.reverse.map(range => { ... }).mkString("") + errorStrBody + "\n"
-  let prefix: String = err.range().iter().rev().map(|range| {
-    let pos_str = code_map(range.begin);
-    let line_contents = line_containing(range.begin);
-    format!("At {}:\n{}\n", pos_str, line_contents)
-  }).collect::<Vec<_>>().join("");
+  let prefix: String = err
+    .range()
+    .iter()
+    .rev()
+    .map(|range| {
+      let pos_str = code_map(range.begin);
+      let line_contents = line_containing(range.begin);
+      format!("At {}:\n{}\n", pos_str, line_contents)
+    })
+    .collect::<Vec<_>>()
+    .join("");
   format!("{}{}\n", prefix, error_str_body)
 }
 
-pub fn humanize_defining_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, err: &IDefiningError<'s, 't>) -> String {
+pub fn humanize_defining_error<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  verbose: bool,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  err: &IDefiningError<'s, 't>,
+) -> String {
   match err {
-    IDefiningError::DefiningResolveConclusionError(inner) => {
-      humanize_conclusion_resolve_error(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, inner)
-    }
-    IDefiningError::DefiningSolveFailedOrIncomplete(inner) => {
-      humanize_failed_solve(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, inner.clone())
-    }
+    IDefiningError::DefiningResolveConclusionError(inner) => humanize_conclusion_resolve_error(
+      scout_arena,
+      typing_interner,
+      verbose,
+      code_map,
+      lines_between,
+      line_range_containing,
+      line_containing,
+      inner,
+    ),
+    IDefiningError::DefiningSolveFailedOrIncomplete(inner) => humanize_failed_solve(
+      scout_arena,
+      typing_interner,
+      verbose,
+      code_map,
+      lines_between,
+      line_range_containing,
+      line_containing,
+      inner.clone(),
+    ),
   }
 }
 
-pub fn humanize_resolve_failure<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, fff: ResolveFailure<'s, 't, KindT<'s, 't>>) -> String {
+pub fn humanize_resolve_failure<'s, 't>(
+  verbose: bool,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  fff: ResolveFailure<'s, 't, KindT<'s, 't>>,
+) -> String {
   panic!("Unimplemented: humanize_resolve_failure");
   // val ResolveFailure(range, reason) = fff
   // humanizeResolvingError(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, reason)
 }
 
-pub fn humanize_resolving_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, error: &IResolvingError<'s, 't>) -> String {
+pub fn humanize_resolving_error<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  verbose: bool,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  error: &IResolvingError<'s, 't>,
+) -> String {
   match error {
-    IResolvingError::ResolvingResolveConclusionError(inner) => {
-      humanize_conclusion_resolve_error(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, inner.as_ref())
-    }
-    IResolvingError::ResolvingSolveFailedOrIncomplete(inner) => {
-      humanize_failed_solve(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, inner.clone())
-    }
+    IResolvingError::ResolvingResolveConclusionError(inner) => humanize_conclusion_resolve_error(
+      scout_arena,
+      typing_interner,
+      verbose,
+      code_map,
+      lines_between,
+      line_range_containing,
+      line_containing,
+      inner.as_ref(),
+    ),
+    IResolvingError::ResolvingSolveFailedOrIncomplete(inner) => humanize_failed_solve(
+      scout_arena,
+      typing_interner,
+      verbose,
+      code_map,
+      lines_between,
+      line_range_containing,
+      line_containing,
+      inner.clone(),
+    ),
   }
 }
 
-pub fn humanize_failed_solve<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, error: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>) -> String {
-  humanize_candidate_and_failed_solve(scout_arena, typing_interner, code_map, lines_between, line_range_containing, line_containing, &error)
+pub fn humanize_failed_solve<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  verbose: bool,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  error: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>,
+) -> String {
+  humanize_candidate_and_failed_solve(
+    scout_arena,
+    typing_interner,
+    code_map,
+    lines_between,
+    line_range_containing,
+    line_containing,
+    &error,
+  )
 }
 
-pub fn humanize_conclusion_resolve_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, error: &IConclusionResolveError<'s, 't>) -> String {
+pub fn humanize_conclusion_resolve_error<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  verbose: bool,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  error: &IConclusionResolveError<'s, 't>,
+) -> String {
   match error {
-    IConclusionResolveError::CouldntFindKindForConclusionResolve(_) => panic!("implement: humanize_conclusion_resolve_error CouldntFindKindForConclusionResolve"),
+    IConclusionResolveError::CouldntFindKindForConclusionResolve(_) => {
+      panic!("implement: humanize_conclusion_resolve_error CouldntFindKindForConclusionResolve")
+    }
     IConclusionResolveError::CouldntFindFunctionForConclusionResolve { range, fff } => {
-      humanize_find_function_failure(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, range.to_vec(), fff)
+      humanize_find_function_failure(
+        scout_arena,
+        typing_interner,
+        verbose,
+        code_map,
+        lines_between,
+        line_range_containing,
+        line_containing,
+        range.to_vec(),
+        fff,
+      )
     }
-    IConclusionResolveError::ReturnTypeConflictInConclusionResolve { range: _, expected_return_type, actual } => {
-      "Found function: ".to_string() + &humanize_id(scout_arena, typing_interner, code_map, actual.id, None) +
-        " which returns " + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: actual.return_type }))) +
-        " but expected return type of " + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *expected_return_type })))
+    IConclusionResolveError::ReturnTypeConflictInConclusionResolve {
+      range: _,
+      expected_return_type,
+      actual,
+    } => {
+      "Found function: ".to_string()
+        + &humanize_id(scout_arena, typing_interner, code_map, actual.id, None)
+        + " which returns "
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: actual.return_type })),
+        )
+        + " but expected return type of "
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *expected_return_type })),
+        )
     }
-    IConclusionResolveError::CouldntFindImplForConclusionResolve { .. } => panic!("implement: humanize_conclusion_resolve_error CouldntFindImplForConclusionResolve"),
+    IConclusionResolveError::CouldntFindImplForConclusionResolve { .. } => {
+      panic!("implement: humanize_conclusion_resolve_error CouldntFindImplForConclusionResolve")
+    }
   }
 }
 
-pub fn humanize_find_function_failure<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, invocation_range: Vec<RangeS<'s>>, fff: &FindFunctionFailure<'s, 't>) -> String {
+pub fn humanize_find_function_failure<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  verbose: bool,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  invocation_range: Vec<RangeS<'s>>,
+  fff: &FindFunctionFailure<'s, 't>,
+) -> String {
   let FindFunctionFailure { name, args, rejected_callee_to_reason } = fff;
-  let args_str = args.iter().map(|tyype| {
-    humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *tyype })))
-  }).collect::<Vec<_>>().join(", ");
+  let args_str = args
+    .iter()
+    .map(|tyype| {
+      humanize_templata(
+        scout_arena,
+        typing_interner,
+        code_map,
+        ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *tyype })),
+      )
+    })
+    .collect::<Vec<_>>()
+    .join(", ");
   let tail = if rejected_callee_to_reason.is_empty() {
     "No function with that name exists.\n".to_string()
   } else {
-    let parts = rejected_callee_to_reason.iter().enumerate().map(|(index, (candidate, reason))| {
-      format!("Candidate {} (of {}): {}{}\n\n",
-        index + 1, rejected_callee_to_reason.len(),
-        humanize_candidate(scout_arena, typing_interner, code_map, line_range_containing, candidate),
-        humanize_rejection_reason(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, &invocation_range, reason))
-    }).collect::<Vec<_>>().join("");
+    let parts = rejected_callee_to_reason
+      .iter()
+      .enumerate()
+      .map(|(index, (candidate, reason))| {
+        format!(
+          "Candidate {} (of {}): {}{}\n\n",
+          index + 1,
+          rejected_callee_to_reason.len(),
+          humanize_candidate(
+            scout_arena,
+            typing_interner,
+            code_map,
+            line_range_containing,
+            candidate
+          ),
+          humanize_rejection_reason(
+            scout_arena,
+            typing_interner,
+            verbose,
+            code_map,
+            lines_between,
+            line_range_containing,
+            line_containing,
+            &invocation_range,
+            reason
+          )
+        )
+      })
+      .collect::<Vec<_>>()
+      .join("");
     format!("Rejected candidates:\n\n{}", parts)
   };
-  format!("Couldn't find a suitable function {}({}). {}",
+  format!(
+    "Couldn't find a suitable function {}({}). {}",
     humanize_imprecise_name(*name),
     args_str,
-    tail)
+    tail
+  )
 }
 
-pub fn humanize_banner<'s>(code_map: &dyn Fn(CodeLocationS<'s>) -> String, banner: FunctionBannerT) -> String {
+pub fn humanize_banner<'s>(
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  banner: FunctionBannerT,
+) -> String {
   panic!("Unimplemented: humanize_banner");
   // banner.originFunctionTemplata match {
   //   case None => "(internal)"
@@ -376,7 +548,12 @@ pub fn humanize_banner<'s>(code_map: &dyn Fn(CodeLocationS<'s>) -> String, banne
   // }
 }
 
-fn printable_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, name: INameS<'s>) -> String {
+fn printable_name<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  name: INameS<'s>,
+) -> String {
   match name {
     INameS::VarName(n) => {
       panic!("implement: printable_name VarName");
@@ -385,7 +562,9 @@ fn printable_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &Typing
     INameS::TopLevelStructDeclaration(n) => n.name.0.to_string(),
     INameS::TopLevelInterfaceDeclaration(n) => n.name.0.to_string(),
     INameS::FunctionDeclaration(n) => match n {
-      IFunctionDeclarationNameS::FunctionName(fn_name) => format!("{}: {}", code_map(fn_name.code_location), fn_name.name.0),
+      IFunctionDeclarationNameS::FunctionName(fn_name) => {
+        format!("{}: {}", code_map(fn_name.code_location), fn_name.name.0)
+      }
       IFunctionDeclarationNameS::LambdaDeclarationName(_) => {
         panic!("implement: printable_name LambdaDeclarationName");
         // codeMap(codeLocation) + ": " + "(lambda)"
@@ -435,18 +614,35 @@ fn get_file(function_a: FunctionS) -> FileCoordinate {
   // functionA.range.file
 }
 
-fn humanize_rejection_reason<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, invocation_range: &Vec<RangeS<'s>>, reason: &IFindFunctionFailureReason<'s, 't>) -> String {
+fn humanize_rejection_reason<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  verbose: bool,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  invocation_range: &Vec<RangeS<'s>>,
+  reason: &IFindFunctionFailureReason<'s, 't>,
+) -> String {
   match reason {
-    IFindFunctionFailureReason::FindFunctionResolveFailure { reason } => {
-      humanize_resolving_error(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, reason)
-    }
+    IFindFunctionFailureReason::FindFunctionResolveFailure { reason } => humanize_resolving_error(
+      scout_arena,
+      typing_interner,
+      verbose,
+      code_map,
+      lines_between,
+      line_range_containing,
+      line_containing,
+      reason,
+    ),
     IFindFunctionFailureReason::RuleTypeSolveFailure { reason } => {
       let code_map_ref = |c: &CodeLocationS<'s>| code_map(*c);
       let lines_between_ref = |a: &CodeLocationS<'s>, b: &CodeLocationS<'s>| lines_between(*a, *b);
       let line_range_containing_ref = |c: &CodeLocationS<'s>| line_range_containing(*c);
       let line_containing_ref = |c: &CodeLocationS<'s>| line_containing(*c);
-      let humanize_rule_error_fn = |rt_err: &IRuneTypeRuleError<'s>|
-        humanize_rune_type_error(code_map, rt_err);
+      let humanize_rule_error_fn =
+        |rt_err: &IRuneTypeRuleError<'s>| humanize_rune_type_error(code_map, rt_err);
       solver_humanize_failed_solve(
         code_map_ref,
         lines_between_ref,
@@ -460,123 +656,280 @@ fn humanize_rejection_reason<'s, 't>(scout_arena: &ScoutArena<'s>, typing_intern
         |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| u.rune).collect(),
         humanize_rule,
         &reason.failed_solve,
-      ).0
+      )
+      .0
     }
     IFindFunctionFailureReason::WrongNumberOfArguments { supplied, expected } => {
-      "Number of params doesn't match! Supplied ".to_string() + &supplied.to_string() + " but function takes " + &expected.to_string()
+      "Number of params doesn't match! Supplied ".to_string()
+        + &supplied.to_string()
+        + " but function takes "
+        + &expected.to_string()
     }
     IFindFunctionFailureReason::WrongNumberOfTemplateArguments { supplied, expected } => {
-      "Number of template params doesn't match! Supplied ".to_string() + &supplied.to_string() + " but function takes " + &expected.to_string()
+      "Number of template params doesn't match! Supplied ".to_string()
+        + &supplied.to_string()
+        + " but function takes "
+        + &expected.to_string()
     }
     IFindFunctionFailureReason::SpecificParamDoesntMatchExactly { index, argument, parameter } => {
-      "Index ".to_string() + &index.to_string() + " argument " + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *argument }))) +
-        " isn't the same exact type as expected parameter " + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *parameter })))
+      "Index ".to_string()
+        + &index.to_string()
+        + " argument "
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *argument })),
+        )
+        + " isn't the same exact type as expected parameter "
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *parameter })),
+        )
     }
     IFindFunctionFailureReason::SpecificParamDoesntSend { index, argument, parameter } => {
-      " Index ".to_string() + &index.to_string() + " argument " + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *argument }))) +
-        " can't be given to expected parameter " + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *parameter })))
+      " Index ".to_string()
+        + &index.to_string()
+        + " argument "
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *argument })),
+        )
+        + " can't be given to expected parameter "
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *parameter })),
+        )
     }
     IFindFunctionFailureReason::SpecificParamVirtualityDoesntMatch { index } => {
       "Virtualities don't match at index ".to_string() + &index.to_string()
     }
-    IFindFunctionFailureReason::InferFailure { .. } => panic!("implement: humanize_rejection_reason InferFailure"),
-    IFindFunctionFailureReason::Outscored => panic!("implement: humanize_rejection_reason Outscored"),
+    IFindFunctionFailureReason::InferFailure { .. } => {
+      panic!("implement: humanize_rejection_reason InferFailure")
+    }
+    IFindFunctionFailureReason::Outscored => {
+      panic!("implement: humanize_rejection_reason Outscored")
+    }
     IFindFunctionFailureReason::CouldntEvaluateTemplateError { reason } => {
       "Couldn't evaluate template: ".to_string()
-        + &humanize_defining_error(scout_arena, typing_interner, true, code_map, lines_between, line_range_containing, line_containing, reason)
+        + &humanize_defining_error(
+          scout_arena,
+          typing_interner,
+          true,
+          code_map,
+          lines_between,
+          line_range_containing,
+          line_containing,
+          reason,
+        )
     }
   }
 }
 
-pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, error: ITypingPassSolverError<'s, 't>) -> String {
+pub fn humanize_rule_error<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  error: ITypingPassSolverError<'s, 't>,
+) -> String {
   match error {
     ITypingPassSolverError::IsaFailed { sub, suuper } => {
       "Kind ".to_string()
-        + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: sub })))
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: sub })),
+        )
         + " does not implement interface "
-        + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: suuper })))
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: suuper })),
+        )
     }
     ITypingPassSolverError::BadIsaSubKind { kind } => {
       "Kind ".to_string()
-        + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind })))
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind })),
+        )
         + " cannot be a sub-kind."
     }
-    ITypingPassSolverError::CantGetComponentsOfPlaceholderPrototype { .. } => panic!("implement: humanize_rule_error CantGetComponentsOfPlaceholderPrototype"),
-    ITypingPassSolverError::ReturnTypeConflict { .. } => panic!("implement: humanize_rule_error ReturnTypeConflict"),
-    ITypingPassSolverError::CantShareMutable { kind } => {
-      "Can't share a mutable kind: ".to_string() + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind })))
+    ITypingPassSolverError::CantGetComponentsOfPlaceholderPrototype { .. } => {
+      panic!("implement: humanize_rule_error CantGetComponentsOfPlaceholderPrototype")
     }
-    ITypingPassSolverError::BadIsaSuperKind { .. } => panic!("implement: humanize_rule_error BadIsaSuperKind"),
-    ITypingPassSolverError::SendingNonIdenticalKinds { .. } => panic!("implement: humanize_rule_error SendingNonIdenticalKinds"),
-    ITypingPassSolverError::SendingNonCitizen { .. } => panic!("implement: humanize_rule_error SendingNonCitizen"),
-    ITypingPassSolverError::CantCheckPlaceholder { .. } => panic!("implement: humanize_rule_error CantCheckPlaceholder"),
-    ITypingPassSolverError::CouldntFindFunction { .. } => panic!("implement: humanize_rule_error CouldntFindFunction"),
-    ITypingPassSolverError::CouldntResolveKind { .. } => panic!("implement: humanize_rule_error CouldntResolveKind"),
-    ITypingPassSolverError::WrongNumberOfTemplateArgs { expected_min_num_args, expected_max_num_args } => {
+    ITypingPassSolverError::ReturnTypeConflict { .. } => {
+      panic!("implement: humanize_rule_error ReturnTypeConflict")
+    }
+    ITypingPassSolverError::CantShareMutable { kind } => {
+      "Can't share a mutable kind: ".to_string()
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind })),
+        )
+    }
+    ITypingPassSolverError::BadIsaSuperKind { .. } => {
+      panic!("implement: humanize_rule_error BadIsaSuperKind")
+    }
+    ITypingPassSolverError::SendingNonIdenticalKinds { .. } => {
+      panic!("implement: humanize_rule_error SendingNonIdenticalKinds")
+    }
+    ITypingPassSolverError::SendingNonCitizen { .. } => {
+      panic!("implement: humanize_rule_error SendingNonCitizen")
+    }
+    ITypingPassSolverError::CantCheckPlaceholder { .. } => {
+      panic!("implement: humanize_rule_error CantCheckPlaceholder")
+    }
+    ITypingPassSolverError::CouldntFindFunction { .. } => {
+      panic!("implement: humanize_rule_error CouldntFindFunction")
+    }
+    ITypingPassSolverError::CouldntResolveKind { .. } => {
+      panic!("implement: humanize_rule_error CouldntResolveKind")
+    }
+    ITypingPassSolverError::WrongNumberOfTemplateArgs {
+      expected_min_num_args,
+      expected_max_num_args,
+    } => {
       if expected_min_num_args == expected_max_num_args {
         format!("Wrong number of template args, expected {}.", expected_min_num_args)
       } else {
-        format!("Wrong number of template args, expected {} or {}.", expected_min_num_args, expected_max_num_args)
+        format!(
+          "Wrong number of template args, expected {} or {}.",
+          expected_min_num_args, expected_max_num_args
+        )
       }
     }
-    ITypingPassSolverError::LookupFailed { .. } => panic!("implement: humanize_rule_error LookupFailed"),
+    ITypingPassSolverError::LookupFailed { .. } => {
+      panic!("implement: humanize_rule_error LookupFailed")
+    }
     ITypingPassSolverError::KindIsNotConcrete { kind } => {
-      "Expected kind to be concrete, but was not. Kind: ".to_string() + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
+      "Expected kind to be concrete, but was not. Kind: ".to_string()
+        + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
     }
     ITypingPassSolverError::KindIsNotBorrowRef { kind } => {
-      "Expected a borrow, but was: ".to_string() + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
+      "Expected a borrow, but was: ".to_string()
+        + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
     }
     ITypingPassSolverError::KindIsNotWeakRef { kind } => {
-      "Expected a weak, but was: ".to_string() + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
+      "Expected a weak, but was: ".to_string()
+        + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
     }
     ITypingPassSolverError::KindIsNotOwnRef { kind } => {
-      "Expected an own, but was: ".to_string() + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
+      "Expected an own, but was: ".to_string()
+        + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
     }
     ITypingPassSolverError::KindIsNotFromATemplate { kind } => {
-      "Expected a type built from a template, but was: ".to_string() + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
+      "Expected a type built from a template, but was: ".to_string()
+        + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
     }
     // ITypingPassSolverError::OneOfFailed { .. } => panic!("implement: humanize_rule_error OneOfFailed"),
-    ITypingPassSolverError::KindIsNotInterface { .. } => panic!("implement: humanize_rule_error KindIsNotInterface"),
+    ITypingPassSolverError::KindIsNotInterface { .. } => {
+      panic!("implement: humanize_rule_error KindIsNotInterface")
+    }
     ITypingPassSolverError::CallResultIsntCallable { result } => {
-      "Generic call result isn't callable: ".to_string() + &humanize_templata(scout_arena, typing_interner, code_map, result)
+      "Generic call result isn't callable: ".to_string()
+        + &humanize_templata(scout_arena, typing_interner, code_map, result)
     }
     ITypingPassSolverError::CallResultWasntExpectedType { expected, actual } => {
-      "Expected an instantiation of ".to_string() + &humanize_templata(scout_arena, typing_interner, code_map, expected) + " but got " + &humanize_templata(scout_arena, typing_interner, code_map, actual)
+      "Expected an instantiation of ".to_string()
+        + &humanize_templata(scout_arena, typing_interner, code_map, expected)
+        + " but got "
+        + &humanize_templata(scout_arena, typing_interner, code_map, actual)
     }
     // ITypingPassSolverError::OwnershipDidntMatch { coord, expected_ownership } => {
     //   "Given type ".to_string() + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(CoordTemplataT { coord }))) +
     //     " doesn't have expected ownership " + &humanize_ownership(unevaluate_ownership(expected_ownership))
     // }
-    ITypingPassSolverError::ReceivingDifferentOwnerships { .. } => panic!("implement: humanize_rule_error ReceivingDifferentOwnerships"),
+    ITypingPassSolverError::ReceivingDifferentOwnerships { .. } => {
+      panic!("implement: humanize_rule_error ReceivingDifferentOwnerships")
+    }
     ITypingPassSolverError::NoAncestorsSatisfyCall { params } => {
       "No ancestors satisfy call: ".to_string()
-        + &params.iter().map(|(rune, coord)| {
-            humanize_rune(*rune) + " = " + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *coord })))
-          }).collect::<Vec<_>>().join(", ")
+        + &params
+          .iter()
+          .map(|(rune, coord)| {
+            humanize_rune(*rune)
+              + " = "
+              + &humanize_templata(
+                scout_arena,
+                typing_interner,
+                code_map,
+                ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *coord })),
+              )
+          })
+          .collect::<Vec<_>>()
+          .join(", ")
     }
-    ITypingPassSolverError::KindIsNotStruct { .. } => panic!("implement: humanize_rule_error KindIsNotStruct"),
-    ITypingPassSolverError::CouldntFindImpl { .. } => panic!("implement: humanize_rule_error CouldntFindImpl"),
-    ITypingPassSolverError::CantSharePlaceholder { .. } => panic!("implement: humanize_rule_error CantSharePlaceholder"),
-    ITypingPassSolverError::NoCommonAncestors { .. } => panic!("implement: humanize_rule_error NoCommonAncestors"),
-    ITypingPassSolverError::CantDetermineNarrowestKind { .. } => panic!("implement: humanize_rule_error CantDetermineNarrowestKind"),
-    ITypingPassSolverError::FunctionDoesntHaveName { .. } => panic!("implement: humanize_rule_error FunctionDoesntHaveName"),
-    ITypingPassSolverError::InternalSolverError { range: _, err } => {
-      match err {
-        ISolverError::SolverConflict(c) => {
-          "Solver conflict on rune ".to_string() + &humanize_rune(c.rune) + ": was " +
-            &humanize_templata(scout_arena, typing_interner, code_map, c.previous_conclusion) +
-            " but now concluding " + &humanize_templata(scout_arena, typing_interner, code_map, c.new_conclusion)
-        }
-        ISolverError::RuleError(r) => {
-          humanize_rule_error(scout_arena, typing_interner, code_map, lines_between, line_range_containing, line_containing, r.err)
-        }
-        ISolverError::SolveIncomplete(_) => "Solve incomplete".to_string(),
+    ITypingPassSolverError::KindIsNotStruct { .. } => {
+      panic!("implement: humanize_rule_error KindIsNotStruct")
+    }
+    ITypingPassSolverError::CouldntFindImpl { .. } => {
+      panic!("implement: humanize_rule_error CouldntFindImpl")
+    }
+    ITypingPassSolverError::CantSharePlaceholder { .. } => {
+      panic!("implement: humanize_rule_error CantSharePlaceholder")
+    }
+    ITypingPassSolverError::NoCommonAncestors { .. } => {
+      panic!("implement: humanize_rule_error NoCommonAncestors")
+    }
+    ITypingPassSolverError::CantDetermineNarrowestKind { .. } => {
+      panic!("implement: humanize_rule_error CantDetermineNarrowestKind")
+    }
+    ITypingPassSolverError::FunctionDoesntHaveName { .. } => {
+      panic!("implement: humanize_rule_error FunctionDoesntHaveName")
+    }
+    ITypingPassSolverError::InternalSolverError { range: _, err } => match err {
+      ISolverError::SolverConflict(c) => {
+        "Solver conflict on rune ".to_string()
+          + &humanize_rune(c.rune)
+          + ": was "
+          + &humanize_templata(scout_arena, typing_interner, code_map, c.previous_conclusion)
+          + " but now concluding "
+          + &humanize_templata(scout_arena, typing_interner, code_map, c.new_conclusion)
       }
-    }
+      ISolverError::RuleError(r) => humanize_rule_error(
+        scout_arena,
+        typing_interner,
+        code_map,
+        lines_between,
+        line_range_containing,
+        line_containing,
+        r.err,
+      ),
+      ISolverError::SolveIncomplete(_) => "Solve incomplete".to_string(),
+    },
   }
 }
 
-pub fn humanize_candidate_and_failed_solve<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, result: &FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>) -> String {
+pub fn humanize_candidate_and_failed_solve<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  line_containing: &dyn Fn(CodeLocationS<'s>) -> String,
+  result: &FailedSolve<
+    IRulexSR<'s>,
+    IRuneS<'s>,
+    ITemplataT<'s, 't>,
+    ITypingPassSolverError<'s, 't>,
+  >,
+) -> String {
   let (text, _line_begins) = solver_humanize_failed_solve(
     |loc| code_map(*loc),
     |a, b| lines_between(*a, *b),
@@ -584,7 +937,17 @@ pub fn humanize_candidate_and_failed_solve<'s, 't>(scout_arena: &ScoutArena<'s>,
     |loc| line_containing(*loc),
     |rune| humanize_rune(rune),
     |t| humanize_templata(scout_arena, typing_interner, &|loc| code_map(loc), t),
-    |err| humanize_rule_error(scout_arena, typing_interner, code_map, lines_between, line_range_containing, line_containing, *err),
+    |err| {
+      humanize_rule_error(
+        scout_arena,
+        typing_interner,
+        code_map,
+        lines_between,
+        line_range_containing,
+        line_containing,
+        *err,
+      )
+    },
     |rule: &IRulexSR<'s>| *rule.range(),
     |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| (u.rune, u.range)).collect(),
     |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| u.rune).collect(),
@@ -594,7 +957,13 @@ pub fn humanize_candidate_and_failed_solve<'s, 't>(scout_arena: &ScoutArena<'s>,
   text
 }
 
-pub fn humanize_candidate<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, candidate: &ICalleeCandidate<'s, 't>) -> String {
+pub fn humanize_candidate<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>,
+  candidate: &ICalleeCandidate<'s, 't>,
+) -> String {
   match candidate {
     ICalleeCandidate::Header(HeaderCalleeCandidate { header }) => {
       humanize_id(scout_arena, typing_interner, code_map, header.id, None)
@@ -606,10 +975,17 @@ pub fn humanize_candidate<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner:
       match function_template_code_location(ft.function_template_id.local_name) {
         Some(code_loc) => {
           let begin = line_range_containing(code_loc).begin;
-          code_map(begin) + ":\n" +
-            &format!("{:?}", line_range_containing(begin).begin) + "\n"
+          code_map(begin) + ":\n" + &format!("{:?}", line_range_containing(begin).begin) + "\n"
         }
-        None => humanize_name(scout_arena, typing_interner, code_map, ft.function_template_id.local_name, None) + ":\n",
+        None => {
+          humanize_name(
+            scout_arena,
+            typing_interner,
+            code_map,
+            ft.function_template_id.local_name,
+            None,
+          ) + ":\n"
+        }
       }
     }
   }
@@ -618,7 +994,9 @@ pub fn humanize_candidate<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner:
 /// Best-effort source location for a function-template id's local name. Returns None for the
 /// kinds that carry no location (extern, bound, predicted, override-dispatcher, anon-substruct
 /// constructor); callers degrade gracefully rather than assume one exists.
-fn function_template_code_location<'s, 't>(local_name: INameT<'s, 't>) -> Option<CodeLocationS<'s>> {
+fn function_template_code_location<'s, 't>(
+  local_name: INameT<'s, 't>,
+) -> Option<CodeLocationS<'s>> {
   match local_name {
     INameT::FunctionTemplate(n) => Some(n.code_location),
     INameT::ConstructorTemplate(n) => Some(n.code_location),
@@ -627,76 +1005,153 @@ fn function_template_code_location<'s, 't>(local_name: INameT<'s, 't>) -> Option
   }
 }
 
-pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, templata: ITemplataT<'s, 't>) -> String {
+pub fn humanize_templata<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  templata: ITemplataT<'s, 't>,
+) -> String {
   match templata {
     ITemplataT::RuntimeSizedArrayTemplate(_) => "Array".to_string(),
     ITemplataT::StaticSizedArrayTemplate(_) => "StaticArray".to_string(),
-    ITemplataT::InterfaceDefinition(interface_def) => match interface_def.interface_template_id.local_name {
-      INameT::InterfaceTemplate(itn) => itn.human_namee.0.to_string(),
-      other => panic!("unexpected interface id local name in humanize_templata: {:?}", other),
-    },
+    ITemplataT::InterfaceDefinition(interface_def) => {
+      match interface_def.interface_template_id.local_name {
+        INameT::InterfaceTemplate(itn) => itn.human_namee.0.to_string(),
+        other => panic!("unexpected interface id local name in humanize_templata: {:?}", other),
+      }
+    }
     ITemplataT::StructDefinition(struct_def) => match struct_def.struct_template_id.local_name {
       INameT::StructTemplate(stn) => stn.human_name.0.to_string(),
       INameT::AnonymousSubstructTemplate(astn) => {
-        let iface = match astn.interface { IInterfaceTemplateNameT::InterfaceTemplate(t) => t };
+        let iface = match astn.interface {
+          IInterfaceTemplateNameT::InterfaceTemplate(t) => t,
+        };
         format!("<anonymous substruct of {}>", iface.human_namee.0)
       }
       other => panic!("unexpected struct id local name in humanize_templata: {:?}", other),
     },
     ITemplataT::Integer(value) => value.to_string(),
-    ITemplataT::Prototype(prototype_templata) => humanize_id(scout_arena, typing_interner, code_map, prototype_templata.prototype.id, None),
-    ITemplataT::Kind(kind_templata) => humanize_kind(scout_arena, typing_interner, code_map, kind_templata.kind, None),
+    ITemplataT::Prototype(prototype_templata) => {
+      humanize_id(scout_arena, typing_interner, code_map, prototype_templata.prototype.id, None)
+    }
+    ITemplataT::Kind(kind_templata) => {
+      humanize_kind(scout_arena, typing_interner, code_map, kind_templata.kind, None)
+    }
     ITemplataT::CoordList(coord_list) => {
-      "(".to_string() + &coord_list.kinds.iter().map(|c| humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *c })))).collect::<Vec<_>>().join(", ") + ")"
+      "(".to_string()
+        + &coord_list
+          .kinds
+          .iter()
+          .map(|c| {
+            humanize_templata(
+              scout_arena,
+              typing_interner,
+              code_map,
+              ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *c })),
+            )
+          })
+          .collect::<Vec<_>>()
+          .join(", ")
+        + ")"
     }
     ITemplataT::String(value) => panic!("implement: humanize_templata String"),
     ITemplataT::Placeholder(p) => match p.tyype {
       // ITemplataType::KindTemplataType(_) => "$".to_string() + &humanize_id(scout_arena, typing_interner, code_map, p.id, None),
-      _ => crate::postparsing::post_parser_error_humanizer::humanize_templata_type(&p.tyype) + "$" + &humanize_id(scout_arena, typing_interner, code_map, p.id, None),
+      _ => {
+        crate::postparsing::post_parser_error_humanizer::humanize_templata_type(&p.tyype)
+          + "$"
+          + &humanize_id(scout_arena, typing_interner, code_map, p.id, None)
+      }
     },
     _ => panic!("implement: humanize_templata other"),
   }
 }
 
-fn humanize_kind<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, kind: KindT<'s, 't>, containing_region: Option<RegionT>) -> String {
+fn humanize_kind<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  kind: KindT<'s, 't>,
+  containing_region: Option<RegionT>,
+) -> String {
   match kind {
     KindT::Int(IntT { bits }) => format!("i{}", bits),
     KindT::Bool(_) => "bool".to_string(),
-    KindT::KindPlaceholder(name) => format!("Kind${}", humanize_id(scout_arena, typing_interner, code_map, name.id, None)),
+    KindT::KindPlaceholder(name) => {
+      format!("Kind${}", humanize_id(scout_arena, typing_interner, code_map, name.id, None))
+    }
     KindT::Str(_) => "str".to_string(),
     KindT::Never(_) => "never".to_string(),
     KindT::Void(_) => "void".to_string(),
     KindT::Float(_) => "float".to_string(),
     KindT::USize(_) => "usize".to_string(),
-    KindT::OverloadSet(s) => format!("(overloads: {})",
-      humanize_imprecise_name(*s.name)),
-    KindT::Interface(name) => humanize_id(scout_arena, typing_interner, code_map, name.id, containing_region),
-    KindT::Struct(name) => humanize_id(scout_arena, typing_interner, code_map, name.id, containing_region),
+    KindT::OverloadSet(s) => format!("(overloads: {})", humanize_imprecise_name(*s.name)),
+    KindT::Interface(name) => {
+      humanize_id(scout_arena, typing_interner, code_map, name.id, containing_region)
+    }
+    KindT::Struct(name) => {
+      humanize_id(scout_arena, typing_interner, code_map, name.id, containing_region)
+    }
     KindT::RuntimeSizedArray(rsa) => {
-      "Array<".to_string() +
-        &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: rsa.element_type() }))) +
-        ">"
+      "Array<".to_string()
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: rsa.element_type() })),
+        )
+        + ">"
     }
     KindT::StaticSizedArray(ssa) => format!("StaticSizedArray({:?})", ssa.name),
-    KindT::BorrowRef(b) => format!("&{}", humanize_kind(scout_arena, typing_interner, code_map, b.inner, Some(b.region))),
-    KindT::WeakRef(w) => format!("weak {}", humanize_kind(scout_arena, typing_interner, code_map, w.inner, containing_region)),
-    KindT::ShareRef(s) => humanize_kind(scout_arena, typing_interner, code_map, s.inner, containing_region),
-    KindT::OwnRef(h) => format!("own {}", humanize_kind(scout_arena, typing_interner, code_map, h.inner, containing_region)),
+    KindT::BorrowRef(b) => {
+      format!("&{}", humanize_kind(scout_arena, typing_interner, code_map, b.inner, Some(b.region)))
+    }
+    KindT::WeakRef(w) => format!(
+      "weak {}",
+      humanize_kind(scout_arena, typing_interner, code_map, w.inner, containing_region)
+    ),
+    KindT::ShareRef(s) => {
+      humanize_kind(scout_arena, typing_interner, code_map, s.inner, containing_region)
+    }
+    KindT::OwnRef(h) => format!(
+      "own {}",
+      humanize_kind(scout_arena, typing_interner, code_map, h.inner, containing_region)
+    ),
   }
 }
 
-pub fn humanize_id<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, name: IdT<'s, 't>, containing_region: Option<RegionT>) -> String
-where 's: 't,
+pub fn humanize_id<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  name: IdT<'s, 't>,
+  containing_region: Option<RegionT>,
+) -> String
+where
+  's: 't,
 {
   let prefix = if !name.init_steps.is_empty() {
-    name.init_steps.iter().map(|n| humanize_name(scout_arena, typing_interner, code_map, *n, None)).collect::<Vec<_>>().join(".") + "."
+    name
+      .init_steps
+      .iter()
+      .map(|n| humanize_name(scout_arena, typing_interner, code_map, *n, None))
+      .collect::<Vec<_>>()
+      .join(".")
+      + "."
   } else {
     "".to_string()
   };
-  prefix + &humanize_name(scout_arena, typing_interner, code_map, name.local_name, containing_region)
+  prefix
+    + &humanize_name(scout_arena, typing_interner, code_map, name.local_name, containing_region)
 }
 
-pub fn humanize_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, name: INameT<'s, 't>, containing_region: Option<RegionT>) -> String {
+pub fn humanize_name<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  name: INameT<'s, 't>,
+  containing_region: Option<RegionT>,
+) -> String {
   match name {
     INameT::AnonymousSubstructConstructor(n) => {
       panic!("implement: humanize_name AnonymousSubstructConstructor");
@@ -713,16 +1168,18 @@ pub fn humanize_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &Typ
       format!("ovdt:{}", humanize_id(scout_arena, typing_interner, code_map, n.impl_id, None))
     }
     INameT::OverrideDispatcher(n) => {
-      let params =
-        n.parameters.iter()
-          .map(|k| humanize_kind(scout_arena, typing_interner, code_map, *k, None))
-          .collect::<Vec<_>>()
-          .join(", ");
+      let params = n
+        .parameters
+        .iter()
+        .map(|k| humanize_kind(scout_arena, typing_interner, code_map, *k, None))
+        .collect::<Vec<_>>()
+        .join(", ");
       format!(
         "ovd:{}{}({})",
         humanize_id(scout_arena, typing_interner, code_map, n.template.impl_id, None),
         humanize_generic_args(scout_arena, typing_interner, code_map, n.template_args, None),
-        params)
+        params
+      )
     }
     INameT::Iterator(n) => {
       panic!("implement: humanize_name Iterator");
@@ -747,16 +1204,30 @@ pub fn humanize_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &Typ
     INameT::ForwarderFunctionTemplate(n) => {
       let inner_name = match n.inner {
         IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
-        IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => INameT::ForwarderFunctionTemplate(r),
+        IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => {
+          INameT::ForwarderFunctionTemplate(r)
+        }
         IFunctionTemplateNameT::ConstructorTemplate(r) => INameT::ConstructorTemplate(r),
-        IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => INameT::AnonymousSubstructConstructorTemplate(r),
-        IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => INameT::LambdaCallFunctionTemplate(r),
-        IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => INameT::OverrideDispatcherTemplate(r),
+        IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => {
+          INameT::AnonymousSubstructConstructorTemplate(r)
+        }
+        IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => {
+          INameT::LambdaCallFunctionTemplate(r)
+        }
+        IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => {
+          INameT::OverrideDispatcherTemplate(r)
+        }
         IFunctionTemplateNameT::ExternFunction(r) => INameT::ExternFunction(r),
         IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
-        IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
+        IFunctionTemplateNameT::PredictedFunctionTemplate(r) => {
+          INameT::PredictedFunctionTemplate(r)
+        }
       };
-      format!("fwd{}:{}", n.index, humanize_name(scout_arena, typing_interner, code_map, inner_name, containing_region))
+      format!(
+        "fwd{}:{}",
+        n.index,
+        humanize_name(scout_arena, typing_interner, code_map, inner_name, containing_region)
+      )
     }
     INameT::MagicParam(n) => {
       panic!("implement: humanize_name MagicParam");
@@ -783,67 +1254,230 @@ pub fn humanize_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &Typ
     INameT::LambdaCallFunctionTemplate(n) => "λF:".to_string() + &code_map(n.code_location),
     INameT::LambdaCitizenTemplate(n) => "λC:".to_string() + &code_map(n.code_location),
     INameT::LambdaCallFunction(n) => {
-      humanize_name(scout_arena, typing_interner, code_map, INameT::LambdaCallFunctionTemplate(n.template), None) +
-        &humanize_generic_args(scout_arena, typing_interner, code_map, n.template_args, None) +
-        "(" + &n.parameters.iter().map(|p| humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *p })))).collect::<Vec<_>>().join(", ") + ")"
+      humanize_name(
+        scout_arena,
+        typing_interner,
+        code_map,
+        INameT::LambdaCallFunctionTemplate(n.template),
+        None,
+      ) + &humanize_generic_args(scout_arena, typing_interner, code_map, n.template_args, None)
+        + "("
+        + &n
+          .parameters
+          .iter()
+          .map(|p| {
+            humanize_templata(
+              scout_arena,
+              typing_interner,
+              code_map,
+              ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *p })),
+            )
+          })
+          .collect::<Vec<_>>()
+          .join(", ")
+        + ")"
     }
     INameT::FunctionBound(n) => {
-      humanize_name(scout_arena, typing_interner, code_map, INameT::FunctionBoundTemplate(n.template), None) +
-        &humanize_generic_args(scout_arena, typing_interner, code_map, n.template_args, containing_region) +
-        "(" + &n.parameters.iter().map(|p| humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *p })))).collect::<Vec<_>>().join(", ") + ")"
+      humanize_name(
+        scout_arena,
+        typing_interner,
+        code_map,
+        INameT::FunctionBoundTemplate(n.template),
+        None,
+      ) + &humanize_generic_args(
+        scout_arena,
+        typing_interner,
+        code_map,
+        n.template_args,
+        containing_region,
+      ) + "("
+        + &n
+          .parameters
+          .iter()
+          .map(|p| {
+            humanize_templata(
+              scout_arena,
+              typing_interner,
+              code_map,
+              ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *p })),
+            )
+          })
+          .collect::<Vec<_>>()
+          .join(", ")
+        + ")"
     }
-    INameT::KindPlaceholder(n) => humanize_name(scout_arena, typing_interner, code_map, INameT::KindPlaceholderTemplate(n.template), None),
-    INameT::KindPlaceholderTemplate(n) => crate::postparsing::post_parser_error_humanizer::humanize_rune(n.rune),
+    INameT::KindPlaceholder(n) => humanize_name(
+      scout_arena,
+      typing_interner,
+      code_map,
+      INameT::KindPlaceholderTemplate(n.template),
+      None,
+    ),
+    INameT::KindPlaceholderTemplate(n) => {
+      crate::postparsing::post_parser_error_humanizer::humanize_rune(n.rune)
+    }
     INameT::CodeVar(n) => n.name.0.to_string(),
-    INameT::LambdaCitizen(n) => humanize_name(scout_arena, typing_interner, code_map, INameT::LambdaCitizenTemplate(n.template), containing_region) + "<>",
+    INameT::LambdaCitizen(n) => {
+      humanize_name(
+        scout_arena,
+        typing_interner,
+        code_map,
+        INameT::LambdaCitizenTemplate(n.template),
+        containing_region,
+      ) + "<>"
+    }
     INameT::FunctionTemplate(n) => n.human_name.0.to_string(),
     INameT::ExternFunction(n) => n.human_name.0.to_string(),
     INameT::Function(n) => {
-      humanize_name(scout_arena, typing_interner, code_map, INameT::FunctionTemplate(n.template), None) +
-        &humanize_generic_args(scout_arena, typing_interner, code_map, n.template_args, containing_region) +
-        &(if !n.parameters.is_empty() {
-          "(".to_string() + &n.parameters.iter().map(|p| humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *p })))).collect::<Vec<_>>().join(", ") + ")"
-        } else {
-          "".to_string()
-        })
+      humanize_name(
+        scout_arena,
+        typing_interner,
+        code_map,
+        INameT::FunctionTemplate(n.template),
+        None,
+      ) + &humanize_generic_args(
+        scout_arena,
+        typing_interner,
+        code_map,
+        n.template_args,
+        containing_region,
+      ) + &(if !n.parameters.is_empty() {
+        "(".to_string()
+          + &n
+            .parameters
+            .iter()
+            .map(|p| {
+              humanize_templata(
+                scout_arena,
+                typing_interner,
+                code_map,
+                ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *p })),
+              )
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+          + ")"
+      } else {
+        "".to_string()
+      })
     }
     INameT::Struct(sn) => {
       let template_name = match sn.template {
         IStructTemplateNameT::LambdaCitizenTemplate(n) => INameT::LambdaCitizenTemplate(n),
         IStructTemplateNameT::StructTemplate(n) => INameT::StructTemplate(n),
-        IStructTemplateNameT::AnonymousSubstructTemplate(n) => INameT::AnonymousSubstructTemplate(n),
+        IStructTemplateNameT::AnonymousSubstructTemplate(n) => {
+          INameT::AnonymousSubstructTemplate(n)
+        }
       };
-      humanize_name(scout_arena, typing_interner, code_map, template_name, None) +
-        &humanize_generic_args(scout_arena, typing_interner, code_map, sn.template_args, containing_region)
+      humanize_name(scout_arena, typing_interner, code_map, template_name, None)
+        + &humanize_generic_args(
+          scout_arena,
+          typing_interner,
+          code_map,
+          sn.template_args,
+          containing_region,
+        )
     }
     INameT::Interface(sn) => {
-      humanize_name(scout_arena, typing_interner, code_map, INameT::InterfaceTemplate(sn.template), None) +
-        &humanize_generic_args(scout_arena, typing_interner, code_map, sn.template_args, containing_region)
+      humanize_name(
+        scout_arena,
+        typing_interner,
+        code_map,
+        INameT::InterfaceTemplate(sn.template),
+        None,
+      ) + &humanize_generic_args(
+        scout_arena,
+        typing_interner,
+        code_map,
+        sn.template_args,
+        containing_region,
+      )
     }
     INameT::AnonymousSubstruct(n) => {
-      humanize_name(scout_arena, typing_interner, code_map, INameT::InterfaceTemplate(match n.template.interface { IInterfaceTemplateNameT::InterfaceTemplate(t) => t }), containing_region) +
-        &humanize_generic_args(scout_arena, typing_interner, code_map, n.template_args, containing_region)
+      humanize_name(
+        scout_arena,
+        typing_interner,
+        code_map,
+        INameT::InterfaceTemplate(match n.template.interface {
+          IInterfaceTemplateNameT::InterfaceTemplate(t) => t,
+        }),
+        containing_region,
+      ) + &humanize_generic_args(
+        scout_arena,
+        typing_interner,
+        code_map,
+        n.template_args,
+        containing_region,
+      )
     }
     INameT::AnonymousSubstructTemplate(n) => {
-      humanize_name(scout_arena, typing_interner, code_map, INameT::InterfaceTemplate(match n.interface { IInterfaceTemplateNameT::InterfaceTemplate(t) => t }), containing_region) + ".anonymous"
+      humanize_name(
+        scout_arena,
+        typing_interner,
+        code_map,
+        INameT::InterfaceTemplate(match n.interface {
+          IInterfaceTemplateNameT::InterfaceTemplate(t) => t,
+        }),
+        containing_region,
+      ) + ".anonymous"
     }
     INameT::StructTemplate(n) => n.human_name.0.to_string(),
     INameT::InterfaceTemplate(n) => n.human_namee.0.to_string(),
-    INameT::NonKindNonRegionPlaceholder(n) => crate::postparsing::post_parser_error_humanizer::humanize_rune(n.rune),
+    INameT::NonKindNonRegionPlaceholder(n) => {
+      crate::postparsing::post_parser_error_humanizer::humanize_rune(n.rune)
+    }
     INameT::PredictedFunction(n) => {
-      humanize_name(scout_arena, typing_interner, code_map, INameT::PredictedFunctionTemplate(n.template), None) +
-        &humanize_generic_args(scout_arena, typing_interner, code_map, n.template_args, containing_region) +
-        "(" + &n.parameters.iter().map(|p| humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *p })))).collect::<Vec<_>>().join(", ") + ")"
+      humanize_name(
+        scout_arena,
+        typing_interner,
+        code_map,
+        INameT::PredictedFunctionTemplate(n.template),
+        None,
+      ) + &humanize_generic_args(
+        scout_arena,
+        typing_interner,
+        code_map,
+        n.template_args,
+        containing_region,
+      ) + "("
+        + &n
+          .parameters
+          .iter()
+          .map(|p| {
+            humanize_templata(
+              scout_arena,
+              typing_interner,
+              code_map,
+              ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *p })),
+            )
+          })
+          .collect::<Vec<_>>()
+          .join(", ")
+        + ")"
     }
     INameT::PredictedFunctionTemplate(n) => n.human_name.0.to_string(),
     INameT::AnonymousSubstructImplTemplate(n) => {
-      humanize_name(scout_arena, typing_interner, code_map, INameT::InterfaceTemplate(match n.interface { IInterfaceTemplateNameT::InterfaceTemplate(t) => t }), containing_region) + ".anonymous.impl"
+      humanize_name(
+        scout_arena,
+        typing_interner,
+        code_map,
+        INameT::InterfaceTemplate(match n.interface {
+          IInterfaceTemplateNameT::InterfaceTemplate(t) => t,
+        }),
+        containing_region,
+      ) + ".anonymous.impl"
     }
     other => panic!("implement: humanize_name other: {:?}", other),
   }
 }
 
-fn humanize_generic_args<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, template_args: &[ITemplataT<'s, 't>], containing_region: Option<RegionT>) -> String {
+fn humanize_generic_args<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  template_args: &[ITemplataT<'s, 't>],
+  containing_region: Option<RegionT>,
+) -> String {
   if template_args.is_empty() {
     "".to_string()
   } else {
@@ -853,14 +1487,21 @@ fn humanize_generic_args<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
       None => humanize_templata(scout_arena, typing_interner, code_map, *last),
       Some(_) => "_".to_string(),
     };
-    let parts = init.iter().map(|t| humanize_templata(scout_arena, typing_interner, code_map, *t))
+    let parts = init
+      .iter()
+      .map(|t| humanize_templata(scout_arena, typing_interner, code_map, *t))
       .chain(once(last_str))
-      .collect::<Vec<_>>().join(", ");
+      .collect::<Vec<_>>()
+      .join(", ");
     format!("<{}>", parts)
   }
 }
 
-pub fn humanize_signature<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, signature: SignatureT<'s, 't>) -> String {
+pub fn humanize_signature<'s, 't>(
+  scout_arena: &ScoutArena<'s>,
+  typing_interner: &TypingInterner<'s, 't>,
+  code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  signature: SignatureT<'s, 't>,
+) -> String {
   humanize_id(scout_arena, typing_interner, code_map, signature.id, None)
 }
-

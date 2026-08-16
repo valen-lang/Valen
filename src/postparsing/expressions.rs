@@ -1,12 +1,10 @@
 use crate::interner::StrI;
+use crate::parsing::ast::LoadAsP;
 use crate::postparsing::ast::{FunctionS, IExpressionSE as IExpressionSETrait, LocationInDenizen};
 use crate::postparsing::names::{CodeNameS, IImpreciseNameS, IRuneS, IVarNameS};
 use crate::postparsing::patterns::AtomSP;
 use crate::postparsing::rules::{IRulexSR, RuneUsage};
-use crate::parsing::ast::LoadAsP;
 use crate::utils::range::RangeS;
-
-
 
 #[derive(Debug, PartialEq)]
 pub struct LetSE<'s> {
@@ -66,14 +64,11 @@ pub struct CopyPrimSE<'s> {
   pub inner_expr: &'s IExpressionSE<'s>,
 }
 
-
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IVariableUseCertainty {
   Used,
   NotUsed,
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocalS<'s> {
@@ -86,7 +81,6 @@ pub struct LocalS<'s> {
   pub child_mutated: IVariableUseCertainty,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct BodySE<'s> {
   pub range: RangeS<'s>,
@@ -94,14 +88,12 @@ pub struct BodySE<'s> {
   pub block: &'s BlockSE<'s>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct BlockSE<'s> {
   pub range: RangeS<'s>,
   pub locals: &'s [LocalS<'s>],
   pub expr: &'s IExpressionSE<'s>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum IExpressionSE<'s> {
@@ -172,7 +164,6 @@ impl<'s> IExpressionSETrait<'s> for IExpressionSE<'s> {
       IExpressionSE::CopyPrim(x) => x.range.clone(),
     }
   }
-  
 }
 
 #[derive(Debug, PartialEq)]
@@ -180,19 +171,12 @@ pub struct ConsecutorSE<'s> {
   pub exprs: &'s [&'s IExpressionSE<'s>],
 }
 
-
 impl<'s> ConsecutorSE<'s> {
   pub fn range(&self) -> RangeS<'s> {
     assert!(!self.exprs.is_empty());
-    RangeS::new(
-      self.exprs.first().unwrap().range().begin,
-      self.exprs.last().unwrap().range().end,
-    )
+    RangeS::new(self.exprs.first().unwrap().range().begin, self.exprs.last().unwrap().range().end)
   }
-
-
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct ReturnSE<'s> {
@@ -237,7 +221,6 @@ pub struct NewRuntimeSizedArraySE<'s> {
   pub size: &'s IExpressionSE<'s>,
   pub callable: Option<&'s IExpressionSE<'s>>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct ConstantIntSE<'s> {
@@ -295,7 +278,6 @@ pub struct IndexSE<'s> {
   pub index_expr: &'s IExpressionSE<'s>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct FunctionCallSE<'s> {
   pub range: RangeS<'s>,
@@ -315,7 +297,6 @@ pub struct LoadPartSE<'s> {
   pub name: IImpreciseNameS<'s>,
   pub explicit_template_args: &'s [RuneUsage<'s>],
 }
-
 
 // A load from something that lives outside the current definition.
 // For example:
@@ -341,12 +322,10 @@ pub struct OutsideLoadSE<'s> {
   pub parts: &'s [&'s LoadPartSE<'s>],
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct OverloadSetSE<'s> {
   pub lookup: OutsideLoadSE<'s>,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct RuneLookupSE<'s> {

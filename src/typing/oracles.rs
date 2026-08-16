@@ -24,43 +24,46 @@ use std::marker::PhantomData;
 /// Miscellaneous (see @TFITCX)
 #[derive(Clone, Copy)]
 pub struct Oracles<'ctx, 's, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    /// Answers questions about Rust items. `None` when nothing is being asked — a test about
-    /// Vale semantics, or a compilation with no Rust dependencies — in which case every seam
-    /// falls through to ordinary Vale behavior.
-    #[cfg(feature = "rust_interop")]
-    pub rust: Option<&'ctx dyn RustOracle<'s, 't>>,
+  /// Answers questions about Rust items. `None` when nothing is being asked — a test about
+  /// Vale semantics, or a compilation with no Rust dependencies — in which case every seam
+  /// falls through to ordinary Vale behavior.
+  #[cfg(feature = "rust_interop")]
+  pub rust: Option<&'ctx dyn RustOracle<'s, 't>>,
 
-    /// Keeps the lifetime parameters used when there are no fields to use them.
-    #[cfg(not(feature = "rust_interop"))]
-    _marker: PhantomData<(&'ctx (), &'s (), &'t ())>,
+  /// Keeps the lifetime parameters used when there are no fields to use them.
+  #[cfg(not(feature = "rust_interop"))]
+  _marker: PhantomData<(&'ctx (), &'s (), &'t ())>,
 }
 
 impl<'ctx, 's, 't> Oracles<'ctx, 's, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    /// No oracles. Compiles in both configurations, so ordinary callers never mention the
-    /// build mode.
-    pub fn none() -> Self {
-        Oracles {
-            #[cfg(feature = "rust_interop")]
-            rust: None,
-            #[cfg(not(feature = "rust_interop"))]
-            _marker: PhantomData,
-        }
+  /// No oracles. Compiles in both configurations, so ordinary callers never mention the
+  /// build mode.
+  pub fn none() -> Self {
+    Oracles {
+      #[cfg(feature = "rust_interop")]
+      rust: None,
+      #[cfg(not(feature = "rust_interop"))]
+      _marker: PhantomData,
     }
+  }
 
-    #[cfg(feature = "rust_interop")]
-    pub fn with_rust(rust: &'ctx dyn RustOracle<'s, 't>) -> Self {
-        Oracles { rust: Some(rust) }
-    }
+  #[cfg(feature = "rust_interop")]
+  pub fn with_rust(rust: &'ctx dyn RustOracle<'s, 't>) -> Self {
+    Oracles { rust: Some(rust) }
+  }
 }
 
 impl<'ctx, 's, 't> Default for Oracles<'ctx, 's, 't>
-where 's: 't,
+where
+  's: 't,
 {
-    fn default() -> Self {
-        Oracles::none()
-    }
+  fn default() -> Self {
+    Oracles::none()
+  }
 }

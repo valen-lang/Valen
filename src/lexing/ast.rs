@@ -1,7 +1,6 @@
 use crate::interner::StrI;
 use crate::parsing::ast::SharednessP;
 
-
 /// Position range in source code (test edit)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RangeL(i32, i32);
@@ -25,14 +24,12 @@ impl RangeL {
   }
 }
 
-
 /// A file with top-level denizens
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FileL<'p> {
   pub denizens: &'p [IDenizenL<'p>],
   pub comment_ranges: &'p [RangeL],
 }
-
 
 /// Top-level items in a file
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -45,7 +42,6 @@ pub enum IDenizenL<'p> {
   TopLevelImport(ImportL<'p>),
 }
 
-
 /// Impl block
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ImplL<'p> {
@@ -57,14 +53,12 @@ pub struct ImplL<'p> {
   pub attributes: &'p [IAttributeL<'p>],
 }
 
-
 /// Export as declaration
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExportAsL<'p> {
   pub range: RangeL,
   pub contents: ScrambleLE<'p>,
 }
-
 
 /// Import declaration
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -74,7 +68,6 @@ pub struct ImportL<'p> {
   pub package_steps: &'p [WordLE<'p>],
   pub importee_name: WordLE<'p>,
 }
-
 
 /// Struct definition
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -90,7 +83,6 @@ pub struct StructL<'p> {
   pub methods: &'p [FunctionL<'p>],
 }
 
-
 /// Interface definition
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InterfaceL<'p> {
@@ -104,25 +96,16 @@ pub struct InterfaceL<'p> {
   pub members: &'p [FunctionL<'p>],
 }
 
-
 /// Attributes on declarations
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IAttributeL<'p> {
   AbstractAttribute(RangeL),
   ExportAttribute(RangeL),
-  ExternAttribute {
-    range: RangeL,
-    maybe_custom_name: Option<ParendLE<'p>>,
-  },
+  ExternAttribute { range: RangeL, maybe_custom_name: Option<ParendLE<'p>> },
   WeakableAttribute(RangeL),
   SealedAttribute(RangeL),
-  MacroCall {
-    range: RangeL,
-    inclusion: IMacroInclusionL,
-    name: WordLE<'p>,
-  },
+  MacroCall { range: RangeL, inclusion: IMacroInclusionL, name: WordLE<'p> },
 }
-
 
 /// Macro inclusion type
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -130,7 +113,6 @@ pub enum IMacroInclusionL {
   CallMacro,
   DontCallMacro,
 }
-
 
 /// Function definition
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -140,13 +122,11 @@ pub struct FunctionL<'p> {
   pub body: Option<FunctionBodyL<'p>>,
 }
 
-
 /// Function body
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FunctionBodyL<'p> {
   pub body: CurliedLE<'p>,
 }
-
 
 /// Function header
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -161,12 +141,10 @@ pub struct FunctionHeaderL<'p> {
   pub trailing_details: ScrambleLE<'p>,
 }
 
-
 /// Node in the lexer tree
 pub trait INodeLE {
   fn range(&self) -> RangeL;
 }
-
 
 /// A scramble of lexer nodes (no structure yet)
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -179,7 +157,6 @@ impl INodeLE for ScrambleLE<'_> {
     self.range
   }
 }
-
 
 /// Enum wrapper for INodeLE to allow storing in vectors
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -225,7 +202,6 @@ impl INodeLE for ParendLE<'_> {
   }
 }
 
-
 /// Angled brackets (generics)
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AngledLE<'p> {
@@ -237,7 +213,6 @@ impl INodeLE for AngledLE<'_> {
     self.range
   }
 }
-
 
 /// Squared brackets (arrays)
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -252,7 +227,6 @@ impl INodeLE for SquaredLE<'_> {
   }
 }
 
-
 /// Curly braces (blocks)
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CurliedLE<'p> {
@@ -266,7 +240,6 @@ impl INodeLE for CurliedLE<'_> {
   }
 }
 
-
 /// Word/identifier
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WordLE<'p> {
@@ -278,7 +251,6 @@ impl INodeLE for WordLE<'_> {
     self.range
   }
 }
-
 
 /// Single character symbol
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -300,7 +272,6 @@ impl INodeLE for SymbolLE {
   }
 }
 
-
 /// String literal
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StringLE<'p> {
@@ -314,16 +285,12 @@ impl INodeLE for StringLE<'_> {
   }
 }
 
-
 /// Part of a string (literal or interpolated expression)
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum StringPart<'p> {
   Literal { range: RangeL, s: StrI<'p> },
   Expr(ScrambleLE<'p>),
 }
-
-
-
 
 /// Parsed integer literal
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -339,7 +306,6 @@ impl INodeLE for ParsedIntegerLE {
   }
 }
 
-
 /// Parsed floating-point literal
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ParsedDoubleLE {
@@ -353,4 +319,3 @@ impl INodeLE for ParsedDoubleLE {
     self.range
   }
 }
-

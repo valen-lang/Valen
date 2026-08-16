@@ -1,6 +1,6 @@
 use crate::postparsing::names::IImpreciseNameS;
-use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
+use crate::typing::names::names::*;
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::typing_interner::MustIntern;
 
@@ -77,24 +77,21 @@ impl<'s, 't> KindT<'s, 't> {
       _ => panic!("vfail"),
     }
   }
-  
-  
+
   pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
     match self {
       KindT::Interface(c) => c,
       _ => panic!("vfail"),
     }
   }
-  
-  
+
   pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
     match self {
       KindT::Struct(c) => c,
       _ => panic!("vfail"),
     }
   }
-  
-  
+
   pub fn is_primitive(&self) -> bool {
     match self {
       KindT::Never(_) => true,
@@ -116,7 +113,6 @@ impl<'s, 't> KindT<'s, 't> {
       KindT::WeakRef(_) => false,
     }
   }
-
 
   // A `&X -> X` read-out copies the value out of the borrow with no user-written clone,
   // via a CopyPrim intrinsic. True for primitives and for str (a share value that copies
@@ -140,9 +136,8 @@ pub struct NeverT {
 pub struct VoidT;
 
 impl IntT {
-    pub const I32: IntT = IntT { bits: 32 };
-    pub const I64: IntT = IntT { bits: 64 };
-
+  pub const I32: IntT = IntT { bits: 32 };
+  pub const I64: IntT = IntT { bits: 64 };
 }
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -178,23 +173,23 @@ pub struct StaticSizedArrayTT<'s, 't> {
   pub _must_intern: MustIntern,
 }
 
-
-
-impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
+impl<'s, 't> StaticSizedArrayTT<'s, 't>
+where
+  's: 't,
+{
   pub fn element_type(&self) -> KindT<'s, 't> {
     match self.name.local_name {
       INameT::StaticSizedArray(ssa_name) => ssa_name.arr.element_type,
       _ => panic!("vwat"),
     }
   }
-  
+
   pub fn size(&self) -> ITemplataT<'s, 't> {
     match self.name.local_name {
       INameT::StaticSizedArray(ssa_name) => ssa_name.size,
       _ => panic!("vwat"),
     }
   }
-  
 }
 
 fn unapply_contents_runtime_sized_array_tt() {
@@ -216,14 +211,16 @@ pub struct RuntimeSizedArrayTT<'s, 't> {
   pub _must_intern: MustIntern,
 }
 
-impl<'s, 't> RuntimeSizedArrayTT<'s, 't> where 's: 't {
+impl<'s, 't> RuntimeSizedArrayTT<'s, 't>
+where
+  's: 't,
+{
   pub fn element_type(&self) -> KindT<'s, 't> {
     match self.name.local_name {
       INameT::RuntimeSizedArray(rsa_name) => rsa_name.arr.element_type,
       _ => panic!("vwat"),
     }
   }
-  
 }
 
 /// Interning transient (see @TFITCX)
@@ -257,7 +254,6 @@ fn unapply_i_citizen_tt() {
 //   }
 // }
 
-
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -267,35 +263,37 @@ pub enum ISubKindTT<'s, 't> {
   KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
 }
 
-impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
-    pub fn id(&self) -> IdT<'s, 't> {
-        match self {
-            ISubKindTT::Struct(s) => s.id,
-            ISubKindTT::Interface(i) => i.id,
-            ISubKindTT::KindPlaceholder(kp) => kp.id,
-        }
+impl<'s, 't> ISubKindTT<'s, 't>
+where
+  's: 't,
+{
+  pub fn id(&self) -> IdT<'s, 't> {
+    match self {
+      ISubKindTT::Struct(s) => s.id,
+      ISubKindTT::Interface(i) => i.id,
+      ISubKindTT::KindPlaceholder(kp) => kp.id,
     }
-    
-    pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
-        match self {
-            ISubKindTT::Struct(s) => ICitizenTT::Struct(s),
-            ISubKindTT::Interface(i) => ICitizenTT::Interface(i),
-            ISubKindTT::KindPlaceholder(_) => panic!("vfail"),
-        }
+  }
+
+  pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
+    match self {
+      ISubKindTT::Struct(s) => ICitizenTT::Struct(s),
+      ISubKindTT::Interface(i) => ICitizenTT::Interface(i),
+      ISubKindTT::KindPlaceholder(_) => panic!("vfail"),
     }
-    
-    pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
-        KindT::from(*self).expect_interface()
-    }
-    
-    pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
-        KindT::from(*self).expect_struct()
-    }
-    
-    pub fn is_primitive(&self) -> bool {
-        KindT::from(*self).is_primitive()
-    }
-    
+  }
+
+  pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
+    KindT::from(*self).expect_interface()
+  }
+
+  pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
+    KindT::from(*self).expect_struct()
+  }
+
+  pub fn is_primitive(&self) -> bool {
+    KindT::from(*self).is_primitive()
+  }
 }
 
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
@@ -306,30 +304,32 @@ pub enum ISuperKindTT<'s, 't> {
   KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
 }
 
-impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
-    pub fn id(&self) -> IdT<'s, 't> {
-        match self {
-            ISuperKindTT::Interface(i) => i.id,
-            ISuperKindTT::KindPlaceholder(kp) => kp.id,
-        }
+impl<'s, 't> ISuperKindTT<'s, 't>
+where
+  's: 't,
+{
+  pub fn id(&self) -> IdT<'s, 't> {
+    match self {
+      ISuperKindTT::Interface(i) => i.id,
+      ISuperKindTT::KindPlaceholder(kp) => kp.id,
     }
-    
-    pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
-        KindT::from(*self).expect_citizen()
-    }
-    
-    pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
-        KindT::from(*self).expect_interface()
-    }
-    
-    pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
-        KindT::from(*self).expect_struct()
-    }
-    
-    pub fn is_primitive(&self) -> bool {
-        KindT::from(*self).is_primitive()
-    }
-    
+  }
+
+  pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
+    KindT::from(*self).expect_citizen()
+  }
+
+  pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
+    KindT::from(*self).expect_interface()
+  }
+
+  pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
+    KindT::from(*self).expect_struct()
+  }
+
+  pub fn is_primitive(&self) -> bool {
+    KindT::from(*self).is_primitive()
+  }
 }
 
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
@@ -340,30 +340,32 @@ pub enum ICitizenTT<'s, 't> {
   Interface(&'t InterfaceTT<'s, 't>),
 }
 
-impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
-    pub fn id(&self) -> IdT<'s, 't> {
-        match self {
-            ICitizenTT::Struct(s) => s.id,
-            ICitizenTT::Interface(i) => i.id,
-        }
+impl<'s, 't> ICitizenTT<'s, 't>
+where
+  's: 't,
+{
+  pub fn id(&self) -> IdT<'s, 't> {
+    match self {
+      ICitizenTT::Struct(s) => s.id,
+      ICitizenTT::Interface(i) => i.id,
     }
-    
-    pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
-        *self
-    }
-    
-    pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
-        KindT::from(*self).expect_interface()
-    }
-    
-    pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
-        KindT::from(*self).expect_struct()
-    }
-    
-    pub fn is_primitive(&self) -> bool {
-        KindT::from(*self).is_primitive()
-    }
-    
+  }
+
+  pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
+    *self
+  }
+
+  pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
+    KindT::from(*self).expect_interface()
+  }
+
+  pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
+    KindT::from(*self).expect_struct()
+  }
+
+  pub fn is_primitive(&self) -> bool {
+    KindT::from(*self).is_primitive()
+  }
 }
 
 /// Interned (see @TFITCX)
@@ -413,7 +415,6 @@ pub struct KindPlaceholderT<'s, 't> {
   pub id: IdT<'s, 't>,
 }
 
-
 // -- Simple / shallow concretes (reuse struct itself as Val) ------------------
 // The 6 concrete Kind payloads above (StructTT, InterfaceTT, StaticSizedArrayTT,
 // RuntimeSizedArrayTT, KindPlaceholderT, OverloadSetT) are arena-interned but
@@ -433,7 +434,8 @@ pub struct KindPlaceholderT<'s, 't> {
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum InternedKindPayloadValT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   StructTT(StructTTValT<'s, 't>),
   InterfaceTT(InterfaceTTValT<'s, 't>),
@@ -446,7 +448,8 @@ where 's: 't,
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum InternedKindPayloadT<'s, 't>
-where 's: 't,
+where
+  's: 't,
 {
   StructTT(&'t StructTT<'s, 't>),
   InterfaceTT(&'t InterfaceTT<'s, 't>),
@@ -459,61 +462,74 @@ where 's: 't,
 // -- From bridges: concrete payload → each wrapper enum it belongs to --------
 
 impl<'s, 't> From<&'t StructTT<'s, 't>> for ICitizenTT<'s, 't> {
-  fn from(x: &'t StructTT<'s, 't>) -> Self { ICitizenTT::Struct(x) }
-  
+  fn from(x: &'t StructTT<'s, 't>) -> Self {
+    ICitizenTT::Struct(x)
+  }
 }
 impl<'s, 't> From<&'t StructTT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t StructTT<'s, 't>) -> Self { ISubKindTT::Struct(x) }
-  
+  fn from(x: &'t StructTT<'s, 't>) -> Self {
+    ISubKindTT::Struct(x)
+  }
 }
 impl<'s, 't> From<&'t StructTT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t StructTT<'s, 't>) -> Self { KindT::Struct(x) }
-  
+  fn from(x: &'t StructTT<'s, 't>) -> Self {
+    KindT::Struct(x)
+  }
 }
 
 impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for ICitizenTT<'s, 't> {
-  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ICitizenTT::Interface(x) }
-  
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self {
+    ICitizenTT::Interface(x)
+  }
 }
 impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ISubKindTT::Interface(x) }
-  
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self {
+    ISubKindTT::Interface(x)
+  }
 }
 impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for ISuperKindTT<'s, 't> {
-  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ISuperKindTT::Interface(x) }
-  
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self {
+    ISuperKindTT::Interface(x)
+  }
 }
 impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { KindT::Interface(x) }
-  
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self {
+    KindT::Interface(x)
+  }
 }
 
 impl<'s, 't> From<&'t StaticSizedArrayTT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self { KindT::StaticSizedArray(x) }
-  
+  fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self {
+    KindT::StaticSizedArray(x)
+  }
 }
 
 impl<'s, 't> From<&'t RuntimeSizedArrayTT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self { KindT::RuntimeSizedArray(x) }
-  
+  fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self {
+    KindT::RuntimeSizedArray(x)
+  }
 }
 
 impl<'s, 't> From<&'t KindPlaceholderT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { ISubKindTT::KindPlaceholder(x) }
-  
+  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self {
+    ISubKindTT::KindPlaceholder(x)
+  }
 }
 impl<'s, 't> From<&'t KindPlaceholderT<'s, 't>> for ISuperKindTT<'s, 't> {
-  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { ISuperKindTT::KindPlaceholder(x) }
-  
+  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self {
+    ISuperKindTT::KindPlaceholder(x)
+  }
 }
 impl<'s, 't> From<&'t KindPlaceholderT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { KindT::KindPlaceholder(x) }
-  
+  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self {
+    KindT::KindPlaceholder(x)
+  }
 }
 
 impl<'s, 't> From<&'t OverloadSetT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t OverloadSetT<'s, 't>) -> Self { KindT::OverloadSet(x) }
-  
+  fn from(x: &'t OverloadSetT<'s, 't>) -> Self {
+    KindT::OverloadSet(x)
+  }
 }
 
 // -- From bridges: narrow sub-enum → wider sub-enum / KindT ------------------
@@ -525,7 +541,6 @@ impl<'s, 't> From<ICitizenTT<'s, 't>> for ISubKindTT<'s, 't> {
       ICitizenTT::Interface(x) => ISubKindTT::Interface(x),
     }
   }
-  
 }
 impl<'s, 't> From<ICitizenTT<'s, 't>> for KindT<'s, 't> {
   fn from(c: ICitizenTT<'s, 't>) -> Self {
@@ -534,7 +549,6 @@ impl<'s, 't> From<ICitizenTT<'s, 't>> for KindT<'s, 't> {
       ICitizenTT::Interface(x) => KindT::Interface(x),
     }
   }
-  
 }
 impl<'s, 't> From<ISubKindTT<'s, 't>> for KindT<'s, 't> {
   fn from(s: ISubKindTT<'s, 't>) -> Self {
@@ -544,7 +558,6 @@ impl<'s, 't> From<ISubKindTT<'s, 't>> for KindT<'s, 't> {
       ISubKindTT::KindPlaceholder(x) => KindT::KindPlaceholder(x),
     }
   }
-  
 }
 impl<'s, 't> From<ISuperKindTT<'s, 't>> for KindT<'s, 't> {
   fn from(s: ISuperKindTT<'s, 't>) -> Self {
@@ -553,7 +566,6 @@ impl<'s, 't> From<ISuperKindTT<'s, 't>> for KindT<'s, 't> {
       ISuperKindTT::KindPlaceholder(x) => KindT::KindPlaceholder(x),
     }
   }
-  
 }
 
 // -- TryFrom bridges: wider → narrower ---------------------------------------
@@ -567,7 +579,6 @@ impl<'s, 't> TryFrom<KindT<'s, 't>> for ICitizenTT<'s, 't> {
       _ => Err(()),
     }
   }
-  
 }
 impl<'s, 't> TryFrom<KindT<'s, 't>> for ISubKindTT<'s, 't> {
   type Error = ();
@@ -579,7 +590,6 @@ impl<'s, 't> TryFrom<KindT<'s, 't>> for ISubKindTT<'s, 't> {
       _ => Err(()),
     }
   }
-  
 }
 impl<'s, 't> TryFrom<KindT<'s, 't>> for ISuperKindTT<'s, 't> {
   type Error = ();
@@ -590,7 +600,6 @@ impl<'s, 't> TryFrom<KindT<'s, 't>> for ISuperKindTT<'s, 't> {
       _ => Err(()),
     }
   }
-  
 }
 impl<'s, 't> TryFrom<ISubKindTT<'s, 't>> for ICitizenTT<'s, 't> {
   type Error = ();
@@ -601,5 +610,4 @@ impl<'s, 't> TryFrom<ISubKindTT<'s, 't>> for ICitizenTT<'s, 't> {
       _ => Err(()),
     }
   }
-  
 }

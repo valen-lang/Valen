@@ -2,36 +2,34 @@
 // LocationInDenizenBuilder instead of arena-allocating. The slice is promoted
 // to permanent arena storage only inside intern_rune on a miss.
 
-use crate::scout_arena::ScoutArena;
+use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
-  BoolPT, IntPT, ITemplexPT, ITemplexPT::NameOrRune, NameOrRunePT,
-  NameP, RegionP, RegionRunePT, StringPT,
+  BoolPT, ITemplexPT, ITemplexPT::NameOrRune, IntPT, NameOrRunePT, NameP, RegionP, RegionRunePT,
+  StringPT,
 };
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
-use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, ImplicitRuneValS, IRuneS,
-};
 use crate::postparsing::names::IRuneValS::{CodeRune, ImplicitRune};
+use crate::postparsing::names::{
+  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, IRuneS, ImplicitRuneValS,
+};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
 use crate::postparsing::rules::rules::IRulexSR::{Call, Lookup};
 use crate::postparsing::rules::rules::{
-  BoolLiteralSL, BorrowRefSR, CallSR, ILiteralSL, IntLiteralSL, IRulexSR, KindListSR,
-  LiteralSR, LookupSR, OwnRefSR, RegionSR, RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, WeakRefSR,
+  BoolLiteralSL, BorrowRefSR, CallSR, ILiteralSL, IRulexSR, IntLiteralSL, KindListSR, LiteralSR,
+  LookupSR, OwnRefSR, RegionSR, RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, WeakRefSR,
 };
-use crate::utils::range::RangeS;
-use crate::postparsing::rules::rules::{
-  CallSiteFuncSR, DefinitionFuncSR, ResolveSR,
-};
+use crate::postparsing::rules::rules::{CallSiteFuncSR, DefinitionFuncSR, ResolveSR};
 use crate::postparsing::rules::types::{
-  AnonymousRuneST, BoolST, BorrowRefST, CallST, IntST, ITypeST, NameST, OwnRefST, PackST,
-  RegionS, RuneUsageST, RuntimeSizedArrayST, StringST, TupleST, WeakRefST,
+  AnonymousRuneST, BoolST, BorrowRefST, CallST, ITypeST, IntST, NameST, OwnRefST, PackST, RegionS,
+  RuneUsageST, RuntimeSizedArrayST, StringST, TupleST, WeakRefST,
 };
-use crate::interner::StrI;
+use crate::scout_arena::ScoutArena;
+use crate::utils::range::RangeS;
 
-
-pub fn add_literal_rule<'s>(scout_arena: &ScoutArena<'s>,
+pub fn add_literal_rule<'s>(
+  scout_arena: &ScoutArena<'s>,
   lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
   range_s: RangeS<'s>,
@@ -50,25 +48,23 @@ pub fn add_literal_rule<'s>(scout_arena: &ScoutArena<'s>,
   rune_s
 }
 
-fn add_rune_parent_env_lookup_rule<'s>(_scout_arena: &ScoutArena<'s>,
+fn add_rune_parent_env_lookup_rule<'s>(
+  _scout_arena: &ScoutArena<'s>,
   _lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
   range_s: RangeS<'s>,
   rune_s: IRuneS<'s>,
 ) -> RuneUsage<'s> {
-  let usage = RuneUsage {
-    range: range_s.clone(),
-    rune: rune_s,
-  };
+  let usage = RuneUsage { range: range_s.clone(), rune: rune_s };
   rule_builder.push(IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
-      range: range_s,
-      rune: usage.clone(),
-    },
-  ));
+    range: range_s,
+    rune: usage.clone(),
+  }));
   usage
 }
 
-fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
+fn add_lookup_rule<'s>(
+  scout_arena: &ScoutArena<'s>,
   lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
   range_s: RangeS<'s>,
@@ -95,7 +91,8 @@ fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
 // The ITemplexPT::Call arm builds its own Call instead of calling this: it mints its result rune
 // *before* translating the template and args, and that ordering feeds the rune's
 // LocationInDenizen path, so sharing this helper would change every applied template's rune.
-fn add_zero_arg_call_rule<'s>(scout_arena: &ScoutArena<'s>,
+fn add_zero_arg_call_rule<'s>(
+  scout_arena: &ScoutArena<'s>,
   lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
   range_s: RangeS<'s>,
@@ -120,17 +117,15 @@ pub fn translate_value_templex<'s, 'p>(
   templex: &ITemplexPT<'p>,
 ) -> Option<ILiteralSL<'s>> {
   match templex {
-    ITemplexPT::Int(IntPT { value, .. }) => Some(ILiteralSL::IntLiteral(IntLiteralSL {
-      value: *value,
+    ITemplexPT::Int(IntPT { value, .. }) => {
+      Some(ILiteralSL::IntLiteral(IntLiteralSL { value: *value }))
+    }
+    ITemplexPT::Bool(BoolPT { value, .. }) => {
+      Some(ILiteralSL::BoolLiteral(BoolLiteralSL { value: *value }))
+    }
+    ITemplexPT::String(StringPT { str, .. }) => Some(ILiteralSL::StringLiteral(StringLiteralSL {
+      value: scout_arena.intern_str(str.as_str()),
     })),
-    ITemplexPT::Bool(BoolPT { value, .. }) => Some(ILiteralSL::BoolLiteral(BoolLiteralSL {
-      value: *value,
-    })),
-    ITemplexPT::String(StringPT { str, .. }) => Some(ILiteralSL::StringLiteral(
-      StringLiteralSL {
-        value: scout_arena.intern_str(str.as_str()),
-      },
-    )),
     _ => None,
   }
 }
@@ -153,7 +148,10 @@ fn translate_borrow_ref_templex<'s>(
     rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
   };
   builder.push(IRulexSR::BorrowRef(BorrowRefSR {
-    range: range_s, result_rune: result_rune.clone(), inner_rune, region,
+    range: range_s,
+    result_rune: result_rune.clone(),
+    inner_rune,
+    region,
   }));
   result_rune
 }
@@ -170,7 +168,9 @@ fn translate_weak_ref_templex<'s>(
     rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
   };
   builder.push(IRulexSR::WeakRef(WeakRefSR {
-    range: range_s, result_rune: result_rune.clone(), inner_rune,
+    range: range_s,
+    result_rune: result_rune.clone(),
+    inner_rune,
   }));
   result_rune
 }
@@ -187,7 +187,9 @@ fn translate_own_ref_templex<'s>(
     rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
   };
   builder.push(IRulexSR::OwnRef(OwnRefSR {
-    range: range_s, result_rune: result_rune.clone(), inner_rune,
+    range: range_s,
+    result_rune: result_rune.clone(),
+    inner_rune,
   }));
   result_rune
 }
@@ -202,7 +204,8 @@ fn translate_own_ref_templex<'s>(
 /// do it here and the outer application receives a finished kind, with its arguments left nothing
 /// to apply to. Every other templex already yields the right rune — a rune name resolves to itself
 /// or to a parent-env lookup, and neither applies anything.
-fn translate_template_position_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
+fn translate_template_position_templex<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
@@ -213,14 +216,21 @@ fn translate_template_position_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
   let file = env.file();
   if let ITemplexPT::NameOrRune(NameOrRunePT { name: name_or_rune, .. }) = templex {
     let name_str = scout_arena.intern_str(name_or_rune.str().as_str());
-    let is_rune_from_env =
-      env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })));
+    let is_rune_from_env = env
+      .all_declared_runes()
+      .contains(&scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })));
     if !is_rune_from_env {
       let name = scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: name_str }));
       let range_s = PostParser::eval_range(file, name_or_rune.range());
       let mut child_lidb = lidb.child();
       return add_lookup_rule(
-        scout_arena, &mut child_lidb, rule_builder, range_s, context_region, name);
+        scout_arena,
+        &mut child_lidb,
+        rule_builder,
+        range_s,
+        context_region,
+        name,
+      );
     }
   }
   translate_templex(scout_arena, keywords, env, lidb, rule_builder, context_region, templex)
@@ -242,25 +252,28 @@ pub fn translate_templex_into_type_st<'s, 'p>(
   let file = env.file();
   let range_s = PostParser::eval_range(file, templex.range());
   match templex {
-    ITemplexPT::AnonymousRune(_) =>
-      ITypeST::AnonymousRune(scout_arena.alloc(AnonymousRuneST { range: range_s })),
+    ITemplexPT::AnonymousRune(_) => {
+      ITypeST::AnonymousRune(scout_arena.alloc(AnonymousRuneST { range: range_s }))
+    }
 
-    ITemplexPT::Bool(BoolPT { value, .. }) =>
-      ITypeST::Bool(scout_arena.alloc(BoolST { range: range_s, value: *value })),
+    ITemplexPT::Bool(BoolPT { value, .. }) => {
+      ITypeST::Bool(scout_arena.alloc(BoolST { range: range_s, value: *value }))
+    }
 
-    ITemplexPT::Int(IntPT { value, .. }) =>
-      ITypeST::Int(scout_arena.alloc(IntST { range: range_s, value: IntLiteralSL { value: *value } })),
+    ITemplexPT::Int(IntPT { value, .. }) => ITypeST::Int(
+      scout_arena.alloc(IntST { range: range_s, value: IntLiteralSL { value: *value } }),
+    ),
 
-    ITemplexPT::String(StringPT { str, .. }) =>
-      ITypeST::String(scout_arena.alloc(StringST {
-        range: range_s, str: scout_arena.intern_str(str.as_str()),
-      })),
+    ITemplexPT::String(StringPT { str, .. }) => ITypeST::String(
+      scout_arena.alloc(StringST { range: range_s, str: scout_arena.intern_str(str.as_str()) }),
+    ),
 
     // A bare name, e.g. `int` (a concrete type) or `D` (a declared generic). The env decides which.
     ITemplexPT::NameOrRune(NameOrRunePT { name: name_or_rune, .. }) => {
       let name_str = scout_arena.intern_str(name_or_rune.str().as_str());
-      let is_rune = env.all_declared_runes().contains(
-        &scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })));
+      let is_rune = env
+        .all_declared_runes()
+        .contains(&scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })));
       if is_rune {
         ITypeST::Rune(scout_arena.alloc(RuneUsageST {
           rune: RuneUsage {
@@ -284,13 +297,18 @@ pub fn translate_templex_into_type_st<'s, 'p>(
         args.push(scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), arg)));
       }
       ITypeST::Call(scout_arena.alloc(CallST {
-        range: range_s, template, args: scout_arena.alloc_slice_from_vec(args),
+        range: range_s,
+        template,
+        args: scout_arena.alloc_slice_from_vec(args),
       }))
     }
 
     ITemplexPT::BorrowRef(borrow_ref) => {
-      let inner: &'s ITypeST<'s> =
-        scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), borrow_ref.inner));
+      let inner: &'s ITypeST<'s> = scout_arena.alloc(translate_templex_into_type_st(
+        scout_arena,
+        env.clone(),
+        borrow_ref.inner,
+      ));
       let region = match borrow_ref.region {
         RegionP::Unspecified => RegionS::Unspecified,
         RegionP::Held => RegionS::Held,
@@ -325,21 +343,31 @@ pub fn translate_templex_into_type_st<'s, 'p>(
     ITemplexPT::Pack(pack) => {
       let mut members = Vec::<&'s ITypeST<'s>>::new();
       for member in pack.members {
-        members.push(scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), member)));
+        members.push(scout_arena.alloc(translate_templex_into_type_st(
+          scout_arena,
+          env.clone(),
+          member,
+        )));
       }
-      ITypeST::Pack(scout_arena.alloc(PackST {
-        range: range_s, members: scout_arena.alloc_slice_from_vec(members),
-      }))
+      ITypeST::Pack(
+        scout_arena
+          .alloc(PackST { range: range_s, members: scout_arena.alloc_slice_from_vec(members) }),
+      )
     }
 
     ITemplexPT::Tuple(tuple) => {
       let mut elements = Vec::<&'s ITypeST<'s>>::new();
       for element in tuple.elements {
-        elements.push(scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), element)));
+        elements.push(scout_arena.alloc(translate_templex_into_type_st(
+          scout_arena,
+          env.clone(),
+          element,
+        )));
       }
-      ITypeST::Tuple(scout_arena.alloc(TupleST {
-        range: range_s, elements: scout_arena.alloc_slice_from_vec(elements),
-      }))
+      ITypeST::Tuple(
+        scout_arena
+          .alloc(TupleST { range: range_s, elements: scout_arena.alloc_slice_from_vec(elements) }),
+      )
     }
 
     ITemplexPT::RuntimeSizedArray(rsa) => {
@@ -381,20 +409,35 @@ pub fn translate_type_st_into_rune<'s>(
   match type_st {
     ITypeST::Bool(b) => {
       let mut child_lidb = lidb.child();
-      add_literal_rule(scout_arena, &mut child_lidb, rule_builder, range_s,
-        ILiteralSL::BoolLiteral(BoolLiteralSL { value: b.value }))
+      add_literal_rule(
+        scout_arena,
+        &mut child_lidb,
+        rule_builder,
+        range_s,
+        ILiteralSL::BoolLiteral(BoolLiteralSL { value: b.value }),
+      )
     }
 
     ITypeST::Int(i) => {
       let mut child_lidb = lidb.child();
-      add_literal_rule(scout_arena, &mut child_lidb, rule_builder, range_s,
-        ILiteralSL::IntLiteral(i.value))
+      add_literal_rule(
+        scout_arena,
+        &mut child_lidb,
+        rule_builder,
+        range_s,
+        ILiteralSL::IntLiteral(i.value),
+      )
     }
 
     ITypeST::String(s) => {
       let mut child_lidb = lidb.child();
-      add_literal_rule(scout_arena, &mut child_lidb, rule_builder, range_s,
-        ILiteralSL::StringLiteral(StringLiteralSL { value: s.str }))
+      add_literal_rule(
+        scout_arena,
+        &mut child_lidb,
+        rule_builder,
+        range_s,
+        ILiteralSL::StringLiteral(StringLiteralSL { value: s.str }),
+      )
     }
 
     ITypeST::AnonymousRune(_) => RuneUsage {
@@ -408,7 +451,13 @@ pub fn translate_type_st_into_rune<'s>(
       } else {
         // From a parent env, e.g. a lambda's `__call` mentioning its parent's `T`.
         let mut child_lidb = lidb.child();
-        add_rune_parent_env_lookup_rule(scout_arena, &mut child_lidb, rule_builder, range_s, r.rune.rune)
+        add_rune_parent_env_lookup_rule(
+          scout_arena,
+          &mut child_lidb,
+          rule_builder,
+          range_s,
+          r.rune.rune,
+        )
       }
     }
 
@@ -416,7 +465,14 @@ pub fn translate_type_st_into_rune<'s>(
       // A value-position bare name like `int`. Per @TNLTZACZ it is a zero-arg application: the
       // name's Lookup, then a Call([]) whose result is the value rune.
       let mut child_lidb = lidb.child();
-      let template_rune = add_lookup_rule(scout_arena, &mut child_lidb, rule_builder, range_s, context_region, n.name);
+      let template_rune = add_lookup_rule(
+        scout_arena,
+        &mut child_lidb,
+        rule_builder,
+        range_s,
+        context_region,
+        n.name,
+      );
       add_zero_arg_call_rule(scout_arena, &mut child_lidb, rule_builder, range_s, template_rune)
     }
 
@@ -427,11 +483,25 @@ pub fn translate_type_st_into_rune<'s>(
         rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
       };
       let template_rune_s = translate_type_st_template_position_into_rune(
-        scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, c.template);
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        rule_builder,
+        context_region,
+        c.template,
+      );
       let mut arg_runes = Vec::<RuneUsage<'s>>::new();
       for arg in c.args {
         arg_runes.push(translate_type_st_into_rune(
-          scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, arg));
+          scout_arena,
+          keywords,
+          env.clone(),
+          &mut lidb.child(),
+          rule_builder,
+          context_region,
+          arg,
+        ));
       }
       rule_builder.push(Call(CallSR {
         range: range_s,
@@ -444,20 +514,47 @@ pub fn translate_type_st_into_rune<'s>(
 
     ITypeST::BorrowRef(br) => {
       let inner_rune = translate_type_st_into_rune(
-        scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, br.inner);
-      let region = region_s_into_region_sr(scout_arena, env.clone(), &mut lidb.child(), rule_builder, br.region);
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        rule_builder,
+        context_region,
+        br.inner,
+      );
+      let region = region_s_into_region_sr(
+        scout_arena,
+        env.clone(),
+        &mut lidb.child(),
+        rule_builder,
+        br.region,
+      );
       translate_borrow_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune, region)
     }
 
     ITypeST::WeakRef(wr) => {
       let inner_rune = translate_type_st_into_rune(
-        scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, wr.inner);
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        rule_builder,
+        context_region,
+        wr.inner,
+      );
       translate_weak_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
     }
 
     ITypeST::OwnRef(or) => {
       let inner_rune = translate_type_st_into_rune(
-        scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, or.inner);
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        rule_builder,
+        context_region,
+        or.inner,
+      );
       translate_own_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
     }
 
@@ -470,10 +567,12 @@ pub fn translate_type_st_into_rune<'s>(
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s,
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          rune: scout_arena
+            .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         rule_builder.push(Lookup(LookupSR {
-          range: range_s, rune: template_rune_s.clone(),
+          range: range_s,
+          rune: template_rune_s.clone(),
           parts: scout_arena.alloc_slice_copy(&[tuple_name]),
         }));
         add_zero_arg_call_rule(scout_arena, &mut child_lidb, rule_builder, range_s, template_rune_s)
@@ -481,21 +580,31 @@ pub fn translate_type_st_into_rune<'s>(
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s,
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          rune: scout_arena
+            .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s,
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          rune: scout_arena
+            .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         rule_builder.push(Lookup(LookupSR {
-          range: range_s, rune: template_rune_s.clone(),
+          range: range_s,
+          rune: template_rune_s.clone(),
           parts: scout_arena.alloc_slice_copy(&[tuple_name]),
         }));
         let mut element_runes = Vec::<RuneUsage<'s>>::new();
         for element in tuple.elements {
           element_runes.push(translate_type_st_into_rune(
-            scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region, element));
+            scout_arena,
+            keywords,
+            env.clone(),
+            &mut lidb.child(),
+            rule_builder,
+            context_region,
+            element,
+          ));
         }
         rule_builder.push(Call(CallSR {
           range: range_s,
@@ -519,13 +628,21 @@ pub fn translate_type_st_into_rune<'s>(
         rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
       };
       rule_builder.push(Lookup(LookupSR {
-        range: range_s, rune: template_rune_s.clone(),
+        range: range_s,
+        rune: template_rune_s.clone(),
         parts: scout_arena.alloc_slice_copy(&[
-          scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: keywords.array })),
+          scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: keywords.array }))
         ]),
       }));
       let element_rune_s = translate_type_st_into_rune(
-        scout_arena, keywords, env, &mut lidb.child(), rule_builder, context_region, rsa.element);
+        scout_arena,
+        keywords,
+        env,
+        &mut lidb.child(),
+        rule_builder,
+        context_region,
+        rsa.element,
+      );
       rule_builder.push(Call(CallSR {
         range: range_s,
         result_rune: result_rune_s.clone(),
@@ -555,9 +672,24 @@ fn translate_type_st_template_position_into_rune<'s>(
 ) -> RuneUsage<'s> {
   if let ITypeST::Name(n) = type_st {
     let mut child_lidb = lidb.child();
-    add_lookup_rule(scout_arena, &mut child_lidb, rule_builder, type_st.range(), context_region, n.name)
+    add_lookup_rule(
+      scout_arena,
+      &mut child_lidb,
+      rule_builder,
+      type_st.range(),
+      context_region,
+      n.name,
+    )
   } else {
-    translate_type_st_into_rune(scout_arena, keywords, env, lidb, rule_builder, context_region, type_st)
+    translate_type_st_into_rune(
+      scout_arena,
+      keywords,
+      env,
+      lidb,
+      rule_builder,
+      context_region,
+      type_st,
+    )
   }
 }
 
@@ -581,7 +713,15 @@ pub fn translate_signature_type_st<'s>(
   let mut value_rules = Vec::new();
   let mut outer_ref_rules = Vec::new();
   let (full_rune, value_rune) = split_type_st_into(
-    scout_arena, keywords, env, lidb, &mut value_rules, &mut outer_ref_rules, context_region, type_st);
+    scout_arena,
+    keywords,
+    env,
+    lidb,
+    &mut value_rules,
+    &mut outer_ref_rules,
+    context_region,
+    type_st,
+  );
   (full_rune, value_rune, outer_ref_rules, value_rules)
 }
 
@@ -604,31 +744,74 @@ fn split_type_st_into<'s>(
   match type_st {
     ITypeST::BorrowRef(br) => {
       let (inner_full, value) = split_type_st_into(
-        scout_arena, keywords, env.clone(), &mut lidb.child(),
-        value_builder, outer_ref_builder, context_region, br.inner);
-      let region = region_s_into_region_sr(scout_arena, env.clone(), &mut lidb.child(), value_builder, br.region);
-      let full = translate_borrow_ref_templex(scout_arena, lidb, outer_ref_builder, range_s, inner_full, region);
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        value_builder,
+        outer_ref_builder,
+        context_region,
+        br.inner,
+      );
+      let region = region_s_into_region_sr(
+        scout_arena,
+        env.clone(),
+        &mut lidb.child(),
+        value_builder,
+        br.region,
+      );
+      let full = translate_borrow_ref_templex(
+        scout_arena,
+        lidb,
+        outer_ref_builder,
+        range_s,
+        inner_full,
+        region,
+      );
       (full, value)
     }
     ITypeST::WeakRef(wr) => {
       let (inner_full, value) = split_type_st_into(
-        scout_arena, keywords, env.clone(), &mut lidb.child(),
-        value_builder, outer_ref_builder, context_region, wr.inner);
-      let full = translate_weak_ref_templex(scout_arena, lidb, outer_ref_builder, range_s, inner_full);
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        value_builder,
+        outer_ref_builder,
+        context_region,
+        wr.inner,
+      );
+      let full =
+        translate_weak_ref_templex(scout_arena, lidb, outer_ref_builder, range_s, inner_full);
       (full, value)
     }
     ITypeST::OwnRef(or) => {
       let (inner_full, value) = split_type_st_into(
-        scout_arena, keywords, env.clone(), &mut lidb.child(),
-        value_builder, outer_ref_builder, context_region, or.inner);
-      let full = translate_own_ref_templex(scout_arena, lidb, outer_ref_builder, range_s, inner_full);
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        value_builder,
+        outer_ref_builder,
+        context_region,
+        or.inner,
+      );
+      let full =
+        translate_own_ref_templex(scout_arena, lidb, outer_ref_builder, range_s, inner_full);
       (full, value)
     }
     // The value root, past the outer wraps: translate it flat into the value list (nested wraps, e.g.
     // the `&` inside `Opt<&Spaceship>`, correctly stay in value position). full == value here.
     _ => {
       let value = translate_type_st_into_rune(
-        scout_arena, keywords, env, lidb, value_builder, context_region, type_st);
+        scout_arena,
+        keywords,
+        env,
+        lidb,
+        value_builder,
+        context_region,
+        type_st,
+      );
       (value, value)
     }
   }
@@ -653,7 +836,13 @@ fn region_s_into_region_sr<'s>(
         RegionSR::Rune(RuneUsage { range: ru.range, rune: ru.rune })
       } else {
         let mut child_lidb = lidb.child();
-        RegionSR::Rune(add_rune_parent_env_lookup_rule(scout_arena, &mut child_lidb, rule_builder, ru.range, ru.rune))
+        RegionSR::Rune(add_rune_parent_env_lookup_rule(
+          scout_arena,
+          &mut child_lidb,
+          rule_builder,
+          ru.range,
+          ru.rune,
+        ))
       }
     }
   }
@@ -672,29 +861,38 @@ where
   F: Fn(IRuneS<'s>) -> IRuneS<'s>,
 {
   match type_st {
-    ITypeST::AnonymousRune(_) | ITypeST::Bool(_) | ITypeST::Int(_)
-    | ITypeST::String(_) | ITypeST::Name(_) => *type_st,
+    ITypeST::AnonymousRune(_)
+    | ITypeST::Bool(_)
+    | ITypeST::Int(_)
+    | ITypeST::String(_)
+    | ITypeST::Name(_) => *type_st,
 
-    ITypeST::Rune(r) => ITypeST::Rune(scout_arena.alloc(RuneUsageST {
-      rune: RuneUsage { range: r.rune.range, rune: func(r.rune.rune) },
-    })),
+    ITypeST::Rune(r) => ITypeST::Rune(
+      scout_arena
+        .alloc(RuneUsageST { rune: RuneUsage { range: r.rune.range, rune: func(r.rune.rune) } }),
+    ),
 
     ITypeST::Call(c) => {
-      let template: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, c.template));
+      let template: &'s ITypeST<'s> =
+        scout_arena.alloc(map_runes_in_type_st(scout_arena, func, c.template));
       let mut args = Vec::<&'s ITypeST<'s>>::new();
       for arg in c.args {
         args.push(scout_arena.alloc(map_runes_in_type_st(scout_arena, func, arg)));
       }
       ITypeST::Call(scout_arena.alloc(CallST {
-        range: c.range, template, args: scout_arena.alloc_slice_from_vec(args),
+        range: c.range,
+        template,
+        args: scout_arena.alloc_slice_from_vec(args),
       }))
     }
 
     ITypeST::BorrowRef(br) => {
-      let inner: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, br.inner));
+      let inner: &'s ITypeST<'s> =
+        scout_arena.alloc(map_runes_in_type_st(scout_arena, func, br.inner));
       let region = match br.region {
         RegionS::Rune(Some(ru)) => {
-          let ru_ref: &'s RuneUsage<'s> = scout_arena.alloc(RuneUsage { range: ru.range, rune: func(ru.rune) });
+          let ru_ref: &'s RuneUsage<'s> =
+            scout_arena.alloc(RuneUsage { range: ru.range, rune: func(ru.rune) });
           RegionS::Rune(Some(ru_ref))
         }
         other => other,
@@ -703,12 +901,14 @@ where
     }
 
     ITypeST::WeakRef(wr) => {
-      let inner: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, wr.inner));
+      let inner: &'s ITypeST<'s> =
+        scout_arena.alloc(map_runes_in_type_st(scout_arena, func, wr.inner));
       ITypeST::WeakRef(scout_arena.alloc(WeakRefST { range: wr.range, inner }))
     }
 
     ITypeST::OwnRef(or) => {
-      let inner: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, or.inner));
+      let inner: &'s ITypeST<'s> =
+        scout_arena.alloc(map_runes_in_type_st(scout_arena, func, or.inner));
       ITypeST::OwnRef(scout_arena.alloc(OwnRefST { range: or.range, inner }))
     }
 
@@ -717,9 +917,10 @@ where
       for member in p.members {
         members.push(scout_arena.alloc(map_runes_in_type_st(scout_arena, func, member)));
       }
-      ITypeST::Pack(scout_arena.alloc(PackST {
-        range: p.range, members: scout_arena.alloc_slice_from_vec(members),
-      }))
+      ITypeST::Pack(
+        scout_arena
+          .alloc(PackST { range: p.range, members: scout_arena.alloc_slice_from_vec(members) }),
+      )
     }
 
     ITypeST::Tuple(t) => {
@@ -727,14 +928,18 @@ where
       for element in t.elements {
         elements.push(scout_arena.alloc(map_runes_in_type_st(scout_arena, func, element)));
       }
-      ITypeST::Tuple(scout_arena.alloc(TupleST {
-        range: t.range, elements: scout_arena.alloc_slice_from_vec(elements),
-      }))
+      ITypeST::Tuple(
+        scout_arena
+          .alloc(TupleST { range: t.range, elements: scout_arena.alloc_slice_from_vec(elements) }),
+      )
     }
 
     ITypeST::RuntimeSizedArray(rsa) => {
-      let element: &'s ITypeST<'s> = scout_arena.alloc(map_runes_in_type_st(scout_arena, func, rsa.element));
-      ITypeST::RuntimeSizedArray(scout_arena.alloc(RuntimeSizedArrayST { range: rsa.range, element }))
+      let element: &'s ITypeST<'s> =
+        scout_arena.alloc(map_runes_in_type_st(scout_arena, func, rsa.element));
+      ITypeST::RuntimeSizedArray(
+        scout_arena.alloc(RuntimeSizedArrayST { range: rsa.range, element }),
+      )
     }
 
     // The builder never produces a Function node, so its remap is unneeded until it does.
@@ -742,7 +947,8 @@ where
   }
 }
 
-pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
+pub fn translate_templex<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
@@ -751,45 +957,40 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
   context_region: IRuneS<'s>,
   templex: &ITemplexPT<'p>,
 ) -> RuneUsage<'s> {
-
   let file = env.file();
 
   match translate_value_templex(scout_arena, templex) {
-    
     Some(x) => {
       let mut child_lidb = lidb.child();
-      add_literal_rule(scout_arena,
+      add_literal_rule(
+        scout_arena,
         &mut child_lidb,
         rule_builder,
         PostParser::eval_range(file, templex.range()),
         x,
       )
     }
-    
-    None => match templex {
 
+    None => match templex {
       ITemplexPT::AnonymousRune(anonymous_rune) => {
         let mut child_lidb = lidb.child();
         let rune = RuneUsage {
           range: PostParser::eval_range(file, anonymous_rune.range),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          rune: scout_arena
+            .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         rune
       }
 
-      ITemplexPT::RegionRune(RegionRunePT {
-        range: _,
-        name: None,
-      }) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_REGION_RUNE_NONE_NOT_YET_IMPLEMENTED"),
+      ITemplexPT::RegionRune(RegionRunePT { range: _, name: None }) => {
+        panic!("POSTPARSER_TRANSLATE_TEMPLEX_REGION_RUNE_NONE_NOT_YET_IMPLEMENTED")
+      }
 
-      ITemplexPT::RegionRune(RegionRunePT {
-        range,
-        name: Some(name),
-      }) => {
+      ITemplexPT::RegionRune(RegionRunePT { range, name: Some(name) }) => {
         let name_s = scout_arena.intern_str(name.str().as_str());
-        let is_rune_from_local_env = env.local_declared_runes().contains(
-          &scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_s })),
-        );
+        let is_rune_from_local_env = env
+          .local_declared_runes()
+          .contains(&scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_s })));
         if is_rune_from_local_env {
           RuneUsage {
             range: PostParser::eval_range(file, *range),
@@ -798,7 +999,8 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         } else {
           // It's from a parent env
           let mut child_lidb = lidb.child();
-          add_rune_parent_env_lookup_rule(scout_arena, 
+          add_rune_parent_env_lookup_rule(
+            scout_arena,
             &mut child_lidb,
             rule_builder,
             PostParser::eval_range(file, *range),
@@ -808,17 +1010,15 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
       }
 
       ITemplexPT::NameOrRune(NameOrRunePT { name: name_or_rune, .. }) => {
-        let is_rune_from_env = env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(
-          CodeRuneS {
+        let is_rune_from_env =
+          env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(CodeRuneS {
             name: scout_arena.intern_str(name_or_rune.str().as_str()),
-          },
-        )));
+          })));
         if is_rune_from_env {
-          let is_rune_from_local_env = env.local_declared_runes().contains(
-            &scout_arena.intern_rune(CodeRune(CodeRuneS {
+          let is_rune_from_local_env =
+            env.local_declared_runes().contains(&scout_arena.intern_rune(CodeRune(CodeRuneS {
               name: scout_arena.intern_str(name_or_rune.str().as_str()),
-            })),
-          );
+            })));
           if is_rune_from_local_env {
             RuneUsage {
               range: PostParser::eval_range(file, name_or_rune.range()),
@@ -829,7 +1029,8 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           } else {
             // It's from a parent env
             let mut child_lidb = lidb.child();
-            add_rune_parent_env_lookup_rule(scout_arena, 
+            add_rune_parent_env_lookup_rule(
+              scout_arena,
               &mut child_lidb,
               rule_builder,
               PostParser::eval_range(file, name_or_rune.range()),
@@ -846,7 +1047,8 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           }));
           let range_s = PostParser::eval_range(file, name_or_rune.range());
           let mut child_lidb = lidb.child();
-          let template_rune = add_lookup_rule(scout_arena,
+          let template_rune = add_lookup_rule(
+            scout_arena,
             &mut child_lidb,
             rule_builder,
             range_s.clone(),
@@ -861,15 +1063,24 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
       ITemplexPT::BorrowRef(borrow_ref) => {
         let range_s = PostParser::eval_range(file, borrow_ref.range);
         let inner_rune = translate_templex(
-          scout_arena, keywords, env.clone(), &mut lidb.child(),
-          rule_builder, context_region.clone(), borrow_ref.inner,
+          scout_arena,
+          keywords,
+          env.clone(),
+          &mut lidb.child(),
+          rule_builder,
+          context_region.clone(),
+          borrow_ref.inner,
         );
         let region = match borrow_ref.region {
           RegionP::Unspecified => RegionSR::Unspecified,
           RegionP::Held => RegionSR::Held,
           RegionP::Rune(region_pt) => RegionSR::Rune(translate_templex(
-            scout_arena, keywords, env.clone(), &mut lidb.child(),
-            rule_builder, context_region.clone(),
+            scout_arena,
+            keywords,
+            env.clone(),
+            &mut lidb.child(),
+            rule_builder,
+            context_region.clone(),
             &ITemplexPT::RegionRune((*region_pt).clone()),
           )),
         };
@@ -879,8 +1090,13 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
       ITemplexPT::WeakRef(weak_ref) => {
         let range_s = PostParser::eval_range(file, weak_ref.range);
         let inner_rune = translate_templex(
-          scout_arena, keywords, env.clone(), &mut lidb.child(),
-          rule_builder, context_region.clone(), weak_ref.inner,
+          scout_arena,
+          keywords,
+          env.clone(),
+          &mut lidb.child(),
+          rule_builder,
+          context_region.clone(),
+          weak_ref.inner,
         );
         translate_weak_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
       }
@@ -888,8 +1104,13 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
       ITemplexPT::OwnRef(own_ref) => {
         let range_s = PostParser::eval_range(file, own_ref.range);
         let inner_rune = translate_templex(
-          scout_arena, keywords, env.clone(), &mut lidb.child(),
-          rule_builder, context_region.clone(), own_ref.inner,
+          scout_arena,
+          keywords,
+          env.clone(),
+          &mut lidb.child(),
+          rule_builder,
+          context_region.clone(),
+          own_ref.inner,
         );
         translate_own_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
       }
@@ -899,7 +1120,8 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          rune: scout_arena
+            .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = translate_template_position_templex(
@@ -946,30 +1168,69 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         for param_p in func.parameters {
           params_types.push(translate_templex_into_type_st(scout_arena, env.clone(), param_p));
         }
-        let return_type = translate_templex_into_type_st(scout_arena, env.clone(), func.return_type);
+        let return_type =
+          translate_templex_into_type_st(scout_arena, env.clone(), func.return_type);
 
-        let params_s: Vec<RuneUsage<'s>> =
-          params_types.iter().map(|param_type| {
+        let params_s: Vec<RuneUsage<'s>> = params_types
+          .iter()
+          .map(|param_type| {
             let (full, _value, outer_vec, value_vec) = translate_signature_type_st(
-              scout_arena, keywords, env.clone(), &mut lidb.child(), context_region.clone(), param_type);
+              scout_arena,
+              keywords,
+              env.clone(),
+              &mut lidb.child(),
+              context_region.clone(),
+              param_type,
+            );
             rule_builder.extend(value_vec);
             rule_builder.extend(outer_vec);
             full
-          }).collect();
-        let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))) };
-        rule_builder.push(IRulexSR::KindList(KindListSR { range: params_range_s, result_rune: param_list_rune_s.clone(), members: scout_arena.alloc_slice_from_vec(params_s) }));
+          })
+          .collect();
+        let param_list_rune_s = RuneUsage {
+          range: params_range_s.clone(),
+          rune: scout_arena
+            .intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
+        };
+        rule_builder.push(IRulexSR::KindList(KindListSR {
+          range: params_range_s,
+          result_rune: param_list_rune_s.clone(),
+          members: scout_arena.alloc_slice_from_vec(params_s),
+        }));
 
         let (return_rune_s, _rt_value, rt_outer_vec, rt_value_vec) = translate_signature_type_st(
-          scout_arena, keywords, env.clone(), &mut lidb.child(), context_region.clone(), &return_type);
+          scout_arena,
+          keywords,
+          env.clone(),
+          &mut lidb.child(),
+          context_region.clone(),
+          &return_type,
+        );
         rule_builder.extend(rt_value_vec);
         rule_builder.extend(rt_outer_vec);
 
-        let result_rune_s = RuneUsage { range: PostParser::eval_range(file, func.range), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))) };
+        let result_rune_s = RuneUsage {
+          range: PostParser::eval_range(file, func.range),
+          rune: scout_arena
+            .intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
+        };
 
         // Only appears in call site; filtered out when solving definition
-        rule_builder.push(IRulexSR::CallSiteFunc(CallSiteFuncSR { range: range_s.clone(), prototype_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s.clone(), return_rune: return_rune_s.clone() }));
+        rule_builder.push(IRulexSR::CallSiteFunc(CallSiteFuncSR {
+          range: range_s.clone(),
+          prototype_rune: result_rune_s.clone(),
+          name: name.clone(),
+          params_list_rune: param_list_rune_s.clone(),
+          return_rune: return_rune_s.clone(),
+        }));
         // Only appears in definition; filtered out when solving call site
-        rule_builder.push(IRulexSR::DefinitionFunc(DefinitionFuncSR { range: range_s.clone(), result_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s.clone(), return_rune: return_rune_s.clone() }));
+        rule_builder.push(IRulexSR::DefinitionFunc(DefinitionFuncSR {
+          range: range_s.clone(),
+          result_rune: result_rune_s.clone(),
+          name: name.clone(),
+          params_list_rune: param_list_rune_s.clone(),
+          return_rune: return_rune_s.clone(),
+        }));
 
         // Only appears in call site; filtered out when solving definition
         rule_builder.push(IRulexSR::Resolve(ResolveSR {
@@ -983,7 +1244,6 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         }));
 
         result_rune_s
-
       }
 
       ITemplexPT::Pack(_pack) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_PACK_NOT_YET_IMPLEMENTED"),
@@ -993,18 +1253,20 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          rune: scout_arena
+            .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          rune: scout_arena
+            .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         rule_builder.push(Lookup(LookupSR {
           range: range_s.clone(),
           rune: template_rune_s.clone(),
           parts: scout_arena.alloc_slice_copy(&[
-            scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: keywords.array })),
+            scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: keywords.array }))
           ]),
         }));
         let mut child_lidb = lidb.child();
@@ -1036,24 +1298,33 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           let mut child_lidb = lidb.child();
           let template_rune_s = RuneUsage {
             range: range_s.clone(),
-            rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+            rune: scout_arena
+              .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
           };
           rule_builder.push(Lookup(LookupSR {
             range: range_s.clone(),
             rune: template_rune_s.clone(),
             parts: scout_arena.alloc_slice_copy(&[tuple_name]),
           }));
-          add_zero_arg_call_rule(scout_arena, &mut child_lidb, rule_builder, range_s, template_rune_s)
+          add_zero_arg_call_rule(
+            scout_arena,
+            &mut child_lidb,
+            rule_builder,
+            range_s,
+            template_rune_s,
+          )
         } else {
           let mut child_lidb = lidb.child();
           let result_rune_s = RuneUsage {
             range: range_s.clone(),
-            rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+            rune: scout_arena
+              .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
           };
           let mut child_lidb = lidb.child();
           let template_rune_s = RuneUsage {
             range: range_s.clone(),
-            rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+            rune: scout_arena
+              .intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
           };
           rule_builder.push(Lookup(LookupSR {
             range: range_s.clone(),
@@ -1101,7 +1372,8 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
 // VCOORD: Superseded by translate_signature_type_st (the ITypeST twin) and now caller-free except its own
 // recursion — function params were the last caller and now route through the ITypeST deriver. Kept
 // during the migration; safe to delete once the ITypeST route is fully trusted.
-pub fn translate_signature_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
+pub fn translate_signature_templex<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
@@ -1119,46 +1391,84 @@ pub fn translate_signature_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
     ITemplexPT::BorrowRef(borrow_ref) => {
       let range_s = PostParser::eval_range(file, borrow_ref.range);
       let (inner_rune, value_type_rune) = translate_signature_templex(
-        scout_arena, keywords, env.clone(), &mut lidb.child(),
-        rule_builder, type_outer_ref_builder, context_region.clone(), borrow_ref.inner,
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        rule_builder,
+        type_outer_ref_builder,
+        context_region.clone(),
+        borrow_ref.inner,
       );
       let region = match borrow_ref.region {
         RegionP::Unspecified => RegionSR::Unspecified,
         RegionP::Held => RegionSR::Held,
         RegionP::Rune(region_pt) => RegionSR::Rune(translate_templex(
-          scout_arena, keywords, env.clone(), &mut lidb.child(),
-          rule_builder, context_region.clone(),
+          scout_arena,
+          keywords,
+          env.clone(),
+          &mut lidb.child(),
+          rule_builder,
+          context_region.clone(),
           &ITemplexPT::RegionRune((*region_pt).clone()),
         )),
       };
-      let full = translate_borrow_ref_templex(scout_arena, lidb, type_outer_ref_builder, range_s, inner_rune, region);
+      let full = translate_borrow_ref_templex(
+        scout_arena,
+        lidb,
+        type_outer_ref_builder,
+        range_s,
+        inner_rune,
+        region,
+      );
       (full, value_type_rune)
     }
 
     ITemplexPT::WeakRef(weak_ref) => {
       let range_s = PostParser::eval_range(file, weak_ref.range);
       let (inner_rune, value_type_rune) = translate_signature_templex(
-        scout_arena, keywords, env.clone(), &mut lidb.child(),
-        rule_builder, type_outer_ref_builder, context_region.clone(), weak_ref.inner,
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        rule_builder,
+        type_outer_ref_builder,
+        context_region.clone(),
+        weak_ref.inner,
       );
-      let full = translate_weak_ref_templex(scout_arena, lidb, type_outer_ref_builder, range_s, inner_rune);
+      let full =
+        translate_weak_ref_templex(scout_arena, lidb, type_outer_ref_builder, range_s, inner_rune);
       (full, value_type_rune)
     }
 
     ITemplexPT::OwnRef(own_ref) => {
       let range_s = PostParser::eval_range(file, own_ref.range);
       let (inner_rune, value_type_rune) = translate_signature_templex(
-        scout_arena, keywords, env.clone(), &mut lidb.child(),
-        rule_builder, type_outer_ref_builder, context_region.clone(), own_ref.inner,
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        rule_builder,
+        type_outer_ref_builder,
+        context_region.clone(),
+        own_ref.inner,
       );
-      let full = translate_own_ref_templex(scout_arena, lidb, type_outer_ref_builder, range_s, inner_rune);
+      let full =
+        translate_own_ref_templex(scout_arena, lidb, type_outer_ref_builder, range_s, inner_rune);
       (full, value_type_rune)
     }
 
     // A non-ref node, e.g. `Ship` or `List<T>`: the value-type root, with no wrapping.
     _ => {
-      let value_type_rune =
-        translate_type_into_rune(scout_arena, keywords, env, lidb, rule_builder, context_region, templex);
+      let value_type_rune = translate_type_into_rune(
+        scout_arena,
+        keywords,
+        env,
+        lidb,
+        rule_builder,
+        context_region,
+        templex,
+      );
       (value_type_rune.clone(), value_type_rune)
     }
   }
@@ -1166,7 +1476,8 @@ pub fn translate_signature_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
 
 // Returns:
 // - Rune for this type
-fn translate_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
+fn translate_type_into_rune<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
@@ -1177,19 +1488,15 @@ fn translate_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
 ) -> RuneUsage<'s> {
   let file = env.file();
   match type_p {
-    NameOrRune(NameOrRunePT { name: NameP(
-      range,
-      name_or_rune,
-    ), .. })
+    NameOrRune(NameOrRunePT { name: NameP(range, name_or_rune), .. })
       if env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(CodeRuneS {
         name: scout_arena.intern_str(name_or_rune.as_str()),
       }))) =>
     {
       let result_rune_s = RuneUsage {
         range: PostParser::eval_range(file, *range),
-        rune: scout_arena.intern_rune(CodeRune(CodeRuneS {
-          name: scout_arena.intern_str(name_or_rune.as_str()),
-        })),
+        rune: scout_arena
+          .intern_rune(CodeRune(CodeRuneS { name: scout_arena.intern_str(name_or_rune.as_str()) })),
       };
       result_rune_s
     }
@@ -1210,7 +1517,8 @@ fn translate_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
 
 // Returns:
 // - Rune for this type
-pub fn translate_maybe_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
+pub fn translate_maybe_type_into_rune<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
@@ -1228,13 +1536,20 @@ pub fn translate_maybe_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
       };
       result_rune_s
     }
-    Some(type_p) => {
-      translate_type_into_rune(scout_arena, keywords, env, lidb, rule_builder, context_region, type_p)
-    }
+    Some(type_p) => translate_type_into_rune(
+      scout_arena,
+      keywords,
+      env,
+      lidb,
+      rule_builder,
+      context_region,
+      type_p,
+    ),
   }
 }
 
-pub(crate) fn translate_maybe_type_into_maybe_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
+pub(crate) fn translate_maybe_type_into_maybe_rune<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
@@ -1247,7 +1562,8 @@ pub(crate) fn translate_maybe_type_into_maybe_rune<'s, 'p>(scout_arena: &ScoutAr
     None
   } else {
     let mut child_lidb = lidb.child();
-    let result_rune = translate_maybe_type_into_rune(scout_arena,
+    let result_rune = translate_maybe_type_into_rune(
+      scout_arena,
       keywords,
       env,
       &mut child_lidb,

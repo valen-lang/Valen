@@ -1,12 +1,10 @@
-use crate::Keywords;
+use crate::code_source::CodeSource;
 use crate::compile_options::GlobalOptions;
 use crate::parse_arena::ParseArena;
-use crate::code_source::CodeSource;
-use crate::scout_arena::ScoutArena;
 use crate::postparsing::ScoutCompilation;
+use crate::scout_arena::ScoutArena;
 use crate::utils::code_hierarchy::PackageCoordinate;
-
-
+use crate::Keywords;
 
 pub fn test<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
@@ -16,7 +14,8 @@ pub fn test<'s, 'ctx, 'p>(
   code_source: &'ctx CodeSource<'p>,
   code: &str,
 ) -> ScoutCompilation<'s, 'ctx, 'p>
-where 'p: 's,
+where
+  'p: 's,
 {
   let _ = code;
   let global_options = GlobalOptions {
