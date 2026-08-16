@@ -24,13 +24,9 @@ pub struct Counter {
 }
 
 impl Counter {
-    /// By-value `self` rather than `&self`, deliberately and temporarily.
-    ///
-    /// A `&self` receiver lowers to `KindT::BorrowRef`, and
-    /// `substitute_templatas_in_kind` currently has `unimplemented!()` for all four
-    /// reference-wrap arms (`templata_compiler.rs:522-525`) — a gap in the onion arc, not
-    /// something interop introduced. Substitution runs even for non-generic callees, so a
-    /// borrow receiver hits it immediately. Switch this back to `&self` once those arms land.
+    /// By-value `self`, on purpose: this is a *consuming* method, exercising the owned-receiver
+    /// path (the rvalue-call cases lean on it). Borrow receivers (`&self`) are supported now — see
+    /// `peek` below — so this is a deliberate consume, not a workaround.
     pub fn get(self) -> i32 {
         self.value
     }
@@ -58,6 +54,16 @@ impl Counter {
     /// where that would show up.
     pub fn new() -> Counter {
         Counter { value: 5 }
+    }
+
+    /// A **borrow-receiver** method: `&self` lowers to `KindT::BorrowRef(Counter)`, unlike the
+    /// by-value `self` the other methods use. It is the probe for whether the onion arc's
+    /// reference-wrap arms (`substitute_templatas_in_kind`, the borrow arms of
+    /// `is_type_convertible`/`convert`) now let a borrow receiver resolve — the shape every real
+    /// `&self`/`&mut self` Rust method (`Vec::len`, `Vec::push`) takes. Called on a *local*, so it
+    /// also exercises reading a local as a borrow against a borrow receiver.
+    pub fn peek(&self) -> i32 {
+        self.value
     }
 }
 
@@ -243,9 +249,10 @@ pub fn make_bool_holder() -> Holder<bool> {
     Holder { value: true }
 }
 
-/// Consumers for the two `Holder` instantiations, so a case can observe the two *kinds* without
-/// also needing a scope-end drop on a generic type — which does not resolve yet. See
-/// `a_generic_rust_type_carries_its_arguments`.
+/// Consumers for the two `Holder` instantiations, letting a case observe the two distinct *kinds* by
+/// consuming each. See `a_generic_rust_type_carries_its_arguments`. (A scope-end drop on a generic
+/// local also resolves — see `a_generic_rust_type_gets_a_scope_end_drop` — so consuming is one option,
+/// not a workaround.)
 pub fn holder_value(h: Holder<i32>) -> i32 {
     h.value
 }
@@ -260,6 +267,45 @@ pub fn holder_value(h: Holder<i32>) -> i32 {
 /// is drop-specific or general.
 pub fn holder_ignore<T>(_h: Holder<T>) -> i32 {
     9
+}
+
+/// A concrete zero-field type standing in for `std::alloc::Global`: the argument an impl *pins* in the
+/// `Vec<T, Global>` shape. Imported as an ordinary opaque type.
+pub struct Fixed;
+
+/// A **two-parameter** generic type — the `Vec<T, A>` shape in miniature, with `A` the pinned
+/// allocator. Imported opaque, so the field types never reach Vale.
+pub struct Boxed<T, A> {
+    pub value: Option<T>,
+    pub alloc: Option<A>,
+}
+
+impl<T> Boxed<T, Fixed> {
+    /// An associated function whose impl **fixes** the second parameter to `Fixed` — the `Vec::new`
+    /// shape. Its own generics are just `[T]` (`Fixed` is not a parameter here); it returns
+    /// `Boxed<T, Fixed>` with `Fixed` concrete, and takes no receiver and no arguments, so `T` is
+    /// knowable only from the call-site type application, never inferred from an argument.
+    pub fn new() -> Boxed<T, Fixed> {
+        Boxed { value: None, alloc: None }
+    }
+}
+
+/// Consumes a `Boxed` by value — exercises a two-parameter generic in argument position. (A scope-end
+/// drop on a generic local also resolves now; see `a_generic_assoc_result_bound_to_a_local_...`.)
+pub fn boxed_ignore<T>(_b: Boxed<T, Fixed>) -> i32 {
+    7
+}
+
+/// Produces a `usize` — imported as the Vale `usize` primitive. The `Vec::len` shape: a Rust function
+/// whose return is `usize`, which used to decline (`UnsignedInteger`).
+pub fn some_size() -> usize {
+    3
+}
+
+/// Consumes a `usize`, so a case can pass a produced `usize` somewhere. `usize` is a primitive, so no
+/// drop is involved either way — this just exercises `usize` in argument position too.
+pub fn consume_usize(_n: usize) -> i32 {
+    8
 }
 
 pub fn bool_holder_flag(h: Holder<bool>) -> i32 {

@@ -1301,6 +1301,7 @@ where
         KindT::Bool(_) => {}
         KindT::Str(_) => {}
         KindT::Float(_) => {}
+        KindT::USize(_) => {}
         KindT::Struct(s) => visit_struct_tt(pred, out, s),
         KindT::Interface(i) => visit_interface_tt(pred, out, i),
         KindT::StaticSizedArray(a) => visit_static_sized_array_tt(pred, out, a),

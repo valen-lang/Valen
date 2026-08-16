@@ -36,7 +36,7 @@ use crate::postparsing::names::{
     IImpreciseNameS, IImpreciseNameValS, IRuneValS, IStructDeclarationNameS, IVarNameS,
     ReturnRuneS, TopLevelStructDeclarationNameS,
 };
-use crate::postparsing::rules::rules::{CallSR, EqualsSR, IRulexSR, LookupSR, RuneUsage};
+use crate::postparsing::rules::rules::{BorrowRefSR, CallSR, EqualsSR, IRulexSR, LookupSR, RegionSR, RuneUsage};
 use crate::typing::compiler::Compiler;
 use crate::typing::names::names::{INameT, IStructTemplateNameT};
 use crate::typing::rust_interop::oracle::{RustItemId, ValeSig, ValeSigType};
@@ -118,25 +118,60 @@ where
         // no shared list for it to leak into, which is what keeps @PFVSZ's split true by
         // construction rather than by remembering.
         let mut value_type_rules: Vec<IRulexSR<'s>> = Vec::new();
-        let rune = bind_sig_type(
-            compiler,
-            sig_type,
-            own_rune,
-            range,
-            &generic_runes,
-            &mut value_type_rules,
-            &mut next_synthetic,
-        )?;
+        // Per @PFVSZ a parameter's type splits into its outer ref wraps (the full type) and the value
+        // they enclose. A `&self`/`&T` receiver is the one place a synthesized extern has an outer
+        // wrap: the borrow chains the full type (the argument rune) down to the value type (a fresh
+        // rune bound in the value bucket). Every other position has no wrap, so full == value.
+        let (full_type_rune, value_type_rune, outer_ref_rules): (_, _, Vec<IRulexSR<'s>>) =
+            match sig_type {
+                ValeSigType::Borrow(inner) => {
+                    // The argument binds to the *value* type: a dot-call peels the receiver's outer
+                    // borrow and matches the value it encloses, so `own_rune` (the argument rune) is
+                    // the value_type_rune, and the outer wrap concludes a fresh full-type rune *from*
+                    // it. Wiring the borrow onto the argument rune instead makes the peeled `Counter`
+                    // argument fail the wrap's `KindIsNotBorrowRef` check.
+                    let full_type_rune = fresh_rune(scout_arena, range, &mut next_synthetic);
+                    bind_sig_type(
+                        compiler,
+                        inner,
+                        own_rune,
+                        range,
+                        &generic_runes,
+                        &mut value_type_rules,
+                        &mut next_synthetic,
+                    )?;
+                    let outer = vec![IRulexSR::BorrowRef(BorrowRefSR {
+                        range,
+                        result_rune: full_type_rune,
+                        inner_rune: own_rune,
+                        // Unspecified: an extern param carries no region annotation, matching the
+                        // `RegionT::Default` the settled-kind lowering uses. Real lifetime
+                        // reconciliation is deferred (@ELASZ).
+                        region: RegionSR::Unspecified,
+                    })];
+                    (full_type_rune, own_rune, outer)
+                }
+                _ => {
+                    let rune = bind_sig_type(
+                        compiler,
+                        sig_type,
+                        own_rune,
+                        range,
+                        &generic_runes,
+                        &mut value_type_rules,
+                        &mut next_synthetic,
+                    )?;
+                    (rune, rune, Vec::new())
+                }
+            };
         params.push(ParameterS::new(
             range,
             None,
             false,
             IVarNameS::CodeVarName(scout_arena.intern_str(&format!("p{}", index))),
-            // No outer ref wraps: an extern's params are taken by value at this stage, so the
-            // full type and the value type are the same rune. `ParameterS::new` asserts it.
-            rune,
-            rune,
-            scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
+            full_type_rune,
+            value_type_rune,
+            scout_arena.alloc_slice_from_vec(outer_ref_rules),
             scout_arena.alloc_slice_from_vec(value_type_rules),
         ));
     }
@@ -284,6 +319,21 @@ where
                 result_rune: own_rune,
                 template_rune,
                 args: scout_arena.alloc_slice_from_vec(arg_runes),
+            }));
+            Some(own_rune)
+        }
+        ValeSigType::Borrow(inner) => {
+            // A borrow in a non-parameter position — a return type, or nested inside a citizen's
+            // arguments (`Vec<&T>`) — where the wrap belongs inline in the value rules rather than in
+            // a parameter's outer-ref bucket. A parameter's *top-level* borrow is split off by the
+            // caller in `synthesize_extern_function` before it reaches here, per @PFVSZ.
+            let inner_rune = fresh_rune(scout_arena, range, next_synthetic);
+            bind_sig_type(compiler, inner, inner_rune, range, generic_runes, rules, next_synthetic)?;
+            rules.push(IRulexSR::BorrowRef(BorrowRefSR {
+                range,
+                result_rune: own_rune,
+                inner_rune,
+                region: RegionSR::Unspecified,
             }));
             Some(own_rune)
         }
@@ -471,6 +521,7 @@ where
         KindT::Int(i) if i.bits == 32 => Some(compiler.keywords.int),
         KindT::Bool(_) => Some(compiler.keywords.bool),
         KindT::Void(_) => Some(compiler.keywords.void),
+        KindT::USize(_) => Some(compiler.keywords.usize),
         _ => None,
     }
 }

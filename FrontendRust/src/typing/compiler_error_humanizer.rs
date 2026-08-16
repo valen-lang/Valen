@@ -667,6 +667,7 @@ fn humanize_kind<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingI
     KindT::Never(_) => "never".to_string(),
     KindT::Void(_) => "void".to_string(),
     KindT::Float(_) => "float".to_string(),
+    KindT::USize(_) => "usize".to_string(),
     KindT::OverloadSet(s) => format!("(overloads: {})",
       humanize_imprecise_name(*s.name)),
     KindT::Interface(name) => humanize_id(scout_arena, typing_interner, code_map, name.id, containing_region),

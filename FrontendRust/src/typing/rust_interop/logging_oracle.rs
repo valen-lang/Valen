@@ -43,6 +43,9 @@ pub enum SigPosition {
     /// positions, because "a citizen reached this position" is not the interesting fact once
     /// generic types exist — *which* citizen at *which* arguments is.
     Citizen { name: String, args: Vec<SigPosition> },
+    /// A reference (`&T` / `&mut T`) wrapping another position — a Rust `&self` receiver or a
+    /// borrowed parameter.
+    Borrow(Box<SigPosition>),
 }
 
 /// A lowered signature, reduced to the facts a test keys on.
@@ -153,6 +156,7 @@ fn shape_of(sig: &ValeSig) -> SigShape {
                 name: name.0.to_string(),
                 args: args.iter().map(position).collect(),
             },
+            ValeSigType::Borrow(inner) => SigPosition::Borrow(Box::new(position(inner))),
         }
     }
     SigShape {

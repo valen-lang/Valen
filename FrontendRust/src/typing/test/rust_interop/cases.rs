@@ -327,6 +327,64 @@ fn calls_an_associated_function_with_no_receiver() {
     );
 }
 
+/// An associated function whose impl **fixes** one of the type's parameters (`impl<T> Boxed<T, Fixed>`,
+/// the `Vec::new` shape), called with the generic on the method: `Boxed.new<int>()`. `new` ranges over
+/// one generic, so naming one type argument does not trip the resolver's container-vs-function rune
+/// subtraction (the `1 - 2` underflow the over-specified `Boxed<int, Fixed>.new()` form would hit).
+#[test]
+fn calls_an_assoc_fn_with_a_fixed_impl_param_method_generic() {
+    assert_rust_callees(&CALLS_AN_ASSOC_FN_FIXED_IMPL_PARAM_METHOD_GENERIC, &["new"]);
+}
+
+/// The same fixed-impl-param associated function, called with the generic on the type:
+/// `Boxed<int>.new()` — the `Vec<int>.with_capacity()` form.
+#[test]
+fn calls_an_assoc_fn_with_a_fixed_impl_param_type_generic() {
+    assert_rust_callees(&CALLS_AN_ASSOC_FN_FIXED_IMPL_PARAM_TYPE_GENERIC, &["new"]);
+}
+
+/// A Rust `usize` imported as the Vale `usize` primitive (`Vec::len`'s shape): `some_size() -> usize`
+/// produces one, `consume_usize(usize) -> i32` takes it. `usize` used to decline as `UnsignedInteger`.
+#[test]
+fn imports_usize_as_a_primitive() {
+    assert_rust_callees(&CALLS_A_FUNCTION_RETURNING_USIZE, &["some_size", "consume_usize"]);
+}
+
+/// The capstone: real `std::vec::Vec` + `std::alloc::Global` from the actual `alloc` crate,
+/// `Vec.new<int>()` bound to a local with a scope-end drop, typechecked against live rustc.
+#[test]
+fn imports_real_vec_and_constructs_it() {
+    assert_rust_callees(&IMPORTS_REAL_VEC_AND_CONSTRUCTS_IT, &["new"]);
+}
+
+/// Real `Vec` `&mut self` method: `v.push(42)`.
+#[test]
+fn calls_push_on_a_real_vec() {
+    assert_rust_callees(&CALLS_PUSH_ON_A_REAL_VEC, &["push"]);
+}
+
+/// Real `Vec` `&self` method returning `usize`: `v.len()`.
+#[test]
+fn calls_len_on_a_real_vec() {
+    assert_rust_callees(&CALLS_LEN_ON_A_REAL_VEC, &["len"]);
+}
+
+/// A two-parameter generic value from an associated function, bound to a local and dropped at scope
+/// end — the real `let v = Vec<int, Global>.new();` shape. The generated drop names no type argument, so
+/// `T` must come from the value.
+#[test]
+fn a_generic_assoc_result_bound_to_a_local_gets_a_scope_end_drop() {
+    let outcome =
+        run_case(&A_GENERIC_ASSOC_RESULT_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP, callees_in_main);
+    let callees = outcome
+        .check(&A_GENERIC_ASSOC_RESULT_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP)
+        .expect("the case declares it compiles");
+    assert!(
+        callees.iter().any(|c| c.name == "drop" && c.rust_backed),
+        "the bound generic Rust value got no scope-end drop: {callees:?}"
+    );
+}
+
 /// A method on a generic type whose signature names the type's own parameter (`into_value(self) -> T`).
 /// `T` is inherited from `impl<T> Holder<T>`, not declared by the method — the case that used to decline
 /// as `InheritedParameter` before the oracle reported parent-inclusive generic params for methods.
@@ -464,6 +522,13 @@ fn calls_a_method_on_a_rust_type() {
         "the method was never discovered from the Rust side:\n{}",
         outcome.rendered_log()
     );
+}
+
+/// A `&self` (borrow-receiver) method called on a local. A local read is a `BorrowRef`, so this only
+/// resolves if a borrow receiver matches `&self` — the shape every real `Vec::len`/`push` takes.
+#[test]
+fn calls_a_borrow_self_method_on_a_local() {
+    assert_rust_callees(&CALLS_A_BORROW_SELF_METHOD_ON_A_LOCAL, &["peek"]);
 }
 
 /// A Rust value bound to a local and never consumed needs a scope-end drop. `Compiler::drop`'s

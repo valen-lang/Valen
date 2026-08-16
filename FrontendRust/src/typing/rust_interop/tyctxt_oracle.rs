@@ -424,6 +424,14 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                     args: interner.alloc_slice_from_vec(args),
                 })
             }
+            // A reference — a `&self` receiver or a borrowed parameter. Kept structural (a borrow *of
+            // a position*) so the inner citizen keeps its package path and an inner generic keeps its
+            // slot, exactly as the non-reference cases above do. The settled `KindT::BorrowRef` that
+            // `lower_ty` would build in the fallthrough carries neither, which is why a `&Counter`
+            // receiver could not be synthesized before this arm.
+            TyKind::Ref(_, inner, _) => Ok(ValeSigType::Borrow(
+                interner.alloc(self.lower_sig_ty(*inner, own_param_names, def_id, interner)?),
+            )),
             _ => Ok(ValeSigType::Kind(self.lower_ty(ty, interner)?)),
         }
     }
@@ -453,6 +461,9 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
                 rustc_middle::ty::IntTy::I64 => Ok(KindT::Int(IntT::I64)),
                 _ => Err(DeclineReason::IntWidth),
             },
+            // `usize` imports as the Vale `usize` primitive (a distinct kind, never unified with
+            // `int`/`i64`). The other unsigned widths (`u8`..`u64`) still decline for now.
+            TyKind::Uint(rustc_middle::ty::UintTy::Usize) => Ok(KindT::USize(USizeT)),
             TyKind::Uint(_) => Err(DeclineReason::UnsignedInteger),
             TyKind::Float(_) => Err(DeclineReason::Float),
             TyKind::Str | TyKind::Slice(_) | TyKind::Dynamic(..) => Err(DeclineReason::Unsized),

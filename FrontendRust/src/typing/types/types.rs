@@ -56,6 +56,7 @@ pub enum KindT<'s, 't> {
   Bool(BoolT),
   Str(StrT),
   Float(FloatT),
+  USize(USizeT),
   Struct(&'t StructTT<'s, 't>),
   Interface(&'t InterfaceTT<'s, 't>),
   StaticSizedArray(&'t StaticSizedArrayTT<'s, 't>),
@@ -102,6 +103,7 @@ impl<'s, 't> KindT<'s, 't> {
       KindT::Bool(_) => true,
       KindT::Str(_) => false,
       KindT::Float(_) => true,
+      KindT::USize(_) => true,
       KindT::Struct(_) => false,
       KindT::Interface(_) => false,
       KindT::StaticSizedArray(_) => false,
@@ -159,6 +161,9 @@ pub struct StrT;
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FloatT;
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct USizeT;
 
 fn unapply_contents_static_sized_array_tt() {
   panic!("Unimplemented: unapply_contents_static_sized_array_tt");

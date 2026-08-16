@@ -70,6 +70,13 @@ pub enum ValeSigType<'s, 't> {
     /// at a glance — hence `pick<A, B>` at `<int, bool>` as the canary: a swapped index produces a
     /// plausible wrong concrete type rather than an obvious placeholder.
     Generic(u32),
+    /// A reference (`&T` / `&mut T`) wrapping another signature position — a Rust `&self` receiver or
+    /// a borrowed parameter. Kept structural, not lowered to a settled `Kind(BorrowRef(..))`, for the
+    /// same reason `Citizen` is: the inner may be a citizen that must be named by its package path, or
+    /// a generic parameter that has no `KindT` at all, and a settled kind carries neither. The
+    /// declaration emits a `BorrowRefSR` around the inner's rune — in the parameter's outer-ref bucket
+    /// per @PFVSZ for a top-level parameter borrow, or inline for a nested/return position.
+    Borrow(&'t ValeSigType<'s, 't>),
 }
 
 /// Why a Rust signature has no Vale form.

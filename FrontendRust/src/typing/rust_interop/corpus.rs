@@ -576,6 +576,25 @@ exported func main() int {
     expect: Expect::Returns(7),
 };
 
+/// A **borrow-receiver** (`&self`) method called on a **local** — the shape a real `Vec::len`/`push`
+/// takes, and the case the fixtures used to have to dodge with by-value `self`. Reading the local `c`
+/// yields `BorrowRef(Counter)`, which must match `peek`'s `&self`; `c` survives the borrow and takes a
+/// scope-end drop. Whether this resolves is the probe for the onion arc's reference-wrap arms.
+pub const CALLS_A_BORROW_SELF_METHOD_ON_A_LOCAL: Case = Case {
+    fixture: "fixtures",
+    name: "borrow-self-on-local",
+    vale: r#"
+import rust.mycrate.make_counter;
+import rust.mycrate.Counter;
+exported func main() int {
+  c = make_counter();
+  return c.peek();
+}
+"#,
+    // `make_counter()` builds `Counter { value: 7 }`; `peek` reads it back.
+    expect: Expect::Returns(7),
+};
+
 /// An associated function with no receiver — the `Vec::new` shape.
 ///
 /// It arrives through the same `associated_items` walk as a method, so under the
@@ -596,6 +615,136 @@ exported func main() int {
     // receiver) is named type-prefixed and resolves through the type's outer environment.
     // `Counter::new` builds `Counter { value: 5 }`.
     expect: Expect::Returns(5),
+};
+
+/// An associated function whose impl **fixes** one of the type's parameters — `impl<T> Boxed<T, Fixed>`,
+/// the `Vec::new` shape where the allocator is pinned. `new` ranges over one generic (`T`); `Fixed` is
+/// concrete in its return. Called with the generic on the **method**: `Boxed.new<int>()`. Because the
+/// call names one type argument for `new`'s one generic, the resolver's container-vs-function rune
+/// arithmetic does not underflow. The `Boxed` is consumed by `boxed_ignore`, which exercises the
+/// two-param generic in argument position; the bind-a-local-and-drop shape is covered separately by
+/// `A_GENERIC_ASSOC_RESULT_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP`.
+pub const CALLS_AN_ASSOC_FN_FIXED_IMPL_PARAM_METHOD_GENERIC: Case = Case {
+    fixture: "fixtures",
+    name: "assoc-fixed-param-method-generic",
+    vale: r#"
+import rust.mycrate.Boxed;
+import rust.mycrate.Fixed;
+import rust.mycrate.boxed_ignore;
+exported func main() int {
+  return boxed_ignore<int>(Boxed.new<int>());
+}
+"#,
+    // `boxed_ignore` returns 7.
+    expect: Expect::Returns(7),
+};
+
+/// The same fixed-impl-param associated function, called with the generic on the **type**:
+/// `Boxed<int>.new()` — the form needed for `Vec<int>.with_capacity()`. `Boxed<int>` names one
+/// argument for a two-parameter type, routed as a receiving rune onto `new`'s single generic.
+pub const CALLS_AN_ASSOC_FN_FIXED_IMPL_PARAM_TYPE_GENERIC: Case = Case {
+    fixture: "fixtures",
+    name: "assoc-fixed-param-type-generic",
+    vale: r#"
+import rust.mycrate.Boxed;
+import rust.mycrate.Fixed;
+import rust.mycrate.boxed_ignore;
+exported func main() int {
+  return boxed_ignore<int>(Boxed<int>.new());
+}
+"#,
+    // `boxed_ignore` returns 7.
+    expect: Expect::Returns(7),
+};
+
+/// A **two-parameter generic** value from an associated function, bound to a local and left to fall
+/// out of scope — the real `let v = Vec<int, Global>.new();` shape. Its scope-end `drop` is a generated
+/// call naming no type argument, so `T` (and the pinned `Fixed`) must come from the value. Probes
+/// whether generic scope-end drop resolves for the associated-function/2-param shape.
+pub const A_GENERIC_ASSOC_RESULT_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP: Case = Case {
+    fixture: "fixtures",
+    name: "generic-assoc-local-drop",
+    vale: r#"
+import rust.mycrate.Boxed;
+import rust.mycrate.Fixed;
+exported func main() int {
+  b = Boxed<int>.new();
+  return 5;
+}
+"#,
+    expect: Expect::Returns(5),
+};
+
+/// The capstone: the **real** `std::vec::Vec` and `std::alloc::Global`, imported from the actual `alloc`
+/// crate, exercising `Vec.new<int>()` bound to a local with a scope-end drop, against live rustc.
+/// `Vec::new` lives in `impl<T> Vec<T, Global>` — one own generic (`T`), `Global` pinned — so
+/// `Vec.new<int>()` returns `Vec<int, Global>`. Nothing runs; this is a typecheck.
+pub const IMPORTS_REAL_VEC_AND_CONSTRUCTS_IT: Case = Case {
+    fixture: "fixtures",
+    name: "real-vec-new",
+    vale: r#"
+import rust.alloc.vec.Vec;
+import rust.alloc.alloc.Global;
+exported func main() int {
+  v = Vec.new<int>();
+  return 0;
+}
+"#,
+    expect: Expect::Returns(0),
+};
+
+/// A Rust `usize` imported as the Vale `usize` **primitive** (alongside `int`/`bool`/`float`), rather
+/// than declining as it used to. `some_size() -> usize` produces one and `consume_usize(usize) -> i32`
+/// takes it, so `usize` is exercised in both return and argument position. It is a distinct primitive —
+/// never `int` — and needs no drop.
+pub const CALLS_A_FUNCTION_RETURNING_USIZE: Case = Case {
+    fixture: "fixtures",
+    name: "usize-primitive",
+    vale: r#"
+import rust.mycrate.some_size;
+import rust.mycrate.consume_usize;
+exported func main() int {
+  return consume_usize(some_size());
+}
+"#,
+    // `consume_usize` returns 8.
+    expect: Expect::Returns(8),
+};
+
+/// Real `Vec` with a **`&mut self` method call**: `v.push(42)`. `push` is `fn push(&mut self, value: T)`
+/// — a borrow receiver (slice 1) plus an element of the type's generic `T`. The local `v` is read as a
+/// borrow to match `&mut self`, then still dropped at scope end.
+pub const CALLS_PUSH_ON_A_REAL_VEC: Case = Case {
+    fixture: "fixtures",
+    name: "real-vec-push",
+    vale: r#"
+import rust.alloc.vec.Vec;
+import rust.alloc.alloc.Global;
+exported func main() int {
+  v = Vec.new<int>();
+  v.push(42);
+  return 0;
+}
+"#,
+    expect: Expect::Returns(0),
+};
+
+/// Real `Vec` with a **`&self` method returning `usize`**: `v.len()`. Combines the borrow receiver
+/// (slice 1) and the `usize` primitive (slice 3); the returned `usize` is passed to `consume_usize`.
+pub const CALLS_LEN_ON_A_REAL_VEC: Case = Case {
+    fixture: "fixtures",
+    name: "real-vec-len",
+    vale: r#"
+import rust.alloc.vec.Vec;
+import rust.alloc.alloc.Global;
+import rust.mycrate.consume_usize;
+exported func main() int {
+  v = Vec.new<int>();
+  return consume_usize(v.len());
+}
+"#,
+    // `consume_usize` returns 8.
+    expect: Expect::Returns(8),
 };
 
 /// A method on a **generic** type, whose signature names the type's own parameter. `Holder<int>`'s
@@ -1076,16 +1225,10 @@ func value_of(c Counter) int {
 pub const A_GENERIC_RUST_TYPE_CARRIES_ITS_ARGUMENTS: Case = Case {
     fixture: "fixtures",
     name: "generic-type-arguments",
-    // Both `Holder`s are **consumed** by a Rust function rather than bound and left to fall out of
-    // scope. Scope-end drop on a *generic* type does not resolve: the drop declaration is
-    // `drop<T>(Holder<T>)`, a compiler-generated drop call supplies no explicit type argument, and
-    // `T` is not in fact inferred from the argument. `holder_ignore<int>(..)` works precisely
-    // because the argument is written.
-    //
-    // This was originally read as arch §1.7 behaving as designed. It is not — that rule was a
-    // transcription of Sky's, never ratified for Vale, and has been struck. Inference here is
-    // wanted, not forbidden, so this is a defect rather than a constraint. Routed to Vale2; see
-    // plan §9 step 2.
+    // Both `Holder`s are **consumed** by a Rust function so the case observes the two distinct kinds
+    // directly. A scope-end drop of a generic local also resolves now — the generated `drop<T>(Holder<T>)`
+    // call infers `T` from the value (see `a_generic_rust_type_gets_a_scope_end_drop`) — so consuming
+    // here is a choice, not a workaround.
     vale: r#"
 import rust.mycrate.make_holder;
 import rust.mycrate.make_bool_holder;

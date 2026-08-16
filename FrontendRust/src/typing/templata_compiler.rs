@@ -474,6 +474,7 @@ where 's: 't,
             KindT::Bool(_) => kind,
             KindT::Str(_) => kind,
             KindT::Float(_) => kind,
+            KindT::USize(_) => kind,
             KindT::Void(_) => kind,
             KindT::Never(_) => kind,
             KindT::RuntimeSizedArray(rsa) => {

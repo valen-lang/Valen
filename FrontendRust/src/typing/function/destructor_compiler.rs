@@ -91,7 +91,7 @@ where 's: 't,
                 // Return the original Never-typed expr, so the current block still knows that it's unreachable.
                 undestructed_expr_2
             }
-            KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Float(_)| KindT::OverloadSet(_) | KindT::BorrowRef(_) | KindT::OwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) => {
+            KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Float(_) | KindT::USize(_) | KindT::OverloadSet(_) | KindT::BorrowRef(_) | KindT::OwnRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) => {
                 // Just discard
                 ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(undestructed_expr_2)))
             }

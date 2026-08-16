@@ -30,7 +30,7 @@ use crate::typing::templata::templata::{
     FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, PlaceholderTemplataT,
     PrototypeTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
 };
-use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, NeverT, StrT, VoidT, BorrowRefT, OwnRefT, WeakRefT, ShareRefT};
+use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, NeverT, StrT, USizeT, VoidT, BorrowRefT, OwnRefT, WeakRefT, ShareRefT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::oracles::Oracles;
 #[cfg(feature = "rust_interop")]
@@ -180,6 +180,7 @@ where 's: 't,
             KindT::Int(_) => {}
             KindT::Bool(_) => {}
             KindT::Float(_) => {}
+            KindT::USize(_) => {}
             KindT::Void(_) => {}
             KindT::Never(_) => {}
             KindT::Str(_) => {}
@@ -282,7 +283,7 @@ where 's: 't,
                 self.is_descendant(_coutputs, _envs.parent_ranges, _envs.call_location, _envs.original_calling_env,
                     ISubKindTT::Interface(i))
             }
-            KindT::Int(_) | KindT::Bool(_) | KindT::Float(_) | KindT::Str(_) | KindT::Void(_) => false,
+            KindT::Int(_) | KindT::Bool(_) | KindT::Float(_) | KindT::USize(_) | KindT::Str(_) | KindT::Void(_) => false,
             KindT::BorrowRef(_) => unimplemented!(),
             KindT::OwnRef(_) => unimplemented!(),
             KindT::ShareRef(_) => unimplemented!(),
@@ -668,6 +669,7 @@ where 's: 't,
             (self.keywords.i64, KindT::Int(IntT::I64)),
             (self.keywords.bool, KindT::Bool(BoolT)),
             (self.keywords.float, KindT::Float(FloatT)),
+            (self.keywords.usize, KindT::USize(USizeT)),
             (self.keywords.__never, KindT::Never(NeverT { from_break: false })),
             (self.keywords.str, KindT::Str(StrT)),
             (self.keywords.void, KindT::Void(VoidT)),
@@ -1666,7 +1668,7 @@ where 's: 't,
                     // before filling this in.
                     KindT::Interface(_) => {}
                     KindT::KindPlaceholder(_) | KindT::OverloadSet(_) |
-                    KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_) | KindT::Never(_) => {
+                    KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_) | KindT::USize(_) | KindT::Never(_) => {
                         panic!("vwat: unexpected kind in exportedKindToExport");
                     }
                     KindT::BorrowRef(_) => unimplemented!(),
@@ -1754,7 +1756,7 @@ where 's: 't,
         kind: KindT<'s, 't>,
     ) -> bool {
         match kind {
-            KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Never(_) | KindT::Float(_) => true,
+            KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Never(_) | KindT::Float(_) | KindT::USize(_) => true,
             KindT::KindPlaceholder(_) => false,
             KindT::Struct(_) => false,
             KindT::Interface(_) => false,
