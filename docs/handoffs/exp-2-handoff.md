@@ -8,6 +8,8 @@ RSBEX gate denies edits by sessions whose transcript shows the skill was never l
 
 **The RED-slice phase is over: the enabled `--lib` suite passes** (measure with the PICK UP HERE command; read the measurement traps under "Current state" first). The deferred feature families — closures/lambdas, `str`/share lowering, the anonymous-interface macro, and weaks — are `#[ignore]`d rather than failing; `simplifying/`, `hammer/`, `backend/`, `testvm/`, `integration_tests/` stay commented out or `#[cfg(any())]`-gated in `lib.rs`.
 
+**Rung-0 group groundwork is partly landed.** The group data structures and the parser/postparser group syntax (`&T in g`, `<g': T>`, `mut(g)` / `not(mut(g))`) are built and the suite is green; `BorrowRefT` is emptied of its region. The **typing-side semantic wiring is the next work** — see `docs/plans/path-to-borrowing.md`, whose "What is already done" block draws the built-vs-unwired line.
+
 **Read order for a fresh session:**
 0. **"LESSONS LEARNED"** — short, and it will save you an afternoon.
 1. **"PICK UP HERE"** — the current state, the uncommitted work, and what Vale4 is blocked on.
@@ -50,6 +52,8 @@ Everything else is reference; skip it until you need it.
 - **A partial set with a total name gets its fold forgotten.** `header_rules` omits each param's own type-binding rules, and three of five sites remembered to fold them in — check every reader when a field's name promises more than it holds.
 - **A failure-set diff is meaningless if the test binary did not compile.** Confirm a `test result` line exists before comparing runs, or a broken test build reads as every test suddenly passing.
 - **Lambdas do not generally use the anonymous interface macro.** Only a lambda passed where an *interface* is expected does; a direct lambda call, or a lambda/struct satisfying a concept-function bound (`__call(&G)E`), does not — so a failing lambda test is usually not an anonymous-substruct failure.
+- **Emptying a struct field reaches past its constructors, through its type.** Removing `BorrowRefT.region` (a `RegionT`) meant chasing `RegionT` through the humanizer's display params (`humanize_id`/`kind`/`name`/`generic_args`, each carrying an `Option<RegionT>`) and out of the `IdT` name-structs (`ExportNameT`). Grep the field's *type*, not just its name, to bound the sweep.
+- **A `--lib` build passing does not mean the tests build.** `typing/mod.rs` gates `pub mod test;` behind `#[cfg(test)]`, so a change can compile under `cargo build --lib` yet break the test build (typing's macros construct `ParameterS`/`FunctionS`, its tests construct `ExportNameT`). Run `cargo test --lib --no-run` before calling a typing-touching change done.
 
 **Architect preferences, generalized**
 
@@ -62,6 +66,9 @@ Everything else is reference; skip it until you need it.
 - **Take work out of the solver wherever it can reasonably go.** The solver's job is structural deduction; name resolution and callee resolution living there as rules is complexity to relocate, not to accept.
 - **Renaming is an acceptable price.** Where two things want one name, making the user rename one is preferable to a mechanism that tells them apart.
 - **Widen on the way in rather than narrowing on the way in.** An error type that holds less than its producers do forces each of them to flatten, and a flatten silently drops whatever did not fit.
+- **Authorize removals category-by-category.** The architect clears one kind of edit at a time (*"just that, no other kinds of typing pass edits"*); surface the boundary of a cascade and wait for the go-ahead rather than bundling the next category in.
+- **No typing-pass change without a failing test motivating it.** A "cheaper to do it now, before the checker depends on it" argument does not clear the bar; the core stays untouched until a red test proves the change is needed. (This is why source ranges — defect 15 — are deferred, not do-early.)
+- **Do not preserve backwards compatibility or maintain unused code.** Code as if there are no users: a superseded function whose only callers are its own recursion is dead — delete it, don't keep it working alongside its replacement.
 
 **Recurring agent mistakes**
 
@@ -223,24 +230,33 @@ Goal: **the compiler is whole again** end to end, and the corpus stops lying abo
   of the override-dispatch machinery.
 - **`instantiating/` and `simplifying/`** — worse than gated, they are **stale and would not
   compile** (they match on `ReferenceExpressionTE::While/Return/Break`, an enum with zero hits under
-  `typing/`). ~3 weeks out per what we told Vale4.
+  `typing/`). The planned direction is not re-linking them as-is but **deleting `simplifying/`/`hammer`
+  and `ProgramH`/`final_ast` and having the instantiator emit onion `HinputsI` straight to the backend**
+  (`~/.claude/plans/please-write-up-a-eventual-sphinx.md`), so the instantiator is a rewrite, not a
+  re-link.
 - **Tier 1 of the syntax migration** — `^` postfix, `own`→`ownref`, and
   `#!DeriveStructDrop`→`#explicitly_destroyed`. All three are measured and ready.
 - **The `&&`-as-weak corpus sites** — the compiler cannot drive this migration, because `&&T`
   stays a legal type and nothing errors. Needs the hand-list.
-- **Source ranges on AST nodes** — only 6 of 49 `ExpressionTE` variants carry a `RangeS`. Any
-  post-hoc checker's diagnostics need them, and it is much cheaper before the checker exists.
+- **Source ranges on AST nodes** — only 6 of 49 `ExpressionTE` variants carry a `RangeS`, and the
+  call/control nodes have none, so a post-hoc checker's diagnostics need them. **Deferred, not
+  do-early** (defect 15): added only when a borrow-check diagnostic needs a range and a red test
+  proves the gap — no speculative typing-pass change.
 
 #### LONG TERM — the borrow checker, and the backend arc
 
 Goal: **the language's actual point.** This is where the design work of the last three days cashes
 out.
 
-- **Rung 0 — groups become real.** The gate on the whole borrow-checker track. Now well-scoped: see
-  the regions block below for what exists (`ITemplataT::Placeholder` with `RegionTemplataType` for
-  group *parameters*) versus what does not (any representation for a *concrete* group expression).
-  Two prerequisites are typing-slice work regardless of regions — argument types reaching the
-  call-site solve, and `substitute_templatas_in_kind` for the four ref wraps.
+- **Rung 0 — groups become real.** Underway; the representation, syntax, and no-op checker seam are
+  landed. Scoped in `docs/plans/path-to-borrowing.md`: groups live **only on the declaration side**,
+  never on the value type. `BorrowRefT` is emptied to `{ inner }`; group params stay uniform valued by
+  a ceremonial `ITemplataT::Group(Default)` constant; group/effect syntax lives in
+  `GroupP`/`GroupS`/`GroupB` enums and the minimal `mut(g)` clause; the borrow checker reads them off
+  the scout `FunctionS` (`FunctionT<'t>`; `ITypeST` never into `'t`), minting `GroupB`, never off a
+  `KindT`. Remaining: construct `ITemplataT::Group(Default)` and mint `GroupB`. This **supersedes** the
+  earlier "add `ITemplataT::Region`, make `RegionT` an interned recursive algebra, put a real region on
+  `BorrowRefT`" scoping — do not resurrect it.
 - **Rungs 1–3** — effect clauses and the first call-site check, then churn tracking, then `Vec<T>`.
   Two entry points confirmed, not one: borrow *creation* at the member/element seam, and the
   joint-argument check at call sites.
@@ -253,9 +269,9 @@ out.
 
 #### The one thing that would most change this plan
 
-**Rung 0.** Everything in the long-term horizon sits behind it, and it is the one item on the whole
-board that is entirely an architect decision rather than grind. Short and medium term proceed without
-it; nothing past rung 0 starts until it does.
+**Rung 0**, now underway. Everything in the long-term horizon sits behind it. Its representation and
+seam are landed; what remains gating the rest is the typing-side semantics (mint the group constant,
+mint `GroupB`) plus the rung-1 effect-domain decisions. Short and medium term proceed independently.
 
 ## ►► CAPABILITY LADDER — the build order ◄◄
 
@@ -438,11 +454,12 @@ this direction** — `solve_rule`'s `BorrowRef` peel concludes into `result_rune
 incidental.
 
 **►► BUT `type_outer_ref_rules` IS THE WRONG *SOLE* SOURCE FOR THE WRAP CHAIN ◄◄**
-`translate_signature_templex` (`postparsing/rules/templex_scout.rs`) splits a parameter on **written
-syntax** — it peels `BorrowRef` / `WeakRef` / `OwnRef` templexes into `type_outer_ref_rules` and
-leaves the rest as `value_type_rules`. A parameter written bare as `x MyClass` has no wrap templex at
-all, so it gets `type_outer_ref_rules = []` and `full_type_rune == value_type_rune` — even though its
-real type is the anchored borrow `BorrowRef(ShareRef(Struct(MyClass)))`.
+`translate_signature_type_st` (`postparsing/rules/templex_scout.rs`) splits a parameter's `ITypeST`
+on **written syntax** — its recursive peeler (`split_type_st_into`) peels every `BorrowRef` /
+`WeakRef` / `OwnRef` layer into `type_outer_ref_rules` and hands the value root to
+`translate_type_st_into_rune` for `value_type_rules`. A parameter written bare as `x MyClass` has no
+wrap layer at all, so it gets `type_outer_ref_rules = []` and `full_type_rune == value_type_rune` —
+even though its real type is the anchored borrow `BorrowRef(ShareRef(Struct(MyClass)))`.
 
 **►► CLASS SEMANTICS WAIT FOR THE LOWERING MOVE — DO NOT ANNOTATE THE CORPUS IN THE MEANTIME ◄◄**
 `share` citizens are declared today and then treated as plain structs, because nothing lowers a bare
@@ -698,13 +715,13 @@ Everything below is open. Nothing else is. Grouped by what unblocks it.
 - **`BorrowState`'s shape** — still correctly parked behind its stated trigger.
 - **Telling phase 0's two failures apart** — *"the target is not knowable yet"* (the explicit-`T` error) versus *"the target is known and the argument does not match"* (an ordinary type error). Both present as "cannot convert this" and want different diagnostics. Everything else about sends is settled; see CALL-SITE PHASES.
 - **►► Can phase 0 be a single static pass, given lambdas? ◄◄** rustc's `check_argument_types` runs a two-pass loop — non-closures, a solver drain, then closures — because a closure literal's parameter types are deduced from the expectation, which the *other* arguments must pin down first. That is attributable to neither lifetimes nor coherence nor rustc's lack of overloading, so it applies to us verbatim. Explicit-`T` makes the preview total for *type* arguments and says nothing about a lambda whose signature depends on a sibling argument. **Do not treat "phase 0 is one pass" as settled until a lambda case is worked through.** If it does need speculation, the shape to copy is rustc's `fudge_inference_if_ok`: guess inside a rolled-back snapshot, keep only a hint, re-verify for real.
-- **Where the wrap chain comes from**, given that `type_outer_ref_rules` cannot be its sole source. The position rule is a typing-time interpretation, not surface sugar, so a bare class parameter's real chain is invisible to `translate_signature_templex`. Both the static filter and phase 0 need it. The shape is known — chain = written wraps ++ the position rule given the citizen's kind, and the second half is a lookup — but its home is not. **Blocking nothing today**, since neither the filter nor phase 0 is built.
+- **Where the wrap chain comes from**, given that `type_outer_ref_rules` cannot be its sole source. The position rule is a typing-time interpretation, not surface sugar, so a bare class parameter's real chain is invisible to `translate_signature_type_st`. Both the static filter and phase 0 need it. The shape is known — chain = written wraps ++ the position rule given the citizen's kind, and the second half is a lookup — but its home is not. **Blocking nothing today**, since neither the filter nor phase 0 is built.
 - **Where a minted anchor's release charge lands**, and whether the found-anchor case admits the quiet-window certificate. Both are open *upstream* and both land on the consumer-side claim rules; see the fork under "Ready to start".
 - **What the expression `&x` forms at a claim-typed local** — payload borrow by concrete sugar, compositional borrow-of-claim, or a one-hop argument coercion. Open upstream, and they have asked for our input, since our lowering implicitly picks a horn.
 
 **Decisions only the architect can make**
-1. **Rung 0 — do we start?** The gate on the entire borrow-checker track, and everything in the long-term horizon sits behind it. **Its representation work is scoped** (see the regions block): `ITemplataT` needs a `Region` variant, `RegionT` becomes an interned recursive algebra, and two prerequisites are typing-slice work regardless — argument types reaching the call-site solve, and `substitute_templatas_in_kind` for ref wraps.
-2. **Where does mutability live?** design-1 puts it on the **group**, via signature effect clauses (`func heal(e: &Entity in g) mut(g)`), and calls that its one departure from Rust (*"there is no `&mut`"*, design-1:361). We dropped `&mut` and never added effect clauses, so mutability currently lives **nowhere**. Sits *behind* rung 0, not beside it, since effect targets are group expressions. It is bigger than "add effect clauses": `mut(g)` / `mut(g.tiles[])` / `mut(E)` with `E: Effects` / `mut(())`, the subtractive `not(mut(…))` forms, the deep-effect rule, parameter shorthands that desugar to **fresh anonymous group params instantiated per call site**, plus solve-order pins (design-1:1235 — no negative bound discharged against less than `E`'s full solution; re-check on widening). That is a **second solver domain** alongside types and groups, i.e. `ITemplataT::Effect` beside `ITemplataT::Region`.
+1. **Rung 0 is underway — the start question is settled, do not re-raise it.** Its representation, syntax, and no-op checker seam are landed (see "Region borrow checker — rung 0 underway"); the scope is in `docs/plans/path-to-borrowing.md`. Groups live only on the declaration side, never on the value type — empty `BorrowRefT` to `{ inner }`, a ceremonial `ITemplataT::Group(Default)` constant for the uniform group param, `GroupP`/`GroupS`/`GroupB` enums + a minimal `mut(g)` clause, all read by the borrow checker straight off the scout `FunctionS` (no side-table struct; `FunctionT<'t>`, `ITypeST` never into `'t`). Groups never flow through the solver. (This replaced the earlier region-on-`BorrowRefT` / `ITemplataT::Region` / interned-`RegionT` scoping.) Remaining typing-side wiring is core work, so it needs "fire core edits"; the still-open effect-domain calls are decisions 2-3 below.
+2. **Where does mutability live?** design-1 puts it on the **group**, via signature effect clauses (`func heal(e: &Entity in g) mut(g)`), and calls that its one departure from Rust (*"there is no `&mut`"*, design-1:361). We dropped `&mut` and never added effect clauses, so mutability currently lives **nowhere**. Sits *behind* rung 0, not beside it, since effect targets are group expressions. It is bigger than "add effect clauses": `mut(g)` / `mut(g.tiles[])` / `mut(E)` with `E: Effects` / `mut(())`, the subtractive `not(mut(…))` forms, the deep-effect rule, parameter shorthands that desugar to **fresh anonymous group params instantiated per call site**, plus solve-order pins (design-1:1235 — no negative bound discharged against less than `E`'s full solution; re-check on widening). That is a **second solver domain** (rung 1) alongside types, i.e. `ITemplataT::Effect` — distinct from the ceremonial group-param constant `ITemplataT::Group`, since groups themselves never flow through the solver.
 3. **Effect vocabulary staging** — full set or `mut(g)` first? And is effect *inference* in scope initially? (Ruled: named functions **declare and are checked**, so no call-graph fixpoint; closures genuinely infer, and a *recursive closure* is an unaddressed gap.)
 5. **`is_primitive`** — the fix is *renaming*, not moving the `Str` row. Which two names?
 6. **The three override mismatches** — make the abstract bare (matching its four siblings) or borrow the overrides? Lean exact-match: Valen refused variance deliberately. **Note the diagnosis changes once position-dependence lands** — today it's borrow-vs-strong-ref; after, it's borrow-of-payload vs borrow-of-claim.
@@ -757,10 +774,10 @@ kind is a conforming implementation of that.**
 
 **And when it lands, decide which bucket `ShareRefSR` goes in** — `type_outer_ref_rules` or
 `value_type_rules`. The architect leans outer-refs: the peeled value type is what drives namespace
-lookup, so `x @Ship` should still search `Ship`'s namespace for callable methods.
-Note `translate_signature_templex` peels **three** wraps today while PFVSZ's stated
-invariant and `ParameterS::new`'s `debug_assert!` both say **four**, and typing's
-`peel_all_references` peels four — so the tree already answers this two ways.
+lookup, so `x @Ship` should still search `Ship`'s namespace for callable methods. `split_type_st_into`
+(`translate_signature_type_st`'s recursive peeler) already routes every outer ref layer to
+`type_outer_ref_rules`, so a restored `ShareRefSR` handled there as one more ref wrap lands in the
+outer-refs bucket by construction.
 
 **One parsing call still outstanding** — `func bork() ^&SomeStruct` in
 `can_turn_a_borrow_coord_into_an_owning_coord`, the last parse failure. Mechanically `^&X` → `&X`, by
@@ -773,8 +790,8 @@ test no longer tests its name; delete it and that is a call.
 
 **Closed, recorded so nobody re-opens them:** the `set` spec report (sent + ruled); the Vale4 reply (sent); the Luz curate queue (drained + committed); `Guardian/Luz` (deleted, 7 symlinks deliberately broken); the design-1 audit doc (folded into this file + deleted); the `lookup_rune_type` coercion arm (**dead by evidence** — probe run, suite byte-identical, zero hits); the move-tracker join question; the `self`-receiver hazard; the borrow-creation seam; per-body checking; and every one of the seven "genuinely unfinished reasoning" threads from the start of the arc.
 
-### Designed but not started
-The **region borrow checker** — ladder, quarantine rule, and rustc evidence are recorded in `docs/plans/path-to-borrowing.md`. Rung 0 (groups become real) is entirely architect work and is gated on decision 1 above.
+### Region borrow checker — rung 0 underway
+The full design — ladder, quarantine rule, and rustc evidence — lives in `docs/plans/path-to-borrowing.md`. Rung 0 (groups become real) is in progress: `BorrowRefT` is emptied to `{ inner }`, the `GroupP`/`GroupS`/`GroupB` + `EffectP`/`EffectS`/`EffectB` enums and `ITemplataT::Group(GroupTemplataT)` exist, `&T in g` / `<g': T>` / `mut(g)` parse and scout, and a no-op `check_function` seam is wired at the tail of each user-body typecheck (`function_compiler_core.rs`, reading the scout `FunctionS`). Remaining: construct the ceremonial `ITemplataT::Group(Default)` and mint `GroupB`.
 
 ## Current state
 
@@ -1008,8 +1025,8 @@ Grouped by what you would do with them. **Everything here is traced from source 
 3. **Dropping a `Str` is unimplemented.** `drop`'s `Str` arm in `destructor_compiler.rs` is a bare `unimplemented!()` under a comment reading "decrement a reference count" — the one kind that does not resolve a drop function the way the citizen arms do.
 4. **Share upcasts don't work at all.** `convert_via_upcast` (`typing/convert_helper.rs`) calls `ISubKindTT::try_from`, which rejects wrapped kinds. `convert()`'s borrow path passes peeled citizens (fine); the no-borrow path passes the full type, so `@Dog → @Animal` arrives as `ShareRef(...)`, `try_from` fails, and it reports **`CouldntConvertT` instead of upcasting**. Consequence: **the 18 class-tier interfaces are probably not a working baseline** — check before treating them as one.
 5. **`inner_find_reachable_allocations` (`testvm/heap.rs`) is missing THREE arms, not one.** `KindV` has 8 variants and it handles 5, so **`Str`, `Opaque`, AND `ArrayInstance`** hit a bare `panic!()`. Latent (one call path, one test, empty members) — but the `ArrayInstance` gap means the leak check would panic on any array-rooted heap before `str` even enters. Fix as one arm-set.
-6. **Loops skip their move check when the body is `Never`** — a body that always returns or breaks can unstackify an outer local with no diagnostic and no propagation. The same `While` arm also contains a **verbatim duplicate** of its own preceding block, and both report the wrong local (`body_unstackified_` where `body_restackified_` was meant).
-7. **The plain `Block` arm lacks the `continues` guard the `if` arm has** — it propagates child unstackifications to the parent unconditionally, so a bare block ending in `return`/`break` still pushes its marks upward.
+6. **A move from inside a `while` whose body never falls through goes unreported** — the *only* real move-tracker defect. The move check in `evaluate_expression` is gated on `match body.result { KindT::Never(_) => {} .. }`, so a body ending in `break`/`return` skips it and an illegal move of an outer local is silently accepted. Captured by the ignored test `reports_when_moving_from_inside_a_while_that_never_falls_through` (`typing/test/compiler_tests.rs`); the sibling `reports_when_moving_from_inside_a_while` (no break) still errors correctly. **The fix drops the `Never` guard so the check runs regardless of the body's result — deferred until a borrow-checker feature needs it (test-first ruling), not fixed speculatively.**
+7. **Not a defect: the `Block` arm's move propagation is correct.** The report of a missing `continues` guard (a bare block ending in `return`/`break` pushing marks upward) does not reproduce — do not re-file it from reading the arm.
 8. **`&self` is a parse-level stub.** The parser recognizes it (a two-token lookahead in `pattern_parser.rs` setting `self_borrow`), but postparsing builds a **rule-free `ImplicitRune`** — nothing ties it to the enclosing citizen and **the borrow-ness is discarded**. Related: bare `self` inside a citizen body **panics** in `function_scout.rs` with `POSTPARSER_SCOUT_FUNCTION_PARAM_TYPE_REQUIRED_NOT_YET_IMPLEMENTED`, contradicting a stale parser comment claiming it defaults to the containing struct. **And there is no `Self` type to desugar to** — no `"Self"` string anywhere in `src`; `SelfRuneS` is dead, `SelfFullTypeRuneS` is macro-only, and `SelfNameS` is a *variable* name that never meets a user-written `CodeVarName("self")`. **Sequencing: implementing `&self` requires inventing `Self` first.**
 9. **`SharednessImplingMismatch` doesn't exist and never did.** `impl_compiler.rs` validates exactly one citizen attribute across an impl — weakability — and zero `sharedness`. Confirmed absent from the Scala era too (the compiled class files survive; only `WeakableImplingMismatch` exists). So **`look_for_override`'s blind shape-copy rests on a convention, not an invariant**, and the instantiator makes the same unbacked assumption, deriving impl sharedness purely from the super interface. A mismatched impl compiles cleanly and then panics downstream with no useful diagnostic. **The fix shape is obvious: a `SharednessImplingMismatch` three lines from its precedent.**
 10. **`stdlib/src/ifunction/ifunction1.vale`** reads `interface IFunction1<M Mutability, P1 Ref, R Ref> M {` — the trailing `M` sits in the sharedness slot but is a **generic Mutability parameter** from pre-migration syntax; the lexer accepts only the literal `share` there, so **the file is unbuildable as written**. It is also the **only trace anywhere that sharedness was once template-parametric**, which would contradict the parse-time-known assumption in `struct_compiler.rs`. Same stale shape in `stdlib/src/str.vale`. (This is also the `IFunction1` with **no implementors** and an arity mismatch against its local twin under `tests/ifunction/`.)
@@ -1017,10 +1034,10 @@ Grouped by what you would do with them. **Everything here is traced from source 
 ### More defects (numbering continues the inventory)
 
 11. **The `BorrowRef` peel writes to the wrong rune.** In `solve_rule` (`typing/infer/compiler_solver.rs`), the "result known, inner unknown" arm concludes into `result_rune` where it means `inner_rune`. `result_rune` already has a conclusion — that is the match guard — and the new value differs, so `commit_step` returns `SolverConflict`, which the arm handles with an unimplemented-wrapping `panic!`. Reachable: `get_puzzles` gives `BorrowRef` both directions. **This is the peel direction phase 0 depends on**, which makes it load-bearing rather than incidental.
-12. **No move inside a loop body ever propagates outward.** The `While` arm never calls `mark_local_unstackified` at all, unlike the `If` and `Block` arms.
-13. **The loop move-check is skipped entirely when the body is `Never`** — the whole check is wrapped in `match body.result { Never => {}, _ => checks }`, so a body that unconditionally breaks or returns bypasses it.
+12. **Not a defect: the `While` arm's move propagation is correct.** The report that a loop-body move never propagates outward (the arm not calling `mark_local_unstackified`) was false — do not re-file it. The one real loop move-tracker defect is defect 6.
+13. **Not a defect: no `While` duplicate-block or wrong-local bug.** The "verbatim duplicate block reporting the wrong local" report was false; the sole real loop move-check defect is the `Never`-guard skip, defect 6.
 14. **Our loop rule rejects the desugar of `for`.** `CantUnstackifyOutsideLocalFromInsideWhile` forbids moves of outer locals outright; upstream confirmed move-and-restore is intended to compile, and the `for` desugar *is* one — `while Some[(it2, x)] = it^.next() { body; set it = it2 }`. **A defect, not a strictness preference.**
-15. **Most AST nodes carry no source range** — 6 of 49. A hard constraint on any checker's diagnostics, cheapest to fix before the checker exists.
+15. **Most AST nodes carry no source range** — 6 of 49; the call/control nodes (`FunctionCallTE`, `IfTE`, `WhileTE`, `ReturnTE`, `BreakTE`) have none, so a post-hoc checker cannot point at them. **Deferred, not do-early**: no typing-pass change lands without a failing test motivating it, so ranges are added only when a borrow-check diagnostic needs one and a red test proves the gap — not proactively. It is a core edit (needs "fire core edits"); fold in the vestigial `BreakTE.region: RegionT` removal then.
 
 ### Dead code, verified
 
@@ -1061,14 +1078,21 @@ Grouped by what you would do with them. **Everything here is traced from source 
 
 ### Verified mechanics
 
-**Regions.**
-- **`ITemplataT` has NO `Region` variant** (15 variants; none). But **`ITemplataType` DOES have `RegionTemplataType`**. So the rune-*type* domain has regions and the rune-*value* domain does not. A live comment in `rust_interop/tyctxt_oracle.rs` confirms it.
-- **A region *generic parameter* does get a value**: `create_placeholder` (`templata_compiler.rs`) routes every non-`Kind` rune type to `create_non_kind_non_region_placeholder_inner`, yielding `ITemplataT::Placeholder(PlaceholderTemplataT { id, tyype: RegionTemplataType })`. **So the architect's model — "a region is a `PlaceholderTemplataT` referring to a generic parameter" — is real and already implemented.** What does *not* exist is a representation for a *concrete* group expression.
-- **Writing an explicit `&'r Moo` is a latent hole.** The rune-type solver types the region rune and it enters `all_runes`, but `solve_rule`'s `BorrowRef` arm **never reads `r.region`**, so the completeness check fails with `SolveIncomplete`. An *anonymous* region doesn't survive postparse — `translate_templex` panics on it. No typing test uses region syntax.
-- **Nothing branches on a region.** `grep "RegionT::Default =>|RegionT::Iso =>"` returns **zero**. `RegionT::Iso` is constructed zero times in live code. Only two sites read the field. **The real consumer is the derived `PartialEq`/`Hash`** on `BorrowRefT` → `KindT` → type equality and arena interning — so region equality is free *because* everything is `Default`. A real algebra makes it semantic (`a+b == b+a`), hitting `params_match`'s exact comparison and interning. `convert_helper.rs` carries a comment already saying "unreachable while every borrow carries `RegionT::Default`".
-- **`RegionT::Default` / `Iso` are migration scaffolding** — we are mid onion-typing migration and they were always coming out. Do not read the ~52 `RegionT::Default` literals as accumulated debt.
-- **Threading cost, if regions become an algebra** *(counts measured once and not since — re-measure before quoting)*: ~52 `RegionT::Default` literals; **9 `BorrowRefT` construction sites** across `ast/expressions.rs`, `function_compiler.rs`, `call_compiler.rs` and `compiler_solver.rs`, all stamping `Default`; ~45 signatures threading `context_region: RegionT` by value; 8 expression nodes with `region` fields; `FunctionEnvironment*.default_region` at six sites. `InferEnv` is `#[derive(Copy)]` with a by-value region. **`KindT` is a deliberately 16-byte `Copy+Eq+Hash` enum (`@WVSBIZ`)**, so a recursive `RegionT` must become arena-interned with a `*ValT` companion. And **`RegionT` is already part of denizen identity** — a field of `ExportNameT`, `RawArrayNameT`, `ExternNameT`, i.e. inside `IdT`.
-- **`substitute_templatas_in_kind` recurses through all four ref wraps** (`templata_compiler.rs`), rebuilding each around its substituted inner and preserving a `BorrowRef`'s region — so a generic substitution survives the ref layers.
+**Groups / regions.** The region-on-the-value-type model is retired: `BorrowRefT` is `{ inner }`
+with no region, and groups live only on declaration-side structures. `docs/plans/path-to-borrowing.md`
+is the design and the built-vs-unwired line. Still-true mechanics:
+- **`ITemplataType` carries both `RegionTemplataType` and `GroupTemplataType`; `ITemplataT` carries a
+  `Group(GroupTemplataT)` variant** — but the ceremonial `ITemplataT::Group(Default)` is never
+  *constructed* yet. `create_placeholder` (`templata_compiler.rs`) still mints a region-typed
+  `Placeholder` for a group param; the rung-0 rework is to return the `Group` constant instead.
+- **`KindT` is a deliberately 16-byte `Copy+Eq+Hash` enum (`@WVSBIZ`)** — this is *why* a group must
+  never live in it: it would join type equality, arena interning, and monomorphization identity.
+- **`RegionT` (`Iso`/`Default`) is vestigial scaffolding** — still on `context_region` params and the
+  `RawArrayNameT`/`ExternNameT` name-structs; removing it fully is a follow-up sweep. `RegionT::Iso`
+  is constructed zero times.
+- **`substitute_templatas_in_kind` recurses through all four ref wraps** (`templata_compiler.rs`),
+  rebuilding each around its substituted inner; with `BorrowRefT` group-free there is no region to
+  carry through generics.
 
 **Bounds — a bound is a DENIZEN LOOKUP, never a predicate.**
 - The entire bound vocabulary is `PrototypeT` and `IdT` (`InstantiationBoundArgumentsT`, in `hinputs_t.rs`). Discharge is calling the **overload resolver**. The only failure vocabulary is "couldn't find a function/impl" or "return type mismatched" (four `IConclusionResolveError` variants). `IRulexSR`'s twelve variants contain **no general assertion rule**.
@@ -1089,7 +1113,7 @@ Grouped by what you would do with them. **Everything here is traced from source 
 - **No linear-obligation tracking exists**, and the reason is structural: `drop_since` auto-generates drops for everything live at block end, so nothing is ever *required* to be consumed. Under ruling 13 (drop *absence* creates the obligation) **that auto-drop machinery is what has to become conditional.** Upstream's landed shape: *"conditional on the fields, resolved per instantiation, carried as a bound on what is generated rather than deferred to monomorphization"* — so **a generic container's drop existing at all is instantiation-dependent**; `Vec<int>` and `Vec<Future<int>>` differ in whether a scope-end drop exists.
 
 ### Region and effect decisions
-The region and effect rulings (`ITemplataT`'s region payload is the group algebra; a region is never `mut`/`imm`, condemning `RegionT::Iso` as a fossil; borrow creation computes rather than checks; a borrow-of-claim must carry the claim's `rc.T` mention; effect derivation by substitution; effect representation is unsettled, live candidate a per-group permission map; `not(mut(…))` applies to the whole call; the checker iterates the finished tree) now live in `docs/plans/path-to-borrowing.md`.
+The region and effect rulings now live in `docs/plans/path-to-borrowing.md`: groups live only on the declaration side (`GroupS`), never on the value type; `ITemplataT::Group` is a ceremonial constant, not the algebra; a group is never `mut`/`imm`, condemning `RegionT::Iso` (and `RegionT` itself, once `BorrowRefT` is emptied) as a fossil; borrow creation computes rather than checks, but the checker derives a borrow's group by tracing to its anchor, not off a `KindT`; a borrow-of-claim must carry the claim's `rc.T` mention; effect representation is unsettled (live candidate a per-group permission map); `not(mut(…))` applies to the whole call; the checker iterates the finished tree.
 
 ### Outstanding ZHEREs — five, plus one ZLOOK
 
@@ -1124,7 +1148,13 @@ New, ratified direction, lifted here out of the transient `tmp/messages/` mailbo
 - **`weak` stays `weak T`.** Heap-owned is **not** a language keyword — it's a library `Box<T>`, matching Valen; `heap` is removed. This is distinct from `own`: `own` is the language-level *exclusive* state, while `Box<T>` is heap allocation. **`Box<T>` is not fully user-space, though** — design-1:1523 makes `entity.armor[]` a **child group** and design-1:1525 makes `Box<T>` affine-or-linear according to `T`, so the borrow checker needs compiler knowledge of it. Bites at rung 1, not now. Open internal-model question: with heap-ownership library-side, the value-model `HeapOwnRefT` wrap may be **vestigial** — revisit when heap-owned actually surfaces, and note something must still supply that `[]` child group.
 - **Erasure / trait model (all long-term / deferred):** `interface I` (class-tier: no `dyn`, bare = strong `ShareRef`, `I in r` = strong into a non-ambient multi, `weak I`) vs `open trait T` (struct-tier, Rust-`dyn`: `&dyn T` / `Box<dyn T>`, bare `T` = a bound). **Sharedness (share vs single on the definition) carries both the class/struct AND the interface/open-trait split** — no separate keyword; `dyn` appears only for open-traits.
 - **The colon is one of the two intended divergences** in `name: type`: Vale2 **allows but does not require** it; documented Valen always writes it. Even that is only house style — design-1:2350 permits the colonless form for experimentation. Vale2 is the one behind: the parser has no colon support at all today. (The other divergence is that a mention always yields a reference, copied out only at a bare-value receiver; both are provisional and slated for an experimental flag — see the banner at the top of this file.) **Everything else that differs is a bug.**
-- **The `in`-clause region grammar** is **designed, not implemented**. Per Valen's canonical (adopted): the group-param **tick lives only at the declaration** — `<g'>` (untyped) / `<g': T>` (typed) — and **every use is bare**. So `&Ship in g` (not `in g'`); a value's own group is bare; the ambient-multi group is `rc` (not `rc'`); value-paths (`world.ships[]`) and `...` descendant steps carry no tick. `borrow_with_region` still tests the old `&i'MyStruct` apostrophe-*prefix* syntax; re-author when the `in`-clause slice lands.
+- **The `in`-clause group grammar — the single named group is landed; the rest is not.** The
+  group-param **tick lives only at the declaration** (`<g'>` untyped / `<g': T>` typed, both parse)
+  and **every use is bare**: `&Ship in g` parses and scouts to `RegionS::Group(GroupS::Rune | Local)`,
+  and `mut(g)` / `not(mut(g))` parse and scout to `EffectS`. The old `&i'MyStruct` apostrophe-*prefix*
+  borrow-use syntax is **retired** (the declaration tick stays). Unimplemented — `GroupP`/`GroupS`
+  variants the parser does not yet produce: value-paths (`world.ships[]`), union (`a | b`), the `...`
+  descendant step, and the ambient-multi group `rc`.
 
 ### Valen alignment — later TODOs
 Their design docs **are** the ratification, so the transformation rulebook is the authoritative spelling spec. Sources: `/Volumes/V/LangNotesValen/Valen/valen-approach-convo-30-finalize-syntax.md` (the decisions) and `…-convo-30-plan.md` (§3 is the rulebook). None of the below blocks the onion arc; record and schedule.
@@ -1174,8 +1204,8 @@ registry must be spelled `Vec<Box<dyn EventHandler>>`, not `List<EventHandler>`.
 `tests_exporting_interface` means exporting an opaque handle, not a dyn-shaped type — **so that test
 may be asserting the wrong thing.**
 
-### Region borrow checker — designed, not started
-The full design lives in `docs/plans/path-to-borrowing.md`: the ladder (rungs 0-3), the design rulings (regions are inert cargo, a group is an identity not an extent, invalidation keyed on reach, the two join disciplines, the two seams, quarantine by capability, per-body, the whole-signature input), the region and effect rulings, and the rustc evidence. Rung 0 (groups become real) is entirely architect work; nothing past it starts until the go-ahead.
+### Region borrow checker — design index
+The full design lives in `docs/plans/path-to-borrowing.md`: the ladder (rungs 0-3), the design rulings (regions are inert cargo, a group is an identity not an extent, invalidation keyed on reach, the two join disciplines, the two seams, quarantine by capability, per-body, the whole-signature input), the region and effect rulings, and the rustc evidence. For the built-vs-remaining line see "Region borrow checker — rung 0 underway" above.
 
 ### Reference model
 Four ratified decisions, in force. Together they **retire `RegionT::Held` entirely — do NOT add it** — and reshape how a mention lowers.
@@ -1239,7 +1269,7 @@ Each of these shapes the frontend cascade below it.
 2. **Share's shape.** A property of the citizen's *definition* (its declared mutability). NOT stored on `StructTT` / `InterfaceTT`, and nowhere in the `KindT` enum. Not an onion layer. Share citizens cannot be held bare — must be wrapped in one of `HeapOwnRef` / `ShareRef` / `BorrowRef` / `WeakRef`.
     - **The live query is `declare_type_sharedness`** (`compiler_outputs.rs`), read through `struct_compiler_get_sharedness` (`struct_compiler.rs`), whose only caller is `struct_constructor_macro.rs`. **`get_sharedness` and `lookup_mutability` do not exist** — they were deleted with placeholder sharedness, and every remaining `get_sharedness` mention under `typing/` is commented out. **This is the query the position rule will need**; see the wrap-chain block under CALL-SITE PHASES.
 3. **Bare-use and `&`** are governed by C1 and the reference model — see Reference-model decision 1. **`RegionT::Held` does not exist and must not be introduced**; a lookup is the uniform address-of-slot, with a read-path `DerefTE` peeling one storage layer.
-4. **Coord's fate.** `Coord` disappears entirely; walking is pure `Kind`. Region lives on `BorrowRefT`, the only ref layer that carries it.
+4. **Coord's fate.** `Coord` disappears entirely; walking is pure `Kind`. `BorrowRefT` is now `{ inner }` with no region field — groups do not live on the value type (see `docs/plans/path-to-borrowing.md`). `RegionT` survives only as vestigial scaffolding (`context_region` params, `RawArrayNameT`/`ExternNameT`) pending its sweep.
 5. **`convert()` / auto-coercion.** See the coercion table below. **The `implicit_clone` probe mechanism is retired** — what survives is the structural rows plus the upcast.
 6. **Backend representation.** All IR stages get the onion — T-IR, I-IR, H-IR. `CoordH` disappears symmetric to `CoordT`. Backend C++ / Metal eventually walk the onion (large end-state refactor; scoped as a follow-up Backend arc after the frontend arc lands).
 
@@ -1255,8 +1285,8 @@ Each of these shapes the frontend cascade below it.
     - **Two pins to keep wired:** a **poisoned** old value hands its poison to the receiving binding (`convo-12:738`, design-1:713 — we have no poison-travel yet, so this is a list item, not code); and destroy-in-place lowering becomes conditional on the result being *unused* (as-if, so no semantic exposure).
     - **Grammar consequence: `set` must be expression-valued and legal as the RHS of a `set`** (`set x = set y = set x = None` swaps two vars). Our parser appears to satisfy this already — `set` parses to `IExpressionPE::Mutate`, reachable both from statement position and from the atom parser in `expression_parser.rs`, with the mutatee/source split taken at the first `=` so chaining recurses. **Read from the code, not verified by a run** — worth a test case when the parser is next touched.
     - **Residual:** `swap` still does not compose from `set`, because the innermost `set` needs a value to install. It works for any type with a spare inhabitant (`set x = set y = set x = None`) and not otherwise, so design-1:2551(b) is not a place-parameter grammar hole but a **vacancy hole, one stdlib function wide, over spare-inhabitant-free types**. Expect `swap` to stay stdlib-with-unsafe-internals.
-12. **Regions are all `RegionT::Default` for now.** `RegionT` is an enum (`Iso`, `Default`), and every `BorrowRef` the typing pass builds stamps `Default`. Region threading is deferred.
-13. **Addressibility is retired for good**, not deferred. Master's `IVariableT` had Addressible-vs-Reference as its outer axis and ownership as its inner one; the 4→2 collapse (`538fdb12a`) kept Local/Closure and dropped the other axis, which left `determine_if_local_is_addressible` and `determine_closure_variable_member` as wreckage rather than drift. The replacement is an LLVM-style model: every local is storage, a lookup yields a pointer to it. Mutation-sharing becomes `&x` to the same storage; moves become move-out-of-a-borrow (a compile error, the user writes `^`); lifetime becomes regions on `BorrowRefT`; layout is the hammer's problem, not typing's. Note nothing enforces the lifetime half yet, since `LocalLookupTE::new` hardcodes `RegionT::Default`. Addressibility is **orthogonal to the onion**: it was about whether a variable's slot is indirected, while onion layers are about what the value is.
+12. **`BorrowRefT` carries no region** — rung 0 emptied it to `{ inner }`. `RegionT` (`Iso`, `Default`) still exists as vestigial scaffolding on other sites (`context_region` params, the `RawArrayNameT`/`ExternNameT` name-structs); removing it fully is a follow-up sweep.
+13. **Addressibility is retired for good**, not deferred. Master's `IVariableT` had Addressible-vs-Reference as its outer axis and ownership as its inner one; the 4→2 collapse (`538fdb12a`) kept Local/Closure and dropped the other axis, which left `determine_if_local_is_addressible` and `determine_closure_variable_member` as wreckage rather than drift. The replacement is an LLVM-style model: every local is storage, a lookup yields a pointer to it. Mutation-sharing becomes `&x` to the same storage; moves become move-out-of-a-borrow (a compile error, the user writes `^`); lifetime becomes groups (declaration-side, not on `BorrowRefT`); layout is the hammer's problem, not typing's. Nothing enforces the lifetime half yet — the borrow checker is unbuilt. Addressibility is **orthogonal to the onion**: it was about whether a variable's slot is indirected, while onion layers are about what the value is.
 14. **`Copy` is a property of the citizen's definition**, the way sharedness is. C1's first arm is keyed on it, and design-1 is the spec, so Vale2 has a `Copy` property rather than an `implicit_clone` probe. **`implicit_clone` retires completely**, since `Copy ⟹ Clone` and primitives are `Copy`, so `clone` covers the one case a probe was ever kept for.
     - **`Copy` is OPT-IN, `#derive(Copy)`** — not structural. A struct of all-`Copy` fields is *eligible* but is not `Copy` until the author says so. Expect the ergonomic consequence: `struct Point { x: int, y: int }` is a C1 error on first bare mention.
     - **The derive gate must check for a `drop` FUNCTION, never the `T: Drop` bound** — see the trap below. It is the single easiest thing here to get wrong.
@@ -1292,7 +1322,6 @@ below is the map of where a coercion can occur, and every legal one is structura
 
 | # | Source | Target | Op |
 |---|---|---|---|
-| 4 | `BorrowRef(K, r)` | `BorrowRef(K, r')` (regions differ) | pass-through |
 | 5 | bare `K` (from `^local`, literal, ctor) | bare `K` | pass-through |
 | 6 | `HeapOwnRef(K)` / `ShareRef(SC)` / `WeakRef(SC)` (from `^local`) | same shape | pass-through |
 | 7 | bare `K` (from a literal or ctor) | `BorrowRef(K, r)` | materialize a hidden local, lend it, defer its drop, e.g. `&2` |
@@ -1309,9 +1338,8 @@ Plus the upcast, which `convert_via_upcast` owns.
 - Kind mismatch across any coerce site.
 
 **Status in `convert()`.** Rows 5, 6, 7 and the upcast are implemented; row (d) is an error by design.
-**Row 4 is unreachable** until regions get real, since every borrow carries `RegionT::Default` — and
-nothing in `convert()` unifies the two regions, which is still undecided. The numbering is sparse
-because it outlived the probe rows that used to sit between these.
+The numbering is sparse because it outlived the probe rows and the region-differ row that used to sit
+between these — `BorrowRef` carries no region, so there are no two regions to unify.
 
 **The coercion sites.** `convert()` has exactly six callers, and they enumerate every place a coercion can happen:
 

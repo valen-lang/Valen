@@ -16,3 +16,4 @@ mod in_progress_tests;
 mod rust_interop;
 mod todo_tests;
 pub mod traverse;
+mod borrow_checker;

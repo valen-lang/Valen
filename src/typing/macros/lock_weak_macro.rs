@@ -38,7 +38,7 @@ where
     };
     let borrow_coord = match param_coords[0].tyype {
       KindT::WeakRef(w) => KindT::BorrowRef(
-        self.typing_interner.alloc(BorrowRefT { inner: w.inner, region: RegionT::Default }),
+        self.typing_interner.alloc(BorrowRefT { inner: w.inner}),
       ),
       other => panic!("lock's parameter must be a weak: {:?}", other),
     };

@@ -112,8 +112,7 @@ where
         // Now, decay any &&Ship to &Ship.
         let lookup_te_decayed = match lookup_te_undecayed.result() {
           KindT::BorrowRef(BorrowRefT {
-            region: _,
-            inner: KindT::BorrowRef(BorrowRefT { region: _, inner: inner_kind }),
+            inner: KindT::BorrowRef(BorrowRefT { inner: inner_kind }),
           }) => ExpressionTE::Deref(self.typing_interner.alloc(DerefTE::new(
             self.typing_interner,
             ranges[0],
@@ -792,7 +791,7 @@ where
         )?;
 
         match inner_expr_2.result() {
-          KindT::BorrowRef(BorrowRefT { inner, region }) => {
+          KindT::BorrowRef(BorrowRefT { inner }) => {
             // source is borrow
             match ownershipped.target_ownership {
               LoadAsP::Move => {
@@ -2579,6 +2578,7 @@ where
       tyype.clone(),
       params_s,
       maybe_ret_coord_rune.clone(),
+      function_s.effects,
       function_s.header_rules,
       function_s.impl_bounds,
       body_s,

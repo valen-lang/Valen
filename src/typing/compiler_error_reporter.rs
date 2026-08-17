@@ -2,6 +2,7 @@ use crate::postparsing::names::{IFunctionDeclarationNameS, IImpreciseNameS, INam
 use crate::postparsing::rules::rules::IRulexSR;
 use crate::solver::solver::FailedSolve;
 use crate::typing::ast::ast::{KindExportT, PrototypeT, SignatureT};
+use crate::typing::borrow_checker::borrow_error::BorrowErrorKind;
 use crate::typing::citizen::impl_compiler::IsntParent;
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::typing::infer_compiler::{IDefiningError, IResolvingError};
@@ -259,6 +260,10 @@ pub enum ICompileErrorT<'s, 't> {
     range: &'t [RangeS<'s>],
     message: &'s str,
   },
+  BorrowCheckError {
+    range: &'t [RangeS<'s>],
+    kind: BorrowErrorKind<'s, 't>,
+  },
   WeakableImplingMismatch {
     range: &'t [RangeS<'s>],
     struct_weakable: bool,
@@ -337,6 +342,7 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
       Self::CantImplNonInterface { range, .. } => *range,
       Self::NonCitizenCantImpl { range, .. } => *range,
       Self::RangedInternalErrorT { range, .. } => *range,
+      Self::BorrowCheckError { range, .. } => *range,
       Self::WeakableImplingMismatch { range, .. } => *range,
       Self::TookWeakRefOfNonWeakableError { range, .. } => *range,
       Self::NoImplicitCloneDefinedT { range, .. } => *range,

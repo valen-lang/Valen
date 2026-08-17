@@ -479,6 +479,7 @@ pub fn entry_matches_filter<'s, 't>(
     IEnvEntryT::Interface(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
     IEnvEntryT::Templata(templata) => match templata {
       ITemplataT::Placeholder(..) => contexts.contains(&ILookupContext::TemplataLookupContext),
+      ITemplataT::Group(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
       ITemplataT::Isa(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
       ITemplataT::Kind(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
       ITemplataT::CoordList(_) => contexts.contains(&ILookupContext::TemplataLookupContext),

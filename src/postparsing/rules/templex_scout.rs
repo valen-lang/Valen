@@ -5,14 +5,15 @@
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
-  BoolPT, ITemplexPT, ITemplexPT::NameOrRune, IntPT, NameOrRunePT, NameP, RegionP, RegionRunePT,
-  StringPT,
+  BoolPT, EffectP, GroupP, ITemplexPT, ITemplexPT::NameOrRune, IntPT, NameOrRunePT, NameP, RegionP,
+  RegionRunePT, StringPT,
 };
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::postparsing::names::IRuneValS::{CodeRune, ImplicitRune};
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, IRuneS, ImplicitRuneValS,
+  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, IRuneS, IVarNameS,
+  ImplicitRuneValS,
 };
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
 use crate::postparsing::rules::rules::IRulexSR::{Call, Lookup};
@@ -22,8 +23,8 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::rules::rules::{CallSiteFuncSR, DefinitionFuncSR, ResolveSR};
 use crate::postparsing::rules::types::{
-  AnonymousRuneST, BoolST, BorrowRefST, CallST, ITypeST, IntST, NameST, OwnRefST, PackST, RegionS,
-  RuneUsageST, RuntimeSizedArrayST, StringST, TupleST, WeakRefST,
+  AnonymousRuneST, BoolST, BorrowRefST, CallST, EffectS, GroupS, ITypeST, IntST, NameST, OwnRefST,
+  PackST, RegionS, RuneUsageST, RuntimeSizedArrayST, StringST, TupleST, WeakRefST,
 };
 use crate::scout_arena::ScoutArena;
 use crate::utils::range::RangeS;
@@ -312,18 +313,9 @@ pub fn translate_templex_into_type_st<'s, 'p>(
       let region = match borrow_ref.region {
         RegionP::Unspecified => RegionS::Unspecified,
         RegionP::Held => RegionS::Held,
-        RegionP::Rune(region_pt) => match region_pt.name {
-          None => RegionS::Rune(None),
-          Some(name) => {
-            let rune_ref: &'s RuneUsage<'s> = scout_arena.alloc(RuneUsage {
-              range: PostParser::eval_range(file, region_pt.range),
-              rune: scout_arena.intern_rune(CodeRune(CodeRuneS {
-                name: scout_arena.intern_str(name.str().as_str()),
-              })),
-            });
-            RegionS::Rune(Some(rune_ref))
-          }
-        },
+        RegionP::Group(group_p) => {
+          RegionS::Group(translate_group_p_into_group_s(scout_arena, &env, group_p))
+        }
       };
       ITypeST::BorrowRef(scout_arena.alloc(BorrowRefST { range: range_s, inner, region }))
     }
@@ -817,6 +809,56 @@ fn split_type_st_into<'s>(
   }
 }
 
+/// Lowers a parse-side group expression (`GroupP`) into the symbolic scout-side `GroupS`. A bare
+/// group name resolves to `GroupS::Rune` when it is a declared group/region rune, else
+/// `GroupS::Local`, using the same name-vs-rune test the NameOrRune type arm uses. Reused by borrow
+/// regions and effect clauses. Member/element/union group expressions are deferred.
+fn translate_group_p_into_group_s<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
+  env: &IEnvironmentS<'s>,
+  group_p: &GroupP<'p>,
+) -> &'s GroupS<'s> {
+  match group_p {
+    GroupP::Name(name) => {
+      let group_name_str = scout_arena.intern_str(name.str().as_str());
+      let group_range = PostParser::eval_range(env.file(), name.0);
+      let is_rune = env
+        .all_declared_runes()
+        .contains(&scout_arena.intern_rune(CodeRune(CodeRuneS { name: group_name_str })));
+      if is_rune {
+        scout_arena.alloc(GroupS::Rune(scout_arena.alloc(RuneUsage {
+          range: group_range,
+          rune: scout_arena.intern_rune(CodeRune(CodeRuneS { name: group_name_str })),
+        })))
+      } else {
+        scout_arena.alloc(GroupS::Local(IVarNameS::CodeVarName(group_name_str)))
+      }
+    }
+    _ => panic!("POSTPARSER_GROUP_MEMBER_ELEMENT_UNION_NOT_YET_IMPLEMENTED"),
+  }
+}
+
+/// Lowers a function's parse-side effect clauses (`EffectP`) into the symbolic scout-side `EffectS`,
+/// resolving each group via `translate_group_p_into_group_s`. These land (borrowed from `'s`) in the
+/// per-`FunctionT` side table later; the durable `FunctionHeaderT` never carries them.
+pub(crate) fn translate_effects_p_into_effects_s<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
+  env: &IEnvironmentS<'s>,
+  effects_p: &[EffectP<'p>],
+) -> Vec<EffectS<'s>> {
+  effects_p
+    .iter()
+    .map(|effect_p| match effect_p {
+      EffectP::Mut(group_p) => {
+        EffectS::Mut(translate_group_p_into_group_s(scout_arena, env, group_p))
+      }
+      EffectP::NotMut(group_p) => {
+        EffectS::NotMut(translate_group_p_into_group_s(scout_arena, env, group_p))
+      }
+    })
+    .collect()
+}
+
 // Lowers a borrow's region (the ITypeST RegionS) into the rule-side RegionSR, resolving a named
 // region rune the way a value rune resolves: local runes pass straight through, a parent-env rune
 // gets a RuneParentEnvLookup rule.
@@ -830,21 +872,7 @@ fn region_s_into_region_sr<'s>(
   match region {
     RegionS::Unspecified => RegionSR::Unspecified,
     RegionS::Held => RegionSR::Held,
-    RegionS::Rune(None) => panic!("POSTPARSER_TYPE_ST_REGION_RUNE_NONE_NOT_YET_IMPLEMENTED"),
-    RegionS::Rune(Some(ru)) => {
-      if env.local_declared_runes().contains(&ru.rune) {
-        RegionSR::Rune(RuneUsage { range: ru.range, rune: ru.rune })
-      } else {
-        let mut child_lidb = lidb.child();
-        RegionSR::Rune(add_rune_parent_env_lookup_rule(
-          scout_arena,
-          &mut child_lidb,
-          rule_builder,
-          ru.range,
-          ru.rune,
-        ))
-      }
-    }
+    RegionS::Group(_group_s) => RegionSR::Unspecified,
   }
 }
 
@@ -889,14 +917,7 @@ where
     ITypeST::BorrowRef(br) => {
       let inner: &'s ITypeST<'s> =
         scout_arena.alloc(map_runes_in_type_st(scout_arena, func, br.inner));
-      let region = match br.region {
-        RegionS::Rune(Some(ru)) => {
-          let ru_ref: &'s RuneUsage<'s> =
-            scout_arena.alloc(RuneUsage { range: ru.range, rune: func(ru.rune) });
-          RegionS::Rune(Some(ru_ref))
-        }
-        other => other,
-      };
+      let region = br.region;
       ITypeST::BorrowRef(scout_arena.alloc(BorrowRefST { range: br.range, inner, region }))
     }
 
@@ -1074,15 +1095,9 @@ pub fn translate_templex<'s, 'p>(
         let region = match borrow_ref.region {
           RegionP::Unspecified => RegionSR::Unspecified,
           RegionP::Held => RegionSR::Held,
-          RegionP::Rune(region_pt) => RegionSR::Rune(translate_templex(
-            scout_arena,
-            keywords,
-            env.clone(),
-            &mut lidb.child(),
-            rule_builder,
-            context_region.clone(),
-            &ITemplexPT::RegionRune((*region_pt).clone()),
-          )),
+          RegionP::Group(_group_p) => {
+            panic!("POSTPARSER_LEGACY_TRANSLATE_TEMPLEX_GROUP_NOT_SUPPORTED")
+          }
         };
         translate_borrow_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune, region)
       }
@@ -1356,121 +1371,6 @@ pub fn translate_templex<'s, 'p>(
 
       _ => panic!("POSTPARSER_TRANSLATE_TEMPLEX_NOT_YET_IMPLEMENTED"),
     },
-  }
-}
-
-// Translates a signature-position type (a function parameter, say), splitting it into its outer
-// reference wraps and the value type they enclose (per @PFVSZ). For `&&Ship`, both borrow layers
-// are the wraps and `Ship` is the value type.
-//
-// The split goes into two builders:
-// - the outermost run of ref layers (&/weak) goes into `type_outer_ref_builder`.
-// - the value type, and everything nested inside it, goes into `rule_builder`.
-//
-// Returns (full type rune, value-type root rune), which are equal when there's no wrapping.
-//
-// VCOORD: Superseded by translate_signature_type_st (the ITypeST twin) and now caller-free except its own
-// recursion — function params were the last caller and now route through the ITypeST deriver. Kept
-// during the migration; safe to delete once the ITypeST route is fully trusted.
-pub fn translate_signature_templex<'s, 'p>(
-  scout_arena: &ScoutArena<'s>,
-  keywords: &Keywords<'s>,
-  env: IEnvironmentS<'s>,
-  lidb: &mut LocationInDenizenBuilder,
-  rule_builder: &mut Vec<IRulexSR<'s>>,
-  type_outer_ref_builder: &mut Vec<IRulexSR<'s>>,
-  // Nearest enclosing region marker, see RADTGCA.
-  context_region: IRuneS<'s>,
-  templex: &ITemplexPT<'p>,
-) -> (RuneUsage<'s>, RuneUsage<'s>) {
-  let file = env.file();
-
-  // Each ref layer pushes its wrap into the outer-ref builder, then recurses to peel the next
-  // layer. The value-type root found at the bottom propagates back up unchanged.
-  match templex {
-    ITemplexPT::BorrowRef(borrow_ref) => {
-      let range_s = PostParser::eval_range(file, borrow_ref.range);
-      let (inner_rune, value_type_rune) = translate_signature_templex(
-        scout_arena,
-        keywords,
-        env.clone(),
-        &mut lidb.child(),
-        rule_builder,
-        type_outer_ref_builder,
-        context_region.clone(),
-        borrow_ref.inner,
-      );
-      let region = match borrow_ref.region {
-        RegionP::Unspecified => RegionSR::Unspecified,
-        RegionP::Held => RegionSR::Held,
-        RegionP::Rune(region_pt) => RegionSR::Rune(translate_templex(
-          scout_arena,
-          keywords,
-          env.clone(),
-          &mut lidb.child(),
-          rule_builder,
-          context_region.clone(),
-          &ITemplexPT::RegionRune((*region_pt).clone()),
-        )),
-      };
-      let full = translate_borrow_ref_templex(
-        scout_arena,
-        lidb,
-        type_outer_ref_builder,
-        range_s,
-        inner_rune,
-        region,
-      );
-      (full, value_type_rune)
-    }
-
-    ITemplexPT::WeakRef(weak_ref) => {
-      let range_s = PostParser::eval_range(file, weak_ref.range);
-      let (inner_rune, value_type_rune) = translate_signature_templex(
-        scout_arena,
-        keywords,
-        env.clone(),
-        &mut lidb.child(),
-        rule_builder,
-        type_outer_ref_builder,
-        context_region.clone(),
-        weak_ref.inner,
-      );
-      let full =
-        translate_weak_ref_templex(scout_arena, lidb, type_outer_ref_builder, range_s, inner_rune);
-      (full, value_type_rune)
-    }
-
-    ITemplexPT::OwnRef(own_ref) => {
-      let range_s = PostParser::eval_range(file, own_ref.range);
-      let (inner_rune, value_type_rune) = translate_signature_templex(
-        scout_arena,
-        keywords,
-        env.clone(),
-        &mut lidb.child(),
-        rule_builder,
-        type_outer_ref_builder,
-        context_region.clone(),
-        own_ref.inner,
-      );
-      let full =
-        translate_own_ref_templex(scout_arena, lidb, type_outer_ref_builder, range_s, inner_rune);
-      (full, value_type_rune)
-    }
-
-    // A non-ref node, e.g. `Ship` or `List<T>`: the value-type root, with no wrapping.
-    _ => {
-      let value_type_rune = translate_type_into_rune(
-        scout_arena,
-        keywords,
-        env,
-        lidb,
-        rule_builder,
-        context_region,
-        templex,
-      );
-      (value_type_rune.clone(), value_type_rune)
-    }
   }
 }
 

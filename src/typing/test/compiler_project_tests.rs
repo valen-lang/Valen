@@ -137,7 +137,7 @@ fn lambda_has_correct_name() {
     let lambda_struct = typing_interner.intern_struct_tt(StructTTValT { id: *lambda_citizen_id });
     let lambda_borrow_coord = KindT::BorrowRef(
       typing_interner
-        .alloc(BorrowRefT { inner: KindT::Struct(lambda_struct), region: RegionT::Default }),
+        .alloc(BorrowRefT { inner: KindT::Struct(lambda_struct)}),
     );
     let lambda_func_template_name = typing_interner.intern_lambda_call_function_template_name(
       LambdaCallFunctionTemplateNameValT {

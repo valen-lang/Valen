@@ -10,7 +10,7 @@ use crate::postparsing::names::{
   TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::patterns::AtomSP;
-use crate::postparsing::rules::types::ITypeST;
+use crate::postparsing::rules::types::{EffectS, ITypeST};
 use crate::postparsing::rules::{IRulexSR, ImplBoundS, RuneUsage};
 use crate::scout_arena::ScoutArena;
 use crate::utils::arena_index_map::ArenaIndexMap;
@@ -380,6 +380,9 @@ pub struct ParameterS<'s> {
   /// A destructure's inner names live on a body-head LetSE that loads this name, synthesized only
   /// when the param actually destructures.
   pub name: IVarNameS<'s>,
+  /// The parameter's full type tree (plan §P). The borrow checker reads a param's `in g` group off
+  /// this (via the per-`FunctionT` side table), so it must survive scout rather than being discarded.
+  pub tyype: ITypeST<'s>,
   // Per @PFVSZ, the parameter's type is split into its outer ref wraps and the value they enclose.
   /// Rune for the full type: the outer wraps plus the value type they enclose. Equal to
   /// value_type_rune when type_outer_ref_rules is empty (the param has no outer wraps).
@@ -401,6 +404,7 @@ impl<'s> ParameterS<'s> {
     virtuality: Option<AbstractSP<'s>>,
     pre_checked: bool,
     name: IVarNameS<'s>,
+    tyype: ITypeST<'s>,
     full_type_rune: RuneUsage<'s>,
     value_type_rune: RuneUsage<'s>,
     type_outer_ref_rules: &'s [IRulexSR<'s>],
@@ -432,6 +436,7 @@ impl<'s> ParameterS<'s> {
       virtuality,
       pre_checked,
       name,
+      tyype,
       full_type_rune,
       value_type_rune,
       type_outer_ref_rules,
@@ -552,6 +557,9 @@ pub struct FunctionS<'s> {
   pub tyype: TemplateTemplataType<'s>,
   pub params: &'s [ParameterS<'s>],
   pub maybe_ret_kind_rune: Option<RuneUsage<'s>>,
+  /// Effect clauses (`mut(g)` / `not(mut(g))`). Symbolic (`EffectS` over `GroupS`); the typing pass
+  /// lands these (borrowed from `'s`) in the per-`FunctionT` side table, never on `FunctionHeaderT`.
+  pub effects: &'s [EffectS<'s>],
   // Called header rules because it doesn't include any of the rules from the parameters, those are
   // in ParameterS.
   pub header_rules: &'s [IRulexSR<'s>],
@@ -570,6 +578,7 @@ impl<'s> FunctionS<'s> {
     tyype: TemplateTemplataType<'s>,
     params: &'s [ParameterS<'s>],
     maybe_ret_kind_rune: Option<RuneUsage<'s>>,
+    effects: &'s [EffectS<'s>],
     rules: &'s [IRulexSR<'s>],
     impl_bounds: &'s [ImplBoundS<'s>],
     body: &'s IBodyS<'s>,
@@ -602,6 +611,7 @@ impl<'s> FunctionS<'s> {
       tyype,
       params,
       maybe_ret_kind_rune,
+      effects,
       header_rules: rules,
       impl_bounds,
       body,

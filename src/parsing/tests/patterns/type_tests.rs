@@ -3,8 +3,8 @@ use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::parsing::ast::{
-  BorrowRefPT, INameDeclarationP, ITemplexPT, NameOrRunePT, NameP, OwnRefPT, PatternPP, RegionP,
-  SharednessP, WeakRefPT,
+  BorrowRefPT, GroupP, INameDeclarationP, ITemplexPT, NameOrRunePT, NameP, OwnRefPT, PatternPP,
+  RegionP, SharednessP, WeakRefPT,
 };
 use crate::parsing::tests::utils::{
   assert_templex_name, compile_pattern_expect, expect_1, expect_2,
@@ -110,20 +110,40 @@ fn own_prefix_type() {
 }
 
 #[test]
-fn borrow_with_region() {
+fn borrow_without_region() {
+  // A bare `&MyStruct` has no group: its region parses to `Unspecified`. A borrow that names a
+  // group with a trailing `in g` is covered by `borrow_with_group`.
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ &i'MyStruct");
+  let pattern = compile(&parse_arena, &keywords, "_ &MyStruct");
   match pattern.templex.as_ref().unwrap() {
     ITemplexPT::BorrowRef(BorrowRefPT {
-      region: RegionP::Rune(region),
+      region: RegionP::Unspecified,
       inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }),
       ..
-    }) => {
-      assert_eq!(region.name.as_ref().unwrap().as_str(), "i");
+    }) => {}
+    other => panic!("expected `&MyStruct` → BorrowRef(Unspecified, MyStruct), got {:?}", other),
+  }
+  assert!(pattern.destructure.is_none());
+}
+
+#[test]
+fn borrow_with_group() {
+  // A trailing `in g` on a borrow parses to a `Group` region naming the group g.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &MyStruct in g");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region: RegionP::Group(GroupP::Name(NameP(_, StrI("g")))),
+      inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyStruct")), .. }),
+      ..
+    }) => {}
+    other => {
+      panic!("expected `&MyStruct in g` → BorrowRef(Group(Name g), MyStruct), got {:?}", other)
     }
-    other => panic!("expected `&i'MyStruct` → BorrowRef(Rune, MyStruct), got {:?}", other),
   }
   assert!(pattern.destructure.is_none());
 }

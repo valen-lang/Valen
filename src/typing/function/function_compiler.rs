@@ -339,7 +339,7 @@ where
     let tyype = match captured {
       KindT::BorrowRef(_) | KindT::ShareRef(_) | KindT::WeakRef(_) => captured,
       _ => KindT::BorrowRef(
-        self.typing_interner.alloc(BorrowRefT { inner: captured, region: RegionT::Default }),
+        self.typing_interner.alloc(BorrowRefT { inner: captured}),
       ),
     };
     self.typing_interner.alloc(StructMemberT { name: translated_name, tyype })

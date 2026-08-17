@@ -172,7 +172,7 @@ where
     variable: &'t LocalVariable<'s, 't>,
     expr: ExpressionTE<'s, 't>,
   ) -> LetAndLendTE<'s, 't> {
-    let result = interner.alloc(BorrowRefT { inner: expr.result(), region: RegionT::Default });
+    let result = interner.alloc(BorrowRefT { inner: expr.result()});
     LetAndLendTE { variable, expr, result, _sealed: () }
   }
 
@@ -410,7 +410,7 @@ where
     source_expr: ExpressionTE<'s, 't>,
   ) -> MutateTE<'s, 't> {
     let destination_inner_type = match destination_expr.result() {
-      KindT::BorrowRef(BorrowRefT { inner: destination_inner_type, region: _ }) => {
+      KindT::BorrowRef(BorrowRefT { inner: destination_inner_type }) => {
         *destination_inner_type
       }
       _ => panic!(
@@ -768,7 +768,7 @@ where
     local_variable: &'t LocalVariable<'s, 't>,
   ) -> LocalLookupTE<'s, 't> {
     let result =
-      interner.alloc(BorrowRefT { inner: local_variable.tyype, region: RegionT::Default });
+      interner.alloc(BorrowRefT { inner: local_variable.tyype});
     LocalLookupTE { range, local_variable, result, _sealed: () }
   }
 }
@@ -815,7 +815,7 @@ where
     index_expr: ExpressionTE<'s, 't>,
   ) -> StaticSizedArrayLookupTE<'s, 't> {
     let result =
-      interner.alloc(BorrowRefT { inner: array_type.element_type(), region: RegionT::Default });
+      interner.alloc(BorrowRefT { inner: array_type.element_type()});
     StaticSizedArrayLookupTE { range, array_expr, array_type, index_expr, result, _sealed: () }
   }
 }
@@ -846,7 +846,7 @@ where
     index_expr: ExpressionTE<'s, 't>,
   ) -> RuntimeSizedArrayLookupTE<'s, 't> {
     let result =
-      interner.alloc(BorrowRefT { inner: array_type.element_type(), region: RegionT::Default });
+      interner.alloc(BorrowRefT { inner: array_type.element_type()});
     RuntimeSizedArrayLookupTE { range, array_expr, array_type, index_expr, result, _sealed: () }
   }
 }
@@ -894,7 +894,7 @@ where
     member_name: IVarNameT<'s, 't>,
     member_kind: KindT<'s, 't>,
   ) -> ReferenceMemberLookupTE<'s, 't> {
-    let result = interner.alloc(BorrowRefT { inner: member_kind, region: RegionT::Default });
+    let result = interner.alloc(BorrowRefT { inner: member_kind});
     ReferenceMemberLookupTE { range, struct_expr, member_name, result, _sealed: () }
   }
 }
@@ -922,7 +922,7 @@ where
     member_name: IVarNameT<'s, 't>,
     member_kind: KindT<'s, 't>,
   ) -> AddressMemberLookupTE<'s, 't> {
-    let result = interner.alloc(BorrowRefT { inner: member_kind, region: RegionT::Default });
+    let result = interner.alloc(BorrowRefT { inner: member_kind});
     AddressMemberLookupTE { range, struct_expr, member_name, result, _sealed: () }
   }
 }

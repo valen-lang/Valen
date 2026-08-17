@@ -30,6 +30,7 @@ pub mod convert_helper;
 pub mod edge_compiler;
 pub mod infer_compiler;
 pub mod overload_resolver;
+pub mod borrow_checker;
 pub mod reachability;
 pub mod sequence_compiler;
 pub mod templata_compiler;

@@ -242,19 +242,44 @@ where
     // `&T` → ITemplexPT::BorrowRef. `&&T` parses as nested BorrowRef via the
     // recursive parse_templex_atom_and_call_and_prefixes call — double-borrow.
     if iter.try_skip_symbol('&') {
-      let maybe_region = parse_region(iter)?;
       let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
+      let region = self.parse_trailing_group_clause(iter)?;
       return Ok(Some(ITemplexPT::BorrowRef(BorrowRefPT {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
         inner: &*self.parse_arena.alloc(inner),
-        region: match maybe_region {
-          None => RegionP::Unspecified,
-          Some(x) => RegionP::Rune(&*self.parse_arena.alloc(x)),
-        },
+        region,
       })));
     }
 
     Ok(None)
+  }
+
+  /// Parse an optional trailing group clause `in g` on a borrow, e.g. `&Ship in g`. Near-term only a
+  /// single group name (`GroupP::Name`) is accepted; member/element/union group expressions come
+  /// later. Absent `in`, the borrow has no group (`RegionP::Unspecified`).
+  fn parse_trailing_group_clause(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<RegionP<'p>> {
+    if iter.try_skip_word(self.keywords.r#in).is_none() {
+      return Ok(RegionP::Unspecified);
+    }
+    Ok(RegionP::Group(self.parse_group(iter)?))
+  }
+
+  /// Parse a group expression, e.g. `g` at `&Ship in g` or inside `mut(g)`. Near-term only a single
+  /// group name (`GroupP::Name`) is accepted; member/element/union group expressions come later.
+  pub fn parse_group(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<&'p GroupP<'p>> {
+    match iter.peek_cloned() {
+      Some(INodeLEEnum::Word(WordLE { range, str })) => {
+        iter.advance();
+        Ok(&*self.parse_arena.alloc(GroupP::Name(NameP(range, str))))
+      }
+      _ => Err(ParseError::BadTypeExpression(iter.get_pos())),
+    }
   }
 
   /// Parse ending region suffix (type')

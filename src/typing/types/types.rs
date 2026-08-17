@@ -23,7 +23,6 @@ pub enum RegionT {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BorrowRefT<'s, 't> {
   pub inner: KindT<'s, 't>,
-  pub region: RegionT,
 }
 
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).

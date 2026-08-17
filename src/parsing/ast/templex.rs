@@ -101,17 +101,40 @@ impl<'p> NameOrRunePT<'p> {
   }
 }
 
-/// The region of a borrow reference. `held` and an explicit region annotation are sibling values
+/// The region of a borrow reference. `held` and an explicit group annotation are sibling values
 /// here alongside "no annotation", so a borrow's region lives in one slot.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum RegionP<'p> {
-  /// No region written: `&Ship`.
+  /// No group written: `&Ship`.
   Unspecified,
-  /// A held reference: `held Ship`. A borrow into an anonymous region the callee treats as
+  /// A held reference: `held Ship`. A borrow into an anonymous group the callee treats as
   /// undestroyable, proven at the call site by the caller.
   Held,
-  /// An explicit region annotation: `&'Ship` (anonymous rune) or `&i'Ship` (named).
-  Rune(&'p RegionRunePT<'p>),
+  /// An explicit group annotation: `&Ship in g`.
+  Group(&'p GroupP<'p>),
+}
+
+/// A group expression, as written at a borrow's `in ...` clause or in an effect clause. Parse-stage:
+/// leaves are raw identifiers (a group param `g` and a local `x` are indistinguishable until scout).
+/// Extensible: near-term the parser only produces `Name`; `Member`/`Elements`/`Union` (and later
+/// `Descendant` `g...` / `Ambient` `rc`) arrive with the first program that writes them.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum GroupP<'p> {
+  /// `in g` / `in x`: a bare identifier.
+  Name(NameP<'p>),
+  /// `in x.items`: the named member.
+  Member { base: &'p GroupP<'p>, member: NameP<'p> },
+  /// `in x.items[]`: an element of the member.
+  Elements { base: &'p GroupP<'p> },
+  /// `in (a | b)`: a union of groups.
+  Union { members: &'p [&'p GroupP<'p>] },
+}
+
+/// An effect clause on a function signature: `mut(g)` / `not(mut(g))`. Parse-stage, over a `GroupP`.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum EffectP<'p> {
+  Mut(&'p GroupP<'p>),
+  NotMut(&'p GroupP<'p>),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

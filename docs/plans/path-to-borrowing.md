@@ -1,52 +1,78 @@
 # The Path to the Borrow Checker
 
-The onion refactor is done and the suite is green, so the next quest is the region borrow
-checker. This document maps the path from here to *starting* it: what is already built, what we
-still have to build, and in what order.
+The onion refactor is done and the suite is green, and the region borrow checker is now underway.
+This document maps the path: what is already built, what we still have to build, and in what order.
 
-The first step is **rung 0: "groups become real."** Rung 0 makes groups expressible and puts a
-real region on every borrow. It does not check anything. No program is accepted or rejected that
-was not before. The first actual borrow check is rung 1, which is a separate and later step.
+The current step is **rung 0: "groups become real."** Rung 0 makes groups expressible on the
+declaration side — without putting them on the value type — so the borrow checker has something to
+read. It does not check anything. No program is accepted or rejected that was not before. The first
+actual borrow check is rung 1, which is a separate and later step.
 
 Keep that split in mind throughout: rung 0 is representation and plumbing; checking comes after.
 
-## The one gate
+## Where rung 0 stands
 
-Starting rung 0 is an architect decision, and it is the only thing that blocks the work.
-
-Everything else on this page is either already done, ordinary build work, or deferrable to a
-later rung. The design behind rung 0 is settled; once the decision is made, it is build work, not
-more design.
+Rung 0's data structures, its parser/postparser syntax, and a no-op checker seam are landed and
+green (see "What is already done"). What remains is the typing-side semantics — constructing the
+ceremonial `ITemplataT::Group(Default)` and minting `GroupB` from the scout `FunctionS`. The design
+is settled; this is build work, not more design.
 
 ## What rung 0 is, and what it is not
 
 Rung 0 delivers exactly three things:
 
-- **Syntax**: parse and scout group declarations (`<g'>`) and the `in g` clause.
-- **A region value type**: add an `ITemplataT::Region` variant so a group can be a rune value.
-- **A real region on the borrow**: replace today's placeholder `RegionT::Default` with an actual
-  group.
+- **Syntax**: parse and scout group declarations (`<g'>`, `<g': T>`), the `in g` clause, and the
+  minimal `mut(g)` effect clause.
+- **Group representation on the declaration side, never on the value type**: `GroupP`/`GroupS`
+  enums (parse/scout) carry group *syntax*; the group/effect metadata lives on the scout-side
+  `FunctionS` (each `ParameterS.tyype: ITypeST`, plus `FunctionS.effects`), read directly at the
+  checker seam and never copied onto the durable header. The value type (`KindT`) carries no
+  group — `BorrowRefT` is emptied to `{ inner }`.
+- **A ceremonial group-param value**: group generic params stay uniform with type/int params, with
+  a constant `ITemplataT::Group(Default)` value that never enters a `KindT`. Groups never flow
+  through the solver.
 
-Rung 0 adds **no new errors** (well-formedness only). The first real check, and effect clauses
-like `mut(g)`, arrive at rung 1. Rung 1 is a second solver domain and is still partly undesigned,
-so this document treats it as out of scope and something rung 0 must not block.
+Rung 0 adds **no new errors** (well-formedness only). The first real check, and *checking* of
+effect clauses like `mut(g)`, arrive at rung 1 (a second solver domain, still partly undesigned) —
+out of scope here, and something rung 0 must not block. Rung 0 builds the effect clause's
+*representation* (`FunctionS.effects`, an `EffectS`); rung 1 consumes it.
 
 ## What is already done, so we do not rebuild it
 
 The onion work left more of the foundation in place than the old handoff suggests. Verified
 against the current tree:
 
-- **`substitute_templatas_in_kind` handles all four ref wraps**, and it already preserves a
-  borrow's region across substitution (`typing/templata_compiler.rs:540-552`). The seam that
-  carries a region through generics is shaped correctly; it just carries `Default` today. The only
-  remaining `unimplemented!()` ref arms are in the dead `is_descendant_kind` / `is_ancestor_kind`,
-  whose callers are commented out.
-- **Group *parameters* already have a representation.** `create_placeholder` mints an opaque
-  `ITemplataT::Placeholder` tagged `RegionTemplataType` for a region generic param
-  (`typing/templata_compiler.rs:1516`). The model "a region is a placeholder referring to a generic
-  parameter" is real and works.
-- **The `<g'>` group-param declaration already parses** (it is the region-typed generic param,
-  `parsing/parser.rs:parse_generic_parameter`).
+- **The group data structures, the parser/postparser group syntax, and the no-op checker seam are
+  landed, and the crate compiles green** (`cargo test --manifest-path Cargo.toml --lib`: measure
+  before quoting; last 700 passed / 0 failed / 70 ignored). `BorrowRefT` is emptied to
+  `{ inner }` — the `region` field is gone, and the `region: RegionT` fields on the name-structs go
+  with it (`ExportNameT` done; `RawArrayNameT`/`ExternNameT` still carry theirs). The scout produces
+  the symbolic forms: a borrow's `&T in g` lowers to `RegionS::Group(GroupS::Rune | Local)` on the
+  `ITypeST` (resolved via `env.all_declared_runes()`), `<g': T>` parses into
+  `GenericParameterP.maybe_group_type`, and `mut(g)` / `not(mut(g))` scout onto `FunctionS.effects`
+  as `EffectS`. `ParameterS.tyype: ITypeST` is populated — built first, its `@PFVSZ` rune split
+  derived from it. The types `GroupP`/`GroupS`/`GroupB`, `EffectP`/`EffectS`/`EffectB`, and
+  `ITemplataT::Group(GroupTemplataT)` exist; `GroupB`/`EffectB` live in `src/typing/borrow_checker/`.
+  **The rule-side region erases the group to `RegionSR::Unspecified`** (groups never reach the
+  solver); the group survives only on the `ITypeST`.
+  - **The checker seam is a wired no-op**: `check_function` in `src/typing/borrow_checker/` returns
+    `Ok(())`, called at the tail of each user-body typecheck (`function_compiler_core.rs:358`, right
+    after `coutputs.add_function`), reading the scout `FunctionS` straight off
+    `full_env_snapshot.function`. This proves the plumbing (see step 5); it checks nothing.
+  - **No typing-side semantic wiring exists yet — that is the next work.** `ITemplataT::Group(Default)`
+    is never *constructed* (a group param still mints a region-typed `Placeholder` via
+    `create_placeholder`); `GroupB` is never *minted*; the checker reads no groups yet. And only the
+    single-named-group leaf is parsed — `Member`/`Elements`/`Union`, multi-group `mut` folds, `g...`
+    and `rc` are variants the enums carry but the parser does not yet produce.
+- **`substitute_templatas_in_kind` handles all four ref wraps** correctly
+  (`typing/templata_compiler.rs:540-552`); once `BorrowRefT` is emptied there is no region for it to
+  carry through generics, so that concern disappears rather than needing wiring. The only remaining
+  `unimplemented!()` ref arms are in the dead `is_descendant_kind` / `is_ancestor_kind`, whose
+  callers are commented out.
+- **Group *parameters* already have a mint path** to rework: `create_placeholder`
+  (`typing/templata_compiler.rs`) mints an opaque `ITemplataT::Placeholder` tagged
+  `RegionTemplataType` for a region generic param, which rung 0 replaces with the ceremonial
+  `ITemplataT::Group(Default)` (see "The group representation").
 - **Argument types now reach the call-site solve.** The reworked
   `assemble_initial_sends_from_args` seeds each argument into the solve as an `InitialKnown` plus an
   `Equals` (`typing/function/function_compiler_solving_layer.rs:927`, consumed at `:453-461`). The
@@ -60,52 +86,96 @@ against the current tree:
 
 ## The build work
 
-### 1. A real region on the borrow
+**Status: the representation's *types*, the parser/postparser *syntax*, and the no-op checker seam
+are landed (see "What is already done"); the *typing-side wiring* below is not.** Step 1's data
+shapes exist, the seam is a wired no-op, and the crate is green, but the semantics — minting the
+ceremonial `ITemplataT::Group(Default)`, and minting `GroupB` from the scout `FunctionS` — are the
+remaining work, along with steps 3-4.
 
-This is the core of rung 0, and it is bigger than it first looks.
+### 1. The group representation — never on the value type
 
-Today `RegionT` is a flat two-variant `Copy` enum, `{ Iso, Default }`
-(`typing/types/types.rs:16`). Only `BorrowRefT` carries a region; the other three wraps have no
-region field. Every borrow in the tree carries `RegionT::Default`. And the rune *value* domain has
-no region at all: `ITemplataT` has no `Region` variant, so a region *parameter* is faked as an
-opaque placeholder minted through a fallback named, tellingly,
-`create_non_kind_non_region_placeholder_inner`.
+This is the core of rung 0. The load-bearing decision: **a group never lives on the value type
+(`KindT`), never flows through the solver.** In this codebase structural `Eq`/`Hash`, interner
+identity, and monomorphization identity (`IdT`) are one relation (the solver's conflict check at
+`solver/simple_solver_state.rs:75` *is* the derived `PartialEq`), so a group on `BorrowRefT` would
+split `Vec<int> in a` from `Vec<int> in b` into two identical monomorphizations, trip consistency
+asserts, and hit an override panic (`edge_compiler.rs:772`). Groups are inert cargo erased before
+codegen. rustc validates this: HIR typeck erases every region to one constant and recomputes regions
+in a separate pass, while type params stay symbolic.
 
-So "put a real value in the region slot" is four pieces:
+So the representation splits four ways:
 
-- **Add `ITemplataT::Region`**, the missing value variant. The downstream instantiating pass
-  already has the equivalent (`instantiating/ast/templata.rs:70`), which is a precedent to follow.
-- **Make `RegionT` a real, nestable algebra.** A concrete group is recursive (a join like `a + b`,
-  a container's child group, an iso boundary). A recursive value cannot be an inline `Copy` enum,
-  because `KindT` is a deliberately 16-byte `Copy`/`Eq`/`Hash` type (`@WVSBIZ`). So `RegionT` has to
-  become arena-interned with a `*ValT` companion, the same shape as `StructTT` / `StructTTValT`.
-- **Add a real region-placeholder mint path**, to replace the `non-kind-non-region` fallback that
-  stands in for it today.
-- **Design the concrete-group-expression representation.** It does not exist yet. Only group
-  *parameters* do.
+- **Empty `BorrowRefT` to `{ inner }`** (`typing/types/types.rs`), dropping the always-`Default`
+  `region` field — "no group in a `KindT`" true by construction. Behavior-neutral (the field is
+  always `Default`, nothing branches on it). **Do this as its own isolated commit** with a
+  set-identical failing-set diff (it touches every share-borrow construction site). The ~85
+  `RegionT::Default` literals, 36 `context_region: RegionT` params, and the `region` fields on ~8
+  expression nodes + 3 identity name-structs (`ExportNameT`, `RawArrayNameT`, `ExternNameT`, inside
+  `IdT`) become **removal** targets — the deep sweep can follow the empty-struct commit.
+- **Group params stay uniform, valued by a ceremonial constant `ITemplataT::Group(GroupTemplataT)`
+  holding `Default`.** A real conclusion (satisfies "every param has a value") that never enters a
+  `KindT`. Chosen over skipping group params in the typer, which would bifurcate the generic-param
+  list and cause silent arity/index bugs; rustc keeps lifetime params uniform for the same reason.
+  Adding the variant is compiler-flagged (fill each): `ITemplataType::GroupTemplataType`
+  (`templata/templata.rs:91`), the env-lookup arm (`env/environment.rs:476`), a no-op in
+  `get_placeholders_in_templata` (`compiler.rs:186`, reached via `sanity_check_conclusion`), a
+  return-self in `substitute_templatas_in_templata`, `visit_templata` (`test/traverse.rs`),
+  humanizer arms, and — if groups reach monomorphization — a companion `ITemplataI::Group`. Bind it
+  in `create_placeholder` (`templata_compiler.rs:1857`) and seed the param's conclusion as an
+  `InitialKnown`. `GroupTemplataT` is a typing-pass templata (so `T`, not `B`); it is never read, so
+  it needs no payload (a unit suffices). The conflict check is trivially safe
+  (`Group(Default) != Group(Default)` is always false).
+- **Group *syntax* lives in three enums, `P`/`S`/`B` by pass** — kept as extensible enums even
+  though the first programs exercise only the name/rune leaf:
+  - `GroupP` (parse AST): `Name(StrId)`, `Member`, `Elements`, `Union` — leaves are identifiers.
+  - `GroupS` (postparse/scout, symbolic; subsumes today's `RegionS::Rune`): `Rune(&RuneUsage)`,
+    `Local(CodeVarName)`, `Member`, `Elements`, `Union` — never `IdT`. This is the correct home for
+    group syntax (the `ITypeST` borrow node's `region` slot becomes/points at a `GroupS`); putting
+    the `IdT`-based `GroupB` on the `ITypeST` would drag typed identities into a pre-typing tree.
+  - `GroupB` (borrow-checker, `B` = borrow-checker-only, minted from `GroupS` + conclusions):
+    `Empty`, `Rune(IdT)`, `Local(IdT)`, `Member`, `Elements`, `Union` — the checker's reconstruction,
+    canonical on `Union` construction (flatten, drop `Empty`, dedup, sort, collapse singletons).
+  - **Near-term a group is just a name.** The parser produces only `Name`/`Rune` (the `attack`
+    example — `&Entity in r`, `<r': Entity>`, `mut(r)`); building/parsing `Member`/`Elements`/`Union`
+    is deferred to the first program that writes a value-path (`in x.items[]`) or union (`in (a|b)`).
+- **Group/effect metadata is read straight off the scout `FunctionS`**, borrowed zero-copy from `'s`
+  (borrow checking runs at the tail of each function's typecheck, while `'s` is alive), never copied.
+  No dedicated side-table struct is needed: `full_env_snapshot.function` is `&'s FunctionS`, in scope
+  at the seam, and its `.params` (each `.tyype: ITypeST`) and `.effects` are the group/effect source.
+  `FunctionT` becomes `FunctionT<'t>`, copying into `'t` only what survives to instantiation —
+  **`ITypeST`/group/effect data must never enter `'t`** or the durable `FunctionHeaderT`. rustc
+  precedent: `TypeckResults` is a per-body table consumed by later passes and dropped. Invariant to
+  type-enforce: make instantiation take only `FunctionT<'t>`, so it cannot be handed anything still
+  borrowing `'s`. The definition-side `ParameterS.tyype: ITypeST` (plan §P, previously discarded at
+  `postparsing/function_scout.rs:433`) is now populated and reachable here.
 
-The representation carries two ruled constraints from day one:
+Two ruled constraints the group representation carries from day one:
 
-- **It must carry the borrow-of-claim's member-level `rc.T` mention.** A claim borrow that carries
-  no multi mention escapes Send, scoping, and erasure coverage, which is a use-after-free plus a
-  non-atomic refcount. Our `BorrowRef(ShareRef(...))` carries only its region slot today, so the new
-  representation is where this mention lives.
-- **It must not preclude independent group runes** (the "Milano case"). A group can appear only in
-  a where-clause, deduced from nothing, so the representation must allow a free-standing group rune.
+- **The borrow-of-claim's member-level `rc.T` mention** must survive. A claim borrow carrying no
+  multi mention escapes Send, scoping, and erasure coverage — a use-after-free plus a non-atomic
+  refcount. This mention lives on the declaration-side `GroupS` (the scout `FunctionS`'s `ITypeST`),
+  not on the (now group-free) `BorrowRefT`.
+- **Independent group runes** (the "Milano case") must stay expressible: a group can appear only in
+  a where-clause, deduced from nothing, so `GroupS` must allow a free-standing group rune.
 
-One property makes all of this tractable: **a group is an identity, not an extent.** Groups name
-pointee sets, not lifetimes. There is no outlives relation, no variance, and no subtyping over
-groups, so a group fits the existing templata/rune vocabulary. Through the solve, a region is inert
-cargo: nothing mid-solve needs to know *which* group a region is. The solver accumulates the group
-expressions bound to each region rune, and a later order-independent fold applies the widening
-rule.
+Why this is tractable: **a group is an identity, not an extent** (the full ruling is under "Design
+rulings"). With no outlives relation, variance, or subtyping, the group param is a uniform rune with
+a constant value, and the borrow checker does the widening fold structurally rather than the solver.
 
-Threading surface, measured against the current tree:
+**Guardrails for the executing tree:**
 
-- ~85 `RegionT::Default` literals in non-test source.
-- 36 signatures thread `context_region: RegionT` by value.
-- 8 expression nodes carry a `region` field, plus 3 identity name-structs
-  (`ExportNameT`, `RawArrayNameT`, `ExternNameT`) embed one.
+- Do not add a group/region field to `BorrowRefT` or any `KindT` payload — the value type's borrow
+  is `{ inner }`, no permanent always-`Default` staging field.
+- Do not put `ITypeST`/effect/group metadata onto the durable `FunctionHeaderT` or into `'t`; it
+  lives on the scout `FunctionS`, borrowed from `'s`, dropped after the check.
+- Do not skip group params in the typer (they stay uniform with type/int params); do not let an
+  `ITemplataT::Group` value reach a `KindT` or a kind-position rune — keep group runes
+  `GroupTemplataType`-typed and in the region slot.
+- Do not resolve effect-clause or `ITypeST` group runes to `Default`; only `KindT` lowering
+  collapses, and with `BorrowRefT` emptied there is no slot to collapse into anyway. The declaration
+  side (`GroupS`) stays symbolic.
+- Do not make the borrow checker read a group off a `KindT` — it reads `GroupS` off the scout
+  `FunctionS`'s `ITypeST`.
 
 ### 2. Syntax
 
@@ -114,11 +184,12 @@ The declaration side is nearly free; the use side is the work.
 - **`<g'>` (untyped group param) already parses.** No parser change.
 - **`<g': T>` (typed group param) is a small parser add**, plus a postparse rule for the
   constraint.
-- **The bare `in g` clause is the large item, and it has no grammar today.** Today every region
+- **The bare `in g` clause is the large item, and it has no grammar today.** Today every group
   *use* needs a tick prefix (`&r'Ship`); the target spells the tick only at the declaration and
-  every use bare (`&Ship in g`). So `in g` is not just "add a keyword"; it moves where the region
-  lives at a use site. It is also what forces resolving a live panic: an anonymous region currently
-  panics in postparse (`postparsing/rules/templex_scout.rs:region_s_into_region_sr`,
+  every use bare (`&Ship in g`). So `in g` is not just "add a keyword"; it changes where the group
+  *name* is written at a borrow, which the scout lowers into that borrow node's `GroupS::Rune`. It is
+  also what forces resolving a live panic: an anonymous region currently panics in postparse
+  (`postparsing/rules/templex_scout.rs:region_s_into_region_sr`,
   `POSTPARSER_..._REGION_RUNE_NONE_NOT_YET_IMPLEMENTED`).
 
 Two syntax landmines to plan around:
@@ -129,8 +200,11 @@ Two syntax landmines to plan around:
   comment (`lexing/lexing_iterator.rs:consume_ellipses_comments`), so `g...` needs lexer
   disambiguation, not just a parser rule.
 
-Effect clauses (`mut(...)`, `not(mut(...))`), value-paths (`world.ships[]`), and `...` are all
-rung 1 and later. Rung 0 needs only the group declaration plus a way to name a group at a borrow.
+The **minimal `mut(g)` effect clause** — one positive `mut` over a named group, parsed and scouted
+onto `FunctionS.effects` as an `EffectS` (`Mut(GroupS)`) — is rung-0 *representation* (the `attack`
+example needs it). Effect *checking*, `not(mut(...))`, multi-group folds, value-paths
+(`world.ships[]`), and `...` are all rung 1 and later. So rung 0 needs: the group declaration, a way
+to name a group at a borrow, and the bare `mut(g)` clause landed on `FunctionS.effects`.
 
 ### 3. Where and how the checker runs
 
@@ -139,15 +213,15 @@ The big call-site rewrite (`plan-phased-calls.md`) is **not** a prerequisite, an
 over the finished body, at the end of compiling that function's `FunctionT`, inside the typing pass.
 There is no separate borrowck pass.
 
-The plug-in point is concrete. A function body is compiled into a `FunctionDefinitionT`
-(`function_compiler_core.rs:304`), then registered with `coutputs.add_function` (`:309`). The walk
-runs here, on the finished `function2`, whose body is already a complete `ExpressionTE` tree. The
-other body-bearing function kinds register at the sibling `add_function` sites (`:196`, `:396`); each
-is a plug-in point.
+The plug-in point is concrete and wired. A user body is compiled into a `FunctionDefinitionT`,
+registered with `coutputs.add_function`, and the walk is invoked right after
+(`function_compiler_core.rs:358`), on the finished `function2` whose body is a complete
+`ExpressionTE` tree. This is the single real seam: the sibling `add_function` sites are extern
+forwarders (a synthesized `Return(ExternFunctionCall)`, no user body) and a header-only site, so they
+carry nothing to check and are skipped.
 
-Whether the walk runs before or after `coutputs.add_function` is left open (see "What still needs a
-ruling"). The finished function is handed to the walk directly, so it does not depend on this
-function being in `coutputs`.
+The finished function is handed to the walk directly, so it does not depend on being in `coutputs`;
+running after `add_function` is simply where it landed.
 
 Because the walk runs on the fully-resolved body, two hazards the old per-call idea had to avoid
 simply do not arise:
@@ -167,15 +241,20 @@ finished function.
 The checker walks the finished function's `ExpressionTE` body once, carrying per-frame state for
 move-tracking and invalidation. Its contract is deliberately narrow:
 
-- **Inputs**: the finished function, plus a read-only `&CompilerOutputs` and a read-only `&Compiler`.
-  Read-only borrows are enough, so nothing has to be snapshotted into a separate input struct. The
-  checker reads struct member layout (for reach and sibling-disjointness) straight from the read-only
-  `coutputs`.
-- **Output**: a list of errors. The checker mutates nothing (no `&mut CompilerOutputs`, no interner,
-  no arena) and triggers no resolution or instantiation. The architect routes the errors it returns.
-- **Shape**: `check_function(function: &FunctionDefinitionT, coutputs: &CompilerOutputs, compiler:
-  &Compiler) -> Vec<BorrowError>`, stateless across functions. It gains internal per-body state (the
-  dataflow sets) only at the rung whose first test is use-after-churn.
+- **Inputs**: the finished function, **the scout `FunctionS` borrowed from `'s`** (its
+  `ParameterS.tyype: ITypeST` carries each borrow's `GroupS`, and `FunctionS.effects` the declared
+  effect clause — this is where the checker reads a borrow's group, since neither lives on the
+  `KindT`), plus a read-only `&CompilerOutputs` and a read-only `&Compiler`. Everything is *borrowed*,
+  not snapshotted: `FunctionS` is a zero-copy view into `'s`, alive because the checker runs at the
+  tail of this function's typecheck. The checker reads struct member layout (for reach and
+  sibling-disjointness) straight from the read-only `coutputs`.
+- **Output**: errors. The checker mutates nothing (no `&mut CompilerOutputs`, no interner, no arena)
+  and triggers no resolution or instantiation. The architect routes the errors it returns.
+- **Shape**: the landed stub is `check_function(function: &FunctionDefinitionT, function_s:
+  &FunctionS, coutputs: &CompilerOutputs, compiler: &Compiler) -> Result<(), ICompileErrorT>`,
+  returning `Ok(())`; the `Result`/single-error form surfaces via `?` at the seam. Multi-error
+  accumulation (`-> Vec<BorrowError>`) is a future refactor. Stateless across functions; it gains
+  internal per-body state (the dataflow sets) only at the rung whose first test is use-after-churn.
 
 The walk does its work in two node-arms that compose in a fixed order:
 
@@ -191,57 +270,57 @@ idiom the typing pass itself uses: match each variant and recurse into children,
 checker's per-frame state, with `IfTE` and `WhileTE` driving the joins and loop re-walks. The
 compiler has no walker framework, and `traverse.rs` is test-only, not a basis for this.
 
-## Groundwork worth doing early
+## Groundwork, gated on a red test
 
-One item is independent of the region decision and cheaper to do before the checker exists.
+**No typing-pass change lands without a failing test motivating it** (architect rule). The core is
+off-limits to speculative edits, so the "cheaper to do it before the checker exists" argument does
+not clear the bar.
 
-- **Add source ranges to the call and control-flow nodes.** Only 6 of 50 `ExpressionTE` variants
-  carry a `RangeS`, and none of the call or control nodes do (`FunctionCallTE`, `IfTE`, `WhileTE`,
-  `BreakTE`, and the rest). A post-hoc checker cannot point at a call site or an `if` without them.
-  Adding ranges now is far cheaper than retrofitting them once a checker depends on the tree shape.
+- **Source ranges on the call and control-flow nodes are deferred.** Only 6 of 50 `ExpressionTE`
+  variants carry a `RangeS`, and none of the call or control nodes do (`FunctionCallTE`, `IfTE`,
+  `WhileTE`, `BreakTE`, and the rest), so a post-hoc checker cannot yet point at a call site or an
+  `if`. But nothing is added until a borrow-check diagnostic actually needs a range and a red test
+  proves the gap. When that test exists, fold in the vestigial `BreakTE.region: RegionT` removal
+  while touching those nodes. This is a core edit — it needs "fire core edits".
 
-The per-call group bindings need no separate plumbing. Once rung 0 puts a real region on every
-`BorrowRefT`, each argument's group rides on that argument expression's own `BorrowRef` region, and a
-return-position group rides on the call's result. Both are already in the finished tree, so the walk
-reads a call's groups straight off its argument and result nodes, matched against the callee header's
-region parameters. It does not depend on the solver's discarded `inferences` map. The only groups
-this misses are ones that appear on no argument and no result (an independent where-clause group, or
-an effect-only `mut(g)`), and those are rung 1 and later.
+The per-call group bindings need no separate solver plumbing. Because `BorrowRefT` carries no
+group, the checker **derives** each borrow's group structurally — tracing the place back to its
+parameter/local anchor and reading that anchor's group off the scout `FunctionS`'s `ITypeST`
+(`a in ag`, `b in bg`), matched against the callee header's group parameters. Only the anchors need declaration
+data; most body borrows are derived. It does not depend on the solver's discarded `inferences` map.
+The only groups this misses are ones that appear on no argument and no result (an independent
+where-clause group, or an effect-only `mut(g)`), and those are rung 1 and later.
 
 ## The order
 
-1. **Decide** (architect): go or no-go on rung 0. Nothing past rung 0 starts until this.
-2. **Groundwork** (region-independent, do anytime): add source ranges to the call and control
-   nodes.
-3. **Rung 0 core**: the region representation (`ITemplataT::Region`, interned recursive `RegionT`,
-   a real region-placeholder mint, the concrete-group-expression rep with the `rc.T` mention and
-   independent-group-rune constraints). Thread the real region through the ~85 `Default` sites.
-4. **Rung 0 syntax**: `<g': T>`, then the `in g` clause (which resolves the anonymous-region panic).
-5. **The seam**: stand up the whole-function walk and invoke it at the end of compiling each
-   `FunctionT` (`function_compiler_core.rs:304-309` and the sibling `add_function` sites), passing the
-   finished function plus a read-only `&CompilerOutputs` and `&Compiler`, returning errors. Rung 0 is
-   well-formedness only, so the walk does nothing yet; this step just proves the plumbing: it exists,
-   runs once per function, and returns an empty error list.
+1. **Decide** (architect): go or no-go on rung 0. Nothing past rung 0 starts until this. *(Done — rung
+   0 is underway.)*
+2. **The seam** *(done, a no-op)*: `check_function` is invoked at the tail of each user-body typecheck
+   (`function_compiler_core.rs:358`, after `coutputs.add_function`), reading the scout `FunctionS` off
+   `full_env_snapshot.function` and returning `Ok(())`. The plumbing exists; it checks nothing.
+3. **Rung 0 data + syntax** *(done)*: `BorrowRefT` emptied to `{ inner }`; the `GroupP`/`GroupS`/`GroupB`
+   and `EffectP`/`EffectS`/`EffectB` enums; `ITemplataT::Group(GroupTemplataT)` (variant + arms);
+   `ParameterS.tyype: ITypeST` populated; `&T in g`, `<g': T>`, and `mut(g)`/`not(mut(g))` parse and
+   scout. Only the single-named-group leaf is produced so far.
+4. **Rung 0 semantics** *(remaining)*: construct the ceremonial `ITemplataT::Group(Default)` in
+   `create_placeholder` (`templata_compiler.rs:1857`) and seed it as an `InitialKnown` (replacing the
+   region-typed `Placeholder` a group param still mints); then have `check_function` mint `GroupB` from
+   the scout `FunctionS` and begin the whole-function walk. The `Member`/`Elements`/`Union` group
+   parsing, `g...`, and `rc` follow the first program that writes them.
 
-Rung 1 follows: the first real check plus effect clauses (`mut(g)`), which is a second solver
-domain (`ITemplataT::Effect`). It is deferrable and does not gate the start.
+Rung 1 follows: the first real check plus effect *checking* (rung 0 already builds the `mut(g)`
+representation), which is a second solver domain (`ITemplataT::Effect`). It is deferrable and does
+not gate the start.
 
 ## What still needs a ruling
 
-Two open questions remain. The first is shape-determining for the rung 0 representation, so resolve
-it as that representation is designed:
+One open question is shape-determining for the rung 0 representation, so resolve it as that
+representation is designed:
 
 - **What does `&x` form at a claim-typed place?** The candidates are a payload borrow, a
   compositional borrow-of-claim, or a one-hop argument coercion. This is open upstream, they have
   asked for our input, and our onion lowering already picks a horn implicitly. It is entangled with
   the `rc.T` mention above.
-
-The second is a small ordering choice, not a design fork:
-
-- **Does the whole-function walk run before or after `coutputs.add_function`**
-  (`function_compiler_core.rs:309`)? The finished function is handed to the checker directly, so its
-  own data never depends on being registered; the only effect is whether the checker sees its own
-  function in the read-only `coutputs` while checking, which it should not need. Undecided.
 
 The other open design items (where mutability lives, the effect vocabulary, the per-group
 permission map) all belong to rung 1's effect domain. They can wait.
@@ -252,8 +331,8 @@ Rung 0 is the foundation. Each rung past it catches a distinct class of error.
 
 | Rung | Delivers | New errors | Emits errors? |
 |---|---|---|---|
-| 0 | `<g'>`/`in g` parse+scout; `ITemplataT::Region`; real region on `BorrowRefT` | none (well-formedness only) | no |
-| 1 | effect clauses (`mut(g)`); the first check | disjointness violation (declared disjoint, passed aliasing); permission escalation | yes, the first real check |
+| 0 | `<g'>`/`in g`/`mut(g)` parse+scout; empty `BorrowRefT`; ceremonial `ITemplataT::Group`; group/effect metadata read off the scout `FunctionS` | none (well-formedness only) | no |
+| 1 | effect *checking* (`mut(g)` representation lands at rung 0); the first check | disjointness violation (declared disjoint, passed aliasing); permission escalation | yes, the first real check |
 | 2 | churn tracking | use-after-churn; a borrow sibling to a churning receiver | yes, plus monotone state |
 | 3 | `Vec<T>` (rides the generics/bounds track) | the same classes, on realistic code | yes |
 
@@ -267,24 +346,30 @@ These are ruled upstream (`valen-design-1.md` is the authority) and shape both t
 and the checker. The target program is a `Vec<Ship>` with two borrows into one group, both passed
 to one `attack`, surviving mutation, then dying when the container is cleared.
 
-**Regions are inert cargo through type-solving.** Nothing mid-solve needs to know which group a
-region is. design-1:1124: "Groups themselves don't conform to traits," so no trait resolution ever
-depends on a group's value. design-1:1118: "T alone in a signature is group-agnostic. Only `&Foo in
-g` carries group information." So the solver never puts regions into conflict detection. It
-accumulates the group expressions bound to each region rune, and a later order-independent fold
-applies the widening rule (merge iff no binding with a narrower claim survives). This matches rustc,
-whose unification analogue never unifies regions and is infallible.
+**Groups do not flow through the solver at all.** design-1:1124: "Groups themselves don't conform
+to traits," so no trait resolution depends on a group's value. design-1:1118: "T alone in a
+signature is group-agnostic. Only `&Foo in g` carries group information." The only group-related
+thing the solver ever sees is the ceremonial `ITemplataT::Group(Default)` constant (a group param's
+value), which never enters a `KindT` and is never read — so the solver never puts a group into
+conflict detection. The widening fold that used to be imagined in the solver is the **borrow
+checker's** job: it reads the declaration-side `GroupS` off the scout `FunctionS`'s `ITypeST`,
+reconstructs each value's `GroupB`, and applies the widening rule (merge iff no binding with a narrower claim
+survives) as an order-independent fold. This matches rustc, whose unification analogue never unifies
+regions and is infallible. A group also **never affects overload selection** (ruled): the candidate
+filter keys on name, arity, namespace, wrap-chain, and value-type template — never on a group.
 
-- Store provenance, not bare group expressions. Collect `(group expression, contributing site)`
-  pairs so the fold can blame the right argument. rustc pays for skipping this with blame metadata
-  on every constraint and a 1,000-line module for naming `'1`.
-- Caveat: if you hit a point mid-solve that needs to know which group, that is a finding to report
-  upstream. It would contradict design-1:1118 and :1124.
+- Store provenance, not bare group expressions. The checker collects `(group expression,
+  contributing site)` pairs so the fold can blame the right argument. rustc pays for skipping this
+  with blame metadata on every constraint and a 1,000-line module for naming `'1`.
+- Caveat: if you hit a point mid-*solve* that needs to know which group, that is a finding to report
+  upstream — the solve is group-agnostic by design (design-1:1118, :1124), and groups live only on
+  the declaration side.
 
 **Effects are their own solver domain, not signature syntax.** design-1:1263: "the compiler unifies
 declared effects with derived effects; `!mut(path)` acts as a subtractive constraint on effect
 variables." A clause attached to a signature has no variables to solve, widen, and re-check, so
-effects are a second solver domain: `ITemplataT::Effect` beside `ITemplataT::Region`. One
+effects are a second solver domain (rung 1): `ITemplataT::Effect`, distinct from the ceremonial
+group-param constant `ITemplataT::Group`. One
 conformance pin to encode early (design-1:1235, Pin C): a negative bound is satisfied against the
 effect variable's fully-solved value, and a solver widening `E` from a later position must re-check
 every negative bound that touches `E`.
@@ -330,9 +415,11 @@ was considered and rejected: a second representation with permanent sync cost, a
 affords MIR because MIR has four other consumers. The rule instead constrains what the checker may
 do: no `&mut CompilerOutputs`, no interner, no arena, no calls back into resolution; errors are
 returned and the architect routes them. The entry point is `check_function(function:
-&FunctionDefinitionT, coutputs: &CompilerOutputs, compiler: &Compiler) -> Vec<BorrowError>`. A
-read-only `coutputs` and `compiler` are enough, so nothing is snapshotted. It is stateless across
-functions and gains internal per-body state only at the rung whose first test is use-after-churn.
+&FunctionDefinitionT, function_s: &FunctionS, coutputs: &CompilerOutputs, compiler: &Compiler)`
+(landed returning `Result<(), ICompileErrorT>`; `Vec<BorrowError>` is the future multi-error form).
+All inputs are borrowed (`FunctionS` zero-copy from `'s`), so nothing is snapshotted. It is stateless
+across functions and gains internal per-body state only at the rung whose first test is
+use-after-churn.
 
 **The checker is per-body.** Resolution is symbolic at the typing pass (design-1:125); poisoning is
 computed per frame. Every use goes through a typed binding in some frame, each frame knows its own
@@ -348,20 +435,23 @@ where-clause relations.
 
 ### Region and effect specifics
 
-- `ITemplataT`'s region payload is the group algebra, and it names a local's group as readily as a
-  parameter's. The group-parameter path already exists (a `PlaceholderTemplataT`); a concrete group
-  expression needs the new variant.
-- A region is never `mut` or `imm`. A region says which places, never what you may do to them. Put
-  permission on the region and `read_hp(e &Entity in g)` and `heal(e &Entity in g) mut(g)` stop
+- `ITemplataT::Group` holds only the ceremonial constant `Default`; it is a group param's *value*,
+  not the algebra. The group algebra proper is `GroupB`, minted by the borrow checker; the
+  declaration-side `GroupS` names a local's group (`Local`) as readily as a parameter's (`Rune`). The
+  group-param mint path already exists (a `PlaceholderTemplataT`), reworked to return the constant.
+- A group is never `mut` or `imm`. A group says which places, never what you may do to them. Put
+  permission on the group and `read_hp(e &Entity in g)` and `heal(e &Entity in g) mut(g)` stop
   having the same parameter type, and the next question is variance, which Valen refused. Condemned
   as fossils by this: `IRegionMutabilityS::{ReadOnlyRegion, ReadWriteRegion}`, `imm` as a region
   modifier, and `RegionT::Iso` (isolation is a property of how a group was minted, not a variant of
-  the algebra).
-- Borrow creation computes, it does not check. The group lives in the type, on the `BorrowRef`'s
-  region slot, which is where all borrow construction sites stamp `Default` today. The checking half
-  is the joint-argument check at call sites.
-- Effect derivation: the solver produces the bindings; the effect falls out by substitution
-  afterward. It is not held in the solver and is not a rune conclusion.
+  the algebra). `RegionT` itself becomes vestigial once `BorrowRefT` is emptied.
+- Borrow creation computes, it does not check. But the group does **not** live in the value type —
+  the checker derives a borrow's group by tracing the place to its anchor and reading the anchor's
+  group off the scout `FunctionS`'s `ITypeST`. The checking half is the joint-argument check at call
+  sites.
+- Effect derivation is rung-1 checking: the checker derives a body's effects and unifies them
+  against the declared clause (`FunctionS.effects`). It is not held in the solver and is not a
+  rune conclusion.
 - Effect representation is unsettled. Attempts, recorded so nobody re-walks them: (i) `ITemplataT::Effect`
   with a folded `mutates` plus an `includes` list, dropped; (ii) "effects as a bound family,"
   refuted because bounds are denizen lookups; (iii) a header field plus a `NotMutSR` rule variant
@@ -382,8 +472,15 @@ Two surveys of `~/rust` justify the choices above.
   universal-region discovery, the SCC constraint solver, blame metadata on every constraint, and a
   1,000-line module for inventing names for `'1`. Declared groups skip all of it.
 - HIR typeck erases all regions on writeback, and borrowck re-typechecks the whole MIR body (~5,600
-  lines) purely to regenerate region constraints. That argues for keeping our checker in the typing
-  pass, where the group is already on the type.
+  lines) purely to regenerate region constraints — direct precedent for keeping groups off the value
+  type. That also argues for keeping our checker inside the typing pass, at the tail of each
+  function, where the declaration-side group data is still live in `'s`.
+- The one rustc reason borrowck must feed later typeck is **opaque (`impl Trait`) hidden types whose
+  regions are inferred**. Explicit groups remove that edge; it reappears only if we adopt
+  inferred-lifetime existentials (return-position existentials whose group is inferred, not written).
+  That, and a late-bound (higher-ranked) group *closure type* (`func __call<g'>(self, e &Entity in
+  g)`, one stored value invoked at many groups), are the two future tripwires that would force a
+  group into type identity — re-check both when the closure/trait machinery returns.
 - MIR was edited for borrowck after the fact (`FalseEdge`, `FakeRead`, special match lowering) to
   hide CFG structure from it. Lowering to a CFG bought precision, then they spent effort blurring it
   back.

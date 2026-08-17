@@ -563,7 +563,7 @@ fn humanize_errors() {
   let export_template_name =
     typing_interner.intern_export_template_name(ExportTemplateNameT { code_loc: tz[0].begin });
   let firefly_export_name = typing_interner
-    .intern_export_name(ExportNameT { template: export_template_name, region: RegionT::Default });
+    .intern_export_name(ExportNameT { template: export_template_name});
   let firefly_export_id = typing_interner.intern_id(IdValT {
     package_coord: test_package_coord,
     init_steps: &[],
@@ -576,7 +576,7 @@ fn humanize_errors() {
     exported_name: scout_arena.intern_str("Firefly"),
   };
   let serenity_export_name = typing_interner
-    .intern_export_name(ExportNameT { template: export_template_name, region: RegionT::Default });
+    .intern_export_name(ExportNameT { template: export_template_name});
   let serenity_export_id = typing_interner.intern_id(IdValT {
     package_coord: test_package_coord,
     init_steps: &[],

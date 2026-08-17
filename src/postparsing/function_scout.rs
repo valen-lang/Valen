@@ -41,8 +41,10 @@ use crate::postparsing::rules::rules::{
   BorrowRefSR, IRulexSR, ImplBoundS, LookupSR, RegionSR, RuneUsage,
 };
 use crate::postparsing::rules::templex_scout::{
-  translate_maybe_type_into_maybe_rune, translate_signature_type_st, translate_templex_into_type_st,
+  translate_effects_p_into_effects_s, translate_maybe_type_into_maybe_rune,
+  translate_signature_type_st, translate_templex_into_type_st,
 };
+use crate::postparsing::rules::types::{ITypeST, RuneUsageST};
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::code_hierarchy::FileCoordinate;
@@ -224,6 +226,13 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         .unwrap_or(0),
       is_interface_internal_method: matches!(&maybe_parent, IFunctionParent::ParentCitizen(_)),
     };
+    // Scout the effect clauses now, while the function environment (with its declared group runes)
+    // is available at top-level scope; scout_body moves the environment below.
+    let effects_s = translate_effects_p_into_effects_s(
+      self.scout_arena,
+      &IEnvironmentS::FunctionEnvironment(function_environment.clone()),
+      function.header.effects,
+    );
     let header_range_s = Self::eval_range(file_coordinate, function.header.range);
     let (default_region_rune, _maybe_region_generic_param): (IRuneS<'s>, _) =
       match function.body.as_ref().and_then(|body| body.maybe_default_region.as_ref()) {
@@ -365,12 +374,16 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
               ))),
             };
             let self_name = IVarNameS::CodeVarName(self.keywords.self_);
+            // Placeholder ITypeST naming the implicit self kind rune (no user-written type).
+            let self_tyype =
+              ITypeST::Rune(self.scout_arena.alloc(RuneUsageST { rune: kind_rune.clone() }));
             (
               ParameterS::new(
                 param_range.clone(),
                 virtuality,
                 false,
                 self_name.clone(),
+                self_tyype,
                 kind_rune.clone(),
                 kind_rune,
                 self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
@@ -411,10 +424,12 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             // "Unfiltered" means the RuneEnvParentLookup rules havent been stripped out.
             let mut param_type_outer_ref_rules_unfiltered_vec: Vec<IRulexSR<'s>> = Vec::new();
             let mut param_value_type_rules_unfiltered_vec: Vec<IRulexSR<'s>> = Vec::new();
-            let (full_type_rune, value_type_rune, synthesized) = match &pattern.templex {
+            // Build the ITypeST FIRST, then derive the @PFVSZ rune split FROM it, mirroring
+            // NormalStructMemberS. The ITypeST is stored on ParameterS.tyype (the borrow checker
+            // reads a param's `in g` group off it); the derived runes stay for the typing solve.
+            let (full_type_rune, value_type_rune, synthesized, tyype) = match &pattern.templex {
               // A typed param, e.g. `foo(x &int)`.
               Some(type_p) => {
-                // Route through the one canonical ITypeST deriver (the ITemplexPT split path retires).
                 let type_tree = translate_templex_into_type_st(
                   self.scout_arena,
                   IEnvironmentS::FunctionEnvironment(function_environment.clone()),
@@ -430,9 +445,10 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
                 );
                 param_value_type_rules_unfiltered_vec = value_vec;
                 param_type_outer_ref_rules_unfiltered_vec = outer_vec;
-                (full, inner, None)
+                (full, inner, None, type_tree)
               }
-              // An untyped param, e.g. a lambda `(a) => a`. Synthesize an implicit kind rune.
+              // An untyped param, e.g. a lambda `(a) => a`. Synthesize an implicit kind rune, and a
+              // placeholder ITypeST naming that rune (no user-written type to store).
               None => {
                 let kind_rune = RuneUsage {
                   range: param_range.clone(),
@@ -440,7 +456,9 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
                     ImplicitRuneValS::new(lidb.child().borrow_val()),
                   )),
                 };
-                (kind_rune.clone(), kind_rune.clone(), Some(kind_rune))
+                let tyype =
+                  ITypeST::Rune(self.scout_arena.alloc(RuneUsageST { rune: kind_rune.clone() }));
+                (kind_rune.clone(), kind_rune.clone(), Some(kind_rune), tyype)
               }
             };
             let (param_type_outer_ref_rules_vec, param_value_type_rules_vec) = match &maybe_parent {
@@ -502,6 +520,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
                 virtuality,
                 false,
                 name.clone(),
+                tyype,
                 full_type_rune,
                 value_type_rune,
                 type_outer_ref_rules,
@@ -897,6 +916,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         tyype,
         self.scout_arena.alloc_slice_from_vec(total_params_s),
         maybe_ret_kind_rune,
+        self.scout_arena.alloc_slice_from_vec(effects_s),
         rules_array,
         self.scout_arena.alloc_slice_from_vec(impl_bounds),
         body_s,
@@ -962,11 +982,14 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     // so the closure param's per-param rule slices are empty and
     // full_type_rune == value_type_rune == the type rune. It keeps its real name and never
     // destructures, so it needs no body-head let.
+    let closure_param_tyype =
+      ITypeST::Rune(self.scout_arena.alloc(RuneUsageST { rune: closure_param_type_rune.clone() }));
     return ParameterS::new(
       closure_param_range.clone(),
       None,
       false,
       closure_param_name,
+      closure_param_tyype,
       closure_param_type_rune,
       closure_param_type_rune,
       self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
@@ -992,12 +1015,15 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         ));
         let magic_kind_rune_usage =
           RuneUsage { range: magic_param_range.clone(), rune: magic_param_rune };
+        let magic_param_tyype =
+          ITypeST::Rune(self.scout_arena.alloc(RuneUsageST { rune: magic_kind_rune_usage.clone() }));
         // Magic params keep their real MagicParamName and never destructure, so no body-head let.
         ParameterS::new(
           magic_param_range.clone(),
           None,
           false,
           magic_param_name,
+          magic_param_tyype,
           magic_kind_rune_usage,
           magic_kind_rune_usage,
           self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),

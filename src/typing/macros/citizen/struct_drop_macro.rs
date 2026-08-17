@@ -16,6 +16,7 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{CallSR, IRulexSR, LookupSR, RuneUsage};
+use crate::postparsing::rules::types::{ITypeST, RuneUsageST};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::compiler::Compiler;
@@ -113,12 +114,15 @@ where
         None,
         false,
         IVarNameS::CodeVarName(self.keywords.thiss),
+        ITypeST::Rune(self.scout_arena.alloc(RuneUsageST { rune: use_(-64002, self_kind_rune_s) })),
         use_(-64002, self_kind_rune_s),
         use_(-64002, self_kind_rune_s),
         self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
         self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
       )]),
       Some(use_(-64002, void_kind_rune_s)),
+      // A synthesized drop carries no effect clause.
+      &[],
       rules_slice,
       &[],
       self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS {
@@ -166,6 +170,9 @@ where
       None,
       false,
       IVarNameS::CodeVarName(self.keywords.x),
+      ITypeST::Rune(self.scout_arena.alloc(RuneUsageST {
+        rune: RuneUsage { range: internal_range(-64002), rune: drop_p1k_rune },
+      })),
       RuneUsage { range: internal_range(-64002), rune: drop_p1k_rune },
       RuneUsage { range: internal_range(-64002), rune: drop_p1k_rune },
       self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
@@ -207,6 +214,8 @@ where
       },
       params,
       maybe_ret_coord_rune,
+      // A synthesized drop/free carries no effect clause.
+      &[],
       rules,
       &[],
       self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS {

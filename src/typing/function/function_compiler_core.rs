@@ -1,6 +1,7 @@
 use crate::postparsing::ast::{IBodyS, IFunctionAttributeS, LocationInDenizen};
 use crate::postparsing::names::*;
 use crate::typing::ast::ast::*;
+use crate::typing::borrow_checker::borrow_check::check_function;
 use crate::typing::ast::expressions::{
   ArgLookupTE, BlockTE, ExpressionTE, ExternFunctionCallTE, GenericParametersInheritance, ReturnTE,
 };
@@ -350,6 +351,10 @@ where
       body: ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(body2.inner))),
     });
     coutputs.add_function(header_sig, function2);
+
+    // Borrow-check this finished body.
+    check_function(function2, full_env_snapshot.function, coutputs, self)?;
+
     Ok(function2.header)
   }
 

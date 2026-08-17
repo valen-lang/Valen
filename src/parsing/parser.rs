@@ -43,7 +43,7 @@ where
     let maybe_coord_region = self.parse_prefixing_region(&mut iter)?;
 
     // Parse the main parameter
-    let (name, maybe_type, attributes) = match self.parse_region(&mut iter)? {
+    let (name, maybe_type, attributes, maybe_group_type) = match self.parse_region(&mut iter)? {
       None => {
         // Regular rune parameter
         let name = match iter.peek_cloned() {
@@ -72,10 +72,10 @@ where
           vec![]
         };
 
-        (name, maybe_type, maybe_attrs)
+        (name, maybe_type, maybe_attrs, None)
       }
       Some(region) => {
-        // Region parameter
+        // Region / group parameter (`<g'>`, or `<g': T>` typed by its element type).
         let attributes = if let Some(range) = iter.try_skip_word(self.keywords.imm) {
           vec![IRuneAttributeP::ImmutableRegionRuneAttribute(range)]
         } else {
@@ -89,7 +89,14 @@ where
 
         let region_name = region.name.ok_or(ParseError::BadRuneNameError(iter.get_pos()))?;
 
-        (region_name, Some(tyype), attributes)
+        // Optional `: T` group element type, e.g. `<g': Entity>`.
+        let maybe_group_type = if iter.try_skip_symbol(':') {
+          Some(&*self.parse_arena.alloc(self.templex_parser.parse_templex(&mut iter)?))
+        } else {
+          None
+        };
+
+        (region_name, Some(tyype), attributes, maybe_group_type)
       }
     };
 
@@ -109,7 +116,71 @@ where
       coord_region: maybe_coord_region,
       attributes: self.parse_arena.alloc_slice_from_vec(attributes),
       maybe_default,
+      maybe_group_type,
     })
+  }
+
+  /// True if the next token is an effect-clause keyword (`mut` / `not`), which trails the return
+  /// type in a header.
+  fn peek_is_effect_keyword(&self, iter: &ScrambleIterator<'p, '_>) -> bool {
+    match iter.peek_cloned() {
+      Some(INodeLEEnum::Word(WordLE { str, .. })) => {
+        str == self.keywords.r#mut || str == self.keywords.not
+      }
+      _ => false,
+    }
+  }
+
+  /// Parse a run of effect clauses `mut(g)` / `not(mut(g))` into `effects`. Near-term each takes a
+  /// single group; multi-group folds come later.
+  fn parse_effect_clauses(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+    effects: &mut Vec<EffectP<'p>>,
+  ) -> ParseResult<()> {
+    loop {
+      if iter.try_skip_word(self.keywords.r#mut).is_some() {
+        effects.push(EffectP::Mut(self.parse_group_in_parens(iter)?));
+      } else if iter.try_skip_word(self.keywords.not).is_some() {
+        effects.push(EffectP::NotMut(self.parse_not_mut_group(iter)?));
+      } else {
+        break;
+      }
+    }
+    Ok(())
+  }
+
+  /// Read a `( group )` parenthesized group, e.g. the `(g)` in `mut(g)`.
+  fn parse_group_in_parens(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<&'p GroupP<'p>> {
+    match iter.peek_cloned() {
+      Some(INodeLEEnum::Parend(parend)) => {
+        iter.advance();
+        let mut inner = ScrambleIterator::new(&parend.contents);
+        self.templex_parser.parse_group(&mut inner)
+      }
+      _ => Err(ParseError::BadTypeExpression(iter.get_pos())),
+    }
+  }
+
+  /// Read the `( mut ( group ) )` that follows `not`, e.g. in `not(mut(g))`.
+  fn parse_not_mut_group(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<&'p GroupP<'p>> {
+    match iter.peek_cloned() {
+      Some(INodeLEEnum::Parend(parend)) => {
+        iter.advance();
+        let mut inner = ScrambleIterator::new(&parend.contents);
+        if inner.try_skip_word(self.keywords.r#mut).is_none() {
+          return Err(ParseError::BadTypeExpression(inner.get_pos()));
+        }
+        self.parse_group_in_parens(&mut inner)
+      }
+      _ => Err(ParseError::BadTypeExpression(iter.get_pos())),
+    }
   }
 
   pub fn new(parse_arena: &'ctx ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
@@ -654,12 +725,17 @@ where
       };
 
     let return_begin_pos = trailing_details_with_return_and_where.range.begin();
+    // Effect clauses (`mut(g)` / `not(mut(g))`) trail the return type in the header. Peel them here,
+    // after the return templex. (Effects following a `where` clause are deferred.)
+    let mut effects_p_vec: Vec<EffectP<'p>> = Vec::new();
     let maybe_return_type_p = if let Some(mut return_iter) = maybe_return_iter {
-      if return_iter.has_next() {
+      let return_type = if return_iter.has_next() && !self.peek_is_effect_keyword(&return_iter) {
         Some(self.templex_parser.parse_templex(&mut return_iter)?)
       } else {
         None
-      }
+      };
+      self.parse_effect_clauses(&mut return_iter, &mut effects_p_vec)?;
+      return_type
     } else {
       None
     };
@@ -701,6 +777,7 @@ where
       template_rules: maybe_rules_p,
       params: Some(params_p),
       ret: return_p,
+      effects: self.parse_arena.alloc_slice_from_vec(effects_p_vec),
     };
 
     // Parse body if present
@@ -932,8 +1009,11 @@ where
 
     let region = match parse_region_shared(&mut tentative_iter)? {
       Some(region) => {
-        // Check if the next token immediately follows (no gap)
+        // Check if the next token immediately follows (no gap). A `:` that abuts is the group-type
+        // separator of a `<g': T>` param, not a coord this region prefixes. Leave it for the
+        // generic-param parser.
         match tentative_iter.peek_cloned() {
+          Some(INodeLEEnum::Symbol(SymbolLE(_, ':'))) => return Ok(None),
           Some(next) if next.range().begin() == region.range.end() => region,
           _ => return Ok(None),
         }

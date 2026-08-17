@@ -1306,14 +1306,14 @@ where
                     match (solver_state.get_conclusion(&r.result_rune.rune), solver_state.get_conclusion(&r.inner_rune.rune)) {
                         (Some(ITemplataT::Kind(KindTemplataT { kind: result_kind })), _) => {
                             match result_kind {
-                                KindT::BorrowRef(BorrowRefT { inner: result_inner_rune, region: result_region }) => {
+                                KindT::BorrowRef(BorrowRefT { inner: result_inner_rune }) => {
                                     conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT{ kind: *result_inner_rune})));
                                 }
                                 _ => return Err(ITypingPassSolverError::KindIsNotBorrowRef { kind: *result_kind }),
                             }
                         },
                         (_, Some(ITemplataT::Kind(KindTemplataT { kind: inner }))) => {
-                            let wrap = KindT::BorrowRef(self.typing_interner.alloc(BorrowRefT { inner: *inner, region: RegionT::Default }));
+                            let wrap = KindT::BorrowRef(self.typing_interner.alloc(BorrowRefT { inner: *inner}));
                             conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: wrap })));
                         },
                         _ => panic!("Neither result nor inner rune solved in BorrowRef"),

@@ -1873,6 +1873,7 @@ where
           template_rules: None,
           params: None,
           ret: retuurn,
+          effects: &[],
         }
       }
       // Single param lambda: x => ...
@@ -1917,6 +1918,7 @@ where
           template_rules: None,
           params: Some(params),
           ret: retuurn,
+          effects: &[],
         }
       }
       // Multi-param lambda: (x, y) => ...
@@ -1961,6 +1963,7 @@ where
           template_rules: None,
           params: Some(params_p),
           ret: retuurn,
+          effects: &[],
         }
       }
       (_, _, _) => return Ok(None),

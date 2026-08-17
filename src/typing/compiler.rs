@@ -221,7 +221,7 @@ where
       }
       KindT::KindPlaceholder(p) => accum.push(p.id),
       KindT::OverloadSet(_) => {}
-      KindT::BorrowRef(BorrowRefT { region, inner }) => {
+      KindT::BorrowRef(BorrowRefT { inner }) => {
         self.get_placeholders_in_kind(accum, *inner);
       }
       KindT::OwnRef(OwnRefT { inner }) => {
@@ -1079,7 +1079,6 @@ where
                 let placeholdered_export_name =
                   self.typing_interner.intern_export_name(ExportNameT {
                     template: template_name,
-                    region: RegionT::Default,
                   });
                 let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
                 let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
@@ -1173,7 +1172,6 @@ where
                 let placeholdered_export_name =
                   self.typing_interner.intern_export_name(ExportNameT {
                     template: template_name,
-                    region: RegionT::Default,
                   });
                 let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
                 let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
@@ -1326,7 +1324,6 @@ where
                 let placeholdered_export_name =
                   self.typing_interner.intern_export_name(ExportNameT {
                     template: template_name,
-                    region: region_placeholder,
                   });
                 let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
                 let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
@@ -1428,7 +1425,7 @@ where
 
         let placeholdered_export_name = self
           .typing_interner
-          .intern_export_name(ExportNameT { template: template_name, region: region_placeholder });
+          .intern_export_name(ExportNameT { template: template_name });
         let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
         let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
           package_coord: coord,

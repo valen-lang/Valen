@@ -1,8 +1,8 @@
 use crate::interner::StrI;
 use crate::postparsing::ast::*;
 use crate::postparsing::itemplatatype::{
-  BooleanTemplataType, ITemplataType, ImplTemplataType, IntegerTemplataType, KindTemplataType,
-  StringTemplataType, TemplateTemplataType,
+  BooleanTemplataType, GroupTemplataType, ITemplataType, ImplTemplataType, IntegerTemplataType,
+  KindTemplataType, StringTemplataType, TemplateTemplataType,
 };
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
@@ -78,6 +78,11 @@ pub enum ITemplataT<'s, 't> {
   CoordList(&'t KindListTemplataT<'s, 't>),
   RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT),
   StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT),
+  /// The ceremonial value of a group generic param. Uniform with type/int params so arity/index
+  /// invariants hold, but never enters a `KindT` and is never read — the borrow checker reads groups
+  /// off the declaration-side `GroupS`, not off this. See @GROUPS-are-declaration-side.
+  /// VGB: arcana for this
+  Group(GroupTemplataT),
   Function(&'t FunctionTemplataT<'s, 't>),
   StructDefinition(&'t StructDefinitionTemplataT<'s, 't>),
   InterfaceDefinition(&'t InterfaceDefinitionTemplataT<'s, 't>),
@@ -92,6 +97,7 @@ where
     match self {
       ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
       ITemplataT::Placeholder(p) => p.tyype,
+      ITemplataT::Group(_) => ITemplataType::GroupTemplataType(GroupTemplataType {}),
       // ITemplataT::Ownership(_) => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
       ITemplataT::Integer(_) => ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
       ITemplataT::Boolean(_) => ITemplataType::BooleanTemplataType(BooleanTemplataType {}),
@@ -147,6 +153,13 @@ pub struct PlaceholderTemplataT<'s, 't> {
 pub struct KindTemplataT<'s, 't> {
   pub kind: KindT<'s, 't>,
 }
+
+/// Value-type (see @TFITCX).
+/// The ceremonial group-param constant; never read, so it carries no
+/// payload (a `GroupB` would be the real algebra, but this is only the uniform param's value).
+/// VGB: arcana
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct GroupTemplataT {}
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

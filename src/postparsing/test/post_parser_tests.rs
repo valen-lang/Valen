@@ -1333,7 +1333,7 @@ fn test_named_param_keeps_its_name_at_postparse() {
 }
 
 use crate::postparsing::rules::rules::{IRulexSR, RegionSR, ResolveSR};
-use crate::postparsing::rules::types::ITypeST;
+use crate::postparsing::rules::types::{BorrowRefST, EffectS, GroupS, ITypeST, RegionS};
 
 #[test]
 fn test_param_no_outer_wrap_routing() {
@@ -1717,6 +1717,150 @@ fn test_variadic_member_carries_an_itypest() {
       other => panic!("expected variadic member tyype to be a Rune; got {:?}", other),
     },
     other => panic!("expected a variadic member; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_param_group_resolves_to_rune() {
+  // A param `x &int in g`, where `g` is a declared group param `<g'>`, carries on its ITypeST a
+  // BorrowRef whose region is a Group naming the rune g.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    r#"
+exported func foo<g'>(x &int in g) int { return 0; }
+"#,
+  );
+  let foo = program.lookup_function("foo");
+  match foo.params {
+    [ParameterS {
+      tyype:
+        ITypeST::BorrowRef(BorrowRefST {
+          region:
+            RegionS::Group(GroupS::Rune(RuneUsage {
+              rune: IRuneS::CodeRune(CodeRuneS { name: StrI("g"), .. }),
+              ..
+            })),
+          ..
+        }),
+      ..
+    }] => {}
+    other => panic!("expected one param whose ITypeST is BorrowRef(Group(Rune g)); got {:?}", other),
+  }
+}
+
+#[test]
+fn test_param_group_resolves_to_local() {
+  // Without a declaring `<g'>`, the group name in `x &int in g` is an undeclared identifier, so it
+  // resolves to a Local, not a Rune.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    r#"
+exported func foo(x &int in g) int { return 0; }
+"#,
+  );
+  let foo = program.lookup_function("foo");
+  match foo.params {
+    [ParameterS {
+      tyype: ITypeST::BorrowRef(BorrowRefST { region: RegionS::Group(GroupS::Local(_)), .. }),
+      ..
+    }] => {}
+    other => {
+      panic!("expected one param whose ITypeST is BorrowRef(Group(Local)); got {:?}", other)
+    }
+  }
+}
+
+#[test]
+fn test_effect_clause_scouts_to_mut() {
+  // `func foo<g'>() int mut(g)` scouts its effect clause onto FunctionS.effects as a symbolic
+  // `Mut` over the group rune g.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    r#"
+exported func foo<g'>() int mut(g) { return 0; }
+"#,
+  );
+  let foo = program.lookup_function("foo");
+  match foo.effects {
+    [EffectS::Mut(GroupS::Rune(RuneUsage {
+      rune: IRuneS::CodeRune(CodeRuneS { name: StrI("g"), .. }),
+      ..
+    }))] => {}
+    other => panic!("expected FunctionS.effects [Mut(Rune g)]; got {:?}", other),
+  }
+}
+
+#[test]
+fn test_attack_signature_scouts() {
+  // The whole `attack` signature scouts coherently: both `&Entity in r` params carry the group r on
+  // their ITypeST, both resolving to the same declared rune, and `mut(r)` scouts to the effect.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    r#"
+exported func attack<r': Entity>(a &Entity in r, d &Entity in r) mut(r) { }
+"#,
+  );
+  let attack = program.lookup_function("attack");
+  match attack.params {
+    [ParameterS {
+      tyype:
+        ITypeST::BorrowRef(BorrowRefST {
+          region:
+            RegionS::Group(GroupS::Rune(RuneUsage {
+              rune: IRuneS::CodeRune(CodeRuneS { name: StrI("r"), .. }),
+              ..
+            })),
+          ..
+        }),
+      ..
+    }, ParameterS {
+      tyype:
+        ITypeST::BorrowRef(BorrowRefST {
+          region:
+            RegionS::Group(GroupS::Rune(RuneUsage {
+              rune: IRuneS::CodeRune(CodeRuneS { name: StrI("r"), .. }),
+              ..
+            })),
+          ..
+        }),
+      ..
+    }] => {}
+    other => panic!("expected two params both borrowing into group r; got {:?}", other),
+  }
+  match attack.effects {
+    [EffectS::Mut(GroupS::Rune(RuneUsage {
+      rune: IRuneS::CodeRune(CodeRuneS { name: StrI("r"), .. }),
+      ..
+    }))] => {}
+    other => panic!("expected effects [Mut(Rune r)]; got {:?}", other),
   }
 }
 

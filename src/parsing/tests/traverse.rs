@@ -241,6 +241,7 @@ where
     template_rules,
     params,
     ret,
+    effects: _effects,
   } = header;
   if let Some(name) = name {
     visit_name(pred, out, name);
@@ -309,6 +310,7 @@ where
     coord_region,
     attributes,
     maybe_default,
+    maybe_group_type: _maybe_group_type,
   } = param;
   visit_name(pred, out, name);
   if let Some(maybe_type) = maybe_type {
@@ -544,9 +546,7 @@ where
     }
     ITemplexPT::NameOrRune(NameOrRunePT { name, .. }) => visit_name(pred, out, name),
     ITemplexPT::BorrowRef(BorrowRefPT { range: _range, inner, region }) => {
-      if let RegionP::Rune(region) = region {
-        visit_region_rune(pred, out, region);
-      }
+      let _ = region;
       visit_templex(pred, out, inner);
     }
     ITemplexPT::WeakRef(WeakRefPT { range: _range, inner }) => visit_templex(pred, out, inner),

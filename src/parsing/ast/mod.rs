@@ -37,7 +37,7 @@ pub use rules::{BuiltinCallPR, DotPR, EqualsPR, IRulexPR, ITypePR, OrPR, PackPR,
 
 // Re-export everything from templex.rs
 pub use templex::{
-  AnonymousRunePT, BoolPT, BorrowRefPT, CallPT, FuncPT, FunctionPT, ITemplexPT, IntPT,
-  NameOrRunePT, OwnRefPT, PackPT, RegionP, RegionRunePT, RuntimeSizedArrayPT, StringPT, TuplePT,
-  TypedRunePT, WeakRefPT,
+  AnonymousRunePT, BoolPT, BorrowRefPT, CallPT, EffectP, FuncPT, FunctionPT, GroupP, ITemplexPT,
+  IntPT, NameOrRunePT, OwnRefPT, PackPT, RegionP, RegionRunePT, RuntimeSizedArrayPT, StringPT,
+  TuplePT, TypedRunePT, WeakRefPT,
 };

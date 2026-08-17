@@ -38,6 +38,7 @@ fn parameter_from_normal_member<'s>(member: &NormalStructMemberS<'s>) -> Paramet
     None,
     false,
     IVarNameS::CodeVarName(member.name),
+    member.tyype,
     member.type_rune,
     member.value_type_rune,
     member.type_outer_ref_rules,
@@ -132,6 +133,8 @@ where
       },
       params_slice,
       Some(ret_rune),
+      // A synthesized constructor carries no effect clause.
+      &[],
       rules_slice,
       &[],
       self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS {

@@ -1,7 +1,7 @@
 use super::expressions::BlockPE;
 use super::pattern::ParameterP;
 use super::rules::{IRulexPR, ITypePR};
-use super::templex::{ITemplexPT, RegionRunePT};
+use super::templex::{EffectP, ITemplexPT, RegionRunePT};
 use crate::lexing::RangeL;
 use crate::utils::code_hierarchy::FileCoordinate;
 use crate::StrI;
@@ -212,6 +212,9 @@ pub struct GenericParameterP<'p> {
   pub coord_region: Option<RegionRunePT<'p>>,
   pub attributes: &'p [IRuneAttributeP],
   pub maybe_default: Option<ITemplexPT<'p>>,
+  /// For a group param `<g': T>`, the element type `T` the group is over. Only a group (region)
+  /// param carries one; a regular rune param leaves it `None`.
+  pub maybe_group_type: Option<&'p ITemplexPT<'p>>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -261,6 +264,8 @@ pub struct FunctionHeaderP<'p> {
   pub template_rules: Option<TemplateRulesP<'p>>,
   pub params: Option<ParamsP<'p>>,
   pub ret: FunctionReturnP<'p>,
+  /// Effect clauses on the signature: `mut(g)` / `not(mut(g))`.
+  pub effects: &'p [EffectP<'p>],
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

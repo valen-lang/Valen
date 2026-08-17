@@ -262,7 +262,7 @@ fn simple_function_with_apostrophe_region_typed_identifying_rune() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func sum<r'>(a &r'Marine){a}");
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func sum<r'>(a &Marine in r){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "r");
@@ -278,7 +278,7 @@ fn pool_region() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let denizen =
-    compile_denizen_expect(&parse_arena, &keywords, "func sum<r' = pool>(a &r'Marine){a}");
+    compile_denizen_expect(&parse_arena, &keywords, "func sum<r' = pool>(a &Marine in r){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "r");
@@ -294,7 +294,7 @@ fn arena_region() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let denizen =
-    compile_denizen_expect(&parse_arena, &keywords, "func sum<x' = arena>(a &x'Marine){a}");
+    compile_denizen_expect(&parse_arena, &keywords, "func sum<x' = arena>(a &Marine in x){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "x");
@@ -309,7 +309,7 @@ fn readonly_region() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func sum<x'>(a &x'Marine){a}");
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func sum<x'>(a &Marine in x){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "x");
@@ -317,6 +317,90 @@ fn readonly_region() {
   assert!(generic_param.coord_region.is_none());
   assert!(generic_param.attributes.is_empty());
   assert!(generic_param.maybe_default.is_none());
+}
+
+#[test]
+fn typed_group_param() {
+  // `<r': Entity>` is a group param `r` typed by its element type `Entity`. The tick marks it a
+  // region/group param (as `<r'>` already does); the `: Entity` bound is stored on the param.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func f<r': Entity>(){}");
+  match denizen {
+    IDenizenP::TopLevelFunction(FunctionP {
+      header:
+        FunctionHeaderP {
+          generic_parameters:
+            Some(GenericParametersP {
+              params:
+                [GenericParameterP {
+                  name: NameP(_, StrI("r")),
+                  maybe_type: Some(GenericParameterTypeP { tyype: ITypePR::RegionType, .. }),
+                  maybe_group_type:
+                    Some(ITemplexPT::NameOrRune(NameOrRunePT {
+                      name: NameP(_, StrI("Entity")), ..
+                    })),
+                  ..
+                }],
+              ..
+            }),
+          ..
+        },
+      ..
+    }) => {}
+    other => panic!("expected group param r typed by Entity; got {:?}", other),
+  }
+}
+
+#[test]
+fn effect_clause_mut() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func f<g'>() mut(g){}");
+  match denizen {
+    IDenizenP::TopLevelFunction(FunctionP {
+      header: FunctionHeaderP { effects: [EffectP::Mut(GroupP::Name(NameP(_, StrI("g"))))], .. },
+      ..
+    }) => {}
+    other => panic!("expected header effects [Mut(Name g)]; got {:?}", other),
+  }
+}
+
+#[test]
+fn effect_clause_not_mut() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "func f<g'>() not(mut(g)){}");
+  match denizen {
+    IDenizenP::TopLevelFunction(FunctionP {
+      header: FunctionHeaderP { effects: [EffectP::NotMut(GroupP::Name(NameP(_, StrI("g"))))], .. },
+      ..
+    }) => {}
+    other => panic!("expected header effects [NotMut(Name g)]; got {:?}", other),
+  }
+}
+
+#[test]
+fn attack_signature_parses() {
+  // The whole `attack` header parses: a typed group param, two `&Entity in r` params, and `mut(r)`.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let denizen = compile_denizen_expect(
+    &parse_arena,
+    &keywords,
+    "func attack<r': Entity>(a &Entity in r, d &Entity in r) mut(r){}",
+  );
+  match denizen {
+    IDenizenP::TopLevelFunction(FunctionP {
+      header: FunctionHeaderP { effects: [EffectP::Mut(GroupP::Name(NameP(_, StrI("r"))))], .. },
+      ..
+    }) => {}
+    other => panic!("expected header effects [Mut(Name r)]; got {:?}", other),
+  }
 }
 
 #[test]

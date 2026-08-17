@@ -1105,6 +1105,7 @@ where
     ITemplataT::Integer(_) => {}
     ITemplataT::Boolean(_) => {}
     ITemplataT::String(_) => {}
+    ITemplataT::Group(_) => {}
     ITemplataT::Prototype(x) => visit_prototype_templata(pred, out, x),
     ITemplataT::Isa(x) => visit_isa_templata(pred, out, x),
     ITemplataT::CoordList(x) => visit_coord_list_templata(pred, out, x),

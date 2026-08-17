@@ -1251,7 +1251,7 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
   let expected_coord = KindT::BorrowRef(
     compile
       .typing_interner
-      .alloc(BorrowRefT { inner: KindT::Interface(interface_tt), region: RegionT::Default }),
+      .alloc(BorrowRefT { inner: KindT::Interface(interface_tt)}),
   );
 
   let coutputs = compile.expect_compiler_outputs();
@@ -4031,6 +4031,54 @@ Can't move a local (m) from inside a while loop.
   );
 }
 
+// Ignored because it fails today. The move-tracker skips its entire outer-local-move
+// check when the while body never falls through. The `IExpressionSE::While` arm of
+// `evaluate_expression` (typing/expression/expression_compiler.rs) gates that check on
+// `match uncoerced_body_block_2.result { KindT::Never(_) => {} .. }`, so a body ending in
+// break/return makes an illegal move of an outer local go unreported. The sibling
+// `reports_when_moving_from_inside_a_while` (no break) still errors. The fix drops that
+// Never guard so the check runs regardless of the body's result.
+#[test]
+#[ignore]
+fn reports_when_moving_from_inside_a_while_that_never_falls_through() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = concat!(
+    "struct Marine { ammo int; }\n",
+    "exported func main() int {\n",
+    "  m = Marine(7);\n",
+    "  while (false) {\n",
+    "    drop(^m);\n",
+    "    break;\n",
+    "  }\n",
+    "  return 42;\n",
+    "}\n",
+  );
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+  match &err {
+    ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
+      local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }),
+      ..
+    } => {}
+    _other => panic!("expected CantUnstackifyOutsideLocalFromInsideWhile"),
+  }
+}
+
 #[test]
 fn cant_subscript_non_subscriptable_type() {
   let parse_bump = Bump::new();
@@ -4208,7 +4256,7 @@ fn humanize_errors() {
   let export_template_name =
     typing_interner.intern_export_template_name(ExportTemplateNameT { code_loc: tz_code_loc });
   let export_name = typing_interner
-    .intern_export_name(ExportNameT { template: export_template_name, region: RegionT::Default });
+    .intern_export_name(ExportNameT { template: export_template_name});
   let firefly_export_id = typing_interner.intern_id(IdValT {
     package_coord: test_tld,
     init_steps: &[],

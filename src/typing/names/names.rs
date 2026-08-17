@@ -971,7 +971,6 @@ pub struct ExportTemplateNameT<'s> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExportNameT<'s, 't> {
   pub template: &'t ExportTemplateNameT<'s>,
-  pub region: RegionT,
 }
 
 /// Interned (see @TFITCX)

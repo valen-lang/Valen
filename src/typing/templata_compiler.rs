@@ -123,7 +123,6 @@ pub fn replace_value_type_in_ref<'s, 't>(
   match full_type_maybe_with_refs {
     KindT::BorrowRef(b) => KindT::BorrowRef(interner.alloc(BorrowRefT {
       inner: replace_value_type_in_ref(interner, b.inner, new_value_type),
-      region: b.region,
     })),
     KindT::OwnRef(o) => KindT::OwnRef(
       interner
@@ -571,7 +570,6 @@ where
           bound_arguments_source,
           b.inner,
         ),
-        region: b.region,
       })),
       KindT::OwnRef(o) => KindT::OwnRef(interner.alloc(OwnRefT {
         inner: Self::substitute_templatas_in_kind(

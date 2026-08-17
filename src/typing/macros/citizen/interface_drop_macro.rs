@@ -14,6 +14,7 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{CallSR, IRulexSR, LookupSR, RuneUsage};
+use crate::postparsing::rules::types::{ITypeST, RuneUsageST};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::*;
@@ -104,12 +105,15 @@ where
         Some(AbstractSP { range: range(-64002), is_internal_method: true }),
         false,
         IVarNameS::CodeVarName(self.keywords.thiss),
+        ITypeST::Rune(self.scout_arena.alloc(RuneUsageST { rune: use_(-64002, self_kind_rune_s) })),
         use_(-64002, self_kind_rune_s),
         use_(-64002, self_kind_rune_s),
         self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
         self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
       )]),
       Some(use_(-64002, void_kind_rune_s)),
+      // A synthesized drop carries no effect clause.
+      &[],
       rules_slice,
       &[],
       self.scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),

@@ -368,3 +368,18 @@ AFTER:
 /// citizen's own template id. This is the only place that should calculate this.
 pub fn internal_method_template_id(&self, parent_template_id: &'t IdT<'s, 't>, internal_method: &'s FunctionS<'s>, )
 ```
+
+## Don't preserve backwards compatibility
+
+We're pre-alpha. Code as if we don't have any users. It's important to not maintain code that we don't use.
+
+BEFORE:
+```rust
+// Superseded by translate_signature_type_st (the ITypeST twin) and now caller-free except its own
+// recursion. Kept during the migration.
+pub fn translate_signature_templex<'s, 'p>(...) -> (RuneUsage<'s>, RuneUsage<'s>) {
+    // ~100 lines, called only by translate_signature_templex itself
+}
+```
+
+AFTER: (deleted)

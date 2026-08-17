@@ -73,6 +73,11 @@ grep "test result" ./tmp/borrowing-build2.txt
 
 Instead, use the same file.
 
+## Misc rules
+
+ * Don't add any V markers (`// VRI:`, `// VCOORD:`, `// V:`, etc.) unless the user explicitly says to.
+ * We're pre-alpha. Code as if we have no existing users. Don't leave things in for "backwards compatibility".
+
 ## SEE ALSO (auto)
 
 - **Read when decoding the compact id shorthand used in docs/Generics.md, investigation notes, or comments — forms like `dis$0`, `Foo<^int>`, `MySome.bound:drop:66`.** → docs/arcana/IdShorthandNotation-ISNZ.md
