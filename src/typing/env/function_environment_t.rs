@@ -17,6 +17,7 @@ use crate::utils::fx::IndexSet;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ptr::eq;
+use std::ptr::hash;
 
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -337,7 +338,7 @@ where
     }
   }
 
-  pub fn get_all_locals(&self) -> Vec<LocalVariable<'s, 't>> {
+  pub fn get_all_locals(&self) -> Vec<&'t LocalVariable<'s, 't>> {
     panic!("Unimplemented: get_all_locals");
     // declaredLocals.collect({ case i : ILocalVariableT => i })
   }
@@ -428,8 +429,8 @@ where
   pub fn get_live_variables_introduced_since(
     &self,
     since_nenv: &NodeEnvironmentT<'s, 't>,
-  ) -> Vec<LocalVariable<'s, 't>> {
-    let locals_as_of_then: Vec<LocalVariable<'s, 't>> = since_nenv
+  ) -> Vec<&'t LocalVariable<'s, 't>> {
+    let locals_as_of_then: Vec<&'t LocalVariable<'s, 't>> = since_nenv
       .declared_locals
       .iter()
       .filter_map(|v| match v {
@@ -437,7 +438,7 @@ where
         _ => None,
       })
       .collect();
-    let locals_as_of_now: Vec<LocalVariable<'s, 't>> = self
+    let locals_as_of_now: Vec<&'t LocalVariable<'s, 't>> = self
       .declared_locals
       .iter()
       .filter_map(|v| match v {
@@ -677,7 +678,7 @@ where
     self.snapshot(interner).get_variable(name)
   }
 
-  pub fn get_all_locals(&self) -> Vec<LocalVariable<'s, 't>> {
+  pub fn get_all_locals(&self) -> Vec<&'t LocalVariable<'s, 't>> {
     self
       .declared_locals
       .iter()
@@ -967,14 +968,14 @@ where
   }
 }
 
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IVariableT<'s, 't>
 where
   's: 't,
 {
-  Local(LocalVariable<'s, 't>),
-  Capture(CapturedVariableT<'s, 't>),
+  Local(&'t LocalVariable<'s, 't>),
+  Capture(&'t CapturedVariableT<'s, 't>),
 }
 
 impl<'s, 't> IVariableT<'s, 't>
@@ -993,8 +994,8 @@ where
   }
 }
 
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+/// Arena-allocated (see @TFITCX)
+#[derive(Debug)]
 pub struct LocalVariable<'s, 't>
 where
   's: 't,
@@ -1003,8 +1004,27 @@ where
   pub tyype: KindT<'s, 't>,
 }
 
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// Identity equality per @IEOIBZ — `LocalVariable` is arena-allocated.
+impl<'s, 't> PartialEq for LocalVariable<'s, 't>
+where
+  's: 't,
+{
+  fn eq(&self, other: &Self) -> bool {
+    eq(self, other)
+  }
+}
+impl<'s, 't> Eq for LocalVariable<'s, 't> where 's: 't {}
+impl<'s, 't> Hash for LocalVariable<'s, 't>
+where
+  's: 't,
+{
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    hash(self, state)
+  }
+}
+
+/// Arena-allocated (see @TFITCX)
+#[derive(Debug)]
 pub struct CapturedVariableT<'s, 't>
 where
   's: 't,
@@ -1014,13 +1034,32 @@ where
   pub kind: KindT<'s, 't>,
 }
 
-impl<'s, 't> From<LocalVariable<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: LocalVariable<'s, 't>) -> Self {
+// Identity equality per @IEOIBZ — `CapturedVariableT` is arena-allocated.
+impl<'s, 't> PartialEq for CapturedVariableT<'s, 't>
+where
+  's: 't,
+{
+  fn eq(&self, other: &Self) -> bool {
+    eq(self, other)
+  }
+}
+impl<'s, 't> Eq for CapturedVariableT<'s, 't> where 's: 't {}
+impl<'s, 't> Hash for CapturedVariableT<'s, 't>
+where
+  's: 't,
+{
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    hash(self, state)
+  }
+}
+
+impl<'s, 't> From<&'t LocalVariable<'s, 't>> for IVariableT<'s, 't> {
+  fn from(v: &'t LocalVariable<'s, 't>) -> Self {
     IVariableT::Local(v)
   }
 }
-impl<'s, 't> From<CapturedVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: CapturedVariableT<'s, 't>) -> Self {
+impl<'s, 't> From<&'t CapturedVariableT<'s, 't>> for IVariableT<'s, 't> {
+  fn from(v: &'t CapturedVariableT<'s, 't>) -> Self {
     IVariableT::Capture(v)
   }
 }

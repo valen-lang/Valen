@@ -331,8 +331,8 @@ where
   ) -> &'t StructMemberT<'s, 't> {
     let translated_name = self.translate_var_name_step(name);
     let captured = match env.get_variable(translated_name).unwrap() {
-      IVariableT::Local(LocalVariable { tyype, .. }) => tyype,
-      IVariableT::Capture(CapturedVariableT { kind, .. }) => kind,
+      IVariableT::Local(local) => local.tyype,
+      IVariableT::Capture(capture_var) => capture_var.kind,
     };
     // A closure holds a borrow of what it captures, never the owned value.
     // See the "Captured own is borrow" test.

@@ -49,7 +49,7 @@ where
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
         LocationInFunctionEnvironmentT<'t>,
-        &[LocalVariable<'s, 't>],
+        &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
   ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
@@ -176,7 +176,7 @@ where
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     pattern: &'s AtomSP<'s>,
-    previous_live_capture_locals: &'t [LocalVariable<'s, 't>],
+    previous_live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
     input_expr: ExpressionTE<'s, 't>,
     region: RegionT,
     after_sub_pattern_success_continuation: impl FnOnce(
@@ -184,7 +184,7 @@ where
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
         LocationInFunctionEnvironmentT<'t>,
-        &[LocalVariable<'s, 't>],
+        &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
   ) -> ExpressionTE<'s, 't> {
@@ -259,7 +259,7 @@ where
       assert!(matches!(expr_to_destructure_or_drop_or_pass_te.result(), KindT::BorrowRef(_)));
     }
 
-    let mut live_capture_locals: Vec<LocalVariable<'s, 't>> = previous_live_capture_locals.to_vec();
+    let mut live_capture_locals: Vec<&'t LocalVariable<'s, 't>> = previous_live_capture_locals.to_vec();
     if let Some(local_t) = maybe_capture_local_var_t {
       live_capture_locals.push(local_t);
     }
@@ -322,7 +322,7 @@ where
         let list_refs: &'t [&'s AtomSP<'s>] = self
           .typing_interner
           .alloc_slice_copy(&list_of_maybe_destructure_member_patterns.iter().collect::<Vec<_>>());
-        let live_capture_locals_t: &'t [LocalVariable<'s, 't>] =
+        let live_capture_locals_t: &'t [&'t LocalVariable<'s, 't>] =
           self.typing_interner.alloc_slice_copy(&live_capture_locals);
         match expr_to_destructure_or_drop_or_pass_te.result() {
           KindT::BorrowRef(_) | KindT::ShareRef(_) => {
@@ -378,7 +378,7 @@ where
     life: LocationInFunctionEnvironmentT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    initial_live_capture_locals: &'t [LocalVariable<'s, 't>],
+    initial_live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
     input_expr: ExpressionTE<'s, 't>,
     list_of_maybe_destructure_member_patterns: &'t [&'s AtomSP<'s>],
     region: RegionT,
@@ -387,7 +387,7 @@ where
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
         LocationInFunctionEnvironmentT<'t>,
-        &[LocalVariable<'s, 't>],
+        &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
   ) -> ExpressionTE<'s, 't> {
@@ -450,7 +450,7 @@ where
           _ => panic!("vwat"),
         };
         let element_type = static_sized_array_t.element_type();
-        let element_locals: Vec<LocalVariable<'s, 't>> = (0..size as usize)
+        let element_locals: Vec<&'t LocalVariable<'s, 't>> = (0..size as usize)
           .map(|i| {
             self.make_temporary_local(
               nenv,
@@ -466,14 +466,14 @@ where
             self.typing_interner.alloc_slice_from_vec(element_locals.clone()),
           )),
         );
-        let live_capture_locals: Vec<LocalVariable<'s, 't>> = initial_live_capture_locals
+        let live_capture_locals: Vec<&'t LocalVariable<'s, 't>> = initial_live_capture_locals
           .iter()
           .copied()
           .chain(element_locals.iter().copied())
           .collect();
         {
           let names: Vec<_> =
-            live_capture_locals.iter().map(|l: &LocalVariable<'s, 't>| l.name).collect();
+            live_capture_locals.iter().map(|l: &&'t LocalVariable<'s, 't>| l.name).collect();
           let distinct: Vec<_> = {
             let mut seen = Vec::new();
             for n in &names {
@@ -529,7 +529,7 @@ where
     life: LocationInFunctionEnvironmentT<'t>,
     range: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    live_capture_locals: &'t [LocalVariable<'s, 't>],
+    live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
     container_te: ExpressionTE<'s, 't>,
     list_of_maybe_destructure_member_patterns: &'t [&'s AtomSP<'s>],
     region: RegionT,
@@ -538,7 +538,7 @@ where
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
         LocationInFunctionEnvironmentT<'t>,
-        &[LocalVariable<'s, 't>],
+        &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
   ) -> ExpressionTE<'s, 't> {
@@ -588,7 +588,7 @@ where
     life: LocationInFunctionEnvironmentT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    live_capture_locals: &'t [LocalVariable<'s, 't>],
+    live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
     expected_container_coord: KindT<'s, 't>,
     container_aliasing_expr_te: ExpressionTE<'s, 't>,
     member_index: i32,
@@ -600,7 +600,7 @@ where
           &mut CompilerOutputs<'s, 't>,
           &mut NodeEnvironmentBox<'s, 't>,
           LocationInFunctionEnvironmentT<'t>,
-          &[LocalVariable<'s, 't>],
+          &[&'t LocalVariable<'s, 't>],
         ) -> ExpressionTE<'s, 't>
         + 'ctx,
     >,
@@ -675,8 +675,8 @@ where
                   coutputs: &mut CompilerOutputs<'s, 't>,
                   nenv: &mut NodeEnvironmentBox<'s, 't>,
                   life: LocationInFunctionEnvironmentT<'t>,
-                  live_capture_locals: &[LocalVariable<'s, 't>]| {
-              let live_capture_locals: &'t [LocalVariable<'s, 't>] =
+                  live_capture_locals: &[&'t LocalVariable<'s, 't>]| {
+              let live_capture_locals: &'t [&'t LocalVariable<'s, 't>] =
                 compiler.typing_interner.alloc_slice_copy(live_capture_locals);
               {
                 let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
@@ -719,7 +719,7 @@ where
     life: LocationInFunctionEnvironmentT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    initial_live_capture_locals: &'t [LocalVariable<'s, 't>],
+    initial_live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
     inner_patterns: &'t [&'s AtomSP<'s>],
     input_struct_expr: ExpressionTE<'s, 't>,
     region: RegionT,
@@ -728,7 +728,7 @@ where
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
         LocationInFunctionEnvironmentT<'t>,
-        &[LocalVariable<'s, 't>],
+        &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
   ) -> ExpressionTE<'s, 't> {
@@ -757,7 +757,7 @@ where
       struct_tt.id,
       IBoundArgumentsSource::InheritBoundsFromTypeItself,
     );
-    let member_locals: Vec<LocalVariable<'s, 't>> = struct_def_t
+    let member_locals: Vec<&'t LocalVariable<'s, 't>> = struct_def_t
       .members
       .iter()
       .enumerate()
@@ -773,7 +773,7 @@ where
       struct_tt_ref,
       member_locals_ref,
     )));
-    let live_capture_locals: Vec<LocalVariable<'s, 't>> =
+    let live_capture_locals: Vec<&'t LocalVariable<'s, 't>> =
       initial_live_capture_locals.iter().copied().chain(member_locals.iter().copied()).collect();
     {
       let names: Vec<_> = live_capture_locals.iter().map(|l| l.name).collect();
@@ -795,9 +795,9 @@ where
         member_locals.len()
       );
     }
-    let live_capture_locals: &'t [LocalVariable<'s, 't>] =
+    let live_capture_locals: &'t [&'t LocalVariable<'s, 't>] =
       self.typing_interner.alloc_slice_copy(&live_capture_locals);
-    let member_locals_as_local: &'t [LocalVariable<'s, 't>] =
+    let member_locals_as_local: &'t [&'t LocalVariable<'s, 't>] =
       self.typing_interner.alloc_slice_copy(&member_locals);
     let rest_te = self.make_lets_for_own_and_maybe_continue(
       coutputs,
@@ -821,8 +821,8 @@ where
     life: LocationInFunctionEnvironmentT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    initial_live_capture_locals: &'t [LocalVariable<'s, 't>],
-    member_local_variables: &'t [LocalVariable<'s, 't>],
+    initial_live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
+    member_local_variables: &'t [&'t LocalVariable<'s, 't>],
     inner_patterns: &'t [&'s AtomSP<'s>],
     region: RegionT,
     after_lets_success_continuation: Box<
@@ -831,7 +831,7 @@ where
           &mut CompilerOutputs<'s, 't>,
           &mut NodeEnvironmentBox<'s, 't>,
           LocationInFunctionEnvironmentT<'t>,
-          &[LocalVariable<'s, 't>],
+          &[&'t LocalVariable<'s, 't>],
         ) -> ExpressionTE<'s, 't>
         + 'ctx,
     >,
@@ -864,7 +864,7 @@ where
       ) => {
         let unlet_expr = self.unlet_local_without_dropping(nenv, head_member_local_variable);
         let unlet_expr_te = ExpressionTE::Unlet(self.typing_interner.alloc(unlet_expr));
-        let live_capture_locals: &'t [LocalVariable<'s, 't>] =
+        let live_capture_locals: &'t [&'t LocalVariable<'s, 't>] =
           self.typing_interner.alloc_slice_copy(
             &initial_live_capture_locals
               .iter()
@@ -877,7 +877,7 @@ where
         let ranges: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
           &once(head_inner_pattern_range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>(),
         );
-        let tail_member_local_variables: &'t [LocalVariable<'s, 't>] =
+        let tail_member_local_variables: &'t [&'t LocalVariable<'s, 't>] =
           self.typing_interner.alloc_slice_copy(tail_member_local_variables);
         let tail_inner_pattern_maybes: &'t [&'s AtomSP<'s>] =
           self.typing_interner.alloc_slice_copy(tail_inner_pattern_maybes);
@@ -892,7 +892,7 @@ where
           unlet_expr_te,
           region,
           move |compiler, coutputs, nenv, life, live_capture_locals_raw| {
-            let live_capture_locals: &'t [LocalVariable<'s, 't>] =
+            let live_capture_locals: &'t [&'t LocalVariable<'s, 't>] =
               compiler.typing_interner.alloc_slice_copy(live_capture_locals_raw);
             {
               let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name).collect();

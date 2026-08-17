@@ -425,7 +425,7 @@ where
         let all_locals = nenv.get_all_locals();
         let unstackified_locals = nenv.get_all_unstackified_locals();
         let variables_to_destruct: Vec<&LocalVariable<'s, 't>> =
-          all_locals.iter().filter(|x| !unstackified_locals.contains(&x.name)).collect();
+          all_locals.iter().filter(|x| !unstackified_locals.contains(&x.name)).copied().collect();
         let reversed_variables_to_destruct: Vec<&LocalVariable<'s, 't>> =
           variables_to_destruct.into_iter().rev().collect();
 
@@ -436,7 +436,9 @@ where
           .typing_interner
           .intern_typing_pass_function_result_var_name(TypingPassFunctionResultVarNameT {});
         let result_var_id = IVarNameT::TypingPassFunctionResultVar(result_var_name);
-        let result_variable = LocalVariable { name: result_var_id, tyype: inner_expr_2.result() };
+        let result_variable: &'t LocalVariable<'s, 't> = self
+          .typing_interner
+          .alloc(LocalVariable { name: result_var_id, tyype: inner_expr_2.result() });
         let result_let = ExpressionTE::LetNormal(
           self.typing_interner.alloc(LetNormalTE::new(result_variable, inner_expr_2)),
         );
@@ -1870,7 +1872,7 @@ where
               struct_tt.id,
               IBoundArgumentsSource::InheritBoundsFromTypeItself,
             );
-            let destination_locals: Vec<LocalVariable<'s, 't>> = struct_def
+            let destination_locals: Vec<&'t LocalVariable<'s, 't>> = struct_def
               .members
               .iter()
               .enumerate()
@@ -2604,7 +2606,7 @@ where
       match expr_te.result() {
         KindT::Void(_) => {
           let reversed_variables_to_destruct: Vec<_> =
-            unreversed_variables_to_destruct.iter().rev().collect();
+            unreversed_variables_to_destruct.iter().rev().copied().collect();
           let destroy_expressions = self.unlet_and_drop_all(
             coutputs,
             nenv,
@@ -2626,7 +2628,7 @@ where
           //   func drop(self Server) { panic("unreachable"); }
           // and not drop Server.
           let reversed_variables_to_destruct: Vec<_> =
-            unreversed_variables_to_destruct.iter().rev().collect();
+            unreversed_variables_to_destruct.iter().rev().copied().collect();
           let _destroy_expressions =
             self.unlet_all_without_dropping(coutputs, nenv, range, &reversed_variables_to_destruct);
           // Just dont add in the destroyExpressions, let em go.
@@ -2637,7 +2639,7 @@ where
           let (resultified_expr, result_local_variable) =
             self.resultify_expressions(nenv, life.add(self.typing_interner, 1), expr_te);
           let reversed_variables_to_destruct: Vec<_> =
-            unreversed_variables_to_destruct.iter().rev().collect();
+            unreversed_variables_to_destruct.iter().rev().copied().collect();
           let destroy_expressions = self.unlet_and_drop_all(
             coutputs,
             nenv,
@@ -2650,7 +2652,7 @@ where
           exprs.push(resultified_expr);
           exprs.extend(destroy_expressions);
           let result_ilocal_variable = result_local_variable;
-          let unlet_te = self.unlet_local_without_dropping(nenv, &result_ilocal_variable);
+          let unlet_te = self.unlet_local_without_dropping(nenv, result_ilocal_variable);
           exprs.push(ExpressionTE::Unlet(self.typing_interner.alloc(unlet_te)));
           Ok(self.consecutive(&exprs))
         }
@@ -2663,12 +2665,13 @@ where
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     life: LocationInFunctionEnvironmentT<'t>,
     expr: ExpressionTE<'s, 't>,
-  ) -> (ExpressionTE<'s, 't>, LocalVariable<'s, 't>) {
+  ) -> (ExpressionTE<'s, 't>, &'t LocalVariable<'s, 't>) {
     let result_var_ref = self
       .typing_interner
       .intern_typing_pass_block_result_var_name(TypingPassBlockResultVarNameT { life });
     let result_var_name: IVarNameT<'s, 't> = result_var_ref.into();
-    let result_variable = LocalVariable { name: result_var_name, tyype: expr.result() };
+    let result_variable: &'t LocalVariable<'s, 't> =
+      self.typing_interner.alloc(LocalVariable { name: result_var_name, tyype: expr.result() });
     let result_let = LetNormalTE::new(result_variable, expr);
     nenv.add_variable(IVariableT::Local(result_variable));
     (ExpressionTE::LetNormal(self.typing_interner.alloc(result_let)), result_variable)

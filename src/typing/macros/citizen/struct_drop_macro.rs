@@ -269,7 +269,7 @@ where
         panic!("auto-generated drop for extern struct is unsupported; supply an explicit `extern func drop(...)` for {:?}", struct_def.instantiated_citizen);
       }
       SharednessT::Single => {
-        let member_local_variables: Vec<LocalVariable<'s, 't>> = struct_def
+        let member_local_variables: Vec<&'t LocalVariable<'s, 't>> = struct_def
           .members
           .iter()
           .map(|member| {
@@ -280,7 +280,9 @@ where
               IBoundArgumentsSource::InheritBoundsFromTypeItself,
             );
             let reference = substituter.substitute_for_kind(coutputs, member.tyype);
-            LocalVariable { name: member.name, tyype: reference }
+            let member_local: &'t LocalVariable<'s, 't> =
+              self.typing_interner.alloc(LocalVariable { name: member.name, tyype: reference });
+            member_local
           })
           .collect();
         let member_local_variables_slice =

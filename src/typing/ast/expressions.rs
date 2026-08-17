@@ -153,7 +153,7 @@ pub struct LetAndLendTE<'s, 't>
 where
   's: 't,
 {
-  pub variable: LocalVariable<'s, 't>,
+  pub variable: &'t LocalVariable<'s, 't>,
   pub expr: ExpressionTE<'s, 't>,
   // Stored instead of computed because I dont want getters to allocate.
   pub result: &'t BorrowRefT<'s, 't>,
@@ -169,7 +169,7 @@ where
 {
   pub fn new(
     interner: &TypingInterner<'s, 't>,
-    variable: LocalVariable<'s, 't>,
+    variable: &'t LocalVariable<'s, 't>,
     expr: ExpressionTE<'s, 't>,
   ) -> LetAndLendTE<'s, 't> {
     let result = interner.alloc(BorrowRefT { inner: expr.result(), region: RegionT::Default });
@@ -247,7 +247,7 @@ pub struct LetNormalTE<'s, 't>
 where
   's: 't,
 {
-  pub variable: LocalVariable<'s, 't>,
+  pub variable: &'t LocalVariable<'s, 't>,
   pub expr: ExpressionTE<'s, 't>,
   pub result: KindT<'s, 't>,
   _sealed: (),
@@ -257,14 +257,14 @@ impl<'s, 't> LetNormalTE<'s, 't>
 where
   's: 't,
 {
-  pub fn new(variable: LocalVariable<'s, 't>, expr: ExpressionTE<'s, 't>) -> LetNormalTE<'s, 't> {
+  pub fn new(variable: &'t LocalVariable<'s, 't>, expr: ExpressionTE<'s, 't>) -> LetNormalTE<'s, 't> {
     LetNormalTE { variable, expr, result: KindT::Void(VoidT), _sealed: () }
   }
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct UnletTE<'s, 't> {
-  pub variable: LocalVariable<'s, 't>,
+  pub variable: &'t LocalVariable<'s, 't>,
   pub result: KindT<'s, 't>,
   _sealed: (),
 }
@@ -273,7 +273,7 @@ impl<'s, 't> UnletTE<'s, 't>
 where
   's: 't,
 {
-  pub fn new(variable: LocalVariable<'s, 't>) -> UnletTE<'s, 't> {
+  pub fn new(variable: &'t LocalVariable<'s, 't>) -> UnletTE<'s, 't> {
     let result = variable.tyype;
     UnletTE { variable, result, _sealed: () }
   }
@@ -430,7 +430,7 @@ pub struct RestackifyTE<'s, 't>
 where
   's: 't,
 {
-  pub variable: LocalVariable<'s, 't>,
+  pub variable: &'t LocalVariable<'s, 't>,
   pub source_expr: ExpressionTE<'s, 't>,
   pub result: KindT<'s, 't>,
   _sealed: (),
@@ -441,7 +441,7 @@ where
   's: 't,
 {
   pub fn new(
-    variable: LocalVariable<'s, 't>,
+    variable: &'t LocalVariable<'s, 't>,
     source_expr: ExpressionTE<'s, 't>,
   ) -> RestackifyTE<'s, 't> {
     RestackifyTE { variable, source_expr, result: KindT::Void(VoidT), _sealed: () }
@@ -752,7 +752,7 @@ where
 #[derive(Debug)]
 pub struct LocalLookupTE<'s, 't> {
   pub range: RangeS<'s>,
-  pub local_variable: LocalVariable<'s, 't>,
+  pub local_variable: &'t LocalVariable<'s, 't>,
   // A local lookup is a borrow reference to the variable's value.
   pub result: &'t BorrowRefT<'s, 't>,
   _sealed: (),
@@ -765,7 +765,7 @@ where
   pub fn new(
     interner: &TypingInterner<'s, 't>,
     range: RangeS<'s>,
-    local_variable: LocalVariable<'s, 't>,
+    local_variable: &'t LocalVariable<'s, 't>,
   ) -> LocalLookupTE<'s, 't> {
     let result =
       interner.alloc(BorrowRefT { inner: local_variable.tyype, region: RegionT::Default });
@@ -1205,7 +1205,7 @@ where
 {
   pub expr: ExpressionTE<'s, 't>,
   pub static_sized_array: &'t StaticSizedArrayTT<'s, 't>,
-  pub destination_reference_variables: &'t [LocalVariable<'s, 't>],
+  pub destination_reference_variables: &'t [&'t LocalVariable<'s, 't>],
   pub result: KindT<'s, 't>,
   _sealed: (),
 }
@@ -1217,7 +1217,7 @@ where
   pub fn new(
     expr: ExpressionTE<'s, 't>,
     static_sized_array: &'t StaticSizedArrayTT<'s, 't>,
-    destination_reference_variables: &'t [LocalVariable<'s, 't>],
+    destination_reference_variables: &'t [&'t LocalVariable<'s, 't>],
   ) -> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
     DestroyStaticSizedArrayIntoLocalsTE {
       expr,
@@ -1375,7 +1375,7 @@ where
 {
   pub expr: ExpressionTE<'s, 't>,
   pub struct_tt: &'t StructTT<'s, 't>,
-  pub destination_reference_variables: &'t [LocalVariable<'s, 't>],
+  pub destination_reference_variables: &'t [&'t LocalVariable<'s, 't>],
   pub result: KindT<'s, 't>,
   _sealed: (),
 }
@@ -1387,7 +1387,7 @@ where
   pub fn new(
     expr: ExpressionTE<'s, 't>,
     struct_tt: &'t StructTT<'s, 't>,
-    destination_reference_variables: &'t [LocalVariable<'s, 't>],
+    destination_reference_variables: &'t [&'t LocalVariable<'s, 't>],
   ) -> DestroyTE<'s, 't> {
     DestroyTE {
       expr,

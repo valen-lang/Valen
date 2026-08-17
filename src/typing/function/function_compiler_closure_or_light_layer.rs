@@ -335,11 +335,11 @@ where
       .members
       .iter()
       .map(|member| {
-        IVariableT::Capture(CapturedVariableT {
+        IVariableT::Capture(self.typing_interner.alloc(CapturedVariableT {
           name: member.name,
           closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
           kind: substituter.substitute_for_kind(coutputs, member.tyype),
-        })
+        }))
       })
       .collect();
     let entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = vec![(
