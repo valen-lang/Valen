@@ -1063,6 +1063,7 @@ pub fn humanize_templata<'s, 't>(
           + &humanize_id(scout_arena, typing_interner, code_map, p.id)
       }
     },
+    ITemplataT::Group(_) => "'".to_string(),
     _ => panic!("implement: humanize_templata other"),
   }
 }

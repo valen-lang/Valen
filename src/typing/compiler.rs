@@ -183,6 +183,7 @@ where
         // getPlaceholdersInKind(accum, subKind)
         // getPlaceholdersInKind(accum, superKind)
       }
+      ITemplataT::Group(_) => {}
       _ => {
         panic!("implement: get_placeholders_in_templata other");
       }

@@ -64,3 +64,41 @@ Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutat
 "#,
   );
 }
+
+// A value-returning violating call, laid out so `main` is on line 3, so these slices share
+// ALIASING_DIAGNOSTIC. Each nests the call in a different statement position the walk must descend.
+fn value_call_program(statement: &str) -> String {
+  format!(
+    "struct Entity {{ hp int; }}\n\
+     func badpairi<r', s'>(a &Entity in r, d &Entity in s) int mut(r) {{ return 0; }}\n\
+     exported func main() int {{\n  e = Entity(5);\n{statement}\n}}\n"
+  )
+}
+
+// Slice 17: the violating call is the initializer of a `let`.
+#[test]
+fn test_violation_in_let_initializer_caught() {
+  assert_borrow_error_renders(
+    &value_call_program("  y = badpairi(&e, &e);\n  return y;"),
+    ALIASING_DIAGNOSTIC,
+  );
+}
+
+// Slice 18: the violating call is the operand of a `return`.
+#[test]
+fn test_violation_in_return_caught() {
+  assert_borrow_error_renders(
+    &value_call_program("  return badpairi(&e, &e);"),
+    ALIASING_DIAGNOSTIC,
+  );
+}
+
+// Slice 19: the violating call is the source of a `set`.
+#[test]
+fn test_violation_in_set_source_caught() {
+  assert_borrow_error_renders(
+    &value_call_program("  y = 0;\n  set y = badpairi(&e, &e);\n  return y;"),
+    ALIASING_DIAGNOSTIC,
+  );
+}
+

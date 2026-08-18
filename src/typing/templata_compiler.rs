@@ -1082,6 +1082,7 @@ where
         panic!("Unimplemented: substitute_templatas_in_templata Prototype");
         // PrototypeTemplataT(substituteTemplatasInPrototype(...))
       }
+      ITemplataT::Group(_) => templata,
       _ => panic!("vimpl: substitute_templatas_in_templata unexpected templata"),
     }
   }
@@ -1863,18 +1864,9 @@ where
           register_with_compiler_outputs,
         )))
       }
-      // ITemplataType::KindTemplataType(_) => {
-      // let (kind_mutable, region_mutability) = match &generic_param.tyype {
-      // IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS { kind_mutable, region_mutable, .. }) => {
-      // (if *kind_mutable { OwnershipT::Own } else { OwnershipT::Share },
-      // if *region_mutable { IRegionMutabilityS::ReadWriteRegion } else { IRegionMutabilityS::ReadOnlyRegion })
-      // }
-      // _ => (OwnershipT::Own, IRegionMutabilityS::ReadOnlyRegion),
-      // };
-      // ITemplataT::Kind(self.typing_interner.alloc(self.create_coord_placeholder_inner(
-      // coutputs, env, name_prefix, index, rune, current_height,
-      // region_mutability, kind_mutable, register_with_compiler_outputs)))
-      // }
+      // Per BCHATZ, generate an empty group templata, because typing pass doesn't know about
+      // borrowing.
+      ITemplataType::GroupTemplataType(_) => ITemplataT::Group(GroupTemplataT {}),
       other_type => {
         self.create_non_kind_non_region_placeholder_inner(name_prefix, index, rune, other_type)
       }

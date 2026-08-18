@@ -121,3 +121,4 @@ Instead, use the same file.
 - **Read when a human asks you to use the mailbox to send mail, or you have trouble arming a mail watcher.** → docs/skills/use-mailbox.md
 - **Read when reviewing a plan document or FrontendRust code, to flag suspicious patterns — new jargon, broken existing patterns, and creation-order changes that reduce decoupling.** → docs/skills/valec-approach-review.md
 - **Read when reviewing or writing FrontendRust compiler code in any pass.** → docs/skills/valec-reviewer.md
+- **Read when writing, testing, or reviewing borrow checker code.** → src/typing/docs/borrow-checker-guidelines.md

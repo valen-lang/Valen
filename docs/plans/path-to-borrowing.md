@@ -1,21 +1,23 @@
 # The Path to the Borrow Checker
 
-The onion refactor is done and the suite is green, and the region borrow checker is now underway.
-This document maps the path: what is already built, what we still have to build, and in what order.
+The onion refactor is done and the suite is green. **Rung 0 (groups become real) is landed, and
+rung 1's first real check — the joint-argument check — is landed and green.** This document maps the
+path: what is built, what remains, and in what order.
 
-The current step is **rung 0: "groups become real."** Rung 0 makes groups expressible on the
-declaration side — without putting them on the value type — so the borrow checker has something to
-read. It does not check anything. No program is accepted or rejected that was not before. The first
-actual borrow check is rung 1, which is a separate and later step.
+Rung 0 made groups expressible on the declaration side, without putting them on the value type, so
+the checker has something to read; on its own it accepts and rejects nothing new. The joint-argument
+check (rung 1) is the first thing that rejects programs.
 
-Keep that split in mind throughout: rung 0 is representation and plumbing; checking comes after.
+Keep the split in mind: rung 0 is representation and plumbing; checking is rung 1 and up.
 
-## Where rung 0 stands
+## Where it stands
 
-Rung 0's data structures, its parser/postparser syntax, and a no-op checker seam are landed and
-green (see "What is already done"). What remains is the typing-side semantics — constructing the
-ceremonial `ITemplataT::Group(Default)` and minting `GroupB` from the scout `FunctionS`. The design
-is settled; this is build work, not more design.
+Rung 0's data structures, its parser/postparser syntax, and the checker seam are landed, and the
+**joint-argument check runs on top of them** (see "What is already done"). The checker lives in
+`src/typing/borrow_checker/` and its high-level design doc is
+`src/typing/docs/borrow-checker-guidelines.md`. What remains: the dataflow rungs (rung 2,
+use-after-churn), effect *checking*, and the still-unbuilt `GroupB` minting that the dataflow will
+consume. The design is settled; this is build work.
 
 ## What rung 0 is, and what it is not
 
@@ -42,9 +44,9 @@ out of scope here, and something rung 0 must not block. Rung 0 builds the effect
 The onion work left more of the foundation in place than the old handoff suggests. Verified
 against the current tree:
 
-- **The group data structures, the parser/postparser group syntax, and the no-op checker seam are
-  landed, and the crate compiles green** (`cargo test --manifest-path Cargo.toml --lib`: measure
-  before quoting; last 700 passed / 0 failed / 70 ignored). `BorrowRefT` is emptied to
+- **The group data structures, the parser/postparser group syntax, and the rung-1 joint-argument
+  check are landed, and the crate compiles green** (`cargo nextest run --lib --manifest-path
+  Cargo.toml`: measure before quoting; last 722 passed / 0 failed / 70 skipped). `BorrowRefT` is emptied to
   `{ inner }` — the `region` field is gone, and the `region: RegionT` fields on the name-structs go
   with it (`ExportNameT` done; `RawArrayNameT`/`ExternNameT` still carry theirs). The scout produces
   the symbolic forms: a borrow's `&T in g` lowers to `RegionS::Group(GroupS::Rune | Local)` on the
@@ -55,15 +57,27 @@ against the current tree:
   `ITemplataT::Group(GroupTemplataT)` exist; `GroupB`/`EffectB` live in `src/typing/borrow_checker/`.
   **The rule-side region erases the group to `RegionSR::Unspecified`** (groups never reach the
   solver); the group survives only on the `ITypeST`.
-  - **The checker seam is a wired no-op**: `check_function` in `src/typing/borrow_checker/` returns
-    `Ok(())`, called at the tail of each user-body typecheck (`function_compiler_core.rs:358`, right
-    after `coutputs.add_function`), reading the scout `FunctionS` straight off
-    `full_env_snapshot.function`. This proves the plumbing (see step 5); it checks nothing.
-  - **No typing-side semantic wiring exists yet — that is the next work.** `ITemplataT::Group(Default)`
-    is never *constructed* (a group param still mints a region-typed `Placeholder` via
-    `create_placeholder`); `GroupB` is never *minted*; the checker reads no groups yet. And only the
-    single-named-group leaf is parsed — `Member`/`Elements`/`Union`, multi-group `mut` folds, `g...`
-    and `rc` are variants the enums carry but the parser does not yet produce.
+  - **The checker does the joint-argument check.** `check_function` (`src/typing/borrow_checker/borrow_check.rs`),
+    called at the tail of each user-body typecheck (`function_compiler_core.rs:358`, after
+    `coutputs.add_function`), walks the finished body, collects call nodes, and for each reads the
+    callee's declared groups (`ParameterS.tyype`) and `mut` effects (`FunctionS.effects`) off the
+    scout `FunctionS`, then rejects two arguments aliasing into distinct mutated groups, and a borrow
+    argument rooted in a moved argument's local. Argument identity is a `PlacePath` (root + member
+    segments) in `place_path.rs`; the check is in `call_check.rs`; errors are `BorrowErrorKind`
+    (`ICompileErrorT::BorrowCheckError`) in `borrow_error.rs`. It reads `GroupS`/`EffectS` directly by
+    name; it does **not** mint `GroupB`. Its `collect_calls` walk descends the statement positions a
+    nested call can hide in (`LetNormal`/`Return`/`Mutate` alongside the control-flow nodes), and its
+    match is **exhaustive** so a new `ExpressionTE` variant cannot silently reintroduce a walk gap; the
+    remaining un-descended child-bearing variants (`ExternFunctionCall`, `InterfaceFunctionCall`,
+    member/array lookups, `Tuple`, `Construct`, `LetAndLend`) are known gaps to close with a red test
+    when a reachable nested call appears there.
+  - **A group param concludes to the ceremonial `ITemplataT::Group(GroupTemplataT {})` constant**,
+    minted in `create_placeholder`'s `GroupTemplataType` arm; it is inert (substitutes to itself,
+    contributes no placeholder). Real region params still mint a `Placeholder`.
+  - **What the checker still does not do.** `GroupB` is never *minted* (rung 2's dataflow will need
+    it); there is no liveness/invalidation dataflow yet. Only the single-named-group leaf is parsed —
+    `Member`/`Elements`/`Union`, multi-group `mut` folds, `g...` and `rc` are variants the enums carry
+    but the parser does not yet produce.
 - **`substitute_templatas_in_kind` handles all four ref wraps** correctly
   (`typing/templata_compiler.rs:540-552`); once `BorrowRefT` is emptied there is no region for it to
   carry through generics, so that concern disappears rather than needing wiring. The only remaining
@@ -86,11 +100,11 @@ against the current tree:
 
 ## The build work
 
-**Status: the representation's *types*, the parser/postparser *syntax*, and the no-op checker seam
-are landed (see "What is already done"); the *typing-side wiring* below is not.** Step 1's data
-shapes exist, the seam is a wired no-op, and the crate is green, but the semantics — minting the
-ceremonial `ITemplataT::Group(Default)`, and minting `GroupB` from the scout `FunctionS` — are the
-remaining work, along with steps 3-4.
+**Status: the representation's *types*, the parser/postparser *syntax*, and the rung-1 joint-argument
+check are landed (see "What is already done"); the fuller machinery below is not.** The joint-argument
+check reads `GroupS`/`EffectS` off the scout `FunctionS` directly, and a group param concludes to the
+ceremonial `ITemplataT::Group(GroupTemplataT {})` constant. Still to build: minting `GroupB`, and the
+rung-2 liveness/invalidation dataflow that consumes it.
 
 ### 1. The group representation — never on the value type
 
@@ -293,24 +307,22 @@ where-clause group, or an effect-only `mut(g)`), and those are rung 1 and later.
 
 ## The order
 
-1. **Decide** (architect): go or no-go on rung 0. Nothing past rung 0 starts until this. *(Done — rung
-   0 is underway.)*
-2. **The seam** *(done, a no-op)*: `check_function` is invoked at the tail of each user-body typecheck
-   (`function_compiler_core.rs:358`, after `coutputs.add_function`), reading the scout `FunctionS` off
-   `full_env_snapshot.function` and returning `Ok(())`. The plumbing exists; it checks nothing.
-3. **Rung 0 data + syntax** *(done)*: `BorrowRefT` emptied to `{ inner }`; the `GroupP`/`GroupS`/`GroupB`
-   and `EffectP`/`EffectS`/`EffectB` enums; `ITemplataT::Group(GroupTemplataT)` (variant + arms);
+1. **Decide** (architect) *(done)*: rung 0 and the joint-argument check are landed.
+2. **The seam + the joint-argument check** *(done)*: `check_function` (`borrow_check.rs`) is invoked
+   at the tail of each user-body typecheck (`function_compiler_core.rs:358`, after
+   `coutputs.add_function`), walks the finished body, and runs the joint-argument check — rejecting two
+   arguments aliasing into distinct mutated groups, and a borrow argument rooted in a moved argument's
+   local. It reads the callee's `GroupS`/`EffectS` off the scout `FunctionS` and keys on a `PlacePath`
+   argument identity; errors are `BorrowErrorKind` (`ICompileErrorT::BorrowCheckError`).
+3. **Rung 0 data + syntax + the group constant** *(done)*: `BorrowRefT` emptied to `{ inner }`; the
+   `GroupP`/`GroupS`/`GroupB` and `EffectP`/`EffectS`/`EffectB` enums; `ITemplataT::Group(GroupTemplataT)`
+   constructed in `create_placeholder`'s `GroupTemplataType` arm (`templata_compiler.rs`);
    `ParameterS.tyype: ITypeST` populated; `&T in g`, `<g': T>`, and `mut(g)`/`not(mut(g))` parse and
    scout. Only the single-named-group leaf is produced so far.
-4. **Rung 0 semantics** *(remaining)*: construct the ceremonial `ITemplataT::Group(Default)` in
-   `create_placeholder` (`templata_compiler.rs:1857`) and seed it as an `InitialKnown` (replacing the
-   region-typed `Placeholder` a group param still mints); then have `check_function` mint `GroupB` from
-   the scout `FunctionS` and begin the whole-function walk. The `Member`/`Elements`/`Union` group
-   parsing, `g...`, and `rc` follow the first program that writes them.
-
-Rung 1 follows: the first real check plus effect *checking* (rung 0 already builds the `mut(g)`
-representation), which is a second solver domain (`ITemplataT::Effect`). It is deferrable and does
-not gate the start.
+4. **Remaining**: mint `GroupB`, and build the rung-2 liveness/invalidation dataflow that consumes it.
+   The `Member`/`Elements`/`Union` group parsing, `g...`, and `rc` follow the first program that writes
+   them. Effect *checking* (rung 1's second half, `ITemplataT::Effect`) is a separate solver domain,
+   deferrable.
 
 ## What still needs a ruling
 
@@ -335,6 +347,9 @@ Rung 0 is the foundation. Each rung past it catches a distinct class of error.
 | 1 | effect *checking* (`mut(g)` representation lands at rung 0); the first check | disjointness violation (declared disjoint, passed aliasing); permission escalation | yes, the first real check |
 | 2 | churn tracking | use-after-churn; a borrow sibling to a churning receiver | yes, plus monotone state |
 | 3 | `Vec<T>` (rides the generics/bounds track) | the same classes, on realistic code | yes |
+
+Rung 0 and rung 1's joint-argument check are landed. Rung 1's effect *checking* and all of rung 2
+(the liveness/invalidation dataflow) are the next work.
 
 Rungs 0 through 2 need no generics and no `Vec`; plain structs suffice, e.g.
 `struct Fleet { flagship Ship; escort Ship; }`. So the borrow-checker track and the
@@ -466,7 +481,9 @@ where-clause relations.
 
 ## Evidence from rustc
 
-Two surveys of `~/rust` justify the choices above.
+The canonical "what to copy and what to skip from Polonius" catalog lives in
+`src/typing/docs/borrow-checker-guidelines.md` (§"Similar to Polonius"); this section keeps only the
+roadmap rationale. Two surveys of `~/rust` justify the choices above.
 
 - About 15,000 of borrowck's 30,750 lines exist because Rust infers lifetimes: renumbering,
   universal-region discovery, the SCC constraint solver, blame metadata on every constraint, and a

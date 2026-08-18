@@ -24,9 +24,9 @@ pub fn check_function<'s, 'ctx, 't>(
   Ok(())
 }
 
-/// Collect every `FunctionCallTE` reachable in a finished body, descending the structural nodes an
-/// ordinary body is built from. Leaves without child expressions are skipped; control-flow nodes are
-/// added as later slices exercise nesting.
+/// Collect every `FunctionCallTE` reachable in a finished body, descending into each node's child
+/// expressions. The match is **exhaustive on purpose**: a new `ExpressionTE` variant fails to compile
+/// here until someone decides whether the walk descends it, so the walk cannot silently regain a gap.
 fn collect_calls<'s, 't>(expr: &ExpressionTE<'s, 't>, out: &mut Vec<&'t FunctionCallTE<'s, 't>>) {
   match *expr {
     ExpressionTE::FunctionCall(call) => {
@@ -48,6 +48,57 @@ fn collect_calls<'s, 't>(expr: &ExpressionTE<'s, 't>, out: &mut Vec<&'t Function
       collect_calls(&if_expr.else_call, out);
     }
     ExpressionTE::While(while_expr) => collect_calls(&while_expr.block.inner, out),
-    _ => {}
+    ExpressionTE::LetNormal(let_normal) => collect_calls(&let_normal.expr, out),
+    ExpressionTE::Return(ret) => collect_calls(&ret.source_expr, out),
+    ExpressionTE::Mutate(mutate) => {
+      collect_calls(&mutate.destination_expr, out);
+      collect_calls(&mutate.source_expr, out);
+    }
+    // Not descended today. Several of these hold child expressions (`ExternFunctionCall`,
+    // `InterfaceFunctionCall`, the member/array lookups, `Tuple`, `Construct`, `LetAndLend`, the
+    // array ops) and are known gaps: add a recursing arm with a red test when a reachable violating
+    // call can nest there. The rest are leaves. Kept explicit rather than a wildcard so a new variant
+    // forces this decision.
+    ExpressionTE::AddressMemberLookup(_)
+    | ExpressionTE::ArgLookup(_)
+    | ExpressionTE::ArrayLength(_)
+    | ExpressionTE::ArraySize(_)
+    | ExpressionTE::AsSubtype(_)
+    | ExpressionTE::BorrowToWeak(_)
+    | ExpressionTE::Break(_)
+    | ExpressionTE::ConstantBool(_)
+    | ExpressionTE::ConstantFloat(_)
+    | ExpressionTE::ConstantInt(_)
+    | ExpressionTE::ConstantStr(_)
+    | ExpressionTE::Construct(_)
+    | ExpressionTE::CopyPrim(_)
+    | ExpressionTE::Defer(_)
+    | ExpressionTE::Deref(_)
+    | ExpressionTE::Destroy(_)
+    | ExpressionTE::DestroyRuntimeSizedArray(_)
+    | ExpressionTE::DestroyStaticSizedArrayIntoFunction(_)
+    | ExpressionTE::DestroyStaticSizedArrayIntoLocals(_)
+    | ExpressionTE::ExternFunctionCall(_)
+    | ExpressionTE::InterfaceFunctionCall(_)
+    | ExpressionTE::InterfaceToInterfaceUpcast(_)
+    | ExpressionTE::IsSameInstance(_)
+    | ExpressionTE::LetAndLend(_)
+    | ExpressionTE::LocalLookup(_)
+    | ExpressionTE::LockWeak(_)
+    | ExpressionTE::NewRuntimeSizedArray(_)
+    | ExpressionTE::PopRuntimeSizedArray(_)
+    | ExpressionTE::PushRuntimeSizedArray(_)
+    | ExpressionTE::ReferenceMemberLookup(_)
+    | ExpressionTE::Reinterpret(_)
+    | ExpressionTE::Restackify(_)
+    | ExpressionTE::RuntimeSizedArrayCapacity(_)
+    | ExpressionTE::RuntimeSizedArrayLookup(_)
+    | ExpressionTE::StaticArrayFromCallable(_)
+    | ExpressionTE::StaticArrayFromValues(_)
+    | ExpressionTE::StaticSizedArrayLookup(_)
+    | ExpressionTE::Tuple(_)
+    | ExpressionTE::Unlet(_)
+    | ExpressionTE::Upcast(_)
+    | ExpressionTE::VoidLiteral(_) => {}
   }
 }

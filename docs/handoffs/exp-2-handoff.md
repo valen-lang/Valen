@@ -52,6 +52,8 @@ Everything else is reference; skip it until you need it.
 - **A partial set with a total name gets its fold forgotten.** `header_rules` omits each param's own type-binding rules, and three of five sites remembered to fold them in — check every reader when a field's name promises more than it holds.
 - **A failure-set diff is meaningless if the test binary did not compile.** Confirm a `test result` line exists before comparing runs, or a broken test build reads as every test suddenly passing.
 - **Lambdas do not generally use the anonymous interface macro.** Only a lambda passed where an *interface* is expected does; a direct lambda call, or a lambda/struct satisfying a concept-function bound (`__call(&G)E`), does not — so a failing lambda test is usually not an anonymous-substruct failure.
+- **In a borrow-checker fixture, a move is `^local` (prefix), and arithmetic on a borrowed member does not read out.** `f(&x, x)` does not move `x` (bare `x` yields a borrow, rejected against an owned param) and `x^` does not parse (postfix `^` unshipped); write `^x`. `set a.hp = a.hp + 1` on an `&Entity` member fails with `+(&i32, &i32)` not found, so fixtures use literal member writes.
+- **Group invalidation is not Rust's exclusion; do not model the borrow as a lock.** A borrow constrains nobody. A *destructive* op on an **ancestor** group invalidates references into its **child** groups (downward only); a plain member write, a sibling, or mutating the reference's own contents invalidates nothing. The destroy is the aggressor and the borrow is the victim — the reverse of a Rust `&mut`, which is a standing lock its place must respect. (For rung 2's dataflow.)
 - **Emptying a struct field reaches past its constructors, through its type.** Removing `BorrowRefT.region` (a `RegionT`) meant chasing `RegionT` through the humanizer's display params (`humanize_id`/`kind`/`name`/`generic_args`, each carrying an `Option<RegionT>`) and out of the `IdT` name-structs (`ExportNameT`). Grep the field's *type*, not just its name, to bound the sweep.
 - **A `--lib` build passing does not mean the tests build.** `typing/mod.rs` gates `pub mod test;` behind `#[cfg(test)]`, so a change can compile under `cargo build --lib` yet break the test build (typing's macros construct `ParameterS`/`FunctionS`, its tests construct `ExportNameT`). Run `cargo test --lib --no-run` before calling a typing-touching change done.
 
@@ -67,8 +69,9 @@ Everything else is reference; skip it until you need it.
 - **Renaming is an acceptable price.** Where two things want one name, making the user rename one is preferable to a mechanism that tells them apart.
 - **Widen on the way in rather than narrowing on the way in.** An error type that holds less than its producers do forces each of them to flatten, and a flatten silently drops whatever did not fit.
 - **Authorize removals category-by-category.** The architect clears one kind of edit at a time (*"just that, no other kinds of typing pass edits"*); surface the boundary of a cascade and wait for the go-ahead rather than bundling the next category in.
-- **No typing-pass change without a failing test motivating it.** A "cheaper to do it now, before the checker depends on it" argument does not clear the bar; the core stays untouched until a red test proves the change is needed. (This is why source ranges — defect 15 — are deferred, not do-early.)
+- **Only three kinds of work: a simplifying refactor, a new feature driven by a red test, or a bugfix driven by a red test.** Nothing else — no speculative plumbing, no "cheaper to do it now before it's needed". A "cheaper to do it now, before the checker depends on it" argument does not clear the bar; the core stays untouched until a red test proves the change is needed. (This is why source ranges — defect 15 — and minting `GroupB` are deferred, not do-early: no observable behavior to red-test yet.)
 - **Do not preserve backwards compatibility or maintain unused code.** Code as if there are no users: a superseded function whose only callers are its own recursion is dead — delete it, don't keep it working alongside its replacement.
+- **Do not mirror a foreign reference implementation's structure as a template.** Copying Polonius's file/struct layout would import loans/origins/constraints — abstractions for jobs (region inference, exclusivity) group borrowing does not have; write a small own-shape layering doc instead.
 
 **Recurring agent mistakes**
 
@@ -248,18 +251,19 @@ Goal: **the compiler is whole again** end to end, and the corpus stops lying abo
 Goal: **the language's actual point.** This is where the design work of the last three days cashes
 out.
 
-- **Rung 0 — groups become real.** Underway; the representation, syntax, and no-op checker seam are
-  landed. Scoped in `docs/plans/path-to-borrowing.md`: groups live **only on the declaration side**,
-  never on the value type. `BorrowRefT` is emptied to `{ inner }`; group params stay uniform valued by
-  a ceremonial `ITemplataT::Group(Default)` constant; group/effect syntax lives in
-  `GroupP`/`GroupS`/`GroupB` enums and the minimal `mut(g)` clause; the borrow checker reads them off
-  the scout `FunctionS` (`FunctionT<'t>`; `ITypeST` never into `'t`), minting `GroupB`, never off a
-  `KindT`. Remaining: construct `ITemplataT::Group(Default)` and mint `GroupB`. This **supersedes** the
-  earlier "add `ITemplataT::Region`, make `RegionT` an interned recursive algebra, put a real region on
-  `BorrowRefT`" scoping — do not resurrect it.
-- **Rungs 1–3** — effect clauses and the first call-site check, then churn tracking, then `Vec<T>`.
+- **Rung 0 (groups become real) and rung 1's joint-argument check are landed.** Groups live **only on
+  the declaration side**, never on the value type: `BorrowRefT` emptied to `{ inner }`; group/effect
+  syntax in `GroupP`/`GroupS`/`GroupB` enums + the minimal `mut(g)` clause; a ceremonial
+  `ITemplataT::Group(GroupTemplataT {})` constant for the uniform group param (minted in `create_placeholder`).
+  The checker reads groups off the scout `FunctionS`, never off a `KindT`. The joint-argument check
+  reads `GroupS`/`EffectS` by name and does **not** mint `GroupB`. See "Region borrow checker — rung 1
+  joint-argument check landed" for the built/remaining line and the scope in
+  `docs/plans/path-to-borrowing.md`. This **supersedes** the earlier "add `ITemplataT::Region`, make
+  `RegionT` an interned recursive algebra, put a real region on `BorrowRefT`" scoping — do not
+  resurrect it.
+- **Rung 1's rest and rungs 2–3** — effect *checking*, then churn tracking (the dataflow), then `Vec<T>`.
   Two entry points confirmed, not one: borrow *creation* at the member/element seam, and the
-  joint-argument check at call sites.
+  joint-argument check at call sites (landed).
 - **Effects** — strictly behind rung 0, because an effect target *is* a group expression. The
   representation is still unsettled (see the effect-representation block); the live candidate is a
   per-group permission map, since `held` and `dangle` are ratified permission splits that a bare
@@ -720,7 +724,7 @@ Everything below is open. Nothing else is. Grouped by what unblocks it.
 - **What the expression `&x` forms at a claim-typed local** — payload borrow by concrete sugar, compositional borrow-of-claim, or a one-hop argument coercion. Open upstream, and they have asked for our input, since our lowering implicitly picks a horn.
 
 **Decisions only the architect can make**
-1. **Rung 0 is underway — the start question is settled, do not re-raise it.** Its representation, syntax, and no-op checker seam are landed (see "Region borrow checker — rung 0 underway"); the scope is in `docs/plans/path-to-borrowing.md`. Groups live only on the declaration side, never on the value type — empty `BorrowRefT` to `{ inner }`, a ceremonial `ITemplataT::Group(Default)` constant for the uniform group param, `GroupP`/`GroupS`/`GroupB` enums + a minimal `mut(g)` clause, all read by the borrow checker straight off the scout `FunctionS` (no side-table struct; `FunctionT<'t>`, `ITypeST` never into `'t`). Groups never flow through the solver. (This replaced the earlier region-on-`BorrowRefT` / `ITemplataT::Region` / interned-`RegionT` scoping.) Remaining typing-side wiring is core work, so it needs "fire core edits"; the still-open effect-domain calls are decisions 2-3 below.
+1. **Rung 0 and rung 1's joint-argument check are landed — the start question is settled, do not re-raise it.** See "Region borrow checker — rung 1 joint-argument check landed"; the scope is in `docs/plans/path-to-borrowing.md`. Groups live only on the declaration side, never on the value type — empty `BorrowRefT` to `{ inner }`, a ceremonial `ITemplataT::Group(Default)` constant for the uniform group param, `GroupP`/`GroupS`/`GroupB` enums + a minimal `mut(g)` clause, all read by the borrow checker straight off the scout `FunctionS` (no side-table struct; `FunctionT<'t>`, `ITypeST` never into `'t`). Groups never flow through the solver. (This replaced the earlier region-on-`BorrowRefT` / `ITemplataT::Region` / interned-`RegionT` scoping.) Remaining borrow-checker work (mint `GroupB`, the rung-2 dataflow) is in `src/typing/borrow_checker/` (AI-editable); touching the rest of the typing pass still needs "fire core edits". The still-open effect-domain calls are decisions 2-3 below.
 2. **Where does mutability live?** design-1 puts it on the **group**, via signature effect clauses (`func heal(e: &Entity in g) mut(g)`), and calls that its one departure from Rust (*"there is no `&mut`"*, design-1:361). We dropped `&mut` and never added effect clauses, so mutability currently lives **nowhere**. Sits *behind* rung 0, not beside it, since effect targets are group expressions. It is bigger than "add effect clauses": `mut(g)` / `mut(g.tiles[])` / `mut(E)` with `E: Effects` / `mut(())`, the subtractive `not(mut(…))` forms, the deep-effect rule, parameter shorthands that desugar to **fresh anonymous group params instantiated per call site**, plus solve-order pins (design-1:1235 — no negative bound discharged against less than `E`'s full solution; re-check on widening). That is a **second solver domain** (rung 1) alongside types, i.e. `ITemplataT::Effect` — distinct from the ceremonial group-param constant `ITemplataT::Group`, since groups themselves never flow through the solver.
 3. **Effect vocabulary staging** — full set or `mut(g)` first? And is effect *inference* in scope initially? (Ruled: named functions **declare and are checked**, so no call-graph fixpoint; closures genuinely infer, and a *recursive closure* is an unaddressed gap.)
 5. **`is_primitive`** — the fix is *renaming*, not moving the `Str` row. Which two names?
@@ -790,8 +794,8 @@ test no longer tests its name; delete it and that is a call.
 
 **Closed, recorded so nobody re-opens them:** the `set` spec report (sent + ruled); the Vale4 reply (sent); the Luz curate queue (drained + committed); `Guardian/Luz` (deleted, 7 symlinks deliberately broken); the design-1 audit doc (folded into this file + deleted); the `lookup_rune_type` coercion arm (**dead by evidence** — probe run, suite byte-identical, zero hits); the move-tracker join question; the `self`-receiver hazard; the borrow-creation seam; per-body checking; and every one of the seven "genuinely unfinished reasoning" threads from the start of the arc.
 
-### Region borrow checker — rung 0 underway
-The full design — ladder, quarantine rule, and rustc evidence — lives in `docs/plans/path-to-borrowing.md`. Rung 0 (groups become real) is in progress: `BorrowRefT` is emptied to `{ inner }`, the `GroupP`/`GroupS`/`GroupB` + `EffectP`/`EffectS`/`EffectB` enums and `ITemplataT::Group(GroupTemplataT)` exist, `&T in g` / `<g': T>` / `mut(g)` parse and scout, and a no-op `check_function` seam is wired at the tail of each user-body typecheck (`function_compiler_core.rs`, reading the scout `FunctionS`). Remaining: construct the ceremonial `ITemplataT::Group(Default)` and mint `GroupB`.
+### Region borrow checker — rung 1 joint-argument check landed
+The checker lives in `src/typing/borrow_checker/` (`borrow_check`, `place_path`, `call_check`, `borrow_error`); its high-level design doc is `src/typing/docs/borrow-checker-guidelines.md`, and the roadmap is `docs/plans/path-to-borrowing.md`. Rung 0 is landed: `BorrowRefT` emptied to `{ inner }`, the `GroupP`/`GroupS`/`GroupB` + `EffectP`/`EffectS`/`EffectB` enums and `ITemplataT::Group(GroupTemplataT)`, and `&T in g` / `<g': T>` / `mut(g)` parse and scout. On top of it, `check_function` (at each user-body typecheck's tail, `function_compiler_core.rs` after `coutputs.add_function`) runs the **joint-argument check**: it walks the finished body and rejects two arguments aliasing into distinct mutated groups, and a borrow argument rooted in a moved argument's local, reading the callee's `GroupS`/`EffectS` off the scout `FunctionS` and keying on a `PlacePath` argument identity. A group param concludes to the ceremonial `ITemplataT::Group(GroupTemplataT {})` constant (minted in `create_placeholder`), but the checker itself reads groups **by name** off the scout `FunctionS` and does **not** mint `GroupB`. Remaining: mint `GroupB`, and build rung 2 (the liveness/invalidation dataflow). **Walk completeness:** `collect_calls` (`borrow_check.rs`) descends `Consecutor`/`Block`/`Discard`/`If`/`While`, call args, and `LetNormal`/`Return`/`Mutate` (a violation nested in `y = badcall(...)`, `return badcall(...)`, or `set y = badcall(...)` is caught), and the match is **exhaustive** so a new `ExpressionTE` variant cannot silently reintroduce a gap. The still-un-descended child-bearing variants (`ExternFunctionCall`, `InterfaceFunctionCall`, member/array lookups, `Tuple`, `Construct`, `LetAndLend`) are known gaps — add a recursing arm with a red test when a reachable nested call appears there. Suite green: measure with `cargo nextest run --lib --manifest-path Cargo.toml` (last 725 / 0 / 70).
 
 ## Current state
 
@@ -1082,9 +1086,11 @@ Grouped by what you would do with them. **Everything here is traced from source 
 with no region, and groups live only on declaration-side structures. `docs/plans/path-to-borrowing.md`
 is the design and the built-vs-unwired line. Still-true mechanics:
 - **`ITemplataType` carries both `RegionTemplataType` and `GroupTemplataType`; `ITemplataT` carries a
-  `Group(GroupTemplataT)` variant** — but the ceremonial `ITemplataT::Group(Default)` is never
-  *constructed* yet. `create_placeholder` (`templata_compiler.rs`) still mints a region-typed
-  `Placeholder` for a group param; the rung-0 rework is to return the `Group` constant instead.
+  `Group(GroupTemplataT)` variant**, and a group param concludes to the ceremonial
+  `ITemplataT::Group(GroupTemplataT {})` constant, minted in `create_placeholder`'s
+  `GroupTemplataType` arm (`templata_compiler.rs`). It is inert: `substitute_templatas_in_templata`
+  returns it unchanged and `get_placeholders_in_templata` treats it as no placeholder. Real region
+  params still mint a `Placeholder`.
 - **`KindT` is a deliberately 16-byte `Copy+Eq+Hash` enum (`@WVSBIZ`)** — this is *why* a group must
   never live in it: it would join type equality, arena interning, and monomorphization identity.
 - **`RegionT` (`Iso`/`Default`) is vestigial scaffolding** — still on `context_region` params and the
@@ -1205,7 +1211,7 @@ registry must be spelled `Vec<Box<dyn EventHandler>>`, not `List<EventHandler>`.
 may be asserting the wrong thing.**
 
 ### Region borrow checker — design index
-The full design lives in `docs/plans/path-to-borrowing.md`: the ladder (rungs 0-3), the design rulings (regions are inert cargo, a group is an identity not an extent, invalidation keyed on reach, the two join disciplines, the two seams, quarantine by capability, per-body, the whole-signature input), the region and effect rulings, and the rustc evidence. For the built-vs-remaining line see "Region borrow checker — rung 0 underway" above.
+The high-level design doc is `src/typing/docs/borrow-checker-guidelines.md` (layering, the pure-read seam, what to and not to copy from Polonius). The roadmap `docs/plans/path-to-borrowing.md` carries the ladder (rungs 0-3), the design rulings (regions are inert cargo, a group is an identity not an extent, invalidation keyed on reach, the two join disciplines, the two seams, quarantine by capability, per-body, the whole-signature input), and the region/effect rulings. For the built-vs-remaining line see "Region borrow checker — rung 1 joint-argument check landed" above.
 
 ### Reference model
 Four ratified decisions, in force. Together they **retire `RegionT::Held` entirely — do NOT add it** — and reshape how a mention lowers.
