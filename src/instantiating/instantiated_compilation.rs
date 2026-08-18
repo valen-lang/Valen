@@ -9,6 +9,7 @@ use crate::parsing::ast::FileP;
 // use crate::simplifying::HammerCompilationOptions;
 use crate::typing::TypingPassCompilation;
 use crate::typing::TypingPassOptions;
+use crate::typing::oracles::Oracles;
 use crate::code_source::CodeSource;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
@@ -89,6 +90,7 @@ where
       packages_to_build,
       code_source,
       typing_options,
+      Oracles::none(),
     );
 
     let instantiating_interner = InstantiatingInterner::new(instantiating_bump);
@@ -127,11 +129,6 @@ where
 
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.typing_pass_compilation.get_scoutput()
-  }
-
-
-  pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramS<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
-    self.typing_pass_compilation.get_astrouts()
   }
 
 

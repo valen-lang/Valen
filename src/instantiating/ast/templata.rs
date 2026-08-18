@@ -1,24 +1,23 @@
-use crate::instantiating::ast::types::{CoordI, KindIT, OwnershipI, SharednessI, LocationI};
+use crate::instantiating::ast::types::KindIT;
 use crate::instantiating::ast::ast::{FunctionHeaderI, PrototypeI};
-use crate::instantiating::ast::names::{IdI, IImplNameI};
+use crate::instantiating::ast::names::IdI;
 use crate::interner::StrI;
 use crate::utils::range::RangeS;
 use crate::postparsing::itemplatatype::TemplateTemplataType;
-use crate::typing::types::types::{KindT, RegionT};
 use std::marker::PhantomData;
 
 
 
-pub fn expect_coord<'s, 'i>(templata: ITemplataI<'s, 'i>) -> ITemplataI<'s, 'i> {
-    panic!("Unimplemented: expect_coord");
-    // templata match { case t @ CoordTemplataI(_, _) => t; case other => vfail(other) }
+pub fn expect_kind<'s, 'i>(templata: ITemplataI<'s, 'i>) -> ITemplataI<'s, 'i> {
+    panic!("Unimplemented: expect_kind");
+    // templata match { case t @ KindTemplataI(_) => t; case _ => vfail() }
 }
 
 
-pub fn expect_coord_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> CoordTemplataI<'s, 'i> {
+pub fn expect_kind_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> KindTemplataI<'s, 'i> {
     match templata {
-        ITemplataI::Coord(t) => t,
-        _ => panic!("expect_coord_templata: not a CoordTemplataI"),
+        ITemplataI::Kind(t) => t,
+        _ => panic!("expect_kind_templata: not a KindTemplataI"),
     }
 }
 
@@ -30,28 +29,13 @@ pub fn expect_integer_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> IntegerT
     }
 }
 
-pub fn expect_kind<'s, 'i>(templata: ITemplataI<'s, 'i>) -> ITemplataI<'s, 'i> {
-    panic!("Unimplemented: expect_kind");
-    // templata match { case t @ KindTemplataI(_) => t; case _ => vfail() }
-}
 
-
-pub fn expect_kind_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> KindTemplataI<'s, 'i> {
-    panic!("Unimplemented: expect_kind_templata");
-    // templata match { case t @ KindTemplataI(_) => t; case _ => vfail() }
-}
-
-
-pub fn expect_region_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> RegionT {
-    panic!("Unimplemented: expect_region_templata");
-    // templata match { case t @ RegionTemplataI(_) => t; case _ => vfail() }
-}
-
-
+/// A coord is now just an onion kind, so there is no Coord templata — Kind carries it.
+/// Ownership/Location/Region templatas are gone: ownership is a wrap on the kind, and
+/// regions/groups are declaration-side (BCHATZ). Mirrors typing's ITemplataT.
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum ITemplataI<'s, 'i> {
-  Coord(CoordTemplataI<'s, 'i>),
   Kind(KindTemplataI<'s, 'i>),
   RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataI),
   StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataI),
@@ -59,41 +43,25 @@ pub enum ITemplataI<'s, 'i> {
   StructDefinition(StructDefinitionTemplataI<'s, 'i>),
   InterfaceDefinition(InterfaceDefinitionTemplataI<'s, 'i>),
   ImplDefinition(ImplDefinitionTemplataI<'s, 'i>),
-  Ownership(OwnershipTemplataI),
-  Location(LocationTemplataI),
   Boolean(BooleanTemplataI),
   Integer(IntegerTemplataI),
   String(StringTemplataI<'s>),
   Prototype(PrototypeTemplataI<'s, 'i>),
   Isa(IsaTemplataI<'s, 'i>),
-  CoordList(CoordListTemplataI<'s, 'i>),
-  Region(RegionT),
+  KindList(KindListTemplataI<'s, 'i>),
   ExternFunction(ExternFunctionTemplataI<'s, 'i>),
 }
 
 
 
 impl<'s, 'i> ITemplataI<'s, 'i> {
-  pub fn expect_coord_templata(&self) -> CoordTemplataI<'s, 'i> {
-    panic!("Unimplemented: expect_coord_templata");
-    // this match { case c@CoordTemplataI(_, _) => c; case other => vwat(other) }
-  }
-
-
-  pub fn expect_region_templata(&self) -> RegionT {
-    panic!("Unimplemented: expect_region_templata");
-    // this match { case c@RegionTemplataI(_) => c; case other => vwat(other) }
+  pub fn expect_kind_templata(&self) -> KindTemplataI<'s, 'i> {
+    match self {
+      ITemplataI::Kind(k) => *k,
+      _ => panic!("expect_kind_templata: not a KindTemplataI"),
+    }
   }
 }
-
-
-/// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct CoordTemplataI<'s, 'i> {
-  pub region: RegionT,
-  pub coord: CoordI<'s, 'i>,
-}
-
 
 
 /// Polyvalue
@@ -171,20 +139,6 @@ pub struct ImplDefinitionTemplataI<'s, 'i> {
 
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct OwnershipTemplataI {
-  pub ownership: OwnershipI,
-}
-
-/// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct LocationTemplataI {
-  pub location: LocationI,
-}
-
-
-
-/// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct BooleanTemplataI {
   pub value: bool,
 }
@@ -227,8 +181,8 @@ pub struct IsaTemplataI<'s, 'i> {
 
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct CoordListTemplataI<'s, 'i> {
-  pub coords: &'i[CoordI<'s, 'i>],
+pub struct KindListTemplataI<'s, 'i> {
+  pub kinds: &'i [KindIT<'s, 'i>],
 }
 
 
@@ -238,5 +192,3 @@ pub struct CoordListTemplataI<'s, 'i> {
 pub struct ExternFunctionTemplataI<'s, 'i> {
   pub header: &'i FunctionHeaderI<'s, 'i>,
 }
-
-

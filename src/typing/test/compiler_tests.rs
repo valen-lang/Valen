@@ -28,7 +28,6 @@ use crate::typing::ast::ast::{KindExportT, SignatureValT};
 use crate::typing::ast::citizens::StructDefinitionT;
 use crate::typing::ast::citizens::StructMemberT;
 use crate::typing::ast::expressions::ConstantIntTE;
-use crate::typing::ast::expressions::DeferTE;
 use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::ast::expressions::LetAndLendTE;
@@ -445,12 +444,6 @@ exported func main() int {
   let coutputs = compile.expect_compiler_outputs();
   let main = coutputs.lookup_function_by_str("main");
 
-  let defers = collect_where_tnode!(
-      NodeRefT::FunctionDefinition(main),
-      NodeRefT::Defer(_) => Some(())
-  );
-  assert_eq!(defers.len(), 0);
-
   let foo_drops = collect_where_tnode!(
       NodeRefT::FunctionDefinition(main),
       NodeRefT::FunctionCall(FunctionCallTE {
@@ -527,12 +520,6 @@ exported func main() int {
   let coutputs = compile.expect_compiler_outputs();
   let main = coutputs.lookup_function_by_str("main");
 
-  let defers = collect_where_tnode!(
-      NodeRefT::FunctionDefinition(main),
-      NodeRefT::Defer(_) => Some(())
-  );
-  assert_eq!(defers.len(), 0);
-
   let foo_drops = collect_where_tnode!(
       NodeRefT::FunctionDefinition(main),
       NodeRefT::FunctionCall(FunctionCallTE {
@@ -598,12 +585,6 @@ exported func main() {
   let coutputs = compile.expect_compiler_outputs();
   let main = coutputs.lookup_function_by_str("main");
 
-  let defers = collect_where_tnode!(
-      NodeRefT::FunctionDefinition(main),
-      NodeRefT::Defer(_) => Some(())
-  );
-  assert_eq!(defers.len(), 0);
-
   let foo_drops = collect_where_tnode!(
       NodeRefT::FunctionDefinition(main),
       NodeRefT::FunctionCall(FunctionCallTE {
@@ -668,12 +649,6 @@ exported func main() {
   );
   let coutputs = compile.expect_compiler_outputs();
   let main = coutputs.lookup_function_by_str("main");
-
-  let defers = collect_where_tnode!(
-      NodeRefT::FunctionDefinition(main),
-      NodeRefT::Defer(_) => Some(())
-  );
-  assert_eq!(defers.len(), 0);
 
   let foo_drops = collect_where_tnode!(
       NodeRefT::FunctionDefinition(main),
@@ -743,12 +718,6 @@ exported func main() {
   );
   let coutputs = compile.expect_compiler_outputs();
   let main = coutputs.lookup_function_by_str("main");
-
-  let defers = collect_where_tnode!(
-      NodeRefT::FunctionDefinition(main),
-      NodeRefT::Defer(_) => Some(())
-  );
-  assert_eq!(defers.len(), 0);
 
   let foo_drops = collect_where_tnode!(
       NodeRefT::FunctionDefinition(main),

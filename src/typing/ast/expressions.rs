@@ -37,7 +37,6 @@ pub enum ExpressionTE<'s, 't> {
   LetNormal(&'t LetNormalTE<'s, 't>),
   Unlet(&'t UnletTE<'s, 't>),
   Discard(&'t DiscardTE<'s, 't>),
-  Defer(&'t DeferTE<'s, 't>),
   If(&'t IfTE<'s, 't>),
   While(&'t WhileTE<'s, 't>),
   Mutate(&'t MutateTE<'s, 't>),
@@ -95,7 +94,6 @@ where
       ExpressionTE::LetNormal(e) => e.result,
       ExpressionTE::Unlet(e) => e.result,
       ExpressionTE::Discard(e) => e.result,
-      ExpressionTE::Defer(e) => e.result,
       ExpressionTE::If(e) => e.result,
       ExpressionTE::While(e) => e.result,
       ExpressionTE::Mutate(e) => e.result,
@@ -295,31 +293,6 @@ where
 {
   pub fn new(expr: ExpressionTE<'s, 't>) -> DiscardTE<'s, 't> {
     DiscardTE { expr, result: KindT::Void(VoidT), _sealed: () }
-  }
-}
-/// Arena-allocated (see @TFITCX)
-#[derive(Debug)]
-pub struct DeferTE<'s, 't>
-where
-  's: 't,
-{
-  pub inner_expr: ExpressionTE<'s, 't>,
-  pub deferred_expr: ExpressionTE<'s, 't>,
-  pub result: KindT<'s, 't>,
-  _sealed: (),
-}
-
-impl<'s, 't> DeferTE<'s, 't>
-where
-  's: 't,
-{
-  pub fn new(
-    inner_expr: ExpressionTE<'s, 't>,
-    deferred_expr: ExpressionTE<'s, 't>,
-  ) -> DeferTE<'s, 't> {
-    assert!(deferred_expr.result() == KindT::Void(VoidT));
-    let result = inner_expr.result();
-    DeferTE { inner_expr, deferred_expr, result, _sealed: () }
   }
 }
 /// Arena-allocated (see @TFITCX)

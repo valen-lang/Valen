@@ -5,7 +5,7 @@ use crate::instantiating::ast::types::*;
 use crate::instantiating::ast::templata::*;
 use crate::instantiating::ast::ast::{FunctionDefinitionI, PrototypeI};
 use crate::instantiating::ast::expressions::{
-    FunctionCallIE, LetNormalIE, ReferenceExpressionIE,
+    FunctionCallIE, LetNormalIE, ExpressionIE,
 };
 use crate::typing::names::names::IdT;
 use crate::utils::fx::IndexMap;
@@ -15,12 +15,12 @@ pub enum NodeRefI<'s, 'i> {
     Prototype(&'i PrototypeI<'s, 'i>),
     Id(IdI<'s, 'i>),
     Name(INameI<'s, 'i>),
-    Coord(CoordI<'s, 'i>),
+    Coord(KindIT<'s, 'i>),
     Kind(KindIT<'s, 'i>),
     Templata(ITemplataI<'s, 'i>),
     // Top-level / expression-hierarchy variants (only meaningful when R = cI for FunctionDefinition).
     FunctionDefinition(&'i FunctionDefinitionI<'s, 'i>),
-    ReferenceExpression(ReferenceExpressionIE<'s, 'i>),
+    ReferenceExpression(ExpressionIE<'s, 'i>),
     LetNormal(&'i LetNormalIE<'s, 'i>),
     FunctionCall(&'i FunctionCallIE<'s, 'i>),
 }
@@ -49,7 +49,7 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     out
 }
 
-pub fn all_in_coord<'s, 'i, T, F>(root: CoordI<'s, 'i>, pred: &F) -> Vec<T>
+pub fn all_in_coord<'s, 'i, T, F>(root: KindIT<'s, 'i>, pred: &F) -> Vec<T>
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut out = Vec::new();
     visit_coord(pred, &mut out, root);
@@ -139,10 +139,10 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     visit_name(pred, out, id.local_name);
 }
 
-fn visit_coord<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, c: CoordI<'s, 'i>)
+fn visit_coord<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, c: KindIT<'s, 'i>)
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::Coord(c));
-    visit_kind(pred, out, c.kind);
+    visit_kind(pred, out, c);
 }
 
 fn visit_kind<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, k: KindIT<'s, 'i>)
@@ -153,7 +153,11 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
         KindIT::RuntimeSizedArrayIT(a) => visit_id(pred, out, a.name),
         KindIT::StructIT(s) => visit_id(pred, out, s.id),
         KindIT::InterfaceIT(i) => visit_id(pred, out, i.id),
-        _ => {} // primitives (Never/Void/Int/Bool/Str/Float): leaves
+        KindIT::BorrowRefIT(r) => visit_kind(pred, out, r.inner),
+        KindIT::OwnRefIT(r) => visit_kind(pred, out, r.inner),
+        KindIT::ShareRefIT(r) => visit_kind(pred, out, r.inner),
+        KindIT::WeakRefIT(r) => visit_kind(pred, out, r.inner),
+        _ => {} // primitives (Never/Void/Int/Bool/Str/Float/USize): leaves
     }
 }
 
@@ -236,13 +240,13 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
         }
         // Array names
         INameI::RawArray(x) => {
-            visit_templata(pred, out, ITemplataI::Coord(x.element_type));
+            visit_kind(pred, out, x.element_type);
         }
         INameI::StaticSizedArray(x) => {
-            visit_templata(pred, out, ITemplataI::Coord(x.arr.element_type));
+            visit_kind(pred, out, x.arr.element_type);
         }
         INameI::RuntimeSizedArray(x) => {
-            visit_templata(pred, out, ITemplataI::Coord(x.arr.element_type));
+            visit_kind(pred, out, x.arr.element_type);
         }
         // Everything else is a leaf name (var/local/path/package/region/template-name/etc.).
         _ => {}
@@ -255,7 +259,6 @@ fn visit_templata<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, t: ITemplataI<'s, 'i
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::Templata(t));
     match t {
-        ITemplataI::Coord(x) => visit_coord(pred, out, x.coord),
         ITemplataI::Kind(x) => visit_kind(pred, out, x.kind),
         ITemplataI::Function(x) => visit_id(pred, out, x.env_id),
         ITemplataI::StructDefinition(x) => visit_id(pred, out, x.env_id),
@@ -267,8 +270,8 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
             visit_kind(pred, out, x.sub_kind);
             visit_kind(pred, out, x.super_kind);
         }
-        ITemplataI::CoordList(x) => {
-            for c in x.coords { visit_coord(pred, out, *c); }
+        ITemplataI::KindList(x) => {
+            for c in x.kinds { visit_coord(pred, out, *c); }
         }
         // leaves: Ownership / Variability / Mutability / Location / Boolean / Integer / String /
         // Region / RuntimeSizedArrayTemplate / StaticSizedArrayTemplate. ExternFunction's header is a
@@ -285,25 +288,25 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     visit_reference_expression_ie(pred, out, f.body);
 }
 
-fn visit_reference_expression_ie<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, e: ReferenceExpressionIE<'s, 'i>)
+fn visit_reference_expression_ie<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, e: ExpressionIE<'s, 'i>)
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::ReferenceExpression(e));
     match e {
-        ReferenceExpressionIE::LetNormal(l) => visit_let_normal_ie(pred, out, l),
-        ReferenceExpressionIE::FunctionCall(c) => visit_function_call_ie(pred, out, c),
-        ReferenceExpressionIE::Block(b) => visit_reference_expression_ie(pred, out, b.inner),
-        ReferenceExpressionIE::Consecutor(c) => {
+        ExpressionIE::LetNormal(l) => visit_let_normal_ie(pred, out, l),
+        ExpressionIE::FunctionCall(c) => visit_function_call_ie(pred, out, c),
+        ExpressionIE::Block(b) => visit_reference_expression_ie(pred, out, b.inner),
+        ExpressionIE::Consecutor(c) => {
             for inner in c.exprs {
                 visit_reference_expression_ie(pred, out, *inner);
             }
         }
-        ReferenceExpressionIE::If(i) => {
+        ExpressionIE::If(i) => {
             visit_reference_expression_ie(pred, out, i.condition);
             visit_reference_expression_ie(pred, out, i.then_call);
             visit_reference_expression_ie(pred, out, i.else_call);
         }
-        ReferenceExpressionIE::Return(r) => visit_reference_expression_ie(pred, out, r.source_expr),
-        // Other ReferenceExpressionIE variants not yet covered — add visit_* as needed.
+        ExpressionIE::Return(r) => visit_reference_expression_ie(pred, out, r.source_expr),
+        // Other ExpressionIE variants not yet covered — add visit_* as needed.
         _ => {}
     }
 }

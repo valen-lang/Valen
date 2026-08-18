@@ -1,32 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::instantiating::ast::names::{IdI, IInterfaceNameI, IStructNameI, RuntimeSizedArrayNameI, StaticSizedArrayNameI};
-use crate::instantiating::instantiating_interner::MustIntern;
 use crate::instantiating::ast::names::INameI;
-use crate::instantiating::ast::templata::CoordTemplataI;
-
-
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum OwnershipI {
-  MutableShare,
-  Own,
-  Weak,
-  MutableBorrow,
-}
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -38,52 +13,34 @@ pub enum SharednessI {
 }
 
 
-/// Value-type (see @TFITCX)
+// The onion "wrap" layers. Ownership is which wrap surrounds the base kind — or none: an owned
+// value is a bare kind with zero wraps (an owned Ship is KindIT::StructIT(..) directly). Mirrors
+// typing's BorrowRefT/OwnRefT/ShareRefT/WeakRefT. Per BCHATZ there is no region/group here.
+
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum LocationI {
-  Inline,
-  Yonder,
+pub struct BorrowRefIT<'s, 'i> where 's: 'i {
+  pub inner: KindIT<'s, 'i>,
 }
 
-
-
-
-
-
-
-
-impl<'s, 'i> CoordI<'s, 'i> where 's: 'i {
-  pub fn void() -> CoordI<'s, 'i> {
-    panic!("Unimplemented: void");
-    // CoordI[R](MutableShareI, VoidIT())
-  }
-}
-
-
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct CoordI<'s, 'i> where 's: 'i {
-  pub ownership: OwnershipI,
-  pub kind: KindIT<'s, 'i>,
-  _sealed: (),
+pub struct OwnRefIT<'s, 'i> where 's: 'i {
+  pub inner: KindIT<'s, 'i>,
 }
 
-impl<'s, 'i> CoordI<'s, 'i> where 's: 'i {
-    pub fn new(ownership: OwnershipI, kind: KindIT<'s, 'i>) -> Self {
-        let is_primitive = matches!(
-            kind,
-            KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::FloatIT(_) | KindIT::VoidIT(_) | KindIT::NeverIT(_),
-        );
-        let is_share = matches!(ownership, OwnershipI::MutableShare);
-        if is_share && is_primitive {
-            panic!(
-                "Illegal CoordI combination: ownership={:?}, kind={:?}. Primitives are Own at I-IR post-cut.",
-                ownership, kind,
-            );
-        }
-        CoordI { ownership, kind, _sealed: () }
-    }
+/// Polyvalue (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ShareRefIT<'s, 'i> where 's: 'i {
+  pub inner: KindIT<'s, 'i>,
 }
+
+/// Polyvalue (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct WeakRefIT<'s, 'i> where 's: 'i {
+  pub inner: KindIT<'s, 'i>,
+}
+
 
 /// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -94,24 +51,35 @@ pub enum KindIT<'s, 'i> where 's: 'i {
   BoolIT(BoolIT),
   StrIT(StrIT),
   FloatIT(FloatIT),
+  USizeIT(USizeIT),
   StaticSizedArrayIT(&'i StaticSizedArrayIT<'s, 'i>),
   RuntimeSizedArrayIT(&'i RuntimeSizedArrayIT<'s, 'i>),
   StructIT(&'i StructIT<'s, 'i>),
   InterfaceIT(&'i InterfaceIT<'s, 'i>),
+  BorrowRefIT(&'i BorrowRefIT<'s, 'i>),
+  OwnRefIT(&'i OwnRefIT<'s, 'i>),
+  ShareRefIT(&'i ShareRefIT<'s, 'i>),
+  WeakRefIT(&'i WeakRefIT<'s, 'i>),
 }
 
 
 
 impl<'s, 'i> KindIT<'s, 'i> where 's: 'i {
   pub fn is_primitive(&self) -> bool {
-    panic!("Unimplemented: is_primitive");
-    // abstract method (each KindIT case overrides; primitives true, citizens/arrays false)
+    matches!(
+      self,
+      KindIT::NeverIT(_) | KindIT::VoidIT(_) | KindIT::IntIT(_) | KindIT::BoolIT(_)
+        | KindIT::StrIT(_) | KindIT::FloatIT(_) | KindIT::USizeIT(_),
+    )
   }
 
 
   pub fn expect_citizen(&self) -> ICitizenIT<'s, 'i> {
-    panic!("Unimplemented: expect_citizen");
-    // this match { case c : ICitizenIT[R] => c; case _ => vfail() }
+    match self {
+      KindIT::StructIT(s) => ICitizenIT::StructIT(s),
+      KindIT::InterfaceIT(i) => ICitizenIT::InterfaceIT(i),
+      _ => panic!("expect_citizen: not a citizen"),
+    }
   }
 
 
@@ -124,8 +92,10 @@ impl<'s, 'i> KindIT<'s, 'i> where 's: 'i {
 
 
   pub fn expect_struct(&self) -> &'i StructIT<'s, 'i> {
-    panic!("Unimplemented: expect_struct");
-    // this match { case c @ StructIT(_) => c; case _ => vfail() }
+    match self {
+      KindIT::StructIT(s) => s,
+      _ => panic!("expect_struct: not a struct"),
+    }
   }
 }
 
@@ -174,21 +144,21 @@ pub struct FloatIT {
 
 
 
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StaticSizedArrayIT<'s, 'i> where 's: 'i {
-  pub name: IdI<'s, 'i>,
-  pub _must_intern: MustIntern,
+pub struct USizeIT {
 }
 
-/// Interning transient (see @TFITCX)
+
+
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StaticSizedArrayITValI<'s, 'i> where 's: 'i {
+pub struct StaticSizedArrayIT<'s, 'i> where 's: 'i {
   pub name: IdI<'s, 'i>,
 }
 
 impl<'s, 'i> StaticSizedArrayIT<'s, 'i> where 's: 'i {
-  pub fn element_type(self) -> CoordTemplataI<'s, 'i> {
+  pub fn element_type(self) -> KindIT<'s, 'i> {
     match self.name.local_name {
       INameI::StaticSizedArray(n) => n.arr.element_type,
       _ => panic!("StaticSizedArrayIT::element_type: name.local_name is not StaticSizedArrayNameI"),
@@ -204,21 +174,14 @@ impl<'s, 'i> StaticSizedArrayIT<'s, 'i> where 's: 'i {
 
 
 
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayIT<'s, 'i> where 's: 'i {
-  pub name: IdI<'s, 'i>,
-  pub _must_intern: MustIntern,
-}
-
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RuntimeSizedArrayITValI<'s, 'i> where 's: 'i {
   pub name: IdI<'s, 'i>,
 }
 
 impl<'s, 'i> RuntimeSizedArrayIT<'s, 'i> where 's: 'i {
-  pub fn element_type(self) -> CoordTemplataI<'s, 'i> {
+  pub fn element_type(self) -> KindIT<'s, 'i> {
     match self.name.local_name {
       INameI::RuntimeSizedArray(n) => n.arr.element_type,
       _ => panic!("RuntimeSizedArrayIT::element_type: name.local_name is not RuntimeSizedArrayNameI"),
@@ -255,48 +218,16 @@ impl<'s, 'i> ICitizenIT<'s, 'i> where 's: 'i {
 }
 
 
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructIT<'s, 'i> where 's: 'i {
   pub id: IdI<'s, 'i>,
-  pub _must_intern: MustIntern,
-}
-
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StructITValI<'s, 'i> where 's: 'i {
-  pub id: IdI<'s, 'i>,
 }
 
 
 
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceIT<'s, 'i> where 's: 'i {
   pub id: IdI<'s, 'i>,
-  pub _must_intern: MustIntern,
-}
-
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct InterfaceITValI<'s, 'i> where 's: 'i {
-  pub id: IdI<'s, 'i>,
-}
-
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
-pub enum InternedKindPayloadValI<'s, 'i> where 's: 'i {
-  StructIT(StructITValI<'s, 'i>),
-  InterfaceIT(InterfaceITValI<'s, 'i>),
-  StaticSizedArrayIT(StaticSizedArrayITValI<'s, 'i>),
-  RuntimeSizedArrayIT(RuntimeSizedArrayITValI<'s, 'i>),
-}
-
-/// Polyvalue (see @TFITCX)
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
-pub enum InternedKindPayloadI<'s, 'i> where 's: 'i {
-  StructIT(&'i StructIT<'s, 'i>),
-  InterfaceIT(&'i InterfaceIT<'s, 'i>),
-  StaticSizedArrayIT(&'i StaticSizedArrayIT<'s, 'i>),
-  RuntimeSizedArrayIT(&'i RuntimeSizedArrayIT<'s, 'i>),
 }

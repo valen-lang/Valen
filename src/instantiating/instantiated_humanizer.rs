@@ -1,6 +1,6 @@
 use crate::interner::StrI;
 use crate::utils::range::CodeLocationS;
-use crate::instantiating::ast::types::{CoordI, KindIT};
+use crate::instantiating::ast::types::KindIT;
 use crate::instantiating::ast::names::{IdI, INameI};
 use crate::instantiating::ast::templata::ITemplataI;
 use crate::instantiating::ast::ast::SignatureI;
@@ -9,10 +9,9 @@ use crate::instantiating::ast::names::RuntimeSizedArrayNameI;
 use crate::instantiating::ast::names::StaticSizedArrayNameI;
 use crate::instantiating::ast::templata::IntegerTemplataI;
 use crate::instantiating::ast::types::SharednessI;
-use crate::instantiating::ast::types::OwnershipI;
 use std::marker::PhantomData;
 use std::mem::discriminant;
-use crate::typing::types::types::{IRegionT};
+use crate::typing::types::types::RegionT;
 
 
 pub fn humanize_templata<'s, 'i>(
@@ -25,27 +24,18 @@ pub fn humanize_templata<'s, 'i>(
         ITemplataI::InterfaceDefinition(t) => humanize_id(code_map, &t.env_id, None),
         ITemplataI::StructDefinition(t) => humanize_id(code_map, &t.env_id, None),
         ITemplataI::Integer(i) => i.value.to_string(),
-        ITemplataI::Coord(c) => humanize_coord(code_map, &c.coord),
         ITemplataI::Kind(k) => humanize_kind(code_map, &k.kind),
-        ITemplataI::Region(RegionT { region: IRegionT::Iso }) => "iso'".to_string(),
-        ITemplataI::Region(RegionT { region: IRegionT::Default }) => "default'".to_string(),
         _ => panic!("humanize_templata: unimplemented variant"),
     }
 }
 
 
+// A coord is just an onion kind now; ownership shows up as the wrap prefix (see humanize_kind).
 pub fn humanize_coord<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    coord: &CoordI<'s, 'i>,
+    coord: &KindIT<'s, 'i>,
 ) -> String {
-    let ownership_str = match coord.ownership {
-        OwnershipI::Own => "",
-        OwnershipI::MutableShare => "",
-        OwnershipI::MutableBorrow => "&",
-        OwnershipI::Weak => "weak&",
-    };
-    let kind_str = humanize_kind(code_map, &coord.kind);
-    ownership_str.to_string() + &kind_str
+    humanize_kind(code_map, coord)
 }
 
 
@@ -60,10 +50,15 @@ pub fn humanize_kind<'s, 'i>(
         KindIT::NeverIT(_) => "never".to_string(),
         KindIT::VoidIT(_) => "void".to_string(),
         KindIT::FloatIT(_) => "float".to_string(),
+        KindIT::USizeIT(_) => "usize".to_string(),
         KindIT::InterfaceIT(i) => humanize_id(code_map, &i.id, None),
         KindIT::StructIT(s) => humanize_id(code_map, &s.id, None),
         KindIT::RuntimeSizedArrayIT(rsa) => humanize_id(code_map, &rsa.name, None),
         KindIT::StaticSizedArrayIT(ssa) => humanize_id(code_map, &ssa.name, None),
+        KindIT::BorrowRefIT(r) => "&".to_string() + &humanize_kind(code_map, &r.inner),
+        KindIT::OwnRefIT(r) => "^".to_string() + &humanize_kind(code_map, &r.inner),
+        KindIT::ShareRefIT(r) => humanize_kind(code_map, &r.inner),
+        KindIT::WeakRefIT(r) => "weak&".to_string() + &humanize_kind(code_map, &r.inner),
     }
 }
 
@@ -125,15 +120,15 @@ pub fn humanize_name<'s, 'i>(
             let RawArrayNameI { element_type, self_region: region } = arr;
             "[]<".to_string()
                 + &humanize_templata(code_map, &ITemplataI::Integer(IntegerTemplataI { value: size })) + ","
-                + &humanize_templata(code_map, &ITemplataI::Region(region)) + ">"
-                + &humanize_templata(code_map, &ITemplataI::Coord(element_type))
+                + (match region { RegionT::Iso => "iso'", RegionT::Default => "default'" }) + ">"
+                + &humanize_kind(code_map, &element_type)
         }
         INameI::RuntimeSizedArray(n) => {
             let RuntimeSizedArrayNameI { template: _, arr } = *n;
             let RawArrayNameI { element_type, self_region: region } = arr;
             "[]<".to_string()
-                + &humanize_templata(code_map, &ITemplataI::Region(region)) + ">"
-                + &humanize_templata(code_map, &ITemplataI::Coord(element_type))
+                + (match region { RegionT::Iso => "iso'", RegionT::Default => "default'" }) + ">"
+                + &humanize_kind(code_map, &element_type)
         }
         INameI::Iterator(i) => "it:".to_string() + &code_map(i.range.begin),
         INameI::Iterable(i) => "ib:".to_string() + &code_map(i.range.begin),

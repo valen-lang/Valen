@@ -235,7 +235,7 @@ where
           (given_callable_unborrowed_expr_2, PendingTempDrops::none())
         }
         _ => {
-          let (let_and_lend_te, subject_pending_temp_drop) = self.make_temporary_local_defer(
+          let (let_and_lend_te, subject_pending_temp_drop) = self.make_temporary_local_borrow(
             coutputs,
             nenv,
             range,

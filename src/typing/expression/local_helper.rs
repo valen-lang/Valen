@@ -42,7 +42,7 @@ where
     rlv
   }
 
-  pub fn make_temporary_local_defer(
+  pub fn make_temporary_local_borrow(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
@@ -279,7 +279,7 @@ where
 }
 
 /// A **linear obligation** carrying the temporary locals created to hold borrowed rvalues (see
-/// `make_temporary_local_defer`). Each such temp is stackified into the environment and MUST later be
+/// `make_temporary_local_borrow`). Each such temp is stackified into the environment and MUST later be
 /// either drained — `drain_pending_temp_drops` builds its `unlet + drop` — or, on a diverging path,
 /// declined via `discard_pending_temp_drops_past_never` (unlet without dropping). Forgetting it leaks
 /// the temp: `drop_since` would try to drop it again at block end, and the stackifier would flag it.
@@ -315,7 +315,7 @@ where
     PendingTempDrops { vars: Vec::new(), bomb }
   }
 
-  /// One outstanding temp-drop — what `make_temporary_local_defer` produces for a single borrow.
+  /// One outstanding temp-drop — what `make_temporary_local_borrow` produces for a single borrow.
   pub fn of_one(temp: &'t LocalVariable<'s, 't>) -> PendingTempDrops<'s, 't> {
     PendingTempDrops { vars: vec![temp], bomb: DropBomb::armed(PENDING_TEMP_DROPS_MESSAGE) }
   }

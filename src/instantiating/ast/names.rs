@@ -2,16 +2,17 @@ use crate::interner::StrI;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IRuneS;
-use crate::instantiating::ast::types::{CoordI, ICitizenIT, SharednessI};
-use crate::instantiating::ast::templata::{ITemplataI, CoordTemplataI};
+use crate::instantiating::ast::types::{KindIT, ICitizenIT, SharednessI};
+use crate::instantiating::ast::templata::ITemplataI;
 use crate::typing::types::types::RegionT;
 use crate::instantiating::ast::ast::LocationInFunctionEnvironmentI;
 use crate::instantiating::instantiating_interner::InstantiatingInterner;
-use crate::typing::types::types::CoordT;
 use std::marker::PhantomData;
 
 
 
+/// Value-type (see @TFITCX). Instantiateds are write-once/read-once and not interned, so
+/// identity is structural.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IdI<'s, 'i> {
     pub package_coord: &'s PackageCoordinate<'s>,
@@ -144,85 +145,6 @@ pub enum INameI<'s, 'i> {
     AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
     ResolvingEnv(&'i ResolvingEnvNameI),
     CallEnv(&'i CallEnvNameI),
-}
-
-/// Interning transient (see @TFITCX) — mirror of INameI holding payloads by value
-/// (used as HashMap lookup key in the interner). Per typing-pass parity (INameValT).
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum INameValI<'s, 'i> {
-    RegionName(RegionNameI<'s>),
-    DenizenDefaultRegionName(DenizenDefaultRegionNameI),
-    ExportTemplate(ExportTemplateNameI<'s>),
-    Export(ExportNameI<'s>),
-    ExternTemplate(ExternTemplateNameI<'s>),
-    Extern(ExternNameI<'s>),
-    ImplTemplate(ImplTemplateNameI<'s>),
-    Impl(ImplNameI<'s, 'i>),
-    ImplBoundTemplate(ImplBoundTemplateNameI<'s>),
-    ImplBound(ImplBoundNameI<'s, 'i>),
-    Let(LetNameI<'s>),
-    ExportAs(ExportAsNameI<'s>),
-    RawArray(RawArrayNameI<'s, 'i>),
-    ReachablePrototype(ReachablePrototypeNameI),
-    StaticSizedArrayTemplate(StaticSizedArrayTemplateNameI),
-    StaticSizedArray(StaticSizedArrayNameI<'s, 'i>),
-    RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateNameI),
-    RuntimeSizedArray(RuntimeSizedArrayNameI<'s, 'i>),
-    OverrideDispatcherTemplate(OverrideDispatcherTemplateNameI<'s, 'i>),
-    OverrideDispatcher(OverrideDispatcherNameI<'s, 'i>),
-    OverrideDispatcherCase(OverrideDispatcherCaseNameI<'s, 'i>),
-    CaseFunctionFromImpl(CaseFunctionFromImplNameI<'s, 'i>),
-    CaseFunctionFromImplTemplate(CaseFunctionFromImplTemplateNameI<'s>),
-    TypingPassBlockResultVar(TypingPassBlockResultVarNameI<'i>),
-    TypingPassFunctionResultVar(TypingPassFunctionResultVarNameI),
-    TypingPassTemporaryVar(TypingPassTemporaryVarNameI<'i>),
-    TypingPassPatternMember(TypingPassPatternMemberNameI<'i>),
-    TypingIgnoredParam(TypingIgnoredParamNameI),
-    TypingPassPatternDestructuree(TypingPassPatternDestructureeNameI<'i>),
-    UnnamedLocal(UnnamedLocalNameI<'s>),
-    ClosureParam(ClosureParamNameI<'s>),
-    ConstructingMember(ConstructingMemberNameI<'s>),
-    WhileCondResult(WhileCondResultNameI<'s>),
-    Iterable(IterableNameI<'s>),
-    Iterator(IteratorNameI<'s>),
-    IterationOption(IterationOptionNameI<'s>),
-    MagicParam(MagicParamNameI<'s>),
-    CodeVar(CodeVarNameI<'s>),
-    AnonymousSubstructMember(AnonymousSubstructMemberNameI),
-    Primitive(PrimitiveNameI<'s>),
-    PackageTopLevel(PackageTopLevelNameI),
-    Project(ProjectNameI<'s>),
-    Package(PackageNameI<'s>),
-    Rune(RuneNameI<'s>),
-    BuildingFunctionNameWithClosureds(BuildingFunctionNameWithClosuredsI<'s, 'i>),
-    ExternFunction(ExternFunctionNameI<'s, 'i>),
-    FunctionNameIX(FunctionNameIX<'s, 'i>),
-    ForwarderFunction(ForwarderFunctionNameI<'s, 'i>),
-    FunctionBoundTemplate(FunctionBoundTemplateNameI<'s>),
-    FunctionBound(FunctionBoundNameI<'s, 'i>),
-    ReachableFunctionTemplate(ReachableFunctionTemplateNameI<'s>),
-    ReachableFunction(ReachableFunctionNameI<'s, 'i>),
-    FunctionTemplate(FunctionTemplateNameI<'s>),
-    LambdaCallFunctionTemplate(LambdaCallFunctionTemplateNameI<'s, 'i>),
-    LambdaCallFunction(LambdaCallFunctionNameI<'s, 'i>),
-    ForwarderFunctionTemplate(ForwarderFunctionTemplateNameI<'s, 'i>),
-    ConstructorTemplate(ConstructorTemplateNameI<'s>),
-    Self_(SelfNameI),
-    Arbitrary(ArbitraryNameI),
-    StructName(StructNameI<'s, 'i>),
-    InterfaceName(InterfaceNameI<'s, 'i>),
-    LambdaCitizenTemplate(LambdaCitizenTemplateNameI<'s>),
-    LambdaCitizen(LambdaCitizenNameI<'s>),
-    StructTemplate(StructTemplateNameI<'s>),
-    InterfaceTemplate(InterfaceTemplateNameI<'s>),
-    AnonymousSubstructImplTemplate(AnonymousSubstructImplTemplateNameI<'s, 'i>),
-    AnonymousSubstructImpl(AnonymousSubstructImplNameI<'s, 'i>),
-    AnonymousSubstructTemplate(AnonymousSubstructTemplateNameI<'s, 'i>),
-    AnonymousSubstructConstructorTemplate(AnonymousSubstructConstructorTemplateNameI<'s, 'i>),
-    AnonymousSubstructConstructor(AnonymousSubstructConstructorNameI<'s, 'i>),
-    AnonymousSubstruct(AnonymousSubstructNameI<'s, 'i>),
-    ResolvingEnv(ResolvingEnvNameI),
-    CallEnv(CallEnvNameI),
 }
 
 
@@ -502,7 +424,7 @@ impl<'s, 'i> IFunctionNameI<'s, 'i> where 's: 'i {
         }
     }
 
-    pub fn parameters(&self) -> &'i [CoordI<'s, 'i>] {
+    pub fn parameters(&self) -> &'i [KindIT<'s, 'i>] {
         match self {
             IFunctionNameI::OverrideDispatcher(f) => f.parameters,
             IFunctionNameI::ExternFunction(f) => f.parameters,
@@ -1161,7 +1083,7 @@ pub struct ExportAsNameI<'s> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct RawArrayNameI<'s, 'i> {
-    pub element_type: CoordTemplataI<'s, 'i>,
+    pub element_type: KindIT<'s, 'i>,
     pub self_region: RegionT,
 }
 
@@ -1233,7 +1155,7 @@ pub struct OverrideDispatcherTemplateNameI<'s, 'i> {
 pub struct OverrideDispatcherNameI<'s, 'i> {
     pub template: OverrideDispatcherTemplateNameI<'s, 'i>,
     pub template_args: &'i[ITemplataI<'s, 'i>],
-    pub parameters: &'i[CoordI<'s, 'i>],
+    pub parameters: &'i[KindIT<'s, 'i>],
 }
 
 
@@ -1253,7 +1175,7 @@ pub struct OverrideDispatcherCaseNameI<'s, 'i> {
 pub struct CaseFunctionFromImplNameI<'s, 'i> {
     pub template: CaseFunctionFromImplTemplateNameI<'s>,
     pub template_args: &'i[ITemplataI<'s, 'i>],
-    pub parameters: &'i[CoordI<'s, 'i>],
+    pub parameters: &'i[KindIT<'s, 'i>],
 }
 
 
@@ -1522,7 +1444,7 @@ pub struct BuildingFunctionNameWithClosuredsI<'s, 'i> {
 pub struct ExternFunctionNameI<'s, 'i> {
     pub human_name: StrI<'s>,
     pub template_args: &'i[ITemplataI<'s, 'i>],
-    pub parameters: &'i[CoordI<'s, 'i>],
+    pub parameters: &'i[KindIT<'s, 'i>],
 }
 
 
@@ -1532,7 +1454,7 @@ pub struct ExternFunctionNameI<'s, 'i> {
 pub struct FunctionNameIX<'s, 'i> {
     pub template: FunctionTemplateNameI<'s>,
     pub template_args: &'i[ITemplataI<'s, 'i>],
-    pub parameters: &'i[CoordI<'s, 'i>],
+    pub parameters: &'i[KindIT<'s, 'i>],
 }
 
 
@@ -1562,7 +1484,7 @@ pub struct FunctionBoundTemplateNameI<'s> {
 pub struct FunctionBoundNameI<'s, 'i> {
     pub template: FunctionBoundTemplateNameI<'s>,
     pub template_args: &'i[ITemplataI<'s, 'i>],
-    pub parameters: &'i[CoordI<'s, 'i>],
+    pub parameters: &'i[KindIT<'s, 'i>],
 }
 
 
@@ -1582,7 +1504,7 @@ pub struct ReachableFunctionTemplateNameI<'s> {
 pub struct ReachableFunctionNameI<'s, 'i> {
     pub template: ReachableFunctionTemplateNameI<'s>,
     pub template_args: &'i[ITemplataI<'s, 'i>],
-    pub parameters: &'i[CoordI<'s, 'i>],
+    pub parameters: &'i[KindIT<'s, 'i>],
 }
 
 
@@ -1603,7 +1525,7 @@ pub struct FunctionTemplateNameI<'s> {
 // (was cfg-gated)
 pub struct LambdaCallFunctionTemplateNameI<'s, 'i> {
     pub code_location: CodeLocationS<'s>,
-    pub param_types: &'i[CoordI<'s, 'i>],
+    pub param_types: &'i[KindIT<'s, 'i>],
 }
 
 
@@ -1614,7 +1536,7 @@ pub struct LambdaCallFunctionTemplateNameI<'s, 'i> {
 pub struct LambdaCallFunctionNameI<'s, 'i> {
     pub template: LambdaCallFunctionTemplateNameI<'s, 'i>,
     pub template_args: &'i[ITemplataI<'s, 'i>],
-    pub parameters: &'i[CoordI<'s, 'i>],
+    pub parameters: &'i[KindIT<'s, 'i>],
 }
 
 
@@ -1770,7 +1692,7 @@ pub struct AnonymousSubstructConstructorTemplateNameI<'s, 'i> {
 pub struct AnonymousSubstructConstructorNameI<'s, 'i> {
     pub template: AnonymousSubstructConstructorTemplateNameI<'s, 'i>,
     pub template_args: &'i[ITemplataI<'s, 'i>],
-    pub parameters: &'i[CoordI<'s, 'i>],
+    pub parameters: &'i[KindIT<'s, 'i>],
 }
 
 

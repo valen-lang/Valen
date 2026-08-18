@@ -7,7 +7,7 @@ use crate::typing::ast::citizens::{InterfaceDefinitionT, StructDefinitionT, Stru
 use crate::typing::ast::expressions::{
   AddressMemberLookupTE, ArgLookupTE, ArrayLengthTE, ArraySizeTE, AsSubtypeTE, BlockTE,
   BorrowToWeakTE, BreakTE, ConsecutorTE, ConstantBoolTE, ConstantFloatTE, ConstantIntTE,
-  ConstantStrTE, ConstructTE, DeferTE, DerefTE, DestroyRuntimeSizedArrayTE,
+  ConstantStrTE, ConstructTE, DerefTE, DestroyRuntimeSizedArrayTE,
   DestroyStaticSizedArrayIntoFunctionTE, DestroyStaticSizedArrayIntoLocalsTE, DestroyTE, DiscardTE,
   ExpressionTE, ExternFunctionCallTE, FunctionCallTE, IfTE, InterfaceFunctionCallTE,
   InterfaceToInterfaceUpcastTE, IsSameInstanceTE, LetAndLendTE, LetNormalTE, LocalLookupTE,
@@ -55,7 +55,6 @@ pub enum NodeRefT<'s, 't> {
   Unlet(&'t UnletTE<'s, 't>),
   Discard(&'t DiscardTE<'s, 't>),
   Deref(&'t DerefTE<'s, 't>),
-  Defer(&'t DeferTE<'s, 't>),
   If(&'t IfTE<'s, 't>),
   While(&'t WhileTE<'s, 't>),
   Mutate(&'t MutateTE<'s, 't>),
@@ -467,7 +466,6 @@ where
     ExpressionTE::LetNormal(x) => visit_let_normal(pred, out, x),
     ExpressionTE::Unlet(x) => visit_unlet(pred, out, x),
     ExpressionTE::Discard(x) => visit_discard(pred, out, x),
-    ExpressionTE::Defer(x) => visit_defer(pred, out, x),
     ExpressionTE::If(x) => visit_if(pred, out, x),
     ExpressionTE::While(x) => visit_while(pred, out, x),
     ExpressionTE::Mutate(x) => visit_mutate(pred, out, x),
@@ -592,16 +590,6 @@ where
 {
   collect_if(pred, out, NodeRefT::Deref(x));
   visit_expression_te(pred, out, x.inner);
-}
-
-fn visit_defer<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t DeferTE<'s, 't>)
-where
-  F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-  's: 't,
-{
-  collect_if(pred, out, NodeRefT::Defer(x));
-  visit_expression_te(pred, out, x.inner_expr);
-  visit_expression_te(pred, out, x.deferred_expr);
 }
 
 fn visit_if<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t IfTE<'s, 't>)

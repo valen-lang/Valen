@@ -955,7 +955,7 @@ where
                 // + borrows its inputs, they want to borrow it for
                 // the duration of the +.
                 let range_with_parent = [&[ownershipped.range][..], parent_ranges].concat();
-                let (let_and_lend_te, pending_temp_drops) = self.make_temporary_local_defer(
+                let (let_and_lend_te, pending_temp_drops) = self.make_temporary_local_borrow(
                   coutputs,
                   nenv,
                   &range_with_parent,
@@ -993,7 +993,7 @@ where
                 // want to borrow an owning source
                 let range_with_parent: Vec<RangeS<'s>> =
                   once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
-                let (let_and_lend_te, pending_temp_drops) = self.make_temporary_local_defer(
+                let (let_and_lend_te, pending_temp_drops) = self.make_temporary_local_borrow(
                   coutputs,
                   nenv,
                   &range_with_parent,
@@ -1010,7 +1010,7 @@ where
                 // want to weak-borrow a owning source
                 let range_with_parent: Vec<RangeS<'s>> =
                   once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
-                let (let_and_lend_te, pending_temp_drops) = self.make_temporary_local_defer(
+                let (let_and_lend_te, pending_temp_drops) = self.make_temporary_local_borrow(
                   coutputs,
                   nenv,
                   &range_with_parent,
@@ -1049,7 +1049,7 @@ where
           KindT::KindPlaceholder(_) => panic!("implement: dot on a placeholder is a compile error"),
           // Anything else is a value rather than a place, so it wants materializing into a
           // temporary and lending, with its drop deferred, probably with
-          // make_temporary_local_defer at life.add(1).
+          // make_temporary_local_borrow at life.add(1).
           _ => panic!("implement: materialize an rvalue container"),
         };
         let expr_2 = match peel_all_references(container_expr_2.result()) {
@@ -2101,7 +2101,7 @@ where
           }
           // Anything else is a value rather than a place, so it wants materializing into a
           // temporary and lending, with its drop deferred, with
-          // make_temporary_local_defer at life.add(1).
+          // make_temporary_local_borrow at life.add(1).
           _ => panic!("implement: materialize an rvalue container"),
         };
         let (index_expr_2, returns_from_index_expr, pending_from_index) = self.evaluate_expression(
