@@ -19,6 +19,9 @@ use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
 use crate::utils::range::RangeS;
+use std::mem;
+use std::thread;
+use crate::utils::drop_bomb::DropBomb;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where
@@ -48,21 +51,17 @@ where
     life: LocationInFunctionEnvironmentT<'t>,
     context_region: RegionT,
     r: ExpressionTE<'s, 't>,
-  ) -> Result<&'t DeferTE<'s, 't>, ICompileErrorT<'s, 't>> {
+  ) -> Result<
+    (&'t LetAndLendTE<'s, 't>, PendingTempDrops<'s, 't>),
+    ICompileErrorT<'s, 't>
+  > {
     let rlv = self.make_temporary_local(nenv, life, r.result());
-    let let_expr_2 = ExpressionTE::LetAndLend(self.typing_interner.alloc(LetAndLendTE::new(
+    let let_expr_2 = self.typing_interner.alloc(LetAndLendTE::new(
       self.typing_interner,
       rlv,
       r,
-    )));
-    let unlet = self.unlet_local_without_dropping(nenv, rlv);
-    let unlet_te: ExpressionTE<'s, 't> = ExpressionTE::Unlet(self.typing_interner.alloc(unlet));
-    let snapshot: &'t NodeEnvironmentT<'s, 't> = nenv.snapshot(self.typing_interner);
-    let env_in_denizen: IInDenizenEnvironmentT<'s, 't> = IInDenizenEnvironmentT::Node(snapshot);
-    let destruct_expr_2 =
-      self.drop(env_in_denizen, coutputs, range, call_location, context_region, unlet_te)?;
-    assert_eq!(destruct_expr_2.result(), KindT::Void(VoidT));
-    Ok(self.typing_interner.alloc(DeferTE::new(let_expr_2, destruct_expr_2)))
+    ));
+    Ok((let_expr_2, PendingTempDrops::of_one(rlv)))
   }
 
   pub fn unlet_local_without_dropping(
@@ -277,4 +276,80 @@ where
   //         }
   //     }
   // }
+}
+
+/// A **linear obligation** carrying the temporary locals created to hold borrowed rvalues (see
+/// `make_temporary_local_defer`). Each such temp is stackified into the environment and MUST later be
+/// either drained — `drain_pending_temp_drops` builds its `unlet + drop` — or, on a diverging path,
+/// declined via `discard_pending_temp_drops_past_never` (unlet without dropping). Forgetting it leaks
+/// the temp: `drop_since` would try to drop it again at block end, and the stackifier would flag it.
+///
+/// Enforcement is as close to linear as affine Rust allows: the type is move-only (no `Copy`/`Clone`)
+/// and `#[must_use]`, so it cannot be silently ignored or duplicated, and the embedded `DropBomb`
+/// (armed whenever a temp is outstanding) fires if a non-empty one falls out of scope. Sub-expression
+/// obligations are combined with `absorb`, which consumes the child.
+///
+/// CAVEAT: the bomb fires on any armed drop that is not already unwinding a panic — a `?` early-return
+/// on a compile error included. Keep a live non-empty token from spanning a fallible call: `absorb` it
+/// into the accumulator you return (or drain it) before any `?`. The airtight complement is to seal
+/// the function body so it can only be built from an empty token.
+#[must_use = "pending temp-drops must be drained, discarded past a Never, or propagated up"]
+pub struct PendingTempDrops<'s, 't>
+where
+  's: 't,
+{
+  vars: Vec<&'t LocalVariable<'s, 't>>,
+  bomb: DropBomb,
+}
+
+const PENDING_TEMP_DROPS_MESSAGE: &str =
+  "PendingTempDrops dropped with an outstanding temp-drop — drain or discard-past-Never \
+   before it leaves scope";
+
+impl<'s, 't> PendingTempDrops<'s, 't>
+where
+  's: 't,
+{
+  pub fn none() -> PendingTempDrops<'s, 't> {
+    let bomb = DropBomb::armed(PENDING_TEMP_DROPS_MESSAGE);
+    PendingTempDrops { vars: Vec::new(), bomb }
+  }
+
+  /// One outstanding temp-drop — what `make_temporary_local_defer` produces for a single borrow.
+  pub fn of_one(temp: &'t LocalVariable<'s, 't>) -> PendingTempDrops<'s, 't> {
+    PendingTempDrops { vars: vec![temp], bomb: DropBomb::armed(PENDING_TEMP_DROPS_MESSAGE) }
+  }
+
+  /// Add one more temp to the obligation.
+  pub fn push(&mut self, temp: &'t LocalVariable<'s, 't>) {
+    self.vars.push(temp);
+    self.bomb.arm();
+  }
+
+  /// Deliberately abandon this obligation without draining it, because this path is aborting the
+  /// compile (returning an `ICompileErrorT`): no tree is produced, so there is nothing to drain into.
+  /// This is the *only* sanctioned way to drop a token without discharging it — an accidental drop
+  /// still trips the bomb. Use it exactly at error returns, never to sidestep a real drain.
+  pub fn defuse_on_error(mut self) {
+    self.bomb.defuse();
+  }
+
+  /// Merge a sub-expression's obligations into this one, consuming the child (whose bomb is defused
+  /// as it is taken over). Preserves order: `child`'s temps land after ours, so a later drain reversal
+  /// yields overall LIFO.
+  pub fn absorb(&mut self, mut child: PendingTempDrops<'s, 't>) {
+    if !child.vars.is_empty() {
+      self.bomb.arm();
+    }
+    child.bomb.defuse();
+    self.vars.append(&mut child.vars);
+  }
+
+  /// Consume the obligation, yielding its temps in LIFO (reverse-of-creation) order. Private so the
+  /// only ways to discharge are the two `Compiler` methods above — no public raw-`Vec` escape hatch.
+  pub fn take_vars(mut self) -> Vec<&'t LocalVariable<'s, 't>> {
+    self.bomb.defuse();
+    let mut vars = mem::take(&mut self.vars);
+    vars
+  }
 }

@@ -9,6 +9,7 @@ pub mod range;
 pub mod source_code_utils;
 pub mod utils;
 pub mod vassert;
+pub mod drop_bomb;
 
 pub type Result<T, E> = StdResult<T, E>;
 

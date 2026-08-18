@@ -269,7 +269,7 @@ fn tests_adding_two_numbers() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: let code = "import v.builtins.arith.*;\nexported func main() int { return +(2, 3); }";
-  let code = "import v.builtins.arith.*;\nexported func main() int { return +(&2, &3); }";
+  let code = "import v.builtins.arith.*;\nexported func main() int { a = 2; b = 3; return +(&a, &b); }";
   let code_source = CodeSource::new(vec![
     builtin_source_for_arith(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -320,30 +320,465 @@ fn tests_adding_two_numbers() {
   }
 
   assert_eq!(func_call.args.len(), 2);
-  // Post-flip: we wrote `+(&2, &3)` to match the `+(&int, &int)` signature in arith.vale.
-  // Each `&literal` becomes Defer(LetAndLend(ConstantInt, ...)). Verify that exact shape.
+  // We wrote `a = 2; b = 3; +(&a, &b)` to match the `+(&int, &int)` signature in arith.vale.
+  // Borrowing a local is a plain LocalLookup (a lookup is itself a borrow) — no temp, no Defer.
   match &func_call.args[0] {
-    ExpressionTE::Defer(DeferTE {
-      inner_expr:
-        ExpressionTE::LetAndLend(LetAndLendTE {
-          expr: ExpressionTE::ConstantInt(ConstantIntTE { value: ITemplataT::Integer(2), .. }),
-          ..
-        }),
+    ExpressionTE::LocalLookup(LocalLookupTE {
+      local_variable: LocalVariable {
+        name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+        ..
+      },
       ..
     }) => {}
-    other => panic!("Expected arg 0 shape Defer(LetAndLend(ConstantInt(2))), got {:?}", other),
+    other => panic!("Expected arg 0 shape LocalLookup(a), got {:?}", other),
   }
   match &func_call.args[1] {
-    ExpressionTE::Defer(DeferTE {
-      inner_expr:
-        ExpressionTE::LetAndLend(LetAndLendTE {
-          expr: ExpressionTE::ConstantInt(ConstantIntTE { value: ITemplataT::Integer(3), .. }),
-          ..
-        }),
+    ExpressionTE::LocalLookup(LocalLookupTE {
+      local_variable: LocalVariable {
+        name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("b"), .. }),
+        ..
+      },
       ..
     }) => {}
-    other => panic!("Expected arg 1 shape Defer(LetAndLend(ConstantInt(3))), got {:?}", other),
+    other => panic!("Expected arg 1 shape LocalLookup(b), got {:?}", other),
   }
+}
+
+// Two sibling rvalue-borrow temporaries (`&Foo()` and `&Bar()` as two args of one call) must have
+// their drops spliced in last-created-first (LIFO): the `&Bar()` temp drops before the `&Foo()` one.
+// (The hammer dropped siblings in evaluation order (FIFO) — an artifact of its accumulator, pinned
+// here to LIFO to match `drop_since` and the intended semantics.)
+#[test]
+fn sibling_borrow_temps_drop_lifo() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r#"
+struct Foo {}
+struct Bar {}
+func destructor(m Foo) { Foo[ ] = ^m; }
+func destructor(m Bar) { Bar[ ] = ^m; }
+func bork(a &Foo, b &Bar) { }
+exported func main() {
+  bork(&Foo(), &Bar());
+}
+"#;
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let main = coutputs.lookup_function_by_str("main");
+
+  let dropped_structs: Vec<&str> = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT {
+                  local_name: INameT::Function(FunctionNameT {
+                      template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                      parameters: [KindT::Struct(StructTT {
+                          id: IdT {
+                              local_name: INameT::Struct(StructNameT {
+                                  template: IStructTemplateNameT::StructTemplate(
+                                      StructTemplateNameT { human_name: StrI(name), .. },
+                                  ),
+                                  ..
+                              }),
+                              ..
+                          },
+                          ..
+                      })],
+                      ..
+                  }),
+                  ..
+              },
+              ..
+          },
+          ..
+      }) => Some(name)
+  );
+  assert_eq!(dropped_structs.len(), 2);
+  assert_eq!(dropped_structs[0], "Bar");
+  assert_eq!(dropped_structs[1], "Foo");
+}
+
+// A non-void consumer's result is preserved across the borrow-temp's drop: `frob(&Foo())` returns an
+// int that `main` returns, and the `&Foo()` temp is still dropped (once) — no Defer node remains.
+#[test]
+fn borrow_temp_preserves_consumer_value() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r#"
+struct Foo {}
+func destructor(m Foo) { Foo[ ] = ^m; }
+func frob(a &Foo) int { return 7; }
+exported func main() int {
+  return frob(&Foo());
+}
+"#;
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let main = coutputs.lookup_function_by_str("main");
+
+  let defers = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::Defer(_) => Some(())
+  );
+  assert_eq!(defers.len(), 0);
+
+  let foo_drops = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT {
+                  local_name: INameT::Function(FunctionNameT {
+                      template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                      parameters: [KindT::Struct(StructTT {
+                          id: IdT {
+                              local_name: INameT::Struct(StructNameT {
+                                  template: IStructTemplateNameT::StructTemplate(
+                                      StructTemplateNameT { human_name: StrI("Foo"), .. },
+                                  ),
+                                  ..
+                              }),
+                              ..
+                          },
+                          ..
+                      })],
+                      ..
+                  }),
+                  ..
+              },
+              ..
+          },
+          ..
+      }) => Some(())
+  );
+  assert_eq!(foo_drops.len(), 1);
+}
+
+// Site 5 (If) — a borrow-temp created in an `if` condition must be dropped right after the condition,
+// before the (diverging) branch runs, so it is not orphaned on the `return` path. A correct drain
+// discharges the condition's temp there; a buggy one that bubbles it to the statement boundary would
+// leave the temp un-unstackified on the return path (a stackifier error, so the fixture would panic).
+#[test]
+fn if_condition_borrow_temp_drops_before_diverging_branch() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
+import v.builtins.panic.*;
+struct Foo {}
+func destructor(m Foo) { Foo[ ] = ^m; }
+func check(a &Foo) bool { return true; }
+exported func main() int {
+  if (check(&Foo())) {
+    return 3;
+  } else {
+    return 5;
+  }
+  __vbi_panic();
+}
+";
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let main = coutputs.lookup_function_by_str("main");
+
+  let defers = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::Defer(_) => Some(())
+  );
+  assert_eq!(defers.len(), 0);
+
+  let foo_drops = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT {
+                  local_name: INameT::Function(FunctionNameT {
+                      template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                      parameters: [KindT::Struct(StructTT {
+                          id: IdT {
+                              local_name: INameT::Struct(StructNameT {
+                                  template: IStructTemplateNameT::StructTemplate(
+                                      StructTemplateNameT { human_name: StrI("Foo"), .. },
+                                  ),
+                                  ..
+                              }),
+                              ..
+                          },
+                          ..
+                      })],
+                      ..
+                  }),
+                  ..
+              },
+              ..
+          },
+          ..
+      }) => Some(())
+  );
+  assert_eq!(foo_drops.len(), 1);
+}
+
+// Site 5 (While) — a borrow-temp in a `while` condition must drop after the condition, not be orphaned
+// when the loop `break`s out of the body.
+#[test]
+fn while_condition_borrow_temp_drops_with_break() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
+struct Foo {}
+func destructor(m Foo) { Foo[ ] = ^m; }
+func check(a &Foo) bool { return true; }
+exported func main() {
+  while (check(&Foo())) {
+    break;
+  }
+}
+";
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let main = coutputs.lookup_function_by_str("main");
+
+  let defers = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::Defer(_) => Some(())
+  );
+  assert_eq!(defers.len(), 0);
+
+  let foo_drops = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT {
+                  local_name: INameT::Function(FunctionNameT {
+                      template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                      parameters: [KindT::Struct(StructTT {
+                          id: IdT {
+                              local_name: INameT::Struct(StructNameT {
+                                  template: IStructTemplateNameT::StructTemplate(
+                                      StructTemplateNameT { human_name: StrI("Foo"), .. },
+                                  ),
+                                  ..
+                              }),
+                              ..
+                          },
+                          ..
+                      })],
+                      ..
+                  }),
+                  ..
+              },
+              ..
+          },
+          ..
+      }) => Some(())
+  );
+  assert_eq!(foo_drops.len(), 1);
+}
+
+// Site 4 — per-statement drain: a borrow-temp created in statement 1 must drop at the end of that
+// statement, before statement 2 (`marker()`) runs, rather than bubbling to block end.
+#[test]
+fn borrow_temp_drops_at_statement_end_before_next_statement() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
+struct Foo {}
+func destructor(m Foo) { Foo[ ] = ^m; }
+func check(a &Foo) bool { return true; }
+func marker() { }
+exported func main() {
+  check(&Foo());
+  marker();
+}
+";
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let main = coutputs.lookup_function_by_str("main");
+
+  let defers = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::Defer(_) => Some(())
+  );
+  assert_eq!(defers.len(), 0);
+
+  let foo_drops = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT {
+                  local_name: INameT::Function(FunctionNameT {
+                      template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                      parameters: [KindT::Struct(StructTT {
+                          id: IdT {
+                              local_name: INameT::Struct(StructNameT {
+                                  template: IStructTemplateNameT::StructTemplate(
+                                      StructTemplateNameT { human_name: StrI("Foo"), .. },
+                                  ),
+                                  ..
+                              }),
+                              ..
+                          },
+                          ..
+                      })],
+                      ..
+                  }),
+                  ..
+              },
+              ..
+          },
+          ..
+      }) => Some(())
+  );
+  assert_eq!(foo_drops.len(), 1);
+}
+
+// Discard-past-Never — when the consuming call itself diverges (`check` returns `__Never`), the
+// borrow-temp is unlet WITHOUT dropping: no destructor runs on a path that never returns.
+#[test]
+fn borrow_temp_discarded_when_consumer_diverges() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
+import v.builtins.panic.*;
+struct Foo {}
+func destructor(m Foo) { Foo[ ] = ^m; }
+func check(a &Foo) __Never { __vbi_panic(); }
+exported func main() {
+  check(&Foo());
+}
+";
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let main = coutputs.lookup_function_by_str("main");
+
+  let defers = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::Defer(_) => Some(())
+  );
+  assert_eq!(defers.len(), 0);
+
+  let foo_drops = collect_where_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT {
+                  local_name: INameT::Function(FunctionNameT {
+                      template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                      parameters: [KindT::Struct(StructTT {
+                          id: IdT {
+                              local_name: INameT::Struct(StructNameT {
+                                  template: IStructTemplateNameT::StructTemplate(
+                                      StructTemplateNameT { human_name: StrI("Foo"), .. },
+                                  ),
+                                  ..
+                              }),
+                              ..
+                          },
+                          ..
+                      })],
+                      ..
+                  }),
+                  ..
+              },
+              ..
+          },
+          ..
+      }) => Some(())
+  );
+  assert_eq!(foo_drops.len(), 0);
 }
 
 #[test]

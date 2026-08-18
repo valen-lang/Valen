@@ -55,6 +55,7 @@ use crate::utils::fx::{HashMap, HashSet};
 use crate::utils::range::RangeS;
 use std::iter::once;
 use std::marker::PhantomData;
+use crate::typing::expression::local_helper::PendingTempDrops;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where
@@ -69,11 +70,15 @@ where
     call_location: LocationInDenizen<'s>,
     region: RegionT,
     exprs_1: &[&'s IExpressionSE<'s>],
-  ) -> Result<(Vec<ExpressionTE<'s, 't>>, HashSet<KindT<'s, 't>>), ICompileErrorT<'s, 't>> {
+  ) -> Result<
+    (Vec<ExpressionTE<'s, 't>>, HashSet<KindT<'s, 't>>, PendingTempDrops<'s, 't>),
+    ICompileErrorT<'s, 't>,
+  > {
     let mut result_exprs = Vec::new();
     let mut all_returns = HashSet::default();
+    let mut all_pending = PendingTempDrops::none();
     for (index, expr) in exprs_1.iter().enumerate() {
-      let (ref_expr, returns) = self.evaluate_expression(
+      let (ref_expr, returns, pending) = match self.evaluate_expression(
         coutputs,
         nenv,
         life.add(self.typing_interner, index as i32),
@@ -81,11 +86,18 @@ where
         call_location,
         region,
         expr,
-      )?;
+      ) {
+        Ok(v) => v,
+        Err(e) => {
+          all_pending.defuse_on_error();
+          return Err(e);
+        }
+      };
       result_exprs.push(ref_expr);
       all_returns.extend(returns);
+      all_pending.absorb(pending);
     }
-    Ok((result_exprs, all_returns))
+    Ok((result_exprs, all_returns, all_pending))
   }
 
   pub fn evaluate_lookup_for_load(
@@ -359,12 +371,13 @@ where
     outer_call_location: LocationInDenizen<'s>,
     region: RegionT,
     expr_1: &'s IExpressionSE<'s>,
-  ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>), ICompileErrorT<'s, 't>> {
+  ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>, PendingTempDrops<'s, 't>), ICompileErrorT<'s, 't>> {
     // VTRACE: show
     match expr_1 {
       IExpressionSE::Void(_) => Ok((
         ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(region))),
         HashSet::default(),
+        PendingTempDrops::none(),
       )),
       IExpressionSE::ConstantInt(c) => Ok((
         ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE::new(
@@ -373,9 +386,10 @@ where
           region,
         ))),
         HashSet::default(),
+        PendingTempDrops::none(),
       )),
       IExpressionSE::Return(ret) => {
-        let (uncasted_inner_expr_2, returns_from_inner_expr) = self.evaluate_expression(
+        let (uncasted_inner_expr_2_with_pending_drops, returns_from_inner_expr, pending_temp_drops_from_inner) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -384,6 +398,18 @@ where
           region,
           ret.inner,
         )?;
+
+        let uncasted_inner_expr_2 =
+            self.drop_since(
+              coutputs,
+              nenv,
+              &parent_ranges,
+              outer_call_location,
+              life,
+              region,
+              uncasted_inner_expr_2_with_pending_drops,
+              pending_temp_drops_from_inner.take_vars()
+            )?;
 
         let inner_expr_2 = match nenv.maybe_return_type() {
           None => uncasted_inner_expr_2,
@@ -423,6 +449,7 @@ where
 
         let all_locals = nenv.get_all_locals();
         let unstackified_locals = nenv.get_all_unstackified_locals();
+        // VCOORD: feels like this is redundant with some other code somewhere...
         let variables_to_destruct: Vec<&LocalVariable<'s, 't>> =
           all_locals.iter().filter(|x| !unstackified_locals.contains(&x.name)).copied().collect();
         let reversed_variables_to_destruct: Vec<&LocalVariable<'s, 't>> =
@@ -466,10 +493,10 @@ where
 
         let return_te = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(consecutor)));
 
-        Ok((return_te, returns))
+        Ok((return_te, returns, PendingTempDrops::none()))
       }
       IExpressionSE::Let(let_se) => {
-        let (source_expr_2, returns_from_source) = self.evaluate_expression(
+        let (source_expr_2, returns_from_source, pending_from_source) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -506,7 +533,7 @@ where
           //       parentRanges, e))
         });
 
-        let result_te = self.infer_and_translate_pattern(
+        let result_te = match self.infer_and_translate_pattern(
           coutputs,
           nenv,
           life.add(self.typing_interner, 1),
@@ -522,9 +549,15 @@ where
               self.typing_interner.alloc(VoidLiteralTE::new(nenv.default_region())),
             )
           },
-        )?;
+        ) {
+          Ok(v) => v,
+          Err(e) => {
+            pending_from_source.defuse_on_error();
+            return Err(e);
+          }
+        };
 
-        Ok((result_te, returns_from_source))
+        Ok((result_te, returns_from_source, pending_from_source))
       }
       IExpressionSE::Consecutor(consecutor_se) => {
         assert!(region == nenv.default_region());
@@ -535,7 +568,7 @@ where
         for (index, expr_se) in
           consecutor_se.exprs.iter().enumerate().take(consecutor_se.exprs.len() - 1)
         {
-          let (undropped_expr_te, returns) = self.evaluate_expression(
+          let (undropped_expr_te_with_pending_drops, returns, pending_temp_drops) = self.evaluate_expression(
             coutputs,
             nenv,
             life.add(self.typing_interner, index as i32),
@@ -544,12 +577,26 @@ where
             region_for_inners,
             expr_se,
           )?;
+
+          let range_with_parent: Vec<RangeS<'s>> =
+              once((*expr_se).range()).chain(parent_ranges.iter().copied()).collect();
+
+          let undropped_expr_te =
+              self.drop_since(
+                coutputs,
+                nenv,
+                &range_with_parent,
+                outer_call_location,
+                life,
+                region,
+                undropped_expr_te_with_pending_drops,
+                pending_temp_drops.take_vars()
+              )?;
+
           let expr_te = match undropped_expr_te.result() {
             KindT::Void(_) => undropped_expr_te,
             _ => {
               let snap = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
-              let range_with_parent: Vec<RangeS<'s>> =
-                once((*expr_se).range()).chain(parent_ranges.iter().copied()).collect();
               self.drop(
                 snap,
                 coutputs,
@@ -560,11 +607,12 @@ where
               )?
             }
           };
+
           init_exprs_te.push(expr_te);
           init_returns.extend(returns);
         }
 
-        let (last_expr_te, last_returns) = self.evaluate_expression(
+        let (last_expr_te_with_pending, last_returns, last_expr_pending_temp_drops) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, (consecutor_se.exprs.len() - 1) as i32),
@@ -574,11 +622,23 @@ where
           consecutor_se.exprs.last().unwrap(),
         )?;
 
+        let last_expr_te =
+            self.drop_since(
+              coutputs,
+              nenv,
+              &parent_ranges,
+              outer_call_location,
+              life,
+              region,
+              last_expr_te_with_pending,
+              last_expr_pending_temp_drops.take_vars()
+            )?;
+
         init_exprs_te.push(last_expr_te);
         init_returns.extend(last_returns);
 
         let result = self.consecutive(&init_exprs_te);
-        Ok((result, init_returns))
+        Ok((result, init_returns, PendingTempDrops::none()))
       }
       IExpressionSE::LocalLoad(local_load) => {
         let name = self.translate_var_name_step(local_load.name);
@@ -595,13 +655,13 @@ where
           None => unreachable!(
             "scout pass intercepts unknown names with CouldntFindVarToMutateS before typing runs"
           ),
-          Some(x) => Ok((x, HashSet::default())),
+          Some(x) => Ok((x, HashSet::default(), PendingTempDrops::none())),
         }
       }
       IExpressionSE::FunctionCall(fc) => {
         match fc.callable_expr {
           IExpressionSE::OverloadSet(overload_set) => {
-            let (args_exprs_2, returns_from_args) = self
+            let (args_exprs_2, returns_from_args, pending_from_args) = self
               .evaluate_and_coerce_to_reference_expressions(
                 coutputs,
                 nenv,
@@ -667,7 +727,7 @@ where
             );
             let template_arg_runes: Vec<IRuneS<'s>> =
               last_part.explicit_template_args.iter().map(|a| a.rune).collect();
-            let call_expr_2 = self.evaluate_prefix_call(
+            let (call_expr_2, pending_from_call) = match self.evaluate_prefix_call(
               coutputs,
               nenv,
               life.add(self.typing_interner, 1),
@@ -679,11 +739,19 @@ where
               &template_arg_runes,
               &container_receiving_rune_to_explicit_template_arg_rune,
               &args_exprs_2,
-            )?;
-            Ok((call_expr_2, returns_from_args))
+            ) {
+              Ok(v) => v,
+              Err(e) => {
+                pending_from_args.defuse_on_error();
+                return Err(e);
+              }
+            };
+            let mut all_pending = pending_from_args;
+            all_pending.absorb(pending_from_call);
+            Ok((call_expr_2, returns_from_args, all_pending))
           }
           _ => {
-            let (undecayed_callable_expr_2, returns_from_callable) = self.evaluate_expression(
+            let (undecayed_callable_expr_2, returns_from_callable, pending_from_callable) = self.evaluate_expression(
               coutputs,
               nenv,
               life.add(self.typing_interner, 0),
@@ -700,7 +768,7 @@ where
             //         parent_ranges, fc.location,
             //         decayed_callable_expr_2_ref, region)?;
             let decayed_callable_reference_expr_2 = undecayed_callable_expr_2;
-            let (args_exprs_2, returns_from_args) = self
+            let (args_exprs_2, returns_from_args, pending_from_args) = match self
               .evaluate_and_coerce_to_reference_expressions(
                 coutputs,
                 nenv,
@@ -709,8 +777,14 @@ where
                 fc.location,
                 nenv.default_region(),
                 fc.arg_exprs,
-              )?;
-            let function_pointer_call_2 = self.evaluate_prefix_call(
+              ) {
+              Ok(v) => v,
+              Err(e) => {
+                pending_from_callable.defuse_on_error();
+                return Err(e);
+              }
+            };
+            let (function_pointer_call_2, pending_from_call) = match self.evaluate_prefix_call(
               coutputs,
               nenv,
               life.add(self.typing_interner, 2),
@@ -726,10 +800,20 @@ where
               &[],
               &[],
               &args_exprs_2,
-            )?;
+            ) {
+              Ok(v) => v,
+              Err(e) => {
+                pending_from_callable.defuse_on_error();
+                pending_from_args.defuse_on_error();
+                return Err(e);
+              }
+            };
             let mut all_returns = returns_from_callable;
             all_returns.extend(returns_from_args);
-            Ok((function_pointer_call_2, all_returns))
+            let mut all_pending = pending_from_callable;
+            all_pending.absorb(pending_from_args);
+            all_pending.absorb(pending_from_call);
+            Ok((function_pointer_call_2, all_returns, all_pending))
           }
         }
       }
@@ -747,7 +831,7 @@ where
           function_s.name,
           function_s,
         )?;
-        Ok((call_expr_2, HashSet::default()))
+        Ok((call_expr_2, HashSet::default(), PendingTempDrops::none()))
       }
       IExpressionSE::CopyPrim(cp) => {
         // TEMP: typing-pass handler for source-level `__copy_prim(x)` syntax.
@@ -757,7 +841,7 @@ where
         // CopyPrim replaces the source-level syntax; the CopyPrimTE emission
         // moves to convert_helper.rs (for `&int → int` coercions) and the
         // move tracker (for primitive `y = x` assignments) instead.
-        let (inner_te, returns_from_inner) = self.evaluate_expression(
+        let (inner_te, returns_from_inner, pending_from_inner) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -776,11 +860,11 @@ where
           _ => panic!("__copy_prim expects &primitive, got {:?}", inner_coord),
         };
         let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(inner_te, result_coord));
-        Ok((ExpressionTE::CopyPrim(copy_prim_te), returns_from_inner))
+        Ok((ExpressionTE::CopyPrim(copy_prim_te), returns_from_inner, pending_from_inner))
       }
       IExpressionSE::Ownershipped(ownershipped) => {
         // VCOORD: clean this all up
-        let (inner_expr_2, returns_from_inner) = self.evaluate_expression(
+        let (inner_expr_2, returns_from_inner, pending_from_inner) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -812,6 +896,7 @@ where
                         self.typing_interner.alloc(UnletTE::new(*local_variable)),
                       ),
                       returns_from_inner,
+                      pending_from_inner,
                     ))
                   }
                   _ => {
@@ -822,7 +907,7 @@ where
               }
               LoadAsP::LoadAsBorrow => {
                 // want to borrow a borrow source
-                Ok((inner_expr_2, returns_from_inner))
+                Ok((inner_expr_2, returns_from_inner, pending_from_inner))
               }
               LoadAsP::LoadAsWeak => {
                 // want to weak-borrow a borrow source
@@ -835,9 +920,10 @@ where
                     inner_expr_2,
                   )?,
                   returns_from_inner,
+                  pending_from_inner,
                 ))
               }
-              LoadAsP::Use => Ok((inner_expr_2, returns_from_inner)),
+              LoadAsP::Use => Ok((inner_expr_2, returns_from_inner, pending_from_inner)),
             }
           }
           KindT::WeakRef(WeakRefT { inner }) => {
@@ -856,7 +942,7 @@ where
               LoadAsP::Move => {
                 // want to move a share source
                 // Allow this, we can do ^ on a share ref, itll just give us a share ref.
-                Ok((inner_expr_2, returns_from_inner))
+                Ok((inner_expr_2, returns_from_inner, pending_from_inner))
               }
               LoadAsP::LoadAsBorrow => {
                 // want to borrow a share source
@@ -869,7 +955,7 @@ where
                 // + borrows its inputs, they want to borrow it for
                 // the duration of the +.
                 let range_with_parent = [&[ownershipped.range][..], parent_ranges].concat();
-                let defer_te = self.make_temporary_local_defer(
+                let (let_and_lend_te, pending_temp_drops) = self.make_temporary_local_defer(
                   coutputs,
                   nenv,
                   &range_with_parent,
@@ -878,7 +964,9 @@ where
                   region,
                   inner_expr_2,
                 )?;
-                Ok((ExpressionTE::Defer(defer_te), returns_from_inner))
+                let mut pending = pending_from_inner;
+                pending.absorb(pending_temp_drops);
+                Ok((ExpressionTE::LetAndLend(let_and_lend_te), returns_from_inner, pending))
               }
               LoadAsP::LoadAsWeak => {
                 // want to weak-borrow a share source
@@ -888,7 +976,7 @@ where
               }
               LoadAsP::Use => {
                 // want to use a share source, no mention of how
-                Ok((inner_expr_2, returns_from_inner))
+                Ok((inner_expr_2, returns_from_inner, pending_from_inner))
               }
             }
           }
@@ -905,7 +993,7 @@ where
                 // want to borrow an owning source
                 let range_with_parent: Vec<RangeS<'s>> =
                   once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
-                let defer_te = self.make_temporary_local_defer(
+                let (let_and_lend_te, pending_temp_drops) = self.make_temporary_local_defer(
                   coutputs,
                   nenv,
                   &range_with_parent,
@@ -914,13 +1002,15 @@ where
                   region,
                   inner_expr_2,
                 )?;
-                Ok((ExpressionTE::Defer(defer_te), returns_from_inner))
+                let mut pending = pending_from_inner;
+                pending.absorb(pending_temp_drops);
+                Ok((ExpressionTE::LetAndLend(let_and_lend_te), returns_from_inner, pending))
               }
               LoadAsP::LoadAsWeak => {
                 // want to weak-borrow a owning source
                 let range_with_parent: Vec<RangeS<'s>> =
                   once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
-                let defer_te = self.make_temporary_local_defer(
+                let (let_and_lend_te, pending_temp_drops) = self.make_temporary_local_defer(
                   coutputs,
                   nenv,
                   &range_with_parent,
@@ -929,7 +1019,7 @@ where
                   region,
                   inner_expr_2,
                 )?;
-                let expr = ExpressionTE::Defer(defer_te);
+                let expr = ExpressionTE::LetAndLend(let_and_lend_te);
                 panic!("unimplemented");
                 // self.weak_alias(coutputs, self.typing_interner.alloc_slice_copy(&range_with_parent), expr)?
               }
@@ -944,7 +1034,7 @@ where
         let member_name: IVarNameT<'s, 't> = IVarNameT::CodeVar(
           self.typing_interner.intern_code_var_name(CodeVarNameT { name: dot.member }),
         );
-        let (unborrowed_container_expr_2, returns_from_container_expr) = self.evaluate_expression(
+        let (unborrowed_container_expr_2, returns_from_container_expr, pending_from_container) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -1009,6 +1099,7 @@ where
             } else {
               let range_with_parent: Vec<RangeS<'s>> =
                 once(dot.range).chain(parent_ranges.iter().copied()).collect();
+              pending_from_container.defuse_on_error();
               return Err(ICompileErrorT::RangedInternalErrorT {
                 range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
                 message: self
@@ -1030,17 +1121,24 @@ where
               let range_with_parent: Vec<RangeS<'s>> =
                 once(dot.range).chain(parent_ranges.iter().copied()).collect();
               ExpressionTE::RuntimeSizedArrayLookup(self.typing_interner.alloc(
-                self.lookup_in_unknown_sized_array(
+                match self.lookup_in_unknown_sized_array(
                   &range_with_parent,
                   dot.range,
                   container_expr_2,
                   index_expr_2,
                   rsa,
-                )?,
+                ) {
+                  Ok(lookup) => lookup,
+                  Err(e) => {
+                    pending_from_container.defuse_on_error();
+                    return Err(e);
+                  }
+                },
               ))
             } else {
               let range_with_parent: Vec<RangeS<'s>> =
                 once(dot.range).chain(parent_ranges.iter().copied()).collect();
+              pending_from_container.defuse_on_error();
               return Err(ICompileErrorT::RangedInternalErrorT {
                 range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
                 message: self
@@ -1053,6 +1151,7 @@ where
           other => {
             let range_with_parent: Vec<RangeS<'s>> =
               once(dot.range).chain(parent_ranges.iter().copied()).collect();
+            pending_from_container.defuse_on_error();
             return Err(ICompileErrorT::RangedInternalErrorT {
               range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
               message: self
@@ -1071,7 +1170,7 @@ where
           }
           _ => {}
         }
-        Ok((expr_2, returns_from_container_expr))
+        Ok((expr_2, returns_from_container_expr, pending_from_container))
       }
       IExpressionSE::If(if_se) => {
         // We make a block for the if-statement which contains its condition (the "if block"),
@@ -1079,7 +1178,7 @@ where
         // The then and else blocks are children of the block which contains the condition
         // so they can access any locals declared by the condition.
 
-        let (uncoerced_condition_expr, returns_from_condition) = self.evaluate_expression(
+        let (uncoerced_condition_expr_with_pending_drops, returns_from_condition, pending_temp_drops_from_condition) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 1),
@@ -1088,6 +1187,18 @@ where
           nenv.default_region(),
           if_se.condition,
         )?;
+
+        let uncoerced_condition_expr =
+            self.drop_since(
+              coutputs,
+              nenv,
+              &parent_ranges,
+              outer_call_location,
+              life,
+              region,
+              uncoerced_condition_expr_with_pending_drops,
+              pending_temp_drops_from_condition.take_vars()
+            )?;
 
         let condition_expr = match uncoerced_condition_expr.result() {
           // VCOORD: is there some unified thing we can do to coerce like this? or maybe we can make if-statements take references? thatd be easy to coerce...
@@ -1316,7 +1427,7 @@ where
         let mut all_returns = returns_from_condition;
         all_returns.extend(then_returns_from_exprs);
         all_returns.extend(else_returns_from_exprs);
-        Ok((if_expr_2, all_returns))
+        Ok((if_expr_2, all_returns, PendingTempDrops::none()))
       }
       IExpressionSE::Break(b) => {
         // See BEAFB, we need to find the nearest while to see local since then.
@@ -1330,19 +1441,20 @@ where
             assert!(region == nenv.default_region()); // vcurious
             let void_literal =
               ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(region)));
+
             let drops_te = self.drop_since(
               coutputs,
-              while_nenv,
               nenv,
               &range_with_parent,
               outer_call_location,
               life,
               region,
               void_literal,
+              nenv.snapshot(self.typing_interner).get_live_variables_introduced_since(while_nenv),
             )?;
             let break_te = ExpressionTE::Break(self.typing_interner.alloc(BreakTE::new(region)));
             let drops_and_break_te = self.consecutive(&[drops_te, break_te]);
-            Ok((drops_and_break_te, HashSet::default()))
+            Ok((drops_and_break_te, HashSet::default(), PendingTempDrops::none()))
           }
         }
       }
@@ -1414,7 +1526,7 @@ where
 
         let loop_expr_2 =
           ExpressionTE::While(self.typing_interner.alloc(WhileTE::new(uncoerced_body_block_2)));
-        Ok((loop_expr_2, body_returns_from_exprs))
+        Ok((loop_expr_2, body_returns_from_exprs, PendingTempDrops::none()))
       }
       IExpressionSE::Map(m) => {
         // // Preprocess the entire loop once, to predict what its result type
@@ -1552,7 +1664,7 @@ where
         unimplemented!();
       }
       IExpressionSE::ExprMutate(em) => {
-        let (unconverted_source_expr_2, returns_from_source) = self.evaluate_expression(
+        let (unconverted_source_expr_2, returns_from_source, pending_from_source) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -1561,7 +1673,7 @@ where
           nenv.default_region(),
           em.expr,
         )?;
-        let (destination_expr_2, returns_from_destination) = self.evaluate_expression(
+        let (destination_expr_2, returns_from_destination, pending_from_destination) = match self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 1),
@@ -1569,7 +1681,13 @@ where
           outer_call_location,
           region,
           em.mutatee,
-        )?;
+        ) {
+          Ok(v) => v,
+          Err(e) => {
+            pending_from_source.defuse_on_error();
+            return Err(e);
+          }
+        };
         assert!(is_ref(destination_expr_2.result()));
 
         let range_with_parent: Vec<RangeS<'s>> =
@@ -1587,13 +1705,15 @@ where
           *destination_value_type,
         );
         if !is_convertible {
+          pending_from_source.defuse_on_error();
+          pending_from_destination.defuse_on_error();
           return Err(ICompileErrorT::CouldntConvertForMutateT {
             range: self.typing_interner.alloc_slice_copy(&range_with_parent),
             expected_type: *destination_value_type,
             actual_type: unconverted_source_expr_2.result(),
           });
         }
-        let converted_source_expr_2 = self.convert(
+        let converted_source_expr_2 = match self.convert(
           nenv,
           life,
           coutputs,
@@ -1602,17 +1722,26 @@ where
           region,
           unconverted_source_expr_2,
           *destination_value_type,
-        )?;
+        ) {
+          Ok(v) => v,
+          Err(e) => {
+            pending_from_source.defuse_on_error();
+            pending_from_destination.defuse_on_error();
+            return Err(e);
+          }
+        };
         // VCOORD: lets rename all the _2 to _te etc.
         let mutate_2 = ExpressionTE::Mutate(
           self.typing_interner.alloc(MutateTE::new(destination_expr_2, converted_source_expr_2)),
         );
         let mut returns = returns_from_source;
         returns.extend(returns_from_destination);
-        Ok((mutate_2, returns))
+        let mut all_pending = pending_from_source;
+        all_pending.absorb(pending_from_destination);
+        Ok((mutate_2, returns, all_pending))
       }
       IExpressionSE::LocalMutate(lm) => {
-        let (unconverted_source_expr_2, returns_from_source) = self.evaluate_expression(
+        let (unconverted_source_expr_2, returns_from_source, pending_from_source) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -1649,6 +1778,7 @@ where
           *destination_value_type,
         );
         if !is_convertible {
+          pending_from_source.defuse_on_error();
           return Err(ICompileErrorT::CouldntConvertForMutateT {
             range: self.typing_interner.alloc_slice_copy(&range_with_parent),
             expected_type: *destination_value_type,
@@ -1656,7 +1786,7 @@ where
           });
         }
         assert!(is_convertible);
-        let converted_source_expr_2 = self.convert(
+        let converted_source_expr_2 = match self.convert(
           nenv,
           life,
           coutputs,
@@ -1665,7 +1795,13 @@ where
           region,
           unconverted_source_expr_2,
           *destination_value_type,
-        )?;
+        ) {
+          Ok(v) => v,
+          Err(e) => {
+            pending_from_source.defuse_on_error();
+            return Err(e);
+          }
+        };
         let expr_te = match destination_expr_2 {
           ExpressionTE::LocalLookup(local_lookup)
             if nenv.unstackifieds().contains(&local_lookup.local_variable.name) =>
@@ -1681,10 +1817,10 @@ where
             self.typing_interner.alloc(MutateTE::new(destination_expr_2, converted_source_expr_2)),
           ),
         };
-        Ok((expr_te, returns_from_source))
+        Ok((expr_te, returns_from_source, pending_from_source))
       }
       IExpressionSE::Tuple(t) => {
-        let (exprs_2, returns_from_elements) = self.evaluate_and_coerce_to_reference_expressions(
+        let (exprs_2, returns_from_elements, pending_from_elements) = self.evaluate_and_coerce_to_reference_expressions(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -1700,10 +1836,10 @@ where
           outer_call_location,
           exprs_2,
         );
-        Ok((expr_2, returns_from_elements))
+        Ok((expr_2, returns_from_elements, pending_from_elements))
       }
       IExpressionSE::StaticArrayFromValues(sav) => {
-        let (exprs_2, returns_from_elements) = self.evaluate_and_coerce_to_reference_expressions(
+        let (exprs_2, returns_from_elements, pending_from_elements) = self.evaluate_and_coerce_to_reference_expressions(
           coutputs,
           nenv,
           life,
@@ -1714,7 +1850,7 @@ where
         )?;
         let new_parent_ranges: Vec<RangeS<'s>> =
           once(sav.range).chain(parent_ranges.iter().copied()).collect();
-        let expr_2 = self.evaluate_static_sized_array_from_values(
+        let expr_2 = match self.evaluate_static_sized_array_from_values(
           coutputs,
           IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)),
           &new_parent_ranges,
@@ -1724,14 +1860,21 @@ where
           sav.size_st.rune,
           exprs_2,
           region,
-        )?;
+        ) {
+          Ok(v) => v,
+          Err(e) => {
+            pending_from_elements.defuse_on_error();
+            return Err(e);
+          }
+        };
         Ok((
           ExpressionTE::StaticArrayFromValues(self.typing_interner.alloc(expr_2)),
           returns_from_elements,
+          pending_from_elements,
         ))
       }
       IExpressionSE::StaticArrayFromCallable(sa) => {
-        let (callable_te, returns_from_callable) = self.evaluate_expression(
+        let (callable_te, returns_from_callable, pending_from_callable) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -1742,7 +1885,7 @@ where
         )?;
         let range_with_parent: Vec<RangeS<'s>> =
           once(sa.range).chain(parent_ranges.iter().copied()).collect();
-        let expr_2 = self.evaluate_static_sized_array_from_callable(
+        let expr_2 = match self.evaluate_static_sized_array_from_callable(
           coutputs,
           IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)),
           region,
@@ -1752,14 +1895,21 @@ where
           sa.maybe_element_type_st.map(|r| r.rune),
           sa.size_st.rune,
           callable_te,
-        )?;
+        ) {
+          Ok(v) => v,
+          Err(e) => {
+            pending_from_callable.defuse_on_error();
+            return Err(e);
+          }
+        };
         Ok((
           ExpressionTE::StaticArrayFromCallable(self.typing_interner.alloc(expr_2)),
           returns_from_callable,
+          pending_from_callable,
         ))
       }
       IExpressionSE::NewRuntimeSizedArray(nrsa) => {
-        let (size_te, returns_from_size) = self.evaluate_expression(
+        let (size_te, returns_from_size, pending_from_size) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -1768,10 +1918,10 @@ where
           region,
           nrsa.size,
         )?;
-        let (maybe_callable_te, returns_from_callable) = match nrsa.callable {
-          None => (None, HashSet::default()),
+        let (maybe_callable_te, returns_from_callable, pending_from_callable) = match nrsa.callable {
+          None => (None, HashSet::default(), PendingTempDrops::none()),
           Some(callable_ae) => {
-            let (callable_te, rets) = self.evaluate_expression(
+            let (callable_te, rets, cb_pending) = self.evaluate_expression(
               coutputs,
               nenv,
               life.add(self.typing_interner, 1),
@@ -1780,12 +1930,12 @@ where
               nenv.default_region(),
               callable_ae,
             )?;
-            (Some(callable_te), rets)
+            (Some(callable_te), rets, cb_pending)
           }
         };
         let range_with_parent: Vec<RangeS<'s>> =
           once(nrsa.range).chain(parent_ranges.iter().copied()).collect();
-        let expr_2 = self.evaluate_runtime_sized_array_from_callable(
+        let expr_2 = match self.evaluate_runtime_sized_array_from_callable(
           coutputs,
           nenv.snapshot(self.typing_interner),
           &range_with_parent,
@@ -1795,10 +1945,19 @@ where
           nrsa.maybe_element_type_st.map(|r| r.rune),
           size_te,
           maybe_callable_te,
-        )?;
+        ) {
+          Ok(v) => v,
+          Err(e) => {
+            pending_from_size.defuse_on_error();
+            pending_from_callable.defuse_on_error();
+            return Err(e);
+          }
+        };
         let mut returns = returns_from_size;
         returns.extend(returns_from_callable);
-        Ok((expr_2, returns))
+        let mut all_pending = pending_from_size;
+        all_pending.absorb(pending_from_callable);
+        Ok((expr_2, returns, all_pending))
       }
       IExpressionSE::Block(b) => {
         let mut child_environment =
@@ -1825,7 +1984,7 @@ where
         for local in restackified_ancestor_locals {
           nenv.mark_local_restackified(local);
         }
-        Ok((block_2, returns_from_exprs))
+        Ok((block_2, returns_from_exprs, PendingTempDrops::none()))
       }
       // IExpressionSE::Pure(_) => {
       // panic!("implement: evaluate_expression — Pure");
@@ -1838,16 +1997,16 @@ where
           c.value,
           region,
         )));
-        Ok((result, HashSet::default()))
+        Ok((result, HashSet::default(), PendingTempDrops::none()))
       }
       IExpressionSE::ConstantFloat(c) => {
         let result = ExpressionTE::ConstantFloat(
           self.typing_interner.alloc(ConstantFloatTE::new(c.value, region)),
         );
-        Ok((result, HashSet::default()))
+        Ok((result, HashSet::default(), PendingTempDrops::none()))
       }
       IExpressionSE::Destruct(destruct_se) => {
-        let (inner_expr_2, returns_from_array_expr) = self.evaluate_expression(
+        let (inner_expr_2, returns_from_array_expr, pending_from_inner) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -1897,7 +2056,7 @@ where
           }
           _ => panic!("vfail: Can't destruct type: {:?}", inner_expr_2.result()),
         };
-        Ok((destroy_2, returns_from_array_expr))
+        Ok((destroy_2, returns_from_array_expr, pending_from_inner))
       }
       IExpressionSE::Unlet(unlet_se) => {
         let name = self.translate_var_name_step(unlet_se.name);
@@ -1920,10 +2079,10 @@ where
         // This will likely be dropped, as theyre probably not doing anything with it.
         // But who knows, maybe they'll do something with it, like pass it as a parameter
         // to something.
-        Ok((ExpressionTE::Unlet(self.typing_interner.alloc(result_expr)), HashSet::default()))
+        Ok((ExpressionTE::Unlet(self.typing_interner.alloc(result_expr)), HashSet::default(), PendingTempDrops::none()))
       }
       IExpressionSE::Index(index_se) => {
-        let (unborrowed_container_expr_2, returns_from_container_expr) = self.evaluate_expression(
+        let (unborrowed_container_expr_2, returns_from_container_expr, pending_from_container) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 0),
@@ -1945,7 +2104,7 @@ where
           // make_temporary_local_defer at life.add(1).
           _ => panic!("implement: materialize an rvalue container"),
         };
-        let (index_expr_2, returns_from_index_expr) = self.evaluate_expression(
+        let (index_expr_2, returns_from_index_expr, pending_from_index) = self.evaluate_expression(
           coutputs,
           nenv,
           life.add(self.typing_interner, 2),
@@ -1956,13 +2115,20 @@ where
         )?;
         let expr_templata = match peel_all_references(container_expr_2.result()) {
           KindT::RuntimeSizedArray(rsa) => {
-            let lookup = self.lookup_in_unknown_sized_array(
+            let lookup = match self.lookup_in_unknown_sized_array(
               &range_with_parent,
               index_se.range,
               container_expr_2,
               index_expr_2,
               rsa,
-            )?;
+            ) {
+              Ok(v) => v,
+              Err(e) => {
+                pending_from_container.defuse_on_error();
+                pending_from_index.defuse_on_error();
+                return Err(e);
+              }
+            };
             ExpressionTE::RuntimeSizedArrayLookup(self.typing_interner.alloc(lookup))
           }
           KindT::StaticSizedArray(at) => {
@@ -1975,6 +2141,8 @@ where
             ExpressionTE::StaticSizedArrayLookup(self.typing_interner.alloc(lookup))
           }
           _ => {
+            pending_from_container.defuse_on_error();
+            pending_from_index.defuse_on_error();
             return Err(ICompileErrorT::CannotSubscriptT {
               range: self.typing_interner.alloc_slice_copy(&range_with_parent),
               tyype: container_expr_2.result(),
@@ -1983,7 +2151,9 @@ where
         };
         let mut returns = returns_from_container_expr;
         returns.extend(returns_from_index_expr);
-        Ok((expr_templata, returns))
+        let mut all_pending = pending_from_container;
+        all_pending.absorb(pending_from_index);
+        Ok((expr_templata, returns, all_pending))
       }
       IExpressionSE::RuneLookup(r) => {
         let rune_name_s = self
@@ -2007,7 +2177,7 @@ where
               32,
               region,
             )));
-            Ok((result, HashSet::default()))
+            Ok((result, HashSet::default(), PendingTempDrops::none()))
           }
           ITemplataT::Placeholder(p)
             if matches!(p.tyype, ITemplataType::IntegerTemplataType(_)) =>
@@ -2017,7 +2187,7 @@ where
               32,
               region,
             )));
-            Ok((result, HashSet::default()))
+            Ok((result, HashSet::default(), PendingTempDrops::none()))
           }
           ITemplataT::Prototype(_pt) => {
             let mut tiny_env =
@@ -2039,7 +2209,7 @@ where
               RegionT::Default,
               arbitrary_imprecise,
             );
-            Ok((expr, HashSet::default()))
+            Ok((expr, HashSet::default(), PendingTempDrops::none()))
           }
           _ => {
             let mut ranges: Vec<RangeS<'s>> = vec![r.range.clone()];
@@ -2055,7 +2225,7 @@ where
         let result = ExpressionTE::ConstantBool(
           self.typing_interner.alloc(ConstantBoolTE::new(c.value, region)),
         );
-        Ok((result, HashSet::default()))
+        Ok((result, HashSet::default(), PendingTempDrops::none()))
       }
       IExpressionSE::OverloadSet(overload_set) => {
         // Per canonical: vassert(rules.isEmpty); val name = parts.head.name
@@ -2102,7 +2272,7 @@ where
             "OverloadSet match is exhaustive; over-matched for slice-pattern exhaustiveness"
           ),
         };
-        Ok((templata_from_env, HashSet::default()))
+        Ok((templata_from_env, HashSet::default(), PendingTempDrops::none()))
       }
     }
   }
@@ -2588,18 +2758,14 @@ where
   pub fn drop_since(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
-    starting_nenv: &'t NodeEnvironmentT<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     life: LocationInFunctionEnvironmentT<'t>,
     region: RegionT,
     expr_te: ExpressionTE<'s, 't>,
+    unreversed_variables_to_destruct: Vec<&'t LocalVariable<'s, 't>>
   ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-    let snapshot = nenv.snapshot(self.typing_interner);
-    let unreversed_variables_to_destruct =
-      snapshot.get_live_variables_introduced_since(starting_nenv);
-
     if unreversed_variables_to_destruct.is_empty() {
       Ok(expr_te)
     } else {

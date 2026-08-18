@@ -49,7 +49,7 @@ where
     region: RegionT,
     block_se: &'s BlockSE<'s>,
   ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>), ICompileErrorT<'s, 't>> {
-    let (unnevered_unresultified_undestructed_root_expression, returns_from_exprs) = self
+    let (undestructed_root_expression_with_pending_temps, returns_from_exprs, pending_drops_from_exprs) = self
       .evaluate_expression(
         coutputs,
         nenv,
@@ -60,22 +60,35 @@ where
         block_se.expr,
       )?;
 
-    let unresultified_undestructed_expressions =
-      unnevered_unresultified_undestructed_root_expression;
-
     let drop_range = RangeS::new(block_se.range.end, block_se.range.end);
     let drop_ranges: Vec<RangeS<'s>> =
       once(drop_range).chain(parent_ranges.iter().copied()).collect();
-    let new_expr = self.drop_since(
-      coutputs,
-      starting_nenv,
-      nenv,
-      &drop_ranges,
-      call_location,
-      life,
-      region,
-      unresultified_undestructed_expressions,
-    )?;
+
+    // Do any temporary locals' pending drops
+    let undestructed_root_expression =
+        self.drop_since(
+          coutputs,
+          nenv,
+          &drop_ranges,
+          call_location,
+          life,
+          region,
+          undestructed_root_expression_with_pending_temps,
+          pending_drops_from_exprs.take_vars()
+        )?;
+
+    // Drop any still live local variables
+    let new_expr =
+        self.drop_since(
+          coutputs,
+          nenv,
+          &drop_ranges,
+          call_location,
+          life,
+          region,
+          undestructed_root_expression,
+          nenv.snapshot(self.typing_interner).get_live_variables_introduced_since(starting_nenv)
+        )?;
 
     Ok((new_expr, returns_from_exprs))
   }

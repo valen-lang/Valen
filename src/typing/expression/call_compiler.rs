@@ -9,6 +9,7 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
+use crate::typing::expression::local_helper::PendingTempDrops;
 use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::typing::infer_compiler::IResolvingError;
@@ -36,7 +37,10 @@ where
     explicit_template_arg_runes_s: &[IRuneS<'s>],
     receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
     given_args_exprs_2: &[ExpressionTE<'s, 't>],
-  ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+  ) -> Result<
+    (ExpressionTE<'s, 't>, PendingTempDrops<'s, 't>),
+    ICompileErrorT<'s, 't>
+  > {
     match callable_expr.result() {
       KindT::Never(NeverT { from_break: true }) => {
         panic!("vwat");
@@ -177,11 +181,16 @@ where
           .get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id)
           .is_some());
         let result_te = stamp_result.prototype.return_type;
-        Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
-          stamp_result.prototype,
-          self.typing_interner.alloc_slice_from_vec(args_exprs_2),
-          result_te,
-        ))))
+        Ok(
+          (
+            ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+              stamp_result.prototype,
+              self.typing_interner.alloc_slice_from_vec(args_exprs_2),
+              result_te,
+            ))),
+            PendingTempDrops::none()
+          )
+        )
       }
       other => self.evaluate_custom_call(
         nenv,
@@ -214,14 +223,19 @@ where
     receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
     given_callable_unborrowed_expr_2: ExpressionTE<'s, 't>,
     given_args_exprs_2: &[ExpressionTE<'s, 't>],
-  ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+  ) -> Result<
+    (ExpressionTE<'s, 't>, PendingTempDrops<'s, 't>),
+    ICompileErrorT<'s, 't>
+  > {
     // A borrowed or shared callable is already a reference to call through. An owned one is
     // given a temporary local to live in, and we lend that.
-    let given_callable_borrow_expr_2: ExpressionTE<'s, 't> =
+    let (given_callable_borrow_expr_2, subject_pending_temp_drops) =
       match given_callable_unborrowed_expr_2.result() {
-        KindT::BorrowRef(_) | KindT::ShareRef(_) => given_callable_unborrowed_expr_2,
+        KindT::BorrowRef(_) | KindT::ShareRef(_) => {
+          (given_callable_unborrowed_expr_2, PendingTempDrops::none())
+        }
         _ => {
-          let defer = self.make_temporary_local_defer(
+          let (let_and_lend_te, subject_pending_temp_drop) = self.make_temporary_local_defer(
             coutputs,
             nenv,
             range,
@@ -230,7 +244,7 @@ where
             context_region,
             given_callable_unborrowed_expr_2,
           )?;
-          ExpressionTE::Defer(defer)
+          (ExpressionTE::LetAndLend(let_and_lend_te), subject_pending_temp_drop)
         }
       };
 
@@ -309,11 +323,16 @@ where
       .get_instantiation_bounds(self.typing_interner, resolved.prototype.id)
       .is_some());
     let result_te = resolved.prototype.return_type;
-    Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
-      resolved.prototype,
-      self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
-      result_te,
-    ))))
+    Ok(
+      (
+        ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+          resolved.prototype,
+          self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
+          result_te,
+        ))),
+        subject_pending_temp_drops
+      )
+    )
   }
 
   pub fn check_types(
@@ -365,8 +384,8 @@ where
     explicit_template_arg_runes_s: &[IRuneS<'s>],
     receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
     args_exprs_2: &[ExpressionTE<'s, 't>],
-  ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-    let call_expr = self.evaluate_call(
+  ) -> Result<(ExpressionTE<'s, 't>, PendingTempDrops<'s, 't>), ICompileErrorT<'s, 't>> {
+    let (call_expr, pending_temp_drops) = self.evaluate_call(
       coutputs,
       nenv,
       life,
@@ -379,6 +398,6 @@ where
       receiving_rune_to_explicit_template_arg_rune,
       args_exprs_2,
     )?;
-    Ok(call_expr)
+    Ok((call_expr, pending_temp_drops))
   }
 }

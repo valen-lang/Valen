@@ -1,0 +1,339 @@
+# Plan: Delete the Simplifying (Hammer) Pass — Instantiator Emits Onion IR Straight to the Backend
+
+> **Audience:** a fresh tree with **no access to the conversation that produced this plan.** It is
+> deliberately heavy on context. Read "Background" fully before touching code. All paths are relative
+> to the repo root. Line numbers are snapshots — grep the named symbol; don't trust the number.
+
+---
+
+## Context — why this change
+
+The Vale frontend pipeline is:
+
+```
+parsing → postparsing → higher_typing → typing        (T-IR, "HinputsT")
+        → instantiating                                 (I-IR, "HinputsI" / "monouts")
+        → simplifying  (a.k.a. the HAMMER; H-IR "ProgramH" / "hamuts", in src/final_ast/)
+        → backend (C++/LLVM, in Backend/)   and   TestVM (src/testvm/, interprets ProgramH)
+```
+
+The **simplifying pass** (`src/simplifying/`, every file `*_hammer.rs`) lowers the instantiator's IR
+into `final_ast`'s `ProgramH`, which the C++ backend consumes over FFI and TestVM interprets.
+
+Two things changed the calculus:
+
+1. **The "onion typing" refactor** rebuilt the *typing* pass. It deleted the old
+   `CoordT`/`OwnershipT`/`LocationT` value model and replaced it with **`KindT` carrying four
+   reference "wrap" layers** — `BorrowRef` / `OwnRef` / `ShareRef` / `WeakRef` — an "onion" of ref
+   layers around a base kind. The expression hierarchy flattened to a **single `ExpressionTE`** (the
+   old `ReferenceExpressionTE` / `AddressExpressionTE` two-sort split is gone), `SoftLoadTE` dissolved
+   into a read-path `DerefTE`, and **addressibility was retired** (an LLVM-style storage model: every
+   local is storage; a lookup yields a borrow of that storage).
+
+2. That directly eliminates the hammer's two largest jobs — l-value/r-value flattening + `SoftLoad`
+   fusion, and box-wrapping of addressible (mutably-captured) variables. What the hammer did there,
+   the onion now does *in typing*. But the onion currently lives **only in typing**; the instantiator,
+   simplifying, and final_ast are frozen at the pre-onion checkpoint and commented out of `src/lib.rs`.
+
+**The decision:** rather than revive the pre-onion instantiator/hammer and keep the `Coord`-shaped
+`ProgramH`, push the onion all the way to the metal. The instantiator is rewritten to emit an
+**onion-typed `HinputsI`**; the simplifying pass and `ProgramH` are **deleted**; the backend + TestVM
+are rewired to consume `HinputsI` directly. `HinputsI` becomes the sole IR from instantiation onward.
+
+### The load-bearing principle (do not violate)
+
+**Blast `Coord` away wherever you touch it. Never make new code "work with" the existing
+`Coord`/`Ownership`/`Location`/`ProgramH` shapes.** If a task tempts you to adapt to `CoordI`,
+`CoordH`, `OwnershipH`, `OwnershipI`, `LocationH`, `LocationI`, or `ProgramH`, stop — replace that
+shape with the onion, don't interoperate with it. Memory placement (Inline vs Yonder) is **not** a
+carried field in the new world; it is **derived from the onion shape at codegen** (bare kind → value;
+ref-wrap → pointer).
+
+### Locked decisions (agreed with the architect; do not re-open)
+
+1. **`HinputsI` is the backend contract.** After this work there is no `ProgramH` / H-IR. The
+   instantiator's onion-typed `HinputsI` is what the C++ backend FFI and TestVM consume.
+2. **`ProgramH` / `src/final_ast/` / the whole `src/simplifying/` pass are deleted**, not revived or
+   re-onioned.
+3. **Inline/Yonder (`LocationH`/`LocationI`) goes away as a field/enum.** Placement is derived from the
+   onion shape at codegen.
+4. **The instantiator output IR is named + onion + monomorphized** — the same vocabulary as typing's
+   `ExpressionTE` / `KindT`, minus generics. It is *not* a new `Coord`-flavored dialect. Locals and
+   struct members stay **named**; any numbering / member-index resolution (if still needed at all) is a
+   backend/codegen concern.
+5. **DeferTE moves into the typing pass** (step 1) — drop *timing* becomes explicit in the typed tree,
+   which also serves the future borrow checker.
+
+---
+
+## Background the fresh tree needs
+
+**Current build state (`src/lib.rs`).** The downstream arc is commented out: `backend_ffi`,
+`final_ast`, `simplifying`, `instantiating`, `testvm`, `von`, `clang`, `end_to_end_tests`,
+`integration_tests`, `file_coordinate_map` are all `// pub mod …`. Only `parsing`, `postparsing`,
+`typing`, `pass_manager`, `solver` (etc.) link. So today only the **typing** suite builds/runs.
+
+**Why the downstream passes are stale, not just gated.** The instantiator matches on typing enum
+variants that no longer exist (`ReferenceExpressionTE::While/Return/Break` at
+`src/instantiating/instantiator.rs:1498,1544,1552`) and imports deleted typing types (`SoftLoadTE` at
+`:141`, `AddressibleLocalVariableT` at `:26`). It also *emits* the pre-onion model (`CoordI`,
+two-sort `ExpressionIE`, `SoftLoadIE`, addressibility). So this is a **rewrite of the instantiator's
+read and write sides**, not a re-link.
+
+**The onion target vocabulary** (what the instantiator's output mirrors) lives in typing:
+- **Kinds** — `KindT` (`src/typing/types/types.rs:52-70`, 17 variants). The four wrap structs:
+  `BorrowRefT { inner: KindT, region: RegionT }` (`:24`), `OwnRefT { inner }` (`:31`),
+  `ShareRefT { inner }` (`:37`), `WeakRefT { inner }` (`:43`) — all stored behind `&'t`. **An owned
+  value is a bare kind** (zero wraps), e.g. an owned `Ship` is `KindT::Struct(&StructTT)` directly.
+  `RegionT { Iso, Default }` (`:16`) lives only on `BorrowRefT`. **No location/ownership field exists
+  anywhere** — ownership is which wrap (or none) surrounds the kind.
+- **Expressions** — one flat `ExpressionTE` (`src/typing/ast/expressions.rs:33-84`, 50 variants, no
+  Reference/Address split, no `SoftLoad`). `DerefTE` (`:932`) peels exactly one wrap via
+  `peel_one_reference`. The five lookup nodes (`LocalLookupTE` `:752`, `ReferenceMemberLookupTE`
+  `:874`, `AddressMemberLookupTE` `:903`, the two array lookups `:793`/`:824`) each return
+  `KindT::BorrowRef(...)` of their target. `result()` dispatcher at `:90-143`.
+- **Locals & members** — a local is `LocalVariable { name: IVarNameT, tyype: KindT }`
+  (`src/typing/env/function_environment_t.rs:998`). Members are keyed by interned **name**
+  (`IVarNameT`), never index (member lookups' `member_name: IVarNameT`).
+- **Key helpers to mirror** — `peel_one_reference` / `is_ref` / `replace_value_type_in_ref`
+  (`src/typing/templata_compiler.rs:65-142`), and `substitute_templatas_in_kind` (recurses through all
+  four wraps — the precedent for the instantiator's placeholder substitution).
+
+**Caveat: the typing pass is human-edited.** `src/typing/.claude/CLAUDE.md` marks typing as
+human-authored — get explicit architect approval before modifying `src/typing/` files (this bears on
+step 1). Some typing functions are still stubs (`evaluate_block` panics "Slab 15";
+`InterfaceToInterfaceUpcastTE::new` is `unimplemented!`) — don't treat those as authoritative shapes.
+
+---
+
+## Step 1 — Typing handles Defer (delete `DeferTE`)
+
+**Goal:** make deferred-drop *timing* explicit in the typed `ExpressionTE` tree, so the downstream IRs
+never need a `Defer` node or a defer-timing algorithm.
+
+**Current reality.** Drop *insertion* is already fully in typing. Only defer *timing* lives downstream
+(the hammer's "bubble-up-and-flush" accumulator). The pieces:
+- `make_temporary_local_defer` (`src/typing/expression/local_helper.rs:41-65`) builds
+  `DeferTE { inner_expr = LetAndLend(temp, value), deferred_expr = drop(unlet temp) }`. The deferred
+  drop is already a concrete `Unlet`+destructor expression.
+- `DeferTE` node: `src/typing/ast/expressions.rs:300-324` (asserts `deferred_expr` is `Void`; result =
+  `inner_expr.result()`).
+- `drop_since` (`src/typing/expression/expression_compiler.rs:2586-2659`) already runs the isomorphic
+  **scope-end** flush: collect live-vars-introduced-since-block-start
+  (`get_live_variables_introduced_since`), **reverse for LIFO**, `unlet_and_drop_all` → splice into a
+  `Consecutor` (via `consecutive`, `src/typing/compiler.rs:1994`). Its `Never` arm unlets **without**
+  dropping (`:2624`). Block ends funnel through it (`src/typing/expression/block_compiler.rs:41-81`);
+  `break` funnels through it against the loop env (`expression_compiler.rs:1320-1347`).
+- `drop()` (`src/typing/function/destructor_compiler.rs:78-138`) decides `Discard` (primitives, refs,
+  str) vs `FunctionCall(destructor)` (struct/interface/array/placeholder) by kind.
+
+**What to build.** Thread a pending-deferred accumulator through typing's expression evaluation
+(`evaluate_expression`, `src/typing/expression/expression_compiler.rs:354-363`, returns
+`(ExpressionTE, HashSet<KindT>)`), and splice each deferred into a `Consecutor` at the nearest
+consuming op / end-of-statement / before `Return`, discarding pending deferreds past a `Never` — reusing
+`drop_since`'s LIFO machinery and `consecutive`. Recall `ConsecutorTE::new`
+(`src/typing/ast/expressions.rs:507-533`) makes the whole sequence `Never` if any element is `Never`,
+which gives the "discard past Never" behavior structurally.
+
+**Then delete `DeferTE`.** Convert the four live `make_temporary_local_defer` callers to emit the
+deferred at the flush point directly instead of wrapping in `DeferTE`:
+- `src/typing/expression/call_compiler.rs:224-233` (owned callable in `__call`),
+- `src/typing/expression/expression_compiler.rs:871-880` (`LoadAsBorrow` of a share rvalue),
+- `src/typing/expression/expression_compiler.rs:907-916` (`LoadAsBorrow` of an owning rvalue — the
+  `&2` case),
+- `src/typing/expression/expression_compiler.rs:922-932` (`LoadAsWeak` of an owning rvalue; note the
+  next step is `panic!("unimplemented")` at `:932` — weak-alias not built, so this site is partially
+  dead and can be handled minimally).
+
+Remove the `DeferTE` variant and struct once the callers no longer produce it.
+
+**Why first / standalone.** Typing is the only linked suite, so it's fully testable in isolation; it
+removes one node kind and the `Vec<deferred>` threading from the step-2 rewrite; and the borrow checker
+wants explicit drop timing in the tree anyway.
+
+**Gate:** the typing `--lib` suite stays green. **This step touches `src/typing/` — get architect
+approval per the human-edited-pass rule.**
+
+---
+
+## Step 2 — Onion-ify `HinputsI` (blast `Coord`)
+
+**Goal:** rewrite `src/instantiating/` to (a) *consume* the current flat onion `ExpressionTE`, and
+(b) *emit* an onion-typed `HinputsI` (no `CoordI`/`OwnershipI`/`LocationI`, no two-sort split, no
+`SoftLoadIE`, no addressibility). This is the bulk of the work.
+
+**What stays unchanged (onion-neutral — do NOT rewrite):** the monomorphization spine —
+`translate` (`src/instantiating/instantiator.rs:270`) → `translate_method` (`:290`) → the worklist
+drain loop (`:433-463`); `assemble_placeholder_map` (`:851`/`:873`); bound discharge in
+`translate_prototype` (`:943`, pushes onto `monouts.new_functions` at `:1018`); the callsite-discovery
+functions (`translate_function_callsite` `:794`, `translate_impl_callsite` `:782`,
+`translate_abstract_func` `:822`, `translate_override` `:685`); all name translation
+(`translate_*_name`, `translate_id`); the interner (`instantiating_interner.rs` — keep its
+sealed-`MustIntern` + 12-map structure, just intern onion kinds); `get_monouts`
+(`src/instantiating/instantiated_compilation.rs:148`).
+
+**Read side (re-source from onion typing):** rewrite the expression/type translators that match
+deleted typing variants —
+- Merge `translate_expr` (`:1365`), `translate_ref_expr` (`:1379`, the big match `:1381-1981`), and
+  `translate_addr_expr` (`:1295`) into a single translator over the flat `ExpressionTE`. There is no
+  Reference/Address split to dispatch anymore; add a `Deref` arm; delete the `SoftLoad` handling.
+- `translate_coord` (`:2170`) and `translate_kind` (`:2353`): translate the onion kind, substituting
+  `KindPlaceholder`s. The placeholder-substitution + `compose_ownerships` logic (`:2011`/`:2020`/`:2058`)
+  is **replaced by wrap-splicing** — splice the concrete onion kind into the wrap structure, mirroring
+  typing's `substitute_templatas_in_kind` / `replace_value_type_in_ref`. Ownership is no longer a scalar
+  to compose; it's the wrap that surrounds the substituted inner.
+- `translate_local_variable` (`:1253`): keep named locals; **delete**
+  `translate_addressible_local_variable` (`:1283`) and the addressibility path.
+- `translate_struct_member` (`:899`): already name-keyed; carry an onion member type.
+
+**Output IR (onion-ify `src/instantiating/ast/`):**
+- `types.rs`: **delete `OwnershipI` (`:12`), `LocationI` (`:43`), `CoordI` (`:65`).** Replace `KindIT`
+  (`:90`, 10 variants) with an onion kind mirroring typing's `KindT` — add wrap variants
+  `BorrowRefIT { inner, region }`, `OwnRefIT { inner }`, `ShareRefIT { inner }`, `WeakRefIT { inner }`.
+  A coord becomes just an onion kind. (Note `CoordI::new` `:78` already bakes one onion invariant —
+  primitives are `Own` — which now becomes "primitives are bare kinds.")
+- `expressions.rs`: collapse `ExpressionIE` (`:22`, 2-sort) + `ReferenceExpressionIE` (`:94`, 49
+  variants) + `AddressExpressionIE` (`:148`, 5 variants) into **one flat `ExpressionIE`** mirroring
+  `ExpressionTE`. **Delete `SoftLoadIE` (`:812`), `AddressExpressionIE`, `AddressMemberLookupIE`; add a
+  `DerefIE`.** Move the lookup nodes into the single enum (returning `BorrowRef` of their target, like
+  typing).
+- `ast.rs`: **delete the addressible local/closure variants** in `IVariableI` (`:333`) /
+  `ILocalVariableI` (`:356`) — keep only the reference (named) ones. `ParameterI` (`:148`) /
+  `FunctionHeaderI` (`:226`) / `PrototypeI` (`:302`) carry onion coords instead of `CoordI`.
+- `citizens.rs`: `StructMemberI` (`:41`) stays name-keyed; its `IMemberTypeI` carries an onion coord;
+  drop the `AddressMemberTypeI` distinction if it only existed for addressibility.
+- `hinputs.rs`: `HinputsI` (`:29`) top-level shape is fine; its contained defs now hold onion types.
+
+**Verification (tooling is greenfield — build it):** the instantiator tests
+(`src/instantiating/tests/instantiated_tests.rs:16`, the `test(...)` source→`get_monouts()` harness)
+are **smoke tests only** (assert no panic); most `HinputsI` `lookup_*` accessors are `panic!` stubs.
+Stand up real verification via `src/instantiating/instantiated_humanizer.rs` (already exists, 187
+lines) — a text-dump/golden of the onion `HinputsI` for representative programs. **Do not** run
+simplifying or downstream tests.
+
+---
+
+## Step 3 — Delete simplifying and `ProgramH`
+
+**Goal:** remove `src/simplifying/` and `src/final_ast/` entirely; `HinputsI` becomes the backend's
+input. The hammer's still-needed mechanical jobs (placement, any numbering/member-indexing, name
+mangling, vtable slots) move to the **backend** (step 4) — none return as a frontend pass or a carried
+field.
+
+**Delete:** `src/simplifying/` (whole dir), `src/final_ast/` (whole dir; note `metal_printer.rs` is
+already 0 bytes). Remove their `mod` lines and re-exports.
+
+**Repoint or drop every `ProgramH`/`final_ast` reference** (the exact surface, from a tree-wide grep
+excluding `final_ast`/`simplifying`):
+- `src/pass_manager/pass_manager.rs` (`:19` imports `PackageH`; `:445-472` the
+  `get_hamuts()`→`populate_metal_cache`→`backend_compile_program_safe` flow) and
+  `src/pass_manager/full_compilation.rs` (`:18` `ProgramH`; `:131` `get_hamuts() -> &ProgramH`). Rewire
+  the terminal accessor from `get_hamuts()`/`ProgramH` to `get_monouts()`/`HinputsI`.
+- `src/backend_ffi/metal_lowerer.rs`, `src/backend_ffi/mod.rs` (step 4 rewrites these; step 3 just
+  stops them referencing `ProgramH`).
+- `src/testvm/*` (8 files — step 4 rewrites; see below).
+- Integration tests that call `get_hamuts()` (`src/integration_tests/tests/{hammer_tests,
+  hash_map_tests, integration_tests_a, integration_tests_c, run_compilation}.rs`) — repoint or remove
+  the hammer-specific ones (`hammer_tests.rs` and `src/simplifying/test/` go with the pass).
+
+**Gate:** frontend compiles with simplifying/final_ast gone. **Do not** run backend or downstream tests
+(nothing produces the old `ProgramH` and the backend isn't rewired yet).
+
+---
+
+## Step 4 — Backend + TestVM think onion
+
+**Goal:** rewire the C++ backend FFI bridge and TestVM to consume onion `HinputsI`; **derive placement
+(Inline/Yonder) from the onion shape at codegen** instead of reading a carried field.
+
+**The single new rule (implement in both the Rust bridge and C++, and in TestVM):** placement is a
+function of the onion shape — bare primitive/value → Inline; ref-wrap (borrow/weak) → pointer/Yonder.
+The legacy coupling is already asserted in three places and is the derivation spec:
+`final_ast/types.rs` `CoordH::new` (`:30-52`), C++ `Reference` ctor (`Backend/src/metal/types.h:94-99`:
+`INLINE ⇒ ownership ∈ {OWN, MUTABLE_SHARE}`; borrow/weak ⇒ `YONDER`), and `CoordI::new`
+(`src/instantiating/ast/types.rs:78`).
+
+**Rust FFI bridge (`src/backend_ffi/`):**
+- `metal_lowerer.rs`: `populate_metal_cache` (`:53`) currently walks `ProgramH` — repoint it to walk
+  `HinputsI`. The hot spot: `lower_coord_to_reference` (`:282`) calls `cache.get_reference(ownership,
+  location, kind)`; `lower_location` (`:275`) reads `coord.location`. **Delete `lower_location`;
+  compute placement from the onion `(outer-wrap, kind)`** at each `get_reference` call and everywhere an
+  expression rebuilds a target coord copying `src_coord.location` (e.g. `:476-478`, `:490-492`).
+- `metal_cache.rs`: `MetalCache::get_reference` (`:506`) → `metal_cache_get_reference` FFI (`:146`) is
+  the chokepoint that passes `location` across. Decide: keep the C++ `Reference` carrying a computed
+  `location` (derive on the Rust side, pass it), or push derivation into C++ and drop the parameter.
+  Prefer deriving on the C++ side so the onion is the single source of truth.
+
+**C++ backend (`Backend/`):** the metal layer's `Reference { Ownership ownership; Location location;
+Kind* kind; }` (`Backend/src/metal/types.h:75`) becomes an onion kind; `Location` (`:51`) as a stored
+field goes away, computed at codegen. Scope (raw counts under `Backend/src/`): `Ownership::` ×181,
+`Location::INLINE` ×34 / `YONDER` ×31, `->location` ×41 (the sites to convert to derivation),
+`->ownership` ×86. The metal FFI builders are `Backend/src/metal/metal_cache_ffi.{h,cpp}`; per-instruction
+codegen is `Backend/src/function/expressions/*.cpp` (dispatcher `Backend/src/function/expression.cpp`).
+Resolve the **13 `// VCOORD` sites** flagged as backwards under the new model (full list: `translatetype.cpp:17`;
+`vale.cpp:353,928,1043`; `metal/ast.h:189`; `metal/metalcache.h:92`; `function/expressions/localload.cpp:22`;
+`function/expressions/externs.cpp:298`; `function/expression.cpp:604,678`; `region/common/common.cpp:309`;
+`region/rcimm/rcimm.cpp:1068,1101`).
+
+**TestVM (`src/testvm/`):** repoint the entry points from `ProgramH` to `HinputsI` — `vivem.rs`
+`execute_with_primitive_args` (`:56`), `execute_with_heap` (`:67`), `inner_execute` (`:112`, finds
+`main` via the program's export map). The placement-derivation target: `heap.rs` `add(interner,
+ownership, location, kind)` (`:160`) and `add_allocation_for_return(ownership, location, kind)` (`:66`)
+take `location` as a parameter today — change them to **compute** Inline/Yonder from the onion
+`(ownership, kind)` when constructing the `ReferenceV`, instead of receiving `LocationH`. The VM is
+threaded with final_ast types across `expression_vivem.rs` (~91 refs), `vivem_externs.rs` (~41),
+`values.rs` (~31), `heap.rs`, `function_vivem.rs`, `call.rs` — all move to onion `HinputsI` types.
+
+**Owned-bare-struct placement (the one deferred decision).** Because an owned value is now a bare kind
+(zero wraps), the backend must decide how a bare owned *struct* is placed (by-value vs. heap) from the
+kind alone rather than from a stored `Yonder`. Pin this rule when you reach step 4 — it's the point
+where "no Location field" turns into a concrete codegen choice (historically owned citizens were
+`Yonder`; primitives `Inline`).
+
+**Gate:** now run the **full** suite — `src/integration_tests/`, `src/end_to_end_tests/`, and TestVM
+(`src/testvm/test/vivem_tests.rs`). Re-link the downstream modules in `src/lib.rs`.
+
+---
+
+## Cross-cutting notes
+
+- **The one genuinely new semantic thing** across the whole plan is the **onion→placement derivation**
+  in step 4. Everything else is either deletion (defer timing, box lowering, the two-sort split,
+  Coord/Ownership/Location fields) or mechanical renaming (kind/expr node translation, name mangling).
+- **Verification tooling is greenfield for step 2.** Budget for building `HinputsI` inspection via
+  `instantiated_humanizer.rs`; the existing instantiator tests only assert "doesn't panic."
+- **Keep locals and members named end-to-end.** No numbering, no member indices in the frontend. If
+  codegen needs indices, resolve them in the backend from struct layout (step 4).
+
+## Verification strategy
+
+- **Step 1:** `cargo test --manifest-path Cargo.toml --lib --no-fail-fast` (typing suite) green;
+  census panic sites per the handoff PICK-UP command. Behavior parity: deferred drops must fire at the
+  same points (statement end / before `Return`, LIFO, discarded past `Never`) — compare against
+  `drop_since`'s existing rules.
+- **Step 2:** instantiator unit tests + golden `HinputsI` dumps via the humanizer on representative
+  programs. Downstream held.
+- **Step 3:** frontend compiles; `simplifying/` + `final_ast/` removed; no dangling `ProgramH` refs.
+- **Step 4:** full suite green — TestVM interpretation and (where wired) the C++ backend — with
+  placement derived from the onion.
+
+## Guardrails
+
+- **Never commit** without the architect's literal "fire commit" / "fire commit temporary". Steps 1–3
+  land as `TEMP CHECKPOINT` commits; the green-at-commit invariant is suspended until step 4.
+- **`src/typing/` is human-edited** — get architect approval before step 1's typing edits.
+- No `#[ignore]` additions without approval. Surface before reverting landed work.
+- Pipe all cargo output to a single fixed `./tmp/` file per session; never chain heavy commands with
+  `| tail`/`| grep`/`| head`. Build via `--manifest-path Cargo.toml`, never `cd … && cargo`.
+
+## Ordering & dependency summary
+
+```
+Step 1 (typing: Defer→tree, delete DeferTE)   — runs/tests in isolation; only linked suite
+   ↓ (removes a node kind + Vec<deferred> threading from step 2)
+Step 2 (instantiator: onion-ify HinputsI)      — instantiator tests only; downstream held
+   ↓ (HinputsI is now backend-ready onion IR)
+Step 3 (delete simplifying/ + final_ast/)      — frontend compiles; downstream held
+   ↓ (nothing produces ProgramH anymore)
+Step 4 (backend C++ + FFI bridge + TestVM)     — full suite runs; placement derived from onion
+```
