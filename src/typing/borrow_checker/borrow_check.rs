@@ -74,7 +74,6 @@ fn collect_calls<'s, 't>(expr: &ExpressionTE<'s, 't>, out: &mut Vec<&'t Function
     | ExpressionTE::ConstantStr(_)
     | ExpressionTE::Construct(_)
     | ExpressionTE::CopyPrim(_)
-    | ExpressionTE::Defer(_)
     | ExpressionTE::Deref(_)
     | ExpressionTE::Destroy(_)
     | ExpressionTE::DestroyRuntimeSizedArray(_)
