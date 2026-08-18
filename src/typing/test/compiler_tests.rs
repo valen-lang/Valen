@@ -4053,6 +4053,41 @@ Indexed array with non-integer: bool
   );
 }
 
+// VCOORD: check if this is redundant
+#[test]
+fn runtime_sized_array_local_drops_cleanly() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = concat!(
+    "import v.builtins.arrays.*;\n",
+    "import v.builtins.drop.*;\n",
+    "exported func main() int {\n",
+    "  arr = Array<int>(3);\n",
+    "  return 0;\n",
+    "}\n",
+  );
+  let code_source = CodeSource::new(vec![
+    builtin_source_for_arrays(&parse_arena, &parser_keywords),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  compile.expect_compiler_outputs();
+}
+
 #[test]
 fn reports_when_dot_applied_to_non_container() {
   let parse_bump = Bump::new();

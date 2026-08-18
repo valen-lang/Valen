@@ -2,6 +2,7 @@ use crate::postparsing::ast::FunctionS;
 use crate::typing::ast::ast::FunctionDefinitionT;
 use crate::typing::ast::expressions::{ExpressionTE, FunctionCallTE};
 use crate::typing::borrow_checker::call_check::check_call;
+use crate::typing::borrow_checker::liveness::check_use_after_churn;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
@@ -21,6 +22,7 @@ pub fn check_function<'s, 'ctx, 't>(
   for call in calls {
     check_call(call, function_s.range, coutputs, compiler)?;
   }
+  check_use_after_churn(function, coutputs, compiler, function_s.range)?;
   Ok(())
 }
 

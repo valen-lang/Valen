@@ -4,8 +4,12 @@ use crate::typing::names::names::IVarNameT;
 /// One step of a place path below its root local.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Segment<'s, 't> {
-  /// A named struct member, e.g. `.flagship`.
+  /// A named struct member, e.g. `.flagship`. Stays in the parent group.
   Member(IVarNameT<'s, 't>),
+  /// An element of a runtime-sized array, e.g. `arr[i]`. The index is not tracked (it is a runtime
+  /// value), so all elements of one array share one segment. An element is in a **child group**: the
+  /// container can move or delete it independently, so a churn of the parent invalidates it.
+  Element,
 }
 
 /// The place an argument expression refers to: a root local plus the member steps taken from it.
@@ -27,6 +31,13 @@ impl<'s, 't> PlacePath<'s, 't> {
     }
     let common = self.segments.len().min(other.segments.len());
     self.segments[..common] == other.segments[..common]
+  }
+
+  /// Whether this path names a place in a **child group** — i.e. it steps through an array element.
+  /// A churn of the parent group invalidates references into child groups (an element can be moved
+  /// or deleted); a parent-group reference (a root or member-only path) survives.
+  pub fn is_child_group(&self) -> bool {
+    self.segments.iter().any(|segment| matches!(segment, Segment::Element))
   }
 }
 
@@ -55,6 +66,16 @@ pub fn place_path<'s, 't>(expr: &ExpressionTE<'s, 't>) -> Option<PlacePath<'s, '
     ExpressionTE::AddressMemberLookup(member_lookup) => {
       let mut path = place_path(&member_lookup.struct_expr)?;
       path.segments.push(Segment::Member(member_lookup.member_name));
+      Some(path)
+    }
+    ExpressionTE::RuntimeSizedArrayLookup(array_lookup) => {
+      let mut path = place_path(&array_lookup.array_expr)?;
+      path.segments.push(Segment::Element);
+      Some(path)
+    }
+    ExpressionTE::StaticSizedArrayLookup(array_lookup) => {
+      let mut path = place_path(&array_lookup.array_expr)?;
+      path.segments.push(Segment::Element);
       Some(path)
     }
     _ => None,

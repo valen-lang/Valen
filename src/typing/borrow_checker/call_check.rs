@@ -15,7 +15,7 @@ use crate::utils::range::RangeS;
 /// A parameter's declared group, as its group-rune name, when the parameter is `&T in <rune>` with a
 /// declared group rune. `None` for a non-group / non-borrow parameter, or a group that resolved to a
 /// local rather than a declared rune.
-fn param_group_name<'s>(param: &ParameterS<'s>) -> Option<StrI<'s>> {
+pub(super) fn param_group_name<'s>(param: &ParameterS<'s>) -> Option<StrI<'s>> {
   match &param.tyype {
     ITypeST::BorrowRef(BorrowRefST {
       region:
@@ -27,7 +27,7 @@ fn param_group_name<'s>(param: &ParameterS<'s>) -> Option<StrI<'s>> {
 }
 
 /// Whether the callee declares `mut(<group>)` over the group named `group`.
-fn is_mut_target<'s>(effects: &[EffectS<'s>], group: StrI<'s>) -> bool {
+pub(super) fn is_mut_target<'s>(effects: &[EffectS<'s>], group: StrI<'s>) -> bool {
   effects.iter().any(|effect| match effect {
     EffectS::Mut(GroupS::Rune(RuneUsage { rune: IRuneS::CodeRune(CodeRuneS { name }), .. })) => {
       *name == group

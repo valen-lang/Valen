@@ -3,6 +3,12 @@ import v.builtins.arith.*;
 import v.builtins.drop.*;
 import v.builtins.panic.*;
 
+struct DropFunctor<T> { }
+func __call<T>(self &DropFunctor<T>, elem T)
+where func drop(T)void {
+  ^elem;
+}
+
 extern("vale_static_sized_array_len")
 func len<S Int, E>(arr &StaticArray<S, E>) int;
 
@@ -30,21 +36,19 @@ where func(&F, E)void
   [] = ^arr;
 }
 
-// VCOORD: re enable lambdas
-// func drop<E>(arr []E) void
-// where func drop(E)void {
-//   drop_into(^arr, &{ ^_; });
-// }
+func drop<E>(arr []E) void
+where func drop(E)void {
+  drop_into(^arr, &DropFunctor<E>());
+}
 
 extern("vale_static_sized_array_drop_into")
 func drop_into<S Int, E, F>(arr StaticArray<S, E>, consumer &F) void
 where func(&F, E)void;
 
-// VCOORD: re-enable lambdas
-// func drop<S Int, E>(arr StaticArray<S, E>) void
-// where func drop(E)void {
-//   drop_into(^arr, &{ ^_; });
-// }
+func drop<S Int, E>(arr StaticArray<S, E>) void
+where func drop(E)void {
+  drop_into(^arr, &DropFunctor<E>());
+}
 
 func Array<E, G>(n int, generator G) []E
 where

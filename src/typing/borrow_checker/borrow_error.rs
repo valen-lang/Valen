@@ -24,6 +24,11 @@ pub enum BorrowErrorKind<'s, 't> {
     borrow_arg: usize,
     move_arg: usize,
   },
+  /// A reference into a child group (a runtime-sized array element) is used after a call churned the
+  /// parent group, which may have moved or deleted the element.
+  UseAfterChurn {
+    local: IVarNameT<'s, 't>,
+  },
 }
 
 impl<'s, 't> BorrowErrorKind<'s, 't> {
@@ -59,6 +64,13 @@ impl<'s, 't> BorrowErrorKind<'s, 't> {
           borrow_arg,
           var_name(local),
           move_arg,
+        )
+      }
+      BorrowErrorKind::UseAfterChurn { local } => {
+        format!(
+          "{} references an array element, which a preceding churn of its group may have moved or \
+           deleted, so it can't be used here.",
+          var_name(local),
         )
       }
     }
