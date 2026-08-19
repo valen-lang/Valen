@@ -30,7 +30,6 @@ pub mod builtins;
 pub mod code_source;
 pub mod compile_options;
 // pub mod file_coordinate_map;
-// pub mod final_ast;
 // #[cfg(test)]
 // pub mod end_to_end_tests;
 // #[cfg(test)]
@@ -44,7 +43,6 @@ pub mod parsing;
 pub mod pass_manager;
 pub mod postparsing;
 pub mod scout_arena;
-// pub mod simplifying;
 pub mod tests;
 pub mod typing;
 // #[cfg(test)]

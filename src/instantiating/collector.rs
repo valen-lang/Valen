@@ -18,9 +18,9 @@ pub enum NodeRefI<'s, 'i> {
     Coord(KindIT<'s, 'i>),
     Kind(KindIT<'s, 'i>),
     Templata(ITemplataI<'s, 'i>),
-    // Top-level / expression-hierarchy variants (only meaningful when R = cI for FunctionDefinition).
+    // Top-level / expression-hierarchy variants.
     FunctionDefinition(&'i FunctionDefinitionI<'s, 'i>),
-    ReferenceExpression(ExpressionIE<'s, 'i>),
+    Expression(ExpressionIE<'s, 'i>),
     LetNormal(&'i LetNormalIE<'s, 'i>),
     FunctionCall(&'i FunctionCallIE<'s, 'i>),
 }
@@ -113,10 +113,10 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
         NodeRefI::Coord(c) => visit_coord(pred, &mut out, *c),
         NodeRefI::Kind(k) => visit_kind(pred, &mut out, *k),
         NodeRefI::Templata(t) => visit_templata(pred, &mut out, *t),
-        NodeRefI::ReferenceExpression(e) => visit_reference_expression_ie(pred, &mut out, *e),
+        NodeRefI::Expression(e) => visit_expression_ie(pred, &mut out, *e),
         NodeRefI::LetNormal(l) => visit_let_normal_ie(pred, &mut out, l),
         NodeRefI::FunctionCall(c) => visit_function_call_ie(pred, &mut out, c),
-        NodeRefI::FunctionDefinition(_) => panic!("INSTANTIATING_TEST_COLLECT_IN_INODE: FunctionDefinition requires R=cI dispatcher (use all_in_function or NodeRefI root form)"),
+        NodeRefI::FunctionDefinition(f) => visit_function_definition(pred, &mut out, f),
     }
     out
 }
@@ -285,36 +285,133 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
 fn visit_function_definition<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, f: &'i FunctionDefinitionI<'s, 'i>)
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::FunctionDefinition(f));
-    visit_reference_expression_ie(pred, out, f.body);
+    visit_expression_ie(pred, out, f.body);
 }
 
-fn visit_reference_expression_ie<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, e: ExpressionIE<'s, 'i>)
+// Exhaustive over all ExpressionIE variants (no `_` arm — a new variant must be handled here). Each
+// arm recurses into its sub-expressions, plus any carried prototype (call targets / constructors),
+// so a predicate can reach every node in a function body. Leaf nodes (constants, ArgLookup, Unlet,
+// Break, lookups whose only descendant is a kind) descend nowhere.
+fn visit_expression_ie<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, e: ExpressionIE<'s, 'i>)
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
-    collect_if(pred, out, NodeRefI::ReferenceExpression(e));
+    collect_if(pred, out, NodeRefI::Expression(e));
     match e {
+        ExpressionIE::LetAndLend(x) => visit_expression_ie(pred, out, x.expr),
+        ExpressionIE::LockWeak(x) => {
+            visit_expression_ie(pred, out, x.inner_expr);
+            visit_prototype(pred, out, &x.some_constructor);
+            visit_prototype(pred, out, &x.none_constructor);
+        }
+        ExpressionIE::BorrowToWeak(x) => visit_expression_ie(pred, out, x.inner_expr),
         ExpressionIE::LetNormal(l) => visit_let_normal_ie(pred, out, l),
-        ExpressionIE::FunctionCall(c) => visit_function_call_ie(pred, out, c),
-        ExpressionIE::Block(b) => visit_reference_expression_ie(pred, out, b.inner),
-        ExpressionIE::Consecutor(c) => {
-            for inner in c.exprs {
-                visit_reference_expression_ie(pred, out, *inner);
+        ExpressionIE::Restackify(x) => visit_expression_ie(pred, out, x.source_expr),
+        ExpressionIE::Unlet(_) => {}
+        ExpressionIE::Discard(x) => visit_expression_ie(pred, out, x.expr),
+        ExpressionIE::If(x) => {
+            visit_expression_ie(pred, out, x.condition);
+            visit_expression_ie(pred, out, x.then_call);
+            visit_expression_ie(pred, out, x.else_call);
+        }
+        ExpressionIE::While(x) => visit_expression_ie(pred, out, x.block.inner),
+        ExpressionIE::Mutate(x) => {
+            visit_expression_ie(pred, out, x.destination_expr);
+            visit_expression_ie(pred, out, x.source_expr);
+        }
+        ExpressionIE::Return(x) => visit_expression_ie(pred, out, x.source_expr),
+        ExpressionIE::Break(_) => {}
+        ExpressionIE::Block(x) => visit_expression_ie(pred, out, x.inner),
+        ExpressionIE::Consecutor(x) => {
+            for inner in x.exprs {
+                visit_expression_ie(pred, out, *inner);
             }
         }
-        ExpressionIE::If(i) => {
-            visit_reference_expression_ie(pred, out, i.condition);
-            visit_reference_expression_ie(pred, out, i.then_call);
-            visit_reference_expression_ie(pred, out, i.else_call);
+        ExpressionIE::Tuple(x) => {
+            for el in x.elements {
+                visit_expression_ie(pred, out, *el);
+            }
         }
-        ExpressionIE::Return(r) => visit_reference_expression_ie(pred, out, r.source_expr),
-        // Other ExpressionIE variants not yet covered — add visit_* as needed.
-        _ => {}
+        ExpressionIE::StaticArrayFromValues(x) => {
+            for el in x.elements {
+                visit_expression_ie(pred, out, *el);
+            }
+        }
+        ExpressionIE::ArraySize(x) => visit_expression_ie(pred, out, x.array),
+        ExpressionIE::IsSameInstance(x) => {
+            visit_expression_ie(pred, out, x.left);
+            visit_expression_ie(pred, out, x.right);
+        }
+        ExpressionIE::AsSubtype(x) => {
+            visit_expression_ie(pred, out, x.source_expr);
+            visit_prototype(pred, out, x.ok_constructor);
+            visit_prototype(pred, out, x.err_constructor);
+        }
+        ExpressionIE::VoidLiteral(_) => {}
+        ExpressionIE::ConstantInt(_) => {}
+        ExpressionIE::ConstantBool(_) => {}
+        ExpressionIE::ConstantStr(_) => {}
+        ExpressionIE::ConstantFloat(_) => {}
+        ExpressionIE::ArgLookup(_) => {}
+        ExpressionIE::ArrayLength(x) => visit_expression_ie(pred, out, x.array_expr),
+        ExpressionIE::InterfaceFunctionCall(x) => {
+            visit_prototype(pred, out, x.super_function_prototype);
+            for arg in x.args {
+                visit_expression_ie(pred, out, *arg);
+            }
+        }
+        ExpressionIE::ExternFunctionCall(x) => {
+            visit_prototype(pred, out, &x.prototype2);
+            for arg in x.args {
+                visit_expression_ie(pred, out, *arg);
+            }
+        }
+        ExpressionIE::FunctionCall(c) => visit_function_call_ie(pred, out, c),
+        ExpressionIE::Reinterpret(x) => visit_expression_ie(pred, out, x.expr),
+        ExpressionIE::Construct(x) => {
+            for arg in x.args {
+                visit_expression_ie(pred, out, *arg);
+            }
+        }
+        ExpressionIE::NewRuntimeSizedArray(x) => visit_expression_ie(pred, out, x.capacity_expr),
+        ExpressionIE::StaticArrayFromCallable(x) => {
+            visit_expression_ie(pred, out, x.generator);
+            visit_prototype(pred, out, &x.generator_method);
+        }
+        ExpressionIE::DestroyStaticSizedArrayIntoFunction(x) => {
+            visit_expression_ie(pred, out, x.array_expr);
+            visit_expression_ie(pred, out, x.consumer);
+            visit_prototype(pred, out, &x.consumer_method);
+        }
+        ExpressionIE::DestroyStaticSizedArrayIntoLocals(x) => visit_expression_ie(pred, out, x.expr),
+        ExpressionIE::DestroyRuntimeSizedArray(x) => visit_expression_ie(pred, out, x.array_expr),
+        ExpressionIE::RuntimeSizedArrayCapacity(x) => visit_expression_ie(pred, out, x.array_expr),
+        ExpressionIE::PushRuntimeSizedArray(x) => {
+            visit_expression_ie(pred, out, x.array_expr);
+            visit_expression_ie(pred, out, x.new_element_expr);
+        }
+        ExpressionIE::PopRuntimeSizedArray(x) => visit_expression_ie(pred, out, x.array_expr),
+        ExpressionIE::InterfaceToInterfaceUpcast(x) => visit_expression_ie(pred, out, x.inner_expr),
+        ExpressionIE::Upcast(x) => visit_expression_ie(pred, out, x.inner_expr),
+        ExpressionIE::Destroy(x) => visit_expression_ie(pred, out, x.expr),
+        ExpressionIE::CopyPrim(x) => visit_expression_ie(pred, out, x.inner),
+        ExpressionIE::LocalLookup(_) => {}
+        ExpressionIE::StaticSizedArrayLookup(x) => {
+            visit_expression_ie(pred, out, x.array_expr);
+            visit_expression_ie(pred, out, x.index_expr);
+        }
+        ExpressionIE::RuntimeSizedArrayLookup(x) => {
+            visit_expression_ie(pred, out, x.array_expr);
+            visit_expression_ie(pred, out, x.index_expr);
+        }
+        ExpressionIE::ReferenceMemberLookup(x) => visit_expression_ie(pred, out, x.struct_expr),
+        ExpressionIE::AddressMemberLookup(x) => visit_expression_ie(pred, out, x.struct_expr),
+        ExpressionIE::Deref(x) => visit_expression_ie(pred, out, x.inner),
     }
 }
 
 fn visit_let_normal_ie<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, l: &'i LetNormalIE<'s, 'i>)
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::LetNormal(l));
-    visit_reference_expression_ie(pred, out, l.expr);
+    visit_expression_ie(pred, out, l.expr);
 }
 
 fn visit_function_call_ie<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, c: &'i FunctionCallIE<'s, 'i>)
@@ -322,7 +419,7 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::FunctionCall(c));
     visit_prototype(pred, out, &c.callable);
     for arg in c.args {
-        visit_reference_expression_ie(pred, out, *arg);
+        visit_expression_ie(pred, out, *arg);
     }
 }
 

@@ -89,7 +89,7 @@ Instead, use the same file.
 - **Read when investigating a compiler bug by tracing execution and narrowing the call graph.** → docs/skills/collapsed-call-tree.md
 - **Read when the human says this session continues, resumes, or picks up an earlier session or convo.** → docs/skills/continue-session.md
 - **Read when asked to deep-read a document, or when a skill or doc has a Required reading section that must be followed recursively.** → docs/skills/deep-read.md
-- **Read when the human wants you to know the a document and all of its background looks relevant.** → docs/skills/design-assistant.md
+- **Read when the human wants to work with you to edit a markdown ending in -design.md.** → docs/skills/design-assistant.md
 - **Read when reporting a failure to the human, or when the user says "/diagnose" — dig for the root cause of a failure without proposing fixes.** → docs/skills/diagnose.md
 - **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → docs/skills/feature-development-flow.md
 - **Read when reviewing a diff for added code that doesn't serve the change's goal — dead helpers, redundant reinventions, unused flexibility, and the stale comments that hide them.** → docs/skills/find-deadweight.md
@@ -107,6 +107,7 @@ Instead, use the same file.
 - **Read when a skill exists in Luz/skills/ or an inner repo's own docs/skills/ (e.g. Guardian's) but isn't showing up as a usable skill in this repo.** → docs/skills/luz-import-skill.md
 - **Read when the architect asks what `experimental` has that `master` might want, or asks to pull specific commits from `experimental`.** → docs/skills/merging-from-experimental.md
 - **Read when the architect asks what `master` has that `experimental` might want, or asks to pull specific commits from `master`.** → docs/skills/merging-from-master.md
+- **Read when the human wants to work with you to edit a markdown ending in -plan.md.** → docs/skills/plan-assistant.md
 - **Read when referring to a specific place in code, so the reference is a ctrl-clickable path:line.** → docs/skills/point.md
 - **Read when writing or reviewing prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-reviewer.md
 - **Read when checking the grammar and voice of prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-tactical.md

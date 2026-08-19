@@ -1,22 +1,23 @@
 ---
-name: design-assistant
-description: How to work with the human on editing a `-design.md` design document.
-g_read_when: Read when the human wants to work with you to edit a markdown ending in -design.md.
+name: plan-assistant
+description: How to work with the human on editing a `-plan.md` plan document.
+g_read_when: Read when the human wants to work with you to edit a markdown ending in -plan.md.
 g_mention_in:
   - CLAUDE.md
 ---
 
-## The Design Document
+## The Plan Document
 
-We'll have a design document.
+We'll have a plan document.
 
- * This doc is intended to be a living doc, serving as the source of truth for a codebase.
+ * While we're working on it, it will be committed to docs/plans, ending with "-plan", no number. Example: docs/plans/generics-solving-plan.md.
+ * It will be committed to docs/historical when it's done.
  * This doesn't replace the handoff document. But the handoff document shouldnt contain anything that would be better in here.
  * To check what the human changed, use **verbatim** the command `diff -U2 <(sed -n '1,/^## Strategic Directions Proposals/p' /tmp/plan-phased-calls-0.md) <(sed -n '1,/^## Strategic Directions Proposals/p' docs/plans/plan-phased-calls.md) || true; cp docs/plans/plan-phased-calls.md /tmp/plan-phased-calls-1.md`, updating the 0 and 1 as you go. If the human says only "read", they might mean this.
 
 Sections:
 
-**"Design (human-only)" section:**
+**"Strategic Directions (human-only)" section:**
 
  * Only I (the human) can edit it.
  * It tracks the plan's high-level requirements and direction as I understand them.
@@ -25,7 +26,7 @@ Sections:
  * When you notice something in this section that seems wrong, **please tell me.**
  * When I edit this section, remove anything from "Strategic Directions Proposals" that is now redundant or inconsistent.
 
-**"Design Proposals" section:**
+**"Strategic Directions Proposals" section:**
 
  * You add things to this section as you understand them, concisely.
  * As we go, I'll "ratify", in other words, move things to the top section.
@@ -34,7 +35,7 @@ Sections:
  * Every item in this section should be short, effective, and to the point.
  * Every time the user says something, if it's not already specified by the Strategic Directions, it should be added to the top of the strategic directions proposals, in roughly the same amount of words as the user used.
 
-**"Details" section:**
+**"Plan Details" section:**
 
  * You can modify this section.
  * It describes how we'll carry out the top section's items.
@@ -47,6 +48,13 @@ Sections:
  * You can modify this section.
  * Write in it any examples or test cases that we explicitly talked through, or you specifically explored.
  * Don't eagerly try to fill this out, just put in here what you happen to think through, or what we happen to talk about.
+
+**"Background and Current State" section**:
+
+ * You can modify this section.
+ * It should have information on the compiler as it currently is, that factors into the plan.
+ * This section can (and often should be!) be very large.
+ * Every part should have references, so that a sub-agent can doublecheck/verify things in there. References will be inline, with the code file + symbol name, or markdown document file path + the date that part of the markdown document was last updated.
 
 **"Open Questions" section:**
 

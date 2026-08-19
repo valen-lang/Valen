@@ -1,0 +1,1 @@
+../../../docs/skills/plan-assistant.md

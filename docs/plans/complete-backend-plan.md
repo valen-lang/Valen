@@ -63,6 +63,13 @@ ref-wrap → pointer).
    backend/codegen concern.
 5. **DeferTE moves into the typing pass** (step 1) — drop *timing* becomes explicit in the typed tree,
    which also serves the future borrow checker.
+6. **Instantiateds are NOT interned.** They are write-once/read-once, so the I-types are plain
+   structural value-types — `MustIntern`, every `*ValI` transient, and the interner's dedup maps
+   are deleted; `instantiating_interner.rs` is a bare arena wrapper. (This supersedes the step-2 text
+   below about keeping the interner.)
+7. **`'s` stays on the instantiator types.** It is load-bearing via source runes (`IRuneS<'s>` key
+   the `rune_to_*_bound` maps) and `StrI<'s>` mangling names; removing it would mean re-keying the
+   bounds machinery for no real gain.
 
 ---
 
@@ -106,7 +113,11 @@ step 1). Some typing functions are still stubs (`evaluate_block` panics "Slab 15
 
 ---
 
-## Step 1 — Typing handles Defer (delete `DeferTE`)
+## Step 1 — Typing handles Defer (delete `DeferTE`) — **DONE (landed on `main`)**
+
+Typing owns deferred temp-drops via a linear `PendingTempDrops` obligation (a `DropBomb`-backed
+move-only token); `DeferTE` is retired. The rest of this section is the original design context.
+
 
 **Goal:** make deferred-drop *timing* explicit in the typed `ExpressionTE` tree, so the downstream IRs
 never need a `Defer` node or a defer-timing algorithm.
@@ -156,7 +167,15 @@ approval per the human-edited-pass rule.**
 
 ---
 
-## Step 2 — Onion-ify `HinputsI` (blast `Coord`)
+## Step 2 — Onion-ify `HinputsI` (blast `Coord`) — **DONE (landed on `main`)**
+
+The instantiator emits onion `HinputsI` and the whole module compiles. Verified by matcher-based
+tests in `instantiated_tests.rs`: `fn test` compiles a program, `get_monouts()` yields the onion IR,
+and `collect_only_inode!` (over the completed `visit_expression_ie` walker in
+`src/instantiating/collector.rs`) pins the onion shape — ownership as ref-wrap layers, `SoftLoad` as
+`Deref`, lookups yielding `BorrowRefIT`, monomorphized prototypes. The rest of this section is the
+original design context.
+
 
 **Goal:** rewrite `src/instantiating/` to (a) *consume* the current flat onion `ExpressionTE`, and
 (b) *emit* an onion-typed `HinputsI` (no `CoordI`/`OwnershipI`/`LocationI`, no two-sort split, no
@@ -168,9 +187,9 @@ drain loop (`:433-463`); `assemble_placeholder_map` (`:851`/`:873`); bound disch
 `translate_prototype` (`:943`, pushes onto `monouts.new_functions` at `:1018`); the callsite-discovery
 functions (`translate_function_callsite` `:794`, `translate_impl_callsite` `:782`,
 `translate_abstract_func` `:822`, `translate_override` `:685`); all name translation
-(`translate_*_name`, `translate_id`); the interner (`instantiating_interner.rs` — keep its
-sealed-`MustIntern` + 12-map structure, just intern onion kinds); `get_monouts`
-(`src/instantiating/instantiated_compilation.rs:148`).
+(`translate_*_name`, `translate_id`); `get_monouts`
+(`src/instantiating/instantiated_compilation.rs:148`). (The interner is NOT kept — per locked
+decision 6 it collapsed to an arena wrapper; every `intern_*` call became `bump.alloc`.)
 
 **Read side (re-source from onion typing):** rewrite the expression/type translators that match
 deleted typing variants —
@@ -204,12 +223,12 @@ deleted typing variants —
   drop the `AddressMemberTypeI` distinction if it only existed for addressibility.
 - `hinputs.rs`: `HinputsI` (`:29`) top-level shape is fine; its contained defs now hold onion types.
 
-**Verification (tooling is greenfield — build it):** the instantiator tests
-(`src/instantiating/tests/instantiated_tests.rs:16`, the `test(...)` source→`get_monouts()` harness)
-are **smoke tests only** (assert no panic); most `HinputsI` `lookup_*` accessors are `panic!` stubs.
-Stand up real verification via `src/instantiating/instantiated_humanizer.rs` (already exists, 187
-lines) — a text-dump/golden of the onion `HinputsI` for representative programs. **Do not** run
-simplifying or downstream tests.
+**Verification (done):** matcher-based tests in `instantiated_tests.rs` — the `test` source →
+`get_monouts()` harness, plus `collect_only_inode!` over the onion IR via the completed
+`visit_expression_ie` walker and `NodeRefI` in `src/instantiating/collector.rs`. Array/`v.builtins.*`
+fixtures use the `test_with_array_builtins` harness (the default `test` omits builtins). No golden
+text dumps — pin shapes with matchers like the other passes. **Do not** run simplifying or downstream
+tests.
 
 ---
 
@@ -300,8 +319,6 @@ where "no Location field" turns into a concrete codegen choice (historically own
 - **The one genuinely new semantic thing** across the whole plan is the **onion→placement derivation**
   in step 4. Everything else is either deletion (defer timing, box lowering, the two-sort split,
   Coord/Ownership/Location fields) or mechanical renaming (kind/expr node translation, name mangling).
-- **Verification tooling is greenfield for step 2.** Budget for building `HinputsI` inspection via
-  `instantiated_humanizer.rs`; the existing instantiator tests only assert "doesn't panic."
 - **Keep locals and members named end-to-end.** No numbering, no member indices in the frontend. If
   codegen needs indices, resolve them in the backend from struct layout (step 4).
 
@@ -311,8 +328,8 @@ where "no Location field" turns into a concrete codegen choice (historically own
   census panic sites per the handoff PICK-UP command. Behavior parity: deferred drops must fire at the
   same points (statement end / before `Return`, LIFO, discarded past `Never`) — compare against
   `drop_since`'s existing rules.
-- **Step 2:** instantiator unit tests + golden `HinputsI` dumps via the humanizer on representative
-  programs. Downstream held.
+- **Step 2:** instantiator matcher tests (`collect_only_inode!` over `get_monouts()`) pin the onion IR
+  shape on representative programs. Downstream held.
 - **Step 3:** frontend compiles; `simplifying/` + `final_ast/` removed; no dangling `ProgramH` refs.
 - **Step 4:** full suite green — TestVM interpretation and (where wired) the C++ backend — with
   placement derived from the onion.
