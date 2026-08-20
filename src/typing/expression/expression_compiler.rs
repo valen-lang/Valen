@@ -155,8 +155,8 @@ where
         //         name: IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location})),
         //         tyype: closured_vars_struct_ref_coord,
         //     })))));
-        // Ok(Some(ExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(
-        //     ReferenceMemberLookupTE::new(self.typing_interner, ranges[0], borrow_expr, rcv.name, rcv.coord)))))
+        // Ok(Some(ExpressionTE::MemberLookup(self.typing_interner.alloc(
+        //     MemberLookupTE::new(self.typing_interner, ranges[0], borrow_expr, rcv.name, rcv.coord)))))
       }
       None => {
         let name_as_name_t: INameT<'s, 't> = name.into();
@@ -265,7 +265,7 @@ where
         //       ReferenceLocalVariableT(interner.intern(ClosureParamNameT(closuredVarsStructTemplateName.codeLocation)), FinalT, closuredVarsStructRefCoord)))
         //
         // val lookup =
-        //   ast.ReferenceMemberLookupTE(loadRange, borrowExpr, varName, tyype, variability)
+        //   ast.MemberLookupTE(loadRange, borrowExpr, varName, tyype, variability)
         // Some(lookup)
       }
       None => None,
@@ -1074,8 +1074,8 @@ where
               )
               .substitute_for_kind(coutputs, unsubstituted_member_type);
             assert!(struct_def.members.iter().any(|m| m.name == member_name));
-            ExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(
-              ReferenceMemberLookupTE::new(
+            ExpressionTE::MemberLookup(self.typing_interner.alloc(
+              MemberLookupTE::new(
                 self.typing_interner,
                 dot.range,
                 container_expr_2,

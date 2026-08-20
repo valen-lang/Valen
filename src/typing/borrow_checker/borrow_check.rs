@@ -57,12 +57,11 @@ fn collect_calls<'s, 't>(expr: &ExpressionTE<'s, 't>, out: &mut Vec<&'t Function
       collect_calls(&mutate.source_expr, out);
     }
     // Not descended today. Several of these hold child expressions (`ExternFunctionCall`,
-    // `InterfaceFunctionCall`, the member/array lookups, `Tuple`, `Construct`, `LetAndLend`, the
+    // `InterfaceFunctionCall`, the member/array lookups, `Construct`, `LetAndLend`, the
     // array ops) and are known gaps: add a recursing arm with a red test when a reachable violating
     // call can nest there. The rest are leaves. Kept explicit rather than a wildcard so a new variant
     // forces this decision.
-    ExpressionTE::AddressMemberLookup(_)
-    | ExpressionTE::ArgLookup(_)
+    ExpressionTE::ArgLookup(_)
     | ExpressionTE::ArrayLength(_)
     | ExpressionTE::ArraySize(_)
     | ExpressionTE::AsSubtype(_)
@@ -89,7 +88,7 @@ fn collect_calls<'s, 't>(expr: &ExpressionTE<'s, 't>, out: &mut Vec<&'t Function
     | ExpressionTE::NewRuntimeSizedArray(_)
     | ExpressionTE::PopRuntimeSizedArray(_)
     | ExpressionTE::PushRuntimeSizedArray(_)
-    | ExpressionTE::ReferenceMemberLookup(_)
+    | ExpressionTE::MemberLookup(_)
     | ExpressionTE::Reinterpret(_)
     | ExpressionTE::Restackify(_)
     | ExpressionTE::RuntimeSizedArrayCapacity(_)
@@ -97,7 +96,6 @@ fn collect_calls<'s, 't>(expr: &ExpressionTE<'s, 't>, out: &mut Vec<&'t Function
     | ExpressionTE::StaticArrayFromCallable(_)
     | ExpressionTE::StaticArrayFromValues(_)
     | ExpressionTE::StaticSizedArrayLookup(_)
-    | ExpressionTE::Tuple(_)
     | ExpressionTE::Unlet(_)
     | ExpressionTE::Upcast(_)
     | ExpressionTE::VoidLiteral(_) => {}

@@ -33,7 +33,6 @@ use crate::instantiating::ast::ast::LocalVariableI;
 use crate::instantiating::ast::citizens::InterfaceDefinitionI;
 use crate::instantiating::ast::citizens::StructDefinitionI;
 use crate::instantiating::ast::citizens::StructMemberI;
-use crate::instantiating::ast::expressions::AddressMemberLookupIE;
 use crate::instantiating::ast::expressions::DerefIE;
 use crate::instantiating::ast::expressions::ArgLookupIE;
 use crate::instantiating::ast::expressions::ArrayLengthIE;
@@ -53,7 +52,7 @@ use crate::instantiating::ast::expressions::MutateIE;
 use crate::instantiating::ast::expressions::NewRuntimeSizedArrayIE;
 use crate::instantiating::ast::expressions::PopRuntimeSizedArrayIE;
 use crate::instantiating::ast::expressions::PushRuntimeSizedArrayIE;
-use crate::instantiating::ast::expressions::ReferenceMemberLookupIE;
+use crate::instantiating::ast::expressions::MemberLookupIE;
 use crate::instantiating::ast::expressions::RestackifyIE;
 use crate::instantiating::ast::expressions::RuntimeSizedArrayCapacityIE;
 use crate::instantiating::ast::expressions::RuntimeSizedArrayLookupIE;
@@ -108,7 +107,6 @@ use crate::instantiating::ast::types::USizeIT;
 use crate::instantiating::ast::types::VoidIT;
 use crate::typing::ast::ast::ICitizenAttributeT;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
-use crate::typing::ast::expressions::AddressMemberLookupTE;
 use crate::typing::ast::expressions::ArgLookupTE;
 use crate::typing::ast::expressions::ArrayLengthTE;
 use crate::typing::ast::expressions::AsSubtypeTE;
@@ -129,14 +127,13 @@ use crate::typing::ast::expressions::MutateTE;
 use crate::typing::ast::expressions::NewRuntimeSizedArrayTE;
 use crate::typing::ast::expressions::PopRuntimeSizedArrayTE;
 use crate::typing::ast::expressions::PushRuntimeSizedArrayTE;
-use crate::typing::ast::expressions::ReferenceMemberLookupTE;
+use crate::typing::ast::expressions::MemberLookupTE;
 use crate::typing::ast::expressions::RuntimeSizedArrayCapacityTE;
 use crate::typing::ast::expressions::RuntimeSizedArrayLookupTE;
 use crate::typing::ast::expressions::DerefTE;
 use crate::typing::ast::expressions::StaticArrayFromCallableTE;
 use crate::typing::ast::expressions::StaticArrayFromValuesTE;
 use crate::typing::ast::expressions::StaticSizedArrayLookupTE;
-use crate::typing::ast::expressions::TupleTE;
 use crate::typing::ast::expressions::UpcastTE;
 use crate::typing::names::names::AnonymousSubstructConstructorNameT;
 use crate::typing::names::names::AnonymousSubstructConstructorTemplateNameT;
@@ -1232,12 +1229,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     result: result_borrow,
                 }))
             }
-            ExpressionTE::ReferenceMemberLookup(rml) => {
-                let ReferenceMemberLookupTE { range, struct_expr: struct_expr_t, member_name: member_name_t, .. } = **rml;
+            ExpressionTE::MemberLookup(rml) => {
+                let MemberLookupTE { range, struct_expr: struct_expr_t, member_name: member_name_t, .. } = **rml;
                 let (_struct_it, struct_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &struct_expr_t);
                 let member_name = Self::translate_var_name(self.interner, &member_name_t);
-                ExpressionIE::ReferenceMemberLookup(self.interner.bump().alloc(ReferenceMemberLookupIE {
+                ExpressionIE::MemberLookup(self.interner.bump().alloc(MemberLookupIE {
                     range,
                     struct_expr: struct_ce,
                     member_name,
@@ -1256,17 +1253,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     array_expr: array_ce,
                     array_type: self.interner.alloc(ssa_it),
                     index_expr: index_ce,
-                    result: result_borrow,
-                }))
-            }
-            ExpressionTE::AddressMemberLookup(a) => {
-                let AddressMemberLookupTE { range, struct_expr, member_name, .. } = **a;
-                let (_struct_it, struct_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &struct_expr);
-                let var_name = Self::translate_var_name(self.interner, &member_name);
-                ExpressionIE::AddressMemberLookup(self.interner.alloc(AddressMemberLookupIE {
-                    range,
-                    struct_expr: struct_ce,
-                    member_name: var_name,
                     result: result_borrow,
                 }))
             }
@@ -1432,16 +1418,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     result: result_it,
                 }))
             }
-            ExpressionTE::Tuple(t) => {
-                let TupleTE { elements, .. } = **t;
-                let elements_ce: Vec<_> = elements.iter().map(|element_te| {
-                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, element_te).1
-                }).collect();
-                ExpressionIE::Tuple(self.interner.bump().alloc(TupleIE {
-                    elements: self.interner.alloc_slice_from_vec(elements_ce),
-                    result: result_it,
-                }))
-            }
             ExpressionTE::StaticArrayFromValues(s) => {
                 let StaticArrayFromValuesTE { elements, array_type, .. } = **s;
                 let elements_ce: Vec<_> = elements.iter().map(|element_te| {
@@ -1575,7 +1551,17 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     result: result_it,
                 }))
             }
-            ExpressionTE::Reinterpret(_) => panic!("Unimplemented: translate_ref_expr Reinterpret"),
+            ExpressionTE::Reinterpret(r) => {
+                // A Reinterpret is a type-identity node from typing (e.g. `@x` viewed as `&x`)
+                // that only exists to bridge kinds pre-monomorphization. Once substitution is
+                // done its source and result kinds coincide, so assert that and emit the inner
+                // expression directly. Reinterpret never reaches the I-IR or the backend.
+                // VCOORD: need arcana
+                let (inner_it, inner_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &r.expr);
+                assert_eq!(inner_it, result_it, "Reinterpret source kind != result kind after substitution");
+                inner_ce
+            }
             ExpressionTE::CopyPrim(cp) => {
                 let (_inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &cp.inner);
@@ -1731,8 +1717,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ExpressionTE::LocalLookup(_)
             | ExpressionTE::StaticSizedArrayLookup(_)
             | ExpressionTE::RuntimeSizedArrayLookup(_)
-            | ExpressionTE::ReferenceMemberLookup(_)
-            | ExpressionTE::AddressMemberLookup(_) => {
+            | ExpressionTE::MemberLookup(_) => {
                 return self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, expr);
             }
         };

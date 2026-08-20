@@ -951,7 +951,7 @@ where
         },
       )
       .substitute_for_kind(coutputs, member.tyype);
-    ExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(ReferenceMemberLookupTE::new(
+    ExpressionTE::MemberLookup(self.typing_interner.alloc(MemberLookupTE::new(
       self.typing_interner,
       load_range,
       container_alias,

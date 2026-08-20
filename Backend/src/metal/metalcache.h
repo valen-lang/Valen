@@ -38,22 +38,23 @@ V& makeIfNotPresent(std::unordered_map<K, V, H, E>* map, const K& key, F&& makeE
   return iter->second;
 }
 
-struct HashRefVec {
-  AddressHasher<Reference*> hasher;
-  HashRefVec(AddressHasher<Reference*> hasher_) : hasher(hasher_) {}
+// Prototype interning keys on its param list of onion Kind*.
+struct HashKindVec {
+  AddressHasher<Kind*> hasher;
+  HashKindVec(AddressHasher<Kind*> hasher_) : hasher(hasher_) {}
 
-  size_t operator()(const std::vector<Reference *> &refs) const {
+  size_t operator()(const std::vector<Kind *> &kinds) const {
     size_t result = 1337;
-    for (auto el : refs) {
+    for (auto el : kinds) {
       result += (size_t) el;
     }
     return result;
   }
 };
-struct RefVecEquals {
+struct KindVecEquals {
   bool operator()(
-      const std::vector<Reference *> &a,
-      const std::vector<Reference *> &b) const {
+      const std::vector<Kind *> &a,
+      const std::vector<Kind *> &b) const {
     if (a.size() != b.size())
       return false;
     for (size_t i = 0; i < a.size(); i++) {
@@ -77,40 +78,34 @@ public:
       floats(0, addressNumberer->makeHasher<RegionId*>()),
       nevers(0, addressNumberer->makeHasher<RegionId*>()),
       voids(0, addressNumberer->makeHasher<RegionId*>()),
+      usizes(0, addressNumberer->makeHasher<RegionId*>()),
+      borrowRefs(0, addressNumberer->makeHasher<Kind*>()),
+      ownRefs(0, addressNumberer->makeHasher<Kind*>()),
+      shareRefs(0, addressNumberer->makeHasher<Kind*>()),
+      weakRefs(0, addressNumberer->makeHasher<Kind*>()),
       runtimeSizedArrays(0, addressNumberer->makeHasher<Name*>()),
       staticSizedArrays(0, addressNumberer->makeHasher<Name*>()),
-      unconvertedReferences(0, addressNumberer->makeHasher<Kind*>()),
       prototypes(0, addressNumberer->makeHasher<Name*>()),
-      interfaceMethods(0, addressNumberer->makeHasher<Prototype*>()),
-      locals(0, addressNumberer->makeHasher<VariableId*>()) {
+      interfaceMethods(0, addressNumberer->makeHasher<Prototype*>()) {
 
     builtinPackageCoord = getPackageCoordinate(BUILTIN_PROJECT_NAME, {});
     rcImmRegionId = getRegionId(builtinPackageCoord, "rcimm");
     mutRegionId = getRegionId(builtinPackageCoord, "mut");
 
-    // Primitive singletons are uniformly OWN+INLINE; Str stays Share+YONDER (RC'd at runtime).
+    // Base primitive kind singletons. Ownership and placement are not stored: a bare kind is
+    // owned; the wrap layers (getBorrowRef/getShareRef/…) express references, and placement is
+    // derived from the onion shape at codegen.
     // VCOORD: Str should be different soon
     i32 = getInt(rcImmRegionId, 32);
-    i32Ref = getReference(Ownership::OWN, Location::INLINE, i32);
     i64 = getInt(rcImmRegionId, 64);
-    i64Ref = getReference(Ownership::OWN, Location::INLINE, i64);
     boool = getBool(rcImmRegionId);
-    boolRef = getReference(Ownership::OWN, Location::INLINE, boool);
     flooat = getFloat(rcImmRegionId);
-    floatRef = getReference(Ownership::OWN, Location::INLINE, flooat);
     str = getStr(rcImmRegionId);
-    mutStrRef = getReference(Ownership::MUTABLE_SHARE, Location::YONDER, str);
-    immStrRef = getReference(Ownership::IMMUTABLE_SHARE, Location::YONDER, str);
     never = getNever(rcImmRegionId);
-    neverRef = getReference(Ownership::OWN, Location::INLINE, never);
     vooid = getVoid(rcImmRegionId);
-    voidRef = getReference(Ownership::OWN, Location::INLINE, vooid);
-//    regionKind = getStructKind(getName("__Region"));
   }
 
   PackageCoordinate* getPackageCoordinate(const std::string& projectName, const std::vector<std::string>& packageSteps) {
-
-
     return makeIfNotPresent(
         &packageCoords[projectName],
         packageSteps,
@@ -159,6 +154,13 @@ public:
         [&](){ return new Never(regionId); });
   }
 
+  USize* getUSize(RegionId* regionId) {
+    return makeIfNotPresent(
+        &usizes,
+        regionId,
+        [&](){ return new USize(regionId); });
+  }
+
   StructKind* getStructKind(Name* structName) {
     return makeIfNotPresent(
         &structKinds,
@@ -201,22 +203,29 @@ public:
         [&](){ return new RegionId(packageCoordinate, nameStr); });
   }
 
-  Reference* getReference(Ownership ownership, Location location, Kind* kind) {
-    return makeIfNotPresent<Location, Reference*>(
-        &unconvertedReferences[kind][ownership],
-        location,
-        [&](){ return new Reference(ownership, location, kind); });
+  // Onion wrap kinds: ownership as a layer around the base kind, interned by the inner kind.
+  BorrowRef* getBorrowRef(Kind* inner) {
+    return makeIfNotPresent(&borrowRefs, inner, [&](){ return new BorrowRef(inner); });
+  }
+  OwnRef* getOwnRef(Kind* inner) {
+    return makeIfNotPresent(&ownRefs, inner, [&](){ return new OwnRef(inner); });
+  }
+  ShareRef* getShareRef(Kind* inner) {
+    return makeIfNotPresent(&shareRefs, inner, [&](){ return new ShareRef(inner); });
+  }
+  WeakRef* getWeakRef(Kind* inner) {
+    return makeIfNotPresent(&weakRefs, inner, [&](){ return new WeakRef(inner); });
   }
 
-  Prototype* getPrototype(Name* name, Reference* returnType, std::vector<Reference*> paramTypes) {
+  Prototype* getPrototype(Name* name, Kind* returnType, std::vector<Kind*> paramTypes) {
     return makeIfNotPresent(
         &makeIfNotPresent(
             &makeIfNotPresent(
                 &prototypes,
                 name,
-                [&](){ return PrototypeByParamListByReturnTypeMap(0, AddressHasher<Reference*>(addressNumberer)); }),
+                [&](){ return PrototypeByParamListByReturnTypeMap(0, AddressHasher<Kind*>(addressNumberer)); }),
             returnType,
-            [&](){ return PrototypeByParamListMap(0, HashRefVec(addressNumberer)); }),
+            [&](){ return PrototypeByParamListMap(0, HashKindVec(addressNumberer)); }),
         paramTypes,
         [&](){ return new Prototype(name, paramTypes, returnType); });
   }
@@ -242,62 +251,38 @@ public:
   std::unordered_map<RegionId*, Float*, AddressHasher<RegionId*>> floats;
   std::unordered_map<RegionId*, Void*, AddressHasher<RegionId*>> voids;
   std::unordered_map<RegionId*, Never*, AddressHasher<RegionId*>> nevers;
+  std::unordered_map<RegionId*, USize*, AddressHasher<RegionId*>> usizes;
+
+  // Onion wrap-kind interning, keyed by the inner kind.
+  std::unordered_map<Kind*, BorrowRef*, AddressHasher<Kind*>> borrowRefs;
+  std::unordered_map<Kind*, OwnRef*, AddressHasher<Kind*>> ownRefs;
+  std::unordered_map<Kind*, ShareRef*, AddressHasher<Kind*>> shareRefs;
+  std::unordered_map<Kind*, WeakRef*, AddressHasher<Kind*>> weakRefs;
 
   std::unordered_map<Name*, RuntimeSizedArrayT*, AddressHasher<Name*>> runtimeSizedArrays;
   std::unordered_map<Name*, StaticSizedArrayT*, AddressHasher<Name*>> staticSizedArrays;
-  std::unordered_map<
-      Kind*,
-      std::unordered_map<
-          Ownership,
-          std::unordered_map<
-              Location,
-              Reference*>>,
-      AddressHasher<Kind*>> unconvertedReferences;
-
 
   using PrototypeByParamListMap =
-      std::unordered_map<std::vector<Reference*>, Prototype*, HashRefVec, RefVecEquals>;
+      std::unordered_map<std::vector<Kind*>, Prototype*, HashKindVec, KindVecEquals>;
   using PrototypeByParamListByReturnTypeMap =
-      std::unordered_map<Reference*, PrototypeByParamListMap, AddressHasher<Reference*>>;
+      std::unordered_map<Kind*, PrototypeByParamListMap, AddressHasher<Kind*>>;
   using PrototypeByParamListByReturnTypeByNameMap =
       std::unordered_map<Name*, PrototypeByParamListByReturnTypeMap, AddressHasher<Name*>>;
   PrototypeByParamListByReturnTypeByNameMap prototypes;
 
   std::unordered_map<Prototype*, std::unordered_map<int, InterfaceMethod*>, AddressHasher<Prototype*>> interfaceMethods;
 
-  std::unordered_map<int, std::unordered_map<std::string, VariableId*>> variableIds;
-  using LocalByReferenceMap = std::unordered_map<Reference*, Local*, AddressHasher<Reference*>>;
-  using LocalByReferenceByVariableIdMap = std::unordered_map<VariableId*, LocalByReferenceMap, AddressHasher<VariableId*>>;
-  LocalByReferenceByVariableIdMap locals;
-
   RegionId* rcImmRegionId = nullptr;
   RegionId* mutRegionId = nullptr;
 
-//  I8* i8 = new I8();
-//  Reference* i8Ref = nullptr;
   PackageCoordinate* builtinPackageCoord = nullptr;
   Int* i32 = nullptr;
-  Reference* i32Ref = nullptr;
   Int* i64 = nullptr;
-  Reference* i64Ref = nullptr;
   Bool* boool = nullptr;
-  Reference* boolRef = nullptr;
   Float* flooat = nullptr;
-  Reference* floatRef = nullptr;
   Str* str = nullptr;
-  Reference* immStrRef = nullptr;
-  Reference* mutStrRef = nullptr;
   Never* never = nullptr;
-  Reference* neverRef = nullptr;
   Void* vooid = nullptr;
-  Reference* voidRef = nullptr;
-  // This is a central kind that holds a region's data.
-  // These will hold for example the bump pointer for an arena region,
-  // or a free list pointer for HGM.
-  // We hand these in to methods like allocate, deallocate, etc.
-  // Right now we just use it to hold the bump pointer for linear regions.
-  // Otherwise, for now, we're just handing in Nevers.
-//  StructKind* regionKind = nullptr;
 };
 
 

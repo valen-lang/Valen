@@ -22,7 +22,7 @@ use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::ast::expressions::LetNormalTE;
 use crate::typing::ast::expressions::LocalLookupTE;
 use crate::typing::ast::expressions::MutateTE;
-use crate::typing::ast::expressions::ReferenceMemberLookupTE;
+use crate::typing::ast::expressions::MemberLookupTE;
 use crate::typing::compiler::Compiler;
 use crate::typing::env::function_environment_t::AddressibleLocalVariableT;
 use crate::typing::env::function_environment_t::ILocalVariableT;
@@ -277,7 +277,7 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
         // in the closure struct.
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(lambda),
-            NodeRefT::ReferenceMemberLookup(ReferenceMemberLookupTE {
+            NodeRefT::MemberLookup(MemberLookupTE {
                 member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
                 ..
             }) => Some(())

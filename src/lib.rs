@@ -24,9 +24,9 @@ extern crate rustc_span;
 
 // VCOORD: Onion typing arc: parser + postparsing linked; typing and downstream
 // stay unlinked pending their own slices. higher_typing was retired outright.
-// pub mod backend_ffi;
+pub mod backend_ffi;
 pub mod builtins;
-// pub mod clang;
+pub mod clang;
 pub mod code_source;
 pub mod compile_options;
 // pub mod file_coordinate_map;

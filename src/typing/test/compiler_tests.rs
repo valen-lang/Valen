@@ -31,7 +31,7 @@ use crate::typing::ast::expressions::ConstantIntTE;
 use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::ast::expressions::LetAndLendTE;
-use crate::typing::ast::expressions::ReferenceMemberLookupTE;
+use crate::typing::ast::expressions::MemberLookupTE;
 use crate::typing::ast::expressions::UpcastTE;
 use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
 use crate::typing::compiler_error_humanizer::humanize;
@@ -1541,7 +1541,7 @@ fn reads_a_struct_member() {
   let main = coutputs.lookup_function_by_str("main");
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::ReferenceMemberLookup(ReferenceMemberLookupTE {
+      NodeRefT::MemberLookup(MemberLookupTE {
           member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a") }),
           result: BorrowRefT { inner: KindT::Int(IntT { bits: 32 }), .. },
           ..
@@ -2386,7 +2386,7 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
   // borrow of an int (`&int`) rather than a destroy of `v`.
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::ReferenceMemberLookup(ReferenceMemberLookupTE {
+      NodeRefT::MemberLookup(MemberLookupTE {
           member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x") }),
           result: BorrowRefT { inner: KindT::Int(IntT { bits: 32 }), .. },
           ..

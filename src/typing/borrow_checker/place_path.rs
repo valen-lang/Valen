@@ -58,12 +58,7 @@ pub fn place_path<'s, 't>(expr: &ExpressionTE<'s, 't>) -> Option<PlacePath<'s, '
       Some(PlacePath { root: local_lookup.local_variable.name, segments: Vec::new() })
     }
     ExpressionTE::Deref(deref) => place_path(&deref.inner),
-    ExpressionTE::ReferenceMemberLookup(member_lookup) => {
-      let mut path = place_path(&member_lookup.struct_expr)?;
-      path.segments.push(Segment::Member(member_lookup.member_name));
-      Some(path)
-    }
-    ExpressionTE::AddressMemberLookup(member_lookup) => {
+    ExpressionTE::MemberLookup(member_lookup) => {
       let mut path = place_path(&member_lookup.struct_expr)?;
       path.segments.push(Segment::Member(member_lookup.member_name));
       Some(path)

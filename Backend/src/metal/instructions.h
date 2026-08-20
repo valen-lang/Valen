@@ -54,10 +54,13 @@ public:
 class ConstantStr : public Expression {
 public:
   std::string value;
+  Kind* result;
 
   ConstantStr(
-      const std::string &value_) :
-      value(value_) {}
+      const std::string &value_,
+      Kind* result_) :
+      value(value_),
+      result(result_) {}
 };
 
 
@@ -73,524 +76,248 @@ public:
 
 class Argument : public Expression {
 public:
-  Reference* resultType;
-  int argumentIndex;
+  int paramIndex;
+  Kind* tyype;
+
   Argument(
-      Reference* resultType_,
-      int argumentIndex_) :
-    resultType(resultType_),
-    argumentIndex(argumentIndex_) {}
+      int paramIndex_,
+      Kind* tyype_) :
+    paramIndex(paramIndex_),
+    tyype(tyype_) {}
 };
 
 
 class Stackify : public Expression {
 public:
-  Expression* sourceExpr;
-  Local* local;
-  bool knownLive;
-  std::string maybeName;
+  Local* variable;
+  Expression* expr;
+  Kind* result;
 
   Stackify(
-      Expression* sourceExpr_,
-      Local* local_,
-      bool knownLive_,
-      std::string maybeName_) :
-    sourceExpr(sourceExpr_),
-    local(local_),
-    knownLive(knownLive_),
-    maybeName(maybeName_) {}
+      Local* variable_,
+      Expression* expr_,
+      Kind* result_) :
+    variable(variable_),
+    expr(expr_),
+    result(result_) {}
 };
 
 class Restackify : public Expression {
 public:
+  Local* variable;
   Expression* sourceExpr;
-  Local* local;
-  bool knownLive;
-  std::string maybeName;
+  Kind* result;
 
   Restackify(
+      Local* variable_,
       Expression* sourceExpr_,
-      Local* local_,
-      bool knownLive_,
-      std::string maybeName_) :
+      Kind* result_) :
+      variable(variable_),
       sourceExpr(sourceExpr_),
-      local(local_),
-      knownLive(knownLive_),
-      maybeName(maybeName_) {}
+      result(result_) {}
 };
 
 
 class Unstackify : public Expression {
 public:
-  Local* local;
+  Local* variable;
+  Kind* result;
 
-  Unstackify(Local* local_) :
-    local(local_) {}
+  Unstackify(Local* variable_, Kind* result_) :
+    variable(variable_),
+    result(result_) {}
 };
 
 
 class Destroy : public Expression {
 public:
-  Expression* structExpr;
-  Reference* structType;
-  std::vector<Reference*> localTypes;
-  std::vector<Local*> localIndices;
-  std::vector<bool> localsKnownLives;
+  Expression* expr;
+  StructKind* structKind;
+  std::vector<Local*> destinationLocals;
 
   Destroy(
-      Expression* structExpr_,
-      Reference* structType_,
-      std::vector<Reference*> localTypes_,
-      std::vector<Local*> localIndices_,
-      std::vector<bool> localsKnownLives_) :
-      structExpr(structExpr_),
-      structType(structType_),
-      localTypes(localTypes_),
-      localIndices(localIndices_),
-      localsKnownLives(localsKnownLives_) {}
+      Expression* expr_,
+      StructKind* structKind_,
+      std::vector<Local*> destinationLocals_) :
+      expr(expr_),
+      structKind(structKind_),
+      destinationLocals(destinationLocals_) {}
 };
 
 
 class StructToInterfaceUpcast : public Expression {
 public:
-  Expression* sourceExpr;
-  Reference* sourceStructType;
-  StructKind* sourceStructKind;
-  Reference* targetInterfaceType;
-  InterfaceKind* targetInterfaceKind;
+  Expression* innerExpr;
+  InterfaceKind* targetInterface;
+  Name* implName;
+  Kind* result;
 
   StructToInterfaceUpcast(
-      Expression* sourceExpr_,
-      Reference* sourceStructType_,
-      StructKind* sourceStructKind_,
-      Reference* targetInterfaceType_,
-      InterfaceKind* targetInterfaceKind_) :
-      sourceExpr(sourceExpr_),
-      sourceStructType(sourceStructType_),
-      sourceStructKind(sourceStructKind_),
-      targetInterfaceType(targetInterfaceType_),
-      targetInterfaceKind(targetInterfaceKind_) {}
+      Expression* innerExpr_,
+      InterfaceKind* targetInterface_,
+      Name* implName_,
+      Kind* result_) :
+      innerExpr(innerExpr_),
+      targetInterface(targetInterface_),
+      implName(implName_),
+      result(result_) {}
 };
 
 class InterfaceToInterfaceUpcast : public Expression {
 public:
-  Expression* sourceExpr;
-  Reference* sourceInterfaceType;
-  InterfaceKind* sourceInterfaceKind;
-  Reference* targetInterfaceType;
-  InterfaceKind* targetInterfaceKind;
+  Expression* innerExpr;
+  InterfaceKind* targetInterface;
+  Kind* result;
 
   InterfaceToInterfaceUpcast(
-      Expression* sourceExpr_,
-      Reference* sourceInterfaceType_,
-      InterfaceKind* sourceInterfaceKind_,
-      Reference* targetInterfaceType_,
-      InterfaceKind* targetInterfaceKind_) :
-      sourceExpr(sourceExpr_),
-      sourceInterfaceType(sourceInterfaceType_),
-      sourceInterfaceKind(sourceInterfaceKind_),
-      targetInterfaceType(targetInterfaceType_),
-      targetInterfaceKind(targetInterfaceKind_) {}
+      Expression* innerExpr_,
+      InterfaceKind* targetInterface_,
+      Kind* result_) :
+      innerExpr(innerExpr_),
+      targetInterface(targetInterface_),
+      result(result_) {}
 };
 
 class IsSameInstance : public Expression {
 public:
-  Expression* leftExpr;
-  Reference* leftType;
-  Expression* rightExpr;
-  Reference* rightType;
+  Expression* left;
+  Expression* right;
 
   IsSameInstance(
-      Expression* leftExpr_,
-      Reference* leftType_,
-      Expression* rightExpr_,
-      Reference* rightType_) :
-    leftExpr(leftExpr_),
-    leftType(leftType_),
-    rightExpr(rightExpr_),
-    rightType(rightType_) {}
-};
-
-class LocalStore : public Expression {
-public:
-  Local* local;
-  Expression* sourceExpr;
-  std::string localName;
-  bool knownLive;
-
-  LocalStore(
-      Local* local_,
-      Expression* sourceExpr_,
-      std::string localName_,
-      bool knownLive_) :
-      local(local_),
-      sourceExpr(sourceExpr_),
-      localName(localName_),
-      knownLive(knownLive_) {}
-};
-
-
-class LocalLoad : public Expression {
-public:
-  Local* local;
-  Ownership targetOwnership;
-  std::string localName;
-
-  LocalLoad(
-      Local* local,
-      Ownership targetOwnership,
-      std::string localName) :
-      local(local),
-    targetOwnership(targetOwnership),
-        localName(localName) {}
-};
-
-
-class BorrowToPointer : public Expression {
-public:
-  Expression* sourceExpr;
-  Reference* resultType;
-
-  BorrowToPointer(
-      Expression* sourceExpr_,
-      Reference* resultType_) :
-      sourceExpr(sourceExpr_),
-      resultType(resultType_) {}
-};
-
-class PointerToBorrow : public Expression {
-public:
-  Expression* sourceExpr;
-  Reference* resultType;
-
-  PointerToBorrow(
-      Expression* sourceExpr_,
-      Reference* resultType_) :
-      sourceExpr(sourceExpr_),
-      resultType(resultType_) {}
+      Expression* left_,
+      Expression* right_) :
+    left(left_),
+    right(right_) {}
 };
 
 class WeakAlias : public Expression {
 public:
-  Expression* sourceExpr;
-  Reference* sourceType;
-  Kind* sourceKind;
-  Reference* resultType;
+  Expression* innerExpr;
+  Kind* result;
 
   WeakAlias(
-      Expression* sourceExpr_,
-      Reference* sourceType_,
-      Kind* sourceKind_,
-      Reference* resultType_) :
-    sourceExpr(sourceExpr_),
-    sourceType(sourceType_),
-    sourceKind(sourceKind_),
-    resultType(resultType_) {}
-};
-
-
-class MemberStore : public Expression {
-public:
-  Expression* structExpr;
-  Reference* structType;
-  bool structKnownLive;
-  int memberIndex;
-  Expression* sourceExpr;
-  Reference* resultType;
-  std::string memberName;
-
-  MemberStore(
-      Expression* structExpr_,
-      Reference* structType_,
-      bool structKnownLive_,
-      int memberIndex_,
-      Expression* sourceExpr_,
-      Reference* resultType_,
-      std::string memberName_) :
-    structExpr(structExpr_),
-    structType(structType_),
-    structKnownLive(structKnownLive_),
-    memberIndex(memberIndex_),
-    sourceExpr(sourceExpr_),
-    resultType(resultType_),
-    memberName(memberName_) {}
-};
-
-class NarrowPermission : public Expression {
-public:
-  Expression* sourceExpr;
-
-  NarrowPermission(
-      Expression* sourceExpr_) :
-      sourceExpr(sourceExpr_) {}
-};
-
-
-class MemberLoad : public Expression {
-public:
-  Expression* structExpr;
-  StructKind* structId;
-  Reference* structType;
-  bool structKnownLive;
-  int memberIndex;
-  Ownership targetOwnership;
-  Reference* expectedMemberType;
-  Reference* expectedResultType;
-  std::string memberName;
-
-  MemberLoad(
-      Expression* structExpr_,
-      StructKind* structId_,
-      Reference* structType_,
-      bool structKnownLive_,
-      int memberIndex_,
-      Ownership targetOwnership_,
-      Reference* expectedMemberType_,
-      Reference* expectedResultType_,
-      std::string memberName_) :
-    structExpr(structExpr_),
-    structId(structId_),
-    structType(structType_),
-    structKnownLive(structKnownLive_),
-    memberIndex(memberIndex_),
-    targetOwnership(targetOwnership_),
-    expectedMemberType(expectedMemberType_),
-    expectedResultType(expectedResultType_),
-    memberName(memberName_) {}
+      Expression* innerExpr_,
+      Kind* result_) :
+    innerExpr(innerExpr_),
+    result(result_) {}
 };
 
 
 class NewArrayFromValues : public Expression {
 public:
-  std::vector<Expression*> sourceExprs;
-  Reference* arrayRefType;
-  StaticSizedArrayT* arrayKind;
+  std::vector<Expression*> elements;
+  Kind* result;
+  StaticSizedArrayT* arrayType;
 
   NewArrayFromValues(
-      std::vector<Expression*> sourceExprs_,
-      Reference* arrayRefType_,
-      StaticSizedArrayT* arrayKind_) :
-      sourceExprs(sourceExprs_),
-      arrayRefType(arrayRefType_),
-      arrayKind(arrayKind_) {}
-};
-
-
-class StaticSizedArrayStore : public Expression {
-public:
-  Expression* arrayExpr;
-  Expression* indexExpr;
-  Expression* sourceExpr;
-};
-
-
-class RuntimeSizedArrayStore : public Expression {
-public:
-  Expression* arrayExpr;
-  Reference* arrayType;
-  RuntimeSizedArrayT* arrayKind;
-  bool arrayKnownLive;
-  Expression* indexExpr;
-  Reference* indexType;
-  Kind* indexKind;
-  Expression* sourceExpr;
-  Reference* sourceType;
-  Kind* sourceKind;
-
-  RuntimeSizedArrayStore(
-      Expression* arrayExpr_,
-      Reference* arrayType_,
-      RuntimeSizedArrayT* arrayKind_,
-      bool arrayKnownLive_,
-      Expression* indexExpr_,
-      Reference* indexType_,
-      Kind* indexKind_,
-      Expression* sourceExpr_,
-      Reference* sourceType_,
-      Kind* sourceKind_) :
-    arrayExpr(arrayExpr_),
-    arrayType(arrayType_),
-    arrayKind(arrayKind_),
-    arrayKnownLive(arrayKnownLive_),
-    indexExpr(indexExpr_),
-    indexType(indexType_),
-    indexKind(indexKind_),
-    sourceExpr(sourceExpr_),
-    sourceType(sourceType_),
-    sourceKind(sourceKind_) {}
-};
-
-
-class RuntimeSizedArrayLoad : public Expression {
-public:
-  Expression* arrayExpr;
-  Reference* arrayType;
-  RuntimeSizedArrayT* arrayKind;
-  bool arrayKnownLive;
-  Expression* indexExpr;
-  Reference* indexType;
-  Kind* indexKind;
-  Reference* resultType;
-  Ownership targetOwnership;
-  Reference* arrayElementType;
-
-  RuntimeSizedArrayLoad(
-      Expression* arrayExpr_,
-      Reference* arrayType_,
-      RuntimeSizedArrayT* arrayKind_,
-      bool arrayKnownLive_,
-      Expression* indexExpr_,
-      Reference* indexType_,
-      Kind* indexKind_,
-      Reference* resultType_,
-      Ownership targetOwnership_,
-      Reference* arrayElementType_) :
-    arrayExpr(arrayExpr_),
-    arrayType(arrayType_),
-    arrayKind(arrayKind_),
-    arrayKnownLive(arrayKnownLive_),
-    indexExpr(indexExpr_),
-    indexType(indexType_),
-    indexKind(indexKind_),
-    resultType(resultType_),
-    targetOwnership(targetOwnership_),
-    arrayElementType(arrayElementType_) {}
-};
-
-
-class StaticSizedArrayLoad : public Expression {
-public:
-  Expression* arrayExpr;
-  Reference* arrayType;
-  StaticSizedArrayT* arrayKind;
-  bool arrayKnownLive;
-  Expression* indexExpr;
-  Reference* resultType;
-  Ownership targetOwnership;
-  Reference* arrayElementType;
-  int arraySize;
-
-  StaticSizedArrayLoad(
-      Expression* arrayExpr_,
-      Reference* arrayType_,
-      StaticSizedArrayT* arrayKind_,
-      bool arrayKnownLive_,
-      Expression* indexExpr_,
-      Reference* resultType_,
-      Ownership targetOwnership_,
-      Reference* arrayElementType_,
-      int arraySize_) :
-    arrayExpr(arrayExpr_),
-    arrayType(arrayType_),
-    arrayKind(arrayKind_),
-    arrayKnownLive(arrayKnownLive_),
-    indexExpr(indexExpr_),
-    resultType(resultType_),
-    targetOwnership(targetOwnership_),
-    arrayElementType(arrayElementType_),
-    arraySize(arraySize_) {}
+      std::vector<Expression*> elements_,
+      Kind* result_,
+      StaticSizedArrayT* arrayType_) :
+      elements(elements_),
+      result(result_),
+      arrayType(arrayType_) {}
 };
 
 
 class Call : public Expression {
 public:
-  Prototype *function;
-  std::vector<Expression *> argExprs;
+  Prototype* callable;
+  std::vector<Expression *> args;
+  Kind* result;
 
   Call(
-      Prototype *function_,
-      std::vector<Expression *> argExprs_)
-      : function(function_),
-        argExprs(argExprs_) {}
+      Prototype* callable_,
+      std::vector<Expression *> args_,
+      Kind* result_)
+      : callable(callable_),
+        args(args_),
+        result(result_) {}
 };
 
 class ExternCall : public Expression {
 public:
-    Prototype *function;
-    std::vector<Expression *> argExprs;
-    std::vector<Reference *> argTypes;
+    Prototype* prototype;
+    std::vector<Expression *> args;
+    Kind* result;
 
     ExternCall(
-        Prototype *function_,
-        std::vector<Expression *> argExprs_,
-        std::vector<Reference *> argTypes_)
-        : function(function_),
-        argExprs(argExprs_),
-        argTypes(argTypes_) {}
+        Prototype* prototype_,
+        std::vector<Expression *> args_,
+        Kind* result_)
+        : prototype(prototype_),
+        args(args_),
+        result(result_) {}
 };
 
 
 class InterfaceCall : public Expression {
 public:
-  std::vector<Expression*> argExprs;
+  Prototype* superFunctionPrototype;
   int virtualParamIndex;
-  InterfaceKind* interfaceRef;
-  int indexInEdge;
-  Prototype* functionType;
+  std::vector<Expression*> args;
+  Kind* result;
 
   InterfaceCall(
-      std::vector<Expression*> argExprs_,
+      Prototype* superFunctionPrototype_,
       int virtualParamIndex_,
-      InterfaceKind* interfaceRef_,
-      int indexInEdge_,
-      Prototype* functionType_) :
-    argExprs(argExprs_),
+      std::vector<Expression*> args_,
+      Kind* result_) :
+    superFunctionPrototype(superFunctionPrototype_),
     virtualParamIndex(virtualParamIndex_),
-    interfaceRef(interfaceRef_),
-    indexInEdge(indexInEdge_),
-    functionType(functionType_) {
+    args(args_),
+    result(result_) {
   }
 };
 
 
 class If : public Expression {
 public:
-  Expression* conditionExpr;
-  Expression* thenExpr;
-  Reference* thenResultType;
-  Expression* elseExpr;
-  Reference* elseResultType;
-  Reference* commonSupertype;
+  Expression* condition;
+  Expression* thenCall;
+  Expression* elseCall;
+  Kind* result;
 
   If(
-      Expression * conditionExpr_,
-      Expression * thenExpr_,
-      Reference* thenResultType_,
-      Expression * elseExpr_,
-      Reference* elseResultType_,
-      Reference* commonSupertype_) :
-    conditionExpr(conditionExpr_),
-    thenExpr(thenExpr_),
-    thenResultType(thenResultType_),
-    elseExpr(elseExpr_),
-    elseResultType(elseResultType_),
-    commonSupertype(commonSupertype_) {}
+      Expression* condition_,
+      Expression* thenCall_,
+      Expression* elseCall_,
+      Kind* result_) :
+    condition(condition_),
+    thenCall(thenCall_),
+    elseCall(elseCall_),
+    result(result_) {}
 };
 
 class While : public Expression {
 public:
-  Expression* bodyExpr;
+  Expression* block;
+  Kind* result;
 
-  While(Expression* bodyExpr_) : bodyExpr(bodyExpr_) {}
+  While(Expression* block_, Kind* result_) :
+    block(block_),
+    result(result_) {}
 };
 
 class Consecutor : public Expression {
 public:
   std::vector<Expression *> exprs;
+  Kind* result;
 
   Consecutor(
-      std::vector<Expression *> exprs_) :
-      exprs(exprs_) {}
+      std::vector<Expression *> exprs_,
+      Kind* result_) :
+      exprs(exprs_),
+      result(result_) {}
 };
 
 class Block : public Expression {
 public:
-  Expression * inner;
-  Reference* innerType;
+  Expression* inner;
+  Kind* result;
 
-  Block(Expression * inner_, Reference* innerType_) :
+  Block(Expression* inner_, Kind* result_) :
   inner(inner_),
-  innerType(innerType_) {}
+  result(result_) {}
 };
 
 class Break : public Expression {
@@ -600,354 +327,298 @@ public:
 class Return : public Expression {
 public:
   Expression *sourceExpr;
-  Reference* sourceType;
 
   Return(
-    Expression *sourceExpr_,
-    Reference* sourceType_)
-    : sourceExpr(sourceExpr_),
-      sourceType(sourceType_) {}
+    Expression *sourceExpr_)
+    : sourceExpr(sourceExpr_) {}
 };
 
 
 class NewRuntimeSizedArray : public Expression {
 public:
-  Expression* sizeExpr;
-  Reference* sizeType;
-  Kind* sizeKind;
-  Reference* arrayRefType;
-  Reference* elementType;
+  RuntimeSizedArrayT* arrayType;
+  Expression* capacityExpr;
+  Kind* result;
 
   NewRuntimeSizedArray(
-      Expression* sizeExpr_,
-      Reference* sizeType_,
-      Kind* sizeKind_,
-      Reference* arrayRefType_,
-      Reference* elementType_) :
-      sizeExpr(sizeExpr_),
-      sizeType(sizeType_),
-      sizeKind(sizeKind_),
-      arrayRefType(arrayRefType_),
-      elementType(elementType_) {}
+      RuntimeSizedArrayT* arrayType_,
+      Expression* capacityExpr_,
+      Kind* result_) :
+      arrayType(arrayType_),
+      capacityExpr(capacityExpr_),
+      result(result_) {}
 };
 
 class StaticArrayFromCallable : public Expression {
 public:
-  Expression* generatorExpr;
-  Reference* generatorType;
-  Kind* generatorKind;
+  StaticSizedArrayT* arrayType;
+  Expression* generator;
   Prototype* generatorMethod;
-  bool generatorKnownLive;
-  Reference* arrayRefType;
-  Reference* elementType;
+  Kind* result;
 
   StaticArrayFromCallable(
-      Expression* generatorExpr_,
-      Reference* generatorType_,
-      Kind* generatorKind_,
+      StaticSizedArrayT* arrayType_,
+      Expression* generator_,
       Prototype* generatorMethod_,
-      bool generatorKnownLive_,
-      Reference* arrayRefType_,
-      Reference* elementType_) :
-      generatorExpr(generatorExpr_),
-      generatorType(generatorType_),
-      generatorKind(generatorKind_),
+      Kind* result_) :
+      arrayType(arrayType_),
+      generator(generator_),
       generatorMethod(generatorMethod_),
-      generatorKnownLive(generatorKnownLive_),
-      arrayRefType(arrayRefType_),
-      elementType(elementType_) {}
+      result(result_) {}
 };
 
 class DestroyStaticSizedArrayIntoFunction : public Expression {
 public:
   Expression* arrayExpr;
-  Reference* arrayType;
-  StaticSizedArrayT* arrayKind;
-  Expression* consumerExpr;
-  Reference* consumerType;
+  StaticSizedArrayT* arrayType;
+  Expression* consumer;
   Prototype* consumerMethod;
-  bool consumerKnownLive;
-  Reference* elementType;
-  int arraySize;
 
   DestroyStaticSizedArrayIntoFunction(
       Expression* arrayExpr_,
-      Reference* arrayType_,
-      StaticSizedArrayT* arrayKind_,
-      Expression* consumerExpr_,
-      Reference* consumerType_,
-      Prototype* consumerMethod_,
-      bool consumerKnownLive_,
-      Reference* elementType_,
-      int arraySize_) :
+      StaticSizedArrayT* arrayType_,
+      Expression* consumer_,
+      Prototype* consumerMethod_) :
     arrayExpr(arrayExpr_),
     arrayType(arrayType_),
-    arrayKind(arrayKind_),
-    consumerExpr(consumerExpr_),
-    consumerType(consumerType_),
-    consumerMethod(consumerMethod_),
-    consumerKnownLive(consumerKnownLive_),
-    elementType(elementType_),
-    arraySize(arraySize_) {}
+    consumer(consumer_),
+    consumerMethod(consumerMethod_) {}
 };
 
 class DestroyStaticSizedArrayIntoLocals : public Expression {
 public:
-  Expression* arrayExpr;
-  Reference* arrayType;
-  std::vector<Reference*> localTypes;
-  std::vector<Local*> localIndices;
+  Expression* expr;
+  StaticSizedArrayT* staticSizedArray;
+  std::vector<Local*> destinationLocals;
 
   DestroyStaticSizedArrayIntoLocals(
-    Expression* arrayExpr_,
-    Reference* arrayType_,
-    std::vector<Reference*> localTypes_,
-    std::vector<Local*> localIndices_) :
-      arrayExpr(arrayExpr_),
-      arrayType(arrayType_),
-      localTypes(localTypes_),
-      localIndices(localIndices_) {}
+    Expression* expr_,
+    StaticSizedArrayT* staticSizedArray_,
+    std::vector<Local*> destinationLocals_) :
+      expr(expr_),
+      staticSizedArray(staticSizedArray_),
+      destinationLocals(destinationLocals_) {}
 };
 
 class DestroyRuntimeSizedArray : public Expression {
 public:
   Expression* arrayExpr;
-  Reference* arrayType;
-  RuntimeSizedArrayT* arrayKind;
 
   DestroyRuntimeSizedArray(
-      Expression* arrayExpr_,
-      Reference* arrayType_,
-      RuntimeSizedArrayT* arrayKind_) :
-    arrayExpr(arrayExpr_),
-    arrayType(arrayType_),
-    arrayKind(arrayKind_) {}
+      Expression* arrayExpr_) :
+    arrayExpr(arrayExpr_) {}
 };
 
 class NewStruct : public Expression {
 public:
-  std::vector<Expression*> sourceExprs;
-  Reference* resultType;
+  StructKind* structKind;
+  Kind* result;
+  std::vector<Expression*> args;
 
   NewStruct(
-      std::vector<Expression*> sourceExprs_,
-      Reference* resultType_) :
-      sourceExprs(sourceExprs_),
-      resultType(resultType_) {}
+      StructKind* structKind_,
+      Kind* result_,
+      std::vector<Expression*> args_) :
+      structKind(structKind_),
+      result(result_),
+      args(args_) {}
 };
 
 class ArrayLength : public Expression {
 public:
-  Expression* sourceExpr;
-  Reference* sourceType;
-  bool sourceKnownLive;
+  Expression* arrayExpr;
 
   ArrayLength(
-      Expression* sourceExpr_,
-      Reference* sourceType_,
-      bool sourceKnownLive_) :
-      sourceExpr(sourceExpr_),
-      sourceType(sourceType_),
-      sourceKnownLive(sourceKnownLive_) {}
+      Expression* arrayExpr_) :
+      arrayExpr(arrayExpr_) {}
 };
 
 class ArrayCapacity : public Expression {
 public:
-  Expression* sourceExpr;
-  Reference* sourceType;
-  bool sourceKnownLive;
+  Expression* arrayExpr;
 
   ArrayCapacity(
-      Expression* sourceExpr_,
-      Reference* sourceType_,
-      bool sourceKnownLive_) :
-      sourceExpr(sourceExpr_),
-      sourceType(sourceType_),
-      sourceKnownLive(sourceKnownLive_) {}
+      Expression* arrayExpr_) :
+      arrayExpr(arrayExpr_) {}
 };
 
 class PushRuntimeSizedArray : public Expression {
 public:
   Expression* arrayExpr;
-  Reference* arrayType;
-  bool arrayKnownLive;
-  Expression* newcomerExpr;
-  Reference* newcomerType;
-  bool newcomerKnownLive;
+  Expression* newElementExpr;
 
   PushRuntimeSizedArray(
       Expression* arrayExpr_,
-      Reference* arrayType_,
-      bool arrayKnownLive_,
-      Expression* newcomerExpr_,
-      Reference* newcomerType_,
-      bool newcomerKnownLive_) :
+      Expression* newElementExpr_) :
       arrayExpr(arrayExpr_),
-      arrayType(arrayType_),
-      arrayKnownLive(arrayKnownLive_),
-      newcomerExpr(newcomerExpr_),
-      newcomerType(newcomerType_),
-      newcomerKnownLive(newcomerKnownLive_){}
+      newElementExpr(newElementExpr_) {}
 };
 
 class PopRuntimeSizedArray : public Expression {
 public:
   Expression* arrayExpr;
-  Reference* arrayType;
-  bool arrayKnownLive;
+  Kind* result;
 
   PopRuntimeSizedArray(
       Expression* arrayExpr_,
-      Reference* arrayType_,
-      bool arrayKnownLive_) :
+      Kind* result_) :
       arrayExpr(arrayExpr_),
-      arrayType(arrayType_),
-      arrayKnownLive(arrayKnownLive_) {}
-};
-
-
-class CheckRefCount : public Expression {
-public:
-  Expression* refExpr;
-  RefCountCategory category;
-  Expression* numExpr;
+      result(result_) {}
 };
 
 
 class Discard : public Expression {
 public:
-  Expression* sourceExpr;
-  Reference* sourceResultType;
+  Expression* expr;
 
-  Discard(Expression* sourceExpr_, Reference* sourceResultType_) :
-      sourceExpr(sourceExpr_), sourceResultType(sourceResultType_) {}
+  Discard(Expression* expr_) :
+      expr(expr_) {}
 };
-
-class Mutabilify : public Expression {
-public:
-    Expression* sourceExpr;
-    Reference* sourceType;
-    Reference* resultType;
-
-    Mutabilify(Expression* sourceExpr_, Reference* sourceType_, Reference* resultType_) :
-        sourceExpr(sourceExpr_), sourceType(sourceType_), resultType(resultType_) {}
-};
-
-class Immutabilify : public Expression {
-public:
-    Expression* sourceExpr;
-    Reference* sourceType;
-    Reference* resultType;
-
-    Immutabilify(Expression* sourceExpr_, Reference* sourceType_, Reference* resultType_) :
-            sourceExpr(sourceExpr_), sourceType(sourceType_), resultType(resultType_) {}
-};
-
-class PreCheckBorrow : public Expression {
-public:
-  Expression* sourceExpr;
-  Reference* sourceResultType;
-
-  PreCheckBorrow(Expression* sourceExpr_, Reference* sourceResultType_) :
-      sourceExpr(sourceExpr_), sourceResultType(sourceResultType_) {}
-};
-
 
 class LockWeak : public Expression {
 public:
-  Expression* sourceExpr;
-  Reference* sourceType;
-  bool sourceKnownLive;
-
+  Expression* innerExpr;
   Prototype* someConstructor;
-  Reference* someType;
-  StructKind* someKind;
-
   Prototype* noneConstructor;
-  Reference* noneType;
-  StructKind* noneKind;
-
-  Reference* resultOptType;
-  InterfaceKind* resultOptKind;
+  Name* someImplName;
+  Name* noneImplName;
+  Kind* result;
 
   LockWeak(
-      Expression* sourceExpr_,
-      Reference* sourceType_,
-      bool sourceKnownLive_,
+      Expression* innerExpr_,
       Prototype* someConstructor_,
-      Reference* someType_,
-      StructKind* someKind_,
       Prototype* noneConstructor_,
-      Reference* noneType_,
-      StructKind* noneKind_,
-      Reference* resultOptType_,
-      InterfaceKind* resultOptKind_) :
-    sourceExpr(sourceExpr_),
-    sourceType(sourceType_),
-    sourceKnownLive(sourceKnownLive_),
+      Name* someImplName_,
+      Name* noneImplName_,
+      Kind* result_) :
+    innerExpr(innerExpr_),
     someConstructor(someConstructor_),
-    someType(someType_),
-    someKind(someKind_),
     noneConstructor(noneConstructor_),
-    noneType(noneType_),
-    noneKind(noneKind_),
-    resultOptType(resultOptType_),
-    resultOptKind(resultOptKind_) {}
+    someImplName(someImplName_),
+    noneImplName(noneImplName_),
+    result(result_) {}
 };
+
 
 class AsSubtype : public Expression {
 public:
   Expression* sourceExpr;
-  Reference* sourceType;
-  bool sourceKnownLive;
-
-  Kind* targetKind;
-
+  Kind* targetType;
   Prototype* okConstructor;
-  Reference* okType;
-  StructKind* okKind;
-
   Prototype* errConstructor;
-  Reference* errType;
-  StructKind* errKind;
-
-  Reference* resultResultType;
-  InterfaceKind* resultResultKind;
+  Name* implName;
+  Name* okImplName;
+  Name* errImplName;
+  Kind* result;
 
   AsSubtype(
       Expression* sourceExpr_,
-      Reference* sourceType_,
-      bool sourceKnownLive_,
-      Kind* targetKind_,
+      Kind* targetType_,
       Prototype* okConstructor_,
-      Reference* okType_,
-      StructKind* okKind_,
       Prototype* errConstructor_,
-      Reference* errType_,
-      StructKind* errKind_,
-      Reference* resultResultType_,
-      InterfaceKind* resultResultKind_) :
+      Name* implName_,
+      Name* okImplName_,
+      Name* errImplName_,
+      Kind* result_) :
     sourceExpr(sourceExpr_),
-    sourceType(sourceType_),
-    sourceKnownLive(sourceKnownLive_),
-    targetKind(targetKind_),
+    targetType(targetType_),
     okConstructor(okConstructor_),
-    okType(okType_),
-    okKind(okKind_),
     errConstructor(errConstructor_),
-    errType(errType_),
-    errKind(errKind_),
-    resultResultType(resultResultType_),
-    resultResultKind(resultResultKind_) {}
+    implName(implName_),
+    okImplName(okImplName_),
+    errImplName(errImplName_),
+    result(result_) {}
 };
 
 class CopyPrim : public Expression {
 public:
     Expression* inner;
-    Reference* resultType;
+    Kind* result;
 
-    CopyPrim(Expression* inner_, Reference* resultType_) :
-        inner(inner_), resultType(resultType_) {}
+    CopyPrim(Expression* inner_, Kind* result_) :
+        inner(inner_), result(result_) {}
 };
+
+
+class LetAndLend : public Expression {
+public:
+  Local* variable;
+  Expression* expr;
+  Kind* result;
+
+  LetAndLend(Local* variable_, Expression* expr_, Kind* result_) :
+      variable(variable_), expr(expr_), result(result_) {}
+};
+
+class LocalLookup : public Expression {
+public:
+  Local* localVariable;
+  Kind* result;
+
+  LocalLookup(Local* localVariable_, Kind* result_) :
+      localVariable(localVariable_), result(result_) {}
+};
+
+class Deref : public Expression {
+public:
+  Expression* inner;
+  Kind* result;
+
+  Deref(Expression* inner_, Kind* result_) :
+      inner(inner_), result(result_) {}
+};
+
+class MemberLookup : public Expression {
+public:
+  Expression* structExpr;
+  std::string memberName;
+  Kind* result;
+
+  MemberLookup(Expression* structExpr_, std::string memberName_, Kind* result_) :
+      structExpr(structExpr_), memberName(memberName_), result(result_) {}
+};
+
+class StaticSizedArrayLookup : public Expression {
+public:
+  Expression* arrayExpr;
+  StaticSizedArrayT* arrayType;
+  Expression* indexExpr;
+  Kind* result;
+
+  StaticSizedArrayLookup(Expression* arrayExpr_, StaticSizedArrayT* arrayType_, Expression* indexExpr_, Kind* result_) :
+      arrayExpr(arrayExpr_), arrayType(arrayType_), indexExpr(indexExpr_), result(result_) {}
+};
+
+class RuntimeSizedArrayLookup : public Expression {
+public:
+  Expression* arrayExpr;
+  RuntimeSizedArrayT* arrayType;
+  Expression* indexExpr;
+  Kind* result;
+
+  RuntimeSizedArrayLookup(Expression* arrayExpr_, RuntimeSizedArrayT* arrayType_, Expression* indexExpr_, Kind* result_) :
+      arrayExpr(arrayExpr_), arrayType(arrayType_), indexExpr(indexExpr_), result(result_) {}
+};
+
+class Mutate : public Expression {
+public:
+  Expression* destinationExpr;
+  Expression* sourceExpr;
+  Kind* result;
+
+  Mutate(Expression* destinationExpr_, Expression* sourceExpr_, Kind* result_) :
+      destinationExpr(destinationExpr_), sourceExpr(sourceExpr_), result(result_) {}
+};
+
+class ArraySize : public Expression {
+public:
+  Expression* array;
+  Kind* result;
+
+  ArraySize(Expression* array_, Kind* result_) :
+      array(array_), result(result_) {}
+};
+
+
 
 #endif

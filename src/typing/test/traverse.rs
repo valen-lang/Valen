@@ -5,16 +5,16 @@ use crate::typing::ast::ast::{
 };
 use crate::typing::ast::citizens::{InterfaceDefinitionT, StructDefinitionT, StructMemberT};
 use crate::typing::ast::expressions::{
-  AddressMemberLookupTE, ArgLookupTE, ArrayLengthTE, ArraySizeTE, AsSubtypeTE, BlockTE,
+  ArgLookupTE, ArrayLengthTE, ArraySizeTE, AsSubtypeTE, BlockTE,
   BorrowToWeakTE, BreakTE, ConsecutorTE, ConstantBoolTE, ConstantFloatTE, ConstantIntTE,
   ConstantStrTE, ConstructTE, DerefTE, DestroyRuntimeSizedArrayTE,
   DestroyStaticSizedArrayIntoFunctionTE, DestroyStaticSizedArrayIntoLocalsTE, DestroyTE, DiscardTE,
   ExpressionTE, ExternFunctionCallTE, FunctionCallTE, IfTE, InterfaceFunctionCallTE,
   InterfaceToInterfaceUpcastTE, IsSameInstanceTE, LetAndLendTE, LetNormalTE, LocalLookupTE,
   LockWeakTE, MutateTE, NewRuntimeSizedArrayTE, PopRuntimeSizedArrayTE, PushRuntimeSizedArrayTE,
-  ReferenceMemberLookupTE, ReinterpretTE, RestackifyTE, ReturnTE, RuntimeSizedArrayCapacityTE,
+  MemberLookupTE, ReinterpretTE, RestackifyTE, ReturnTE, RuntimeSizedArrayCapacityTE,
   RuntimeSizedArrayLookupTE, StaticArrayFromCallableTE, StaticArrayFromValuesTE,
-  StaticSizedArrayLookupTE, TupleTE, UnletTE, UpcastTE, VoidLiteralTE, WhileTE,
+  StaticSizedArrayLookupTE, UnletTE, UpcastTE, VoidLiteralTE, WhileTE,
 };
 use crate::typing::env::environment::IEnvironmentT;
 use crate::typing::env::function_environment_t::LocalVariable;
@@ -63,7 +63,6 @@ pub enum NodeRefT<'s, 't> {
   Break(&'t BreakTE<'s, 't>),
   Block(&'t BlockTE<'s, 't>),
   Consecutor(&'t ConsecutorTE<'s, 't>),
-  Tuple(&'t TupleTE<'s, 't>),
   StaticArrayFromValues(&'t StaticArrayFromValuesTE<'s, 't>),
   ArraySize(&'t ArraySizeTE<'s, 't>),
   IsSameInstance(&'t IsSameInstanceTE<'s, 't>),
@@ -96,8 +95,7 @@ pub enum NodeRefT<'s, 't> {
   LocalLookup(&'t LocalLookupTE<'s, 't>),
   StaticSizedArrayLookup(&'t StaticSizedArrayLookupTE<'s, 't>),
   RuntimeSizedArrayLookup(&'t RuntimeSizedArrayLookupTE<'s, 't>),
-  ReferenceMemberLookup(&'t ReferenceMemberLookupTE<'s, 't>),
-  AddressMemberLookup(&'t AddressMemberLookupTE<'s, 't>),
+  MemberLookup(&'t MemberLookupTE<'s, 't>),
 
   // ---- Templata hierarchy ----
   Templata(&'t ITemplataT<'s, 't>),
@@ -474,7 +472,6 @@ where
     ExpressionTE::Break(x) => visit_break(pred, out, x),
     ExpressionTE::Block(x) => visit_block(pred, out, x),
     ExpressionTE::Consecutor(x) => visit_consecutor(pred, out, x),
-    ExpressionTE::Tuple(x) => visit_tuple(pred, out, x),
     ExpressionTE::StaticArrayFromValues(x) => visit_static_array_from_values(pred, out, x),
     ExpressionTE::ArraySize(x) => visit_array_size(pred, out, x),
     ExpressionTE::IsSameInstance(x) => visit_is_same_instance(pred, out, x),
@@ -514,8 +511,7 @@ where
     ExpressionTE::LocalLookup(x) => visit_local_lookup(pred, out, x),
     ExpressionTE::StaticSizedArrayLookup(x) => visit_static_sized_array_lookup(pred, out, x),
     ExpressionTE::RuntimeSizedArrayLookup(x) => visit_runtime_sized_array_lookup(pred, out, x),
-    ExpressionTE::ReferenceMemberLookup(x) => visit_reference_member_lookup(pred, out, x),
-    ExpressionTE::AddressMemberLookup(x) => visit_address_member_lookup(pred, out, x),
+    ExpressionTE::MemberLookup(x) => visit_member_lookup(pred, out, x),
     ExpressionTE::Deref(x) => visit_deref(pred, out, x),
   }
 }
@@ -667,18 +663,6 @@ where
   for e in x.exprs {
     visit_expression_te(pred, out, *e);
   }
-}
-
-fn visit_tuple<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t TupleTE<'s, 't>)
-where
-  F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-  's: 't,
-{
-  collect_if(pred, out, NodeRefT::Tuple(x));
-  for e in x.elements {
-    visit_expression_te(pred, out, *e);
-  }
-  visit_kind(pred, out, x.result);
 }
 
 fn visit_static_array_from_values<'s, 't, T, F>(
@@ -1049,29 +1033,15 @@ fn visit_runtime_sized_array_lookup<'s, 't, T, F>(
   visit_expression_te(pred, out, x.index_expr);
 }
 
-fn visit_reference_member_lookup<'s, 't, T, F>(
+fn visit_member_lookup<'s, 't, T, F>(
   pred: &F,
   out: &mut Vec<T>,
-  x: &'t ReferenceMemberLookupTE<'s, 't>,
+  x: &'t MemberLookupTE<'s, 't>,
 ) where
   F: Fn(NodeRefT<'s, 't>) -> Option<T>,
   's: 't,
 {
-  collect_if(pred, out, NodeRefT::ReferenceMemberLookup(x));
-  visit_expression_te(pred, out, x.struct_expr);
-  visit_var_name(pred, out, &x.member_name);
-  visit_kind(pred, out, KindT::BorrowRef(x.result));
-}
-
-fn visit_address_member_lookup<'s, 't, T, F>(
-  pred: &F,
-  out: &mut Vec<T>,
-  x: &'t AddressMemberLookupTE<'s, 't>,
-) where
-  F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-  's: 't,
-{
-  collect_if(pred, out, NodeRefT::AddressMemberLookup(x));
+  collect_if(pred, out, NodeRefT::MemberLookup(x));
   visit_expression_te(pred, out, x.struct_expr);
   visit_var_name(pred, out, &x.member_name);
   visit_kind(pred, out, KindT::BorrowRef(x.result));

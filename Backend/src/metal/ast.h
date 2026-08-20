@@ -389,12 +389,12 @@ class StructMember {
 public:
     std::string fullName;
     std::string name;
-    Reference* type;
+    Kind* type;
 
     StructMember(
         std::string fullName_,
         std::string name_,
-        Reference* type_) :
+        Kind* type_) :
         fullName(fullName_),
         name(name_),
         type(type_) {}
@@ -446,47 +446,31 @@ public:
 };
 
 // Interned
+// Onion: types are onion Kind* (ownership is the wrap; placement is derived at codegen).
 class Prototype {
 public:
     Name* name;
-    std::vector<Reference*> params;
-    Reference* returnType;
+    std::vector<Kind*> params;
+    Kind* returnType;
 
     Prototype(
         Name* name_,
-        std::vector<Reference*> params_,
-        Reference* returnType_) :
+        std::vector<Kind*> params_,
+        Kind* returnType_) :
       name(name_),
       params(std::move(params_)),
       returnType(returnType_) {}
 };
 
-// Interned
-class VariableId {
-public:
-  int number;
-  int height;
-  std::string maybeName;
-
-  VariableId(
-      int number_,
-      int height_,
-      std::string maybeName_) :
-      number(number_),
-      height(height_),
-      maybeName(maybeName_) {}
-};
-
-// Interned
 class Local {
 public:
-  VariableId* id;
-  Reference* type;
+  std::string name;
+  Kind* type;
 
   Local(
-      VariableId* id_,
-      Reference* type_) :
-      id(id_),
+      std::string name_,
+      Kind* type_) :
+      name(std::move(name_)),
       type(type_) {}
 };
 

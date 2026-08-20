@@ -160,8 +160,7 @@ impl<'s, 'ctx, 't, 'a> Liveness<'s, 'ctx, 't, 'a> {
         self.walk(&mutate.source_expr)
       }
       ExpressionTE::Deref(deref) => self.walk(&deref.inner),
-      ExpressionTE::ReferenceMemberLookup(member_lookup) => self.walk(&member_lookup.struct_expr),
-      ExpressionTE::AddressMemberLookup(member_lookup) => self.walk(&member_lookup.struct_expr),
+      ExpressionTE::MemberLookup(member_lookup) => self.walk(&member_lookup.struct_expr),
       ExpressionTE::RuntimeSizedArrayLookup(array_lookup) => {
         self.walk(&array_lookup.array_expr)?;
         self.walk(&array_lookup.index_expr)

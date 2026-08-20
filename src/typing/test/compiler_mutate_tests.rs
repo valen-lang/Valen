@@ -10,7 +10,7 @@ use crate::postparsing::names::{
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
 use crate::typing::ast::expressions::{
-  ConstantIntTE, ExpressionTE, LocalLookupTE, MutateTE, ReferenceMemberLookupTE,
+  ConstantIntTE, ExpressionTE, LocalLookupTE, MutateTE, MemberLookupTE,
 };
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -122,9 +122,9 @@ exported func main() {
   let coutputs = compile.expect_compiler_outputs();
   let main = coutputs.lookup_function_by_str("main");
 
-  let lookup: &ReferenceMemberLookupTE = collect_only_tnode!(
+  let lookup: &MemberLookupTE = collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::ReferenceMemberLookup(l) => Some(l)
+      NodeRefT::MemberLookup(l) => Some(l)
   );
   // The lookup is a borrow of the member, so the struct is what it points at.
   match lookup.result.inner {

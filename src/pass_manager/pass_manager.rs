@@ -1,7 +1,6 @@
 // Main entry point for the Vale compiler
 
 use crate::compile_options::GlobalOptions;
-use crate::higher_typing::higher_typing_error_humanizer;
 use crate::utils::source_code_utils;
 use crate::interner::StrI;
 use crate::parse_arena::ParseArena;
@@ -16,9 +15,6 @@ use crate::utils::fx::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
-use crate::final_ast::ast::PackageH;
-use crate::simplifying::hammer::Hammer;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::fx::HashSet;
 use std::path::Path;
@@ -50,6 +46,65 @@ impl<'a> IFrontendInput<'a> {
         parse_arena.intern_package_coordinate(*module, &[])
       }
       IFrontendInput::DirectFilePathInput { package_coord, .. } => *package_coord,
+    }
+  }
+}
+
+/// Read the frontend inputs into a package-coord → filename → contents map. This is the removed
+/// `Source::Inputs`, rebuilt here so `code_source` needn't depend on `pass_manager`.
+fn build_inputs_code_map<'p>(
+  parse_arena: &ParseArena<'p>,
+  inputs: &[IFrontendInput<'p>],
+) -> HashMap<&'p PackageCoordinate<'p>, HashMap<String, String>> {
+  let mut map: HashMap<&'p PackageCoordinate<'p>, HashMap<String, String>> = HashMap::default();
+  for input in inputs {
+    match input {
+      IFrontendInput::SourceInput { package_coord, name, code } => {
+        map.entry(*package_coord).or_default().insert(name.clone(), code.clone());
+      }
+      IFrontendInput::DirectFilePathInput { package_coord, path } => {
+        if let Ok(contents) = fs::read_to_string(path) {
+          let filename = Path::new(path)
+            .file_name().and_then(|s| s.to_str()).unwrap_or(path.as_str()).to_string();
+          map.entry(*package_coord).or_default().insert(filename, contents);
+        }
+      }
+      IFrontendInput::ModulePathInput { module, module_path } => {
+        read_module_dir(parse_arena, *module, Path::new(module_path), &[], &mut map);
+      }
+    }
+  }
+  map
+}
+
+/// Recursively read `.vale` files under a module directory; a file at `<dir>/a/b/c.vale`
+/// lands at package coordinate `(module, [a, b])` under filename `c.vale`.
+fn read_module_dir<'p>(
+  parse_arena: &ParseArena<'p>,
+  module: StrI<'p>,
+  dir: &Path,
+  steps: &[StrI<'p>],
+  map: &mut HashMap<&'p PackageCoordinate<'p>, HashMap<String, String>>,
+) {
+  let entries = match fs::read_dir(dir) {
+    Ok(e) => e,
+    Err(_) => return,
+  };
+  for entry in entries.flatten() {
+    let path = entry.path();
+    if path.is_dir() {
+      if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+        let mut new_steps = steps.to_vec();
+        new_steps.push(parse_arena.intern_str(name));
+        read_module_dir(parse_arena, module, &path, &new_steps, map);
+      }
+    } else if path.extension().and_then(|s| s.to_str()) == Some("vale") {
+      if let (Some(filename), Ok(contents)) =
+        (path.file_name().and_then(|s| s.to_str()), fs::read_to_string(&path))
+      {
+        let coord = parse_arena.intern_package_coordinate(module, steps);
+        map.entry(coord).or_default().insert(filename.to_string(), contents);
+      }
     }
   }
 }
@@ -333,7 +388,7 @@ pub struct BuiltProgram {
   pub exe_path: PathBuf,
 }
 
-/// Drive the full pipeline (parse → scout → typing → instantiating → hammer →
+/// Drive the full pipeline (parse → scout → typing → instantiating →
 /// MetalLowerer → backend → clang link) and return the linked executable's
 /// path. Returns `BuiltProgram { rc, package_stems, exe_path }`. The stems
 /// are dot-joined `(project, package_steps...)` strings (e.g. `"__vale"`,
@@ -368,7 +423,7 @@ where
 
   let code_source = CodeSource::new(vec![
     Source::builtins(parse_arena, keywords),
-    Source::Inputs(all_inputs.clone()),
+    Source::CodeMap(build_inputs_code_map(parse_arena, all_inputs)),
   ]);
 
   let options = FullCompilationOptions {
@@ -388,16 +443,13 @@ where
 
   let scout_bump = bumpalo::Bump::new();
   let typing_bump = bumpalo::Bump::new();
-  let hammer_bump = bumpalo::Bump::new();
   let instantiating_bump = bumpalo::Bump::new();
   let scout_arena = ScoutArena::new(&scout_bump);
   let scout_keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(parse_arena);
-  let hammer_interner = HammerInterner::new(&hammer_bump);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compilation = FullCompilation::new(
     &scout_arena,
-    &hammer_interner,
     &typing_interner,
     &scout_keywords,
     &parser_keywords,
@@ -422,15 +474,6 @@ where
     Err(e) => panic!("PostParserErrorHumanizer.humanize not yet implemented: {:?}", e),
     Ok(_) => {}
   }
-  match compilation.get_astrouts() {
-    Err(error) => return Err(higher_typing_error_humanizer::humanize(
-      &|x| source_code_utils::humanize_pos_code_map(&vale_code_map, &x),
-      &|a, b| source_code_utils::lines_between(&vale_code_map, &a, &b),
-      &|x| source_code_utils::line_range_containing(&vale_code_map, &x),
-      &|x| source_code_utils::line_containing(&vale_code_map, &x),
-      &error)),
-    Ok(_) => {}
-  }
   match compilation.get_compiler_outputs() {
     Err(e) => return Err(crate::typing::compiler_error_humanizer::humanize(
       &scout_arena, &typing_interner, opts.verbose_errors,
@@ -442,23 +485,41 @@ where
     Ok(_) => {}
   }
 
-  let program_h = compilation.get_hamuts();
+  let monouts = compilation.get_monouts();
+
+  // HinputsI is flat (no packages map), so derive the set of package coordinates
+  // that actually got compiled from the defs' ids (deduped, first-seen order).
+  // VCOORD: revisit this
+  let mut compiled_package_coords: Vec<&PackageCoordinate> = Vec::new();
+  let mut seen_package_coords: HashSet<&PackageCoordinate> = HashSet::default();
+  for f in monouts.functions.iter() {
+    let pc = f.header.id.package_coord;
+    if seen_package_coords.insert(pc) { compiled_package_coords.push(pc); }
+  }
+  for s in monouts.structs.iter() {
+    let pc = s.instantiated_citizen.id.package_coord;
+    if seen_package_coords.insert(pc) { compiled_package_coords.push(pc); }
+  }
+  for it in monouts.interfaces.iter() {
+    let pc = it.instantiated_interface.id.package_coord;
+    if seen_package_coords.insert(pc) { compiled_package_coords.push(pc); }
+  }
 
   // Collect (project, package_steps) stems for each compiled package, so
   // the valec bin can find their matching native/*.c dirs at link time.
   // Empty module → "__vale" (Backend's `userFuncName` convention; see the
   // walker's lower_package_coord and Backend/src/vale.cpp).
-  let package_coord_stems: Vec<String> = program_h.packages.package_coord_to_contents.iter()
-    .map(|(coord, _pkg)| {
+  let package_coord_stems: Vec<String> = compiled_package_coords.iter()
+    .map(|coord| {
       let module = if coord.module.0.is_empty() { "__vale" } else { coord.module.0 };
       let pkg_steps: String = coord.packages.iter().map(|p| format!(".{}", p.0)).collect();
       format!("{}{}", module, pkg_steps)
     })
     .collect();
 
-  // MetalLowerer: H-AST → MetalCache via FFI, replacing readjson.cpp.
+  // MetalLowerer: I-AST (HinputsI) → MetalCache via FFI, replacing readjson.cpp.
   let cache = crate::backend_ffi::metal_cache::MetalCache::new();
-  let program = crate::backend_ffi::metal_lowerer::populate_metal_cache(&cache, program_h);
+  let program = crate::backend_ffi::metal_lowerer::populate_metal_cache(&cache, monouts);
 
   // Inject --triple into the backend options when ClangConfig requests a
   // cross-target, so LLVM emits the correct data layout (e.g. 32-bit
@@ -530,7 +591,7 @@ where
       None
     }
   }).collect();
-  for (coord, _pkg) in program_h.packages.package_coord_to_contents.iter() {
+  for coord in compiled_package_coords.iter() {
     // Synthetic __vale module (empty module name) has its impls in
     // clang_cfg.builtins_dir; skip the native walk for it.
     if coord.module.0.is_empty() { continue; }

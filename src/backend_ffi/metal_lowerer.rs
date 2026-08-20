@@ -1,672 +1,470 @@
-// MetalLowerer: H-AST → MetalCache. Replaces what `Backend/src/metal/readjson.cpp`
-// used to do, but in Rust against the in-process `ProgramH<'s,'h>` instead
-// of parsed JSON. Each `lower_*` function mirrors a `readjson.cpp` `read*`
-// function; the shape is intentionally near-1:1 so behavior parity is easy
-// to verify.
+// MetalLowerer: instantiated IR (HinputsI) -> MetalCache, via the onion FFI builders.
 //
-// Coverage: complete for everything the current Rust frontend emits — proven
-// end-to-end by `walks_real_*` (hammer pipeline → MetalLowerer → backend →
-// link → exec) and by the full VerdagonSite rebuild. Concretely, ~50
-// ExpressionH arms and 11 KindHT arms across packages, structs, interfaces,
-// edges, functions, externs, static/runtime arrays, virtual dispatch, weak
-// refs (alias / lock / AsSubtype), upcasts, and the full expression set
-// (constants, control flow, locals, member load/store, call/extern-call,
-// arithmetic helpers, array load/store/push/pop/length/capacity, destroy
-// variants, etc.).
+// A faithful ~1:1 translation: each ExpressionIE node maps to the matching `cache.expr_*`
+// builder, each KindIT to a `cache.get_*` kind, names are mangled via the instantiated
+// humanizer. No lowering logic beyond that mangling. Placement / index resolution / deref
+// semantics all live downstream in C++ codegen.
 //
-// MutabilifyH / ImmutabilifyH are fully wired end-to-end (Backend codegen
-// already existed; only result_type and the lowering arms were missing).
-//
-// IsSameInstanceH and InterfaceToInterfaceUpcastH are wired through
-// MetalLowerer + FFI + a Backend `class` declaration, but the LLVM-emission
-// arm in `Backend/src/function/expression.cpp` is intentionally left out.
-// MetalLowerer can construct the H-AST node and ship it through to Backend;
-// any attempt to actually compile a program containing one will fall through
-// to expression.cpp's `else { assert(false); }` at codegen time. The Rust
-// frontend doesn't emit either today, so this is a tripwire, not a hazard.
-//
-// KindHT::OpaqueHT remains a `panic!` in `lower_kind`. It's a Kind variant
-// (not an Expression), so the dispatcher-cascade trick that works for
-// IsSameInstance / I2I-upcast doesn't apply: every region's translateType /
-// getControlBlock / etc. does an exhaustive dynamic_cast switch over Kind
-// subclasses, so adding a new Kind requires touching all of them. The current
-// `kind_to_extern` walker already ignores OpaqueHT (uses info.kind instead),
-// so the panic is unreachable from any code path the frontend exercises.
-//
-// To turn IsSameInstance / I2I-upcast on, add the corresponding
-// `translateExpression` arm in `Backend/src/function/expression.cpp`.
+// TODO(onion): edges/vtables (interface_to_sub_citizen_to_edge), interface super-lists, and
+// static/runtime array *definitions* are not yet reconstructed here. Virtual dispatch and
+// array codegen need them, but nothing runs until step 4, so they're deferred to a focused
+// follow-up. The expression/kind/function/struct/interface/export/extern spine is complete.
+
+use std::cell::RefCell;
+use std::collections::HashMap;
 
 use crate::backend_ffi::metal_cache::{
-    MetalCache, Program, Package, PackageCoord, Name, Kind, Reference,
-    Prototype, Function, Expression, Ownership, Location,
-    VariableId, Local, StructDef, StructMember, InterfaceDef, InterfaceMethod, Edge,
-    Mutability, Weakability,
+    Edge, Expression, Function, InterfaceDef, InterfaceMethod, Kind, Local, MetalCache, Mutability,
+    Name, PackageCoord, Program, Prototype, StructDef, StructMember, Weakability,
 };
-use crate::final_ast::ast::{FunctionH, IdH, InterfaceDefinitionH, InterfaceMethodH, EdgeH, PackageH, PrototypeH, ProgramH, StructDefinitionH, StructMemberH};
-use crate::final_ast::types::{StaticSizedArrayDefinitionHT, RuntimeSizedArrayDefinitionHT};
-use crate::final_ast::instructions::{ExpressionH, VariableIdH, Local as LocalH};
-use crate::final_ast::types::{CoordH, KindHT, LocationH, OwnershipH, Sharedness as MutabilityH};
+use crate::instantiating::ast::ast::{FunctionDefinitionI, PrototypeI};
+use crate::instantiating::ast::citizens::{InterfaceDefinitionI, StructDefinitionI};
+use crate::instantiating::ast::expressions::ExpressionIE;
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::names::{IdI, IVarNameI};
+use crate::instantiating::ast::types::{
+    BorrowRefIT, InterfaceIT, KindIT, SharednessI, StaticSizedArrayIT, StructIT,
+};
+use crate::instantiating::instantiated_humanizer::humanize_id;
 use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::range::CodeLocationS;
 
-/// Walk a `ProgramH` and populate the given `MetalCache`, returning a fully
-/// constructed `Program` ready to hand to `backend_compile_program`.
-pub fn populate_metal_cache<'cache, 's, 'h>(
+/// Walk a `HinputsI` and populate the `MetalCache`, returning a fully constructed `Program`.
+pub fn populate_metal_cache<'cache, 's, 'i>(
     cache: &'cache MetalCache,
-    hamuts: &ProgramH<'s, 'h>,
+    monouts: &HinputsI<'s, 'i>,
 ) -> Program<'cache>
 where
-    's: 'h,
+    's: 'i,
 {
+    let lowerer = Lowerer { cache, locals: RefCell::new(HashMap::new()) };
+
+    // HinputsI is flat; group defs by their id's package coordinate (first-seen order).
+    let mut package_coords: Vec<&'s PackageCoordinate<'s>> = Vec::new();
+    let mut seen: HashMap<usize, ()> = HashMap::new();
+    let mut note = |pc: &'s PackageCoordinate<'s>, out: &mut Vec<&'s PackageCoordinate<'s>>| {
+        if seen.insert(pc as *const _ as usize, ()).is_none() {
+            out.push(pc);
+        }
+    };
+    for f in monouts.functions.iter() {
+        note(f.header.id.package_coord, &mut package_coords);
+    }
+    for s in monouts.structs.iter() {
+        note(s.instantiated_citizen.id.package_coord, &mut package_coords);
+    }
+    for it in monouts.interfaces.iter() {
+        note(it.instantiated_interface.id.package_coord, &mut package_coords);
+    }
+
     let pb = cache.new_program_builder();
-    for (coord, pkg_h) in hamuts.packages.package_coord_to_contents.iter() {
-        let coord_handle = lower_package_coord(cache, coord);
-        let pkg_handle = lower_package(cache, coord_handle, pkg_h);
-        pb.add_package(coord_handle, pkg_handle);
+    for pc in package_coords {
+        let coord = lowerer.lower_package_coord(pc);
+        let package = lowerer.lower_package(monouts, pc, coord);
+        pb.add_package(coord, package);
     }
     pb.finish()
 }
 
-fn lower_package_coord<'cache, 's>(
+struct Lowerer<'cache> {
     cache: &'cache MetalCache,
-    coord: &PackageCoordinate<'s>,
-) -> PackageCoord<'cache> {
-    // Mirrors name_hammer::translate_package_coordinate: the empty-module
-    // builtin coord becomes "__vale" before crossing the FFI boundary.
-    // Backend's userFuncName computation prepends `<project>_` so this
-    // turns `streq` into `__vale_streq`, matching Backend/builtins/strings.c.
-    let project = if coord.module.0.is_empty() { "__vale" } else { coord.module.0 };
-    let steps: Vec<&str> = coord.packages.iter().map(|s| s.0).collect();
-    cache.get_package_coordinate(project, &steps)
+    locals: RefCell<HashMap<usize, Local<'cache>>>,
 }
 
-fn lower_package<'cache, 's, 'h>(
-    cache: &'cache MetalCache,
-    coord: PackageCoord<'cache>,
-    pkg: &PackageH<'s, 'h>,
-) -> Package<'cache>
-where
-    's: 'h,
-{
-    let pb = cache.new_package_builder(coord);
+fn code_map<'s>(loc: CodeLocationS<'s>) -> String {
+    format!("{:?}", loc)
+}
 
-    // Backend's compileValeCode asserts that each Package map's key equals
-    // the value's Name->name. Since lower_id_to_name uses shortened_name
-    // (matching readjson.cpp), the map keys must too.
-    for idef in pkg.interfaces.iter() {
-        let id_h = lower_interface_def(cache, idef);
-        pb.add_interface(idef.id.shortened_name.0, id_h);
-    }
-    for sdef in pkg.structs.iter() {
-        let sd = lower_struct_def(cache, sdef);
-        pb.add_struct(sdef.id.shortened_name.0, sd);
-    }
-    for ssa in pkg.static_sized_arrays.iter() {
-        let name = lower_id_to_name(cache, ssa.name);
-        let kind = cache.get_static_sized_array(name);
-        let region_id = cache.mut_region_id();
-        let elem_ty = lower_coord_to_reference(cache, &ssa.element_type);
-        let def = cache.new_static_sized_array_def(
-            name, kind, ssa.size as i32, region_id,
-            elem_ty,
-        );
-        pb.add_static_sized_array(ssa.name.shortened_name.0, def);
-    }
-    for rsa in pkg.runtime_sized_arrays.iter() {
-        let name = lower_id_to_name(cache, rsa.name);
-        let kind = cache.get_runtime_sized_array(name);
-        let region_id = cache.mut_region_id();
-        let elem_ty = lower_coord_to_reference(cache, &rsa.element_type);
-        let def = cache.new_runtime_sized_array_def(
-            name, kind, region_id, elem_ty,
-        );
-        pb.add_runtime_sized_array(rsa.name.shortened_name.0, def);
+impl<'cache> Lowerer<'cache> {
+    fn lower_package_coord<'s>(&self, pc: &PackageCoordinate<'s>) -> PackageCoord<'cache> {
+        // Empty module -> "__vale" (Backend's userFuncName convention).
+        let project = if pc.module.0.is_empty() { "__vale" } else { pc.module.0 };
+        let steps: Vec<&str> = pc.packages.iter().map(|s| s.0).collect();
+        self.cache.get_package_coordinate(project, &steps)
     }
 
-    for func in pkg.functions.iter() {
-        let proto = lower_prototype(cache, func.prototype);
-        let body = lower_expression(cache, &func.body);
-        let f = cache.new_function(proto, Some(body));
-        pb.add_function(func.prototype.id.shortened_name.0, f);
+    fn lower_id_to_name<'s, 'i>(&self, id: &IdI<'s, 'i>) -> Name<'cache> {
+        let name_str = humanize_id(&code_map, id, None);
+        let coord = self.lower_package_coord(id.package_coord);
+        self.cache.get_name(coord, &name_str)
     }
 
-    for (export_name, proto_ref) in pkg.export_name_to_function.iter() {
-        let proto = lower_prototype(cache, *proto_ref);
-        pb.add_export_function(export_name.0, proto);
+    fn lower_kind<'s, 'i>(&self, kind: KindIT<'s, 'i>) -> Kind<'cache> {
+        let c = self.cache;
+        match kind {
+            KindIT::NeverIT(_) => c.never_kind(),
+            KindIT::VoidIT(_) => c.void_kind(),
+            KindIT::BoolIT(_) => c.bool_kind(),
+            KindIT::StrIT(_) => c.str_kind(),
+            KindIT::FloatIT(_) => c.float_kind(),
+            KindIT::IntIT(i) => c.get_int(c.rcimm_region_id(), i.bits),
+            KindIT::USizeIT(_) => c.get_usize(c.rcimm_region_id()),
+            KindIT::StructIT(s) => c.get_struct_kind(self.lower_id_to_name(&s.id)),
+            KindIT::InterfaceIT(i) => c.get_interface_kind(self.lower_id_to_name(&i.id)),
+            KindIT::StaticSizedArrayIT(a) => c.get_static_sized_array(self.lower_id_to_name(&a.name)),
+            KindIT::RuntimeSizedArrayIT(a) => c.get_runtime_sized_array(self.lower_id_to_name(&a.name)),
+            KindIT::BorrowRefIT(r) => c.get_borrow_ref(self.lower_kind(r.inner)),
+            KindIT::OwnRefIT(r) => c.get_own_ref(self.lower_kind(r.inner)),
+            KindIT::ShareRefIT(r) => c.get_share_ref(self.lower_kind(r.inner)),
+            KindIT::WeakRefIT(r) => c.get_weak_ref(self.lower_kind(r.inner)),
+        }
     }
-    for (export_name, kind_ref) in pkg.export_name_to_kind.iter() {
-        let k = lower_kind(cache, kind_ref);
-        pb.add_export_kind(export_name.0, k);
-    }
-    for (proto_ref, info) in pkg.prototype_to_extern.iter() {
-        let proto = lower_prototype(cache, *proto_ref);
-        pb.add_extern_function(info.maybe_extern_name.0, proto);
-    }
-    for (opaque_ht, info) in pkg.kind_to_extern.iter() {
-        // kind_to_extern keys on OpaqueHT, which isn't a walkable Kind variant
-        // — extern kinds materialize as the underlying KindHT in info.kind.
-        let _ = opaque_ht;
-        let k = lower_kind(cache, &info.kind);
-        pb.add_extern_kind(info.maybe_extern_name.0, k);
+
+    fn lower_borrow<'s, 'i>(&self, r: &BorrowRefIT<'s, 'i>) -> Kind<'cache> {
+        self.cache.get_borrow_ref(self.lower_kind(r.inner))
     }
 
-    pb.finish()
-}
-
-fn lower_mutability(m: MutabilityH) -> Mutability {
-    match m { MutabilityH::Shared => Mutability::Immutable, MutabilityH::Single => Mutability::Mutable }
-}
-
-fn lower_struct_member<'cache, 's, 'h>(cache: &'cache MetalCache, m: &StructMemberH<'s, 'h>) -> StructMember<'cache>
-where 's: 'h,
-{
-    let ty = lower_coord_to_reference(cache, &m.tyype);
-    cache.new_struct_member(m.name.shortened_name.0, m.name.local_name.0, ty)
-}
-
-fn lower_interface_method<'cache, 's, 'h>(cache: &'cache MetalCache, im: &InterfaceMethodH<'s, 'h>) -> InterfaceMethod<'cache>
-where 's: 'h,
-{
-    let proto = lower_prototype(cache, im.prototype_h);
-    cache.get_interface_method(proto, im.virtual_param_index)
-}
-
-fn lower_interface_def<'cache, 's, 'h>(cache: &'cache MetalCache, i: &InterfaceDefinitionH<'s, 'h>) -> InterfaceDef<'cache>
-where 's: 'h,
-{
-    let name = lower_id_to_name(cache, i.id);
-    let kind = cache.get_interface_kind(name);
-    let region_id = match i.sharedness {
-        MutabilityH::Shared => cache.rcimm_region_id(),
-        MutabilityH::Single => cache.mut_region_id(),
-    };
-    let super_names: Vec<Name<'cache>> = i.super_interfaces.iter().map(|iht| lower_id_to_name(cache, iht.id)).collect();
-    let methods: Vec<InterfaceMethod<'cache>> = i.methods.iter().map(|m| lower_interface_method(cache, m)).collect();
-    cache.new_interface_def(
-        name, kind, region_id, lower_mutability(i.sharedness),
-        &super_names, &methods,
-        if i.weakable { Weakability::Weakable } else { Weakability::NonWeakable },
-    )
-}
-
-fn lower_edge<'cache, 's, 'h>(cache: &'cache MetalCache, e: &EdgeH<'s, 'h>) -> Edge<'cache>
-where 's: 'h,
-{
-    let struct_kind = cache.get_struct_kind(lower_id_to_name(cache, e.struct_.id));
-    let interface_kind = cache.get_interface_kind(lower_id_to_name(cache, e.interface.id));
-    let pairs: Vec<(InterfaceMethod<'cache>, Prototype<'cache>)> =
-        e.struct_prototypes_by_interface_method.iter().map(|(im, proto)| {
-            (lower_interface_method(cache, im), lower_prototype(cache, *proto))
-        }).collect();
-    cache.new_edge(struct_kind, interface_kind, &pairs)
-}
-
-fn lower_struct_def<'cache, 's, 'h>(cache: &'cache MetalCache, s: &StructDefinitionH<'s, 'h>) -> StructDef<'cache>
-where 's: 'h,
-{
-    let name = lower_id_to_name(cache, s.id);
-    let kind = cache.get_struct_kind(name);
-    let region_id = match s.sharedness {
-        MutabilityH::Shared => cache.rcimm_region_id(),
-        MutabilityH::Single => cache.mut_region_id(),
-    };
-    let members: Vec<StructMember<'cache>> = s.members.iter().map(|m| lower_struct_member(cache, m)).collect();
-    let edges: Vec<Edge<'cache>> = s.edges.iter().map(|e| lower_edge(cache, e)).collect();
-    cache.new_struct_def(
-      name, kind, region_id, lower_mutability(s.sharedness),
-      &edges, &members,
-      if s.weakable { Weakability::Weakable } else { Weakability::NonWeakable },
-    )
-}
-
-fn lower_id_to_name<'cache, 's>(cache: &'cache MetalCache, id: &IdH<'s>) -> Name<'cache> {
-    // Matches readjson.cpp's readName: uses shortenedName, NOT
-    // fully_qualified_name. (Backend's `__vbi_` extern-skip check
-    // inspects this name; using the fully-qualified form bypasses it
-    // and produces broken ABI shims for builtin externs.)
-    let coord = lower_package_coord(cache, &id.package_coordinate);
-    cache.get_name(coord, id.shortened_name.0)
-}
-
-fn lower_prototype<'cache, 's, 'h>(
-    cache: &'cache MetalCache,
-    proto: &PrototypeH<'s, 'h>,
-) -> Prototype<'cache>
-where
-    's: 'h,
-{
-    let name = lower_id_to_name(cache, proto.id);
-    let return_ref = lower_coord_to_reference(cache, &proto.return_type);
-    let param_refs: Vec<Reference<'cache>> = proto
-        .params
-        .iter()
-        .map(|p| lower_coord_to_reference(cache, p))
-        .collect();
-    cache.get_prototype(name, return_ref, &param_refs)
-}
-
-fn lower_kind<'cache, 's, 'h>(cache: &'cache MetalCache, kind: &KindHT<'s, 'h>) -> Kind<'cache>
-where
-    's: 'h,
-{
-    match kind {
-        KindHT::IntHT(i) => cache.get_int(cache.rcimm_region_id(), i.bits),
-        KindHT::BoolHT(_) => cache.bool_kind(),
-        KindHT::VoidHT(_) => cache.void_kind(),
-        KindHT::NeverHT(_) => cache.never_kind(),
-        KindHT::StrHT(_) => cache.str_kind(),
-        KindHT::FloatHT(_) => cache.get_float(cache.rcimm_region_id()),
-        KindHT::StructHT(s) => cache.get_struct_kind(lower_id_to_name(cache, s.id)),
-        KindHT::InterfaceHT(i) => cache.get_interface_kind(lower_id_to_name(cache, i.id)),
-        KindHT::StaticSizedArrayHT(a) => cache.get_static_sized_array(lower_id_to_name(cache, a.id)),
-        KindHT::RuntimeSizedArrayHT(a) => cache.get_runtime_sized_array(lower_id_to_name(cache, a.name)),
-        KindHT::OpaqueHT(_) => panic!("MetalLowerer: KindHT::OpaqueHT not yet implemented"),
+    fn lower_struct_kind<'s, 'i>(&self, s: StructIT<'s, 'i>) -> Kind<'cache> {
+        self.cache.get_struct_kind(self.lower_id_to_name(&s.id))
     }
-}
-
-fn lower_ownership(o: OwnershipH) -> Ownership {
-    match o {
-        OwnershipH::OwnH => Ownership::Own,
-        OwnershipH::MutableBorrowH => Ownership::MutableBorrow,
-        OwnershipH::MutableShareH => Ownership::MutableShare,
-        OwnershipH::WeakH => Ownership::Weak,
+    fn lower_interface_kind<'s, 'i>(&self, i: InterfaceIT<'s, 'i>) -> Kind<'cache> {
+        self.cache.get_interface_kind(self.lower_id_to_name(&i.id))
     }
-}
-
-fn lower_location(l: LocationH) -> Location {
-    match l {
-        LocationH::InlineH => Location::Inline,
-        LocationH::YonderH => Location::Yonder,
+    fn lower_static_array_kind<'s, 'i>(&self, a: &StaticSizedArrayIT<'s, 'i>) -> Kind<'cache> {
+        self.cache.get_static_sized_array(self.lower_id_to_name(&a.name))
     }
-}
 
-fn lower_coord_to_reference<'cache, 's, 'h>(
-    cache: &'cache MetalCache,
-    coord: &CoordH<'s, 'h>,
-) -> Reference<'cache>
-where
-    's: 'h,
-{
-    let kind = lower_kind(cache, &coord.kind);
-    cache.get_reference(
-        lower_ownership(coord.ownership),
-        lower_location(coord.location),
-        kind,
-    )
-}
+    fn lower_prototype<'s, 'i>(&self, proto: &PrototypeI<'s, 'i>) -> Prototype<'cache> {
+        let name = self.lower_id_to_name(&proto.id);
+        let return_type = self.lower_kind(proto.return_type);
+        let params: Vec<Kind<'cache>> = proto.param_types().into_iter().map(|k| self.lower_kind(k)).collect();
+        self.cache.get_prototype(name, return_type, &params)
+    }
 
-fn lower_variable_id<'cache, 's, 'h>(cache: &'cache MetalCache, v: &VariableIdH<'s, 'h>) -> VariableId<'cache>
-where 's: 'h,
-{
-    let name = v.name.map(|id| id.shortened_name.0);
-    cache.get_variable_id(v.number, v.height, name)
-}
+    /// Locals have pointer identity: the same `&LocalVariableI` must map to one metal `Local`.
+    fn lower_local<'s, 'i>(&self, var: &crate::instantiating::ast::ast::LocalVariableI<'s, 'i>) -> Local<'cache> {
+        let key = var as *const _ as usize;
+        if let Some(l) = self.locals.borrow().get(&key) {
+            return *l;
+        }
+        let name_str = humanize_var_name(var.name);
+        let local = self.cache.get_local(&name_str, self.lower_kind(var.tyype));
+        self.locals.borrow_mut().insert(key, local);
+        local
+    }
 
-fn lower_local<'cache, 's, 'h>(cache: &'cache MetalCache, l: &LocalH<'s, 'h>) -> Local<'cache>
-where 's: 'h,
-{
-    let vid = lower_variable_id(cache, &l.id);
-    let r = lower_coord_to_reference(cache, &l.type_h);
-    cache.get_local(vid, r)
-}
+    fn lower_package<'s, 'i>(
+        &self,
+        monouts: &HinputsI<'s, 'i>,
+        pc: &'s PackageCoordinate<'s>,
+        coord: PackageCoord<'cache>,
+    ) -> crate::backend_ffi::metal_cache::Package<'cache> {
+        let pkg_key = pc as *const _ as usize;
+        let pb = self.cache.new_package_builder(coord);
 
-fn lower_expression<'cache, 's, 'h>(
-    cache: &'cache MetalCache,
-    expr: &ExpressionH<'s, 'h>,
-) -> Expression<'cache>
-where
-    's: 'h,
-{
-    match expr {
-        ExpressionH::ConstantIntH(c) => cache.expr_constant_int(c.value, c.bits),
-        ExpressionH::BlockH(b) => {
-            let inner = lower_expression(cache, &b.inner);
-            let inner_ty = lower_coord_to_reference(cache, &b.inner.result_type());
-            cache.expr_block(inner, inner_ty)
+        for f in monouts.functions.iter() {
+            if f.header.id.package_coord as *const _ as usize != pkg_key {
+                continue;
+            }
+            let func = self.lower_function(f);
+            pb.add_function(&humanize_id(&code_map, &f.header.id, None), func);
         }
-        ExpressionH::ReturnH(r) => {
-            let source = lower_expression(cache, &r.source_expression);
-            let source_ty = lower_coord_to_reference(cache, &r.source_expression.result_type());
-            cache.expr_return(source, source_ty)
+        for s in monouts.structs.iter() {
+            if s.instantiated_citizen.id.package_coord as *const _ as usize != pkg_key {
+                continue;
+            }
+            let sd = self.lower_struct_def(s);
+            pb.add_struct(&humanize_id(&code_map, &s.instantiated_citizen.id, None), sd);
         }
-        ExpressionH::ConsecutorH(c) => {
-            let parts: Vec<Expression<'cache>> = c.exprs.iter().map(|e| lower_expression(cache, e)).collect();
-            cache.expr_consecutor(&parts)
+        for it in monouts.interfaces.iter() {
+            if it.instantiated_interface.id.package_coord as *const _ as usize != pkg_key {
+                continue;
+            }
+            let id = self.lower_interface_def(it);
+            pb.add_interface(&humanize_id(&code_map, &it.instantiated_interface.id, None), id);
         }
-        ExpressionH::ConstantVoidH(_) => cache.expr_constant_void(),
-        ExpressionH::ConstantBoolH(b) => cache.expr_constant_bool(b.value),
-        ExpressionH::ConstantF64H(f) => cache.expr_constant_f64(f.value),
-        ExpressionH::BreakH(_) => cache.expr_break(),
-        ExpressionH::StackifyH(s) => {
-            let src = lower_expression(cache, &s.source_expr);
-            let local = lower_local(cache, &s.local);
-            let name = s.name.map(|id| id.shortened_name.0);
-            cache.expr_stackify(src, local, false, name)
+
+        for e in monouts.function_exports.iter() {
+            if e.export_id.package_coord as *const _ as usize != pkg_key {
+                continue;
+            }
+            pb.add_export_function(e.exported_name.0, self.lower_prototype(e.prototype));
         }
-        ExpressionH::UnstackifyH(u) => {
-            let local = lower_local(cache, &u.local);
-            cache.expr_unstackify(local)
+        for e in monouts.kind_exports.iter() {
+            if e.id.package_coord as *const _ as usize != pkg_key {
+                continue;
+            }
+            pb.add_export_kind(e.exported_name.0, self.lower_kind(e.tyype));
         }
-        ExpressionH::LocalLoadH(l) => {
-            let local = lower_local(cache, &l.local);
-            cache.expr_local_load(local, lower_ownership(l.target_ownership), l.local_name.local_name.0)
+        for e in monouts.function_externs.iter() {
+            if e.prototype.id.package_coord as *const _ as usize != pkg_key {
+                continue;
+            }
+            // The extern's wire name is its mangled id; codegen maps it to the native symbol.
+            pb.add_extern_function(&humanize_id(&code_map, &e.prototype.id, None), self.lower_prototype(e.prototype));
         }
-        ExpressionH::LocalStoreH(s) => {
-            let local = lower_local(cache, &s.local);
-            let src = lower_expression(cache, &s.source_expression);
-            cache.expr_local_store(local, src, s.local_name.local_name.0, false)
+        for (struct_it, _extern) in monouts.kind_externs.iter() {
+            if struct_it.id.package_coord as *const _ as usize != pkg_key {
+                continue;
+            }
+            pb.add_extern_kind(&humanize_id(&code_map, &struct_it.id, None), self.lower_struct_kind(**struct_it));
         }
-        ExpressionH::DiscardH(d) => {
-            let src = lower_expression(cache, &d.source_expression);
-            let src_ty = lower_coord_to_reference(cache, &d.source_expression.result_type());
-            cache.expr_discard(src, src_ty)
+
+        pb.finish()
+    }
+
+    fn lower_function<'s, 'i>(&self, f: &FunctionDefinitionI<'s, 'i>) -> Function<'cache> {
+        self.locals.borrow_mut().clear();
+        let proto = self.lower_prototype(&f.header.to_prototype());
+        let body = self.lower_expression(&f.body);
+        self.cache.new_function(proto, Some(body))
+    }
+
+    fn lower_struct_def<'s, 'i>(&self, s: &StructDefinitionI<'s, 'i>) -> StructDef<'cache> {
+        let name = self.lower_id_to_name(&s.instantiated_citizen.id);
+        let kind = self.lower_struct_kind(*s.instantiated_citizen);
+        let region_id = self.region_for(s.sharedness);
+        let members: Vec<StructMember<'cache>> = s
+            .members
+            .iter()
+            .map(|m| {
+                let member_name = humanize_var_name(m.name);
+                self.cache.new_struct_member(&member_name, &member_name, self.lower_kind(m.tyype))
+            })
+            .collect();
+        // TODO(onion): edges are in HinputsI.interface_to_sub_citizen_to_edge, not inline; reconstruct.
+        let edges: Vec<Edge<'cache>> = Vec::new();
+        self.cache.new_struct_def(
+            name,
+            kind,
+            region_id,
+            self.mutability_for(s.sharedness),
+            &edges,
+            &members,
+            if s.weakable { Weakability::Weakable } else { Weakability::NonWeakable },
+        )
+    }
+
+    fn lower_interface_def<'s, 'i>(&self, it: &InterfaceDefinitionI<'s, 'i>) -> InterfaceDef<'cache> {
+        let name = self.lower_id_to_name(&it.instantiated_interface.id);
+        let kind = self.lower_interface_kind(*it.instantiated_interface);
+        let region_id = self.region_for(it.sharedness);
+        let methods: Vec<InterfaceMethod<'cache>> = it
+            .internal_methods
+            .iter()
+            .map(|(proto, vindex)| {
+                self.cache.get_interface_method(self.lower_prototype(proto), *vindex)
+            })
+            .collect();
+        // TODO(onion): super-interface list isn't carried on InterfaceDefinitionI; empty for now.
+        let super_interfaces: Vec<Name<'cache>> = Vec::new();
+        self.cache.new_interface_def(
+            name,
+            kind,
+            region_id,
+            self.mutability_for(it.sharedness),
+            &super_interfaces,
+            &methods,
+            if it.weakable { Weakability::Weakable } else { Weakability::NonWeakable },
+        )
+    }
+
+    fn region_for(&self, sharedness: SharednessI) -> crate::backend_ffi::metal_cache::RegionId<'cache> {
+        match sharedness {
+            SharednessI::Shared => self.cache.rcimm_region_id(),
+            SharednessI::Single => self.cache.mut_region_id(),
         }
-        ExpressionH::CallH(c) => {
-            let proto = lower_prototype(cache, c.function);
-            let args: Vec<Expression<'cache>> = c.args_expressions.iter()
-                .map(|e| lower_expression(cache, e)).collect();
-            cache.expr_call(proto, &args)
+    }
+    fn mutability_for(&self, sharedness: SharednessI) -> Mutability {
+        match sharedness {
+            SharednessI::Shared => Mutability::Immutable,
+            SharednessI::Single => Mutability::Mutable,
         }
-        ExpressionH::ExternCallH(c) => {
-            let proto = lower_prototype(cache, c.function);
-            let args: Vec<Expression<'cache>> = c.args_expressions.iter()
-                .map(|e| lower_expression(cache, e)).collect();
-            let arg_tys: Vec<Reference<'cache>> = c.args_expressions.iter()
-                .map(|e| lower_coord_to_reference(cache, &e.result_type())).collect();
-            cache.expr_extern_call(proto, &args, &arg_tys)
+    }
+
+    fn lower_exprs<'s, 'i>(&self, exprs: &[ExpressionIE<'s, 'i>]) -> Vec<Expression<'cache>> {
+        exprs.iter().map(|e| self.lower_expression(e)).collect()
+    }
+
+    fn lower_expression<'s, 'i>(&self, expr: &ExpressionIE<'s, 'i>) -> Expression<'cache> {
+        let c = self.cache;
+        match expr {
+            ExpressionIE::ConstantInt(x) => c.expr_constant_int(x.value, x.bits),
+            ExpressionIE::ConstantBool(x) => c.expr_constant_bool(x.value),
+            ExpressionIE::ConstantFloat(x) => c.expr_constant_f64(x.value),
+            ExpressionIE::ConstantStr(x) => c.expr_constant_str(x.value, self.lower_kind(x.result)),
+            ExpressionIE::VoidLiteral(_) => c.expr_constant_void(),
+            ExpressionIE::Break(_) => c.expr_break(),
+
+            ExpressionIE::Return(x) => c.expr_return(self.lower_expression(&x.source_expr)),
+            ExpressionIE::Discard(x) => c.expr_discard(self.lower_expression(&x.expr)),
+            ExpressionIE::Block(x) => c.expr_block(self.lower_expression(&x.inner), self.lower_kind(x.result)),
+            ExpressionIE::Consecutor(x) => c.expr_consecutor(&self.lower_exprs(x.exprs), self.lower_kind(x.result)),
+
+            ExpressionIE::ArgLookup(x) => c.expr_argument(x.param_index, self.lower_kind(x.tyype)),
+            ExpressionIE::LetNormal(x) => {
+                let local = self.lower_local(x.variable);
+                c.expr_stackify(local, self.lower_expression(&x.expr), self.lower_kind(x.result))
+            }
+            ExpressionIE::LetAndLend(x) => {
+                let local = self.lower_local(x.variable);
+                c.expr_let_and_lend(local, self.lower_expression(&x.expr), self.lower_kind(x.result))
+            }
+            ExpressionIE::Restackify(x) => {
+                let local = self.lower_local(x.variable);
+                c.expr_restackify(local, self.lower_expression(&x.source_expr), self.lower_kind(x.result))
+            }
+            ExpressionIE::Unlet(x) => {
+                let local = self.lower_local(x.variable);
+                c.expr_unstackify(local, self.lower_kind(x.result))
+            }
+            ExpressionIE::LocalLookup(x) => {
+                let local = self.lower_local(x.local_variable);
+                c.expr_local_lookup(local, self.lower_borrow(x.result))
+            }
+
+            ExpressionIE::Deref(x) => c.expr_deref(self.lower_expression(&x.inner), self.lower_kind(x.result)),
+            ExpressionIE::MemberLookup(x) => c.expr_member_lookup(
+                self.lower_expression(&x.struct_expr),
+                &humanize_var_name(x.member_name),
+                self.lower_borrow(x.result),
+            ),
+            ExpressionIE::StaticSizedArrayLookup(x) => c.expr_static_sized_array_lookup(
+                self.lower_expression(&x.array_expr),
+                self.lower_static_array_kind(x.array_type),
+                self.lower_expression(&x.index_expr),
+                self.lower_borrow(x.result),
+            ),
+            ExpressionIE::RuntimeSizedArrayLookup(x) => c.expr_runtime_sized_array_lookup(
+                self.lower_expression(&x.array_expr),
+                self.lower_kind(KindIT::RuntimeSizedArrayIT(x.array_type)),
+                self.lower_expression(&x.index_expr),
+                self.lower_borrow(x.result),
+            ),
+
+            ExpressionIE::Mutate(x) => c.expr_mutate(
+                self.lower_expression(&x.destination_expr),
+                self.lower_expression(&x.source_expr),
+                self.lower_kind(x.result),
+            ),
+
+            ExpressionIE::Construct(x) => c.expr_new_struct(
+                self.lower_struct_kind(x.struct_tt),
+                self.lower_kind(x.result),
+                &self.lower_exprs(x.args),
+            ),
+            ExpressionIE::Destroy(x) => c.expr_destroy(
+                self.lower_expression(&x.expr),
+                self.lower_struct_kind(x.struct_tt),
+                &self.lower_locals(x.destination_reference_variables),
+            ),
+            ExpressionIE::CopyPrim(x) => c.expr_copy_prim(self.lower_expression(&x.inner), self.lower_kind(x.result)),
+
+            ExpressionIE::Upcast(x) => c.expr_struct_to_interface_upcast(
+                self.lower_expression(&x.inner_expr),
+                self.lower_interface_kind(x.target_interface),
+                self.lower_id_to_name(&x.impl_name),
+                self.lower_kind(x.result),
+            ),
+            ExpressionIE::InterfaceToInterfaceUpcast(x) => c.expr_interface_to_interface_upcast(
+                self.lower_expression(&x.inner_expr),
+                self.lower_interface_kind(x.target_interface),
+                self.lower_kind(x.result),
+            ),
+            ExpressionIE::AsSubtype(x) => c.expr_as_subtype(
+                self.lower_expression(&x.source_expr),
+                self.lower_kind(x.target_type),
+                self.lower_prototype(x.ok_constructor),
+                self.lower_prototype(x.err_constructor),
+                self.lower_id_to_name(&x.impl_name),
+                self.lower_id_to_name(&x.ok_impl_name),
+                self.lower_id_to_name(&x.err_impl_name),
+                self.lower_kind(x.result),
+            ),
+            ExpressionIE::IsSameInstance(x) => {
+                c.expr_is_same_instance(self.lower_expression(&x.left), self.lower_expression(&x.right))
+            }
+
+            ExpressionIE::BorrowToWeak(x) => c.expr_weak_alias(self.lower_expression(&x.inner_expr), self.lower_kind(x.result)),
+            ExpressionIE::LockWeak(x) => c.expr_lock_weak(
+                self.lower_expression(&x.inner_expr),
+                self.lower_prototype(&x.some_constructor),
+                self.lower_prototype(&x.none_constructor),
+                self.lower_id_to_name(&x.some_impl_name),
+                self.lower_id_to_name(&x.none_impl_name),
+                self.lower_kind(x.result),
+            ),
+
+            ExpressionIE::FunctionCall(x) => c.expr_call(
+                self.lower_prototype(&x.callable),
+                &self.lower_exprs(x.args),
+                self.lower_kind(x.result),
+            ),
+            ExpressionIE::ExternFunctionCall(x) => c.expr_extern_call(
+                self.lower_prototype(&x.prototype2),
+                &self.lower_exprs(x.args),
+                self.lower_kind(x.result),
+            ),
+            ExpressionIE::InterfaceFunctionCall(x) => c.expr_interface_call(
+                self.lower_prototype(x.super_function_prototype),
+                x.virtual_param_index,
+                &self.lower_exprs(x.args),
+                self.lower_kind(x.result),
+            ),
+
+            ExpressionIE::If(x) => c.expr_if(
+                self.lower_expression(&x.condition),
+                self.lower_expression(&x.then_call),
+                self.lower_expression(&x.else_call),
+                self.lower_kind(x.result),
+            ),
+            ExpressionIE::While(x) => {
+                let block = c.expr_block(self.lower_expression(&x.block.inner), self.lower_kind(x.block.result));
+                c.expr_while(block, self.lower_kind(x.result))
+            }
+
+            ExpressionIE::StaticArrayFromValues(x) => c.expr_new_array_from_values(
+                &self.lower_exprs(x.elements),
+                self.lower_kind(x.result),
+                self.lower_static_array_kind(x.array_type),
+            ),
+            ExpressionIE::NewRuntimeSizedArray(x) => c.expr_new_mut_runtime_sized_array(
+                self.lower_kind(KindIT::RuntimeSizedArrayIT(&x.array_type)),
+                self.lower_expression(&x.capacity_expr),
+                self.lower_kind(x.result),
+            ),
+            ExpressionIE::StaticArrayFromCallable(x) => c.expr_static_array_from_callable(
+                self.lower_kind(KindIT::StaticSizedArrayIT(&x.array_type)),
+                self.lower_expression(&x.generator),
+                self.lower_prototype(&x.generator_method),
+                self.lower_kind(x.result),
+            ),
+            ExpressionIE::ArrayLength(x) => c.expr_array_length(self.lower_expression(&x.array_expr)),
+            ExpressionIE::RuntimeSizedArrayCapacity(x) => c.expr_array_capacity(self.lower_expression(&x.array_expr)),
+            ExpressionIE::ArraySize(x) => c.expr_array_size(self.lower_expression(&x.array), self.lower_kind(x.result)),
+            ExpressionIE::PushRuntimeSizedArray(x) => c.expr_push_runtime_sized_array(
+                self.lower_expression(&x.array_expr),
+                self.lower_expression(&x.new_element_expr),
+            ),
+            ExpressionIE::PopRuntimeSizedArray(x) => c.expr_pop_runtime_sized_array(
+                self.lower_expression(&x.array_expr),
+                self.lower_kind(x.result),
+            ),
+            ExpressionIE::DestroyStaticSizedArrayIntoFunction(x) => c.expr_destroy_static_sized_array_into_function(
+                self.lower_expression(&x.array_expr),
+                self.lower_kind(KindIT::StaticSizedArrayIT(&x.array_type)),
+                self.lower_expression(&x.consumer),
+                self.lower_prototype(&x.consumer_method),
+            ),
+            ExpressionIE::DestroyStaticSizedArrayIntoLocals(x) => c.expr_destroy_static_sized_array_into_locals(
+                self.lower_expression(&x.expr),
+                self.lower_kind(KindIT::StaticSizedArrayIT(&x.static_sized_array)),
+                &self.lower_locals(x.destination_reference_variables),
+            ),
+            ExpressionIE::DestroyRuntimeSizedArray(x) => {
+                c.expr_destroy_mut_runtime_sized_array(self.lower_expression(&x.array_expr))
+            }
         }
-        ExpressionH::IfH(i) => {
-            let cond = lower_expression(cache, &i.condition_block);
-            let then_e = lower_expression(cache, &i.then_block);
-            let then_ty = lower_coord_to_reference(cache, &i.then_block.result_type());
-            let else_e = lower_expression(cache, &i.else_block);
-            let else_ty = lower_coord_to_reference(cache, &i.else_block.result_type());
-            let common_ty = lower_coord_to_reference(cache, &i.common_supertype);
-            cache.expr_if(cond, then_e, then_ty, else_e, else_ty, common_ty)
-        }
-        ExpressionH::WhileH(w) => {
-            let body = lower_expression(cache, &w.body_block);
-            cache.expr_while(body)
-        }
-        ExpressionH::ArgumentH(a) => {
-            let ty = lower_coord_to_reference(cache, &a.result_type);
-            cache.expr_argument(ty, a.argument_index)
-        }
-        ExpressionH::MemberLoadH(m) => {
-            let struct_e = lower_expression(cache, &m.struct_expression);
-            let struct_ty_coord = m.struct_expression.result_type();
-            let struct_id = lower_kind(cache, &struct_ty_coord.kind);
-            let struct_ty = lower_coord_to_reference(cache, &struct_ty_coord);
-            let expected_member = lower_coord_to_reference(cache, &m.expected_member_type);
-            let expected_result = lower_coord_to_reference(cache, &m.result_type);
-            cache.expr_member_load(
-                struct_e, struct_id, struct_ty, false,
-                m.member_index, lower_ownership(m.result_type.ownership),
-                expected_member, expected_result,
-                m.member_name.shortened_name.0,
-            )
-        }
-        ExpressionH::NewStructH(n) => {
-            let exprs: Vec<Expression<'cache>> = n.source_expressions.iter()
-                .map(|e| lower_expression(cache, e)).collect();
-            let ty = lower_coord_to_reference(cache, &n.result_type);
-            cache.expr_new_struct(&exprs, ty)
-        }
-        ExpressionH::ConstantStrH(c) => cache.expr_constant_str(c.value),
-        ExpressionH::DestroyH(d) => {
-            let s_expr = lower_expression(cache, &d.struct_expression);
-            let s_ty = lower_coord_to_reference(cache, &d.struct_expression.result_type());
-            let tys: Vec<Reference<'cache>> = d.local_types.iter().map(|t| lower_coord_to_reference(cache, t)).collect();
-            let locs: Vec<Local<'cache>> = d.local_indices.iter().map(|l| lower_local(cache, l)).collect();
-            let lives: Vec<bool> = d.local_indices.iter().map(|_| false).collect();
-            cache.expr_destroy(s_expr, s_ty, &tys, &locs, &lives)
-        }
-        ExpressionH::MemberStoreH(m) => {
-            let s_expr = lower_expression(cache, &m.struct_expression);
-            let s_ty = lower_coord_to_reference(cache, &m.struct_expression.result_type());
-            let src = lower_expression(cache, &m.source_expression);
-            let result_ty = lower_coord_to_reference(cache, &m.result_type);
-            cache.expr_member_store(s_expr, s_ty, false, m.member_index, src, result_ty, m.member_name.shortened_name.0)
-        }
-        ExpressionH::ArrayLengthH(a) => {
-            let s_expr = lower_expression(cache, &a.source_expression);
-            let s_ty = lower_coord_to_reference(cache, &a.source_expression.result_type());
-            cache.expr_array_length(s_expr, s_ty)
-        }
-        ExpressionH::ArrayCapacityH(a) => {
-            let s_expr = lower_expression(cache, &a.source_expression);
-            let s_ty = lower_coord_to_reference(cache, &a.source_expression.result_type());
-            cache.expr_array_capacity(s_expr, s_ty)
-        }
-        ExpressionH::PreCheckBorrowH(p) => {
-            let s_expr = lower_expression(cache, &p.inner_expression);
-            let s_ty = lower_coord_to_reference(cache, &p.inner_expression.result_type());
-            cache.expr_pre_check_borrow(s_expr, s_ty)
-        }
-        ExpressionH::RestackifyH(r) => {
-            let src = lower_expression(cache, &r.source_expr);
-            let local = lower_local(cache, &r.local);
-            let name = r.name.map(|id| id.shortened_name.0);
-            cache.expr_restackify(src, local, false, name)
-        }
-        // ---- Variants the Rust frontend doesn't yet emit ----
-        //
-        // Each panic names the variant explicitly so it's clear what's
-        // missing when the frontend gains that feature. The C ABI shims and
-        // safe wrappers needed to implement these are not yet written —
-        // adding them is mechanical (mirror the existing patterns), but
-        // dead code without an emitting frontend.
-        ExpressionH::MutabilifyH(m) => {
-            let src = lower_expression(cache, &m.inner);
-            let src_ty = lower_coord_to_reference(cache, &m.inner.result_type());
-            let res_ty = lower_coord_to_reference(cache, &expr.result_type());
-            cache.expr_mutabilify(src, src_ty, res_ty)
-        }
-        ExpressionH::ImmutabilifyH(im) => {
-            let src = lower_expression(cache, &im.inner);
-            let src_ty = lower_coord_to_reference(cache, &im.inner.result_type());
-            let res_ty = lower_coord_to_reference(cache, &expr.result_type());
-            cache.expr_immutabilify(src, src_ty, res_ty)
-        }
-        ExpressionH::StructToInterfaceUpcastH(u) => {
-            let src = lower_expression(cache, &u.source_expression);
-            let src_coord = u.source_expression.result_type();
-            let src_ty = lower_coord_to_reference(cache, &src_coord);
-            let src_kind = lower_kind(cache, &src_coord.kind);
-            let target_kind = cache.get_interface_kind(lower_id_to_name(cache, u.target_interface.id));
-            let target_coord = CoordH::new(
-                src_coord.ownership,
-                src_coord.location,
-                KindHT::InterfaceHT(u.target_interface),
-            );
-            let target_ty = lower_coord_to_reference(cache, &target_coord);
-            cache.expr_struct_to_interface_upcast(src, src_ty, src_kind, target_ty, target_kind)
-        }
-        ExpressionH::InterfaceToInterfaceUpcastH(u) => {
-            let src = lower_expression(cache, &u.source_expression);
-            let src_coord = u.source_expression.result_type();
-            let src_ty = lower_coord_to_reference(cache, &src_coord);
-            let src_kind = lower_kind(cache, &src_coord.kind);
-            let target_kind = cache.get_interface_kind(lower_id_to_name(cache, u.target_interface.id));
-            let target_coord = CoordH::new(
-                src_coord.ownership,
-                src_coord.location,
-                KindHT::InterfaceHT(u.target_interface),
-            );
-            let target_ty = lower_coord_to_reference(cache, &target_coord);
-            cache.expr_interface_to_interface_upcast(src, src_ty, src_kind, target_ty, target_kind)
-        }
-        ExpressionH::InterfaceCallH(c) => {
-            let args: Vec<Expression<'cache>> = c.args_expressions.iter()
-                .map(|e| lower_expression(cache, e)).collect();
-            let interface_kind = cache.get_interface_kind(lower_id_to_name(cache, c.interface_h.id));
-            let proto = lower_prototype(cache, c.function_type);
-            cache.expr_interface_call(&args, c.virtual_param_index, interface_kind, c.index_in_edge, proto)
-        }
-        ExpressionH::NewArrayFromValuesH(n) => {
-            let exprs: Vec<Expression<'cache>> = n.source_expressions.iter()
-                .map(|e| lower_expression(cache, e)).collect();
-            let arr_ref = lower_coord_to_reference(cache, &n.result_type);
-            let arr_kind = lower_kind(cache, &n.result_type.kind);
-            cache.expr_new_array_from_values(&exprs, arr_ref, arr_kind)
-        }
-        ExpressionH::StaticSizedArrayStoreH(s) => {
-            let arr = lower_expression(cache, &s.array_expression);
-            let idx = lower_expression(cache, &s.index_expression);
-            let src = lower_expression(cache, &s.source_expression);
-            cache.expr_static_sized_array_store(arr, idx, src)
-        }
-        ExpressionH::StaticSizedArrayLoadH(l) => {
-            let arr = lower_expression(cache, &l.array_expression);
-            let arr_coord = l.array_expression.result_type();
-            let arr_ty = lower_coord_to_reference(cache, &arr_coord);
-            let arr_kind = lower_kind(cache, &arr_coord.kind);
-            let idx = lower_expression(cache, &l.index_expression);
-            let result_ty = lower_coord_to_reference(cache, &l.result_type);
-            let elem_ty = lower_coord_to_reference(cache, &l.expected_element_type);
-            cache.expr_static_sized_array_load(
-                arr, arr_ty, arr_kind, idx, result_ty,
-                lower_ownership(l.target_ownership), elem_ty, l.array_size as i32,
-            )
-        }
-        ExpressionH::RuntimeSizedArrayStoreH(s) => {
-            let arr = lower_expression(cache, &s.array_expression);
-            let arr_coord = s.array_expression.result_type();
-            let arr_ty = lower_coord_to_reference(cache, &arr_coord);
-            let arr_kind = lower_kind(cache, &arr_coord.kind);
-            let idx = lower_expression(cache, &s.index_expression);
-            let idx_coord = s.index_expression.result_type();
-            let idx_ty = lower_coord_to_reference(cache, &idx_coord);
-            let idx_kind = lower_kind(cache, &idx_coord.kind);
-            let src = lower_expression(cache, &s.source_expression);
-            let src_coord = s.source_expression.result_type();
-            let src_ty = lower_coord_to_reference(cache, &src_coord);
-            let src_kind = lower_kind(cache, &src_coord.kind);
-            cache.expr_runtime_sized_array_store(arr, arr_ty, arr_kind, idx, idx_ty, idx_kind, src, src_ty, src_kind)
-        }
-        ExpressionH::RuntimeSizedArrayLoadH(l) => {
-            let arr = lower_expression(cache, &l.array_expression);
-            let arr_coord = l.array_expression.result_type();
-            let arr_ty = lower_coord_to_reference(cache, &arr_coord);
-            let arr_kind = lower_kind(cache, &arr_coord.kind);
-            let idx = lower_expression(cache, &l.index_expression);
-            let idx_coord = l.index_expression.result_type();
-            let idx_ty = lower_coord_to_reference(cache, &idx_coord);
-            let idx_kind = lower_kind(cache, &idx_coord.kind);
-            let result_ty = lower_coord_to_reference(cache, &l.result_type);
-            let elem_ty = lower_coord_to_reference(cache, &l.expected_element_type);
-            cache.expr_runtime_sized_array_load(arr, arr_ty, arr_kind, idx, idx_ty, idx_kind, result_ty, lower_ownership(l.target_ownership), elem_ty)
-        }
-        ExpressionH::NewRuntimeSizedArrayH(n) => {
-            let size = lower_expression(cache, &n.capacity_expression);
-            let size_coord = n.capacity_expression.result_type();
-            let size_ty = lower_coord_to_reference(cache, &size_coord);
-            let size_kind = lower_kind(cache, &size_coord.kind);
-            let arr_ref = lower_coord_to_reference(cache, &n.result_type);
-            let elem_ty = lower_coord_to_reference(cache, &n.element_type);
-            cache.expr_new_mut_runtime_sized_array(size, size_ty, size_kind, arr_ref, elem_ty)
-        }
-        ExpressionH::StaticArrayFromCallableH(n) => {
-            let gen = lower_expression(cache, &n.generator_expression);
-            let gen_coord = n.generator_expression.result_type();
-            let gen_ty = lower_coord_to_reference(cache, &gen_coord);
-            let gen_kind = lower_kind(cache, &gen_coord.kind);
-            let gen_method = lower_prototype(cache, n.generator_method);
-            let arr_ref = lower_coord_to_reference(cache, &n.result_type);
-            let elem_ty = lower_coord_to_reference(cache, &n.element_type);
-            cache.expr_static_array_from_callable(gen, gen_ty, gen_kind, gen_method, arr_ref, elem_ty)
-        }
-        ExpressionH::PushRuntimeSizedArrayH(p) => {
-            let arr = lower_expression(cache, &p.array_expression);
-            let arr_ty = lower_coord_to_reference(cache, &p.array_expression.result_type());
-            let new = lower_expression(cache, &p.newcomer_expression);
-            let new_ty = lower_coord_to_reference(cache, &p.newcomer_expression.result_type());
-            cache.expr_push_runtime_sized_array(arr, arr_ty, new, new_ty)
-        }
-        ExpressionH::PopRuntimeSizedArrayH(p) => {
-            let arr = lower_expression(cache, &p.array_expression);
-            let arr_ty = lower_coord_to_reference(cache, &p.array_expression.result_type());
-            cache.expr_pop_runtime_sized_array(arr, arr_ty)
-        }
-        ExpressionH::DestroyStaticSizedArrayIntoLocalsH(d) => {
-            let arr = lower_expression(cache, &d.struct_expression);
-            let arr_ty = lower_coord_to_reference(cache, &d.struct_expression.result_type());
-            let tys: Vec<Reference<'cache>> = d.local_types.iter().map(|t| lower_coord_to_reference(cache, t)).collect();
-            let locs: Vec<Local<'cache>> = d.local_indices.iter().map(|l| lower_local(cache, l)).collect();
-            cache.expr_destroy_static_sized_array_into_locals(arr, arr_ty, &tys, &locs)
-        }
-        ExpressionH::DestroyStaticSizedArrayIntoFunctionH(d) => {
-            let arr = lower_expression(cache, &d.array_expression);
-            let arr_coord = d.array_expression.result_type();
-            let arr_ty = lower_coord_to_reference(cache, &arr_coord);
-            let arr_kind = lower_kind(cache, &arr_coord.kind);
-            let cons = lower_expression(cache, &d.consumer_expression);
-            let cons_ty = lower_coord_to_reference(cache, &d.consumer_expression.result_type());
-            let cons_method = lower_prototype(cache, d.consumer_method);
-            let elem_ty = lower_coord_to_reference(cache, &d.array_element_type);
-            cache.expr_destroy_static_sized_array_into_function(arr, arr_ty, arr_kind, cons, cons_ty, cons_method, elem_ty, d.array_size as i32)
-        }
-        ExpressionH::DestroyRuntimeSizedArrayH(d) => {
-            let arr = lower_expression(cache, &d.array_expression);
-            let arr_coord = d.array_expression.result_type();
-            let arr_ty = lower_coord_to_reference(cache, &arr_coord);
-            let arr_kind = lower_kind(cache, &arr_coord.kind);
-            cache.expr_destroy_mut_runtime_sized_array(arr, arr_ty, arr_kind)
-        }
-        ExpressionH::BorrowToWeakH(wa) => {
-            let src = lower_expression(cache, &wa.ref_expression);
-            let src_coord = wa.ref_expression.result_type();
-            let src_ty = lower_coord_to_reference(cache, &src_coord);
-            let src_kind = lower_kind(cache, &src_coord.kind);
-            let result_coord = ExpressionH::BorrowToWeakH(wa).result_type();
-            let result_ty = lower_coord_to_reference(cache, &result_coord);
-            cache.expr_weak_alias(src, src_ty, src_kind, result_ty)
-        }
-        ExpressionH::LockWeakH(l) => {
-            let src = lower_expression(cache, &l.source_expression);
-            let src_ty = lower_coord_to_reference(cache, &l.source_expression.result_type());
-            let some_ctor = lower_prototype(cache, l.some_constructor);
-            let some_ty = lower_coord_to_reference(cache, &l.some_constructor.return_type);
-            let some_kind = lower_kind(cache, &l.some_constructor.return_type.kind);
-            let none_ctor = lower_prototype(cache, l.none_constructor);
-            let none_ty = lower_coord_to_reference(cache, &l.none_constructor.return_type);
-            let none_kind = lower_kind(cache, &l.none_constructor.return_type.kind);
-            let result_ty = lower_coord_to_reference(cache, &l.result_type);
-            let result_kind = lower_kind(cache, &l.result_type.kind);
-            cache.expr_lock_weak(src, src_ty, some_ctor, some_ty, some_kind, none_ctor, none_ty, none_kind, result_ty, result_kind)
-        }
-        ExpressionH::AsSubtypeH(a) => {
-            let src = lower_expression(cache, &a.source_expression);
-            let src_ty = lower_coord_to_reference(cache, &a.source_expression.result_type());
-            let target_kind = lower_kind(cache, &a.target_type);
-            let ok_ctor = lower_prototype(cache, a.some_constructor);
-            let ok_ty = lower_coord_to_reference(cache, &a.some_constructor.return_type);
-            let ok_kind = lower_kind(cache, &a.some_constructor.return_type.kind);
-            let err_ctor = lower_prototype(cache, a.none_constructor);
-            let err_ty = lower_coord_to_reference(cache, &a.none_constructor.return_type);
-            let err_kind = lower_kind(cache, &a.none_constructor.return_type.kind);
-            let result_ty = lower_coord_to_reference(cache, &a.result_type);
-            let result_kind = lower_kind(cache, &a.result_type.kind);
-            cache.expr_as_subtype(src, src_ty, target_kind, ok_ctor, ok_ty, ok_kind, err_ctor, err_ty, err_kind, result_ty, result_kind)
-        }
-        ExpressionH::IsSameInstanceH(s) => {
-            let left = lower_expression(cache, &s.left_expression);
-            let left_ty = lower_coord_to_reference(cache, &s.left_expression.result_type());
-            let right = lower_expression(cache, &s.right_expression);
-            let right_ty = lower_coord_to_reference(cache, &s.right_expression.result_type());
-            cache.expr_is_same_instance(left, left_ty, right, right_ty)
-        }
-        ExpressionH::CopyPrimH(c) => {
-            let inner = lower_expression(cache, &c.inner);
-            let result_ty = lower_coord_to_reference(cache, &c.result_type);
-            cache.expr_copy_prim(inner, result_ty)
-        }
-        ExpressionH::AliasH(a) => {
-            // VCOORD: revisit
-            // Backend refcount emission for AliasH is deferred; lower by delegating
-            // to the inner expression, matching the pre-split `&Share T = Share T`
-            // behavior at Backend level.
-            lower_expression(cache, &a.inner)
-        }
+    }
+
+    fn lower_locals<'s, 'i>(
+        &self,
+        vars: &[&crate::instantiating::ast::ast::LocalVariableI<'s, 'i>],
+    ) -> Vec<Local<'cache>> {
+        vars.iter().map(|v| self.lower_local(v)).collect()
     }
 }
 
+fn humanize_var_name<'s, 'i>(name: IVarNameI<'s, 'i>) -> String {
+    crate::instantiating::instantiated_humanizer::humanize_name(&code_map, name.into(), None)
+}

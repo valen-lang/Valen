@@ -31,7 +31,6 @@ pub enum ExpressionIE<'s, 'i> {
     Break(&'i BreakIE),
     Block(&'i BlockIE<'s, 'i>),
     Consecutor(&'i ConsecutorIE<'s, 'i>),
-    Tuple(&'i TupleIE<'s, 'i>),
     StaticArrayFromValues(&'i StaticArrayFromValuesIE<'s, 'i>),
     ArraySize(&'i ArraySizeIE<'s, 'i>),
     IsSameInstance(&'i IsSameInstanceIE<'s, 'i>),
@@ -46,7 +45,6 @@ pub enum ExpressionIE<'s, 'i> {
     InterfaceFunctionCall(&'i InterfaceFunctionCallIE<'s, 'i>),
     ExternFunctionCall(&'i ExternFunctionCallIE<'s, 'i>),
     FunctionCall(&'i FunctionCallIE<'s, 'i>),
-    Reinterpret(&'i ReinterpretIE<'s, 'i>),
     Construct(&'i ConstructIE<'s, 'i>),
     NewRuntimeSizedArray(&'i NewRuntimeSizedArrayIE<'s, 'i>),
     StaticArrayFromCallable(&'i StaticArrayFromCallableIE<'s, 'i>),
@@ -63,8 +61,7 @@ pub enum ExpressionIE<'s, 'i> {
     LocalLookup(&'i LocalLookupIE<'s, 'i>),
     StaticSizedArrayLookup(&'i StaticSizedArrayLookupIE<'s, 'i>),
     RuntimeSizedArrayLookup(&'i RuntimeSizedArrayLookupIE<'s, 'i>),
-    ReferenceMemberLookup(&'i ReferenceMemberLookupIE<'s, 'i>),
-    AddressMemberLookup(&'i AddressMemberLookupIE<'s, 'i>),
+    MemberLookup(&'i MemberLookupIE<'s, 'i>),
     Deref(&'i DerefIE<'s, 'i>),
 }
 
@@ -86,7 +83,6 @@ impl<'s, 'i> ExpressionIE<'s, 'i> {
             ExpressionIE::Break(x) => x.result(),
             ExpressionIE::Block(x) => x.result,
             ExpressionIE::Consecutor(x) => x.result,
-            ExpressionIE::Tuple(x) => x.result,
             ExpressionIE::StaticArrayFromValues(s) => s.result,
             ExpressionIE::ArraySize(x) => x.result,
             ExpressionIE::IsSameInstance(x) => x.result(),
@@ -101,7 +97,6 @@ impl<'s, 'i> ExpressionIE<'s, 'i> {
             ExpressionIE::InterfaceFunctionCall(x) => x.result,
             ExpressionIE::ExternFunctionCall(e) => e.result,
             ExpressionIE::FunctionCall(c) => c.result,
-            ExpressionIE::Reinterpret(x) => x.result,
             ExpressionIE::Construct(c) => c.result,
             ExpressionIE::NewRuntimeSizedArray(n) => n.result,
             ExpressionIE::StaticArrayFromCallable(s) => s.result,
@@ -118,8 +113,7 @@ impl<'s, 'i> ExpressionIE<'s, 'i> {
             ExpressionIE::LocalLookup(x) => KindIT::BorrowRefIT(x.result),
             ExpressionIE::StaticSizedArrayLookup(x) => KindIT::BorrowRefIT(x.result),
             ExpressionIE::RuntimeSizedArrayLookup(x) => KindIT::BorrowRefIT(x.result),
-            ExpressionIE::ReferenceMemberLookup(x) => KindIT::BorrowRefIT(x.result),
-            ExpressionIE::AddressMemberLookup(x) => KindIT::BorrowRefIT(x.result),
+            ExpressionIE::MemberLookup(x) => KindIT::BorrowRefIT(x.result),
             ExpressionIE::Deref(x) => x.result,
         }
     }
@@ -275,16 +269,6 @@ pub struct ConsecutorIE<'s, 'i> {
 	pub exprs: &'i[ExpressionIE<'s, 'i>],
 	pub result: KindIT<'s, 'i>,
 }
-
-
-
-/// Arena-allocated (see @TFITCX) — no equality.
-#[derive(Copy, Clone, Debug)]
-pub struct TupleIE<'s, 'i> {
-	pub elements: &'i[ExpressionIE<'s, 'i>],
-	pub result: KindIT<'s, 'i>,
-}
-
 
 
 /// Arena-allocated (see @TFITCX) — no equality.
@@ -481,21 +465,10 @@ impl<'s, 'i> ArrayLengthIE<'s, 'i> {
 }
 
 
-/// A member lookup yields a borrow of the member's storage (mirrors typing's ReferenceMemberLookupTE).
+/// A member lookup yields a borrow of the member's storage (mirrors typing's MemberLookupTE).
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
-pub struct ReferenceMemberLookupIE<'s, 'i> {
-	pub range: RangeS<'s>,
-	pub struct_expr: ExpressionIE<'s, 'i>,
-	pub member_name: IVarNameI<'s, 'i>,
-	pub result: &'i BorrowRefIT<'s, 'i>,
-}
-
-
-
-/// Arena-allocated (see @TFITCX) — no equality.
-#[derive(Copy, Clone, Debug)]
-pub struct AddressMemberLookupIE<'s, 'i> {
+pub struct MemberLookupIE<'s, 'i> {
 	pub range: RangeS<'s>,
 	pub struct_expr: ExpressionIE<'s, 'i>,
 	pub member_name: IVarNameI<'s, 'i>,
@@ -530,15 +503,6 @@ pub struct ExternFunctionCallIE<'s, 'i> {
 pub struct FunctionCallIE<'s, 'i> {
 	pub callable: PrototypeI<'s, 'i>,
 	pub args: &'i[ExpressionIE<'s, 'i>],
-	pub result: KindIT<'s, 'i>,
-}
-
-
-
-/// Arena-allocated (see @TFITCX) — no equality.
-#[derive(Copy, Clone, Debug)]
-pub struct ReinterpretIE<'s, 'i> {
-	pub expr: ExpressionIE<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
 

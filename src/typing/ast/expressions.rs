@@ -45,7 +45,6 @@ pub enum ExpressionTE<'s, 't> {
   Break(&'t BreakTE<'s, 't>),
   Block(&'t BlockTE<'s, 't>),
   Consecutor(&'t ConsecutorTE<'s, 't>),
-  Tuple(&'t TupleTE<'s, 't>),
   StaticArrayFromValues(&'t StaticArrayFromValuesTE<'s, 't>),
   ArraySize(&'t ArraySizeTE<'s, 't>),
   IsSameInstance(&'t IsSameInstanceTE<'s, 't>),
@@ -77,8 +76,7 @@ pub enum ExpressionTE<'s, 't> {
   LocalLookup(&'t LocalLookupTE<'s, 't>),
   StaticSizedArrayLookup(&'t StaticSizedArrayLookupTE<'s, 't>),
   RuntimeSizedArrayLookup(&'t RuntimeSizedArrayLookupTE<'s, 't>),
-  ReferenceMemberLookup(&'t ReferenceMemberLookupTE<'s, 't>),
-  AddressMemberLookup(&'t AddressMemberLookupTE<'s, 't>),
+  MemberLookup(&'t MemberLookupTE<'s, 't>),
   Deref(&'t DerefTE<'s, 't>),
 }
 
@@ -102,7 +100,6 @@ where
       ExpressionTE::Break(e) => e.result,
       ExpressionTE::Block(e) => e.result,
       ExpressionTE::Consecutor(e) => e.result,
-      ExpressionTE::Tuple(e) => e.result,
       ExpressionTE::StaticArrayFromValues(e) => e.result,
       ExpressionTE::ArraySize(e) => e.result,
       ExpressionTE::IsSameInstance(e) => e.result,
@@ -134,8 +131,7 @@ where
       ExpressionTE::LocalLookup(e) => KindT::BorrowRef(e.result),
       ExpressionTE::StaticSizedArrayLookup(e) => KindT::BorrowRef(e.result),
       ExpressionTE::RuntimeSizedArrayLookup(e) => KindT::BorrowRef(e.result),
-      ExpressionTE::ReferenceMemberLookup(e) => KindT::BorrowRef(e.result),
-      ExpressionTE::AddressMemberLookup(e) => KindT::BorrowRef(e.result),
+      ExpressionTE::MemberLookup(e) => KindT::BorrowRef(e.result),
       ExpressionTE::Deref(e) => e.result,
     }
   }
@@ -504,25 +500,7 @@ where
     // exprs.last
   }
 }
-/// Arena-allocated (see @TFITCX)
-#[derive(Debug)]
-pub struct TupleTE<'s, 't>
-where
-  's: 't,
-{
-  pub elements: &'t [ExpressionTE<'s, 't>],
-  pub result: KindT<'s, 't>,
-  _sealed: (),
-}
 
-impl<'s, 't> TupleTE<'s, 't>
-where
-  's: 't,
-{
-  pub fn new(elements: &'t [ExpressionTE<'s, 't>], result: KindT<'s, 't>) -> TupleTE<'s, 't> {
-    TupleTE { elements, result, _sealed: () }
-  }
-}
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct StaticArrayFromValuesTE<'s, 't>
@@ -844,7 +822,7 @@ where
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct ReferenceMemberLookupTE<'s, 't>
+pub struct MemberLookupTE<'s, 't>
 where
   's: 't,
 {
@@ -856,7 +834,7 @@ where
   _sealed: (),
 }
 
-impl<'s, 't> ReferenceMemberLookupTE<'s, 't>
+impl<'s, 't> MemberLookupTE<'s, 't>
 where
   's: 't,
 {
@@ -866,40 +844,11 @@ where
     struct_expr: ExpressionTE<'s, 't>,
     member_name: IVarNameT<'s, 't>,
     member_kind: KindT<'s, 't>,
-  ) -> ReferenceMemberLookupTE<'s, 't> {
+  ) -> MemberLookupTE<'s, 't> {
     let result = interner.alloc(BorrowRefT { inner: member_kind});
-    ReferenceMemberLookupTE { range, struct_expr, member_name, result, _sealed: () }
+    MemberLookupTE { range, struct_expr, member_name, result, _sealed: () }
   }
 }
-/// Arena-allocated (see @TFITCX)
-#[derive(Debug)]
-pub struct AddressMemberLookupTE<'s, 't>
-where
-  's: 't,
-{
-  pub range: RangeS<'s>,
-  pub struct_expr: ExpressionTE<'s, 't>,
-  pub member_name: IVarNameT<'s, 't>,
-  pub result: &'t BorrowRefT<'s, 't>,
-  _sealed: (),
-}
-
-impl<'s, 't> AddressMemberLookupTE<'s, 't>
-where
-  's: 't,
-{
-  pub fn new(
-    interner: &TypingInterner<'s, 't>,
-    range: RangeS<'s>,
-    struct_expr: ExpressionTE<'s, 't>,
-    member_name: IVarNameT<'s, 't>,
-    member_kind: KindT<'s, 't>,
-  ) -> AddressMemberLookupTE<'s, 't> {
-    let result = interner.alloc(BorrowRefT { inner: member_kind});
-    AddressMemberLookupTE { range, struct_expr, member_name, result, _sealed: () }
-  }
-}
-
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct DerefTE<'s, 't>
@@ -1072,6 +1021,13 @@ where
     result: KindT<'s, 't>,
     args: &'t [ExpressionTE<'s, 't>],
   ) -> ConstructTE<'s, 't> {
+    let base_kind = match result {
+      // Constructing a shared thing gives you the shared ref immediately.
+      KindT::ShareRef(sr) => sr.inner,
+      // Constructing a non-shared thing gives you the value (not a reference).
+      other => other,
+    };
+    assert_eq!(base_kind, KindT::Struct(struct_tt), "ConstructTE result must be the struct kind, bare or ShareRef-wrapped");
     ConstructTE { struct_tt, result, args, _sealed: () }
   }
 }

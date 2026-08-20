@@ -153,14 +153,14 @@ where
   //                             nenv.mark_local_unstackified(lv_lookup.local_variable.name());
   //                             ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE { variable: lv_lookup.local_variable }))
   //                         }
-  //                         ExpressionTE::ReferenceMemberLookup(ref r) => {
+  //                         ExpressionTE::MemberLookup(ref r) => {
   //                             panic!("unimplemented: {:?}", r.member_name);
   //                         }
   //                         ExpressionTE::AddressMemberLookup(ref r) => {
   //                             panic!("unimplemented: {:?}", r.member_name);
   //                         }
   //                         _ => {
-  //                             unreachable!("OwnT+MoveP arm only matches LocalLookupTE/ReferenceMemberLookupTE/AddressMemberLookupTE");
+  //                             unreachable!("OwnT+MoveP arm only matches LocalLookupTE/MemberLookupTE/AddressMemberLookupTE");
   //                         }
   //                     }
   //                 }
@@ -186,7 +186,7 @@ where
   //                         ExpressionTE::StaticSizedArrayLookup(_) => {
   //                             ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
   //                         }
-  //                         ExpressionTE::ReferenceMemberLookup(_) => {
+  //                         ExpressionTE::MemberLookup(_) => {
   //                             ExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
   //                         }
   //                         ExpressionTE::AddressMemberLookup(_) => {
@@ -200,14 +200,14 @@ where
   //                             nenv.mark_local_unstackified(lv_lookup.local_variable.name());
   //                             ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE { variable: lv_lookup.local_variable }))
   //                         }
-  //                         ExpressionTE::ReferenceMemberLookup(ref r) => {
+  //                         ExpressionTE::MemberLookup(ref r) => {
   //                             panic!("CantMoveOutOfMemberT: {:?}", r.member_name);
   //                         }
   //                         ExpressionTE::AddressMemberLookup(ref r) => {
   //                             panic!("CantMoveOutOfMemberT: {:?}", r.member_name);
   //                         }
   //                         _ => {
-  //                             unreachable!("OwnT+MoveP arm only matches LocalLookupTE/ReferenceMemberLookupTE/AddressMemberLookupTE");
+  //                             unreachable!("OwnT+MoveP arm only matches LocalLookupTE/MemberLookupTE/AddressMemberLookupTE");
   //                         }
   //                     }
   //                 }

@@ -110,7 +110,6 @@ Instead, use the same file.
 - **Read when the human wants to work with you to edit a markdown ending in -plan.md.** → docs/skills/plan-assistant.md
 - **Read when referring to a specific place in code, so the reference is a ctrl-clickable path:line.** → docs/skills/point.md
 - **Read when writing or reviewing prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-reviewer.md
-- **Read when checking the grammar and voice of prose in the codebase, such as comments, doc comments, error messages, test-header comments, or checked-in design notes.** → docs/skills/prose-tactical.md
 - **Read when the human says they are about to fork this session, or asks you to get ready for a fork.** → docs/skills/ready-fork.md
 - **Read when authoring or running any bulk-edit script (`./tmp/scripts/*.py`, shell loops over many files, or any per-file transform across more than a handful of files).** → docs/skills/scripting.md
 - **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → docs/skills/tdd.md

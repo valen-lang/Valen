@@ -1,1 +1,0 @@
-../../Luz/skills/prose-tactical.md

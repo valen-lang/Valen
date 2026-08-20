@@ -27,6 +27,11 @@ class StructKind;
 class RawArrayT;
 class StaticSizedArrayT;
 class RuntimeSizedArrayT;
+class USize;
+class BorrowRef;
+class OwnRef;
+class ShareRef;
+class WeakRef;
 
 enum class Ownership {
   OWN,
@@ -212,14 +217,14 @@ public:
   StaticSizedArrayT* kind;
   int size;
   RegionId* regionId;
-  Reference *elementType;
+  Kind *elementType;
 
   StaticSizedArrayDefinitionT(
       Name* name_,
       StaticSizedArrayT* kind_,
       int size_,
       RegionId* regionId_,
-      Reference* elementType_) :
+      Kind* elementType_) :
       name(name_),
       kind(kind_),
       size(size_),
@@ -247,17 +252,74 @@ public:
   Name* name;
   RuntimeSizedArrayT* kind;
   RegionId* regionId;
-  Reference *elementType;
+  Kind *elementType;
 
   RuntimeSizedArrayDefinitionT(
       Name* name_,
       RuntimeSizedArrayT* kind_,
       RegionId* regionId_,
-      Reference* elementType_) :
+      Kind* elementType_) :
       name(name_),
       kind(kind_),
       regionId(regionId_),
       elementType(elementType_) {}
+};
+
+
+class USize : public Kind {
+public:
+  RegionId* regionId;
+
+  USize(RegionId* regionId_) :
+      regionId(regionId_) {}
+
+  PackageCoordinate* getPackageCoordinate() const override { return regionId->packageCoord; }
+};
+
+
+// The onion "wrap" layers, mirroring the instantiated IR's KindIT
+// (BorrowRefIT / OwnRefIT / ShareRefIT / WeakRefIT). Ownership is which wrap surrounds the
+// base kind, or none: an owned value is a bare kind with zero wraps (an owned Ship is a
+// StructKind directly). Placement (inline vs yonder) is derived from this shape at codegen,
+// not stored, so there is no ownership/location field here. There is no region/group on a wrap.
+class BorrowRef : public Kind {
+public:
+  Kind* inner;
+
+  BorrowRef(Kind* inner_) :
+      inner(inner_) {}
+
+  PackageCoordinate* getPackageCoordinate() const override { return inner->getPackageCoordinate(); }
+};
+
+class OwnRef : public Kind {
+public:
+  Kind* inner;
+
+  OwnRef(Kind* inner_) :
+      inner(inner_) {}
+
+  PackageCoordinate* getPackageCoordinate() const override { return inner->getPackageCoordinate(); }
+};
+
+class ShareRef : public Kind {
+public:
+  Kind* inner;
+
+  ShareRef(Kind* inner_) :
+      inner(inner_) {}
+
+  PackageCoordinate* getPackageCoordinate() const override { return inner->getPackageCoordinate(); }
+};
+
+class WeakRef : public Kind {
+public:
+  Kind* inner;
+
+  WeakRef(Kind* inner_) :
+      inner(inner_) {}
+
+  PackageCoordinate* getPackageCoordinate() const override { return inner->getPackageCoordinate(); }
 };
 
 

@@ -325,11 +325,6 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
                 visit_expression_ie(pred, out, *inner);
             }
         }
-        ExpressionIE::Tuple(x) => {
-            for el in x.elements {
-                visit_expression_ie(pred, out, *el);
-            }
-        }
         ExpressionIE::StaticArrayFromValues(x) => {
             for el in x.elements {
                 visit_expression_ie(pred, out, *el);
@@ -365,7 +360,6 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
             }
         }
         ExpressionIE::FunctionCall(c) => visit_function_call_ie(pred, out, c),
-        ExpressionIE::Reinterpret(x) => visit_expression_ie(pred, out, x.expr),
         ExpressionIE::Construct(x) => {
             for arg in x.args {
                 visit_expression_ie(pred, out, *arg);
@@ -402,8 +396,7 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
             visit_expression_ie(pred, out, x.array_expr);
             visit_expression_ie(pred, out, x.index_expr);
         }
-        ExpressionIE::ReferenceMemberLookup(x) => visit_expression_ie(pred, out, x.struct_expr),
-        ExpressionIE::AddressMemberLookup(x) => visit_expression_ie(pred, out, x.struct_expr),
+        ExpressionIE::MemberLookup(x) => visit_expression_ie(pred, out, x.struct_expr),
         ExpressionIE::Deref(x) => visit_expression_ie(pred, out, x.inner),
     }
 }

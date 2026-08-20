@@ -33,9 +33,12 @@ where
   ) -> ExpressionTE<'s, 't> {
     let types_2: Vec<KindT<'s, 't>> = exprs.iter().map(|e| e.result()).collect();
     let region = RegionT::Default;
-    let final_expr = ExpressionTE::Tuple(self.typing_interner.alloc(TupleTE::new(
+    let tuple_kind = self.make_tuple_kind(env, coutputs, parent_ranges, call_location, types_2);
+    let struct_tt = self.typing_interner.alloc(tuple_kind);
+    let final_expr = ExpressionTE::Construct(self.typing_interner.alloc(ConstructTE::new(
+      struct_tt,
+      KindT::Struct(struct_tt),
       self.typing_interner.alloc_slice_from_vec(exprs),
-      self.make_tuple_coord(env, coutputs, parent_ranges, call_location, region, types_2),
     )));
     final_expr
   }
@@ -85,18 +88,5 @@ where
       IResolveOutcome::ResolveSuccess(s) => s.kind,
       IResolveOutcome::ResolveFailure(_) => panic!("make_tuple_kind: resolve_struct failed"),
     }
-  }
-
-  pub fn make_tuple_coord(
-    &self,
-    env: IInDenizenEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    region: RegionT,
-    types: Vec<KindT<'s, 't>>,
-  ) -> KindT<'s, 't> {
-    let tuple_kind = self.make_tuple_kind(env, coutputs, parent_ranges, call_location, types);
-    KindT::Struct(self.typing_interner.alloc(tuple_kind))
   }
 }

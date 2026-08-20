@@ -15,7 +15,7 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::collect_only_inode;
 use crate::collect_where_inode;
 use crate::instantiating::collector::NodeRefI;
-use crate::instantiating::ast::expressions::{ExpressionIE, LocalLookupIE, ConstructIE, ConstantStrIE, ReferenceMemberLookupIE, DerefIE, ConstantIntIE, FunctionCallIE, InterfaceFunctionCallIE, UpcastIE, RuntimeSizedArrayLookupIE};
+use crate::instantiating::ast::expressions::{ExpressionIE, LocalLookupIE, ConstructIE, ConstantStrIE, MemberLookupIE, DerefIE, ConstantIntIE, FunctionCallIE, InterfaceFunctionCallIE, UpcastIE, RuntimeSizedArrayLookupIE};
 use crate::builtins::builtins::{builtin_source_for_arrays, empty_v_builtins_stub};
 use crate::instantiating::ast::types::{KindIT, IntIT, BorrowRefIT, ShareRefIT};
 use crate::instantiating::ast::ast::PrototypeI;
@@ -278,7 +278,7 @@ exported func main() str {
 }
 
 /// A struct member read yields a borrow of the member's storage: `s.fuel` (s a `&Ship`)
-/// instantiates to a ReferenceMemberLookupIE whose result is `BorrowRefIT<int>`.
+/// instantiates to a MemberLookupIE whose result is `BorrowRefIT<int>`.
 #[test]
 fn struct_member_read_yields_borrow_of_member() {
     let parse_bump = Bump::new();
@@ -306,7 +306,7 @@ exported func main() {
     let get_fuel = monouts.lookup_function_by_str("get_fuel");
     collect_only_inode!(
         NodeRefI::FunctionDefinition(get_fuel),
-        NodeRefI::Expression(ExpressionIE::ReferenceMemberLookup(ReferenceMemberLookupIE {
+        NodeRefI::Expression(ExpressionIE::MemberLookup(MemberLookupIE {
             result: &BorrowRefIT { inner: KindIT::IntIT(IntIT { bits: 32 }) },
             ..
         })) => Some(())

@@ -232,69 +232,50 @@ tests.
 
 ---
 
-## Step 3 — Delete simplifying and `ProgramH`
+## Step 3 — Delete simplifying and `ProgramH` — **DONE (landed on `main`)**
 
-**Goal:** remove `src/simplifying/` and `src/final_ast/` entirely; `HinputsI` becomes the backend's
-input. The hammer's still-needed mechanical jobs (placement, any numbering/member-indexing, name
-mangling, vtable slots) move to the **backend** (step 4) — none return as a frontend pass or a carried
-field.
-
-**Delete:** `src/simplifying/` (whole dir), `src/final_ast/` (whole dir; note `metal_printer.rs` is
-already 0 bytes). Remove their `mod` lines and re-exports.
-
-**Repoint or drop every `ProgramH`/`final_ast` reference** (the exact surface, from a tree-wide grep
-excluding `final_ast`/`simplifying`):
-- `src/pass_manager/pass_manager.rs` (`:19` imports `PackageH`; `:445-472` the
-  `get_hamuts()`→`populate_metal_cache`→`backend_compile_program_safe` flow) and
-  `src/pass_manager/full_compilation.rs` (`:18` `ProgramH`; `:131` `get_hamuts() -> &ProgramH`). Rewire
-  the terminal accessor from `get_hamuts()`/`ProgramH` to `get_monouts()`/`HinputsI`.
-- `src/backend_ffi/metal_lowerer.rs`, `src/backend_ffi/mod.rs` (step 4 rewrites these; step 3 just
-  stops them referencing `ProgramH`).
-- `src/testvm/*` (8 files — step 4 rewrites; see below).
-- Integration tests that call `get_hamuts()` (`src/integration_tests/tests/{hammer_tests,
-  hash_map_tests, integration_tests_a, integration_tests_c, run_compilation}.rs`) — repoint or remove
-  the hammer-specific ones (`hammer_tests.rs` and `src/simplifying/test/` go with the pass).
-
-**Gate:** frontend compiles with simplifying/final_ast gone. **Do not** run backend or downstream tests
-(nothing produces the old `ProgramH` and the backend isn't rewired yet).
+`src/simplifying/` and `src/final_ast/` are deleted; `HinputsI`/`get_monouts()` is the backend's input.
+`pass_manager`/`full_compilation` are rewired off `ProgramH` (the `'h` hammer lifetime is gone), and
+`get_astrouts` is dropped — its only provider was the deleted `HammerCompilation`, and the astronomer
+step now folds into `TypingPassCompilation::get_compiler_outputs`. The hammer's still-needed mechanical
+jobs (placement, member-indexing, name mangling, vtable slots) are re-homed to the backend/codegen
+(step 4).
 
 ---
 
 ## Step 4 — Backend + TestVM think onion
 
-**Goal:** rewire the C++ backend FFI bridge and TestVM to consume onion `HinputsI`; **derive placement
-(Inline/Yonder) from the onion shape at codegen** instead of reading a carried field.
+**Status.** The onion metal IR, the FFI builder layer, the Rust bridge, and the driver are reshaped and
+compile — validate the Rust side with `CARGO_FEATURE_RUST_INTEROP=1 cargo check --lib`, which skips the
+red C++ build. **Done:** `Backend/src/metal/{types.h,ast.h,metalcache.h,instructions.h}` are onion-shaped
+(`Reference`/`Ownership`/`Location` retired; kinds carry the four wrap layers + `USize`; `instructions.h`
+mirrors `ExpressionIE` 1:1, dormant pre-onion nodes kept aside); `metal_cache_ffi.{h,cpp}` +
+`src/backend_ffi/metal_cache.rs` are dumb 1:1 onion builders; `src/backend_ffi/metal_lowerer.rs` walks
+`HinputsI` → those builders (name mangling via `instantiated_humanizer`); `pass_manager`/`clang` are
+re-linked and rewired to `get_monouts()`. **Remaining:** the C++ codegen readers (below), the deferred
+lowerer bits, and re-linking/running the suites.
 
-**The single new rule (implement in both the Rust bridge and C++, and in TestVM):** placement is a
-function of the onion shape — bare primitive/value → Inline; ref-wrap (borrow/weak) → pointer/Yonder.
-The legacy coupling is already asserted in three places and is the derivation spec:
-`final_ast/types.rs` `CoordH::new` (`:30-52`), C++ `Reference` ctor (`Backend/src/metal/types.h:94-99`:
-`INLINE ⇒ ownership ∈ {OWN, MUTABLE_SHARE}`; borrow/weak ⇒ `YONDER`), and `CoordI::new`
-(`src/instantiating/ast/types.rs:78`).
+**The single new rule — implement in C++ codegen only:** placement is a function of the onion shape —
+bare primitive/value → Inline; ref-wrap (borrow/weak) → pointer/Yonder. The FFI, `metal_cache.rs`, and
+`metal_lowerer.rs` do **no** lowering: they pass the onion `Kind*` straight through. Placement,
+member-name→index, deref/load fusion, and vtable-slot resolution all happen at C++ codegen.
 
-**Rust FFI bridge (`src/backend_ffi/`):**
-- `metal_lowerer.rs`: `populate_metal_cache` (`:53`) currently walks `ProgramH` — repoint it to walk
-  `HinputsI`. The hot spot: `lower_coord_to_reference` (`:282`) calls `cache.get_reference(ownership,
-  location, kind)`; `lower_location` (`:275`) reads `coord.location`. **Delete `lower_location`;
-  compute placement from the onion `(outer-wrap, kind)`** at each `get_reference` call and everywhere an
-  expression rebuilds a target coord copying `src_coord.location` (e.g. `:476-478`, `:490-492`).
-- `metal_cache.rs`: `MetalCache::get_reference` (`:506`) → `metal_cache_get_reference` FFI (`:146`) is
-  the chokepoint that passes `location` across. Decide: keep the C++ `Reference` carrying a computed
-  `location` (derive on the Rust side, pass it), or push derivation into C++ and drop the parameter.
-  Prefer deriving on the C++ side so the onion is the single source of truth.
+**Deferred in `metal_lowerer.rs` (stubbed with TODOs):** edge/vtable reconstruction from
+`HinputsI.interface_to_sub_citizen_to_edge`, interface super-lists, and static/runtime array
+*definitions* (there is no array-def list on `HinputsI` — collect from the array kinds used).
 
-**C++ backend (`Backend/`):** the metal layer's `Reference { Ownership ownership; Location location;
-Kind* kind; }` (`Backend/src/metal/types.h:75`) becomes an onion kind; `Location` (`:51`) as a stored
-field goes away, computed at codegen. Scope (raw counts under `Backend/src/`): `Ownership::` ×181,
-`Location::INLINE` ×34 / `YONDER` ×31, `->location` ×41 (the sites to convert to derivation),
-`->ownership` ×86. The metal FFI builders are `Backend/src/metal/metal_cache_ffi.{h,cpp}`; per-instruction
-codegen is `Backend/src/function/expressions/*.cpp` (dispatcher `Backend/src/function/expression.cpp`).
+**C++ codegen (`Backend/`) — the remaining big pass.** `instructions.h`/`types.h` are already onion; now
+reshape the *readers*: per-instruction codegen (`Backend/src/function/expressions/*.cpp`, dispatcher
+`Backend/src/function/expression.cpp`), the regions (`region/`), and `vale.cpp`. Derive placement from the
+onion wrap; resolve member name→index from struct layout and the vtable index-in-edge at emit; implement
+`Deref`/`*Lookup`/unified `Mutate` in codegen (the hammer's old lowering); retire the dormant
+`instructions.h` nodes. Scope (raw counts under `Backend/src/`): `->location` ×41, `->ownership` ×86.
 Resolve the **13 `// VCOORD` sites** flagged as backwards under the new model (full list: `translatetype.cpp:17`;
 `vale.cpp:353,928,1043`; `metal/ast.h:189`; `metal/metalcache.h:92`; `function/expressions/localload.cpp:22`;
 `function/expressions/externs.cpp:298`; `function/expression.cpp:604,678`; `region/common/common.cpp:309`;
 `region/rcimm/rcimm.cpp:1068,1101`).
 
-**TestVM (`src/testvm/`):** repoint the entry points from `ProgramH` to `HinputsI` — `vivem.rs`
+**TestVM (`src/testvm/`) — ported in a separate session (exp-1), not this branch.** Repoint the entry points from `ProgramH` to `HinputsI` — `vivem.rs`
 `execute_with_primitive_args` (`:56`), `execute_with_heap` (`:67`), `inner_execute` (`:112`, finds
 `main` via the program's export map). The placement-derivation target: `heap.rs` `add(interner,
 ownership, location, kind)` (`:160`) and `add_allocation_for_return(ownership, location, kind)` (`:66`)
