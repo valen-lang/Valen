@@ -22,8 +22,8 @@ use crate::typing::types::types::OwnershipT;
 use crate::typing::types::types::RegionT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 
 pub struct IntegrationTestsC;
 

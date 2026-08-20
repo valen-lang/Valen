@@ -6,6 +6,7 @@ pub mod heap;
 pub mod values;
 pub mod vivem;
 pub mod vivem_externs;
+pub mod von;
 
 #[cfg(test)]
 mod test;

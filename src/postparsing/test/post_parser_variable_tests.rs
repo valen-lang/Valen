@@ -10,7 +10,7 @@ use crate::postparsing::expressions::{
   ConsecutorSE, FunctionCallSE, FunctionSE, IExpressionSE, IVariableUseCertainty, LetSE, LocalS,
   OwnershippedSE,
 };
-use crate::postparsing::names::IVarNameS;
+use crate::postparsing::names::{CodeVarNameS, IVarDeclarationNameS};
 use crate::postparsing::post_parser::VariableNameAlreadyExists;
 use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
 use crate::postparsing::test::traverse::NodeRefS;
@@ -111,7 +111,7 @@ fn regular_variable() {
   let local = &locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -157,7 +157,7 @@ fn reports_defining_same_name_variable() {
   );
   match &err {
     ICompileErrorS::VariableNameAlreadyExists(VariableNameAlreadyExists {
-      name: IVarNameS::CodeVarName(StrI("x")),
+      name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       ..
     }) => {}
     _ => panic!("expected VariableNameAlreadyExists(_, CodeVarName(\"x\")), got {:?}", err),
@@ -182,7 +182,7 @@ fn self_is_pointing_to_function() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -212,7 +212,7 @@ fn self_is_pointing_to_method() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -242,7 +242,7 @@ fn self_is_moving_to_function() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -272,7 +272,7 @@ fn self_is_moving_to_method() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -302,7 +302,7 @@ fn self_is_mutating_mutable() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::Used,
@@ -332,7 +332,7 @@ fn self_is_moving_and_mutating_same_variable() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::Used,
@@ -365,7 +365,7 @@ fn child_is_pointing() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -398,7 +398,7 @@ fn child_is_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -431,7 +431,7 @@ fn child_is_mutating() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -464,7 +464,7 @@ fn self_maybe_pointing() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -497,7 +497,7 @@ fn self_maybe_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -530,7 +530,7 @@ fn self_maybe_mutating() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::Used,
@@ -563,7 +563,7 @@ fn children_maybe_pointing() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -596,7 +596,7 @@ fn children_maybe_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -629,7 +629,7 @@ fn children_maybe_mutating() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -662,7 +662,7 @@ fn self_both_pointing() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -695,7 +695,7 @@ fn children_both_pointing() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -728,7 +728,7 @@ fn self_both_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -761,7 +761,7 @@ fn children_both_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -794,7 +794,7 @@ fn self_both_mutating() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::Used,
@@ -827,7 +827,7 @@ fn children_both_mutating() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -860,7 +860,7 @@ fn self_pointing_or_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -893,7 +893,7 @@ fn children_pointing_or_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -926,7 +926,7 @@ fn self_mutating_or_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::Used,
@@ -959,7 +959,7 @@ fn children_mutating_or_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -989,7 +989,7 @@ fn self_moving_and_mutating_same_variable() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::Used,
@@ -1019,7 +1019,7 @@ fn children_moving_and_mutating_same_variable() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -1051,7 +1051,7 @@ fn self_borrowing_param() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -1083,7 +1083,7 @@ fn children_borrowing_param() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -1116,7 +1116,7 @@ fn self_loading_or_mutating_or_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::Used,
@@ -1149,7 +1149,7 @@ fn children_loading_or_mutating_or_moving() {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -1183,7 +1183,7 @@ exported func main() int {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -1217,7 +1217,7 @@ exported func main() int {
   let local = &code_body.body.block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("x")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -1292,7 +1292,7 @@ exported func main() int {
   let local = &lam_block.locals[0];
   match local {
     LocalS {
-      var_name: IVarNameS::ClosureParamName(_),
+      var_name: IVarDeclarationNameS::ClosureParamName(_),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -1324,11 +1324,11 @@ fn include_underscore_in_locals() {
   let locals = &lam_block.locals;
   let closure_param = locals
     .iter()
-    .find(|l| matches!(&l.var_name, IVarNameS::ClosureParamName(_)))
+    .find(|l| matches!(&l.var_name, IVarDeclarationNameS::ClosureParamName(_)))
     .expect("no ClosureParamName local found");
   match closure_param {
     LocalS {
-      var_name: IVarNameS::ClosureParamName(_),
+      var_name: IVarDeclarationNameS::ClosureParamName(_),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,

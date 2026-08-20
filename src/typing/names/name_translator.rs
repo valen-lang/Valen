@@ -274,32 +274,32 @@ where
     s
   }
 
-  pub fn translate_var_name_step(&self, name: IVarNameS<'s>) -> IVarNameT<'s, 't> {
+  pub fn translate_var_name_step(&self, name: IVarDeclarationNameS<'s>) -> IVarNameT<'s, 't> {
     match name {
-      IVarNameS::CodeVarName(name_str) => IVarNameT::CodeVar(
-        self.typing_interner.intern_code_var_name(CodeVarNameT { name: name_str }),
+      IVarDeclarationNameS::CodeVarName(n) => IVarNameT::Local(
+        self.typing_interner.intern_local_name(LocalNameT { name: n.name, lid: n.lid }),
       ),
-      IVarNameS::ClosureParamName(closure_param_name_s) => {
+      IVarDeclarationNameS::ClosureParamName(closure_param_name_s) => {
         IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT {
           code_location: closure_param_name_s.code_location,
         }))
       }
-      IVarNameS::MagicParamName(code_location) => {
+      IVarDeclarationNameS::MagicParamName(code_location) => {
         IVarNameT::MagicParam(self.typing_interner.intern_magic_param_name(MagicParamNameT {
           code_location2: self.translate_code_location(code_location),
         }))
       }
-      IVarNameS::SelfName => IVarNameT::Self_(self.typing_interner.intern_self_name(SelfNameT {})),
-      IVarNameS::ConstructingMemberName(n) => IVarNameT::ConstructingMember(
+      IVarDeclarationNameS::SelfName => IVarNameT::Self_(self.typing_interner.intern_self_name(SelfNameT {})),
+      IVarDeclarationNameS::ConstructingMemberName(n) => IVarNameT::ConstructingMember(
         self.typing_interner.intern_constructing_member_name(ConstructingMemberNameT { name: n }),
       ),
-      IVarNameS::IterableName(range) => {
+      IVarDeclarationNameS::IterableName(range) => {
         IVarNameT::Iterable(self.typing_interner.intern_iterable_name(IterableNameT { range }))
       }
-      IVarNameS::IteratorName(range) => {
+      IVarDeclarationNameS::IteratorName(range) => {
         IVarNameT::Iterator(self.typing_interner.intern_iterator_name(IteratorNameT { range }))
       }
-      IVarNameS::IterationOptionName(range) => IVarNameT::IterationOption(
+      IVarDeclarationNameS::IterationOptionName(range) => IVarNameT::IterationOption(
         self.typing_interner.intern_iteration_option_name(IterationOptionNameT { range }),
       ),
       _ => {

@@ -107,9 +107,9 @@ where
     ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     region: RegionT,
-    name: IVarNameT<'s, 't>,
+    name_imprecise: IImpreciseNameS<'s>,
   ) -> Result<Option<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
-    match nenv.get_variable(name, self.typing_interner) {
+    match nenv.get_variable(name_imprecise, self.typing_interner, self.scout_arena) {
       Some(IVariableT::Local(rlv)) => {
         if nenv.unstackifieds().contains(&rlv.name) {
           return Err(ICompileErrorT::CantUseUnstackifiedLocal {
@@ -159,10 +159,9 @@ where
         //     MemberLookupTE::new(self.typing_interner, ranges[0], borrow_expr, rcv.name, rcv.coord)))))
       }
       None => {
-        let name_as_name_t: INameT<'s, 't> = name.into();
         let lookup_filter: HashSet<ILookupContext> =
           [ILookupContext::TemplataLookupContext].into_iter().collect();
-        match nenv.lookup_nearest_with_name(name_as_name_t, &lookup_filter) {
+        match nenv.lookup_nearest_with_imprecise_name(name_imprecise, &lookup_filter, self.typing_interner) {
                     Some(ITemplataT::Integer(num)) => {
                         Ok(Some(ExpressionTE::ConstantInt(self.typing_interner.alloc(
                             ConstantIntTE::new(ITemplataT::Integer(num), 32, region)))))
@@ -213,10 +212,9 @@ where
     parent_ranges: &'t [RangeS<'s>],
     region: RegionT,
     load_range: RangeS<'s>,
-    name_a: IVarNameS<'s>,
+    name_imprecise: IImpreciseNameS<'s>,
   ) -> Option<ExpressionTE<'s, 't>> {
-    let name_2 = self.translate_var_name_step(name_a);
-    match nenv.get_variable(name_2, self.typing_interner) {
+    match nenv.get_variable(name_imprecise, self.typing_interner, self.scout_arena) {
       Some(IVariableT::Local(rlv)) => Some(ExpressionTE::LocalLookup(
         self.typing_interner.alloc(LocalLookupTE::new(self.typing_interner, load_range, rlv)),
       )),
@@ -641,7 +639,6 @@ where
         Ok((result, init_returns, PendingTempDrops::none()))
       }
       IExpressionSE::LocalLoad(local_load) => {
-        let name = self.translate_var_name_step(local_load.name);
         let range_list = vec![local_load.range];
         let lookup_expr_1 = self.evaluate_lookup_for_load(
           coutputs,
@@ -649,7 +646,7 @@ where
           &range_list,
           outer_call_location,
           region,
-          name,
+          local_load.name,
         )?;
         match lookup_expr_1 {
           None => unreachable!(
@@ -1031,8 +1028,8 @@ where
         }
       }
       IExpressionSE::Dot(dot) => {
-        let member_name: IVarNameT<'s, 't> = IVarNameT::CodeVar(
-          self.typing_interner.intern_code_var_name(CodeVarNameT { name: dot.member }),
+        let member_name: IVarNameT<'s, 't> = IVarNameT::Member(
+          self.typing_interner.intern_member_name(MemberNameT { name: dot.member }),
         );
         let (unborrowed_container_expr_2, returns_from_container_expr, pending_from_container) = self.evaluate_expression(
           coutputs,
@@ -2059,8 +2056,8 @@ where
         Ok((destroy_2, returns_from_array_expr, pending_from_inner))
       }
       IExpressionSE::Unlet(unlet_se) => {
-        let name = self.translate_var_name_step(unlet_se.name);
-        let local = match nenv.get_variable(name, self.typing_interner) {
+        let name_imprecise = unlet_se.name;
+        let local = match nenv.get_variable(name_imprecise, self.typing_interner, self.scout_arena) {
           Some(IVariableT::Local(rlv)) => rlv,
           Some(IVariableT::Capture(_)) => {
             panic!("implement: Unlet — AddressibleClosure (not a local)");

@@ -12,7 +12,7 @@ use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::postparsing::names::IRuneValS::{CodeRune, ImplicitRune};
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, IRuneS, IVarNameS,
+  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, IRuneS, IVarDeclarationNameS,
   ImplicitRuneValS,
 };
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
@@ -831,7 +831,9 @@ fn translate_group_p_into_group_s<'s, 'p>(
           rune: scout_arena.intern_rune(CodeRune(CodeRuneS { name: group_name_str })),
         })))
       } else {
-        scout_arena.alloc(GroupS::Local(IVarNameS::CodeVarName(group_name_str)))
+        scout_arena.alloc(GroupS::Local(scout_arena.intern_imprecise_name(
+          CodeName(CodeNameS { name: group_name_str }),
+        )))
       }
     }
     _ => panic!("POSTPARSER_GROUP_MEMBER_ELEMENT_UNION_NOT_YET_IMPLEMENTED"),

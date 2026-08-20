@@ -47,9 +47,9 @@ use crate::typing::types::types::RegionT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::CodeLocationS;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
-use crate::von::ast::VonStr;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
+use crate::testvm::von::VonStr;
 use std::marker::PhantomData;
 
 pub struct VirtualTests;

@@ -41,7 +41,7 @@ use crate::postparsing::itemplatatype::{
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, ExportAsNameS, IFunctionDeclarationNameS,
   IImplDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, INameS, INameValS, IRuneS, IRuneValS,
-  IStructDeclarationNameS, IVarNameS, ImplDeclarationNameS, TopLevelInterfaceDeclarationNameS,
+  IStructDeclarationNameS, IVarDeclarationNameS, ImplDeclarationNameS, TopLevelInterfaceDeclarationNameS,
   TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::names::{IterableNameS, IterationOptionNameS, IteratorNameS};
@@ -156,7 +156,7 @@ pub struct CantOwnershipStructInImpl<'s> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct VariableNameAlreadyExists<'s> {
   pub range: RangeS<'s>,
-  pub name: IVarNameS<'s>,
+  pub name: IVarDeclarationNameS<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -298,7 +298,7 @@ impl<'s> StackFrame<'s> {
     }
   }
 
-  pub fn find_variable(&self, name: &IImpreciseNameS<'s>) -> Option<IVarNameS<'s>> {
+  pub fn find_variable(&self, name: &IImpreciseNameS<'s>) -> Option<IVarDeclarationNameS<'s>> {
     match self.locals.find(name) {
       Some(full_name_s) => Some(full_name_s),
       None => match &self.maybe_parent {

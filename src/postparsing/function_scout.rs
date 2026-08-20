@@ -24,9 +24,9 @@ use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
-  ClosureParamNameS, CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, FunctionNameS,
+  ClosureParamNameS, CodeNameS, CodeRuneS, CodeVarNameS, DenizenDefaultRegionRuneS, FunctionNameS,
   IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IImpreciseNameValS, INameS, INameValS,
-  IRuneS, IRuneValS, IVarNameS, IVarNameValS, ImplicitRegionRuneValS, ImplicitRuneValS,
+  IRuneS, IRuneValS, IVarDeclarationNameS, IVarDeclarationNameValS, ImplicitRegionRuneValS, ImplicitRuneValS,
   LambdaDeclarationNameS, LambdaStructDeclarationNameS, MagicParamRuneValS,
 };
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
@@ -72,7 +72,7 @@ pub struct ParentCitizen<'s> {
 /// source of truth.
 struct ExplicitParamExtras<'s> {
   range: RangeS<'s>,
-  abi_name: IVarNameS<'s>,
+  abi_name: IVarDeclarationNameS<'s>,
   destructure: Option<(AtomSP<'s>, &'s [IRulexSR<'s>])>,
 }
 
@@ -373,7 +373,10 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
                 lidb.child().borrow_val(),
               ))),
             };
-            let self_name = IVarNameS::CodeVarName(self.keywords.self_);
+            let self_name = IVarDeclarationNameS::CodeVarName(CodeVarNameS {
+              name: self.keywords.self_,
+              lid: lidb.child().consume_in_arena(self.scout_arena),
+            });
             // Placeholder ITypeST naming the implicit self kind rune (no user-written type).
             let self_tyype =
               ITypeST::Rune(self.scout_arena.alloc(RuneUsageST { rune: kind_rune.clone() }));
@@ -406,16 +409,19 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             let name = match &pattern.destination {
               Some(destination) => match &destination.decl {
                 INameDeclarationP::LocalNameDeclaration(name_p) => {
-                  IVarNameS::CodeVarName(self.scout_arena.intern_str(name_p.str().as_str()))
+                  IVarDeclarationNameS::CodeVarName(CodeVarNameS {
+                    name: self.scout_arena.intern_str(name_p.str().as_str()),
+                    lid: pattern_lidb.child().consume_in_arena(self.scout_arena),
+                  })
                 }
                 INameDeclarationP::ConstructingMemberNameDeclaration(name_p) => {
-                  IVarNameS::ConstructingMemberName(
+                  IVarDeclarationNameS::ConstructingMemberName(
                     self.scout_arena.intern_str(name_p.str().as_str()),
                   )
                 }
-                _ => IVarNameS::DesugaredParamName(param_range.begin.clone()),
+                _ => IVarDeclarationNameS::DesugaredParamName(param_range.begin.clone()),
               },
-              None => IVarNameS::DesugaredParamName(param_range.begin.clone()),
+              None => IVarDeclarationNameS::DesugaredParamName(param_range.begin.clone()),
             };
 
             // Per @PFVSZ, the param's type splits into its outer ref wraps (&/heap/etc)
@@ -568,7 +574,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
           IFunctionParent::ParentFunction { .. } => {
             let closure_param_pos = Self::eval_pos(file_coordinate, function.range.begin());
             let closure_param_name = match self.scout_arena.intern_name(INameValS::VarName(
-              IVarNameValS::ClosureParamName(ClosureParamNameS {
+              IVarDeclarationNameValS::ClosureParamName(ClosureParamNameS {
                 code_location: closure_param_pos,
               }),
             )) {
@@ -581,7 +587,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         for extras in &explicit_param_extras {
           let mut vars: Vec<VariableDeclarationS<'s>> = Vec::new();
           // A real param name is itself a body-visible local; a synthetic ABI slot isn't.
-          if !matches!(extras.abi_name, IVarNameS::DesugaredParamName(_)) {
+          if !matches!(extras.abi_name, IVarDeclarationNameS::DesugaredParamName(_)) {
             vars.push(VariableDeclarationS { name: extras.abi_name.clone() });
           }
           // A destructure contributes its inner names (its top atom is nameless).
@@ -732,7 +738,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         let (body_s, variable_uses, magic_param_names): (
           &'s BodySE<'s>,
           VariableUses<'s>,
-          Vec<IVarNameS<'s>>,
+          Vec<IVarDeclarationNameS<'s>>,
         ) = self.scout_body(
           function_environment,
           parent_stack_frame,
@@ -808,7 +814,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             extras.destructure.as_ref().map(|(atom, rules)| {
               let load_expr = self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
                 range: extras.range.clone(),
-                name: extras.abi_name.clone(),
+                name: extras.abi_name.imprecise_name(self.scout_arena),
               }));
               &*self.scout_arena.alloc(IExpressionSE::Let(LetSE {
                 range: extras.range.clone(),
@@ -938,7 +944,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     let closure_param_pos = PostParser::eval_pos(parent_stack_frame.file, range.begin());
     let closure_param_range = RangeS::new(closure_param_pos.clone(), closure_param_pos.clone());
     let closure_param_name =
-      match self.scout_arena.intern_name(INameValS::VarName(IVarNameValS::ClosureParamName(
+      match self.scout_arena.intern_name(INameValS::VarName(IVarDeclarationNameValS::ClosureParamName(
         ClosureParamNameS { code_location: closure_param_range.begin.clone() },
       ))) {
         INameS::VarName(r) => (*r).clone(),
@@ -1000,13 +1006,13 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
   fn create_magic_parameters(
     &self,
     lidb: &mut LocationInDenizenBuilder,
-    lambda_magic_param_names: Vec<IVarNameS<'s>>,
+    lambda_magic_param_names: Vec<IVarDeclarationNameS<'s>>,
   ) -> Vec<ParameterS<'s>> {
     lambda_magic_param_names
       .into_iter()
       .map(|magic_param_name| {
         let code_location = match &magic_param_name {
-          IVarNameS::MagicParamName(c) => c.clone(),
+          IVarDeclarationNameS::MagicParamName(c) => c.clone(),
           _ => panic!("POSTPARSER_CREATE_MAGIC_PARAMS_EXPECTED_MAGIC_PARAM_NAME"),
         };
         let magic_param_range = RangeS::new(code_location.clone(), code_location.clone());
@@ -1055,7 +1061,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     context_region: IRuneS<'s>,
     body0: &BlockPE<'p>,
     initial_declarations: VariableDeclarations<'s>,
-  ) -> Result<(&'s BodySE<'s>, VariableUses<'s>, Vec<IVarNameS<'s>>), ICompileErrorS<'s>> {
+  ) -> Result<(&'s BodySE<'s>, VariableUses<'s>, Vec<IVarDeclarationNameS<'s>>), ICompileErrorS<'s>> {
     let function_body_env: FunctionEnvironmentS<'s> = function_env.child();
     let body_range_s = PostParser::eval_range(function_body_env.file, body0.range);
     let mut new_block_lidb = lidb.child();
@@ -1079,14 +1085,14 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         },
       )?;
 
-    let magic_param_names: Vec<IVarNameS<'s>> = self_uses
+    let magic_param_names: Vec<IVarDeclarationNameS<'s>> = self_uses
       .uses
       .iter()
       .filter_map(|use_| match &use_.name {
-        IVarNameS::MagicParamName(code_location) => Some(
+        IVarDeclarationNameS::MagicParamName(code_location) => Some(
           match self
             .scout_arena
-            .intern_name(INameValS::VarName(IVarNameValS::MagicParamName(code_location.clone())))
+            .intern_name(INameValS::VarName(IVarDeclarationNameValS::MagicParamName(code_location.clone())))
           {
             INameS::VarName(r) => (*r).clone(),
             _ => panic!("POSTPARSER_INTERN_MAGIC_PARAM_EXPECTED_VAR_NAME"),
@@ -1126,12 +1132,12 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         if block1.locals.iter().any(|local| local.var_name == use_.name) {
           false
         } else {
-          !matches!(use_.name, IVarNameS::MagicParamName(_))
+          !matches!(use_.name, IVarDeclarationNameS::MagicParamName(_))
         }
       })
       .cloned()
       .collect::<Vec<_>>();
-    let closured_names: Vec<IVarNameS<'s>> =
+    let closured_names: Vec<IVarDeclarationNameS<'s>> =
       uses_of_parent_variables.iter().map(|use_| use_.name.clone()).collect();
     let body_s = &*self.scout_arena.alloc(BodySE {
       range: PostParser::eval_range(function_body_env.file, body0.range),

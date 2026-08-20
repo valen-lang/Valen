@@ -6,10 +6,11 @@ use crate::postparsing::ast::{GeneratedBodyS, IBodyS, IStructMemberS, ParameterS
 use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
+use crate::postparsing::names::CodeVarNameS;
 use crate::postparsing::names::IFunctionDeclarationNameS;
 use crate::postparsing::names::{
   ConstructorNameS, ICitizenDeclarationNameS, IFunctionDeclarationNameValS, INameValS, IRuneValS,
-  IStructDeclarationNameS, IVarNameS, ReturnRuneS, StructNameRuneS,
+  IStructDeclarationNameS, IVarDeclarationNameS, ReturnRuneS, StructNameRuneS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{CallSR, IRulexSR, LookupSR, RuneUsage};
@@ -37,7 +38,7 @@ fn parameter_from_normal_member<'s>(member: &NormalStructMemberS<'s>) -> Paramet
     member.range,
     None,
     false,
-    IVarNameS::CodeVarName(member.name),
+    IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: member.name, lid: LocationInDenizen { path: &[] } }),
     member.tyype,
     member.type_rune,
     member.value_type_rune,

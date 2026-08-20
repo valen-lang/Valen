@@ -44,7 +44,7 @@ use crate::typing::names::names::InterfaceNameT;
 use crate::typing::names::names::KindPlaceholderNameT;
 use crate::typing::names::names::KindPlaceholderTemplateNameT;
 use crate::typing::names::names::{
-  CodeVarNameT, ExportNameT, ExportTemplateNameT, FunctionNameValT, FunctionTemplateNameT,
+  MemberNameT, ExportNameT, ExportTemplateNameT, FunctionNameValT, FunctionTemplateNameT, LocalNameT,
   IStructTemplateNameT, IdT, IdValT, InterfaceNameValT, InterfaceTemplateNameT, StructNameT,
   StructNameValT, StructTemplateNameT,
 };
@@ -249,8 +249,8 @@ fn taking_an_argument_and_returning_it() {
       NodeRefT::LocalLookup(l) => Some(l)
   );
   match lookup.local_variable.name {
-    IVarNameT::CodeVar(c) => assert!(c.name.as_str() == "a"),
-    _ => panic!("Expected CodeVarNameT"),
+    IVarNameT::Local(c) => assert!(c.name.as_str() == "a"),
+    _ => panic!("Expected LocalNameT"),
   }
   match lookup.local_variable.tyype {
     KindT::Int(IntT { bits: 32 }) => {}
@@ -324,7 +324,7 @@ fn tests_adding_two_numbers() {
   match &func_call.args[0] {
     ExpressionTE::LocalLookup(LocalLookupTE {
       local_variable: LocalVariable {
-        name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+        name: IVarNameT::Local(LocalNameT { name: StrI("a"), .. }),
         ..
       },
       ..
@@ -334,7 +334,7 @@ fn tests_adding_two_numbers() {
   match &func_call.args[1] {
     ExpressionTE::LocalLookup(LocalLookupTE {
       local_variable: LocalVariable {
-        name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("b"), .. }),
+        name: IVarNameT::Local(LocalNameT { name: StrI("b"), .. }),
         ..
       },
       ..
@@ -969,7 +969,7 @@ exported func main() void {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::LetNormal(ln @ LetNormalTE {
           variable: LocalVariable {
-              name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("b"), .. }),
+              name: IVarNameT::Local(LocalNameT { name: StrI("b"), .. }),
               ..
           },
           ..
@@ -1209,7 +1209,7 @@ fn simple_struct() {
           weakable: false,
           sharedness: SharednessT::Single,
           members: [StructMemberT {
-            name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+            name: IVarNameT::Member(MemberNameT { name: StrI("a"), .. }),
             tyype: KindT::Int(IntT { bits: 32 }),
           }],
           is_closure: false,
@@ -1230,7 +1230,7 @@ fn simple_struct() {
               ..
           },
           params: [ParameterT {
-              name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+              name: IVarNameT::Member(MemberNameT { name: StrI("a"), .. }),
               virtuality: None,
               tyype: KindT::Int(IntT { bits: 32 }),
               ..
@@ -1542,7 +1542,7 @@ fn reads_a_struct_member() {
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
       NodeRefT::MemberLookup(MemberLookupTE {
-          member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a") }),
+          member_name: IVarNameT::Member(MemberNameT { name: StrI("a") }),
           result: BorrowRefT { inner: KindT::Int(IntT { bits: 32 }), .. },
           ..
       }) => Some(())
@@ -1941,7 +1941,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
       attributes: &[],
       params:
         [ParameterT {
-          name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("value"), .. }),
+          name: IVarNameT::Member(MemberNameT { name: StrI("value"), .. }),
           virtuality: None,
           tyype:
             KindT::KindPlaceholder(KindPlaceholderT {
@@ -2044,7 +2044,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::LetNormal(LetNormalTE {
           variable: LocalVariable {
-              name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
+              name: IVarNameT::Local(LocalNameT { name: StrI("x"), .. }),
               tyype: KindT::Interface(InterfaceTT {
                   id: IdT {
                       local_name: INameT::Interface(InterfaceNameT {
@@ -2386,7 +2386,7 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
       NodeRefT::MemberLookup(MemberLookupTE {
-          member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x") }),
+          member_name: IVarNameT::Member(MemberNameT { name: StrI("x") }),
           result: BorrowRefT { inner: KindT::Int(IntT { bits: 32 }), .. },
           ..
       }) => Some(())
@@ -2524,7 +2524,7 @@ func main() () {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::LetNormal(LetNormalTE {
           variable: LocalVariable {
-              name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
+              name: IVarNameT::Local(LocalNameT { name: StrI("x"), .. }),
               tyype: KindT::Struct(StructTT {
                   id: IdT {
                       local_name: INameT::Struct(StructNameT {
@@ -4323,7 +4323,7 @@ fn reports_when_mutating_after_moving() {
   let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
   match &err {
     ICompileErrorT::CantUseUnstackifiedLocal {
-      local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("newWeapon"), .. }),
+      local_id: IVarNameT::Local(LocalNameT { name: StrI("newWeapon"), .. }),
       ..
     } => {}
     _other => panic!("expected CantUseUnstackifiedLocal"),
@@ -4408,7 +4408,7 @@ fn reports_when_reading_after_moving() {
   let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
   match &err {
     ICompileErrorT::CantUseUnstackifiedLocal {
-      local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("newWeapon"), .. }),
+      local_id: IVarNameT::Local(LocalNameT { name: StrI("newWeapon"), .. }),
       ..
     } => {}
     _other => panic!("expected CantUseUnstackifiedLocal"),
@@ -4454,7 +4454,7 @@ fn reports_when_moving_from_inside_a_while() {
   let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
   match &err {
     ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
-      local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }),
+      local_id: IVarNameT::Local(LocalNameT { name: StrI("m"), .. }),
       ..
     } => {}
     _other => panic!("expected CantUnstackifyOutsideLocalFromInsideWhile"),
@@ -4511,7 +4511,7 @@ fn reports_when_moving_from_inside_a_while_that_never_falls_through() {
   let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
   match &err {
     ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
-      local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }),
+      local_id: IVarNameT::Local(LocalNameT { name: StrI("m"), .. }),
       ..
     } => {}
     _other => panic!("expected CantUnstackifyOutsideLocalFromInsideWhile"),
@@ -4879,8 +4879,8 @@ fn humanize_errors() {
     }
   )
   .is_empty());
-  let hp_var_name: &CodeVarNameT =
-    typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("hp") });
+  let hp_var_name: &MemberNameT =
+    typing_bump.alloc(MemberNameT { name: scout_arena.intern_str("hp") });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,
@@ -4889,11 +4889,11 @@ fn humanize_errors() {
     &lines_between,
     &line_range_containing,
     &line_containing,
-    ICompileErrorT::CantMoveOutOfMemberT { range: tz_slice, name: IVarNameT::CodeVar(hp_var_name) }
+    ICompileErrorT::CantMoveOutOfMemberT { range: tz_slice, name: IVarNameT::Member(hp_var_name) }
   )
   .is_empty());
-  let firefly_var_name: &CodeVarNameT =
-    typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("firefly") });
+  let firefly_var_name: &MemberNameT =
+    typing_bump.alloc(MemberNameT { name: scout_arena.intern_str("firefly") });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,
@@ -4904,7 +4904,7 @@ fn humanize_errors() {
     &line_containing,
     ICompileErrorT::CantUseUnstackifiedLocal {
       range: tz_slice,
-      local_id: IVarNameT::CodeVar(firefly_var_name)
+      local_id: IVarNameT::Member(firefly_var_name)
     }
   )
   .is_empty());
@@ -4918,7 +4918,7 @@ fn humanize_errors() {
     &line_containing,
     ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
       range: tz_slice,
-      local_id: IVarNameT::CodeVar(firefly_var_name)
+      local_id: IVarNameT::Member(firefly_var_name)
     }
   )
   .is_empty());

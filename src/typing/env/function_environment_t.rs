@@ -4,8 +4,8 @@ use crate::postparsing::names::IImpreciseNameS;
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::env::environment::{
-  GlobalEnvironmentT, IEnvironmentT, IInDenizenEnvironmentT, ILookupContext, TemplatasStoreBuilder,
-  TemplatasStoreT,
+  GlobalEnvironmentT, IEnvironmentT, IInDenizenEnvironmentT, ILookupContext,
+  TemplatasStoreBuilder, TemplatasStoreT,
 };
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::names::names::{INameT, IVarNameT, IdT};
@@ -328,12 +328,21 @@ where
     // parentNodeEnv.getOrElse(parentFunctionEnv)
   }
 
-  pub fn get_variable(&self, name: IVarNameT<'s, 't>) -> Option<IVariableT<'s, 't>> {
-    match self.declared_locals.iter().find(|v| v.name() == name) {
+  pub fn get_variable(
+    &self,
+    name: IImpreciseNameS<'s>,
+    scout_arena: &ScoutArena<'s>,
+  ) -> Option<IVariableT<'s, 't>> {
+    match self.declared_locals.iter().find(|v| v.name().imprecise_name(scout_arena) == Some(name)) {
       Some(v) => Some(*v),
       None => match self.parent_node_env {
-        Some(p) => p.get_variable(name),
-        None => self.parent_function_env.closured_locals.iter().find(|v| v.name() == name).copied(),
+        Some(p) => p.get_variable(name, scout_arena),
+        None => self
+          .parent_function_env
+          .closured_locals
+          .iter()
+          .find(|v| v.name().imprecise_name(scout_arena) == Some(name))
+          .copied(),
       },
     }
   }
@@ -672,10 +681,11 @@ where
   // same shape.
   pub fn get_variable(
     &self,
-    name: IVarNameT<'s, 't>,
+    name: IImpreciseNameS<'s>,
     interner: &TypingInterner<'s, 't>,
+    scout_arena: &ScoutArena<'s>,
   ) -> Option<IVariableT<'s, 't>> {
-    self.snapshot(interner).get_variable(name)
+    self.snapshot(interner).get_variable(name, scout_arena)
   }
 
   pub fn get_all_locals(&self) -> Vec<&'t LocalVariable<'s, 't>> {

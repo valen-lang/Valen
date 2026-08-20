@@ -2046,7 +2046,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_var_name(interner: &InstantiatingInterner<'s, 'i>, name: &IVarNameT<'s, 't>) -> IVarNameI<'s, 'i> {
         match name {
             IVarNameT::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.alloc(TypingPassFunctionResultVarNameI)),
-            IVarNameT::CodeVar(x) => IVarNameI::CodeVar(interner.alloc(CodeVarNameI { name: x.name })),
+            IVarNameT::Member(x) => IVarNameI::Member(interner.alloc(MemberNameI { name: x.name })),
+            IVarNameT::Local(x) => IVarNameI::Local(interner.alloc(LocalNameI {
+                name: x.name,
+                life: LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(x.lid.path.to_vec()) },
+            })),
             IVarNameT::ClosureParam(ClosureParamNameT { code_location, .. }) => IVarNameI::ClosureParam(interner.alloc(ClosureParamNameI { code_location: *code_location })),
             IVarNameT::TypingPassBlockResultVar(TypingPassBlockResultVarNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => {
                 IVarNameI::TypingPassBlockResultVar(interner.alloc(TypingPassBlockResultVarNameI {

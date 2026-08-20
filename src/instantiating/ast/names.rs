@@ -109,7 +109,8 @@ pub enum INameI<'s, 'i> {
     Iterator(&'i IteratorNameI<'s>),
     IterationOption(&'i IterationOptionNameI<'s>),
     MagicParam(&'i MagicParamNameI<'s>),
-    CodeVar(&'i CodeVarNameI<'s>),
+    Member(&'i MemberNameI<'s>),
+    Local(&'i LocalNameI<'s, 'i>),
     AnonymousSubstructMember(&'i AnonymousSubstructMemberNameI),
     Primitive(&'i PrimitiveNameI<'s>),
     PackageTopLevel(&'i PackageTopLevelNameI),
@@ -1209,7 +1210,8 @@ pub enum IVarNameI<'s, 'i> {
     Iterator(&'i IteratorNameI<'s>),
     IterationOption(&'i IterationOptionNameI<'s>),
     MagicParam(&'i MagicParamNameI<'s>),
-    CodeVar(&'i CodeVarNameI<'s>),
+    Member(&'i MemberNameI<'s>),
+    Local(&'i LocalNameI<'s, 'i>),
     AnonymousSubstructMember(&'i AnonymousSubstructMemberNameI),
     Self_(&'i SelfNameI),
 }
@@ -1233,7 +1235,8 @@ impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IVarNameI<'s, 'i> where 's: 'i {
             INameI::Iterator(x) => Ok(IVarNameI::Iterator(x)),
             INameI::IterationOption(x) => Ok(IVarNameI::IterationOption(x)),
             INameI::MagicParam(x) => Ok(IVarNameI::MagicParam(x)),
-            INameI::CodeVar(x) => Ok(IVarNameI::CodeVar(x)),
+            INameI::Member(x) => Ok(IVarNameI::Member(x)),
+            INameI::Local(x) => Ok(IVarNameI::Local(x)),
             INameI::AnonymousSubstructMember(x) => Ok(IVarNameI::AnonymousSubstructMember(x)),
             INameI::Self_(x) => Ok(IVarNameI::Self_(x)),
             _ => Err(()),
@@ -1257,7 +1260,8 @@ impl<'s, 'i> From<IVarNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
             IVarNameI::Iterator(x) => INameI::Iterator(x),
             IVarNameI::IterationOption(x) => INameI::IterationOption(x),
             IVarNameI::MagicParam(x) => INameI::MagicParam(x),
-            IVarNameI::CodeVar(x) => INameI::CodeVar(x),
+            IVarNameI::Member(x) => INameI::Member(x),
+            IVarNameI::Local(x) => INameI::Local(x),
             IVarNameI::AnonymousSubstructMember(x) => INameI::AnonymousSubstructMember(x),
             IVarNameI::Self_(x) => INameI::Self_(x),
         }
@@ -1378,8 +1382,17 @@ pub struct MagicParamNameI<'s> {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct CodeVarNameI<'s> {
+pub struct MemberNameI<'s> {
     pub name: StrI<'s>,
+}
+
+/// A user-declared local's instantiated name. Mirrors typing's `LocalNameT`: source `name` plus
+/// the `life` that makes it unique per function (@VCOORD). The VM keys locals on this.
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct LocalNameI<'s, 'i> {
+    pub name: StrI<'s>,
+    pub life: LocationInFunctionEnvironmentI<'i>,
 }
 
 

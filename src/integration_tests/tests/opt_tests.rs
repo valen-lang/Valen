@@ -5,8 +5,8 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 pub struct OptTests;
 
 #[test]

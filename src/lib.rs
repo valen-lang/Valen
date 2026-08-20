@@ -45,10 +45,9 @@ pub mod postparsing;
 pub mod scout_arena;
 pub mod tests;
 pub mod typing;
-// #[cfg(test)]
-// pub mod testvm;
+#[cfg(test)]
+pub mod testvm;
 pub mod utils;
-// pub mod von;
 #[path = "solver/lib.rs"]
 pub mod solver;
 

@@ -263,11 +263,25 @@ where
 
     if is_destructor {
       // If it's a destructor, make sure that we've actually destroyed/moved/unlet'd
-      // the parameter. For now, we'll just check if it's been moved away, but soon
+      // the parameter, because otherwise we'll get infinite recursion like in this function:
+      //     func drop(self Ship) {
+      //       // implicitly calls drop(self) which is... this function. infinite recursion.
+      //     }
+      // For now, we'll just check if it's been moved away, but soon
       // we'll want fate to track whether it's been destroyed, and do that check instead.
       // We don't want the user to accidentally just move it somewhere, they need to
       // promise it gets destroyed.
-      let destructee_name = params_2[0].name;
+      // The parameter's `ParameterT.name` isn't the same value as the local it was bound into (the
+      // binding carries the unique `Local` name, the parameter its source name), so resolve the
+      // parameter to its actual local and check that local's name — which is what unstackify records.
+      let param_imprecise = params_2[0]
+        .name
+        .imprecise_name(self.scout_arena)
+        .expect("destructee param has no imprecise name");
+      let destructee_name = env
+        .get_variable(param_imprecise, self.typing_interner, self.scout_arena)
+        .expect("destructee param not bound as a local")
+        .name();
       if !env.unstackified_locals.contains(&destructee_name) {
         panic!("Destructee wasn't moved/destroyed!");
       }
@@ -302,8 +316,13 @@ where
     // since that body-head let loads them by name (see @PFVSZ).
     let mut let_exprs: Vec<ExpressionTE<'s, 't>> = Vec::new();
     for (param_1, param_lookup_2) in params_1.iter().zip(param_lookups_2.into_iter()) {
-      let local =
-        self.make_user_local_variable(coutputs, nenv, range, param_1.name, param_lookup_2.result());
+      let local = self.make_user_local_variable(
+        coutputs,
+        nenv,
+        range,
+        param_1.name,
+        param_lookup_2.result(),
+      );
       let_exprs.push(ExpressionTE::LetNormal(
         self.typing_interner.alloc(LetNormalTE::new(local, param_lookup_2)),
       ));

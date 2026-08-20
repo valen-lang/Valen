@@ -1,29 +1,28 @@
-use std::cell::Cell;
 use crate::utils::fx::HashMap;
-use std::marker::PhantomData;
-use crate::final_ast::types::{KindHT, CoordH};
+use crate::instantiating::ast::types::KindIT;
 use crate::testvm::values::{
-    AllocationIdV, CallIdV, ExpressionIdV, IObjectReferrerV,
-    ReferenceV, RegisterV, VariableAddressV, VariableV,
+    CallIdV, ReferenceV, VariableAddressV, VariableV,
 };
 
 
 
 /// Temporary state
-pub struct CallV<'v, 'h, 's> {
-  pub call_id: CallIdV<'v, 'h, 's>,
-  pub in_args: &'v [ReferenceV<'v, 'h, 's>],
-  pub args: HashMap<i32, Option<ReferenceV<'v, 'h, 's>>>,
-  pub locals: HashMap<VariableAddressV<'v, 'h, 's>, VariableV<'v, 'h, 's>>,
+pub struct CallV<'v, 'i, 's> {
+  pub call_id: CallIdV<'v, 'i, 's>,
+  pub in_args: &'v [ReferenceV<'v, 'i, 's>],
+  pub args: HashMap<i32, Option<ReferenceV<'v, 'i, 's>>>,
+  pub locals: HashMap<VariableAddressV<'v, 'i, 's>, VariableV<'v, 'i, 's>>,
 }
 
 
-impl<'v, 'h, 's> CallV<'v, 'h, 's> {
-  pub fn add_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, tyype: CoordH<'s, 'h>) {
+impl<'v, 'i, 's> CallV<'v, 'i, 's> {
+  pub fn add_local(&mut self, var_addr: VariableAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, tyype: KindIT<'s, 'i>) {
     assert_eq!(var_addr.call_id, self.call_id);
     let locals = &mut self.locals;
     assert!(!locals.contains_key(&var_addr));
-    assert!(!locals.iter().any(|(addr, _)| addr.local.id.number == var_addr.local.id.number));
+    // A local's identity is its (per-function-unique) name, so this catches re-adding the same
+    // underlying local under any address.
+    assert!(!locals.iter().any(|(addr, _)| addr.name == var_addr.name));
     locals.insert(var_addr, VariableV {
       id: var_addr,
       reference,
@@ -32,7 +31,7 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   }
 
 
-  pub fn remove_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>) {
+  pub fn remove_local(&mut self, var_addr: VariableAddressV<'v, 'i, 's>) {
     assert_eq!(var_addr.call_id, self.call_id);
     let locals = &mut self.locals;
     assert!(locals.contains_key(&var_addr));
@@ -40,19 +39,19 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   }
 
 
-  pub fn get_local(&self, addr: VariableAddressV<'v, 'h, 's>) -> VariableV<'v, 'h, 's> {
+  pub fn get_local(&self, addr: VariableAddressV<'v, 'i, 's>) -> VariableV<'v, 'i, 's> {
     let locals = &self.locals;
     let result = locals.get(&addr).expect("get_local: not found").clone();
     result
   }
 
 
-  pub fn mutate_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, _expected_type: CoordH<'s, 'h>) {
+  pub fn mutate_local(&mut self, var_addr: VariableAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, _expected_type: KindIT<'s, 'i>) {
     self.locals.get_mut(&var_addr).expect("mutate_local: not found").reference = reference;
   }
 
 
-  pub fn take_argument(&mut self, index: i32) -> ReferenceV<'v, 'h, 's> {
+  pub fn take_argument(&mut self, index: i32) -> ReferenceV<'v, 'i, 's> {
     assert!((index as usize) < self.args.len());
     match self.args.get(&index).copied() {
       Some(Some(r#ref)) => {
@@ -75,4 +74,3 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
     }
   }
 }
-

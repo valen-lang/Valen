@@ -605,7 +605,8 @@ fn printable_id<'s, 't>(id: IdT<'s, 't>) -> String {
 
 fn printable_var_name<'s, 't>(name: IVarNameT<'s, 't>) -> String {
   match name {
-    IVarNameT::CodeVar(n) => n.name.0.to_string(),
+    IVarNameT::Member(n) => n.name.0.to_string(),
+    IVarNameT::Local(n) => n.name.0.to_string(),
     _ => panic!("implement: printable_var_name other"),
   }
 }
@@ -1307,7 +1308,8 @@ pub fn humanize_name<'s, 't>(
     INameT::KindPlaceholderTemplate(n) => {
       crate::postparsing::post_parser_error_humanizer::humanize_rune(n.rune)
     }
-    INameT::CodeVar(n) => n.name.0.to_string(),
+    INameT::Member(n) => n.name.0.to_string(),
+    INameT::Local(n) => n.name.0.to_string(),
     INameT::LambdaCitizen(n) => {
       humanize_name(
         scout_arena,

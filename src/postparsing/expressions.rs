@@ -1,7 +1,7 @@
 use crate::interner::StrI;
 use crate::parsing::ast::LoadAsP;
 use crate::postparsing::ast::{FunctionS, IExpressionSE as IExpressionSETrait, LocationInDenizen};
-use crate::postparsing::names::{CodeNameS, IImpreciseNameS, IRuneS, IVarNameS};
+use crate::postparsing::names::{CodeNameS, IImpreciseNameS, IRuneS, IVarDeclarationNameS};
 use crate::postparsing::patterns::AtomSP;
 use crate::postparsing::rules::{IRulexSR, RuneUsage};
 use crate::utils::range::RangeS;
@@ -48,7 +48,7 @@ pub struct ExprMutateSE<'s> {
 #[derive(Debug, PartialEq)]
 pub struct LocalMutateSE<'s> {
   pub range: RangeS<'s>,
-  pub name: IVarNameS<'s>,
+  pub name: IImpreciseNameS<'s>,
   pub expr: &'s IExpressionSE<'s>,
 }
 
@@ -72,7 +72,7 @@ pub enum IVariableUseCertainty {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocalS<'s> {
-  pub var_name: IVarNameS<'s>,
+  pub var_name: IVarDeclarationNameS<'s>,
   pub self_borrowed: IVariableUseCertainty,
   pub self_moved: IVariableUseCertainty,
   pub self_mutated: IVariableUseCertainty,
@@ -84,7 +84,7 @@ pub struct LocalS<'s> {
 #[derive(Debug, PartialEq)]
 pub struct BodySE<'s> {
   pub range: RangeS<'s>,
-  pub closured_names: &'s [IVarNameS<'s>],
+  pub closured_names: &'s [IVarDeclarationNameS<'s>],
   pub block: &'s BlockSE<'s>,
 }
 
@@ -255,7 +255,7 @@ pub struct DestructSE<'s> {
 #[derive(Debug, PartialEq)]
 pub struct UnletSE<'s> {
   pub range: RangeS<'s>,
-  pub name: IVarNameS<'s>,
+  pub name: IImpreciseNameS<'s>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -289,7 +289,7 @@ pub struct FunctionCallSE<'s> {
 #[derive(Debug, PartialEq)]
 pub struct LocalLoadSE<'s> {
   pub range: RangeS<'s>,
-  pub name: IVarNameS<'s>,
+  pub name: IImpreciseNameS<'s>,
 }
 // One step in a OutsideLoadSE. See OutsideLoadSE comments.
 #[derive(Debug, PartialEq)]

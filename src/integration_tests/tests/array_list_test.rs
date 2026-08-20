@@ -8,12 +8,12 @@ use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::ast::expressions::LetNormalTE;
 use crate::typing::env::function_environment_t::AddressibleLocalVariableT;
 use crate::typing::env::function_environment_t::ILocalVariableT;
-use crate::typing::names::names::CodeVarNameT;
+use crate::typing::names::names::MemberNameT;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 pub struct ArrayListTest;
 
 #[test]
@@ -305,7 +305,7 @@ exported func main() int {
             NodeRefT::FunctionDefinition(main),
             NodeRefT::LetNormal(LetNormalTE {
                 variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
-                    name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }),
+                    name: IVarNameT::Member(MemberNameT { name: StrI("m"), .. }),
                     ..
                 }),
                 ..
@@ -359,7 +359,7 @@ exported func main() int {
             NodeRefT::FunctionDefinition(main),
             NodeRefT::LetNormal(LetNormalTE {
                 variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
-                    name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }),
+                    name: IVarNameT::Member(MemberNameT { name: StrI("m"), .. }),
                     ..
                 }),
                 ..

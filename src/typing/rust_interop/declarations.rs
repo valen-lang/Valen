@@ -25,14 +25,15 @@ use crate::parsing::ast::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::ast::{
   ExternBodyS, ExternS, FunctionS, GenericParameterS, IBodyS, ICitizenAttributeS,
   IFunctionAttributeS, IGenericParameterTypeS, InterfaceS, KindGenericParameterTypeS, MacroCallS,
-  ParameterS, SealedS, StructS,
+  LocationInDenizenBuilder, ParameterS, SealedS, StructS,
 };
 use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
   ArgumentRuneS, CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
-  IImpreciseNameValS, IRuneValS, IStructDeclarationNameS, IVarNameS, ReturnRuneS,
+  CodeVarNameS, IImpreciseNameValS, IRuneValS, IStructDeclarationNameS, IVarDeclarationNameS,
+  ReturnRuneS,
   TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::rules::rules::{
@@ -109,6 +110,8 @@ where
   let mut next_synthetic: u32 = 0;
 
   let mut params: Vec<ParameterS<'s>> = Vec::new();
+  // The synthesized interop function mints its own lid space; each param gets a distinct child.
+  let mut lidb = LocationInDenizenBuilder::new(Vec::new());
   for (index, sig_type) in sig.params.iter().enumerate() {
     let own_rune = RuneUsage {
       range,
@@ -169,7 +172,10 @@ where
       range,
       None,
       false,
-      IVarNameS::CodeVarName(scout_arena.intern_str(&format!("p{}", index))),
+      IVarDeclarationNameS::CodeVarName(CodeVarNameS {
+        name: scout_arena.intern_str(&format!("p{}", index)),
+        lid: lidb.child().consume_in_arena(scout_arena),
+      }),
       full_type_rune,
       value_type_rune,
       scout_arena.alloc_slice_from_vec(outer_ref_rules),

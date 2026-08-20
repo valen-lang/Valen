@@ -32,6 +32,22 @@ fn main() {
     return;
   }
 
+  // Frontend/VM test builds (the `no_backend` feature) skip the C++ backend entirely. The backend's
+  // C symbols (backend_ffi) are then unresolved; tell the linker to allow that rather than build the
+  // red C++ backend. Nothing in the frontend or TestVM tests calls them, so they never bind; a stray
+  // call would fault at runtime, which is the honest signal that the backend is absent. Temporary,
+  // until the backend is reshaped for the onion metal IR.
+  println!("cargo:rerun-if-env-changed=CARGO_FEATURE_NO_BACKEND");
+  if env::var_os("CARGO_FEATURE_NO_BACKEND").is_some() {
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    if target_os == "macos" {
+      println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
+    } else {
+      println!("cargo:rustc-link-arg=-Wl,--unresolved-symbols=ignore-all");
+    }
+    return;
+  }
+
   let backend_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("Backend");
 
   let llvm_config = locate_llvm_config();

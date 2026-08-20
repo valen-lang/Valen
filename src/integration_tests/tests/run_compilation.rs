@@ -32,7 +32,7 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::tests::tests::new_test_code_map;
-use crate::von::ast::IVonData;
+use crate::testvm::von::IVonData;
 use crate::utils::fx::HashMap;
 use std::io::stdout;
 

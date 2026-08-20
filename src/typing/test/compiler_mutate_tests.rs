@@ -17,7 +17,7 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::function_environment_t::LocalVariable;
 use crate::typing::names::names::StructNameT;
 use crate::typing::names::names::{
-  CodeVarNameT, FunctionNameValT, FunctionTemplateNameT, INameT, IStructTemplateNameT, IVarNameT,
+  MemberNameT, FunctionNameValT, FunctionTemplateNameT, INameT, IStructTemplateNameT, IVarNameT, LocalNameT,
   IdT, IdValT, RawArrayNameT, StaticSizedArrayNameT, StructNameValT, StructTemplateNameT,
 };
 use crate::typing::overload_resolver::FindFunctionFailure;
@@ -71,7 +71,7 @@ exported func main() {a = 3; set a = 4; }
       NodeRefT::Mutate(MutateTE {
           destination_expr: ExpressionTE::LocalLookup(LocalLookupTE {
               local_variable: LocalVariable {
-                  name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+                  name: IVarNameT::Local(LocalNameT { name: StrI("a"), .. }),
                   ..
               },
               ..
@@ -458,7 +458,7 @@ exported func main() int {
 At test:0.vale:7:3:
   if true {
 Internal error: Must move same variables from inside branches!
-From then branch: {CodeVar(CodeVarNameT { name: "s" })}
+From then branch: {Local(LocalNameT { name: "s", lid: LocationInDenizen { path: [3, 1, 1, 1, 1, 1, 3, 1] } })}
 From else branch: {}
 "##,
   );
@@ -716,8 +716,8 @@ fn humanize_errors() {
     }
   )
   .is_empty());
-  let hp_var_name: &CodeVarNameT =
-    typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("hp") });
+  let hp_var_name: &MemberNameT =
+    typing_bump.alloc(MemberNameT { name: scout_arena.intern_str("hp") });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,
@@ -726,7 +726,7 @@ fn humanize_errors() {
     &lines_between,
     &line_range_containing,
     &line_containing,
-    ICompileErrorT::CantMoveOutOfMemberT { range: tz_slice, name: IVarNameT::CodeVar(hp_var_name) }
+    ICompileErrorT::CantMoveOutOfMemberT { range: tz_slice, name: IVarNameT::Member(hp_var_name) }
   )
   .is_empty());
   assert!(!humanize(
@@ -744,8 +744,8 @@ fn humanize_errors() {
     }
   )
   .is_empty());
-  let firefly_var_name: &CodeVarNameT =
-    typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("firefly") });
+  let firefly_var_name: &MemberNameT =
+    typing_bump.alloc(MemberNameT { name: scout_arena.intern_str("firefly") });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,
@@ -756,7 +756,7 @@ fn humanize_errors() {
     &line_containing,
     ICompileErrorT::CantUseUnstackifiedLocal {
       range: tz_slice,
-      local_id: IVarNameT::CodeVar(firefly_var_name)
+      local_id: IVarNameT::Member(firefly_var_name)
     }
   )
   .is_empty());

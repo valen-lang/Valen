@@ -5,9 +5,9 @@ use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::testvm::vivem::VmRuntimeErrorV;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
-use crate::von::ast::VonStr;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
+use crate::testvm::von::VonStr;
 pub struct ResultTests;
 
 #[test]

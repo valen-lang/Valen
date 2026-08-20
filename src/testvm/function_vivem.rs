@@ -1,11 +1,12 @@
 use crate::interner::StrI;
-use crate::final_ast::ast::{FunctionH, ProgramH, PrototypeH};
-use crate::final_ast::types::KindHT;
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::ast::{FunctionDefinitionI, PrototypeI};
+use crate::instantiating::ast::names::INameI;
+use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::testvm::values::{CallIdV, ReferenceV};
 use crate::testvm::heap::{AdapterForExternsV, HeapV};
 use crate::testvm::expression_vivem::NodeReturnV;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::testvm::expression_vivem::INodeExecuteResultV;
 use crate::testvm::expression_vivem::execute_node;
 use crate::testvm::values::ArgumentIdV;
@@ -54,15 +55,18 @@ use crate::testvm::vivem_externs::vec_capacity;
 use std::io::Write;
 
 
-pub fn execute_function<'h, 's, 'v>(
-    program_h: &'h ProgramH<'s, 'h>,
-    interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>,
+pub fn execute_function<'i, 's, 'v>(
+    program_h: &'i HinputsI<'s, 'i>,
+    interner: &InstantiatingInterner<'s, 'i>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>,
     stdout: &'v dyn Fn(StrI<'s>),
-    heap: &mut HeapV<'v, 'h, 's>,
-    args: &'v [ReferenceV<'v, 'h, 's>],
-    function_h: &'h FunctionH<'s, 'h>,
-) -> Result<(CallIdV<'v, 'h, 's>, NodeReturnV<'v, 'h, 's>), VmRuntimeErrorV<'s>> {
-    let call_id = heap.push_new_stack_frame(function_h.prototype, args);
+    heap: &mut HeapV<'v, 'i, 's>,
+    args: &'v [ReferenceV<'v, 'i, 's>],
+    function_h: &'i FunctionDefinitionI<'s, 'i>,
+) -> Result<(CallIdV<'v, 'i, 's>, NodeReturnV<'v, 'i, 's>), VmRuntimeErrorV<'s>> {
+    // The stack-frame call-id needs an `&'i PrototypeI`; the header computes one by value, so
+    // arena-allocate it.
+    let prototype: &'i PrototypeI<'s, 'i> = interner.bump().alloc(function_h.header.to_prototype());
+    let call_id = heap.push_new_stack_frame(prototype, args);
     {
         let handle = &mut *heap.vivem_dout;
         let prefix = "  ".repeat(call_id.call_depth as usize);
@@ -104,14 +108,22 @@ pub fn execute_function<'h, 's, 'v>(
     Ok((call_id, return_ref))
 }
 
-pub fn get_extern_function<'h, 's, 'v>(
-    _program_h: &ProgramH<'s, 'h>,
-    ref_: &PrototypeH<'s, 'h>,
-) -> Box<dyn for<'a> Fn(&mut AdapterForExternsV<'a, 'v, 'h, 's>, &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> + 'h>
-where 's: 'h, 'h: 'v,
+pub fn get_extern_function<'i, 's, 'v>(
+    _program_h: &HinputsI<'s, 'i>,
+    ref_: &PrototypeI<'s, 'i>,
+) -> Box<dyn for<'a> Fn(&mut AdapterForExternsV<'a, 'v, 'i, 's>, &'v [ReferenceV<'v, 'i, 's>]) -> Result<ReferenceV<'v, 'i, 's>, VmRuntimeErrorV<'s>> + 'i>
+where 's: 'i, 'i: 'v,
 {
-    let name = ref_.id.fully_qualified_name.0.replace("v::builtins::arith", "");
-    match name.as_str() {
+    // Externs are ordinary functions carrying the `extern` attribute, so their prototype name is a
+    // FunctionNameIX; the builtin dispatch key is its human name (e.g. "__vbi_addI32").
+    let name = match ref_.id.local_name {
+        INameI::FunctionNameIX(n) => n.template.human_name.0,
+        // A builtin/extern function's prototype carries an ExternFunctionNameI, whose human_name is
+        // the dispatch key (e.g. "__vbi_addI32").
+        INameI::ExternFunction(n) => n.human_name.0,
+        other => panic!("get_extern_function: unexpected prototype name variant {:?}", other),
+    };
+    match name {
         "__vbi_addI32" => Box::new(add_i32),
         "__vbi_addFloatFloat" => Box::new(add_float_float),
         "__vbi_panic" => Box::new(panic),
@@ -147,12 +159,10 @@ where 's: 'h, 'h: 'v,
         "__vbi_divideI64" => Box::new(divide_i64),
         "__vbi_subtractI64" => Box::new(subtract_i64),
         "TruncateI64ToI32" => Box::new(truncate_i64_to_i32),
-        "VecOuterNew<i32>" => { let ref_ = ref_.clone(); Box::new(move |memory, args| new_vec(memory, &ref_, args)) },
-        "Vec.new<i32>" => { let ref_ = ref_.clone(); Box::new(move |memory, args| new_vec(memory, &ref_, args)) },
-        "Vec.with_capacity<i32>" => { let ref_ = ref_.clone(); Box::new(move |memory, args| new_vec_with_capacity(memory, &ref_, args)) },
-        "Vec.capacity<i32>" => { let ref_ = ref_.clone(); Box::new(move |memory, args| vec_capacity(memory, &ref_, args)) },
+        "VecOuterNew<i32>" => { let proto = *ref_; Box::new(move |memory, args| new_vec(memory, &proto, args)) },
+        "Vec.new<i32>" => { let proto = *ref_; Box::new(move |memory, args| new_vec(memory, &proto, args)) },
+        "Vec.with_capacity<i32>" => { let proto = *ref_; Box::new(move |memory, args| new_vec_with_capacity(memory, &proto, args)) },
+        "Vec.capacity<i32>" => { let proto = *ref_; Box::new(move |memory, args| vec_capacity(memory, &proto, args)) },
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }
-
-

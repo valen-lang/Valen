@@ -5,7 +5,8 @@ use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::postparsing::expressions::LocalS;
-use crate::postparsing::names::IVarNameS;
+use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::postparsing::names::{CodeVarNameS, IVarDeclarationNameS};
 use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::tests::tests::load_expected;
@@ -27,7 +28,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::env::function_environment_t::AddressibleLocalVariableT;
 use crate::typing::env::function_environment_t::ILocalVariableT;
 use crate::typing::env::function_environment_t::ReferenceLocalVariableT;
-use crate::typing::names::names::CodeVarNameT;
+use crate::typing::names::names::MemberNameT;
 use crate::typing::names::names::FunctionNameT;
 use crate::typing::names::names::FunctionTemplateNameT;
 use crate::typing::names::names::INameT;
@@ -50,8 +51,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::FileCoordinate;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::CodeLocationS;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 use std::marker::PhantomData;
 use crate::postparsing::expressions::IVariableUseCertainty::NotUsed;
 use crate::postparsing::expressions::IVariableUseCertainty::Used;
@@ -63,7 +64,10 @@ pub fn addressibility() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let calc = |self_borrowed, self_moved, self_mutated, child_borrowed, child_moved, child_mutated| {
         let local_s = LocalS {
-            var_name: IVarNameS::CodeVarName(scout_arena.intern_str("x")),
+            var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS {
+                name: scout_arena.intern_str("x"),
+                lid: LocationInDenizenBuilder::new(vec![]).consume_in_arena(&scout_arena),
+            }),
             self_borrowed,
             self_moved,
             self_mutated,
@@ -258,7 +262,7 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
 
         let expected_members = vec![
             IStructMemberT::Normal(NormalStructMemberT {
-                name: IVarNameT::CodeVar(interner.intern_code_var_name(CodeVarNameT { name: scout_arena.intern_str("x")})),
+                name: IVarNameT::Member(interner.intern_member_name(MemberNameT { name: scout_arena.intern_str("x")})),
                 tyype: IMemberTypeT::Reference(ReferenceMemberTypeT {
                     reference: CoordT::new(
                         // TSUGAR: was OwnershipT::Own pre-flip when `x` was captured by-value into the closure.
@@ -278,7 +282,7 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(lambda),
             NodeRefT::MemberLookup(MemberLookupTE {
-                member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
+                member_name: IVarNameT::Member(MemberNameT { name: StrI("x"), .. }),
                 ..
             }) => Some(())
         );
@@ -412,7 +416,7 @@ exported func main() int {
         let closure_struct_def = coutputs.lookup_struct(closure_struct.id);
         let expected_members = vec![
             IStructMemberT::Normal(NormalStructMemberT {
-                name: IVarNameT::CodeVar(interner.intern_code_var_name(CodeVarNameT { name: scout_arena.intern_str("x")})),
+                name: IVarNameT::Member(interner.intern_member_name(MemberNameT { name: scout_arena.intern_str("x")})),
                 tyype: IMemberTypeT::Address(AddressMemberTypeT {
                     reference: CoordT::new(
                         OwnershipT::Own,
@@ -429,7 +433,7 @@ exported func main() int {
             NodeRefT::FunctionDefinition(lambda),
             NodeRefT::Mutate(MutateTE {
                 destination_expr: AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
-                    member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
+                    member_name: IVarNameT::Member(MemberNameT { name: StrI("x"), .. }),
                     result_type2: CoordT {
                         ownership: OwnershipT::Own,
                         kind: KindT::Int(IntT { bits: 32 }),

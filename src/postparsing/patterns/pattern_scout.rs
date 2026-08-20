@@ -1,7 +1,7 @@
 use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, PatternPP};
 use crate::postparsing::ast::LocationInDenizenBuilder;
-use crate::postparsing::names::IVarNameS;
+use crate::postparsing::names::{CodeVarNameS, IVarDeclarationNameS};
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser, StackFrame};
 use crate::postparsing::rules::rules::IRulexSR;
@@ -82,23 +82,26 @@ pub(crate) fn translate_pattern<'s, 'p>(
       match &destination.decl {
         INameDeclarationP::IgnoredLocalNameDeclaration(_) => None,
         INameDeclarationP::LocalNameDeclaration(name_p) => Some(CaptureS {
-          name: IVarNameS::CodeVarName(scout_arena.intern_str(name_p.str().as_str())),
+          name: IVarDeclarationNameS::CodeVarName(CodeVarNameS {
+            name: scout_arena.intern_str(name_p.str().as_str()),
+            lid: lidb.child().consume_in_arena(scout_arena),
+          }),
           mutate,
         }),
         INameDeclarationP::ConstructingMemberNameDeclaration(name_p) => Some(CaptureS {
-          name: IVarNameS::ConstructingMemberName(scout_arena.intern_str(name_p.str().as_str())),
+          name: IVarDeclarationNameS::ConstructingMemberName(scout_arena.intern_str(name_p.str().as_str())),
           mutate,
         }),
         INameDeclarationP::IterableNameDeclaration(range) => Some(CaptureS {
-          name: IVarNameS::IterableName(PostParser::eval_range(stack_frame.file, *range)),
+          name: IVarDeclarationNameS::IterableName(PostParser::eval_range(stack_frame.file, *range)),
           mutate,
         }),
         INameDeclarationP::IteratorNameDeclaration(range) => Some(CaptureS {
-          name: IVarNameS::IteratorName(PostParser::eval_range(stack_frame.file, *range)),
+          name: IVarDeclarationNameS::IteratorName(PostParser::eval_range(stack_frame.file, *range)),
           mutate,
         }),
         INameDeclarationP::IterationOptionNameDeclaration(range) => Some(CaptureS {
-          name: IVarNameS::IterationOptionName(PostParser::eval_range(stack_frame.file, *range)),
+          name: IVarDeclarationNameS::IterationOptionName(PostParser::eval_range(stack_frame.file, *range)),
           mutate,
         }),
       }

@@ -8,7 +8,7 @@ use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::ast::expressions::FunctionCallTE;
-use crate::typing::names::names::CodeVarNameT;
+use crate::typing::names::names::MemberNameT;
 use crate::typing::names::names::FunctionNameT;
 use crate::typing::names::names::FunctionTemplateNameT;
 use crate::typing::names::names::INameT;
@@ -25,8 +25,8 @@ use crate::typing::types::types::KindT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::types::types::StructTT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 
 pub struct InferTemplateTests;
 
@@ -63,7 +63,7 @@ exported func main() int {
         let moo = coutputs.lookup_function_by_str("moo");
         match moo.header.params {
             [ParameterT {
-                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }),
+                name: IVarNameT::Member(MemberNameT { name: StrI("m"), .. }),
                 tyype: CoordT { ownership: OwnershipT::Borrow, .. },
                 ..
             }] => {}

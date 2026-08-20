@@ -10,7 +10,7 @@ use crate::tests::tests::new_test_package_source;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::ast::expressions::FunctionCallTE;
-use crate::typing::names::names::CodeVarNameT;
+use crate::typing::names::names::MemberNameT;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::names::names::{FunctionNameT, FunctionTemplateNameT, INameT, IdT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
@@ -231,7 +231,7 @@ exported func main() int {
       NodeRefT::FunctionDefinition(lambda),
       NodeRefT::Parameter(
           ParameterT {
-              name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+              name: IVarNameT::Member(MemberNameT { name: StrI("a"), .. }),
               virtuality: None,
               tyype: KindT::Int(IntT { bits: 32 }),
               ..

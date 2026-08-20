@@ -11,7 +11,7 @@ use crate::postparsing::expressions::{
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, ExportAsNameS as ExportAsNameFromNamesS,
-  FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarNameS,
+  FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarDeclarationNameS,
   ImplDeclarationNameS, ImplicitRuneS, LambdaDeclarationNameS, MagicParamRuneS,
   TopLevelCitizenDeclarationNameS, TopLevelInterfaceDeclarationNameS,
   TopLevelStructDeclarationNameS,
@@ -98,7 +98,7 @@ pub enum NodeRefS<'s> {
   ExportAsName(&'s ExportAsNameFromNamesS<'s>),
   ImpreciseName(&'s IImpreciseNameS<'s>),
   CodeName(&'s CodeNameS<'s>),
-  VarName(&'s IVarNameS<'s>),
+  VarName(&'s IVarDeclarationNameS<'s>),
   Rune(&'s IRuneS<'s>),
   CodeRune(&'s CodeRuneS<'s>),
   ImplicitRune(&'s ImplicitRuneS<'s>),
@@ -527,7 +527,7 @@ where
       visit_expression(pred, out, x.expr);
     }
     IExpressionSE::LocalMutate(x) => {
-      visit_var_name(pred, out, &x.name);
+      visit_imprecise_name(pred, out, &x.name);
       visit_expression(pred, out, x.expr);
     }
     IExpressionSE::Consecutor(x) => {
@@ -582,7 +582,7 @@ where
     IExpressionSE::ConstantStr(_) => {}
     IExpressionSE::ConstantFloat(_) => {}
     IExpressionSE::Destruct(x) => visit_expression(pred, out, x.inner),
-    IExpressionSE::Unlet(x) => visit_var_name(pred, out, &x.name),
+    IExpressionSE::Unlet(x) => visit_imprecise_name(pred, out, &x.name),
     IExpressionSE::Function(x) => visit_function(pred, out, &x.function),
     IExpressionSE::Dot(x) => visit_dot(pred, out, x),
     IExpressionSE::Index(x) => {
@@ -595,7 +595,7 @@ where
         visit_expression(pred, out, arg);
       }
     }
-    IExpressionSE::LocalLoad(x) => visit_var_name(pred, out, &x.name),
+    IExpressionSE::LocalLoad(x) => visit_imprecise_name(pred, out, &x.name),
     IExpressionSE::OverloadSet(x) => visit_outside_load(pred, out, &x.lookup),
     IExpressionSE::RuneLookup(x) => visit_rune(pred, out, &x.rune),
     IExpressionSE::Ownershipped(x) => visit_ownershipped(pred, out, x),
@@ -873,11 +873,15 @@ where
     | IImpreciseNameS::ClosureParamImpreciseName(_)
     | IImpreciseNameS::PrototypeName(_)
     | IImpreciseNameS::SelfName(_)
-    | IImpreciseNameS::ArbitraryName(_) => {}
+    | IImpreciseNameS::ArbitraryName(_)
+    | IImpreciseNameS::MagicParamName(_)
+    | IImpreciseNameS::WhileCondResultName(_)
+    | IImpreciseNameS::AnonymousSubstructMemberName(_)
+    | IImpreciseNameS::DesugaredParamName(_) => {}
   }
 }
 
-fn visit_var_name<'s, T, F>(pred: &F, out: &mut Vec<T>, name: &'s IVarNameS<'s>)
+fn visit_var_name<'s, T, F>(pred: &F, out: &mut Vec<T>, name: &'s IVarDeclarationNameS<'s>)
 where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {

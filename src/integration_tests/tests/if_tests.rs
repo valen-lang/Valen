@@ -24,9 +24,9 @@ use crate::typing::types::types::OwnershipT;
 use crate::typing::types::types::RegionT;
 use crate::typing::types::types::StrT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
-use crate::von::ast::VonStr;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
+use crate::testvm::von::VonStr;
 
 pub struct IfTests;
 

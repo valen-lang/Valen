@@ -6,7 +6,7 @@ use crate::postparsing::itemplatatype::{
 };
 use crate::postparsing::names::{
   ExportAsNameS, IFunctionDeclarationNameS, IImplDeclarationNameS, IImpreciseNameS, IRuneS,
-  IStructDeclarationNameS, IVarNameS, ImplDeclarationNameS, TopLevelCitizenDeclarationNameS,
+  IStructDeclarationNameS, IVarDeclarationNameS, ImplDeclarationNameS, TopLevelCitizenDeclarationNameS,
   TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::patterns::AtomSP;
@@ -379,7 +379,7 @@ pub struct ParameterS<'s> {
   /// - an anonymous or ignored param (`Pair[a, b]`, `_ Pair`) gets a synthetic DesugaredParamName.
   /// A destructure's inner names live on a body-head LetSE that loads this name, synthesized only
   /// when the param actually destructures.
-  pub name: IVarNameS<'s>,
+  pub name: IVarDeclarationNameS<'s>,
   /// The parameter's full type tree (plan §P). The borrow checker reads a param's `in g` group off
   /// this (via the per-`FunctionT` side table), so it must survive scout rather than being discarded.
   pub tyype: ITypeST<'s>,
@@ -403,7 +403,7 @@ impl<'s> ParameterS<'s> {
     range: RangeS<'s>,
     virtuality: Option<AbstractSP<'s>>,
     pre_checked: bool,
-    name: IVarNameS<'s>,
+    name: IVarDeclarationNameS<'s>,
     tyype: ITypeST<'s>,
     full_type_rune: RuneUsage<'s>,
     value_type_rune: RuneUsage<'s>,
@@ -413,11 +413,11 @@ impl<'s> ParameterS<'s> {
     debug_assert!(
       matches!(
         name,
-        IVarNameS::CodeVarName(_)
-          | IVarNameS::ConstructingMemberName(_)
-          | IVarNameS::ClosureParamName(_)
-          | IVarNameS::MagicParamName(_)
-          | IVarNameS::DesugaredParamName(_)
+        IVarDeclarationNameS::CodeVarName(_)
+          | IVarDeclarationNameS::ConstructingMemberName(_)
+          | IVarDeclarationNameS::ClosureParamName(_)
+          | IVarDeclarationNameS::MagicParamName(_)
+          | IVarDeclarationNameS::DesugaredParamName(_)
       ),
       "ParameterS.name must be a param name (real, or synthetic DesugaredParamName)"
     );

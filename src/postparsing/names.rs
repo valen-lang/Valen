@@ -25,7 +25,7 @@ pub enum INameS<'s> {
   StaticSizedArrayDeclarationName(&'s StaticSizedArrayDeclarationNameS),
   GlobalFunctionFamilyName(&'s GlobalFunctionFamilyNameS<'s>),
   ArbitraryName(&'s ArbitraryNameS),
-  VarName(&'s IVarNameS<'s>),
+  VarName(&'s IVarDeclarationNameS<'s>),
 }
 
 impl<'s> INameS<'s> {
@@ -87,7 +87,7 @@ pub enum INameValS<'s> {
   StaticSizedArrayDeclarationName(StaticSizedArrayDeclarationNameS),
   GlobalFunctionFamilyName(GlobalFunctionFamilyNameS<'s>),
   ArbitraryName(ArbitraryNameS),
-  VarName(IVarNameValS<'s>),
+  VarName(IVarDeclarationNameValS<'s>),
 }
 
 /// Shallow: inner already canonical.
@@ -104,6 +104,7 @@ pub struct AnonymousSubstructTemplateNameValS<'s> {
 
 // AFTERM: Add arcana for how these sometimes contain INameS even though
 // INameS arent interned. Should be fine, but worth looking out for.
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IImpreciseNameS<'s> {
   CodeName(&'s CodeNameS<'s>),
@@ -125,6 +126,10 @@ pub enum IImpreciseNameS<'s> {
   SelfName(&'s SelfNameS),
   RuneName(&'s RuneNameS<'s>),
   ArbitraryName(&'s ArbitraryNameS),
+  MagicParamName(&'s MagicParamNameS<'s>),
+  WhileCondResultName(&'s WhileCondResultNameS<'s>),
+  AnonymousSubstructMemberName(&'s AnonymousSubstructMemberNameS),
+  DesugaredParamName(&'s DesugaredParamNameS<'s>),
 }
 
 impl<'s> IImpreciseNameS<'s> {
@@ -150,6 +155,10 @@ impl<'s> IImpreciseNameS<'s> {
       IImpreciseNameS::SelfName(r) => *r as *const _ as *const (),
       IImpreciseNameS::RuneName(r) => *r as *const _ as *const (),
       IImpreciseNameS::ArbitraryName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::MagicParamName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::WhileCondResultName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::AnonymousSubstructMemberName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::DesugaredParamName(r) => *r as *const _ as *const (),
     }
   }
 
@@ -226,11 +235,17 @@ pub enum IImpreciseNameValS<'s> {
   SelfName(SelfNameS),
   RuneName(RuneNameValS<'s>),
   ArbitraryName(ArbitraryNameS),
+  MagicParamName(MagicParamNameS<'s>),
+  WhileCondResultName(WhileCondResultNameS<'s>),
+  AnonymousSubstructMemberName(AnonymousSubstructMemberNameS),
+  DesugaredParamName(DesugaredParamNameS<'s>),
 }
 
+/// Value-type (see @TFITCX). Identity-bearing — each names one declaration — so never interned
+/// per @WVSBIZ; the per-variant disambiguator (lid/location/range) makes structural eq be identity.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IVarNameS<'s> {
-  CodeVarName(StrI<'s>),
+pub enum IVarDeclarationNameS<'s> {
+  CodeVarName(CodeVarNameS<'s>),
   ConstructingMemberName(StrI<'s>),
   ClosureParamName(&'s ClosureParamNameS<'s>),
   MagicParamName(CodeLocationS<'s>),
@@ -246,10 +261,53 @@ pub enum IVarNameS<'s> {
   DesugaredParamName(CodeLocationS<'s>),
 }
 
+impl<'s> IVarDeclarationNameS<'s> {
+  /// The imprecise (source) name a use-site uses to resolve this variable by its source
+  /// spelling. Total: every declaration-name variant maps to a corresponding imprecise
+  /// variant, so this never fails.
+  pub fn imprecise_name(self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
+    match self {
+      IVarDeclarationNameS::CodeVarName(n) => {
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: n.name }))
+      }
+      IVarDeclarationNameS::ConstructingMemberName(name) => {
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name }))
+      }
+      IVarDeclarationNameS::ClosureParamName(_) => scout_arena.intern_imprecise_name(
+        IImpreciseNameValS::ClosureParamImpreciseName(ClosureParamImpreciseNameS {}),
+      ),
+      IVarDeclarationNameS::MagicParamName(code_location) => scout_arena
+        .intern_imprecise_name(IImpreciseNameValS::MagicParamName(MagicParamNameS {
+          code_location,
+        })),
+      IVarDeclarationNameS::IterableName(range) => scout_arena
+        .intern_imprecise_name(IImpreciseNameValS::IterableName(IterableNameS { range })),
+      IVarDeclarationNameS::IteratorName(range) => scout_arena
+        .intern_imprecise_name(IImpreciseNameValS::IteratorName(IteratorNameS { range })),
+      IVarDeclarationNameS::IterationOptionName(range) => scout_arena.intern_imprecise_name(
+        IImpreciseNameValS::IterationOptionName(IterationOptionNameS { range }),
+      ),
+      IVarDeclarationNameS::WhileCondResultName(range) => scout_arena.intern_imprecise_name(
+        IImpreciseNameValS::WhileCondResultName(WhileCondResultNameS { range }),
+      ),
+      IVarDeclarationNameS::SelfName => {
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::SelfName(SelfNameS {}))
+      }
+      IVarDeclarationNameS::AnonymousSubstructMemberName(index) => scout_arena
+        .intern_imprecise_name(IImpreciseNameValS::AnonymousSubstructMemberName(
+          AnonymousSubstructMemberNameS { index },
+        )),
+      IVarDeclarationNameS::DesugaredParamName(code_location) => scout_arena
+        .intern_imprecise_name(IImpreciseNameValS::DesugaredParamName(DesugaredParamNameS {
+          code_location,
+        })),
+    }
+  }
+}
+
 /// Value form for interner lookups.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IVarNameValS<'s> {
-  CodeVarName(StrI<'s>),
+pub enum IVarDeclarationNameValS<'s> {
   ConstructingMemberName(StrI<'s>),
   ClosureParamName(ClosureParamNameS<'s>),
   MagicParamName(CodeLocationS<'s>),
@@ -625,6 +683,11 @@ pub struct MagicParamNameS<'s> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DesugaredParamNameS<'s> {
+  pub code_location: CodeLocationS<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateNameS<'s> {
   pub interface_name: TopLevelInterfaceDeclarationNameS<'s>,
 }
@@ -644,9 +707,13 @@ pub struct AnonymousSubstructMemberNameS {
   pub index: i32,
 }
 
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeVarNameS<'s> {
   pub name: StrI<'s>,
+  /// Disambiguates same-named locals across scopes, so structural equality is identity
+  /// equality — which is why a declaration name is never interned (see @WVSBIZ).
+  pub lid: LocationInDenizen<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

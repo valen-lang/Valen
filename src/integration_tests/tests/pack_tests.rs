@@ -8,8 +8,8 @@ use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::ast::expressions::TupleTE;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 
 pub struct PackTests;
 

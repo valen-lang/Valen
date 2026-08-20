@@ -12,7 +12,7 @@ use crate::typing::ast::expressions::LetNormalTE;
 use crate::typing::ast::expressions::SoftLoadTE;
 use crate::typing::env::function_environment_t::ILocalVariableT;
 use crate::typing::env::function_environment_t::ReferenceLocalVariableT;
-use crate::typing::names::names::CodeVarNameT;
+use crate::typing::names::names::MemberNameT;
 use crate::typing::names::names::INameT;
 use crate::typing::names::names::IStructTemplateNameT;
 use crate::typing::names::names::IVarNameT;
@@ -28,8 +28,8 @@ use crate::typing::types::types::KindT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::types::types::StructTT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 
 pub struct WeakTests;
 
@@ -61,7 +61,7 @@ fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
             NodeRefT::FunctionDefinition(main),
             NodeRefT::LetNormal(LetNormalTE {
                 variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                    name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("weakMuta"), .. }),
+                    name: IVarNameT::Member(MemberNameT { name: StrI("weakMuta"), .. }),
                     coord: CoordT { ownership: OwnershipT::Weak, .. },
                 }),
                 expr: ref_expr,
@@ -284,7 +284,7 @@ fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
             NodeRefT::FunctionDefinition(main),
             NodeRefT::LetNormal(LetNormalTE {
                 variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                    name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("weakUnit"), .. }),
+                    name: IVarNameT::Member(MemberNameT { name: StrI("weakUnit"), .. }),
                     coord: CoordT { ownership: OwnershipT::Weak, .. },
                 }),
                 expr: ref_expr,

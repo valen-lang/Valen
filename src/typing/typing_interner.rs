@@ -416,7 +416,8 @@ where
       V::Iterator(p) => (V::Iterator(p), T::Iterator(self.bump.alloc(p))),
       V::IterationOption(p) => (V::IterationOption(p), T::IterationOption(self.bump.alloc(p))),
       V::MagicParam(p) => (V::MagicParam(p), T::MagicParam(self.bump.alloc(p))),
-      V::CodeVar(p) => (V::CodeVar(p), T::CodeVar(self.bump.alloc(p))),
+      V::Member(p) => (V::Member(p), T::Member(self.bump.alloc(p))),
+      V::Local(p) => (V::Local(p), T::Local(self.bump.alloc(p))),
       V::AnonymousSubstructMember(p) => {
         (V::AnonymousSubstructMember(p), T::AnonymousSubstructMember(self.bump.alloc(p)))
       }
@@ -793,7 +794,8 @@ where
     IterationOptionNameT
   );
   impl_intern_name_wrapper_simple_s_only!(intern_magic_param_name, MagicParam, MagicParamNameT);
-  impl_intern_name_wrapper_simple_s_only!(intern_code_var_name, CodeVar, CodeVarNameT);
+  impl_intern_name_wrapper_simple_s_only!(intern_member_name, Member, MemberNameT);
+  impl_intern_name_wrapper_simple_s_only!(intern_local_name, Local, LocalNameT);
   impl_intern_name_wrapper_simple_none!(
     intern_anonymous_substruct_member_name,
     AnonymousSubstructMember,

@@ -12,7 +12,7 @@ use crate::postparsing::names::{
   AnonymousSubstructTemplateImpreciseNameS, CallPureMergeRegionRuneS, CallPureMergeRegionRuneValS,
   CallRegionRuneS, CallRegionRuneValS, CaseRuneFromImplS, DispatcherRuneFromImplS,
   IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IImpreciseNameS, IImpreciseNameValS,
-  INameS, INameValS, IRuneS, IRuneValS, IVarNameS, IVarNameValS, ImplImpreciseNameS,
+  INameS, INameValS, IRuneS, IRuneValS, IVarDeclarationNameS, IVarDeclarationNameValS, ImplImpreciseNameS,
   ImplSubCitizenImpreciseNameS, ImplSuperInterfaceImpreciseNameS, ImplicitCoercionTemplateRuneS,
   ImplicitRegionRuneS, ImplicitRuneS, ImplicitRuneValS, LambdaStructImpreciseNameS,
   LetImplicitRuneS, LetImplicitRuneValS, LocalDefaultRegionRuneS, LocalDefaultRegionRuneValS,
@@ -226,6 +226,12 @@ impl<'s> ScoutArena<'s> {
         IImpreciseNameS::RuneName(self.bump.alloc(payload))
       }
       ArbitraryName(p) => IImpreciseNameS::ArbitraryName(self.bump.alloc(p)),
+      MagicParamName(p) => IImpreciseNameS::MagicParamName(self.bump.alloc(p)),
+      WhileCondResultName(p) => IImpreciseNameS::WhileCondResultName(self.bump.alloc(p)),
+      AnonymousSubstructMemberName(p) => {
+        IImpreciseNameS::AnonymousSubstructMemberName(self.bump.alloc(p))
+      }
+      DesugaredParamName(p) => IImpreciseNameS::DesugaredParamName(self.bump.alloc(p)),
     }
   }
 
@@ -343,19 +349,18 @@ impl<'s> ScoutArena<'s> {
     }
   }
 
-  fn alloc_var_name_canonical(&self, val: IVarNameValS<'s>) -> IVarNameS<'s> {
+  fn alloc_var_name_canonical(&self, val: IVarDeclarationNameValS<'s>) -> IVarDeclarationNameS<'s> {
     match val {
-      IVarNameValS::CodeVarName(n) => IVarNameS::CodeVarName(n),
-      IVarNameValS::ConstructingMemberName(n) => IVarNameS::ConstructingMemberName(n),
-      IVarNameValS::ClosureParamName(p) => IVarNameS::ClosureParamName(self.bump.alloc(p)),
-      IVarNameValS::MagicParamName(p) => IVarNameS::MagicParamName(p),
-      IVarNameValS::IterableName(p) => IVarNameS::IterableName(p),
-      IVarNameValS::IteratorName(p) => IVarNameS::IteratorName(p),
-      IVarNameValS::IterationOptionName(p) => IVarNameS::IterationOptionName(p),
-      IVarNameValS::WhileCondResultName(p) => IVarNameS::WhileCondResultName(p),
-      IVarNameValS::SelfName => IVarNameS::SelfName,
-      IVarNameValS::AnonymousSubstructMemberName(i) => IVarNameS::AnonymousSubstructMemberName(i),
-      IVarNameValS::DesugaredParamName(p) => IVarNameS::DesugaredParamName(p),
+      IVarDeclarationNameValS::ConstructingMemberName(n) => IVarDeclarationNameS::ConstructingMemberName(n),
+      IVarDeclarationNameValS::ClosureParamName(p) => IVarDeclarationNameS::ClosureParamName(self.bump.alloc(p)),
+      IVarDeclarationNameValS::MagicParamName(p) => IVarDeclarationNameS::MagicParamName(p),
+      IVarDeclarationNameValS::IterableName(p) => IVarDeclarationNameS::IterableName(p),
+      IVarDeclarationNameValS::IteratorName(p) => IVarDeclarationNameS::IteratorName(p),
+      IVarDeclarationNameValS::IterationOptionName(p) => IVarDeclarationNameS::IterationOptionName(p),
+      IVarDeclarationNameValS::WhileCondResultName(p) => IVarDeclarationNameS::WhileCondResultName(p),
+      IVarDeclarationNameValS::SelfName => IVarDeclarationNameS::SelfName,
+      IVarDeclarationNameValS::AnonymousSubstructMemberName(i) => IVarDeclarationNameS::AnonymousSubstructMemberName(i),
+      IVarDeclarationNameValS::DesugaredParamName(p) => IVarDeclarationNameS::DesugaredParamName(p),
     }
   }
 

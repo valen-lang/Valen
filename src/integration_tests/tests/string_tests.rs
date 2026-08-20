@@ -9,9 +9,9 @@ use crate::tests::tests::load_expected;
 use crate::typing::ast::expressions::ConstantStrTE;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
-use crate::von::ast::VonStr;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
+use crate::testvm::von::VonStr;
 
 pub struct StringTests;
 

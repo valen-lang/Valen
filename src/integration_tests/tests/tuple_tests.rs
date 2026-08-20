@@ -9,9 +9,9 @@ use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::IntT;
 use crate::typing::types::types::KindT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonBool;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonBool;
+use crate::testvm::von::VonInt;
 
 pub struct TupleTests;
 

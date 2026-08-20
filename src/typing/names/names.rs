@@ -1,4 +1,5 @@
 use crate::interner::StrI;
+use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::names::IRuneS;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
@@ -181,7 +182,8 @@ pub enum INameT<'s, 't> {
   Iterator(&'t IteratorNameT<'s>),
   IterationOption(&'t IterationOptionNameT<'s>),
   MagicParam(&'t MagicParamNameT<'s>),
-  CodeVar(&'t CodeVarNameT<'s>),
+  Member(&'t MemberNameT<'s>),
+  Local(&'t LocalNameT<'s>),
   AnonymousSubstructMember(&'t AnonymousSubstructMemberNameT),
   Primitive(&'t PrimitiveNameT<'s>),
   PackageTopLevel(&'t PackageTopLevelNameT),
@@ -1161,6 +1163,7 @@ pub struct OverrideDispatcherCaseNameT<'s, 't> {
   pub _must_intern: MustIntern,
 }
 
+// VCOORD: arcana that all IVarNameT must be unique in a given function.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IVarNameT<'s, 't> {
@@ -1177,7 +1180,8 @@ pub enum IVarNameT<'s, 't> {
   Iterator(&'t IteratorNameT<'s>),
   IterationOption(&'t IterationOptionNameT<'s>),
   MagicParam(&'t MagicParamNameT<'s>),
-  CodeVar(&'t CodeVarNameT<'s>),
+  Member(&'t MemberNameT<'s>),
+  Local(&'t LocalNameT<'s>),
   AnonymousSubstructMember(&'t AnonymousSubstructMemberNameT),
   Self_(&'t SelfNameT),
 }
@@ -1260,8 +1264,15 @@ pub struct MagicParamNameT<'s> {
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct CodeVarNameT<'s> {
+pub struct MemberNameT<'s> {
   pub name: StrI<'s>,
+}
+
+/// Interned (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct LocalNameT<'s> {
+  pub name: StrI<'s>,
+  pub lid: LocationInDenizen<'s>,
 }
 
 /// Interned (see @TFITCX)
@@ -1710,9 +1721,14 @@ impl<'s, 't> From<&'t MagicParamNameT<'s>> for INameT<'s, 't> {
     INameT::MagicParam(x)
   }
 }
-impl<'s, 't> From<&'t CodeVarNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t CodeVarNameT<'s>) -> Self {
-    INameT::CodeVar(x)
+impl<'s, 't> From<&'t MemberNameT<'s>> for INameT<'s, 't> {
+  fn from(x: &'t MemberNameT<'s>) -> Self {
+    INameT::Member(x)
+  }
+}
+impl<'s, 't> From<&'t LocalNameT<'s>> for INameT<'s, 't> {
+  fn from(x: &'t LocalNameT<'s>) -> Self {
+    INameT::Local(x)
   }
 }
 impl<'s, 't> From<&'t AnonymousSubstructMemberNameT> for INameT<'s, 't> {
@@ -2535,9 +2551,14 @@ impl<'s, 't> From<&'t MagicParamNameT<'s>> for IVarNameT<'s, 't> {
     IVarNameT::MagicParam(x)
   }
 }
-impl<'s, 't> From<&'t CodeVarNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t CodeVarNameT<'s>) -> Self {
-    IVarNameT::CodeVar(x)
+impl<'s, 't> From<&'t MemberNameT<'s>> for IVarNameT<'s, 't> {
+  fn from(x: &'t MemberNameT<'s>) -> Self {
+    IVarNameT::Member(x)
+  }
+}
+impl<'s, 't> From<&'t LocalNameT<'s>> for IVarNameT<'s, 't> {
+  fn from(x: &'t LocalNameT<'s>) -> Self {
+    IVarNameT::Local(x)
   }
 }
 impl<'s, 't> From<&'t AnonymousSubstructMemberNameT> for IVarNameT<'s, 't> {
@@ -2767,7 +2788,8 @@ impl<'s, 't> From<IVarNameT<'s, 't>> for INameT<'s, 't> {
       IVarNameT::Iterator(x) => x.into(),
       IVarNameT::IterationOption(x) => x.into(),
       IVarNameT::MagicParam(x) => x.into(),
-      IVarNameT::CodeVar(x) => x.into(),
+      IVarNameT::Member(x) => x.into(),
+      IVarNameT::Local(x) => x.into(),
       IVarNameT::AnonymousSubstructMember(x) => x.into(),
       IVarNameT::Self_(x) => x.into(),
     }
@@ -3198,7 +3220,8 @@ impl<'s, 't> TryFrom<INameT<'s, 't>> for IVarNameT<'s, 't> {
       INameT::Iterator(x) => Ok(IVarNameT::Iterator(x)),
       INameT::IterationOption(x) => Ok(IVarNameT::IterationOption(x)),
       INameT::MagicParam(x) => Ok(IVarNameT::MagicParam(x)),
-      INameT::CodeVar(x) => Ok(IVarNameT::CodeVar(x)),
+      INameT::Member(x) => Ok(IVarNameT::Member(x)),
+      INameT::Local(x) => Ok(IVarNameT::Local(x)),
       INameT::AnonymousSubstructMember(x) => Ok(IVarNameT::AnonymousSubstructMember(x)),
       INameT::Self_(x) => Ok(IVarNameT::Self_(x)),
       _ => Err(()),
@@ -3512,7 +3535,7 @@ where
 //   KindPlaceholderTemplateNameT, NonKindNonRegionPlaceholderNameT,
 //   TypingIgnoredParamNameT, UnnamedLocalNameT, ClosureParamNameT,
 //   ConstructingMemberNameT, WhileCondResultNameT, IterableNameT,
-//   IteratorNameT, IterationOptionNameT, MagicParamNameT, CodeVarNameT,
+//   IteratorNameT, IterationOptionNameT, MagicParamNameT, MemberNameT,
 //   AnonymousSubstructMemberNameT, PrimitiveNameT, ProjectNameT, PackageNameT,
 //   RuneNameT, ExternTemplateNameT, FunctionBoundTemplateNameT,
 //   PredictedFunctionTemplateNameT, FunctionTemplateNameT,
@@ -3734,7 +3757,8 @@ where
   Iterator(IteratorNameT<'s>),
   IterationOption(IterationOptionNameT<'s>),
   MagicParam(MagicParamNameT<'s>),
-  CodeVar(CodeVarNameT<'s>),
+  Member(MemberNameT<'s>),
+  Local(LocalNameT<'s>),
   AnonymousSubstructMember(AnonymousSubstructMemberNameT),
   Primitive(PrimitiveNameT<'s>),
   PackageTopLevel(PackageTopLevelNameT),
@@ -3860,7 +3884,8 @@ where
       (Iterator(a), Iterator(b)) => a == b,
       (IterationOption(a), IterationOption(b)) => a == b,
       (MagicParam(a), MagicParam(b)) => a == b,
-      (CodeVar(a), CodeVar(b)) => a == b,
+      (Member(a), Member(b)) => a == b,
+      (Local(a), Local(b)) => a == b,
       (AnonymousSubstructMember(a), AnonymousSubstructMember(b)) => a == b,
       (Primitive(a), Primitive(b)) => a == b,
       (PackageTopLevel(a), PackageTopLevel(b)) => a == b,

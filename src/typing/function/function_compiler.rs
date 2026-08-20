@@ -1,7 +1,7 @@
 use crate::postparsing::ast::FunctionS;
 use crate::postparsing::ast::{IBodyS, LocationInDenizen};
 use crate::postparsing::names::IRuneS;
-use crate::postparsing::names::{IFunctionDeclarationNameS, IVarNameS};
+use crate::postparsing::names::{IFunctionDeclarationNameS, IVarDeclarationNameS};
 use crate::typing::ast::ast::FunctionHeaderT;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::ast::citizens::StructMemberT;
@@ -327,10 +327,11 @@ where
   pub fn determine_closure_variable_member(
     &self,
     env: &'t NodeEnvironmentT<'s, 't>,
-    name: IVarNameS<'s>,
+    name: IVarDeclarationNameS<'s>,
   ) -> &'t StructMemberT<'s, 't> {
     let translated_name = self.translate_var_name_step(name);
-    let captured = match env.get_variable(translated_name).unwrap() {
+    let name_imprecise = name.imprecise_name(self.scout_arena);
+    let captured = match env.get_variable(name_imprecise, self.scout_arena).unwrap() {
       IVariableT::Local(local) => local.tyype,
       IVariableT::Capture(capture_var) => capture_var.kind,
     };

@@ -12,7 +12,7 @@ use crate::postparsing::names::IImpreciseNameValS;
 use crate::postparsing::names::*;
 use crate::postparsing::names::{
   CodeVarNameS, FunctionNameS, IFunctionDeclarationNameS, IFunctionDeclarationNameValS, INameValS,
-  IRuneValS, IVarNameS, MacroVoidKindRuneS, SelfKindRuneS, SelfKindTemplateRuneS,
+  IRuneValS, IVarDeclarationNameS, MacroVoidKindRuneS, SelfKindRuneS, SelfKindTemplateRuneS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
@@ -195,7 +195,7 @@ where
         range(-1340),
         None,
         false,
-        IVarNameS::CodeVarName(self.keywords.thiss),
+        IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: self.keywords.thiss, lid: LocationInDenizen { path: &[] } }),
         ITypeST::Rune(self.scout_arena.alloc(RuneUsageST { rune: use_(-64002, self_kind_rune_s) })),
         use_(-64002, self_kind_rune_s),
         use_(-64002, self_kind_rune_s),
@@ -251,7 +251,7 @@ where
       internal_range(-1342),
       None,
       false,
-      IVarNameS::CodeVarName(self.keywords.x),
+      IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: self.keywords.x, lid: LocationInDenizen { path: &[] } }),
       ITypeST::Rune(self.scout_arena.alloc(RuneUsageST {
         rune: RuneUsage { range: internal_range(-64002), rune: drop_p1k_rune },
       })),

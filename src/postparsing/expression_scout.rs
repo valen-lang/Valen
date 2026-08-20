@@ -20,7 +20,7 @@ use crate::postparsing::loop_post_parser::{scout_each, scout_while};
 use crate::postparsing::names::ImplicitRuneValS;
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, IRuneS,
-  IRuneValS, IVarNameS,
+  IRuneValS, IVarDeclarationNameS,
 };
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::post_parser::translate_imprecise_name;
@@ -45,7 +45,7 @@ pub(crate) enum IScoutResult<'s, 'p> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) struct LocalLookupResultS<'s> {
   range: RangeS<'s>,
-  name: IVarNameS<'s>,
+  name: IVarDeclarationNameS<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -188,7 +188,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       .vars
       .iter()
       .filter_map(|declared| match &declared.name {
-        IVarNameS::ConstructingMemberName(member_name) => Some(*member_name),
+        IVarDeclarationNameS::ConstructingMemberName(member_name) => Some(*member_name),
         _ => None,
       })
       .collect();
@@ -473,7 +473,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
 
       IExpressionPE::MagicParamLookup(magic_param_lookup) => {
         let range_s = PostParser::eval_range(&file_coordinate, magic_param_lookup.range);
-        let name = IVarNameS::MagicParamName(PostParser::eval_pos(
+        let name = IVarDeclarationNameS::MagicParamName(PostParser::eval_pos(
           &file_coordinate,
           magic_param_lookup.range.begin(),
         ));
@@ -1158,7 +1158,15 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
           .vars
           .iter()
           .map(|decl| decl.name.clone())
-          .find(|name| declarations_from_pattern.vars.iter().any(|decl| decl.name == *name));
+          .find(|name| {
+            // Same-name conflict is by imprecise (source) name, not the full declaration name:
+            // the lid makes two same-spelling locals distinct, but they still collide by spelling.
+            let name_imprecise = name.imprecise_name(self.scout_arena);
+            declarations_from_pattern
+              .vars
+              .iter()
+              .any(|decl| decl.name.imprecise_name(self.scout_arena) == name_imprecise)
+          });
         if let Some(name_conflict_var_name) = maybe_name_conflict_var_name {
           return Err(ICompileErrorS::VariableNameAlreadyExists(VariableNameAlreadyExists {
             range: PostParser::eval_range(&file_coordinate, lett.range),
@@ -1210,7 +1218,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             IScoutResult::LocalLookupResult(LocalLookupResultS { range, name }) => (
               &*self.scout_arena.alloc(IExpressionSE::LocalMutate(LocalMutateSE {
                 range,
-                name: name.clone(),
+                name: name.imprecise_name(self.scout_arena),
                 expr: source_expr_s,
               })),
               source_inner_self_uses.mark_mutated(name),
@@ -1254,7 +1262,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
               stack_frame.clone(),
               IScoutResult::LocalLookupResult(LocalLookupResultS {
                 range: PostParser::eval_range(&file_coordinate, lookup_name.range()),
-                name: IVarNameS::ConstructingMemberName(
+                name: IVarDeclarationNameS::ConstructingMemberName(
                   self.scout_arena.intern_str(dot.member.str().as_str()),
                 ),
               }),
@@ -1523,7 +1531,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         };
         let result = self
           .scout_arena
-          .alloc(IExpressionSE::Unlet(UnletSE { range: range_s, name: var_name_s }));
+          .alloc(IExpressionSE::Unlet(UnletSE { range: range_s, name: imprecise_name_s }));
         Ok((
           stack_frame,
           IScoutResult::NormalResult(NormalResultS { expr: result }),
@@ -1728,14 +1736,19 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         // out, the same operation as the `unlet x` statement, so it lowers straight to
         // Unlet. `weak x` genuinely produces a weak reference (distinct from a borrow), so
         // it wraps the LocalLoad in Ownershipped to route through typing's weak-alias path.
+        // The node holds the imprecise (use-site) name; the declaration `name` stays for the
+        // `mark_*` move/use tracking above.
+        let name_imprecise = name.imprecise_name(self.scout_arena);
         let expr: &'s IExpressionSE<'s> = match load_as_p {
           LoadAsP::Use | LoadAsP::LoadAsBorrow => {
-            &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE { range, name }))
+            &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE { range, name: name_imprecise }))
           }
-          LoadAsP::Move => &*self.scout_arena.alloc(IExpressionSE::Unlet(UnletSE { range, name })),
+          LoadAsP::Move => {
+            &*self.scout_arena.alloc(IExpressionSE::Unlet(UnletSE { range, name: name_imprecise }))
+          }
           LoadAsP::LoadAsWeak => {
             let local_load =
-              &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE { range, name }));
+              &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE { range, name: name_imprecise }));
             &*self.scout_arena.alloc(IExpressionSE::Ownershipped(OwnershippedSE {
               range,
               inner_expr: local_load,

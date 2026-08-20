@@ -116,12 +116,13 @@ where
     coutputs: &CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     range: &[RangeS<'s>],
-    var_name: IVarNameS<'s>,
+    var_name: IVarDeclarationNameS<'s>,
     reference_type2: KindT<'s, 't>,
   ) -> &'t LocalVariable<'s, 't> {
     let var_id = self.translate_var_name_step(var_name);
 
-    if nenv.get_variable(var_id, self.typing_interner).is_some() {
+    let imprecise = var_name.imprecise_name(self.scout_arena);
+    if nenv.get_variable(imprecise, self.typing_interner, self.scout_arena).is_some() {
       panic!("There's already a variable named {:?}", var_id);
     }
 

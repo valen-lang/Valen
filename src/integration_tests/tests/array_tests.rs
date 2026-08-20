@@ -14,7 +14,7 @@ use crate::typing::ast::expressions::StaticSizedArrayLookupTE;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::function_environment_t::ILocalVariableT;
 use crate::typing::env::function_environment_t::ReferenceLocalVariableT;
-use crate::typing::names::names::CodeVarNameT;
+use crate::typing::names::names::MemberNameT;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::test::traverse::NodeRefT;
@@ -23,10 +23,10 @@ use crate::typing::types::types::KindT;
 use crate::typing::types::types::SharednessT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonBool;
-use crate::von::ast::VonInt;
-use crate::von::ast::VonStr;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonBool;
+use crate::testvm::von::VonInt;
+use crate::testvm::von::VonStr;
 
 pub struct ArrayTests;
 
@@ -596,7 +596,7 @@ exported func main() int {
             NodeRefT::FunctionDefinition(main),
             NodeRefT::LetNormal(LetNormalTE {
                 variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                    name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+                    name: IVarNameT::Member(MemberNameT { name: StrI("a"), .. }),
                     coord: CoordT {
                         ownership: OwnershipT::Own,
                         kind: KindT::RuntimeSizedArray(rsa),

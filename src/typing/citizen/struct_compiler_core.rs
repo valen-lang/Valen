@@ -25,7 +25,7 @@ use crate::typing::hinputs_t::make;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::names::names::IInterfaceTemplateNameT;
 use crate::typing::names::names::*;
-use crate::typing::names::names::{CodeVarNameT, IVarNameT};
+use crate::typing::names::names::{MemberNameT, IVarNameT};
 use crate::typing::names::names::{IInstantiationNameT, INameT, IStructTemplateNameT, IdValT};
 #[cfg(feature = "rust_interop")]
 use crate::typing::rust_interop::is_rust_backed;
@@ -345,8 +345,8 @@ where
           }
         };
         StructMemberT {
-          name: IVarNameT::CodeVar(
-            self.typing_interner.intern_code_var_name(CodeVarNameT { name: n.name }),
+          name: IVarNameT::Member(
+            self.typing_interner.intern_member_name(MemberNameT { name: n.name }),
           ),
           tyype: coord,
         }

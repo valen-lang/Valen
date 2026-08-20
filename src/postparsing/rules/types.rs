@@ -1,7 +1,7 @@
 use crate::interner::StrI;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::names::IRuneS;
-use crate::postparsing::names::IVarNameS;
+use crate::postparsing::names::IVarDeclarationNameS;
 use crate::postparsing::rules::rules::IntLiteralSL;
 use crate::postparsing::rules::RuneUsage;
 use crate::utils::range::RangeS;
@@ -153,8 +153,8 @@ pub enum RegionS<'s> {
 pub enum GroupS<'s> {
   /// `in g`: a group param.
   Rune(&'s RuneUsage<'s>),
-  /// `in x`: a local.
-  Local(IVarNameS<'s>),
+  /// `in x`: a local, named by the imprecise (use-site) name it's mentioned by.
+  Local(IImpreciseNameS<'s>),
   /// `in x.items`: the named member.
   Member { base: &'s GroupS<'s>, member_name: StrI<'s> },
   /// `in x.items[]`: an element of the member.

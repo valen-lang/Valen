@@ -3,7 +3,7 @@ use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::names::IRuneS;
 use crate::postparsing::names::{
-  ICitizenDeclarationNameS, IFunctionDeclarationNameS, INameS, IStructDeclarationNameS, IVarNameS,
+  ICitizenDeclarationNameS, IFunctionDeclarationNameS, INameS, IStructDeclarationNameS, IVarDeclarationNameS,
 };
 use crate::postparsing::post_parser::ICompileErrorS;
 use crate::postparsing::rules::rules::ILiteralSL;
@@ -80,11 +80,11 @@ where
   format!("{} error {}: {}\n{}\n", pos_str, error_id, error_str_body, next_stuff)
 }
 
-fn humanize_var_name<'s>(var_name: IVarNameS<'s>) -> String {
+fn humanize_var_name<'s>(var_name: IVarDeclarationNameS<'s>) -> String {
   match var_name {
-    IVarNameS::CodeVarName(n) => n.as_str().to_string(),
-    IVarNameS::ClosureParamName(_) => "(closure)".to_string(),
-    _ => panic!("Unimplemented humanize_var_name branch for IVarNameS"),
+    IVarDeclarationNameS::CodeVarName(n) => n.name.as_str().to_string(),
+    IVarDeclarationNameS::ClosureParamName(_) => "(closure)".to_string(),
+    _ => panic!("Unimplemented humanize_var_name branch for IVarDeclarationNameS"),
   }
 }
 

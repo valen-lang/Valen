@@ -10,8 +10,9 @@ use crate::tests::tests::new_test_code_map;
 use crate::typing::ast::expressions::RestackifyTE;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::function_environment_t::LocalVariable;
-use crate::typing::names::names::CodeVarNameT;
+use crate::typing::names::names::MemberNameT;
 use crate::typing::names::names::IVarNameT;
+use crate::typing::names::names::LocalNameT;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
@@ -391,7 +392,7 @@ fn restackify() {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::Restackify(RestackifyTE {
           variable: LocalVariable {
-              name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("ship"), .. }),
+              name: IVarNameT::Local(LocalNameT { name: StrI("ship"), .. }),
               ..
           },
           ..
@@ -429,7 +430,7 @@ fn loop_restackify() {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::Restackify(RestackifyTE {
           variable: LocalVariable {
-              name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("ship"), .. }),
+              name: IVarNameT::Local(LocalNameT { name: StrI("ship"), .. }),
               ..
           },
           ..
@@ -467,7 +468,7 @@ fn destructure_restackify() {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::Restackify(RestackifyTE {
           variable: LocalVariable {
-              name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("ship"), .. }),
+              name: IVarNameT::Local(LocalNameT { name: StrI("ship"), .. }),
               ..
           },
           ..

@@ -25,8 +25,8 @@ use crate::typing::types::types::KindT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::types::types::StructTT;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 pub struct OwnershipTests;
 
 #[test]

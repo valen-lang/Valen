@@ -9,8 +9,8 @@ use crate::testvm::vivem::VmRuntimeErrorV;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::utils::replace_all;
 use crate::utils::utils::scrambles;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 
 #[test]
 fn make_empty_imm_struct() {

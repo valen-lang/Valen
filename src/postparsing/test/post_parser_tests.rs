@@ -23,7 +23,8 @@ use crate::postparsing::expressions::{
   LocalLoadSE, LocalS, OutsideLoadSE, OverloadSetSE, OwnershippedSE, ReturnSE,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS, IVarNameS,
+  CodeNameS, CodeRuneS, CodeVarNameS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS,
+  IVarDeclarationNameS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::post_parser::VariableNameAlreadyExists;
@@ -405,7 +406,7 @@ fn moving_method_call() {
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
-              name: IVarNameS::CodeVarName(StrI("x")),              ..
+              name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("x"), .. }),              ..
             })],
           ..
         }),
@@ -450,7 +451,7 @@ fn function_with_magic_lambda_and_regular_lambda() {
   match first_lambda.function.params {
     [_, ParameterS {
       pre_checked: false,
-      name: IVarNameS::MagicParamName(_),
+      name: IVarDeclarationNameS::MagicParamName(_),
       full_type_rune: RuneUsage { rune: IRuneS::MagicParamRune(_), .. },
       ..
     }] => {}
@@ -460,7 +461,7 @@ fn function_with_magic_lambda_and_regular_lambda() {
   match second_lambda.function.params {
     [_, ParameterS {
       pre_checked: false,
-      name: IVarNameS::CodeVarName(StrI("a")),
+      name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("a"), .. }),
       full_type_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
       ..
     }] => {}
@@ -493,7 +494,7 @@ fn constructing_members() {
 
   match &block.locals[..] {
     [LocalS {
-      var_name: IVarNameS::ConstructingMemberName(StrI("x")),
+      var_name: IVarDeclarationNameS::ConstructingMemberName(StrI("x")),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -501,7 +502,7 @@ fn constructing_members() {
       child_moved: IVariableUseCertainty::NotUsed,
       child_mutated: IVariableUseCertainty::NotUsed,
     }, LocalS {
-      var_name: IVarNameS::ConstructingMemberName(StrI("y")),
+      var_name: IVarDeclarationNameS::ConstructingMemberName(StrI("y")),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -526,7 +527,7 @@ fn constructing_members() {
           AtomSP {
             name:
               Some(CaptureS {
-                name: IVarNameS::ConstructingMemberName(StrI("x")),
+                name: IVarDeclarationNameS::ConstructingMemberName(StrI("x")),
                 mutate: false,
               }),
             destructure: None,
@@ -546,7 +547,7 @@ fn constructing_members() {
           AtomSP {
             name:
               Some(CaptureS {
-                name: IVarNameS::ConstructingMemberName(StrI("y")),
+                name: IVarDeclarationNameS::ConstructingMemberName(StrI("y")),
                 mutate: false,
               }),
             destructure: None,
@@ -574,10 +575,10 @@ fn constructing_members() {
           }),
         arg_exprs: [
           IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IVarNameS::ConstructingMemberName(StrI("x")),            ..
+            name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("x"), .. }),            ..
           }),
           IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IVarNameS::ConstructingMemberName(StrI("y")),            ..
+            name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("y"), .. }),            ..
           }),
         ],
         ..
@@ -687,7 +688,7 @@ fn test_loading_from_member() {
         IExpressionSE::Dot(DotSE {
           left:
             IExpressionSE::LocalLoad(LocalLoadSE {
-              name: IVarNameS::CodeVarName(StrI("moo")),
+              name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("moo"), .. }),
               ..
             }),
           member: StrI("x"),
@@ -727,7 +728,7 @@ fn test_loading_from_member_2() {
             IExpressionSE::Dot(DotSE {
               left:
                 IExpressionSE::LocalLoad(LocalLoadSE {
-                  name: IVarNameS::CodeVarName(StrI("moo")),                  ..
+                  name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("moo"), .. }),                  ..
                 }),
               borrow_container: true,
               ..
@@ -761,7 +762,7 @@ fn constructing_members_borrowing_another_member() {
 
   match &*block.locals {
     [LocalS {
-      var_name: IVarNameS::ConstructingMemberName(StrI("x")),
+      var_name: IVarDeclarationNameS::ConstructingMemberName(StrI("x")),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -769,7 +770,7 @@ fn constructing_members_borrowing_another_member() {
       child_moved: IVariableUseCertainty::NotUsed,
       child_mutated: IVariableUseCertainty::NotUsed,
     }, LocalS {
-      var_name: IVarNameS::ConstructingMemberName(StrI("y")),
+      var_name: IVarDeclarationNameS::ConstructingMemberName(StrI("y")),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -785,7 +786,7 @@ fn constructing_members_borrowing_another_member() {
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
         name: Some(CaptureS {
-          name: IVarNameS::ConstructingMemberName(StrI("x")),
+          name: IVarDeclarationNameS::ConstructingMemberName(StrI("x")),
           mutate: false,
         }),
         destructure: None,
@@ -800,14 +801,14 @@ fn constructing_members_borrowing_another_member() {
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
         name: Some(CaptureS {
-          name: IVarNameS::ConstructingMemberName(StrI("y")),
+          name: IVarDeclarationNameS::ConstructingMemberName(StrI("y")),
           mutate: false,
         }),
         destructure: None,
         ..
       },
       expr: IExpressionSE::LocalLoad(LocalLoadSE {
-        name: IVarNameS::ConstructingMemberName(StrI("x")),        ..
+        name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("x"), .. }),        ..
       }),
       ..
     })) => Some(())
@@ -826,10 +827,10 @@ fn constructing_members_borrowing_another_member() {
       }),
       arg_exprs: [
         IExpressionSE::LocalLoad(LocalLoadSE {
-          name: IVarNameS::ConstructingMemberName(StrI("x")),          ..
+          name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("x"), .. }),          ..
         }),
         IExpressionSE::LocalLoad(LocalLoadSE {
-          name: IVarNameS::ConstructingMemberName(StrI("y")),          ..
+          name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("y"), .. }),          ..
         }),
       ],
       ..
@@ -860,7 +861,7 @@ fn foreach() {
   collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Local(LocalS {
-      var_name: IVarNameS::IterableName(_),
+      var_name: IVarDeclarationNameS::IterableName(_),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -872,7 +873,7 @@ fn foreach() {
   collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Local(LocalS {
-      var_name: IVarNameS::IteratorName(_),
+      var_name: IVarDeclarationNameS::IteratorName(_),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -884,7 +885,7 @@ fn foreach() {
   collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Local(LocalS {
-      var_name: IVarNameS::IterationOptionName(_),
+      var_name: IVarDeclarationNameS::IterationOptionName(_),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -896,7 +897,7 @@ fn foreach() {
   collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Local(LocalS {
-      var_name: IVarNameS::CodeVarName(StrI("i")),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("i"), .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -912,7 +913,7 @@ fn foreach() {
       pattern: AtomSP {
         name:
           Some(CaptureS {
-            name: IVarNameS::IterableName(_),
+            name: IVarDeclarationNameS::IterableName(_),
             mutate: false,
           }),
         kind_rune: None,
@@ -921,7 +922,7 @@ fn foreach() {
       },
       expr:
         IExpressionSE::LocalLoad(LocalLoadSE {
-          name: IVarNameS::CodeVarName(StrI("myList")),          ..
+          name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("myList"), .. }),          ..
         }),
       ..
     })) => Some(())
@@ -932,7 +933,7 @@ fn foreach() {
       pattern: AtomSP {
         name:
           Some(CaptureS {
-            name: IVarNameS::IteratorName(_),
+            name: IVarDeclarationNameS::IteratorName(_),
             mutate: false,
           }),
         kind_rune: None,
@@ -955,7 +956,7 @@ fn foreach() {
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
-              name: IVarNameS::IterableName(_),
+              name: IImpreciseNameS::IterableName(_),
               ..
             })],
           ..
@@ -973,7 +974,7 @@ fn foreach() {
       pattern: AtomSP {
         name:
           Some(CaptureS {
-            name: IVarNameS::IterationOptionName(_),
+            name: IVarDeclarationNameS::IterationOptionName(_),
             mutate: false,
           }),
         kind_rune: None,
@@ -996,7 +997,7 @@ fn foreach() {
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
-              name: IVarNameS::IteratorName(_),
+              name: IImpreciseNameS::IteratorName(_),
               ..
             })],
           ..
@@ -1021,7 +1022,7 @@ fn foreach() {
         }),
       arg_exprs:
         [IExpressionSE::LocalLoad(LocalLoadSE {
-          name: IVarNameS::IterationOptionName(_),
+          name: IImpreciseNameS::IterationOptionName(_),
           ..
         })],
       ..
@@ -1037,7 +1038,7 @@ fn foreach() {
       pattern: AtomSP {
         name:
           Some(CaptureS {
-            name: IVarNameS::CodeVarName(StrI("i")),
+            name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("i"), .. }),
             mutate: false,
           }),
         kind_rune: None,
@@ -1060,7 +1061,7 @@ fn foreach() {
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
-              name: IVarNameS::IterationOptionName(_),              ..
+              name: IImpreciseNameS::IterationOptionName(_),              ..
             })],
           ..
         }),
@@ -1070,7 +1071,7 @@ fn foreach() {
   let iteration_option_uses = collect_where_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::LocalLoad(LocalLoadSE {
-      name: IVarNameS::IterationOptionName(_),      ..
+      name: IImpreciseNameS::IterationOptionName(_),      ..
     })) => Some(())
   );
   assert!(!iteration_option_uses.is_empty());
@@ -1105,8 +1106,8 @@ fn this_isnt_special_if_was_explicit_param() {
   assert_eq!(dot.member.as_str(), "x");
   assert!(dot.borrow_container);
   let local_load = cast!(dot.left, IExpressionSE::LocalLoad);
-  let code_var_name = cast!(&local_load.name, IVarNameS::CodeVarName);
-  assert_eq!(code_var_name.as_str(), "self");
+  let code_name = cast!(&local_load.name, IImpreciseNameS::CodeName);
+  assert_eq!(code_name.name.as_str(), "self");
 
   let function_calls = collect_where_snode!(
     NodeRefS::Program(&program),
@@ -1170,7 +1171,7 @@ exported func main() {
   );
   match &err {
     ICompileErrorS::VariableNameAlreadyExists(VariableNameAlreadyExists {
-      name: IVarNameS::CodeVarName(StrI("x")),
+      name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
       ..
     }) => {}
     _ => panic!("expected VariableNameAlreadyExists(_, CodeVarName(\"x\")), got {:?}", err),
@@ -1327,7 +1328,7 @@ fn test_named_param_keeps_its_name_at_postparse() {
     compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x int) int { return x; }");
   let foo = program.lookup_function("foo");
   match foo.params {
-    [ParameterS { name: IVarNameS::CodeVarName(StrI("x")), .. }] => {}
+    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }), .. }] => {}
     other => panic!("expected one param named x, got {:?}", other),
   }
 }
@@ -1968,7 +1969,7 @@ fn test_bare_param_keeps_name_and_gets_no_body_let() {
   let foo = program.lookup_function("foo");
   // The bare param keeps its real name; no synthetic DesugaredParamName.
   match foo.params {
-    [ParameterS { name: IVarNameS::CodeVarName(StrI("x")), .. }] => {}
+    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }), .. }] => {}
     other => panic!("expected one param named x, got {:?}", other),
   }
   // A bare param produces no body-head let, so the empty body is left untouched: its head
@@ -2002,16 +2003,16 @@ fn test_destructure_param_desugars_to_let_with_destructure() {
               destructure:
                 Some(
                   [AtomSP {
-                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("a"), .. }), .. }),
                     ..
                   }, AtomSP {
-                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("b"), .. }), .. }),
                     ..
                   }],
                 ),
               ..
             },
-          expr: IExpressionSE::LocalLoad(LocalLoadSE { name: IVarNameS::DesugaredParamName(_), .. }),
+          expr: IExpressionSE::LocalLoad(LocalLoadSE { name: IImpreciseNameS::DesugaredParamName(_), .. }),
           ..
         }), ..],
       ..
@@ -2034,7 +2035,7 @@ fn test_named_destructure_param_keeps_name_and_gets_let() {
     compile(&scout_arena, &keywords, &parse_arena, "exported func foo(p Pair[a, b]) void { }");
   let foo = program.lookup_function("foo");
   match foo.params {
-    [ParameterS { name: IVarNameS::CodeVarName(StrI("p")), .. }] => {}
+    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("p"), .. }), .. }] => {}
     other => panic!("expected one param named p, got {:?}", other),
   }
   match expect_code_body_expr(&foo.body) {
@@ -2047,17 +2048,17 @@ fn test_named_destructure_param_keeps_name_and_gets_let() {
               destructure:
                 Some(
                   [AtomSP {
-                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("a"), .. }), .. }),
                     ..
                   }, AtomSP {
-                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("b"), .. }), .. }),
                     ..
                   }],
                 ),
               ..
             },
           expr:
-            IExpressionSE::LocalLoad(LocalLoadSE { name: IVarNameS::CodeVarName(StrI("p")), .. }),
+            IExpressionSE::LocalLoad(LocalLoadSE { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("p"), .. }), .. }),
           ..
         }), ..],
       ..
@@ -2090,17 +2091,17 @@ fn test_nested_destructure_preserved() {
               destructure:
                 Some(
                   [AtomSP {
-                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("a")), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("a"), .. }), .. }),
                     ..
                   }, AtomSP {
                     name: None,
                     destructure:
                       Some(
                         [AtomSP {
-                          name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }),
+                          name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("b"), .. }), .. }),
                           ..
                         }, AtomSP {
-                          name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("c")), .. }),
+                          name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("c"), .. }), .. }),
                           ..
                         }],
                       ),
@@ -2139,7 +2140,7 @@ fn test_destructure_ignore() {
               destructure:
                 Some(
                   [AtomSP { name: None, .. }, AtomSP {
-                    name: Some(CaptureS { name: IVarNameS::CodeVarName(StrI("b")), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("b"), .. }), .. }),
                     ..
                   }],
                 ),
@@ -2205,7 +2206,7 @@ fn test_extern_bare_param_ok() {
   let program = compile(&scout_arena, &keywords, &parse_arena, "extern func foo(x int);");
   let foo = program.lookup_function("foo");
   match foo.params {
-    [ParameterS { name: IVarNameS::CodeVarName(StrI("x")), .. }] => {}
+    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }), .. }] => {}
     other => panic!("expected one param named x, got {:?}", other),
   }
   match &foo.body {

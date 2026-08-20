@@ -1,10 +1,10 @@
-use crate::postparsing::names::IVarNameS;
+use crate::postparsing::names::IVarDeclarationNameS;
 use crate::postparsing::rules::RuneUsage;
 use crate::utils::range::RangeS;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CaptureS<'s> {
-  pub name: IVarNameS<'s>,
+  pub name: IVarDeclarationNameS<'s>,
   pub mutate: bool,
 }
 

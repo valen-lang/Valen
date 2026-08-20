@@ -30,7 +30,7 @@ use crate::postparsing::names::{
     IRuneS,
     IRuneValS,
     IStructDeclarationNameS,
-    IVarNameS,
+    IVarDeclarationNameS,
     SelfFullTypeRuneS,
     SelfKindRuneS,
     SelfKindTemplateRuneS,
@@ -778,7 +778,7 @@ where 's: 't,
                         abstract_param_range,
                         None,
                         false,
-                        IVarNameS::SelfName,
+                        IVarDeclarationNameS::SelfName,
                         RuneUsage { range: abstract_param_kind_rune.range, rune: self_full_rune },
                         RuneUsage { range: abstract_param_kind_rune.range, rune: self_kind_rune },
                         self_outer_ref_rules,
@@ -814,7 +814,7 @@ where 's: 't,
 
         let self_local_load = self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
             range: method_range,
-            name: IVarNameS::SelfName,
+            name: IVarDeclarationNameS::SelfName,
         }));
         let dot_member = self.scout_arena.intern_str(&method_index.to_string());
         let dot_expr = self.scout_arena.alloc(IExpressionSE::Dot(DotSE {
@@ -867,7 +867,7 @@ where 's: 't,
         });
         let body_se = self.scout_arena.alloc(BodySE {
             range: method_range,
-            closured_names: self.scout_arena.alloc_slice_from_vec::<IVarNameS<'s>>(vec![]),
+            closured_names: self.scout_arena.alloc_slice_from_vec::<IVarDeclarationNameS<'s>>(vec![]),
             block: block_se,
         });
         let body = self.scout_arena.alloc(IBodyS::CodeBody(CodeBodyS { body: body_se }));

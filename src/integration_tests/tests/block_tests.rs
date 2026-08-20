@@ -10,12 +10,12 @@ use crate::postparsing::expressions::ConsecutorSE;
 use crate::postparsing::expressions::IExpressionSE;
 use crate::postparsing::expressions::IVariableUseCertainty;
 use crate::postparsing::expressions::LocalS;
-use crate::postparsing::names::IVarNameS;
+use crate::postparsing::names::{CodeVarNameS, IVarDeclarationNameS};
 use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
-use crate::von::ast::IVonData;
-use crate::von::ast::VonInt;
+use crate::testvm::von::IVonData;
+use crate::testvm::von::VonInt;
 
 pub struct BlockTests;
 
@@ -124,7 +124,7 @@ exported func main() int {
         assert_eq!(block.locals.len(), 1);
         match block.locals[0] {
             LocalS {
-                var_name: IVarNameS::CodeVarName(StrI("y")),
+                var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("y"), .. }),
                 self_borrowed: IVariableUseCertainty::NotUsed,
                 self_moved: IVariableUseCertainty::NotUsed,
                 self_mutated: IVariableUseCertainty::NotUsed,

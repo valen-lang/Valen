@@ -209,15 +209,15 @@ where
     let (maybe_capture_local_var_t, expr_to_destructure_or_drop_or_pass_te) = match &pattern.name {
       None => (None, input_expr),
       Some(capture_s) => {
-        let local_name_t = self.translate_var_name_step(capture_s.name);
         let range_list: Vec<RangeS<'s>> =
           once(pattern.range).chain(parent_ranges.iter().copied()).collect();
         let local_t = if capture_s.mutate {
-          let local_t = match nenv.declared_locals().iter().find(|v| v.name() == local_name_t) {
-            Some(IVariableT::Local(rlv)) => *rlv,
+          let capture_imprecise = capture_s.name.imprecise_name(self.scout_arena);
+          let local_t = match nenv.get_variable(capture_imprecise, self.typing_interner, self.scout_arena) {
+            Some(IVariableT::Local(rlv)) => rlv,
             _ => panic!("expected ReferenceLocalVariableT in declared_locals"),
           };
-          nenv.mark_local_restackified(local_name_t);
+          nenv.mark_local_restackified(local_t.name);
           current_instructions.push(ExpressionTE::Restackify(
             self.typing_interner.alloc(RestackifyTE::new(local_t, input_expr)),
           ));

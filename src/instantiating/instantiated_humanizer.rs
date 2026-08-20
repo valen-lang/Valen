@@ -100,7 +100,7 @@ pub fn humanize_name<'s, 'i>(
         INameI::StructTemplate(t) => t.human_name.0.to_string(),
         INameI::InterfaceTemplate(t) => t.human_namee.0.to_string(),
         INameI::PackageTopLevel(_) => panic!("humanize_name: PackageTopLevel branch"),
-        INameI::CodeVar(c) => c.name.0.to_string(),
+        INameI::Member(c) => c.name.0.to_string(),
         INameI::TypingPassBlockResultVar(b) => format!("b:{}", b.life.to_string()),
         INameI::TypingPassFunctionResultVar(_) => "(result)".to_string(),
         INameI::TypingPassTemporaryVar(t) => format!("t:{}", t.life.to_string()),

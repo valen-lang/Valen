@@ -1,10 +1,10 @@
 use crate::postparsing::expressions::IVariableUseCertainty;
 use crate::postparsing::names::IImpreciseNameS;
-use crate::postparsing::names::IVarNameS;
+use crate::postparsing::names::IVarDeclarationNameS;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableUseS<'s> {
-  pub name: IVarNameS<'s>,
+  pub name: IVarDeclarationNameS<'s>,
   pub borrowed: Option<IVariableUseCertainty>,
   pub moved: Option<IVariableUseCertainty>,
   pub mutated: Option<IVariableUseCertainty>,
@@ -12,7 +12,7 @@ pub struct VariableUseS<'s> {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclarationS<'s> {
-  pub name: IVarNameS<'s>,
+  pub name: IVarDeclarationNameS<'s>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -33,11 +33,11 @@ impl<'s> VariableDeclarations<'s> {
     VariableDeclarations { vars }
   }
 
-  pub fn find(&self, needle: &IImpreciseNameS<'s>) -> Option<IVarNameS<'s>> {
+  pub fn find(&self, needle: &IImpreciseNameS<'s>) -> Option<IVarDeclarationNameS<'s>> {
     match needle {
       IImpreciseNameS::CodeName(needle_name) => {
         self.vars.iter().find_map(|decl| match &decl.name {
-          IVarNameS::CodeVarName(haystack_name) if *haystack_name == needle_name.name => {
+          IVarDeclarationNameS::CodeVarName(haystack) if haystack.name == needle_name.name => {
             Some(decl.name.clone())
           }
           _ => None,
@@ -45,7 +45,7 @@ impl<'s> VariableDeclarations<'s> {
       }
       IImpreciseNameS::IterableName(needle_name) => {
         self.vars.iter().find_map(|decl| match &decl.name {
-          IVarNameS::IterableName(haystack_name) if *haystack_name == needle_name.range => {
+          IVarDeclarationNameS::IterableName(haystack_name) if *haystack_name == needle_name.range => {
             Some(decl.name.clone())
           }
           _ => None,
@@ -53,7 +53,7 @@ impl<'s> VariableDeclarations<'s> {
       }
       IImpreciseNameS::IteratorName(needle_name) => {
         self.vars.iter().find_map(|decl| match &decl.name {
-          IVarNameS::IteratorName(haystack_name) if *haystack_name == needle_name.range => {
+          IVarDeclarationNameS::IteratorName(haystack_name) if *haystack_name == needle_name.range => {
             Some(decl.name.clone())
           }
           _ => None,
@@ -61,14 +61,14 @@ impl<'s> VariableDeclarations<'s> {
       }
       IImpreciseNameS::IterationOptionName(needle_name) => {
         self.vars.iter().find_map(|decl| match &decl.name {
-          IVarNameS::IterationOptionName(haystack_name) if *haystack_name == needle_name.range => {
+          IVarDeclarationNameS::IterationOptionName(haystack_name) if *haystack_name == needle_name.range => {
             Some(decl.name.clone())
           }
           _ => None,
         })
       }
       IImpreciseNameS::SelfName(_) => self.vars.iter().find_map(|decl| match &decl.name {
-        IVarNameS::SelfName => Some(decl.name.clone()),
+        IVarDeclarationNameS::SelfName => Some(decl.name.clone()),
         _ => None,
       }),
       _ => None,
@@ -91,11 +91,11 @@ impl<'s> VariableUses<'s> {
     self.uses.is_empty()
   }
 
-  pub fn all_used_names(&self) -> Vec<IVarNameS<'_>> {
+  pub fn all_used_names(&self) -> Vec<IVarDeclarationNameS<'_>> {
     self.uses.iter().map(|use_| use_.name.clone()).collect()
   }
 
-  pub fn mark_borrowed(&self, name: IVarNameS<'s>) -> VariableUses<'s> {
+  pub fn mark_borrowed(&self, name: IVarDeclarationNameS<'s>) -> VariableUses<'s> {
     self.merge_new_use(
       VariableUseS {
         name,
@@ -107,7 +107,7 @@ impl<'s> VariableUses<'s> {
     )
   }
 
-  pub fn mark_moved(&self, name: IVarNameS<'s>) -> VariableUses<'s> {
+  pub fn mark_moved(&self, name: IVarDeclarationNameS<'s>) -> VariableUses<'s> {
     self.merge_new_use(
       VariableUseS {
         name,
@@ -119,7 +119,7 @@ impl<'s> VariableUses<'s> {
     )
   }
 
-  pub fn mark_mutated(&self, name: IVarNameS<'s>) -> VariableUses<'s> {
+  pub fn mark_mutated(&self, name: IVarDeclarationNameS<'s>) -> VariableUses<'s> {
     self.merge_new_use(
       VariableUseS {
         name,
@@ -141,7 +141,7 @@ impl<'s> VariableUses<'s> {
     self.combine(new_uses, Self::branch_merge_certainty)
   }
 
-  pub fn is_borrowed(&self, name: &IVarNameS<'_>) -> IVariableUseCertainty {
+  pub fn is_borrowed(&self, name: &IVarDeclarationNameS<'_>) -> IVariableUseCertainty {
     self
       .uses
       .iter()
@@ -150,7 +150,7 @@ impl<'s> VariableUses<'s> {
       .unwrap_or(IVariableUseCertainty::NotUsed)
   }
 
-  pub fn is_moved(&self, name: &IVarNameS<'_>) -> IVariableUseCertainty {
+  pub fn is_moved(&self, name: &IVarDeclarationNameS<'_>) -> IVariableUseCertainty {
     self
       .uses
       .iter()
@@ -159,7 +159,7 @@ impl<'s> VariableUses<'s> {
       .unwrap_or(IVariableUseCertainty::NotUsed)
   }
 
-  pub fn is_mutated(&self, name: &IVarNameS<'_>) -> IVariableUseCertainty {
+  pub fn is_mutated(&self, name: &IVarDeclarationNameS<'_>) -> IVariableUseCertainty {
     self
       .uses
       .iter()
@@ -176,7 +176,7 @@ impl<'s> VariableUses<'s> {
       Option<IVariableUseCertainty>,
     ) -> Option<IVariableUseCertainty>,
   ) -> VariableUses<'s> {
-    let mut names: Vec<IVarNameS<'_>> = self.uses.iter().map(|use_| use_.name.clone()).collect();
+    let mut names: Vec<IVarDeclarationNameS<'_>> = self.uses.iter().map(|use_| use_.name.clone()).collect();
     for name in that.uses.iter().map(|use_| use_.name.clone()) {
       if !names.contains(&name) {
         names.push(name);
