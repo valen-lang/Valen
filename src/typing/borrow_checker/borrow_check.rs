@@ -22,7 +22,7 @@ pub fn check_function<'s, 'ctx, 't>(
   for call in calls {
     check_call(call, function_s.range, coutputs, compiler)?;
   }
-  check_use_after_churn(function, coutputs, compiler, function_s.range)?;
+  check_use_after_churn(function, function_s, coutputs, compiler, function_s.range)?;
   Ok(())
 }
 

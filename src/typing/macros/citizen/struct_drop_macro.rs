@@ -15,8 +15,10 @@ use crate::postparsing::names::{
   IRuneValS, IVarNameS, MacroVoidKindRuneS, SelfKindRuneS, SelfKindTemplateRuneS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
-use crate::postparsing::rules::rules::{CallSR, IRulexSR, LookupSR, RuneUsage};
-use crate::postparsing::rules::types::{ITypeST, RuneUsageST};
+use crate::postparsing::rules::rules::{
+  CallSR, CallSiteFuncSR, DefinitionFuncSR, IRulexSR, KindListSR, LookupSR, ResolveSR, RuneUsage,
+};
+use crate::postparsing::rules::types::{ITypeST, NameST, RuneUsageST};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::compiler::Compiler;
@@ -85,6 +87,86 @@ where
       template_rune: RuneUsage { range: struct_a.name.range(), rune: self_kind_template_rune_s },
       args: generic_param_runes_slice,
     }));
+
+    // VCOORD: revisit this, maybe write some arcana, plan what itll look like post phased calls.
+    // For each stored, kind-typed generic parameter, declare `where func drop(T)void` on the
+    // generated drop so its body can drop that member. This is the same bound a user writes by hand
+    // for a generic container; without it, `drop(T)` fails to resolve at the generic level. A
+    // parameter no member mentions (e.g. the `T` of an empty `None<T>`) gets no bound, so its
+    // instances stay droppable at any argument. Mirrors the `where func` bundle the scout builds in
+    // `templex_scout.rs`'s `ITemplexPT::Func` arm (KindList + DefinitionFunc + CallSiteFunc + Resolve).
+    let mut member_mentioned_runes: Vec<IRuneS<'s>> = Vec::new();
+    for member in struct_a.members {
+      match member {
+        IStructMemberS::NormalStructMember(m) => {
+          m.tyype.collect_rune_mentions(&mut member_mentioned_runes)
+        }
+        IStructMemberS::VariadicStructMember(m) => {
+          m.tyype.collect_rune_mentions(&mut member_mentioned_runes)
+        }
+      }
+    }
+    for generic_param in struct_a.generic_params.iter() {
+      if !matches!(generic_param.tyype.tyype(), ITemplataType::KindTemplataType(_)) {
+        continue;
+      }
+      if !member_mentioned_runes.contains(&generic_param.rune.rune) {
+        continue;
+      }
+      let params_list_rune = RuneUsage {
+        range: range(-1672148),
+        rune: self.scout_arena.intern_rune(IRuneValS::StructDropBoundParamsListRune(
+          StructDropBoundParamsListRuneS { param_rune: generic_param.rune.rune },
+        )),
+      };
+      rules.push(IRulexSR::KindList(KindListSR {
+        range: range(-1672148),
+        result_rune: params_list_rune,
+        members: self.scout_arena.alloc_slice_copy(&[generic_param.rune]),
+      }));
+      let prototype_rune = RuneUsage {
+        range: range(-1672149),
+        rune: self.scout_arena.intern_rune(IRuneValS::StructDropBoundPrototypeRune(
+          StructDropBoundPrototypeRuneS { param_rune: generic_param.rune.rune },
+        )),
+      };
+      let void_return_rune = use_(-64002, void_kind_rune_s);
+      let params_types = self.scout_arena.alloc_slice_from_vec(vec![ITypeST::Rune(
+        self.scout_arena.alloc(RuneUsageST { rune: generic_param.rune }),
+      )]);
+      let return_type = ITypeST::Name(self.scout_arena.alloc(NameST {
+        range: range(-1672149),
+        name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+          name: self.keywords.void,
+        })),
+      }));
+      // Only appears in definition; filtered out when solving the call site.
+      rules.push(IRulexSR::DefinitionFunc(DefinitionFuncSR {
+        range: range(-1672149),
+        result_rune: prototype_rune,
+        name: self.keywords.drop,
+        params_list_rune,
+        return_rune: void_return_rune,
+      }));
+      // Only appears in call site; filtered out when solving the definition.
+      rules.push(IRulexSR::CallSiteFunc(CallSiteFuncSR {
+        range: range(-1672149),
+        prototype_rune,
+        name: self.keywords.drop,
+        params_list_rune,
+        return_rune: void_return_rune,
+      }));
+      rules.push(IRulexSR::Resolve(ResolveSR {
+        range: range(-1672149),
+        result_rune: prototype_rune,
+        name: self.keywords.drop,
+        params_list_rune,
+        params_types,
+        return_rune: void_return_rune,
+        return_type,
+      }));
+    }
+    // /VCOORD
 
     // Use the same generic parameters as the struct
     let function_generic_parameters = struct_a.generic_params;

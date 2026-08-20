@@ -1,11 +1,3 @@
----
-name: borrow-checker-guidelines
-description: "Guidelines for working inside the borrow checker"
-g_read_when: Read when writing, testing, or reviewing borrow checker code.
-g_mention_in:
-  - CLAUDE.md
----
-
 # Borrow checker guidelines
 
 This serves as the high-level design doc for the borrow checker.

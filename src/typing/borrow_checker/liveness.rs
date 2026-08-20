@@ -6,16 +6,19 @@
 //! never invalidated. The walk threads two facts through the body in evaluation order: which locals
 //! hold a child-group reference, and which of those a preceding churn may have invalidated.
 
+use crate::interner::StrI;
+use crate::postparsing::ast::FunctionS;
+use crate::postparsing::names::IVarNameS;
 use crate::typing::ast::ast::FunctionDefinitionT;
 use crate::typing::ast::expressions::{ExpressionTE, FunctionCallTE};
 use crate::typing::borrow_checker::borrow_error::BorrowErrorKind;
-use crate::typing::borrow_checker::call_check::{is_mut_target, param_group_name};
+use crate::typing::borrow_checker::call_check::{is_mut_target, param_group_name, resolve_callee};
 use crate::typing::borrow_checker::place_path::{place_path, PlacePath};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::function_environment_t::LocalVariable;
-use crate::typing::names::names::{IdValT, IVarNameT};
+use crate::typing::names::names::IVarNameT;
 use crate::typing::types::types::KindT;
 use crate::utils::range::RangeS;
 use std::collections::{HashMap, HashSet};
@@ -26,14 +29,31 @@ fn local_key(local: &LocalVariable) -> usize {
   local as *const LocalVariable as usize
 }
 
+/// The caller-side group a root local belongs to, for matching a churn against a live borrow.
+///
+/// Two references are in the same group — so a churn of one invalidates child-group references of
+/// the other (common-group aliasing) — exactly when their roots resolve to the same `RootGroup`.
+/// A root that is a caller parameter declared `in r` resolves to that group rune (`ParamRune`), so
+/// two sibling parameters sharing one rune alias; anything else (a fresh local, or a parameter with
+/// no declared group) is its own group (`Local`), disjoint by default. Compared by name/identity —
+/// no `GroupB` is minted.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum RootGroup<'s, 't> {
+  ParamRune(StrI<'s>),
+  Local(IVarNameT<'s, 't>),
+}
+
 struct Liveness<'s, 'ctx, 't, 'a> {
   compiler: &'a Compiler<'s, 'ctx, 't>,
   coutputs: &'a CompilerOutputs<'s, 't>,
   /// Where a violation is reported. Exact call/use ranges are deferred (source-ranges rule), so this
   /// is the enclosing function's range, matching the joint-argument check.
   range: RangeS<'s>,
+  /// Caller-parameter code-name → its declared group-rune name, for resolving a root local to its
+  /// `RootGroup`. Built once from the enclosing function's parameters.
+  param_groups: HashMap<StrI<'s>, StrI<'s>>,
   /// Locals bound to a child-group (array-element) reference, keyed by identity, with their place so
-  /// the churned array's root can be matched.
+  /// the churned array's group can be matched.
   element_refs: HashMap<usize, PlacePath<'s, 't>>,
   /// Element refs a preceding churn may have invalidated.
   invalidated: HashSet<usize>,
@@ -45,14 +65,24 @@ struct Liveness<'s, 'ctx, 't, 'a> {
 /// Walk `function`'s finished body and reject a use of a child-group reference after a churn.
 pub fn check_use_after_churn<'s, 'ctx, 't>(
   function: &'t FunctionDefinitionT<'s, 't>,
+  function_s: &'s FunctionS<'s>,
   coutputs: &CompilerOutputs<'s, 't>,
   compiler: &Compiler<'s, 'ctx, 't>,
   range: RangeS<'s>,
 ) -> Result<(), ICompileErrorT<'s, 't>> {
+  let mut param_groups = HashMap::new();
+  for param in function_s.params {
+    if let (IVarNameS::CodeVarName(param_name), Some(group)) =
+      (&param.name, param_group_name(param))
+    {
+      param_groups.insert(*param_name, group);
+    }
+  }
   let mut liveness = Liveness {
     compiler,
     coutputs,
     range,
+    param_groups,
     element_refs: HashMap::new(),
     invalidated: HashSet::new(),
     reporting: true,
@@ -171,37 +201,43 @@ impl<'s, 'ctx, 't, 'a> Liveness<'s, 'ctx, 't, 'a> {
     }
   }
 
-  /// Invalidate every live element reference rooted in an array the callee churns. A callee churns
-  /// the array handed to each parameter whose group it declares `mut`; a reference into a *different*
-  /// array, or into an array handed to a non-`mut` parameter, is untouched.
+  /// Invalidate every live element reference whose array is in a group the callee churns. A callee
+  /// churns the group handed to each parameter whose group it declares `mut`; a reference into an
+  /// array in a *different* group, or into an array handed to a non-`mut` parameter, is untouched.
+  /// Matching is by **group**, not by root local: a churn through one parameter invalidates element
+  /// references rooted in a *sibling* parameter that shares the same group (common-group aliasing),
+  /// not only references rooted in the churned argument itself.
   fn apply_churn(&mut self, call: &'t FunctionCallTE<'s, 't>) {
-    let churned_roots = self.churned_roots(call);
-    if churned_roots.is_empty() {
+    let churned = self.churned_groups(call);
+    if churned.is_empty() {
       return;
     }
     let newly_invalid: Vec<usize> = self
       .element_refs
       .iter()
-      .filter(|(_, path)| churned_roots.iter().any(|root| path.root == *root))
+      .filter(|(_, path)| churned.iter().any(|group| self.root_group(path.root) == *group))
       .map(|(key, _)| *key)
       .collect();
     self.invalidated.extend(newly_invalid);
   }
 
-  /// The root local of each array the callee churns (a `mut`-group parameter's argument).
-  fn churned_roots(&self, call: &'t FunctionCallTE<'s, 't>) -> Vec<IVarNameT<'s, 't>> {
-    let template_id_val =
-      Compiler::get_function_template(self.compiler.typing_interner, call.callable.id);
-    let template_id = self.compiler.typing_interner.intern_id(IdValT {
-      package_coord: template_id_val.package_coord,
-      init_steps: template_id_val.init_steps,
-      local_name: template_id_val.local_name,
-    });
-    let callee = match self.coutputs.peek_postparsed_function(template_id) {
+  /// The caller-side group a root local belongs to (see `RootGroup`).
+  fn root_group(&self, root: IVarNameT<'s, 't>) -> RootGroup<'s, 't> {
+    if let IVarNameT::CodeVar(code_var) = root {
+      if let Some(group) = self.param_groups.get(&code_var.name) {
+        return RootGroup::ParamRune(*group);
+      }
+    }
+    RootGroup::Local(root)
+  }
+
+  /// The caller-side group of each array the callee churns (a `mut`-group parameter's argument).
+  fn churned_groups(&self, call: &'t FunctionCallTE<'s, 't>) -> Vec<RootGroup<'s, 't>> {
+    let callee = match resolve_callee(call, self.coutputs, self.compiler) {
       Some(callee) => callee,
       None => return Vec::new(),
     };
-    let mut roots = Vec::new();
+    let mut groups = Vec::new();
     let arg_count = call.args.len().min(callee.params.len());
     for i in 0..arg_count {
       let Some(group) = param_group_name(&callee.params[i]) else {
@@ -211,10 +247,10 @@ impl<'s, 'ctx, 't, 'a> Liveness<'s, 'ctx, 't, 'a> {
         continue;
       }
       if let Some(path) = place_path(&call.args[i]) {
-        roots.push(path.root);
+        groups.push(self.root_group(path.root));
       }
     }
-    roots
+    groups
   }
 
   /// Record `variable` as a child-group reference if `init` names an array element.

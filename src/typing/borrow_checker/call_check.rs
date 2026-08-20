@@ -1,5 +1,5 @@
 use crate::interner::StrI;
-use crate::postparsing::ast::ParameterS;
+use crate::postparsing::ast::{FunctionS, ParameterS};
 use crate::postparsing::names::{CodeRuneS, IRuneS};
 use crate::postparsing::rules::rules::RuneUsage;
 use crate::postparsing::rules::types::{BorrowRefST, EffectS, GroupS, ITypeST, RegionS};
@@ -36,6 +36,22 @@ pub(super) fn is_mut_target<'s>(effects: &[EffectS<'s>], group: StrI<'s>) -> boo
   })
 }
 
+/// The scout `FunctionS` of a call's callee — its declared parameters, groups, and effects. `None`
+/// when the callee has no postparsed function on record (e.g. a builtin the borrow checker skips).
+pub(super) fn resolve_callee<'s, 'ctx, 't>(
+  call: &FunctionCallTE<'s, 't>,
+  coutputs: &CompilerOutputs<'s, 't>,
+  compiler: &Compiler<'s, 'ctx, 't>,
+) -> Option<&'s FunctionS<'s>> {
+  let template_id_val = Compiler::get_function_template(compiler.typing_interner, call.callable.id);
+  let template_id = compiler.typing_interner.intern_id(IdValT {
+    package_coord: template_id_val.package_coord,
+    init_steps: template_id_val.init_steps,
+    local_name: template_id_val.local_name,
+  });
+  coutputs.peek_postparsed_function(template_id)
+}
+
 /// Check one call's arguments jointly:
 /// - a pair bound to parameters in *distinct* named groups, at least one of which the callee
 ///   mutates, must not alias — the callee is entitled to treat those groups as disjoint;
@@ -46,14 +62,8 @@ pub fn check_call<'s, 'ctx, 't>(
   coutputs: &CompilerOutputs<'s, 't>,
   compiler: &Compiler<'s, 'ctx, 't>,
 ) -> Result<(), ICompileErrorT<'s, 't>> {
-  let template_id_val = Compiler::get_function_template(compiler.typing_interner, call.callable.id);
-  let template_id = compiler.typing_interner.intern_id(IdValT {
-    package_coord: template_id_val.package_coord,
-    init_steps: template_id_val.init_steps,
-    local_name: template_id_val.local_name,
-  });
-  let callee = match coutputs.peek_postparsed_function(template_id) {
-    Some(function_s) => function_s,
+  let callee = match resolve_callee(call, coutputs, compiler) {
+    Some(callee) => callee,
     None => return Ok(()),
   };
 

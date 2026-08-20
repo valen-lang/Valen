@@ -1169,7 +1169,6 @@ exported func main() {
 
 // VCOORD: re-enable share things after onion
 #[test]
-#[ignore]
 fn pointer_becomes_share_if_kind_is_immutable() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -1680,7 +1679,6 @@ exported func main() int {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn can_destructure_and_assemble_static_sized_array() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

@@ -330,7 +330,6 @@ Can't extend a non-interface: i32
   );
 }
 
-#[ignore] // VCOORD: uses lambda
 #[test]
 fn can_mutate_an_element_in_a_runtime_sized_array() {
   let parse_bump = Bump::new();

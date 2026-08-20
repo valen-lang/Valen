@@ -1,6 +1,6 @@
 use super::compiler_test_compilation::compiler_test_compilation;
 use crate::builtins::builtins::{
-  builtin_source_for_arith, builtin_source_for_arrays, builtin_source_for_as,
+  builtin_source_bundle, builtin_source_for_arith, builtin_source_for_arrays, builtin_source_for_as,
   builtin_source_for_opt, builtin_source_for_panicutils, builtin_source_for_weak,
   empty_v_builtins_stub, get_embedded_modulized_code_map,
 };
@@ -1778,7 +1778,6 @@ fn tests_exporting_struct() {
 // VCOORD: enable this after the export/extern gate rework. (Currently also blocked upstream at the
 // interface vtable edge, edge_compiler.rs:163, not the export gate.)
 #[test]
-#[ignore]
 fn tests_exporting_interface() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -3034,7 +3033,6 @@ fn test_return_from_inside_if_destroys_locals() {
 
 // VCOORD: re-enable share things after onion
 #[test]
-#[ignore]
 fn recursive_struct() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -3097,7 +3095,6 @@ fn recursive_struct_with_opt() {
 
 // VCOORD: re-enable share things after onion
 #[test]
-#[ignore]
 fn templated_imm_struct() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -3107,12 +3104,17 @@ fn templated_imm_struct() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = concat!(
+    "import v.builtins.drop.*;\n",
     "struct ListNode<T> share {\n",
     "  tail ListNode<T>;\n",
     "}\n",
     "func main(a ListNode<int>) {}\n",
   );
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    builtin_source_bundle(&parse_arena, &parser_keywords, &["drop", "implicit_clone"]),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -3163,7 +3165,6 @@ fn borrow_load_member() {
 
 // VCOORD: re-enable share things after onion
 #[test]
-#[ignore]
 fn test_vector_of_struct_templata() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -3524,7 +3525,6 @@ Extern function moo depends on kind Firefly that wasn't exported from package te
 
 // VCOORD: re-enable share things after onion
 #[test]
-#[ignore]
 fn reports_when_exported_struct_depends_on_non_exported_member() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -5472,7 +5472,6 @@ fn tests_destructuring_shared_doesnt_compile_to_destroy() {
 
 // VCOORD: re-enable share things after onion
 #[test]
-#[ignore]
 fn generates_free_function_for_imm_struct() {
   let code = r#"
         struct Vec3i share {
@@ -5615,7 +5614,6 @@ exported func main() int {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn test_array_push_pop_len_capacity_drop() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -6779,7 +6777,6 @@ fn copy_prim_probe() {
 // VCOORD: revisit to turn this into a real test
 // VCOORD: re-enable share things after onion
 #[test]
-#[ignore]
 fn borrow_share_as_arg_to_generic_func_that_takes_borrowed_things() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

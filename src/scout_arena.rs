@@ -629,6 +629,14 @@ impl<'s> ScoutArena<'s> {
         let c = IRuneS::AnonymousSubstructDropBoundParamsListRune(self.bump.alloc(p.clone()));
         (IRuneValS::AnonymousSubstructDropBoundParamsListRune(p), c)
       }
+      StructDropBoundPrototypeRune(p) => {
+        let c = IRuneS::StructDropBoundPrototypeRune(self.bump.alloc(p.clone()));
+        (IRuneValS::StructDropBoundPrototypeRune(p), c)
+      }
+      StructDropBoundParamsListRune(p) => {
+        let c = IRuneS::StructDropBoundParamsListRune(self.bump.alloc(p.clone()));
+        (IRuneValS::StructDropBoundParamsListRune(p), c)
+      }
       AnonymousSubstructFunctionBoundPrototypeRune(p) => {
         let c = IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(self.bump.alloc(p.clone()));
         (IRuneValS::AnonymousSubstructFunctionBoundPrototypeRune(p), c)

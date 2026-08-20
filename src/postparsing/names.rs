@@ -730,6 +730,8 @@ pub enum IRuneS<'s> {
   AnonymousSubstructMethodSelfBorrowKindRune(&'s AnonymousSubstructMethodSelfBorrowKindRuneS<'s>),
   AnonymousSubstructDropBoundPrototypeRune(&'s AnonymousSubstructDropBoundPrototypeRuneS<'s>),
   AnonymousSubstructDropBoundParamsListRune(&'s AnonymousSubstructDropBoundParamsListRuneS<'s>),
+  StructDropBoundPrototypeRune(&'s StructDropBoundPrototypeRuneS<'s>),
+  StructDropBoundParamsListRune(&'s StructDropBoundParamsListRuneS<'s>),
   AnonymousSubstructFunctionBoundPrototypeRune(
     &'s AnonymousSubstructFunctionBoundPrototypeRuneS<'s>,
   ),
@@ -795,6 +797,8 @@ impl<'s> IRuneS<'s> {
       IRuneS::AnonymousSubstructMethodSelfBorrowKindRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructDropBoundPrototypeRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructDropBoundParamsListRune(r) => *r as *const _ as *const (),
+      IRuneS::StructDropBoundPrototypeRune(r) => *r as *const _ as *const (),
+      IRuneS::StructDropBoundParamsListRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructFunctionBoundParamsListRune(r) => *r as *const _ as *const (),
       IRuneS::AnonymousSubstructFunctionInterfaceTemplateRune(r) => *r as *const _ as *const (),
@@ -977,6 +981,8 @@ pub enum IRuneValS<'s, 'tmp> {
   AnonymousSubstructMethodSelfBorrowKindRune(AnonymousSubstructMethodSelfBorrowKindRuneS<'s>),
   AnonymousSubstructDropBoundPrototypeRune(AnonymousSubstructDropBoundPrototypeRuneS<'s>),
   AnonymousSubstructDropBoundParamsListRune(AnonymousSubstructDropBoundParamsListRuneS<'s>),
+  StructDropBoundPrototypeRune(StructDropBoundPrototypeRuneS<'s>),
+  StructDropBoundParamsListRune(StructDropBoundParamsListRuneS<'s>),
   AnonymousSubstructFunctionBoundPrototypeRune(AnonymousSubstructFunctionBoundPrototypeRuneS<'s>),
   AnonymousSubstructFunctionBoundParamsListRune(AnonymousSubstructFunctionBoundParamsListRuneS<'s>),
   AnonymousSubstructFunctionInterfaceTemplateRune(
@@ -1077,6 +1083,8 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
         AnonymousSubstructDropBoundParamsListRune(a),
         AnonymousSubstructDropBoundParamsListRune(b),
       ) => a == b,
+      (StructDropBoundPrototypeRune(a), StructDropBoundPrototypeRune(b)) => a == b,
+      (StructDropBoundParamsListRune(a), StructDropBoundParamsListRune(b)) => a == b,
       (
         AnonymousSubstructFunctionBoundPrototypeRune(a),
         AnonymousSubstructFunctionBoundPrototypeRune(b),
@@ -1298,6 +1306,21 @@ pub struct AnonymousSubstructDropBoundPrototypeRuneS<'s> {
 pub struct AnonymousSubstructDropBoundParamsListRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
+}
+
+/// The prototype rune of a struct's auto-generated drop's synthesized `where func drop(T)void`
+/// bound. Keyed on the struct's generic-parameter rune `T`, so each stored type parameter gets its
+/// own distinct bound within the drop.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct StructDropBoundPrototypeRuneS<'s> {
+  pub param_rune: IRuneS<'s>,
+}
+
+/// The params-list rune of a struct's auto-generated drop's synthesized `where func drop(T)void`
+/// bound (see `StructDropBoundPrototypeRuneS`).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct StructDropBoundParamsListRuneS<'s> {
+  pub param_rune: IRuneS<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

@@ -1,23 +1,26 @@
 # The Path to the Borrow Checker
 
-The onion refactor is done and the suite is green. **Rung 0 (groups become real) is landed, and
-rung 1's first real check — the joint-argument check — is landed and green.** This document maps the
-path: what is built, what remains, and in what order.
+The onion refactor is done and the suite is green. **Rung 0 (groups become real), rung 1's
+joint-argument check, and rung 2's use-after-churn dataflow are all landed and green.** This document
+maps the path: what is built, what remains, and in what order.
 
 Rung 0 made groups expressible on the declaration side, without putting them on the value type, so
 the checker has something to read; on its own it accepts and rejects nothing new. The joint-argument
-check (rung 1) is the first thing that rejects programs.
+check (rung 1) is the first thing that rejects programs. Rung 2 adds the checker's first flow-sensitive
+analysis: a reference into a **child group** (a runtime-sized-array element) is invalidated by a call
+that churns its parent group, and using it afterward is a compile error.
 
 Keep the split in mind: rung 0 is representation and plumbing; checking is rung 1 and up.
 
 ## Where it stands
 
-Rung 0's data structures, its parser/postparser syntax, and the checker seam are landed, and the
-**joint-argument check runs on top of them** (see "What is already done"). The checker lives in
-`src/typing/borrow_checker/` and its high-level design doc is
-`src/typing/docs/borrow-checker-guidelines.md`. What remains: the dataflow rungs (rung 2,
-use-after-churn), effect *checking*, and the still-unbuilt `GroupB` minting that the dataflow will
-consume. The design is settled; this is build work.
+Rung 0's representation, rung 1's joint-argument check, and rung 2's use-after-churn dataflow are
+landed (see "What is already done"). The checker lives in `src/typing/borrow_checker/` and its
+high-level design doc is `src/typing/docs/borrow-checker-guidelines.md`. What remains: extending
+child groups past the runtime-sized-array element (struct-field arrays, `Box`, `Variant`/interface
+payloads, and generic `Vec<T>` — the rung-2/rung-3 boundary, revisit before scoping); effect
+*checking*; and the group-syntax the parser does not yet produce (`Member`/`Elements`/`Union`,
+`g...`, `rc`). The design is settled; this is build work.
 
 ## What rung 0 is, and what it is not
 
@@ -44,9 +47,10 @@ out of scope here, and something rung 0 must not block. Rung 0 builds the effect
 The onion work left more of the foundation in place than the old handoff suggests. Verified
 against the current tree:
 
-- **The group data structures, the parser/postparser group syntax, and the rung-1 joint-argument
-  check are landed, and the crate compiles green** (`cargo nextest run --lib --manifest-path
-  Cargo.toml`: measure before quoting; last 722 passed / 0 failed / 70 skipped). `BorrowRefT` is emptied to
+- **The group data structures, the parser/postparser group syntax, the rung-1 joint-argument check,
+  and the rung-2 use-after-churn dataflow are landed, and the crate compiles green** (`cargo nextest
+  run --lib --manifest-path Cargo.toml`: measure before quoting; last 755 passed / 0 failed / 70
+  skipped). `BorrowRefT` is emptied to
   `{ inner }` — the `region` field is gone, and the `region: RegionT` fields on the name-structs go
   with it (`ExportNameT` done; `RawArrayNameT`/`ExternNameT` still carry theirs). The scout produces
   the symbolic forms: a borrow's `&T in g` lowers to `RegionS::Group(GroupS::Rune | Local)` on the
@@ -74,10 +78,27 @@ against the current tree:
   - **A group param concludes to the ceremonial `ITemplataT::Group(GroupTemplataT {})` constant**,
     minted in `create_placeholder`'s `GroupTemplataType` arm; it is inert (substitutes to itself,
     contributes no placeholder). Real region params still mint a `Placeholder`.
-  - **What the checker still does not do.** `GroupB` is never *minted* (rung 2's dataflow will need
-    it); there is no liveness/invalidation dataflow yet. Only the single-named-group leaf is parsed —
-    `Member`/`Elements`/`Union`, multi-group `mut` folds, `g...` and `rc` are variants the enums carry
-    but the parser does not yet produce.
+  - **The checker also does use-after-churn (rung 2), the first flow-sensitive analysis.**
+    `liveness.rs` walks the finished body threading which locals hold a **child-group** reference (an
+    array element) and which a churn invalidated. A `Segment::Element` in `place_path.rs` plus
+    `is_child_group()` distinguishes an element reference (child group) from a whole-array or member
+    reference (parent group, immune). Invalidation is **root-matched and `mut`-gated**: a call
+    invalidates only element references rooted in an array handed to a `mut`-group parameter (reusing
+    `call_check`'s `param_group_name`/`is_mut_target`). Three dataflow disciplines: straight-line
+    in-order threading (a fresh binding clears its local's invalidation), `if`-join **union** with a
+    diverging arm (`KindT::Never`) contributing nothing, and a `while` **least-fixpoint** over the
+    back-edge (silent passes until the loop-head invalidated set stabilizes, then one reporting pass).
+    The error is `BorrowErrorKind::UseAfterChurn`.
+  - **What the checker still does not do.** It compares group runes **by name** (via the `PlacePath`
+    root and `param_group_name`); `GroupB` is defined but never *minted* — rung 2 did not need it, and
+    minting waits for richer group expressions (`Member`/`Elements`/`Union`) that a name comparison
+    cannot resolve. Child groups are only array **elements** so far — struct-field arrays, `Box`
+    pointees, and `Variant`/interface payloads are not yet child-group sources, and generic `Vec<T>`
+    is untouched. Only the single-named-group leaf is parsed — `Member`/`Elements`/`Union`, multi-group
+    `mut` folds, `g...` and `rc` are variants the enums carry but the parser does not yet produce.
+    `liveness.rs`'s walk has a `_ => Ok(())` fallthrough: a use nested in an unhandled child-bearing
+    node (`Tuple`, `Construct`, array ops) is a false negative, the same gap shape as `collect_calls`'
+    — close each with a red test when a reachable use appears there.
 - **`substitute_templatas_in_kind` handles all four ref wraps** correctly
   (`typing/templata_compiler.rs:540-552`); once `BorrowRefT` is emptied there is no region for it to
   carry through generics, so that concern disappears rather than needing wiring. The only remaining
@@ -319,10 +340,16 @@ where-clause group, or an effect-only `mut(g)`), and those are rung 1 and later.
    constructed in `create_placeholder`'s `GroupTemplataType` arm (`templata_compiler.rs`);
    `ParameterS.tyype: ITypeST` populated; `&T in g`, `<g': T>`, and `mut(g)`/`not(mut(g))` parse and
    scout. Only the single-named-group leaf is produced so far.
-4. **Remaining**: mint `GroupB`, and build the rung-2 liveness/invalidation dataflow that consumes it.
-   The `Member`/`Elements`/`Union` group parsing, `g...`, and `rc` follow the first program that writes
-   them. Effect *checking* (rung 1's second half, `ITemplataT::Effect`) is a separate solver domain,
-   deferrable.
+4. **Rung 2 use-after-churn** *(done)*: the `liveness.rs` flow-sensitive walk — child-group element
+   references (`place_path` `Segment::Element` + `is_child_group`), root-matched `mut`-gated churn
+   invalidation, `if`-join union, and a `while` least-fixpoint. Built **without** `GroupB` (group runes
+   compare by name). A runtime-sized-array local now drops cleanly via a closure-free `DropFunctor<T>`
+   in `arrays.vale`, which rung 2's fixtures need.
+5. **Remaining**: extend child groups past the array element — struct-field arrays, `Box`,
+   `Variant`/interface payloads, then generic `Vec<T>` (the rung-2/rung-3 boundary — revisit before
+   scoping); mint `GroupB` when `Member`/`Elements`/`Union` group expressions arrive that a name
+   comparison cannot resolve; the `g...`/`rc` syntax; and effect *checking* (`ITemplataT::Effect`, a
+   separate solver domain, deferrable).
 
 ## What still needs a ruling
 
@@ -345,15 +372,56 @@ Rung 0 is the foundation. Each rung past it catches a distinct class of error.
 |---|---|---|---|
 | 0 | `<g'>`/`in g`/`mut(g)` parse+scout; empty `BorrowRefT`; ceremonial `ITemplataT::Group`; group/effect metadata read off the scout `FunctionS` | none (well-formedness only) | no |
 | 1 | effect *checking* (`mut(g)` representation lands at rung 0); the first check | disjointness violation (declared disjoint, passed aliasing); permission escalation | yes, the first real check |
-| 2 | churn tracking | use-after-churn; a borrow sibling to a churning receiver | yes, plus monotone state |
-| 3 | `Vec<T>` (rides the generics/bounds track) | the same classes, on realistic code | yes |
+| 2 | churn tracking (runtime-sized-array elements) | use-after-churn | yes, plus monotone state |
+| 3 | more child-group sources (`Box`, `Variant`, struct fields) and generic `Vec<T>` | the same classes, on realistic code | yes |
 
-Rung 0 and rung 1's joint-argument check are landed. Rung 1's effect *checking* and all of rung 2
-(the liveness/invalidation dataflow) are the next work.
+Rung 0, rung 1's joint-argument check, and rung 2's use-after-churn on array elements are landed.
+Rung 1's effect *checking* and rung 3 (more child-group sources, then generic `Vec<T>`) are next.
 
-Rungs 0 through 2 need no generics and no `Vec`; plain structs suffice, e.g.
-`struct Fleet { flagship Ship; escort Ship; }`. So the borrow-checker track and the
-generic-bounds track run in parallel, not in sequence.
+**A rung-2 use-after-churn needs a child group, and only certain constructs form one — an inline-only
+plain struct forms none, so nothing there is ever invalidated** (see "Child groups" below). This is
+why rung 2 lands on a runtime-sized-array *element*, not on `struct Fleet { flagship Ship; }`. The
+borrow-checker track still runs in parallel with the generic-bounds track — generic `Vec<T>` is rung
+3, but a monomorphic runtime-sized array needs no generics.
+
+## Child groups (from `group-borrowing.vmd`)
+
+The design source of truth for what a churn invalidates is `group-borrowing.vmd` (Nick Smith's group
+model, as explained by the architect). Its one rule: **when someone modifies a parent group, invalidate
+every reference into that group's child groups** — and nothing else. This is narrower than "a mutation
+happened," and getting it right is the whole of rung 2.
+
+- **Invalidation is only ever about child groups.** A reference *to an object* is never invalidated by
+  modifying that object; only a reference *into its child groups* is. Concretely, on `d &Entity in r`,
+  a call that churns `r` leaves a reference to `d`, to `d.hp` (an inline field), and to the whole
+  `d.rings` list all live — only a reference to an *element* `d.rings[i]` dies.
+- **A child group forms only from something that owns an independently-destroyable thing**: a
+  collection/array **element**, a `Box` pointee, or a `Variant`/interface **payload**. *"If an object
+  (even indirectly) owns something that could be independently destroyed, it must be in a child
+  group."* An inline scalar or inline struct field is **not** a child group — it dies with its
+  container, so a churn cannot dangle a reference to it.
+- **Consequence that shaped rung 2: an inline-only plain struct forms no child groups**, so nothing in
+  it is ever invalidated — there is no use-after-churn to catch there. Rung 2 therefore lands on a
+  runtime-sized-array **element** (the simplest child-group source that compiles today); a struct like
+  `Fleet { flagship Ship; }` is the wrong shape for this rung.
+- **Where groups come from.** Each local variable forms its own group; groups combine into unions; and
+  Variants/collections/`Box` inside a group form child groups. A `mut(g)` call is the churn event —
+  it invalidates references into `g`'s child groups.
+- **The isolation restriction is what makes aliasing safe.** Items in one group must be mutually
+  isolated — they cannot own or hold references into each other — so a function handed several
+  references into a group cannot use one to destroy another. This is why `attack(a &Entity in r, d
+  &Entity in r) mut(r)` is memory-safe even though it mutates both: no `Entity` in `r` can delete
+  another, and neither `a` nor `d` holds a child-group reference.
+- **Paths carry child-group invalidation across calls.** A signature can name a callee's mutated child
+  group by a path off a parameter (`mut rr: group Ring = e.rings*`), so the caller learns *exactly*
+  which of its references the call may invalidate — `e.rings`' elements, and nothing else. This is
+  rung-3-and-later machinery; rung 2 only needs the whole-parent-group `mut(g)`.
+
+**How this affects the roadmap.** Rung 2 = churn tracking on array elements. Rung 3 extends the
+child-group set (`Box` pointees, `Variant`/interface payloads, struct-field arrays) and then generic
+`Vec<T>`, and eventually adds the path grammar for precise cross-call invalidation. The dataflow
+machinery (`liveness.rs`) is already general over "which places are child groups"; each new source is
+a `place_path` segment plus its child-group predicate, not a new analysis.
 
 ## Design rulings behind the checker
 
@@ -411,7 +479,9 @@ and an effect target is a disjointness claim, verified at every binding site.
 effect targets, of the target's contents-territory: every destructible place beneath it, excluding
 the target's own member places. That is why `attack` writing `attacker.fuel` invalidates nothing
 while `ships.clear()` kills every element borrow. A checker keyed on "a `mut` happened" rejects the
-motivating program.
+motivating program. This is the same downward-only, child-groups-only rule stated in "Child groups"
+above, and it is exactly what rung 2 implements: a `mut(g)` call invalidates only references whose
+place steps through a child-group boundary (an array element) rooted in the churned array.
 
 **Two join disciplines, deliberately.** Monotone facts (invalidation, poisoning, mention sets) are
 may-facts: union at joins, least fixpoint on loops. Conserved facts (move-state, linear obligations)

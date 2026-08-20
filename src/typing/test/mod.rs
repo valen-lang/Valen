@@ -1,5 +1,6 @@
 mod after_regions_error_tests;
 mod after_regions_tests;
+mod compiler_drop_tests;
 mod compiler_generics_tests;
 mod compiler_humanizer_tests;
 mod compiler_lambda_tests;

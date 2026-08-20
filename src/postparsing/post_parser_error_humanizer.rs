@@ -231,6 +231,8 @@ pub fn humanize_rune<'s>(rune: IRuneS<'s>) -> String {
     IRuneS::AnonymousSubstructDropBoundPrototypeRune(r) => {
       "$".to_string() + r.interface.name.as_str() + ".anon.drop.proto"
     }
+    IRuneS::StructDropBoundParamsListRune(_) => "$structdrop.params".to_string(),
+    IRuneS::StructDropBoundPrototypeRune(_) => "$structdrop.proto".to_string(),
     IRuneS::AnonymousSubstructMethodInheritedRune(r) => {
       "$".to_string()
         + r.interface.name.as_str()
