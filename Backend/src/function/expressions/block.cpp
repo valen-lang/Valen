@@ -22,10 +22,10 @@ Ref translateBlock(
   if (block->innerType->kind != globalState->metalCache->never) {
     childBlockState.checkAllIntroducedLocalsWereUnstackified();
 
-    auto childUnstackifiedParentLocalIds =
-        childBlockState.getParentLocalIdsThatSelfUnstackified();
-    for (auto childUnstackifiedParentLocalId : childUnstackifiedParentLocalIds) {
-      parentBlockState->markLocalUnstackified(childUnstackifiedParentLocalId);
+    auto childUnstackifiedParentLocals =
+        childBlockState.getParentLocalsThatSelfUnstackified();
+    for (auto childUnstackifiedParentLocal : childUnstackifiedParentLocals) {
+      parentBlockState->markLocalUnstackified(childUnstackifiedParentLocal);
     }
   }
 

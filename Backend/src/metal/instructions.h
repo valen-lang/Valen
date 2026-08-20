@@ -9,6 +9,7 @@ class AddressRegister;
 class Local;
 class VariableId;
 class StackHeight;
+class MetalCache;
 
 enum class RefCountCategory {
     VARIABLE_REF_COUNT,
@@ -20,16 +21,21 @@ class Expression {
 public:
     virtual ~Expression() {}
 
-//    virtual Reference* getResultType() const = 0;
+    // The onion kind this expression evaluates to (mirrors the instantiated IR's ExpressionIE::result).
+    // Defined in instructions.cpp. Needs the cache for nodes whose result is a singleton kind
+    // (constants, void, never, etc.) rather than a stored field.
+    virtual Kind* resultKind(MetalCache* cache) const = 0;
 };
 
 class ConstantVoid : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   ConstantVoid() {}
 };
 
 class ConstantInt : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   int64_t value;
   int bits;
 
@@ -42,6 +48,7 @@ public:
 
 class ConstantBool : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   bool value;
 
   ConstantBool(
@@ -53,6 +60,7 @@ public:
 
 class ConstantStr : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   std::string value;
   Kind* result;
 
@@ -66,6 +74,7 @@ public:
 
 class ConstantF64 : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   double value;
 
   ConstantF64(
@@ -76,6 +85,7 @@ public:
 
 class Argument : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   int paramIndex;
   Kind* tyype;
 
@@ -89,6 +99,7 @@ public:
 
 class Stackify : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Local* variable;
   Expression* expr;
   Kind* result;
@@ -104,6 +115,7 @@ public:
 
 class Restackify : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Local* variable;
   Expression* sourceExpr;
   Kind* result;
@@ -120,6 +132,7 @@ public:
 
 class Unstackify : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Local* variable;
   Kind* result;
 
@@ -131,6 +144,7 @@ public:
 
 class Destroy : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* expr;
   StructKind* structKind;
   std::vector<Local*> destinationLocals;
@@ -147,6 +161,7 @@ public:
 
 class StructToInterfaceUpcast : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* innerExpr;
   InterfaceKind* targetInterface;
   Name* implName;
@@ -165,6 +180,7 @@ public:
 
 class InterfaceToInterfaceUpcast : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* innerExpr;
   InterfaceKind* targetInterface;
   Kind* result;
@@ -180,6 +196,7 @@ public:
 
 class IsSameInstance : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* left;
   Expression* right;
 
@@ -192,6 +209,7 @@ public:
 
 class WeakAlias : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* innerExpr;
   Kind* result;
 
@@ -205,6 +223,7 @@ public:
 
 class NewArrayFromValues : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   std::vector<Expression*> elements;
   Kind* result;
   StaticSizedArrayT* arrayType;
@@ -221,6 +240,7 @@ public:
 
 class Call : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Prototype* callable;
   std::vector<Expression *> args;
   Kind* result;
@@ -236,6 +256,7 @@ public:
 
 class ExternCall : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
     Prototype* prototype;
     std::vector<Expression *> args;
     Kind* result;
@@ -252,6 +273,7 @@ public:
 
 class InterfaceCall : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Prototype* superFunctionPrototype;
   int virtualParamIndex;
   std::vector<Expression*> args;
@@ -272,6 +294,7 @@ public:
 
 class If : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* condition;
   Expression* thenCall;
   Expression* elseCall;
@@ -290,6 +313,7 @@ public:
 
 class While : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* block;
   Kind* result;
 
@@ -300,6 +324,7 @@ public:
 
 class Consecutor : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   std::vector<Expression *> exprs;
   Kind* result;
 
@@ -312,6 +337,7 @@ public:
 
 class Block : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* inner;
   Kind* result;
 
@@ -322,10 +348,12 @@ public:
 
 class Break : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
 };
 
 class Return : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression *sourceExpr;
 
   Return(
@@ -336,6 +364,7 @@ public:
 
 class NewRuntimeSizedArray : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   RuntimeSizedArrayT* arrayType;
   Expression* capacityExpr;
   Kind* result;
@@ -351,6 +380,7 @@ public:
 
 class StaticArrayFromCallable : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   StaticSizedArrayT* arrayType;
   Expression* generator;
   Prototype* generatorMethod;
@@ -369,6 +399,7 @@ public:
 
 class DestroyStaticSizedArrayIntoFunction : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* arrayExpr;
   StaticSizedArrayT* arrayType;
   Expression* consumer;
@@ -387,6 +418,7 @@ public:
 
 class DestroyStaticSizedArrayIntoLocals : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* expr;
   StaticSizedArrayT* staticSizedArray;
   std::vector<Local*> destinationLocals;
@@ -402,6 +434,7 @@ public:
 
 class DestroyRuntimeSizedArray : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* arrayExpr;
 
   DestroyRuntimeSizedArray(
@@ -411,6 +444,7 @@ public:
 
 class NewStruct : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   StructKind* structKind;
   Kind* result;
   std::vector<Expression*> args;
@@ -426,6 +460,7 @@ public:
 
 class ArrayLength : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* arrayExpr;
 
   ArrayLength(
@@ -435,6 +470,7 @@ public:
 
 class ArrayCapacity : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* arrayExpr;
 
   ArrayCapacity(
@@ -444,6 +480,7 @@ public:
 
 class PushRuntimeSizedArray : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* arrayExpr;
   Expression* newElementExpr;
 
@@ -456,6 +493,7 @@ public:
 
 class PopRuntimeSizedArray : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* arrayExpr;
   Kind* result;
 
@@ -469,6 +507,7 @@ public:
 
 class Discard : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* expr;
 
   Discard(Expression* expr_) :
@@ -477,6 +516,7 @@ public:
 
 class LockWeak : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* innerExpr;
   Prototype* someConstructor;
   Prototype* noneConstructor;
@@ -502,6 +542,7 @@ public:
 
 class AsSubtype : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* sourceExpr;
   Kind* targetType;
   Prototype* okConstructor;
@@ -532,6 +573,7 @@ public:
 
 class CopyPrim : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
     Expression* inner;
     Kind* result;
 
@@ -542,6 +584,7 @@ public:
 
 class LetAndLend : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Local* variable;
   Expression* expr;
   Kind* result;
@@ -552,6 +595,7 @@ public:
 
 class LocalLookup : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Local* localVariable;
   Kind* result;
 
@@ -561,6 +605,7 @@ public:
 
 class Deref : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* inner;
   Kind* result;
 
@@ -570,6 +615,7 @@ public:
 
 class MemberLookup : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* structExpr;
   std::string memberName;
   Kind* result;
@@ -580,6 +626,7 @@ public:
 
 class StaticSizedArrayLookup : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* arrayExpr;
   StaticSizedArrayT* arrayType;
   Expression* indexExpr;
@@ -591,6 +638,7 @@ public:
 
 class RuntimeSizedArrayLookup : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* arrayExpr;
   RuntimeSizedArrayT* arrayType;
   Expression* indexExpr;
@@ -602,6 +650,7 @@ public:
 
 class Mutate : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* destinationExpr;
   Expression* sourceExpr;
   Kind* result;
@@ -612,6 +661,7 @@ public:
 
 class ArraySize : public Expression {
 public:
+  Kind* resultKind(MetalCache* cache) const override;
   Expression* array;
   Kind* result;
 

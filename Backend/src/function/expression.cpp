@@ -16,24 +16,11 @@
 
 // TODO: more advanced static analysis, like what catalyst does.
 bool exprResultKnownLive(GlobalState* globalState, Expression* expr) {
-  // This pretends that everything is knownLive, including things that definitely are bad.
-  // When paired with elide_checks_for_known_live=false, which makes us do generation checks anyway.
-  // Any valid dereference will be fine; knownLive will be true and the check will pass, so no bad.
-  // But any invalid dereference will explode; knownLive will be true and the check failed, so it
-  // will report that it caught a bug.
-  if (globalState->opt->forceAllKnownLive) {
-    return true;
-  }
-  if (auto localLoad = dynamic_cast<LocalLoad*>(expr)) {
-    if (localLoad->local->type->ownership == Ownership::OWN) {
-      return true;
-    }
-  } else if (auto immutabilify = dynamic_cast<Immutabilify*>(expr)) {
-    return exprResultKnownLive(globalState, immutabilify->sourceExpr);
-  } else if (auto preCheckBorrow = dynamic_cast<PreCheckBorrow*>(expr)) {
-    return exprResultKnownLive(globalState, preCheckBorrow->sourceExpr);
-  }
-  return false;
+  // knownLive is a liveness / refcount-elision hint the onion IR no longer carries. Default it
+  // conservatively (not known live unless globally forced): paired with the gen-check path this
+  // only ever adds checks, never removes them, so it can't mask a bug. Real liveness analysis is a
+  // later optimization.
+  return globalState->opt->forceAllKnownLive;
 }
 
 Ref translateExpressionInner(
@@ -121,30 +108,6 @@ Ref translateExpressionInner(
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     // We basically just use the incoming value as is, to make LLVM copy it.
     return translateExpression(globalState, functionState, blockState, builder, copyPrimM->inner);
-  } else if (auto mutabilifyM = dynamic_cast<Mutabilify*>(expr)) {
-    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
-
-    auto regionInstanceRef =
-        // At some point, look up the actual region instance, perhaps from the FunctionState?
-        globalState->getRegion(mutabilifyM->sourceType)->createRegionInstanceLocal(functionState, builder);
-
-    Ref result = translateMutabilify(globalState, functionState, blockState, builder, regionInstanceRef, mutabilifyM);
-//    buildFlare(FL(), globalState, functionState, builder, std::string("/") + typeid(*expr).name());
-    return result;
-  } else if (auto immutabilifyM = dynamic_cast<Immutabilify*>(expr)) {
-    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
-
-    auto regionInstanceRef =
-        // At some point, look up the actual region instance, perhaps from the FunctionState?
-        globalState->getRegion(immutabilifyM->sourceType)->createRegionInstanceLocal(functionState, builder);
-
-    Ref result = translateImmutabilify(globalState, functionState, blockState, builder, regionInstanceRef, immutabilifyM);
-//    buildFlare(FL(), globalState, functionState, builder, std::string("/") + typeid(*expr).name());
-    return result;
-  } else if (auto preCheckBorrowM = dynamic_cast<PreCheckBorrow*>(expr)) {
-    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
-    return translatePreCheckBorrow(
-        globalState, functionState, blockState, builder, preCheckBorrowM);
   } else if (auto ret = dynamic_cast<Return*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     auto sourceRef = translateExpression(globalState, functionState, blockState, builder, ret->sourceExpr);
@@ -220,40 +183,6 @@ Ref translateExpressionInner(
             functionState, builder, false, restackify->local->type, refToStore);
     LLVMBuildStore(builder, toStoreLE, localAddr);
     return makeVoidRef(globalState);
-  } else if (auto localStore = dynamic_cast<LocalStore*>(expr)) {
-    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
-    // The purpose of LocalStore is to put a swap value into a local, and give
-    // what was in it.
-    auto localAddr = blockState->getLocalAddr(localStore->local->id, true);
-
-    auto refToStore =
-        translateExpression(
-            globalState, functionState, blockState, builder, localStore->sourceExpr);
-
-    // We need to load the old ref *after* we evaluate the source expression,
-    // Because of expressions like: Ship() = (mut b = (mut a = (mut b = Ship())));
-    // See mutswaplocals.vale for test case.
-    auto oldRef =
-        globalState->getRegion(localStore->local->type)
-            ->localStore(functionState, builder, localStore->local, localAddr, refToStore, localStore->knownLive);
-
-    auto toStoreLE =
-        globalState->getRegion(localStore->local->type)->checkValidReference(FL(),
-            functionState, builder, false, localStore->local->type, refToStore);
-    LLVMBuildStore(builder, toStoreLE, localAddr);
-    return oldRef;
-  } else if (auto pointerToBorrow = dynamic_cast<PointerToBorrow*>(expr)) {
-    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
-    auto sourceRef =
-        translateExpression(
-            globalState, functionState, blockState, builder, pointerToBorrow->sourceExpr);
-    return sourceRef;
-  } else if (auto borrowToPointer = dynamic_cast<BorrowToPointer*>(expr)) {
-    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
-    auto sourceRef =
-        translateExpression(
-            globalState, functionState, blockState, builder, borrowToPointer->sourceExpr);
-    return sourceRef;
   } else if (auto weakAlias = dynamic_cast<WeakAlias*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
 
@@ -271,10 +200,6 @@ Ref translateExpressionInner(
         AFL("WeakAlias drop constraintref"),
         functionState, builder, weakAlias->sourceType, sourceRef);
     return resultRef;
-  } else if (auto localLoad = dynamic_cast<LocalLoad*>(expr)) {
-    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name(), " ", localLoad->localName);
-
-    return translateLocalLoad(globalState, functionState, blockState, builder, localLoad);
   } else if (auto unstackify = dynamic_cast<Unstackify*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     // The purpose of Unstackify is to destroy the local and give what was in
@@ -327,51 +252,6 @@ Ref translateExpressionInner(
   } else if (auto destroySSAIntoLocalsM = dynamic_cast<DestroyStaticSizedArrayIntoLocals*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     return translateDestroySSAIntoLocals(globalState, functionState, blockState, builder, destroySSAIntoLocalsM);
-  } else if (auto memberLoad = dynamic_cast<MemberLoad*>(expr)) {
-    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name(), " ", memberLoad->memberName);
-    auto structType = memberLoad->structType;
-
-    auto structRef =
-        translateExpression(
-            globalState, functionState, blockState, builder, memberLoad->structExpr);
-    auto memberIndex = memberLoad->memberIndex;
-    auto memberName = memberLoad->memberName;
-    bool structKnownLive = exprResultKnownLive(globalState, memberLoad->structExpr);
-
-    auto structRegionInstanceRef =
-        // At some point, look up the actual region instance, perhaps from the FunctionState?
-        globalState->getRegion(memberLoad->structType)->createRegionInstanceLocal(functionState, builder);
-
-    auto structLiveRef =
-        globalState->getRegion(memberLoad->structType)
-            ->checkRefLive(FL(), functionState, builder, structRegionInstanceRef, structType, structRef, structKnownLive);
-
-    auto resultRef =
-        loadMember(
-            AFL("MemberLoad"),
-            globalState,
-            functionState,
-            builder,
-            structRegionInstanceRef,
-            memberLoad->structType,
-            structLiveRef,
-            memberLoad->expectedMemberType,
-            memberIndex,
-            memberLoad->expectedResultType,
-            memberName);
-    globalState->getRegion(memberLoad->expectedResultType)
-        ->checkValidReference(FL(), functionState, builder, false, memberLoad->expectedResultType, resultRef);
-    if (memberLoad->expectedMemberType == globalState->metalCache->i32Ref) {
-      auto valueForPrintingLE =
-          globalState->getRegion(memberLoad->expectedResultType)
-              ->checkValidReference(FL(), functionState, builder, true, memberLoad->expectedResultType, resultRef);
-      buildFlare(FL(), globalState, functionState, builder, "Loaded value: ", valueForPrintingLE);
-    }
-
-    globalState->getRegion(memberLoad->structType)->dealias(
-        AFL("MemberLoad drop struct"),
-        functionState, builder, memberLoad->structType, structRef);
-    return resultRef;
   } else if (auto destroyStaticSizedArrayIntoFunction = dynamic_cast<DestroyStaticSizedArrayIntoFunction*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     auto consumerType = destroyStaticSizedArrayIntoFunction->consumerType;

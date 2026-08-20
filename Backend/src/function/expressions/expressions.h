@@ -91,22 +91,6 @@ Ref translateDiscard(
     LLVMBuilderRef builder,
     Discard* discardM);
 
-Ref translateMutabilify(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    BlockState* blockState,
-    LLVMBuilderRef builder,
-    Ref regionInstanceRef,
-    Mutabilify* mutabilifyM);
-
-Ref translateImmutabilify(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    BlockState* blockState,
-    LLVMBuilderRef builder,
-    Ref regionInstanceRef,
-    Immutabilify* immutabilifyM);
-
 Ref translateNewArrayFromValues(
     GlobalState* globalState,
     FunctionState* functionState,
@@ -135,19 +119,13 @@ Ref translateConstantStr(
     LLVMBuilderRef builder,
     ConstantStr* constantStr);
 
-Ref translateLocalLoad(
+Ref translateDerefLocalLookup(
     GlobalState* globalState,
     FunctionState* functionState,
     BlockState* blockState,
     LLVMBuilderRef builder,
-    LocalLoad* localLoad);
-
-Ref translatePreCheckBorrow(
-    GlobalState *globalState,
-    FunctionState *functionState,
-    BlockState *blockState,
-    LLVMBuilderRef builder,
-    PreCheckBorrow *preCheckBorrowM);
+    LocalLookup* lookup,
+    Kind* targetKind);
 
 bool exprResultKnownLive(GlobalState* globalState, Expression* expr);
 

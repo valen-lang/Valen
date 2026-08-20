@@ -47,6 +47,7 @@ set(BACKEND_LIB_SRCS
 		src/ffi.cpp
 		src/globalstate.cpp
 		src/metal/ast.cpp
+		src/metal/instructions.cpp
 		src/metal/metal_cache_ffi.cpp
 		src/metal/types.cpp
 		src/translatetype.cpp
@@ -67,11 +68,9 @@ set(BACKEND_LIB_SRCS
 		src/function/expressions/destructure.cpp
 		src/function/expressions/block.cpp
 		src/function/expressions/discard.cpp
-		src/function/expressions/mutabilify.cpp
 		src/function/expressions/externs.cpp
 		src/function/expressions/if.cpp
 		src/function/expressions/constantstr.cpp
-		src/function/expressions/precheckborrow.cpp
 		src/function/expressions/localload.cpp
 		src/function/expressions/while.cpp
 		src/function/expressions/newruntimesizearray.cpp

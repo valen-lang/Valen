@@ -48,13 +48,13 @@ Ref translateIf(
   bool thenContinues = iff->thenResultType->kind != globalState->metalCache->never;
   bool elseContinues = iff->elseResultType->kind != globalState->metalCache->never;
 
-  auto thenUnstackifiedParentLocalIds = thenBlockState.getParentLocalIdsThatSelfUnstackified();
-  auto elseUnstackifiedParentLocalIds = elseBlockState.getParentLocalIdsThatSelfUnstackified();
+  auto thenUnstackifiedParentLocalIds = thenBlockState.getParentLocalsThatSelfUnstackified();
+  auto elseUnstackifiedParentLocalIds = elseBlockState.getParentLocalsThatSelfUnstackified();
 
   // This is the set of locals that we should unstackify from the parent,
   // because they were unstackified from both, or whichever branch actually
   // survived (wasn't never'd).
-  std::unordered_set<VariableId*> branchUnstackifiedParentLocalIds;
+  std::unordered_set<Local*> branchUnstackifiedParentLocalIds;
   if (thenContinues == elseContinues) { // Both continue, or both don't
     // The same outside-if variables should still exist no matter which branch we went down.
     assert(thenUnstackifiedParentLocalIds == elseUnstackifiedParentLocalIds);
