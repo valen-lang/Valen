@@ -6,26 +6,28 @@ C++ backend is rewired to consume `HinputsI` directly. Full plan: `docs/plans/co
 
 ## State (regenerate, don't trust stale)
 
-- Branch tip: `git log --oneline -1`; uncommitted work: `git status --short`. The backend reshape is
-  landed on `main` — the `exp-*-wipbx` branches ratchet `main` via `git fetch . <branch>:main`.
+- Branch tip: `git log --oneline -1`; uncommitted work: `git status --short`. `main` and the
+  `exp-*-wipbx` working branch ratchet together via `git fetch . <branch>:main`.
 - Linked modules: grep `pub mod` in `src/lib.rs`. `final_ast`/`simplifying` are **deleted** (not
-  commented); `backend_ffi`, `pass_manager`, `clang`, and `testvm` are all linked.
+  commented); `backend_ffi`, `pass_manager`, `clang`, `testvm`, `end_to_end_tests`, and
+  `integration_tests` are all linked.
 - **The gate is `cargo nextest run --manifest-path Cargo.toml`, plus the same with
-  `VALE_TEST_BACKEND=wasi`** — both green, and neither compiles the C++ backend, so no module-commenting
-  is needed. `CARGO_FEATURE_RUST_INTEROP=1 cargo check --lib` checks only the non-test lib and misses
-  `cfg(test)` + `testvm` code; it is not the gate.
-- The **C++ backend build is separately red** on the placement/`location` cluster (below). Build it
-  directly with `make` in the cmake-rs build dir cargo configured
-  (`target/debug/build/frontend_rust-*/out/build`); `cargo nextest` does not.
+  `VALE_TEST_BACKEND=wasi`** — both green. It **compiles, links, and runs the C++ backend**: the linked
+  e2e/integration suites drive it via `pass_manager::build` → clang, so a green gate means the backend
+  builds and its live programs run end-to-end.
+- Backend features not yet migrated to the onion IR keep their e2e/integration tests `#[ignore]`d with
+  `// ZCOORD: re-enable with onion`. **That marker is the live map of remaining backend work** — `grep
+  -rn 'ZCOORD' src/` lists every parked test; the un-ignored e2e tests (e.g. `misc::unstackifyret`) pass.
 
 ## Where the plan stands
 
-Steps 1–3 are landed; Step 4 (backend thinks onion) is nearly done. The Rust + C++ headers/FFI are
-onion-shaped, and the C++ codegen readers are mostly reshaped (onion-wrap ownership, `peel_all_references`
-+ `isValueType` in `metal/types.{h,cpp}`, typing-owned vtable slots, array/If/interface-call handlers).
-What remains: the **placement/`location` cluster** — `Location` is deleted, but `mallocKnownSize` and a
-few sites still branch on the removed field; resolve each onto `Sharedness` (see constraint). Then re-link
-and run the downstream (integration/end_to_end/testvm) suites. See `docs/plans/complete-backend-plan.md` Step 4.
+Steps 1–3 are landed; Step 4 (backend thinks onion) builds and runs. The C++ backend compiles, links,
+and runs simple programs end-to-end. Remaining is the feature set behind the `// ZCOORD` tests — struct
+allocate/members, extern/export roundtrips, string read/len, lambdas, upcast — plus the `Mutate`
+expression handler (the `set x = …` case, unimplemented in `translateExpressionInner`,
+`Backend/src/function/expression.cpp`). A residual placement/ownership cluster is shrinking but not gone
+(`grep -rc '\->location\|\->ownership' Backend/src`; the `VCOORD` sites in `Backend/src`); resolve each
+onto `Sharedness` (see constraint). See `docs/plans/complete-backend-plan.md` Step 4.
 
 ## The load-bearing constraint
 
@@ -50,12 +52,15 @@ reading typing's edge blueprint (`super_family_root_headers`), not a C++-codegen
   (member access via `extractvalue`, no control block); inline structs/SSAs are wanted, so never delete a
   `location == INLINE` branch as "dead code." For placement sites, ask what to *remove* — most `location`
   branches are dead/redundant/defensive and collapse — but keep the genuine `Sharedness` branch.
-- `rcimm.cpp` only ever sees shared/heap things: it asserts `ShareRef` and throws on primitives. Don't add
-  single/owned or primitive handling there — that belongs in the single region (`unsafe.cpp`).
-- **The gate does not compile the C++ backend.** `cargo nextest run` (native + wasi) is green while the
-  C++ build is red; and `CARGO_FEATURE_RUST_INTEROP=1 cargo check --lib` misses `cfg(test)` + `testvm`
-  code (it green-lit stale `expr_return` / array-lookup test errors the nextest gate caught). Run the real
-  gate, not the narrow check.
+- `rcimm.cpp` is the shared/heap-and-`Str`-only region; every value type (primitives, single-owner
+  aggregates) lives in the `mut` region (`unsafe.cpp`). Primitives route there via their `mutRegionId`
+  singletons (`Backend/src/metal/metalcache.h`) and `getRegion(Kind*)` peels onion wraps to the inner
+  kind's region. Don't add primitive/single handling to `rcimm.cpp`.
+- **Backend local identity is the variable name, not the node pointer.** Metal `Local` carries a
+  `VarNameM id` (the frontend declaration name, per-function-unique via its LID); `BlockState`
+  (`Backend/src/function/function.h`) keys on it. The instantiator reallocates a fresh `LocalVariableI`
+  per mention, so the node pointer is NOT stable — this restores the pre-onion `VariableId` contract.
+  `VarNameM` is the metal lowering target of `IVarNameI` (a string wrapper for now).
 - Eliminate a vestigial IR node rather than carry it: a tuple lowers to `Construct` in typing; a
   `Reinterpret` is asserted and dropped by the instantiator; member lookup is one `MemberLookup`. Check
   whether the info already exists upstream before adding a node.
