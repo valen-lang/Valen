@@ -406,6 +406,7 @@ impl<'cache> Lowerer<'cache> {
             ExpressionIE::InterfaceFunctionCall(x) => c.expr_interface_call(
                 self.lower_prototype(x.super_function_prototype),
                 x.virtual_param_index,
+                x.index_in_edge,
                 &self.lower_exprs(x.args),
                 self.lower_kind(x.result),
             ),
@@ -414,6 +415,8 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_expression(&x.condition),
                 self.lower_expression(&x.then_call),
                 self.lower_expression(&x.else_call),
+                self.lower_kind(x.then_result_type),
+                self.lower_kind(x.else_result_type),
                 self.lower_kind(x.result),
             ),
             ExpressionIE::While(x) => {

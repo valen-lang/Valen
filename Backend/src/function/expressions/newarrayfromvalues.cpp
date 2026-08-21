@@ -16,49 +16,32 @@ Ref translateNewArrayFromValues(
     BlockState* blockState,
     LLVMBuilderRef builder,
     NewArrayFromValues* newArrayFromValues) {
-  auto arrayType = newArrayFromValues->arrayRefType;
-
-
   auto elementsLE =
       translateExpressions(
           globalState, functionState, blockState, builder, newArrayFromValues->elements);
-  auto ssaDefM = globalState->program->getStaticSizedArray(newArrayFromValues->arrayKind);
+  auto ssaDefM = globalState->program->getStaticSizedArray(newArrayFromValues->arrayType);
   for (auto elementLE : elementsLE) {
     globalState->getRegion(ssaDefM->elementType)
         ->checkValidReference(
             FL(), functionState, builder, false, ssaDefM->elementType, elementLE);
   }
 
-  auto staticSizedArrayMT = dynamic_cast<StaticSizedArrayT*>(newArrayFromValues->arrayRefType->kind);
+  auto staticSizedArrayMT = newArrayFromValues->arrayType;
 
-  auto arrayRegionInstanceRef =
-      // At some point, look up the actual region instance, perhaps from the FunctionState?
-      globalState->getRegion(newArrayFromValues->arrayRefType)->createRegionInstanceLocal(functionState, builder);
-
-  if (newArrayFromValues->arrayRefType->location == Location::INLINE) {
-//        auto valStructL =
-//            globalState->getInnerStruct(structKind->fullName);
-//        return constructInnerStruct(
-//            builder, structM, valStructL, membersLE);
-    { assert(false); throw 1337; }
-  } else {
-    // If we get here, arrayLT is a pointer to our counted struct.
-    auto resultRef =
-        globalState->getRegion(newArrayFromValues->arrayRefType)->constructStaticSizedArray(
-            makeVoidRef(globalState),
-            functionState,
-            builder,
-            newArrayFromValues->arrayRefType,
-            newArrayFromValues->arrayKind);
-    fillStaticSizedArray(
-        globalState,
-        functionState,
-        builder,
-        arrayRegionInstanceRef,
-        newArrayFromValues->arrayRefType,
-        staticSizedArrayMT,
-        resultRef,
-        elementsLE);
-    return toRef(globalState, newArrayFromValues->arrayRefType, resultRef);
-  }
+  // If we get here, arrayLT is a pointer to our counted struct.
+  auto resultRef =
+      globalState->getRegion(newArrayFromValues->result)->constructStaticSizedArray(
+          functionState,
+          builder,
+          newArrayFromValues->result,
+          newArrayFromValues->arrayType);
+  fillStaticSizedArray(
+      globalState,
+      functionState,
+      builder,
+      newArrayFromValues->result,
+      staticSizedArrayMT,
+      resultRef,
+      elementsLE);
+  return toRef(globalState, newArrayFromValues->result, resultRef);
 }

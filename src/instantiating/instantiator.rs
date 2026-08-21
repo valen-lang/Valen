@@ -22,6 +22,7 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::keywords::Keywords;
 use crate::compile_options::GlobalOptions;
 use crate::typing::templata::templata::ITemplataT;
+use crate::typing::templata_compiler::peel_all_references;
 use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::env::function_environment_t::LocalVariable;
 use crate::utils::fx::IndexMap;
@@ -207,7 +208,11 @@ pub struct InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
     pub impl_to_sharedness: IndexMap<IdI<'s, 'i>, SharednessI>,
     pub impl_to_bounds: IndexMap<IdI<'s, 'i>, DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>,
     pub interface_to_impls: IndexMap<IdI<'s, 'i>, Vec<(IdT<'s, 't>, IdI<'s, 'i>)>>,
-    pub interface_to_abstract_func_to_virtual_index: IndexMap<IdI<'s, 'i>, IndexMap<PrototypeI<'s, 'i>, usize>>,
+    // Inner value is (virtual_param_index, index_in_edge). index_in_edge is the method's vtable
+    // slot = its position in typing's InterfaceEdgeBlueprintT.super_family_root_headers. After the
+    // worklist drains, each inner map is sorted by index_in_edge so the blueprint/internal_methods/
+    // edge all emit in typing's order (matching the slot stamped on each InterfaceFunctionCallIE).
+    pub interface_to_abstract_func_to_virtual_index: IndexMap<IdI<'s, 'i>, IndexMap<PrototypeI<'s, 'i>, (usize, i32)>>,
     pub impls: IndexMap<IdI<'s, 'i>, (ICitizenIT<'s, 'i>, IdI<'s, 'i>, DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, InstantiationBoundArgumentsI<'s, 'i>)>,
     pub abstract_func_to_bounds: IndexMap<IdI<'s, 'i>, (DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, &'i InstantiationBoundArgumentsI<'s, 'i>)>,
     pub interface_to_impl_to_abstract_prototype_to_override: IndexMap<IdI<'s, 'i>, IndexMap<IdI<'s, 'i>, IndexMap<PrototypeI<'s, 'i>, PrototypeI<'s, 'i>>>>,
@@ -450,11 +455,17 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
         } {}
 
+        // Reorder each interface's methods into typing's blueprint slot order, so the blueprint,
+        // internal_methods and edges below all emit in the order the call sites' index_in_edge uses.
+        for (_interface, abstract_funcs) in monouts.interface_to_abstract_func_to_virtual_index.iter_mut() {
+            abstract_funcs.sort_by(|_k1, v1, _k2, v2| v1.1.cmp(&v2.1));
+        }
+
         let interface_edge_blueprints =
             ArenaIndexMap::from_iter_in(
                 monouts.interface_to_abstract_func_to_virtual_index.iter().map(|(interface, abstract_func_prototypes)| -> (IdI<'s, 'i>, InterfaceEdgeBlueprintI<'s, 'i>) {
                     let mut entries: Vec<(&'i PrototypeI<'s, 'i>, i32)> = Vec::new();
-                    for (proto, idx) in abstract_func_prototypes.iter() {
+                    for (proto, (idx, _index_in_edge)) in abstract_func_prototypes.iter() {
                         entries.push((self.interner.alloc(*proto), *idx as i32));
                     }
                     (*interface, InterfaceEdgeBlueprintI { interface: *interface, super_family_root_headers: self.interner.bump().alloc_slice_fill_iter(entries.into_iter()) })
@@ -466,7 +477,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let InterfaceDefinitionI { instantiated_interface: ref_, attributes, weakable, sharedness: mutability, .. } = **interface;
                 let map = monouts.interface_to_abstract_func_to_virtual_index.get(&ref_.id).expect("vassertSome: interface_to_abstract_func_to_virtual_index");
                 let mut methods_entries: Vec<(&'i PrototypeI<'s, 'i>, i32)> = Vec::new();
-                for (proto, idx) in map.iter() {
+                for (proto, (idx, _index_in_edge)) in map.iter() {
                     methods_entries.push((self.interner.alloc(*proto), *idx as i32));
                 }
                 InterfaceDefinitionI {
@@ -487,7 +498,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         let (sub_citizen, parent_interface, _, _) = monouts.impls.get(impl_id_i).expect("vassertSome: monouts.impls");
                         assert!(parent_interface == interface);
                         let abstract_func_to_virtual_index = monouts.interface_to_abstract_func_to_virtual_index.get(interface).expect("vassertSome: interface_to_abstract_func_to_virtual_index");
-                        let abstract_func_prototype_to_override_prototype = abstract_func_to_virtual_index.iter().map(|(abstract_func_prototype, virtual_index)| -> (IdI<'s, 'i>, &'i PrototypeI<'s, 'i>) {
+                        let abstract_func_prototype_to_override_prototype = abstract_func_to_virtual_index.iter().map(|(abstract_func_prototype, (virtual_index, _index_in_edge))| -> (IdI<'s, 'i>, &'i PrototypeI<'s, 'i>) {
                             let override_prototype = monouts.interface_to_impl_to_abstract_prototype_to_override
                                 .get(interface).expect("vassertSome interface_to_impl_to_abstract_prototype_to_override (interface)")
                                 .get(impl_id_i).expect("vassertSome interface_to_impl_to_abstract_prototype_to_override (impl)")
@@ -825,9 +836,22 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let supplied_bound_args_ref: &'i InstantiationBoundArgumentsI<'s, 'i> = self.interner.bump().alloc(supplied_bound_args);
         monouts.abstract_func_to_bounds.insert(desired_abstract_prototype.id, (denizen_bound_to_denizen_caller_supplied_thing, supplied_bound_args_ref));
 
+        // The vtable slot is this method's position in typing's interface blueprint (typing owns
+        // the order); stored so the map can be sorted by it, matching each call's index_in_edge.
+        let typed_interface_id =
+            match peel_all_references(desired_abstract_prototype_t.param_types()[virtual_index]) {
+                KindT::Interface(ir) => ir.id,
+                other => panic!("abstract func virtual param is not an interface: {:?}", other),
+            };
+        let index_in_edge =
+            self.hinputs.interface_to_edge_blueprints.get(&typed_interface_id)
+                .expect("vassertSome: interface_to_edge_blueprints for abstract func")
+                .super_family_root_headers.iter()
+                .position(|(header_proto, _)| header_proto.id == desired_abstract_prototype_t.id)
+                .expect("vassertSome: abstract func not in interface blueprint") as i32;
         let abstract_funcs = monouts.interface_to_abstract_func_to_virtual_index.get_mut(interface_id).expect("vassertSome interface_to_abstract_func_to_virtual_index");
         assert!(!abstract_funcs.contains_key(&desired_abstract_prototype));
-        abstract_funcs.insert(desired_abstract_prototype, virtual_index);
+        abstract_funcs.insert(desired_abstract_prototype, (virtual_index, index_in_edge));
 
         let impls = monouts.interface_to_impls.get(interface_id).expect("vassertSome interface_to_impls").clone();
         for (impl_t, impl_) in impls.iter() {
@@ -1364,14 +1388,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ExpressionTE::If(if_te) => {
                 let (_condition_it, condition_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &if_te.condition);
-                let (_then_it, then_ce) =
+                let (then_it, then_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &if_te.then_call);
-                let (_else_it, else_ce) =
+                let (else_it, else_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &if_te.else_call);
                 ExpressionIE::If(self.interner.alloc(IfIE {
                     condition: condition_ce,
                     then_call: then_ce,
                     else_call: else_ce,
+                    then_result_type: then_it,
+                    else_result_type: else_it,
                     result: result_it,
                 }))
             }
@@ -1530,9 +1556,24 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let args_ce: Vec<ExpressionIE<'s, 'i>> = args.iter().map(|arg| {
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg).1
                 }).collect();
+                // Typing owns the vtable order: the slot is this method's position in its
+                // interface's blueprint (InterfaceEdgeBlueprintT.super_family_root_headers).
+                let typed_interface_id =
+                    match peel_all_references(super_function_prototype_t.param_types()[virtual_param_index as usize]) {
+                        KindT::Interface(ir) => ir.id,
+                        other => panic!("InterfaceFunctionCall virtual param is not an interface: {:?}", other),
+                    };
+                let blueprint =
+                    self.hinputs.interface_to_edge_blueprints.get(&typed_interface_id)
+                        .expect("vassertSome: interface_to_edge_blueprints for InterfaceFunctionCall");
+                let index_in_edge =
+                    blueprint.super_family_root_headers.iter()
+                        .position(|(header_proto, _)| header_proto.id == super_function_prototype_t.id)
+                        .expect("vassertSome: super_function_prototype not in interface blueprint") as i32;
                 let result_ce = ExpressionIE::InterfaceFunctionCall(self.interner.bump().alloc(InterfaceFunctionCallIE {
                     super_function_prototype: self.interner.bump().alloc(super_function_prototype),
                     virtual_param_index,
+                    index_in_edge,
                     args: self.interner.alloc_slice_from_vec(args_ce),
                     result: result_it,
                 }));

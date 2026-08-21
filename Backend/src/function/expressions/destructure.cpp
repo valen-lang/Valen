@@ -16,16 +16,12 @@ Ref translateDestructure(
     Destroy* destructureM) {
   buildFlare(FL(), globalState, functionState, builder);
 
-  auto structRegionInstanceRef =
-      // At some point, look up the actual region instance, perhaps from the FunctionState?
-      globalState->getRegion(destructureM->structType)->createRegionInstanceLocal(functionState, builder);
-
   auto structRef =
       translateExpression(
           globalState, functionState, blockState, builder, destructureM->structExpr);
   auto structLiveRef =
       globalState->getRegion(destructureM->structType)->checkRefLive(FL(),
-          functionState, builder, structRegionInstanceRef, destructureM->structType, structRef, false);
+          functionState, builder, destructureM->structType, structRef);
   globalState->getRegion(destructureM->structType)->checkValidReference(FL(),
       functionState, builder, true, destructureM->structType, structRef);
 
@@ -43,7 +39,7 @@ Ref translateDestructure(
     auto memberType = structM->members[i]->type;
     auto memberLE =
         globalState->getRegion(destructureM->structType)->loadMember(
-            functionState, builder, structRegionInstanceRef, destructureM->structType, structLiveRef, i, memberType, memberType, memberName);
+            functionState, builder, destructureM->structType, structLiveRef, i, memberType, memberType, memberName);
     makeHammerLocal(
         globalState, functionState, blockState, builder, destructureM->destinationLocals[i], memberLE);
     buildFlare(FL(), globalState, functionState, builder);
@@ -78,23 +74,18 @@ Ref translateDestroySSAIntoLocals(
     DestroyStaticSizedArrayIntoLocals* destroySSAIntoLocalsM) {
   buildFlare(FL(), globalState, functionState, builder);
 
-  auto structRegionInstanceRef =
-      // At some point, look up the actual region instance, perhaps from the FunctionState?
-      globalState->getRegion(destroySSAIntoLocalsM->arrayType)->createRegionInstanceLocal(functionState, builder);
-
   auto structRef =
       translateExpression(
           globalState, functionState, blockState, builder, destroySSAIntoLocalsM->expr);
   auto structLiveRef =
-      globalState->getRegion(destroySSAIntoLocalsM->arrayType)->checkRefLive(FL(),
-                                                                     functionState, builder, structRegionInstanceRef, destroySSAIntoLocalsM->arrayType, structRef, false);
-  globalState->getRegion(destroySSAIntoLocalsM->arrayType)->checkValidReference(FL(),
-                                                                        functionState, builder, true, destroySSAIntoLocalsM->arrayType, structRef);
+      globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->checkRefLive(FL(),
+                                                                     functionState, builder, destroySSAIntoLocalsM->staticSizedArray, structRef);
+  globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->checkValidReference(FL(),
+                                                                        functionState, builder, true, destroySSAIntoLocalsM->staticSizedArray, structRef);
 
   buildFlare(FL(), globalState, functionState, builder);
 
-  auto ssaKind =
-      dynamic_cast<StaticSizedArrayT *>(destroySSAIntoLocalsM->arrayType->kind);
+  auto ssaKind = destroySSAIntoLocalsM->staticSizedArray;
   assert(ssaKind);
 
   auto ssaM = globalState->program->getStaticSizedArray(ssaKind);
@@ -104,28 +95,28 @@ Ref translateDestroySSAIntoLocals(
     // We know it's in bounds because we used size as a bound for the loop.
     auto inBoundsIndexLE = InBoundsLE{constI64LE(globalState, i)};
     auto memberLoadResult =
-        globalState->getRegion(destroySSAIntoLocalsM->arrayType)->loadElementFromSSA(
-            functionState, builder, structRegionInstanceRef, destroySSAIntoLocalsM->arrayType, ssaKind, structLiveRef, inBoundsIndexLE);
+        globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->loadElementFromSSA(
+            functionState, builder, destroySSAIntoLocalsM->staticSizedArray, ssaKind, structLiveRef, inBoundsIndexLE);
     auto memberLE =
-        globalState->getRegion(destroySSAIntoLocalsM->arrayType)->upgradeLoadResultToRefWithTargetOwnership(
-            functionState, builder, structRegionInstanceRef, ssaM->elementType, ssaM->elementType, memberLoadResult, false);
+        globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->upgradeLoadResultToRefWithTargetOwnership(
+            functionState, builder, ssaM->elementType, ssaM->elementType, memberLoadResult);
     makeHammerLocal(
-        globalState, functionState, blockState, builder, destroySSAIntoLocalsM->localIndices[i], memberLE, false);
+        globalState, functionState, blockState, builder, destroySSAIntoLocalsM->destinationLocals[i], memberLE);
     buildFlare(FL(), globalState, functionState, builder);
   }
   buildFlare(FL(), globalState, functionState, builder);
 
-  if (isValueType(destroySSAIntoLocalsM->arrayType)) {
+  if (isValueType(destroySSAIntoLocalsM->staticSizedArray)) {
     buildFlare(FL(), globalState, functionState, builder);
-    globalState->getRegion(destroySSAIntoLocalsM->arrayType)
-        ->discardOwningRef(FL(), functionState, blockState, builder, destroySSAIntoLocalsM->arrayType, structLiveRef);
-  } else if (dynamic_cast<ShareRef*>(destroySSAIntoLocalsM->arrayType) != nullptr) {
+    globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)
+        ->discardOwningRef(FL(), functionState, blockState, builder, destroySSAIntoLocalsM->staticSizedArray, structLiveRef);
+  } else if (dynamic_cast<ShareRef*>(destroySSAIntoLocalsM->staticSizedArray) != nullptr) {
     buildFlare(FL(), globalState, functionState, builder);
     // We dont decrement anything here, we're only here because we already hit zero.
 
-    globalState->getRegion(destroySSAIntoLocalsM->arrayType)->deallocate(
+    globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->deallocate(
         AFL("Destroy freeing"), functionState, builder,
-        destroySSAIntoLocalsM->arrayType, structLiveRef);
+        destroySSAIntoLocalsM->staticSizedArray, structLiveRef);
   } else {
     { assert(false); throw 1337; }
   }

@@ -55,8 +55,8 @@ void makeHammerLocal(
     LLVMBuilderRef builder,
     Local* local,
     Ref refToStore) {
-  auto localAddr = globalState->getRegion(local->type)->stackify(functionState, builder, local, refToStore, knownLive);
-  blockState->addLocal(local->id, localAddr);
+  auto localAddr = globalState->getRegion(local->type)->stackify(functionState, builder, local, refToStore);
+  blockState->addLocal(local, localAddr);
 }
 
 // Returns the new RC
@@ -277,7 +277,7 @@ Ref buildInterfaceCall(
     int virtualParamIndex) {
   auto virtualParamMT = prototype->params[virtualParamIndex];
 
-  auto interfaceKindM = dynamic_cast<InterfaceKind*>(virtualParamMT->kind);
+  auto interfaceKindM = dynamic_cast<InterfaceKind*>(peel_all_references(virtualParamMT));
   assert(interfaceKindM);
 //  int indexInEdge = globalState->getInterfaceMethod(interfaceKindM, prototype);
 
@@ -393,7 +393,7 @@ Ref buildCallV(
   returnRegion->checkValidReference(
       FL(), functionState, builder, false, returnMT, resultRef);
 
-  if (prototype->returnType->kind == globalState->metalCache->neverType) {
+  if (peel_all_references(prototype->returnType) == globalState->metalCache->neverType) {
     buildFlare(FL(), globalState, functionState, builder, "Done calling function ", prototype->name->name);
     buildFlare(FL(), globalState, functionState, builder, "Resuming function ", functionState->containingFuncName);
     LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL));

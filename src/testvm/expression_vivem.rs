@@ -627,7 +627,7 @@ pub fn execute_node_inner<'v, 'i, 's>(program_h: &'i HinputsI<'s, 'i>, interner:
             // VCOORD: get rid of this, SSALoadH should only return a reference
             // Onion lookup always yields a BorrowRef of the element's storage — no OwnH carve-out.
             // /VCOORD
-            let source = heap.get_reference_from_array(interner, address, ssal.array_type.element_type(), KindIT::BorrowRefIT(ssal.result));
+            let source = heap.get_reference_from_array(interner, address, ssal.array_type.inner.expect_static_sized_array().element_type(), KindIT::BorrowRefIT(ssal.result));
             heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), source);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, ssal.index_expr.result(), index_reference) { return INodeExecuteResultV::Error(e); }
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, ssal.array_expr.result(), array_reference) { return INodeExecuteResultV::Error(e); }
@@ -857,7 +857,7 @@ pub fn execute_node_inner<'v, 'i, 's>(program_h: &'i HinputsI<'s, 'i>, interner:
             };
             let address = ElementAddressV { array_id: array_reference.alloc_id(), element_index: index as i64 };
             write!(heap.vivem_dout, " **o:{}.{}", address.array_id.num, address.element_index).unwrap();
-            let source = heap.get_reference_from_array(interner, address, rsal.array_type.element_type(), KindIT::BorrowRefIT(rsal.result));
+            let source = heap.get_reference_from_array(interner, address, rsal.array_type.inner.expect_runtime_sized_array().element_type(), KindIT::BorrowRefIT(rsal.result));
             heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), source);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, rsal.index_expr.result(), index_int_reference) { return INodeExecuteResultV::Error(e); }
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, rsal.array_expr.result(), array_reference) { return INodeExecuteResultV::Error(e); }

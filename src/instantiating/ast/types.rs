@@ -97,6 +97,22 @@ impl<'s, 'i> KindIT<'s, 'i> where 's: 'i {
       _ => panic!("expect_struct: not a struct"),
     }
   }
+
+
+  pub fn expect_static_sized_array(&self) -> &'i StaticSizedArrayIT<'s, 'i> {
+    match self {
+      KindIT::StaticSizedArrayIT(s) => s,
+      _ => panic!("expect_static_sized_array: not a static sized array"),
+    }
+  }
+
+
+  pub fn expect_runtime_sized_array(&self) -> &'i RuntimeSizedArrayIT<'s, 'i> {
+    match self {
+      KindIT::RuntimeSizedArrayIT(r) => r,
+      _ => panic!("expect_runtime_sized_array: not a runtime sized array"),
+    }
+  }
 }
 
 

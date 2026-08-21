@@ -138,9 +138,6 @@ pub struct BuildArgs {
   #[arg(long, default_value_t = true)]
   include_bounds_checks: bool,
 
-  #[arg(long, default_value_t = false)]
-  force_all_known_live: bool,
-
   /// Module=directory and module=file.vale mappings. Any positional arg
   /// containing `=` is parsed as `<name>=<path>`; everything else is rejected.
   #[arg(trailing_var_arg = true)]
@@ -250,7 +247,6 @@ pub fn build_stuff(compiler_dir: &Path, args: BuildArgs) {
     args.pic,
     args.print_mem_overhead,
     args.use_atomic_rc,
-    args.force_all_known_live,
     args.include_bounds_checks,
   );
 

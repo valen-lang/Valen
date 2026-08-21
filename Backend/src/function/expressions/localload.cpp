@@ -15,24 +15,10 @@ Ref translateLocalLoad(
     LLVMBuilderRef builder,
     LocalLoad* localLoad) {
   auto local = localLoad->local;
-  auto localId = local->id;
+  auto localId = local;
   auto localName = localLoad->localName;
   auto localType = local->type;
-  auto targetOwnership = localLoad->targetOwnership;
-  // VCOORD: revisit
-  // OWN and SHARE both keep the local's location (Inline for primitives).
-  auto targetLocation =
-      (targetOwnership == Ownership::MUTABLE_SHARE || targetOwnership == Ownership::OWN)
-        ? localType->location
-        : Location::YONDER;
-  // /VCOORD
-  auto resultType =
-      globalState->metalCache->getReference(
-          targetOwnership, targetLocation, localType->kind);
-
-  auto regionInstanceRef =
-      // At some point, look up the actual region instance, perhaps from the FunctionState?
-      globalState->getRegion(localType)->createRegionInstanceLocal(functionState, builder);
+  auto resultType = globalState->metalCache->getBorrowRef(local->type);
 
   buildFlare(FL(), globalState, functionState, builder);
 
@@ -42,7 +28,7 @@ Ref translateLocalLoad(
 
   auto resultRef =
       globalState->getRegion(localType)->upgradeLoadResultToRefWithTargetOwnership(
-          functionState, builder, regionInstanceRef, localType, resultType, LoadResult{sourceRef}, false);
+          functionState, builder, localType, resultType, LoadResult{sourceRef});
   globalState->getRegion(resultType)->alias(FL(), functionState, builder, resultType, resultRef);
 
   return resultRef;

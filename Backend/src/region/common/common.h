@@ -117,7 +117,6 @@ void fillRuntimeSizedArray(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Ref arrayRegionInstanceRef,
     Kind* rsaRefMT,
     RuntimeSizedArrayT* rsaMT,
     Kind* elementType,
@@ -131,7 +130,6 @@ void fillStaticSizedArrayFromCallable(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Ref arrayRegionInstanceRef,
     Kind* ssaRefMT,
     StaticSizedArrayT* ssaMT,
     Kind* elementType,
@@ -160,7 +158,6 @@ LLVMValueRef mallocKnownSize(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Location location,
     LLVMTypeRef kindLT);
 void fillInnerStruct(
     GlobalState* globalState,
@@ -170,17 +167,6 @@ void fillInnerStruct(
     std::vector<Ref> membersLE,
     LLVMTypeRef innerStructLT,
     LLVMValueRef innerStructPtrLE);
-Ref constructWrappedStruct(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    KindStructs* kindStructsSource,
-    LLVMBuilderRef builder,
-    LLVMTypeRef structL,
-    Kind* structTypeM,
-    StructDefinition* structM,
-    Weakability effectiveWeakability,
-    std::vector<Ref> membersLE,
-    std::function<void(LLVMBuilderRef builder, ControlBlockPtrLE controlBlockPtrLE)> fillControlBlock);
 LLVMValueRef constructInnerStruct(
     GlobalState* globalState,
     FunctionState* functionState,
@@ -188,16 +174,6 @@ LLVMValueRef constructInnerStruct(
     StructDefinition* structM,
     LLVMTypeRef valStructL,
     const std::vector<Ref>& memberRefs);
-Ref innerAllocate(
-    AreaAndFileAndLine from,
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    Kind* desiredReference,
-    KindStructs* kindStructs,
-    const std::vector<Ref>& memberRefs,
-    Weakability effectiveWeakability,
-    std::function<void(LLVMBuilderRef builder, ControlBlockPtrLE controlBlockPtrLE)> fillControlBlock);
 // Transmutes a weak ref of one ownership (such as borrow) to another ownership (such as weak).
 Ref transmuteWeakRef(
     GlobalState* globalState,
@@ -252,7 +228,6 @@ Ref resilientLockWeak(
     Kind* constraintRefM,
     Kind* sourceWeakRefMT,
     Ref sourceWeakRefLE,
-    bool weakRefKnownLive,
     std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
     std::function<Ref(LLVMBuilderRef)> buildElse,
     Ref isAliveLE,
@@ -279,22 +254,10 @@ void fillStaticSizedArray(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Ref arrayRegionInstanceRef,
     Kind* ssaRefMT,
     StaticSizedArrayT* ssaMT,
     LiveRef ssaRef,
     const std::vector<Ref>& elementRefs);
-
-// Returns a LLVMValueRef for a ref to the string object.
-// The caller should then use getStringBytesPtr to then fill the string's contents.
-LiveRef constructStaticSizedArray(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    Kind* refM,
-    StaticSizedArrayT* ssaMT,
-    KindStructs* kindStructs,
-    std::function<void(LLVMBuilderRef builder, ControlBlockPtrLE controlBlockPtrLE)> fillControlBlock);
 
 
 void regularCheckValidReference(
@@ -361,19 +324,6 @@ LoadResult regularLoadMember(
     const std::string& memberName);
 
 
-LoadResult resilientLoadWeakMember(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    KindStructs* kindStructs,
-    Kind* structRefMT,
-    Ref structRef,
-    bool structKnownLive,
-    int memberIndex,
-    Kind* expectedMemberType,
-    const std::string& memberName);
-
-
 Ref upcastStrong(
     GlobalState* globalState,
     FunctionState* functionState,
@@ -395,20 +345,6 @@ Ref upcastWeak(
     Ref sourceRefLE,
     Kind* targetInterfaceTypeM,
     InterfaceKind* targetInterfaceKindM);
-
-LoadResult resilientloadElementFromSSA(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    Kind* ssaRefMT,
-    StaticSizedArrayT* ssaMT,
-    int size,
-    Sharedness sharedness,
-    Kind* elementType,
-    LiveRef arrayRef,
-    InBoundsLE indexLE,
-    KindStructs* kindStructs);
-
 
 void regularFillControlBlock(
     AreaAndFileAndLine from,
@@ -536,7 +472,6 @@ Ref regularDowncast(
     Kind* resultOptTypeM,
     Kind* sourceInterfaceRefMT,
     Ref sourceInterfaceRef,
-    bool sourceRefKnownLive,
     Kind* targetKind,
     std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
     std::function<Ref(LLVMBuilderRef)> buildElse);

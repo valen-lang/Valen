@@ -126,6 +126,4 @@ Ref translateLocalLoad(
     LLVMBuilderRef builder,
     LocalLoad* localLoad);
 
-bool exprResultKnownLive(GlobalState* globalState, Expression* expr);
-
 #endif

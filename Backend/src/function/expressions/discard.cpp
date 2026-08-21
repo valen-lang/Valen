@@ -13,7 +13,7 @@ Ref translateDiscard(
     LLVMBuilderRef builder,
     Discard* discardM) {
   auto sourceExpr = discardM->expr;
-  auto sourceResultType = discardM->sourceResultType;
+  auto sourceResultType = discardM->sourceType;
 
   auto sourceRef =
       translateExpression(
@@ -28,7 +28,7 @@ Ref translateDiscard(
   buildFlare(FL(), globalState, functionState, builder, "discarding!");
   globalState->getRegion(sourceResultType)
       ->dealias(
-          AFL(std::string("Discard ") + std::to_string((int)discardM->sourceResultType->ownership) + " " + typeid(*discardM->sourceResultType->kind).name() + " from " + typeid(*sourceExpr).name()),
+          AFL(std::string("Discard ") + typeid(*discardM->sourceType).name() + " from " + typeid(*sourceExpr).name()),
           functionState,
           builder,
           sourceResultType,

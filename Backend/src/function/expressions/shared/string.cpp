@@ -68,9 +68,8 @@ Ref buildConstantVStr(
   auto lengthLE = constI32LE(globalState, contents.length());
 
   auto strRef =
-      globalState->getRegion(globalState->metalCache->mutStrType)
+      globalState->getRegion(globalState->metalCache->str)
           ->mallocStr(
-              makeVoidRef(globalState),
               functionState, builder, lengthLE,
               globalState->getOrMakeStringConstant(contents));
 

@@ -29,7 +29,7 @@ Ref translateIf(
           functionState,
           builder,
           conditionExpr,
-//          globalState->getRegion(iff->commonSupertype)->translateType(iff->commonSupertype),
+//          globalState->getRegion(iff->result)->translateType(iff->result),
           iff->thenResultType,
           iff->elseResultType,
           [globalState, functionState, &thenBlockState, iff](LLVMBuilderRef thenBlockBuilder) {
@@ -40,13 +40,13 @@ Ref translateIf(
             return translateExpression(
                 globalState, functionState, &elseBlockState, elseBlockBuilder, iff->elseCall);
           });
-  globalState->getRegion(iff->commonSupertype)
+  globalState->getRegion(iff->result)
       ->checkValidReference(
-          FL(), functionState, builder, false, iff->commonSupertype, resultLE);
+          FL(), functionState, builder, false, iff->result, resultLE);
 
 
-  bool thenContinues = iff->thenResultType->kind != globalState->metalCache->neverType;
-  bool elseContinues = iff->elseResultType->kind != globalState->metalCache->neverType;
+  bool thenContinues = peel_all_references(iff->thenResultType) != globalState->metalCache->neverType;
+  bool elseContinues = peel_all_references(iff->elseResultType) != globalState->metalCache->neverType;
 
   auto thenUnstackifiedParentLocalIds = thenBlockState.getParentLocalsThatSelfUnstackified();
   auto elseUnstackifiedParentLocalIds = elseBlockState.getParentLocalsThatSelfUnstackified();

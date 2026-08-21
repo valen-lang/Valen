@@ -9,18 +9,6 @@
 
 namespace std {
     template<>
-    struct hash<Location> {
-        inline size_t operator()(Location location) const {
-            return (size_t)location;
-        }
-    };
-    template<>
-    struct hash<Ownership> {
-        inline size_t operator()(Ownership ownership) const {
-            return (size_t)ownership;
-        }
-    };
-    template<>
     struct hash<Sharedness> {
         inline size_t operator()(Sharedness sharedness) const {
             return (size_t)sharedness;

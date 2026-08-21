@@ -5,6 +5,7 @@
 
 #include "metal_cache_ffi.h"
 
+#include <cassert>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,9 @@ inline PackageCoordinate* pc(PackageCoordHandle* h)      { return reinterpret_ca
 inline RegionId*          rid(RegionIdHandle* h)         { return reinterpret_cast<RegionId*>(h); }
 inline Name*              nm(NameHandle* h)              { return reinterpret_cast<Name*>(h); }
 inline Kind*              knd(KindHandle* h)             { return reinterpret_cast<Kind*>(h); }
+// Always-borrow operands: the instantiator types these `&BorrowRefIT`, so the handle is a
+// BorrowRef. Fail loud (mirroring the instantiator) if it ever isn't.
+inline BorrowRef*         brf(KindHandle* h)             { auto b = dynamic_cast<BorrowRef*>(knd(h)); assert(b != nullptr); return b; }
 inline Prototype*         proto(PrototypeHandle* h)      { return reinterpret_cast<Prototype*>(h); }
 inline Local*             loc(LocalHandle* h)            { return reinterpret_cast<Local*>(h); }
 inline Expression*        ex(ExpressionHandle* h)        { return reinterpret_cast<Expression*>(h); }
@@ -354,22 +358,22 @@ extern "C" VIS ExpressionHandle* metal_expr_deref(ExpressionHandle* inner, KindH
 extern "C" VIS ExpressionHandle* metal_expr_member_lookup(
     ExpressionHandle* struct_expr, KindHandle* struct_type, const char* member_name_ptr, size_t member_name_len, KindHandle* result) {
   return reinterpret_cast<ExpressionHandle*>(new MemberLookup(
-      ex(struct_expr), knd(struct_type), str(member_name_ptr, member_name_len), knd(result)));
+      ex(struct_expr), brf(struct_type), str(member_name_ptr, member_name_len), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_static_sized_array_lookup(
     ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result) {
   return reinterpret_cast<ExpressionHandle*>(new StaticSizedArrayLookup(
-      ex(array_expr), knd(array_type), ex(index_expr), knd(index_type), knd(result)));
+      ex(array_expr), brf(array_type), ex(index_expr), knd(index_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_runtime_sized_array_lookup(
     ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result) {
   return reinterpret_cast<ExpressionHandle*>(new RuntimeSizedArrayLookup(
-      ex(array_expr), knd(array_type), ex(index_expr), knd(index_type), knd(result)));
+      ex(array_expr), brf(array_type), ex(index_expr), knd(index_type), knd(result)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_mutate(
     ExpressionHandle* destination_expr, KindHandle* destination_type, ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new Mutate(ex(destination_expr), knd(destination_type), ex(source_expr), knd(source_type), knd(result)));
+  return reinterpret_cast<ExpressionHandle*>(new Mutate(ex(destination_expr), brf(destination_type), ex(source_expr), knd(source_type), knd(result)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_new_struct(
@@ -435,16 +439,17 @@ extern "C" VIS ExpressionHandle* metal_expr_extern_call(
   return reinterpret_cast<ExpressionHandle*>(new ExternCall(proto(prototype), exprs(args, arg_count), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_interface_call(
-    PrototypeHandle* super_function_prototype, int32_t virtual_param_index,
+    PrototypeHandle* super_function_prototype, int32_t virtual_param_index, int32_t index_in_edge,
     ExpressionHandle* const* args, size_t arg_count, KindHandle* result) {
   return reinterpret_cast<ExpressionHandle*>(new InterfaceCall(
-      proto(super_function_prototype), virtual_param_index, exprs(args, arg_count), knd(result)));
+      proto(super_function_prototype), virtual_param_index, index_in_edge, exprs(args, arg_count), knd(result)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_if(
-    ExpressionHandle* condition, ExpressionHandle* then_call, ExpressionHandle* else_call, KindHandle* result) {
+    ExpressionHandle* condition, ExpressionHandle* then_call, ExpressionHandle* else_call,
+    KindHandle* then_result_type, KindHandle* else_result_type, KindHandle* result) {
   return reinterpret_cast<ExpressionHandle*>(new If(
-      ex(condition), ex(then_call), ex(else_call), knd(result)));
+      ex(condition), ex(then_call), ex(else_call), knd(then_result_type), knd(else_result_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_while(ExpressionHandle* block, KindHandle* result) {
   return reinterpret_cast<ExpressionHandle*>(new While(ex(block), knd(result)));
@@ -469,20 +474,20 @@ extern "C" VIS ExpressionHandle* metal_expr_static_array_from_callable(
       reinterpret_cast<StaticSizedArrayT*>(knd(array_type)), ex(generator), proto(generator_method), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_array_length(ExpressionHandle* array_expr, KindHandle* array_type) {
-  return reinterpret_cast<ExpressionHandle*>(new ArrayLength(ex(array_expr), knd(array_type)));
+  return reinterpret_cast<ExpressionHandle*>(new ArrayLength(ex(array_expr), brf(array_type)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_array_capacity(ExpressionHandle* array_expr, KindHandle* array_type) {
-  return reinterpret_cast<ExpressionHandle*>(new ArrayCapacity(ex(array_expr), knd(array_type)));
+  return reinterpret_cast<ExpressionHandle*>(new ArrayCapacity(ex(array_expr), brf(array_type)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_array_size(ExpressionHandle* array, KindHandle* result) {
   return reinterpret_cast<ExpressionHandle*>(new ArraySize(ex(array), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_push_runtime_sized_array(
     ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* new_element_expr, KindHandle* element_type) {
-  return reinterpret_cast<ExpressionHandle*>(new PushRuntimeSizedArray(ex(array_expr), knd(array_type), ex(new_element_expr), knd(element_type)));
+  return reinterpret_cast<ExpressionHandle*>(new PushRuntimeSizedArray(ex(array_expr), brf(array_type), ex(new_element_expr), knd(element_type)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_pop_runtime_sized_array(ExpressionHandle* array_expr, KindHandle* array_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new PopRuntimeSizedArray(ex(array_expr), knd(array_type), knd(result)));
+  return reinterpret_cast<ExpressionHandle*>(new PopRuntimeSizedArray(ex(array_expr), brf(array_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_destroy_static_sized_array_into_function(
     ExpressionHandle* array_expr, KindHandle* array_type,

@@ -45,11 +45,10 @@ LiveRef toLiveRef(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Ref regionInstanceRef,
     Kind* refM,
     LLVMValueRef refLE) {
   return globalState->getRegion(refM)->wrapToLiveRef(
-      checkerAFL, functionState, builder, regionInstanceRef, refM, refLE);
+      checkerAFL, functionState, builder, refM, refLE);
 }
 
 LiveRef toLiveRef(
@@ -57,11 +56,10 @@ LiveRef toLiveRef(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Ref regionInstanceRef,
     Kind* refM,
     Ref ref) {
   return globalState->getRegion(refM)->checkRefLive(
-      checkerAFL, functionState, builder, regionInstanceRef, refM, ref, knownLive);
+      checkerAFL, functionState, builder, refM, ref);
 }
 
 LLVMValueRef checkValidInternalReference(

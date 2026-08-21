@@ -195,10 +195,9 @@ LiveRef toLiveRef(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Ref regionInstanceRef,
     Kind* refM,
     LLVMValueRef untrustedRefLE);
-LiveRef toLiveRef(AreaAndFileAndLine checkerAFL, GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, Ref regionInstanceRef, Kind* refM, Ref ref);
+LiveRef toLiveRef(AreaAndFileAndLine checkerAFL, GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, Kind* refM, Ref ref);
 
 
 

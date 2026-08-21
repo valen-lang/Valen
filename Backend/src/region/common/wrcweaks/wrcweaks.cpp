@@ -71,23 +71,24 @@ static LLVMValueRef getWrciFromControlBlockPtr(
     KindStructs* structs,
     Kind* refM,
     ControlBlockPtrLE controlBlockPtr) {
-  auto int32LT = LLVMInt32TypeInContext(globalState->context);
-//  assert(globalState->opt->regionOverride != RegionOverride::RESILIENT_V1);
-
-  if (dynamic_cast<ShareRef*>(refM) != nullptr) {
-    // Shares never have weak refs
-    { assert(false); throw 1337; }
-    return nullptr;
-  } else {
-    auto wrciPtrLE =
-        LLVMBuildStructGEP2(
-            builder,
-            controlBlockPtr.structLT,
-            controlBlockPtr.refLE,
-            structs->getControlBlock(refM->kind)->getMemberIndex(ControlBlockMember::WRCI_32B),
-            "wrciPtr");
-    return LLVMBuildLoad2(builder, int32LT, wrciPtrLE, "wrci");
-  }
+  { assert(false); throw 1337; }
+//   auto int32LT = LLVMInt32TypeInContext(globalState->context);
+// //  assert(globalState->opt->regionOverride != RegionOverride::RESILIENT_V1);
+//
+//   if (dynamic_cast<ShareRef*>(refM) != nullptr) {
+//     // Shares never have weak refs
+//     { assert(false); throw 1337; }
+//     return nullptr;
+//   } else {
+//     auto wrciPtrLE =
+//         LLVMBuildStructGEP2(
+//             builder,
+//             controlBlockPtr.structLT,
+//             controlBlockPtr.refLE,
+//             structs->getControlBlock(refM->kind)->getMemberIndex(ControlBlockMember::WRCI_32B),
+//             "wrciPtr");
+//     return LLVMBuildLoad2(builder, int32LT, wrciPtrLE, "wrci");
+//   }
 }
 
 LLVMValueRef WrcWeaks::getWrcPtr(
@@ -496,35 +497,37 @@ WeakFatPtrLE WrcWeaks::weakInterfaceRefToWeakStructRef(
     LLVMBuilderRef builder,
     Kind* weakInterfaceRefMT,
     WeakFatPtrLE weakInterfaceFatPtrLE) {
-  // Disassemble the weak interface ref.
-  auto wrciLE = getWrciFromWeakRef(builder, weakInterfaceFatPtrLE);
-  // The object might not exist, so skip the check.
-  auto interfaceRefLE =
-      kindStructsSource->makeInterfaceFatPtrWithoutChecking(FL(), functionState, builder,
-          weakInterfaceRefMT, // It's still conceptually weak even though its not in a weak pointer.
-          fatWeaks_.getInnerRefFromWeakRef(
-              functionState,
-              builder,
-              weakInterfaceRefMT,
-              weakInterfaceFatPtrLE));
-  auto controlBlockPtrLE =
-      kindStructsSource->getControlBlockPtrWithoutChecking(
-          FL(), functionState, builder, weakInterfaceRefMT->kind, interfaceRefLE);
+  { assert(false); throw 1337; }
 
-  auto headerLE = makeWrciHeader(builder, weakRefStructsSource, weakInterfaceRefMT->kind, wrciLE);
-
-  // Now, reassemble a weak void* ref to the struct.
-  auto weakVoidStructRefLE =
-      fatWeaks_.assembleVoidStructWeakRef(
-          builder,
-          // We still think of it as an interface pointer, even though its a void*.
-          // That kind of makes this makes sense.
-          // We could think of this as making an "Any" pointer perhaps?
-          weakInterfaceRefMT,
-          controlBlockPtrLE,
-          headerLE);
-
-  return weakVoidStructRefLE;
+  // // Disassemble the weak interface ref.
+  // auto wrciLE = getWrciFromWeakRef(builder, weakInterfaceFatPtrLE);
+  // // The object might not exist, so skip the check.
+  // auto interfaceRefLE =
+  //     kindStructsSource->makeInterfaceFatPtrWithoutChecking(FL(), functionState, builder,
+  //         weakInterfaceRefMT, // It's still conceptually weak even though its not in a weak pointer.
+  //         fatWeaks_.getInnerRefFromWeakRef(
+  //             functionState,
+  //             builder,
+  //             weakInterfaceRefMT,
+  //             weakInterfaceFatPtrLE));
+  // auto controlBlockPtrLE =
+  //     kindStructsSource->getControlBlockPtrWithoutChecking(
+  //         FL(), functionState, builder, weakInterfaceRefMT->kind, interfaceRefLE);
+  //
+  // auto headerLE = makeWrciHeader(builder, weakRefStructsSource, weakInterfaceRefMT->kind, wrciLE);
+  //
+  // // Now, reassemble a weak void* ref to the struct.
+  // auto weakVoidStructRefLE =
+  //     fatWeaks_.assembleVoidStructWeakRef(
+  //         builder,
+  //         // We still think of it as an interface pointer, even though its a void*.
+  //         // That kind of makes this makes sense.
+  //         // We could think of this as making an "Any" pointer perhaps?
+  //         weakInterfaceRefMT,
+  //         controlBlockPtrLE,
+  //         headerLE);
+  //
+  // return weakVoidStructRefLE;
 }
 
 // USE ONLY FOR ASSERTING A REFERENCE IS VALID
@@ -553,7 +556,7 @@ void WrcWeaks::buildCheckWeakRef(
   buildCheckWrc(builder, wrciLE);
 
   // This will also run for objects which have since died, which is fine.
-  if (auto interfaceKindM = dynamic_cast<InterfaceKind*>(weakRefM->kind)) {
+  if (auto interfaceKindM = dynamic_cast<InterfaceKind*>(peel_all_references(weakRefM))) {
     auto interfaceFatPtrLE = kindStructsSource->makeInterfaceFatPtrWithoutChecking(checkerAFL, functionState, builder, weakRefM, innerLE);
     auto itablePtrLE = getTablePtrFromInterfaceRef(builder, interfaceFatPtrLE);
     buildAssertCensusContains(checkerAFL, globalState, functionState, builder, itablePtrLE);
@@ -567,7 +570,7 @@ Ref WrcWeaks::assembleWeakRef(
     Kind* targetType,
     Ref sourceRef) {
   // Now we need to package it up into a weak ref.
-  if (auto structKind = dynamic_cast<StructKind*>(sourceType->kind)) {
+  if (auto structKind = dynamic_cast<StructKind*>(peel_all_references(sourceType))) {
     // I *think* we expect it to be live at this point.
     auto sourceRefLE =
         globalState->getRegion(sourceType)
@@ -577,7 +580,7 @@ Ref WrcWeaks::assembleWeakRef(
         assembleStructWeakRef(
             functionState, builder, sourceType, targetType, structKind, sourceWrapperPtrLE);
     return toRef(globalState->getRegion(targetType), targetType, resultLE);
-  } else if (auto interfaceKindM = dynamic_cast<InterfaceKind*>(sourceType->kind)) {
+  } else if (auto interfaceKindM = dynamic_cast<InterfaceKind*>(peel_all_references(sourceType))) {
     auto sourceRefLE =
         globalState->getRegion(sourceType)
             ->checkValidReference(FL(), functionState, builder, false, sourceType, sourceRef);
@@ -586,7 +589,7 @@ Ref WrcWeaks::assembleWeakRef(
         assembleInterfaceWeakRef(
             functionState, builder, sourceType, targetType, interfaceKindM, sourceInterfaceFatPtrLE);
     return toRef(globalState->getRegion(targetType), targetType, resultLE);
-  } else if (auto staticSizedArray = dynamic_cast<StaticSizedArrayT*>(sourceType->kind)) {
+  } else if (auto staticSizedArray = dynamic_cast<StaticSizedArrayT*>(peel_all_references(sourceType))) {
     auto sourceRefLE =
         globalState->getRegion(sourceType)
             ->checkValidReference(FL(), functionState, builder, false, sourceType, sourceRef);
@@ -595,7 +598,7 @@ Ref WrcWeaks::assembleWeakRef(
         assembleStaticSizedArrayWeakRef(
             functionState, builder, sourceType, staticSizedArray, targetType, sourceWrapperPtrLE);
     return toRef(globalState->getRegion(targetType), targetType, resultLE);
-  } else if (auto runtimeSizedArray = dynamic_cast<RuntimeSizedArrayT*>(sourceType->kind)) {
+  } else if (auto runtimeSizedArray = dynamic_cast<RuntimeSizedArrayT*>(peel_all_references(sourceType))) {
     auto sourceRefLE =
         globalState->getRegion(sourceType)
             ->checkValidReference(FL(), functionState, builder, false, sourceType, sourceRef);

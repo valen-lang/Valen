@@ -35,7 +35,6 @@ struct ValeOptions {
     bool flares = false;
     bool includeBoundsChecks = true;
     bool useAtomicRc = false;
-    bool forceAllKnownLive = false;
     bool printMemOverhead = false;
     bool enableReplaying = false;
     std::unordered_map<std::string, std::unordered_set<std::string>> projectNameToReplayWhitelistedExterns;

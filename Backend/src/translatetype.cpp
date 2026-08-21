@@ -14,22 +14,6 @@ std::vector<LLVMTypeRef> translateTypes(
   return result;
 }
 
-// VCOORD: do we still need this?
-Sharedness ownershipToSharedness(Ownership ownership) {
-  switch (ownership) {
-    case Ownership::MUTABLE_SHARE:
-    case Ownership::IMMUTABLE_SHARE:
-      return Sharedness::SHARED;
-    case Ownership::MUTABLE_BORROW:
-    case Ownership::IMMUTABLE_BORROW:
-    case Ownership::OWN:
-    case Ownership::WEAK:
-      return Sharedness::SINGLE;
-    default:
-      { assert(false); throw 1337; }
-  }
-}
-
 LLVMTypeRef translatePrototypeToFunctionType(
     GlobalState* globalState,
     Prototype* prototype) {

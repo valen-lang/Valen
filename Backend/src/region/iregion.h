@@ -16,7 +16,6 @@ public:
   virtual ~IRegion() = default;
 
   virtual Ref allocate(
-      Ref regionInstanceRef,
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
@@ -28,8 +27,7 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* refM,
-      Ref weakRefLE,
-      bool weakRefKnownLive) = 0;
+      Ref weakRefLE) = 0;
 
   virtual void alias(
       AreaAndFileAndLine from,
@@ -48,7 +46,6 @@ public:
   virtual void storeMember(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* structRefMT,
       LiveRef structRef,
       int memberIndex,
@@ -59,7 +56,6 @@ public:
   virtual Ref loadMember(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* structRefMT,
       LiveRef structRef,
       int memberIndex,
@@ -96,7 +92,6 @@ public:
       Kind* constraintRefM,
       Kind* sourceWeakRefMT,
       Ref sourceWeakRefLE,
-      bool weakRefKnownLive,
       std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
       std::function<Ref(LLVMBuilderRef)> buildElse) = 0;
 
@@ -106,13 +101,11 @@ public:
       Kind* resultOptTypeM,
       Kind* sourceInterfaceRefMT,
       Ref sourceInterfaceRefLE,
-      bool sourceRefKnownLive,
       Kind* targetKind,
       std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
       std::function<Ref(LLVMBuilderRef)> buildElse) = 0;
 
   virtual LiveRef constructStaticSizedArray(
-      Ref regionInstanceRef,
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* referenceM,
@@ -122,16 +115,13 @@ public:
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* refMT,
-      Ref ref,
-      bool refKnownLive) = 0;
+      Ref ref) = 0;
 
     virtual LiveRef wrapToLiveRef(
         AreaAndFileAndLine checkerAFL,
         FunctionState* functionState,
         LLVMBuilderRef builder,
-        Ref regionInstanceRef,
         Kind* refMT,
         LLVMValueRef ref) = 0;
 
@@ -139,16 +129,13 @@ public:
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* refMT,
-      Ref ref,
-      bool refKnownLive) = 0;
+      Ref ref) = 0;
 
   virtual Ref mutabilify(
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* refMT,
       Ref ref,
       Kind* targetRefMT) = 0;
@@ -157,7 +144,6 @@ public:
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* refMT,
       Ref ref,
       Kind* targetRefMT) = 0;
@@ -165,14 +151,12 @@ public:
   virtual Ref getRuntimeSizedArrayLength(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       LiveRef arrayRef) = 0;
 
   virtual Ref getRuntimeSizedArrayCapacity(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       LiveRef arrayRef) = 0;
 
@@ -305,7 +289,6 @@ public:
   virtual LoadResult loadElementFromRSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef structRef,
@@ -320,7 +303,6 @@ public:
 
 
   virtual LiveRef constructRuntimeSizedArray(
-      Ref regionInstanceRef,
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* rsaMT,
@@ -331,7 +313,6 @@ public:
   virtual void pushRuntimeSizedArrayNoBoundsCheck(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef arrayRef,
@@ -341,7 +322,6 @@ public:
   virtual Ref popRuntimeSizedArrayNoBoundsCheck(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef arrayRef,
@@ -350,7 +330,6 @@ public:
   virtual void initializeElementInSSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* ssaRefMT,
       StaticSizedArrayT* ssaMT,
       LiveRef structRef,
@@ -383,11 +362,9 @@ public:
   virtual Ref upgradeLoadResultToRefWithTargetOwnership(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* sourceType,
       Kind* targetType,
-      LoadResult sourceRef,
-      bool resultKnownLive) = 0;
+      LoadResult sourceRef) = 0;
 
   // For instance regions, this will return the handle's type.
   // The C-ABI type a ref of this region crosses the FFI boundary as.
@@ -396,7 +373,6 @@ public:
   virtual LoadResult loadElementFromSSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* ssaRefMT,
       StaticSizedArrayT* ssaMT,
       LiveRef structRef,
@@ -420,19 +396,16 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* refMT,
-      Ref regionInstanceRef,
       LiveRef ref) = 0;
   virtual LLVMValueRef getStringLen(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* refMT,
-      Ref regionInstanceRef,
       LiveRef ref) = 0;
   // TODO:
   // One use is for makeNewStrFunc, make that private to the unsafe region.
   // Change this to also take in the bytes pointer.
   virtual Ref mallocStr(
-      Ref regionInstanceRef,
       FunctionState* functionState,
       LLVMBuilderRef builder,
       LLVMValueRef lengthLE,
@@ -456,14 +429,6 @@ public:
 
   virtual void mainSetup(FunctionState* functionState, LLVMBuilderRef builder) = 0;
   virtual void mainCleanup(FunctionState* functionState, LLVMBuilderRef builder) = 0;
-
-  virtual Kind* getRegionRefType() = 0;
-
-  // This is only temporarily virtual, while we're still creating fake ones on the fly.
-  // Soon it'll be non-virtual, and parameters will differ by region.
-  // Instead of making them on the fly, we'll need to get these regions from somewhere,
-  // perhaps the FunctionState?
-  virtual Ref createRegionInstanceLocal(FunctionState* functionState, LLVMBuilderRef builder) = 0;
 };
 
 LLVMValueRef checkValidReference(

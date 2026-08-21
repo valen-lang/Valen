@@ -32,29 +32,9 @@ class OwnRef;
 class ShareRef;
 class WeakRef;
 
-enum class Ownership {
-  OWN,
-  MUTABLE_BORROW,
-  IMMUTABLE_BORROW,
-  WEAK,
-  MUTABLE_SHARE,
-  IMMUTABLE_SHARE
-};
-
 enum class Weakability {
   WEAKABLE,
   NON_WEAKABLE,
-};
-
-enum class Permission {
-    READONLY,
-    READWRITE,
-    EXCLUSIVE_READWRITE
-};
-
-enum class Location {
-    INLINE,
-    YONDER
 };
 
 enum class Sharedness {
@@ -290,6 +270,11 @@ public:
 };
 
 bool isValueType(Kind* kind);
+
+// Strips every onion ref wrap (BorrowRef/OwnRef/ShareRef/WeakRef) off `kind` and
+// returns the underlying concrete kind (StructKind, InterfaceKind, an array, Int, ...).
+// A bare value type is returned unchanged.
+Kind* peel_all_references(Kind* kind);
 
 class IContainer {
 public:

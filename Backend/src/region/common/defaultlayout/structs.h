@@ -137,7 +137,6 @@ public:
 
   LLVMValueRef getStructContentsPtr(
       LLVMBuilderRef builder,
-      Kind* kind,
       WrapperPtrLE wrapperPtrLE);
 
   LLVMValueRef getVoidPtrFromInterfacePtr(

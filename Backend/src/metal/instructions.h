@@ -217,27 +217,24 @@ public:
 class Mutate : public Expression {
 public:
   Expression* destinationExpr;
-  Kind* destinationType;
+  BorrowRef* destinationType;
   Expression* sourceExpr;
   Kind* sourceType;
   Kind* result;
 
-  Mutate(Expression* destinationExpr_, Kind* destinationType_, Expression* sourceExpr_, Kind* sourceType_, Kind* result_) :
+  Mutate(Expression* destinationExpr_, BorrowRef* destinationType_, Expression* sourceExpr_, Kind* sourceType_, Kind* result_) :
       destinationExpr(destinationExpr_), destinationType(destinationType_), sourceExpr(sourceExpr_), sourceType(sourceType_), result(result_) {}
 };
 
 class LocalLoad : public Expression {
 public:
   Local* local;
-  Ownership targetOwnership;
   std::string localName;
 
   LocalLoad(
       Local* local,
-      Ownership targetOwnership,
       std::string localName) :
       local(local),
-    targetOwnership(targetOwnership),
         localName(localName) {}
 };
 
@@ -271,9 +268,7 @@ public:
   Expression* structExpr;
   StructKind* structId;
   Kind* structType;
-  bool structKnownLive;
   int memberIndex;
-  Ownership targetOwnership;
   Kind* expectedMemberType;
   Kind* expectedResultType;
   std::string memberName;
@@ -282,18 +277,14 @@ public:
       Expression* structExpr_,
       StructKind* structId_,
       Kind* structType_,
-      bool structKnownLive_,
       int memberIndex_,
-      Ownership targetOwnership_,
       Kind* expectedMemberType_,
       Kind* expectedResultType_,
       std::string memberName_) :
     structExpr(structExpr_),
     structId(structId_),
     structType(structType_),
-    structKnownLive(structKnownLive_),
     memberIndex(memberIndex_),
-    targetOwnership(targetOwnership_),
     expectedMemberType(expectedMemberType_),
     expectedResultType(expectedResultType_),
     memberName(memberName_) {}
@@ -303,11 +294,11 @@ public:
 class MemberLookup : public Expression {
 public:
   Expression* structExpr;
-  Kind* structType;
+  BorrowRef* structType;
   std::string memberName;
   Kind* result;
 
-  MemberLookup(Expression* structExpr_, Kind* structType_, std::string memberName_, Kind* result_) :
+  MemberLookup(Expression* structExpr_, BorrowRef* structType_, std::string memberName_, Kind* result_) :
       structExpr(structExpr_), structType(structType_), memberName(memberName_), result(result_) {}
 };
 
@@ -363,16 +354,19 @@ class InterfaceCall : public Expression {
 public:
   Prototype* superFunctionPrototype;
   int virtualParamIndex;
+  int indexInEdge;
   std::vector<Expression*> args;
   Kind* result;
 
   InterfaceCall(
       Prototype* superFunctionPrototype_,
       int virtualParamIndex_,
+      int indexInEdge_,
       std::vector<Expression*> args_,
       Kind* result_) :
     superFunctionPrototype(superFunctionPrototype_),
     virtualParamIndex(virtualParamIndex_),
+    indexInEdge(indexInEdge_),
     args(args_),
     result(result_) {
   }
@@ -384,16 +378,22 @@ public:
   Expression* condition;
   Expression* thenCall;
   Expression* elseCall;
+  Kind* thenResultType;
+  Kind* elseResultType;
   Kind* result;
 
   If(
       Expression* condition_,
       Expression* thenCall_,
       Expression* elseCall_,
+      Kind* thenResultType_,
+      Kind* elseResultType_,
       Kind* result_) :
     condition(condition_),
     thenCall(thenCall_),
     elseCall(elseCall_),
+    thenResultType(thenResultType_),
+    elseResultType(elseResultType_),
     result(result_) {}
 };
 
@@ -514,6 +514,7 @@ public:
 class DestroyRuntimeSizedArray : public Expression {
 public:
   Expression* arrayExpr;
+  Kind* arrayType;
 
   DestroyRuntimeSizedArray(
       Expression* arrayExpr_) :
@@ -538,11 +539,11 @@ public:
 class ArrayLength : public Expression {
 public:
   Expression* arrayExpr;
-  Kind* arrayType;
+  BorrowRef* arrayType;
 
   ArrayLength(
       Expression* arrayExpr_,
-      Kind* arrayType_) :
+      BorrowRef* arrayType_) :
       arrayExpr(arrayExpr_),
       arrayType(arrayType_) {}
 };
@@ -550,11 +551,11 @@ public:
 class ArrayCapacity : public Expression {
 public:
   Expression* arrayExpr;
-  Kind* arrayType;
+  BorrowRef* arrayType;
 
   ArrayCapacity(
       Expression* arrayExpr_,
-      Kind* arrayType_) :
+      BorrowRef* arrayType_) :
       arrayExpr(arrayExpr_),
       arrayType(arrayType_) {}
 };
@@ -562,13 +563,13 @@ public:
 class PushRuntimeSizedArray : public Expression {
 public:
   Expression* arrayExpr;
-  Kind* arrayType;
+  BorrowRef* arrayType;
   Expression* newElementExpr;
   Kind* elementType;
 
   PushRuntimeSizedArray(
       Expression* arrayExpr_,
-      Kind* arrayType_,
+      BorrowRef* arrayType_,
       Expression* newElementExpr_,
       Kind* elementType_) :
       arrayExpr(arrayExpr_),
@@ -580,12 +581,12 @@ public:
 class PopRuntimeSizedArray : public Expression {
 public:
   Expression* arrayExpr;
-  Kind* arrayType;
+  BorrowRef* arrayType;
   Kind* result;
 
   PopRuntimeSizedArray(
       Expression* arrayExpr_,
-      Kind* arrayType_,
+      BorrowRef* arrayType_,
       Kind* result_) :
       arrayExpr(arrayExpr_),
       arrayType(arrayType_),
@@ -696,24 +697,24 @@ public:
 class StaticSizedArrayLookup : public Expression {
 public:
   Expression* arrayExpr;
-  Kind* arrayType;
+  BorrowRef* arrayType;
   Expression* indexExpr;
   Kind* indexType;
   Kind* result;
 
-  StaticSizedArrayLookup(Expression* arrayExpr_, Kind* arrayType_, Expression* indexExpr_, Kind* indexType_, Kind* result_) :
+  StaticSizedArrayLookup(Expression* arrayExpr_, BorrowRef* arrayType_, Expression* indexExpr_, Kind* indexType_, Kind* result_) :
       arrayExpr(arrayExpr_), arrayType(arrayType_), indexExpr(indexExpr_), indexType(indexType_), result(result_) {}
 };
 
 class RuntimeSizedArrayLookup : public Expression {
 public:
   Expression* arrayExpr;
-  Kind* arrayType;
+  BorrowRef* arrayType;
   Expression* indexExpr;
   Kind* indexType;
   Kind* result;
 
-  RuntimeSizedArrayLookup(Expression* arrayExpr_, Kind* arrayType_, Expression* indexExpr_, Kind* indexType_, Kind* result_) :
+  RuntimeSizedArrayLookup(Expression* arrayExpr_, BorrowRef* arrayType_, Expression* indexExpr_, Kind* indexType_, Kind* result_) :
       arrayExpr(arrayExpr_), arrayType(arrayType_), indexExpr(indexExpr_), indexType(indexType_), result(result_) {}
 };
 

@@ -225,12 +225,13 @@ ExpressionHandle* metal_expr_call(
 ExpressionHandle* metal_expr_extern_call(
     PrototypeHandle* prototype, ExpressionHandle* const* args, size_t arg_count, KindHandle* result);
 ExpressionHandle* metal_expr_interface_call(
-    PrototypeHandle* super_function_prototype, int32_t virtual_param_index,
+    PrototypeHandle* super_function_prototype, int32_t virtual_param_index, int32_t index_in_edge,
     ExpressionHandle* const* args, size_t arg_count, KindHandle* result);
 
 // Control flow.
 ExpressionHandle* metal_expr_if(
-    ExpressionHandle* condition, ExpressionHandle* then_call, ExpressionHandle* else_call, KindHandle* result);
+    ExpressionHandle* condition, ExpressionHandle* then_call, ExpressionHandle* else_call,
+    KindHandle* then_result_type, KindHandle* else_result_type, KindHandle* result);
 ExpressionHandle* metal_expr_while(ExpressionHandle* block, KindHandle* result);
 
 // Arrays.

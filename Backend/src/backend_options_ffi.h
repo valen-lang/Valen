@@ -35,7 +35,6 @@ typedef struct BackendCompileOptionsFFI {
   uint8_t flares;
   uint8_t include_bounds_checks;
   uint8_t use_atomic_rc;
-  uint8_t force_all_known_live;
   uint8_t print_mem_overhead;
   uint8_t enable_replaying;
 

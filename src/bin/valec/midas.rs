@@ -31,7 +31,6 @@ pub fn build_backend_options(
   pic: bool,
   print_mem_overhead: bool,
   use_atomic_rc: bool,
-  force_all_known_live: bool,
   include_bounds_checks: bool,
 ) -> BackendCompileOptions {
   let mut opts = BackendCompileOptions::default();
@@ -45,7 +44,6 @@ pub fn build_backend_options(
   opts.pic = pic;
   opts.print_mem_overhead = print_mem_overhead;
   opts.use_atomic_rc = use_atomic_rc;
-  opts.force_all_known_live = force_all_known_live;
   opts.include_bounds_checks = include_bounds_checks;
 
   if let Some(cpu) = maybe_cpu {

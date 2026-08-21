@@ -21,8 +21,6 @@ std::vector<LLVMTypeRef> translateTypes(
 // See usages of this int to see where we make those zero-len arrays of these.
 constexpr int NEVER_INT_BITS = 57;
 
-Sharedness ownershipToSharedness(Ownership ownership);
-
 LLVMTypeRef translatePrototypeToFunctionType(
     GlobalState* globalState,
     Prototype* prototype);

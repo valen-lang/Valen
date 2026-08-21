@@ -17,63 +17,47 @@ Ref translateStaticArrayFromCallable(
     LLVMBuilderRef builder,
     StaticArrayFromCallable* staticArrayFromCallable) {
 
-  auto generatorType = staticArrayFromCallable->generatorType;
   auto generatorExpr = staticArrayFromCallable->generator;
-  auto elementType = staticArrayFromCallable->elementType;
-  auto arrayRefType = staticArrayFromCallable->arrayRefType;
-  auto staticSizedArrayMT = dynamic_cast<StaticSizedArrayT*>(staticArrayFromCallable->arrayRefType->kind);
+  auto staticSizedArrayMT = staticArrayFromCallable->arrayType;
 
   auto ssaDefMT = globalState->program->getStaticSizedArray(staticSizedArrayMT);
+  auto elementType = ssaDefMT->elementType;
+  // The generator is the receiver (param 0) of the per-element generator method.
+  auto generatorType = staticArrayFromCallable->generatorMethod->params[0];
   auto sizeRef = globalState->constI32(ssaDefMT->size);
-
-  auto arrayRegionInstanceRef =
-      // At some point, look up the actual region instance, perhaps from the FunctionState?
-      globalState->getRegion(arrayRefType)->createRegionInstanceLocal(functionState, builder);
 
   auto generatorRef = translateExpression(globalState, functionState, blockState, builder, generatorExpr);
   globalState->getRegion(generatorType)
       ->checkValidReference(FL(), functionState, builder, true, generatorType, generatorRef);
 
-  std::unique_ptr<Ref> result;
-  if (staticArrayFromCallable->arrayRefType->location == Location::INLINE) {
-//        auto valStructL =
-//            globalState->getInnerStruct(structKind->fullName);
-//        return constructInnerStruct(
-//            builder, structM, valStructL, membersLE);
-    { assert(false); throw 1337; }
-  } else {
-    // If we get here, arrayLT is a pointer to our counted struct.
-    auto ssaLiveRef =
-        globalState->getRegion(staticArrayFromCallable->arrayRefType)->constructStaticSizedArray(
-            makeVoidRef(globalState),
-            functionState,
-            builder,
-            staticArrayFromCallable->arrayRefType,
-            staticSizedArrayMT);
-    auto ssaRef = toRef(globalState, arrayRefType, ssaLiveRef);
+  // arrayLT is a pointer to our counted struct.
+  auto ssaLiveRef =
+      globalState->getRegion(staticArrayFromCallable->result)->constructStaticSizedArray(
+          functionState,
+          builder,
+          staticArrayFromCallable->result,
+          staticSizedArrayMT);
+  auto ssaRef = toRef(globalState, staticArrayFromCallable->result, ssaLiveRef);
 
-    buildFlare(FL(), globalState, functionState, builder);
-    fillStaticSizedArrayFromCallable(
-        globalState,
-        functionState,
-        builder,
-        arrayRegionInstanceRef,
-        arrayRefType,
-        staticSizedArrayMT,
-        elementType,
-        generatorType,
-        staticArrayFromCallable->generatorMethod,
-        generatorRef,
-        sizeRef,
-        ssaLiveRef);//getRuntimeSizedArrayContentsPtr(builder, rsaWrapperPtrLE));
-    buildFlare(FL(), globalState, functionState, builder);
+  buildFlare(FL(), globalState, functionState, builder);
+  fillStaticSizedArrayFromCallable(
+      globalState,
+      functionState,
+      builder,
+      staticArrayFromCallable->result,
+      staticSizedArrayMT,
+      elementType,
+      generatorType,
+      staticArrayFromCallable->generatorMethod,
+      generatorRef,
+      sizeRef,
+      ssaLiveRef);
+  buildFlare(FL(), globalState, functionState, builder);
 
-    globalState->getRegion(staticArrayFromCallable->arrayRefType)
-        ->checkValidReference(FL(), functionState, builder, true, staticArrayFromCallable->arrayRefType, ssaRef);
-    result.reset(new Ref(ssaRef));
-  }
+  globalState->getRegion(staticArrayFromCallable->result)
+      ->checkValidReference(FL(), functionState, builder, true, staticArrayFromCallable->result, ssaRef);
 
   globalState->getRegion(generatorType)->dealias(AFL("ConstructRSA"), functionState, builder, generatorType, generatorRef);
 
-  return std::move(*result);
+  return ssaRef;
 }

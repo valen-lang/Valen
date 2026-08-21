@@ -234,12 +234,13 @@ extern "C" {
         prototype: *mut c_void, args: *const *mut c_void, arg_count: usize, result: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_interface_call(
-        super_function_prototype: *mut c_void, virtual_param_index: i32,
+        super_function_prototype: *mut c_void, virtual_param_index: i32, index_in_edge: i32,
         args: *const *mut c_void, arg_count: usize, result: *mut c_void,
     ) -> *mut c_void;
 
     fn metal_expr_if(
-        condition: *mut c_void, then_call: *mut c_void, else_call: *mut c_void, result: *mut c_void,
+        condition: *mut c_void, then_call: *mut c_void, else_call: *mut c_void,
+        then_result_type: *mut c_void, else_result_type: *mut c_void, result: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_while(block: *mut c_void, result: *mut c_void) -> *mut c_void;
 
@@ -725,13 +726,13 @@ impl MetalCache {
         let ptrs = ptrs!(args);
         unsafe { Expression(NonNull::new(metal_expr_extern_call(prototype.0.as_ptr(), ptrs.as_ptr(), ptrs.len(), result.0.as_ptr())).unwrap(), PhantomData) }
     }
-    pub fn expr_interface_call<'c>(&'c self, super_function_prototype: Prototype<'c>, virtual_param_index: i32, args: &[Expression<'c>], result: Kind<'c>) -> Expression<'c> {
+    pub fn expr_interface_call<'c>(&'c self, super_function_prototype: Prototype<'c>, virtual_param_index: i32, index_in_edge: i32, args: &[Expression<'c>], result: Kind<'c>) -> Expression<'c> {
         let ptrs = ptrs!(args);
-        unsafe { Expression(NonNull::new(metal_expr_interface_call(super_function_prototype.0.as_ptr(), virtual_param_index, ptrs.as_ptr(), ptrs.len(), result.0.as_ptr())).unwrap(), PhantomData) }
+        unsafe { Expression(NonNull::new(metal_expr_interface_call(super_function_prototype.0.as_ptr(), virtual_param_index, index_in_edge, ptrs.as_ptr(), ptrs.len(), result.0.as_ptr())).unwrap(), PhantomData) }
     }
 
-    pub fn expr_if<'c>(&'c self, condition: Expression<'c>, then_call: Expression<'c>, else_call: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_if(condition.0.as_ptr(), then_call.0.as_ptr(), else_call.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_if<'c>(&'c self, condition: Expression<'c>, then_call: Expression<'c>, else_call: Expression<'c>, then_result_type: Kind<'c>, else_result_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_if(condition.0.as_ptr(), then_call.0.as_ptr(), else_call.0.as_ptr(), then_result_type.0.as_ptr(), else_result_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
     }
     pub fn expr_while<'c>(&'c self, block: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
         unsafe { Expression(NonNull::new(metal_expr_while(block.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
@@ -987,7 +988,7 @@ mod tests {
         let proto = cache.get_prototype(main_name, cache.i32(), &[]);
 
         let seven = cache.expr_constant_int(7, 32);
-        let ret = cache.expr_return(seven);
+        let ret = cache.expr_return(seven, cache.i32());
         let body = cache.expr_block(ret, cache.i32());
         let func = cache.new_function(proto, Some(body));
 

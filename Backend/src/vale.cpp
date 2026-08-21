@@ -496,14 +496,13 @@ void makeExternOrExportFunction(
     Prototype *prototype,
     bool isExport) {
   for (auto param : prototype->params) {
-    auto kind = param->kind;
     if (translatesToCVoid(globalState, param) ||
-        dynamic_cast<Int *>(kind) ||
-        dynamic_cast<Bool *>(kind) ||
-        dynamic_cast<Float *>(kind)) {
+        dynamic_cast<Int *>(param) ||
+        dynamic_cast<Bool *>(param) ||
+        dynamic_cast<Float *>(param)) {
       // Do nothing, no need to include anything for these
     } else {
-      auto paramTypeExportName = package->getKindExportName(kind, false);
+      auto paramTypeExportName = package->getKindExportName(param, false);
 //      if (ownershipToSharedness(param->ownership) == Sharedness::SINGLE) {
 //        paramTypeExportName += "Ref";
 //      }
@@ -511,15 +510,15 @@ void makeExternOrExportFunction(
     }
   }
   {
-    auto kind = prototype->returnType->kind;
+    auto returnType = prototype->returnType;
     if (translatesToCVoid(globalState, prototype->returnType) ||
-        dynamic_cast<Int *>(kind) ||
-        dynamic_cast<Bool *>(kind) ||
-        dynamic_cast<Float *>(kind)) {
+        dynamic_cast<Int *>(returnType) ||
+        dynamic_cast<Bool *>(returnType) ||
+        dynamic_cast<Float *>(returnType)) {
       // Do nothing, no need to include anything for these
     } else {
       // We need to include the actual header for interfaces, because the user func hands them around by value
-      auto paramTypeExportName = package->getKindExportName(kind, false);
+      auto paramTypeExportName = package->getKindExportName(returnType, false);
 //      if (ownershipToSharedness(prototype->returnType->ownership) == Sharedness::SINGLE) {
 //        paramTypeExportName += "Ref";
 //      }

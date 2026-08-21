@@ -14,15 +14,14 @@ Ref receiveHostObjectIntoVale(
   // as right-sized handle structs (8B concrete / 16B interface) which we decrypt
   // back into Vale refs, and the ref simply moves in. Primitives pass through
   // unwrapped. (Under the opaque-handle FFI, hostRefMT === valeRefMT.)
-  auto kind = hostRefMT->kind;
   bool isPrimitive =
-      dynamic_cast<Int*>(kind) || dynamic_cast<Bool*>(kind) ||
-      dynamic_cast<Float*>(kind) || dynamic_cast<Void*>(kind);
+      dynamic_cast<Int*>(hostRefMT) || dynamic_cast<Bool*>(hostRefMT) ||
+      dynamic_cast<Float*>(hostRefMT) || dynamic_cast<Void*>(hostRefMT);
   if (isPrimitive) {
-    if (dynamic_cast<Void*>(kind)) {
+    if (dynamic_cast<Void*>(hostRefMT)) {
       return toRef(globalState->getRegion(valeRefMT), valeRefMT, makeVoid(globalState));
     }
-    if (dynamic_cast<Bool*>(kind)) {
+    if (dynamic_cast<Bool*>(hostRefMT)) {
       auto asI1LE =
           LLVMBuildTrunc(builder, hostRefLE, LLVMInt1TypeInContext(globalState->context), "boolAsI1");
       return toRef(globalState->getRegion(valeRefMT), valeRefMT, asI1LE);
@@ -47,15 +46,14 @@ LLVMValueRef sendValeObjectIntoHost(
   // cross as right-sized handle structs (8B concrete / 16B interface) via
   // encrypt/send. Primitives are passed through unwrapped — their LE value IS
   // the C-ABI value.
-  auto kind = valeRefMT->kind;
   bool isPrimitive =
-      dynamic_cast<Int*>(kind) || dynamic_cast<Bool*>(kind) ||
-      dynamic_cast<Float*>(kind) || dynamic_cast<Void*>(kind);
+      dynamic_cast<Int*>(valeRefMT) || dynamic_cast<Bool*>(valeRefMT) ||
+      dynamic_cast<Float*>(valeRefMT) || dynamic_cast<Void*>(valeRefMT);
   if (isPrimitive) {
     auto valeArgLE =
         globalState->getRegion(valeRefMT)
             ->checkValidReference(FL(), functionState, builder, true, valeRefMT, valeRef);
-    if (dynamic_cast<Bool*>(kind)) {
+    if (dynamic_cast<Bool*>(valeRefMT)) {
       return LLVMBuildZExt(builder, valeArgLE, LLVMInt8TypeInContext(globalState->context), "boolAsI8");
     }
     return valeArgLE;

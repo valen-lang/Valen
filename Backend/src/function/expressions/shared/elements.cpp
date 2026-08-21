@@ -129,7 +129,7 @@ void initializeElementInRSAWithoutIncrementSize(
   auto rsaDef = globalState->program->getRuntimeSizedArray(rsaMT);
   auto arrayElementsPtrLE = getRuntimeSizedArrayContentsPtr(builder, capacityExists, rsaWPtrLE);
   ::initializeElementWithoutIncrementSize(
-      globalState, functionState, builder, rsaRefMT->location,
+      globalState, functionState, builder,
       rsaDef->elementType, arrayElementsPtrLE, indexLE, elementRef, incrementedSize);
 }
 
@@ -140,7 +140,7 @@ IncrementedSize incrementRSASize(
     Kind* rsaRefMT,
     WrapperPtrLE rsaWPtrLE) {
   auto sizePtrLE = ::getRuntimeSizedArrayLengthPtr(globalState, builder, rsaWPtrLE);
-  assert(rsaRefMT->location != Location::INLINE); // impl
+  assert(false); // implement inline arrays
 
   adjustCounterV(globalState, builder, globalState->metalCache->i32Type, sizePtrLE, 1, false);
 
@@ -175,7 +175,7 @@ void regularInitializeElementInSSA(
   auto arrayElementsPtrLE = getStaticSizedArrayContentsPtr(builder,arrayWPtrLE);
   buildFlare(FL(), globalState, functionState, builder);
   initializeElementWithoutIncrementSize(
-      globalState, functionState, builder, ssaRefMT->location,
+      globalState, functionState, builder,
       elementType, arrayElementsPtrLE, indexLE, elementRef,
       // Manually making an IncrementedSize because it's an SSA.
       IncrementedSize{});
@@ -328,13 +328,10 @@ Ref swapElement(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Location location,
     Kind* elementRefM,
     LLVMValueRef arrayElemsPtrLE,
     InBoundsLE indexLE,
     Ref sourceRef) {
-  assert(location != Location::INLINE); // impl
-
   auto sourceLE =
       globalState->getRegion(elementRefM)
           ->checkValidReference(FL(), functionState, builder, false, elementRefM, sourceRef);
@@ -353,15 +350,12 @@ void initializeElementWithoutIncrementSize(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Location location,
     Kind* elementRefM,
     LLVMValueRef elemsPtrLE,
     InBoundsLE indexLE,
     Ref sourceRef,
     IncrementedSize incrementedSize) {
   // Ignore incrementedSize, it's just a reminder to the caller.
-
-  assert(location != Location::INLINE); // impl
 
   auto sourceLE =
       globalState->getRegion(elementRefM)
@@ -433,7 +427,7 @@ void intRangeLoopReverse(
     Kind* intRefMT,
     LLVMValueRef sizeLE,
     std::function<void(LLVMValueRef, LLVMBuilderRef)> iterationBuilder) {
-  auto innt = dynamic_cast<Int*>(intRefMT->kind);
+  auto innt = dynamic_cast<Int*>(peel_all_references(intRefMT));
   auto intLT = LLVMIntTypeInContext(globalState->context, innt->bits);
 
   LLVMValueRef iterationIndexPtrLE =

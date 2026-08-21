@@ -33,7 +33,6 @@ int loadFromFfi(ValeOptions *opt, const BackendCompileOptionsFFI *ffi) {
   opt->flares = ffi->flares != 0;
   opt->includeBoundsChecks = ffi->include_bounds_checks != 0;
   opt->useAtomicRc = ffi->use_atomic_rc != 0;
-  opt->forceAllKnownLive = ffi->force_all_known_live != 0;
   opt->printMemOverhead = ffi->print_mem_overhead != 0;
   opt->enableReplaying = ffi->enable_replaying != 0;
 

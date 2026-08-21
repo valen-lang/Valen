@@ -42,7 +42,6 @@ public:
       Kind* constraintRefM,
       Kind* sourceWeakRefMT,
       Ref sourceWeakRefLE,
-      bool weakRefKnownLive,
       std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
       std::function<Ref(LLVMBuilderRef)> buildElse) override;
 
@@ -53,7 +52,6 @@ public:
       Kind* resultOptTypeM,
       Kind* sourceInterfaceRefMT,
       Ref sourceInterfaceRef,
-      bool sourceRefKnownLive,
       Kind* targetKind,
       std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
       std::function<Ref(LLVMBuilderRef)> buildElse) override;
@@ -123,7 +121,6 @@ public:
   Ref loadMember(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* structRefMT,
       LiveRef structRef,
       int memberIndex,
@@ -134,7 +131,6 @@ public:
   void storeMember(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* structRefMT,
       LiveRef structRef,
       int memberIndex,
@@ -173,11 +169,9 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* refMT,
-      Ref regionInstanceRef,
       LiveRef ref) override;
 
   Ref allocate(
-      Ref regionInstanceRef,
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
@@ -200,23 +194,19 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* refM,
-      Ref weakRefLE,
-      bool weakRefKnownLive) override;
+      Ref weakRefLE) override;
 
   LiveRef checkRefLive(
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* refMT,
-      Ref ref,
-      bool refKnownLive) override;
+      Ref ref) override;
 
     LiveRef wrapToLiveRef(
         AreaAndFileAndLine checkerAFL,
         FunctionState* functionState,
         LLVMBuilderRef builder,
-        Ref regionInstanceRef,
         Kind* refMT,
         LLVMValueRef ref) override;
 
@@ -224,15 +214,12 @@ public:
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* refMT,
-      Ref ref,
-      bool refKnownLive) override;
+      Ref ref) override;
 
   // Returns a LLVMValueRef for a ref to the string object.
   // The caller should then use getStringBytesPtr to then fill the string's contents.
   LiveRef constructStaticSizedArray(
-      Ref regionInstanceRef,
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* referenceM,
@@ -249,14 +236,12 @@ public:
   Ref getRuntimeSizedArrayLength(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       LiveRef arrayRef) override;
 
   Ref getRuntimeSizedArrayCapacity(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       LiveRef arrayRef) override;
 
@@ -278,11 +263,9 @@ public:
   Ref upgradeLoadResultToRefWithTargetOwnership(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* sourceType,
       Kind* targetType,
-      LoadResult sourceRef,
-      bool resultKnownLive) override;
+      LoadResult sourceRef) override;
 
   void checkInlineStructType(
       FunctionState* functionState,
@@ -293,7 +276,6 @@ public:
   LoadResult loadElementFromSSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* ssaRefMT,
       StaticSizedArrayT* ssaMT,
       LiveRef arrayRef,
@@ -301,7 +283,6 @@ public:
   LoadResult loadElementFromRSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef arrayRef,
@@ -327,7 +308,6 @@ public:
 
 
   LiveRef constructRuntimeSizedArray(
-      Ref regionInstanceRef,
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* rsaMT,
@@ -338,7 +318,6 @@ public:
   void pushRuntimeSizedArrayNoBoundsCheck(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef arrayRef,
@@ -348,7 +327,6 @@ public:
   Ref popRuntimeSizedArrayNoBoundsCheck(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef arrayRef,
@@ -357,7 +335,6 @@ public:
   void initializeElementInSSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* ssaRefMT,
       StaticSizedArrayT* ssaMT,
       LiveRef arrayRef,
@@ -373,7 +350,6 @@ public:
       InBoundsLE indexLE) override;
 
   Ref mallocStr(
-      Ref regionInstanceRef,
       FunctionState* functionState,
       LLVMBuilderRef builder,
       LLVMValueRef lengthLE,
@@ -385,7 +361,6 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* refMT,
-      Ref regionInstanceRef,
       LiveRef ref) override;
 
 
@@ -432,7 +407,6 @@ public:
   LoadResult loadMember2(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* structRefMT,
       LiveRef structLiveRef,
       int memberIndex,
@@ -475,17 +449,10 @@ public:
   void mainSetup(FunctionState* functionState, LLVMBuilderRef builder) override {}
   void mainCleanup(FunctionState* functionState, LLVMBuilderRef builder) override {}
 
-  Kind* getRegionRefType() override;
-
-  // This is only temporarily virtual, while we're still creating fake ones on the fly.
-  // Soon it'll be non-virtual, and parameters will differ by region.
-  Ref createRegionInstanceLocal(FunctionState* functionState, LLVMBuilderRef builder) override;
-
   Ref mutabilify(
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* refMT,
       Ref ref,
       Kind* targetRefMT) override;
@@ -494,7 +461,6 @@ public:
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* refMT,
       Ref ref,
       Kind* targetRefMT) override;
@@ -569,7 +535,6 @@ private:
   void callFree(
       FunctionState *functionState,
       LLVMBuilderRef builder,
-      Ref regionInstanceRef,
       Kind* kind,
       Ref objectRef);
 
@@ -583,8 +548,6 @@ private:
 //      Kind* valeKind,
 //      Ref ref);
 
-  Ref makeRegionInstance(LLVMBuilderRef builder);
-
   GlobalState* globalState = nullptr;
 
   KindStructs kindStructs;
@@ -592,9 +555,6 @@ private:
   DefaultPrimitives primitives;
 
   std::string namePrefix = "__RCImm";
-
-  StructKind* regionKind = nullptr;
-  Kind* regionRefMT = nullptr;
 
   // Populated during declareEdge; maps interface kind -> ordered list of its
   // edges. Used by the typeTag/asSubstruct emitters and by

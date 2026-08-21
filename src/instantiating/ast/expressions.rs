@@ -205,6 +205,8 @@ pub struct IfIE<'s, 'i> {
 	pub condition: ExpressionIE<'s, 'i>,
 	pub then_call: ExpressionIE<'s, 'i>,
 	pub else_call: ExpressionIE<'s, 'i>,
+	pub then_result_type: KindIT<'s, 'i>,
+	pub else_result_type: KindIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
 
@@ -495,6 +497,9 @@ pub struct MemberLookupIE<'s, 'i> {
 pub struct InterfaceFunctionCallIE<'s, 'i> {
 	pub super_function_prototype: &'i PrototypeI<'s, 'i>,
 	pub virtual_param_index: i32,
+	// Vtable slot of the called method within its interface — the position of this method
+	// in typing's InterfaceEdgeBlueprintT.super_family_root_headers (typing owns the order).
+	pub index_in_edge: i32,
 	pub args: &'i[ExpressionIE<'s, 'i>],
 	pub result: KindIT<'s, 'i>,
 }

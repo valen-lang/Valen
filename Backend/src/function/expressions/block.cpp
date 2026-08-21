@@ -19,7 +19,7 @@ Ref translateBlock(
   auto resultLE =
       translateExpression(globalState, functionState, &childBlockState, builder, block->inner);
 
-  if (block->innerType->kind != globalState->metalCache->neverType) {
+  if (block->result != globalState->metalCache->neverType) {
     childBlockState.checkAllIntroducedLocalsWereUnstackified();
 
     auto childUnstackifiedParentLocals =

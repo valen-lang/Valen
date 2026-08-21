@@ -17,32 +17,25 @@ Ref translateNewRuntimeSizedArray(
     LLVMBuilderRef builder,
     NewRuntimeSizedArray* constructRuntimeSizedArray) {
 
-  auto sizeKind = constructRuntimeSizedArray->sizeKind;
   auto sizeExpr = constructRuntimeSizedArray->capacityExpr;
-  auto sizeType = constructRuntimeSizedArray->sizeType;
-  auto elementType = constructRuntimeSizedArray->elementType;
-  auto arrayRefType = constructRuntimeSizedArray->arrayRefType;
 
-  auto runtimeSizedArrayMT = dynamic_cast<RuntimeSizedArrayT*>(constructRuntimeSizedArray->arrayRefType->kind);
+  auto runtimeSizedArrayMT = constructRuntimeSizedArray->arrayType;
 
   auto capacityRef = translateExpression(globalState, functionState, blockState, builder, sizeExpr);
 
-  // If we get here, arrayLT is a pointer to our counted struct.
+  // arrayLT is a pointer to our counted struct.
   auto rsaLiveRef =
-      globalState->getRegion(arrayRefType)->constructRuntimeSizedArray(
-          makeVoidRef(globalState),
+      globalState->getRegion(constructRuntimeSizedArray->result)->constructRuntimeSizedArray(
           functionState,
           builder,
-          arrayRefType,
+          constructRuntimeSizedArray->result,
           runtimeSizedArrayMT,
           capacityRef,
           runtimeSizedArrayMT->name->name);
-  auto rsaRef = toRef(globalState, arrayRefType, rsaLiveRef);
+  auto rsaRef = toRef(globalState, constructRuntimeSizedArray->result, rsaLiveRef);
   buildFlare(FL(), globalState, functionState, builder);
-  globalState->getRegion(arrayRefType)
-      ->checkValidReference(FL(), functionState, builder, true, arrayRefType, rsaRef);
-
-  globalState->getRegion(sizeType)->dealias(AFL("ConstructRSA"), functionState, builder, sizeType, capacityRef);
+  globalState->getRegion(constructRuntimeSizedArray->result)
+      ->checkValidReference(FL(), functionState, builder, true, constructRuntimeSizedArray->result, rsaRef);
 
   return rsaRef;
 }

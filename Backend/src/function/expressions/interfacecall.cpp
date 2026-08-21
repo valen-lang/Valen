@@ -15,9 +15,8 @@ Ref translateInterfaceCall(
 
   auto argExprs = call->args;
   auto virtualParamIndex = call->virtualParamIndex;
-  auto interfaceRef = call->interfaceRef;
   auto indexInEdge = call->indexInEdge;
-  auto functionType = call->functionType;
+  auto functionType = call->superFunctionPrototype;
 
   auto argExprsLE =
       translateExpressions(globalState, functionState, blockState, builder, call->args);
@@ -30,8 +29,8 @@ Ref translateInterfaceCall(
     buildFlare(FL(), globalState, functionState, builder);
 
     auto argLE = translateExpression(globalState, functionState, blockState, builder, call->args[i]);
-    globalState->getRegion(call->functionType->params[i])
-        ->checkValidReference(FL(), functionState, builder, false, call->functionType->params[i], argLE);
+    globalState->getRegion(call->superFunctionPrototype->params[i])
+        ->checkValidReference(FL(), functionState, builder, false, call->superFunctionPrototype->params[i], argLE);
     argsLE.push_back(argLE);
 
     buildFlare(FL(), globalState, functionState, builder);
@@ -53,17 +52,17 @@ Ref translateInterfaceCall(
           globalState,
           functionState,
           builder,
-          call->functionType,
+          call->superFunctionPrototype,
           methodFunctionPtrLE,
           argExprsLE,
           call->virtualParamIndex);
 
   buildFlare(FL(), globalState, functionState, builder);
 
-  globalState->getRegion(call->functionType->returnType)
-      ->checkValidReference(FL(), functionState, builder, false, call->functionType->returnType, resultLE);
+  globalState->getRegion(call->superFunctionPrototype->returnType)
+      ->checkValidReference(FL(), functionState, builder, false, call->superFunctionPrototype->returnType, resultLE);
 
-  if (call->functionType->returnType->kind == globalState->metalCache->neverType) {
+  if (peel_all_references(call->superFunctionPrototype->returnType) == globalState->metalCache->neverType) {
     return toRef(
         globalState->getRegion(globalState->metalCache->neverType),
         globalState->metalCache->neverType,

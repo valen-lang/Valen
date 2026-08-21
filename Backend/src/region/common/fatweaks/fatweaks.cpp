@@ -62,17 +62,18 @@ WeakFatPtrLE FatWeaks::assembleVoidStructWeakRef(
     Kind* refM,
     ControlBlockPtrLE controlBlockPtrLE,
     LLVMValueRef headerLE) {
-  auto objVoidPtrLE =
-      LLVMBuildPointerCast(
-          builder,
-          controlBlockPtrLE.refLE,
-          LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0),
-          "objAsVoidPtr");
-
-  auto weakRefLE = LLVMGetUndef(weakRefStructsSource->getWeakVoidRefStruct(refM->kind));
-  weakRefLE = LLVMBuildInsertValue(builder, weakRefLE, headerLE, WEAK_REF_MEMBER_INDEX_FOR_HEADER, "");
-  weakRefLE =
-      LLVMBuildInsertValue(builder, weakRefLE, objVoidPtrLE, WEAK_REF_MEMBER_INDEX_FOR_OBJPTR, "");
-
-  return weakRefStructsSource->makeWeakFatPtr(refM, weakRefLE);
+  { assert(false); throw 1337; }
+  // auto objVoidPtrLE =
+  //     LLVMBuildPointerCast(
+  //         builder,
+  //         controlBlockPtrLE.refLE,
+  //         LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0),
+  //         "objAsVoidPtr");
+  //
+  // auto weakRefLE = LLVMGetUndef(weakRefStructsSource->getWeakVoidRefStruct(refM->kind));
+  // weakRefLE = LLVMBuildInsertValue(builder, weakRefLE, headerLE, WEAK_REF_MEMBER_INDEX_FOR_HEADER, "");
+  // weakRefLE =
+  //     LLVMBuildInsertValue(builder, weakRefLE, objVoidPtrLE, WEAK_REF_MEMBER_INDEX_FOR_OBJPTR, "");
+  //
+  // return weakRefStructsSource->makeWeakFatPtr(refM, weakRefLE);
 }
