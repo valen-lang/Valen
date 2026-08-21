@@ -653,8 +653,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
 
 //  globalState->stringConstantBuilder = entryBuilder;
 
-  LLVMValueRef empty[1] = {};
-
   globalState->numMainArgsLE =
       LLVMAddGlobal(globalState->mod, LLVMInt64TypeInContext(globalState->context), "__main_num_args");
   LLVMSetLinkage(globalState->numMainArgsLE, LLVMExternalLinkage);
@@ -688,8 +686,8 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       LLVMAddGlobal(globalState->mod, LLVMInt64TypeInContext(globalState->context), "derefCounterLE");
   LLVMSetInitializer(globalState->derefCounterLE, LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 0, false));
 
-  globalState->neverPtrLE = LLVMAddGlobal(globalState->mod, makeNeverType(globalState), "__never");
-  LLVMSetInitializer(globalState->neverPtrLE, LLVMConstArray(LLVMIntTypeInContext(globalState->context, NEVER_INT_BITS), empty, 0));
+  // Never is a zero-sized value type ([0 x i57]), its sentinel is an undef value.
+  globalState->neverLE = LLVMGetUndef(makeNeverType(globalState));
 
   globalState->mutRcAdjustCounterLE =
       LLVMAddGlobal(globalState->mod, LLVMInt64TypeInContext(globalState->context), "__mutRcAdjustCounter");
@@ -704,7 +702,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   globalState->mutRegion = new Unsafe(globalState);
   globalState->regions.emplace(globalState->mutRegion->getRegionId(), globalState->mutRegion);
 
-  assert(LLVMTypeOf(globalState->neverPtrLE) == globalState->getRegion(globalState->metalCache->neverType)->translateType(globalState->metalCache->neverType));
+  assert(LLVMTypeOf(globalState->neverLE) == globalState->getRegion(globalState->metalCache->neverType)->translateType(globalState->metalCache->neverType));
 
   auto mainSetupFuncName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__Vale_mainSetup");
   auto mainSetupFuncProto =

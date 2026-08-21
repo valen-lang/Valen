@@ -9,6 +9,7 @@
 #include "../../utils/branch.h"
 #include "../../function/expressions/shared/string.h"
 #include "common.h"
+#include "primitives.h"
 #include <region/common/migration.h>
 
 constexpr int INTERFACE_REF_MEMBER_INDEX_FOR_OBJ_PTR = 0;
@@ -41,7 +42,10 @@ LLVMValueRef upcastThinPtr(
 }
 
 LLVMTypeRef translateReferenceSimple(GlobalState* globalState, KindStructs* structs, Kind* kind) {
-  if (auto ssaMT = dynamic_cast<StaticSizedArrayT *>(kind)) {
+  DefaultPrimitives primitives;
+  if (primitives.isPrimitive(kind) || dynamic_cast<Never *>(kind) != nullptr) {
+    return primitives.translatePrimitive(globalState, kind);
+  } else if (auto ssaMT = dynamic_cast<StaticSizedArrayT *>(kind)) {
     auto staticSizedArrayCountedStructLT =
         structs->getStaticSizedArrayWrapperStruct(ssaMT);
     return LLVMPointerType(staticSizedArrayCountedStructLT, 0);
@@ -300,16 +304,16 @@ void innerDeallocate(
     Kind* refMT,
     LiveRef ref) {
   buildFlare(FL(), globalState, functionState, builder);
-  auto structKindM = dynamic_cast<StructKind *>(peel_all_references(refMT));
-  assert(structKindM);
-  auto structDefM = globalState->program->getStruct(structKindM);
-  if (structDefM->sharedness == Sharedness::SINGLE) {
-    // Do nothing, it's inline!
-  } else if (structDefM->sharedness == Sharedness::SHARED) {
-    return innerDeallocateYonder(from, globalState, functionState, kindStrutsSource, builder, refMT, ref);
-  } else {
-    { assert(false); throw 1337; }
+  // VCOORD: clean this
+  // Inline (SINGLE) placement only applies to single-owner structs; everything else the free
+  // path reaches here — shared structs, strings, arrays — is a heap object, deallocated yonder.
+  if (auto structKindM = dynamic_cast<StructKind *>(peel_all_references(refMT))) {
+    if (globalState->program->getStruct(structKindM)->sharedness == Sharedness::SINGLE) {
+      // Do nothing, it's inline!
+      return;
+    }
   }
+  innerDeallocateYonder(from, globalState, functionState, kindStrutsSource, builder, refMT, ref);
 }
 
 void fillStaticSizedArray(

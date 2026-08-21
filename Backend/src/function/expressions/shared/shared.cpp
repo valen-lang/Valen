@@ -21,7 +21,7 @@ LLVMTypeRef makeNeverType(GlobalState* globalState) {
 }
 
 LLVMValueRef makeVoid(GlobalState* globalState) {
-  return LLVMGetUndef(globalState->rcImm->translateType(globalState->metalCache->voidType));
+  return LLVMGetUndef(globalState->translateType(globalState->metalCache->voidType));
 }
 
 LLVMTypeRef makeEmptyStructType(GlobalState* globalState) {
@@ -34,7 +34,7 @@ LLVMValueRef makeEmptyStruct(GlobalState* globalState) {
 Ref makeVoidRef(GlobalState* globalState) {
   auto voidLE = makeVoid(globalState);
   auto refMT = globalState->metalCache->voidType;
-  return toRef(globalState->rcImm, refMT, voidLE);
+  return toRef(globalState->mutRegion, refMT, voidLE);
 }
 
 LLVMValueRef makeBackendLocal(
@@ -56,7 +56,7 @@ void makeHammerLocal(
     Local* local,
     Ref refToStore) {
   auto localAddr = globalState->getRegion(local->type)->stackify(functionState, builder, local, refToStore);
-  blockState->addLocal(local, localAddr);
+  blockState->addLocal(local->id, localAddr);
 }
 
 // Returns the new RC
@@ -397,7 +397,7 @@ Ref buildCallV(
     buildFlare(FL(), globalState, functionState, builder, "Done calling function ", prototype->name->name);
     buildFlare(FL(), globalState, functionState, builder, "Resuming function ", functionState->containingFuncName);
     LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL));
-    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverPtrLE);
+    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverLE);
   } else {
     buildFlare(FL(), globalState, functionState, builder, "Done calling function ", prototype->name->name);
     buildFlare(FL(), globalState, functionState, builder, "Resuming function ", functionState->containingFuncName);
@@ -416,7 +416,7 @@ LLVMValueRef buildMaybeNeverCall(
   auto returnLT = LLVMGetReturnType(funcL.funcLT);
   if (returnLT == makeNeverType(globalState)) {
     LLVMBuildRet(builder, LLVMGetUndef(returnLT));
-    return globalState->neverPtrLE;
+    return globalState->neverLE;
   } else {
     return resultLE;
   }

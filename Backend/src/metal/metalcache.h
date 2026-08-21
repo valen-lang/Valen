@@ -80,17 +80,13 @@ public:
     rcImmRegionId = getRegionId(builtinPackageCoord, "rcimm");
     mutRegionId = getRegionId(builtinPackageCoord, "mut");
 
-    // Base primitive kind singletons. Ownership and placement are not stored: a bare kind is
-    // owned; the wrap layers (getBorrowRef/getShareRef/…) express references, and placement is
-    // derived from the onion shape at codegen.
-    // VCOORD: Str should be different soon
-    i32Type = getInt(rcImmRegionId, 32);
-    i64Type = getInt(rcImmRegionId, 64);
-    boolType = getBool(rcImmRegionId);
-    floatType = getFloat(rcImmRegionId);
+    i32Type = getInt(mutRegionId, 32);
+    i64Type = getInt(mutRegionId, 64);
+    boolType = getBool(mutRegionId);
+    floatType = getFloat(mutRegionId);
     str = getStr(rcImmRegionId);
-    neverType = getNever(rcImmRegionId);
-    voidType = getVoid(rcImmRegionId);
+    neverType = getNever(mutRegionId);
+    voidType = getVoid(mutRegionId);
   }
 
   PackageCoordinate* getPackageCoordinate(const std::string& projectName, const std::vector<std::string>& packageSteps) {

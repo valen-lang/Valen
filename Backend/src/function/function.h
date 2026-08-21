@@ -18,10 +18,8 @@ public:
 private:
   BlockState* maybeParentBlockState;
   std::optional<LLVMBasicBlockRef> maybeAfterLoop;
-  // Locals are keyed by Local* pointer identity: the lowerer builds one Local per variable and
-  // reuses the handle, so the pointer is a stable per-variable key (no VariableId anymore).
-  std::unordered_map<Local*, LLVMValueRef, AddressHasher<Local*>> localAddrByLocal;
-  std::unordered_set<Local*, AddressHasher<Local*>> unstackifiedLocals;
+  std::unordered_map<VarNameM, LLVMValueRef> localAddrByLocal;
+  std::unordered_set<VarNameM> unstackifiedLocals;
 
 public:
 //  LLVMBuilderRef builder;
@@ -31,43 +29,41 @@ public:
   BlockState(AddressNumberer* addressNumberer_, BlockState* maybeParentBlockState_, std::optional<LLVMBasicBlockRef> maybeAfterLoop_) :
       addressNumberer(addressNumberer_),
       maybeParentBlockState(maybeParentBlockState_),
-      maybeAfterLoop(maybeAfterLoop_),
-      localAddrByLocal(0, addressNumberer_->makeHasher<Local*>()),
-      unstackifiedLocals(0, addressNumberer_->makeHasher<Local*>()) {
+      maybeAfterLoop(maybeAfterLoop_) {
   }
 
-  LLVMValueRef getLocalAddr(Local* local, bool expectValid) const {
+  LLVMValueRef getLocalAddr(const VarNameM& localId, bool expectValid) const {
     if (expectValid) {
-      assert(unstackifiedLocals.count(local) == 0);
+      assert(unstackifiedLocals.count(localId) == 0);
     }
-    auto localAddrIter = localAddrByLocal.find(local);
+    auto localAddrIter = localAddrByLocal.find(localId);
     if (localAddrIter != localAddrByLocal.end()) {
       return localAddrIter->second;
     }
     if (maybeParentBlockState) {
-      return maybeParentBlockState->getLocalAddr(local, expectValid);
+      return maybeParentBlockState->getLocalAddr(localId, expectValid);
     } else {
       { assert(false); throw 1337; }
     }
   }
 
-  bool localExists(Local* local, bool considerParentsToo) const {
-    if (localAddrByLocal.find(local) != localAddrByLocal.end()) {
+  bool localExists(const VarNameM& localId, bool considerParentsToo) const {
+    if (localAddrByLocal.find(localId) != localAddrByLocal.end()) {
       return true;
     }
-    if (considerParentsToo && maybeParentBlockState && maybeParentBlockState->localExists(local, true)) {
+    if (considerParentsToo && maybeParentBlockState && maybeParentBlockState->localExists(localId, true)) {
       return true;
     }
     return false;
   }
 
-  void addLocal(Local* local, LLVMValueRef localL) {
-    assert(!localExists(local, true));
-    localAddrByLocal.emplace(local, localL);
+  void addLocal(const VarNameM& localId, LLVMValueRef localL) {
+    assert(!localExists(localId, true));
+    localAddrByLocal.emplace(localId, localL);
   }
 
-  std::unordered_set<Local*> getAllLocals(bool considerParentsToo) const {
-    std::unordered_set<Local*> result;
+  std::unordered_set<VarNameM> getAllLocals(bool considerParentsToo) const {
+    std::unordered_set<VarNameM> result;
     if (considerParentsToo && maybeParentBlockState) {
       result = maybeParentBlockState->getAllLocals(true);
     }
@@ -77,54 +73,54 @@ public:
     return result;
   }
 
-  bool localWasUnstackified(Local* local, bool considerParentsToo) const {
-    if (unstackifiedLocals.count(local)) {
+  bool localWasUnstackified(const VarNameM& localId, bool considerParentsToo) const {
+    if (unstackifiedLocals.count(localId)) {
       return true;
     }
-    if (considerParentsToo && maybeParentBlockState && maybeParentBlockState->localWasUnstackified(local, true)) {
+    if (considerParentsToo && maybeParentBlockState && maybeParentBlockState->localWasUnstackified(localId, true)) {
       return true;
     }
     return false;
   }
 
-  void markLocalUnstackified(Local* local) {
-    assert(!localWasUnstackified(local, true));
-    unstackifiedLocals.insert(local);
+  void markLocalUnstackified(const VarNameM& localId) {
+    assert(!localWasUnstackified(localId, true));
+    unstackifiedLocals.insert(localId);
   }
 
 
-  void restackify(Local* local) {
-    assert(localWasUnstackified(local, true));
-    unstackifiedLocals.erase(local);
+  void restackify(const VarNameM& localId) {
+    assert(localWasUnstackified(localId, true));
+    unstackifiedLocals.erase(localId);
   }
 
   void checkAllIntroducedLocalsWereUnstackified() {
     for (auto localAndLocalAddr : localAddrByLocal) {
-      auto local = localAndLocalAddr.first;
+      auto localId = localAndLocalAddr.first;
       // Ignore those that were made in the parent.
       if (maybeParentBlockState &&
-          maybeParentBlockState->localAddrByLocal.count(local))
+          maybeParentBlockState->localAddrByLocal.count(localId))
         continue;
       // local came from the child block. Make sure the child unstackified it.
-      if (unstackifiedLocals.count(local) == 0) {
-        std::cerr << "Un-unstackified local: " << local->name << std::endl;
+      if (unstackifiedLocals.count(localId) == 0) {
+        std::cerr << "Un-unstackified local: " << localId.name << std::endl;
         { assert(false); throw 1337; }
       }
     }
   }
 
   // Get parent locals that the child unstackified.
-  std::unordered_set<Local*> getParentLocalsThatSelfUnstackified() {
+  std::unordered_set<VarNameM> getParentLocalsThatSelfUnstackified() {
     assert(maybeParentBlockState);
-    std::unordered_set<Local*> childUnstackifiedParentLocals;
-    for (Local* unstackifiedLocal : unstackifiedLocals) {
+    std::unordered_set<VarNameM> childUnstackifiedParentLocals;
+    for (const VarNameM& unstackifiedLocalId : unstackifiedLocals) {
       // Ignore any that were made by the child block
-      if (localAddrByLocal.count(unstackifiedLocal))
+      if (localAddrByLocal.count(unstackifiedLocalId))
         continue;
       // Ignore any that were already unstackified by the parent
-      if (maybeParentBlockState->localWasUnstackified(unstackifiedLocal, true))
+      if (maybeParentBlockState->localWasUnstackified(unstackifiedLocalId, true))
         continue;
-      childUnstackifiedParentLocals.insert(unstackifiedLocal);
+      childUnstackifiedParentLocals.insert(unstackifiedLocalId);
     }
     return childUnstackifiedParentLocals;
   }

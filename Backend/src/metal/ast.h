@@ -178,7 +178,10 @@ public:
 //    return iter->second;
 //  }
 
-  std::string getKindExportName(Kind* kind, bool includeProjectName) const {
+  std::string getKindExportName(Kind* rawKind, bool includeProjectName) const {
+    // The export name of a reference is its concrete kind's export name — the onion wrap is just
+    // how it's held, not part of the C ABI type name. Peel before dispatching.
+    auto kind = peel_all_references(rawKind);
     if (auto innt = dynamic_cast<Int *>(kind)) {
       return std::string() + "int" + std::to_string(innt->bits) + "_t";
     } else if (dynamic_cast<Bool *>(kind)) {
@@ -199,7 +202,8 @@ public:
       return (includeProjectName ? packageCoordinate->projectName + "_" : "") + iter->second;
     }
   }
-  std::string getKindHumanName(Kind* kind) const {
+  std::string getKindHumanName(Kind* rawKind) const {
+    auto kind = peel_all_references(rawKind);
     if (auto innt = dynamic_cast<Int *>(kind)) {
       return std::string() + "i" + std::to_string(innt->bits);
     } else if (dynamic_cast<Bool *>(kind)) {
@@ -462,16 +466,32 @@ public:
       returnType(returnType_) {}
 };
 
+// A variable's identity. Unique only within the containing function.
+struct VarNameM {
+  std::string name;
+
+  bool operator==(const VarNameM& other) const { return name == other.name; }
+};
+
 class Local {
 public:
+  VarNameM id;
   std::string name;
   Kind* type;
 
   Local(
+      VarNameM id_,
       std::string name_,
       Kind* type_) :
+      id(std::move(id_)),
       name(std::move(name_)),
       type(type_) {}
 };
+
+namespace std {
+  template<> struct hash<VarNameM> {
+    size_t operator()(const VarNameM& v) const { return std::hash<std::string>()(v.name); }
+  };
+}
 
 #endif

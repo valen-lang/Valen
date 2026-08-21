@@ -203,9 +203,12 @@ extern "C" VIS InterfaceMethodHandle* metal_cache_get_interface_method(
 }
 
 extern "C" VIS LocalHandle* metal_cache_get_local(
-    MetalCacheHandle* h, const char* name_ptr, size_t name_len, KindHandle* kind) {
-  (void)h;  // locals are constructed per-use; the lowerer reuses the handle for identity.
-  return reinterpret_cast<LocalHandle*>(new Local(str(name_ptr, name_len), knd(kind)));
+    MetalCacheHandle* h, const char* id_ptr, size_t id_len,
+    const char* name_ptr, size_t name_len, KindHandle* kind) {
+  (void)h;  // Locals are constructed per-mention; identity is the `id` string (BlockState keys
+            // on it), so multiple handles for one source local are fine.
+  return reinterpret_cast<LocalHandle*>(
+      new Local(VarNameM{str(id_ptr, id_len)}, str(name_ptr, name_len), knd(kind)));
 }
 
 // --- Non-interned constructors ---

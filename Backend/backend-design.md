@@ -5,6 +5,29 @@ Plan context: `docs/plans/complete-backend-plan.md` (Step 4).
 
 ## Design (human-only)
 
+ * For now, rcimm.cpp should only be called for strings (and eventually, classes instead of strings).
+ * Never is a zero-sized value type `[0 x i57]`. If we ever execute an instruction involving one of these, something bad has happened.
+
+### Incoming AST (Metal) and Interning
+
+(We should rename it from Metal, that name is taken by Apple's Metal)
+
+Backend interns:
+
+ * Types
+ * Prototype
+ * InterfaceMethod (prototype + virtual param index)
+ * Name
+ * PackageCoordinate
+ * RegionId (might go away soon)
+
+Not interned:
+
+ * Expressions
+ * `Local`
+ * Definitions (StructDefinition, InterfaceDefinition, array definitions, Function)
+ * StructMember, Edge
+
 ### Ref
 
 Ref is a wrapper struct around an LLVMValueRef and an "actual type". It represents the result of a previous instruction, and our knowledge of its actual type from back then.

@@ -463,14 +463,13 @@ ControlBlockPtrLE KindStructs::getConcreteControlBlockPtr(
     LLVMBuilderRef builder,
     Kind* reference,
     WrapperPtrLE wrapperPtrLE) {
-  { assert(false); throw 1337; }
-  // auto controlBlock = getControlBlock(reference->kind);
-  // // Control block is always the 0th element of every concrete struct.
-  // auto controlBlockPtrLE =
-  //     LLVMBuildStructGEP2(builder, wrapperPtrLE.wrapperStructLT, wrapperPtrLE.refLE, 0, "controlPtr");
-  // assert(LLVMTypeOf(controlBlockPtrLE) == LLVMPointerType(controlBlock->getStruct(), 0));
-  // return makeControlBlockPtr(
-  //     from, functionState, builder, wrapperPtrLE.refM->kind, controlBlockPtrLE);
+  auto concreteKind = peel_all_references(wrapperPtrLE.refM);
+  auto controlBlock = getControlBlock(concreteKind);
+  // Control block is always the 0th element of every concrete struct.
+  auto controlBlockPtrLE =
+      LLVMBuildStructGEP2(builder, wrapperPtrLE.wrapperStructLT, wrapperPtrLE.refLE, 0, "controlPtr");
+  assert(LLVMTypeOf(controlBlockPtrLE) == LLVMPointerType(controlBlock->getStruct(), 0));
+  return makeControlBlockPtr(from, functionState, builder, concreteKind, controlBlockPtrLE);
 }
 
 ControlBlockPtrLE KindStructs::getConcreteControlBlockPtrWithoutChecking(

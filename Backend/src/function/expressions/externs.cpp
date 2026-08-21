@@ -20,7 +20,7 @@ Ref buildResultOrEarlyReturnOfNever(
     Ref resultRef) {
   if (peel_all_references(prototype->returnType) == globalState->metalCache->neverType) {
     LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL));
-    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverPtrLE);
+    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverLE);
   } else {
     if (prototype->returnType == globalState->metalCache->voidType) {
       return makeVoidRef(globalState);
@@ -540,7 +540,7 @@ Ref buildExternCall(
     auto exitCodeLE = makeConstIntExpr(functionState, builder, LLVMInt64TypeInContext(globalState->context), 1);
     buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {exitCodeLE});
     LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL));
-    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverPtrLE);
+    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverLE);
   } else if (prototype->name->name == "__vbi_getch") {
     auto resultIntLE = buildCallWith64BitSExt(globalState, builder, globalState->externs->getch, {});
     return toRef(globalState->getRegion(prototype->returnType), prototype->returnType, resultIntLE);

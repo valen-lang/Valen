@@ -30,8 +30,8 @@ pub mod clang;
 pub mod code_source;
 pub mod compile_options;
 // pub mod file_coordinate_map;
-// #[cfg(test)]
-// pub mod end_to_end_tests;
+#[cfg(test)]
+pub mod end_to_end_tests;
 // #[cfg(test)]
 pub mod integration_tests;
 pub mod instantiating;

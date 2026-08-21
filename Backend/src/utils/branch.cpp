@@ -375,7 +375,7 @@ Ref buildIfElseV(
   if (thenResultMT == globalState->metalCache->neverType && elseResultMT == globalState->metalCache->neverType) {
     // Bail early, even though builder is still pointing at the preceding block. Nobody should use
     // it, since nothing can happen after a never.
-    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverPtrLE);
+    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverLE);
 //    { assert(false); throw 1337; } // impl
   }
 

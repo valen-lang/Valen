@@ -15,7 +15,7 @@ Ref translateLocalLoad(
     LLVMBuilderRef builder,
     LocalLoad* localLoad) {
   auto local = localLoad->local;
-  auto localId = local;
+  auto localId = local->id;
   auto localName = localLoad->localName;
   auto localType = local->type;
   auto resultType = globalState->metalCache->getBorrowRef(local->type);

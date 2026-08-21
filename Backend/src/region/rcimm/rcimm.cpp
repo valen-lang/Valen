@@ -10,11 +10,6 @@
 #include "rcimm.h"
 #include "../../translatetype.h"
 
-enum FreeFunctionParameter {
-  FREE_PARAM_REGION_INSTANCE_REF = 0,
-  FREE_PARAM_OBJECT_REF = 1,
-};
-
 void fillControlBlock(
     AreaAndFileAndLine from,
     GlobalState* globalState,
@@ -883,7 +878,7 @@ LLVMTypeRef RCImm::translateType(Kind* referenceM) {
       return interfaceRefStructL;
     } else if (dynamic_cast<Never*>(peel_all_references(referenceM))) {
       auto result = LLVMPointerType(makeNeverType(globalState), 0);
-      assert(LLVMTypeOf(globalState->neverPtrLE) == result);
+      assert(LLVMTypeOf(globalState->neverLE) == result);
       return result;
     } else {
       std::cerr << "Unimplemented type: " << typeid(*referenceM).name() << std::endl;
@@ -1133,15 +1128,7 @@ Weakability RCImm::getKindWeakability(Kind* kind) {
 }
 
 void RCImm::declareExtraFunctions() {
-  auto valeStrMT = globalState->metalCache->str;
-
-  auto freePrototype =
-      globalState->metalCache->getPrototype(
-          globalState->freeName, globalState->metalCache->voidType,
-          {valeStrMT});
-  auto freeNameL = globalState->freeName->name + "__str";
-  declareExtraFunction(globalState, freePrototype, freeNameL);
-
+  declareConcreteFreeFunction(globalState->metalCache->str);
   declareConcreteAliasFunction(globalState->metalCache->str);
   declareConcreteDealiasFunction(globalState->metalCache->str);
   declareConcreteRefEqFunction(globalState->metalCache->str);
@@ -1915,7 +1902,7 @@ void RCImm::defineConcreteFreeFunction(Kind* valeKind) {
   defineFunctionBodyV(
       globalState, prototype,
       [&](FunctionState* functionState, LLVMBuilderRef builder) -> void {
-        auto objectRefMT = prototype->params[1];
+        auto objectRefMT = prototype->params[0];
 
 
         auto objectRef =
@@ -1924,7 +1911,7 @@ void RCImm::defineConcreteFreeFunction(Kind* valeKind) {
                 toRef(
                     globalState->getRegion(objectRefMT),
                     objectRefMT,
-                    functionState->getParam(UserArgIndex{FREE_PARAM_OBJECT_REF})));
+                    functionState->getParam(UserArgIndex{0})));
 
         if (auto structKind = dynamic_cast<StructKind *>(peel_all_references(objectRefMT))) {
           auto structDefM = globalState->program->getStruct(structKind);
@@ -2021,14 +2008,14 @@ void RCImm::callFree(
   auto prototype = getFreePrototype(kind);
   if (auto interfaceMT = dynamic_cast<InterfaceKind*>(kind)) {
     buildFlare(FL(), globalState, functionState, builder);
-    auto virtualArgRefMT = prototype->params[1];
+    auto virtualArgRefMT = prototype->params[0];
     int indexInEdge = globalState->getInterfaceMethodIndex(interfaceMT, prototype);
     buildFlare(FL(), globalState, functionState, builder);
     auto methodFunctionPtrLE =
         globalState->getRegion(virtualArgRefMT)
             ->getInterfaceMethodFunctionPtr(functionState, builder, virtualArgRefMT, objectRef, indexInEdge);
     buildFlare(FL(), globalState, functionState, builder);
-    buildInterfaceCall(globalState, functionState, builder, prototype, methodFunctionPtrLE, {objectRef}, 1);
+    buildInterfaceCall(globalState, functionState, builder, prototype, methodFunctionPtrLE, {objectRef}, 0);
   } else {
     buildCallV(globalState, functionState, builder, prototype, {objectRef});
   }
@@ -2062,10 +2049,10 @@ void RCImm::defineEdgeFreeFunction(Edge* edge) {
       [&](FunctionState *functionState, LLVMBuilderRef builder) {
         auto structPrototype = getFreePrototype(edge->structName);
 
-        auto objectRefMT = structPrototype->params[1];
+        auto objectRefMT = structPrototype->params[0];
 
         auto objectRef =
-            toRef(globalState->getRegion(objectRefMT), objectRefMT, functionState->getParam(UserArgIndex{FREE_PARAM_OBJECT_REF}));
+            toRef(globalState->getRegion(objectRefMT), objectRefMT, functionState->getParam(UserArgIndex{0}));
 
         buildCallV(
             globalState, functionState, builder, structPrototype,
@@ -2094,7 +2081,7 @@ void RCImm::declareInterfaceFreeFunction(InterfaceKind* kind) {
 
 InterfaceMethod* RCImm::getFreeInterfaceMethod(Kind* valeKind) {
   return globalState->metalCache->getInterfaceMethod(
-      getFreePrototype(valeKind), 1);
+      getFreePrototype(valeKind), 0);
 }
 
 LiveRef RCImm::checkRefLive(

@@ -10,7 +10,6 @@
 // array codegen need them, but nothing runs until step 4, so they're deferred to a focused
 // follow-up. The expression/kind/function/struct/interface/export/extern spine is complete.
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::backend_ffi::metal_cache::{
@@ -37,7 +36,7 @@ pub fn populate_metal_cache<'cache, 's, 'i>(
 where
     's: 'i,
 {
-    let lowerer = Lowerer { cache, locals: RefCell::new(HashMap::new()) };
+    let lowerer = Lowerer { cache };
 
     // HinputsI is flat; group defs by their id's package coordinate (first-seen order).
     let mut package_coords: Vec<&'s PackageCoordinate<'s>> = Vec::new();
@@ -68,7 +67,6 @@ where
 
 struct Lowerer<'cache> {
     cache: &'cache MetalCache,
-    locals: RefCell<HashMap<usize, Local<'cache>>>,
 }
 
 fn code_map<'s>(loc: CodeLocationS<'s>) -> String {
@@ -97,8 +95,8 @@ impl<'cache> Lowerer<'cache> {
             KindIT::BoolIT(_) => c.bool_kind(),
             KindIT::StrIT(_) => c.str_kind(),
             KindIT::FloatIT(_) => c.float_kind(),
-            KindIT::IntIT(i) => c.get_int(c.rcimm_region_id(), i.bits),
-            KindIT::USizeIT(_) => c.get_usize(c.rcimm_region_id()),
+            KindIT::IntIT(i) => c.get_int(c.mut_region_id(), i.bits),
+            KindIT::USizeIT(_) => c.get_usize(c.mut_region_id()),
             KindIT::StructIT(s) => c.get_struct_kind(self.lower_id_to_name(&s.id)),
             KindIT::InterfaceIT(i) => c.get_interface_kind(self.lower_id_to_name(&i.id)),
             KindIT::StaticSizedArrayIT(a) => c.get_static_sized_array(self.lower_id_to_name(&a.name)),
@@ -131,16 +129,14 @@ impl<'cache> Lowerer<'cache> {
         self.cache.get_prototype(name, return_type, &params)
     }
 
-    /// Locals have pointer identity: the same `&LocalVariableI` must map to one metal `Local`.
+    /// Forward the local's identity to the metal `Local`. The instantiator reallocates a fresh
+    /// `LocalVariableI` per mention, so we don't dedup here — the `id` (the structurally-unique
+    /// `IVarNameI`) is the identity, and the backend `BlockState` keys on it. `name` is the
+    /// display/LLVM name only.
     fn lower_local<'s, 'i>(&self, var: &crate::instantiating::ast::ast::LocalVariableI<'s, 'i>) -> Local<'cache> {
-        let key = var as *const _ as usize;
-        if let Some(l) = self.locals.borrow().get(&key) {
-            return *l;
-        }
+        let id = format!("{:?}", var.name);
         let name_str = humanize_var_name(var.name);
-        let local = self.cache.get_local(&name_str, self.lower_kind(var.tyype));
-        self.locals.borrow_mut().insert(key, local);
-        local
+        self.cache.get_local(&id, &name_str, self.lower_kind(var.tyype))
     }
 
     fn lower_package<'s, 'i>(
@@ -204,7 +200,6 @@ impl<'cache> Lowerer<'cache> {
     }
 
     fn lower_function<'s, 'i>(&self, f: &FunctionDefinitionI<'s, 'i>) -> Function<'cache> {
-        self.locals.borrow_mut().clear();
         let proto = self.lower_prototype(&f.header.to_prototype());
         let body = self.lower_expression(&f.body);
         self.cache.new_function(proto, Some(body))

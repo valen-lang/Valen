@@ -113,7 +113,8 @@ InterfaceMethodHandle* metal_cache_get_interface_method(
 
 // A local is a name + its onion kind; the lowerer constructs each once and reuses the handle.
 LocalHandle* metal_cache_get_local(
-    MetalCacheHandle*, const char* name_ptr, size_t name_len, KindHandle* kind);
+    MetalCacheHandle*, const char* id_ptr, size_t id_len,
+    const char* name_ptr, size_t name_len, KindHandle* kind);
 
 // --- Non-interned constructors (raw `new` on the C++ side) ---
 

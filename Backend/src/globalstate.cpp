@@ -92,6 +92,8 @@ std::vector<ValeFuncPtrLE> GlobalState::getEdgeFunctions(Edge* edge) {
 }
 
 IRegion* GlobalState::getRegion(Kind* kindM) {
+  // A reference lives in the region of the kind it wraps; peel the onion wraps first.
+  kindM = peel_all_references(kindM);
   if (auto innt = dynamic_cast<Int*>(kindM)) {
     return getRegion(innt->regionId);
   } else if (auto vooid = dynamic_cast<Void*>(kindM)) {

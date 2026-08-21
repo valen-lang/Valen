@@ -129,7 +129,9 @@ extern "C" {
     ) -> *mut c_void;
 
     fn metal_cache_get_local(
-        _: *mut MetalCacheHandleRaw, name_ptr: *const c_char, name_len: usize, kind: *mut c_void,
+        _: *mut MetalCacheHandleRaw,
+        id_ptr: *const c_char, id_len: usize,
+        name_ptr: *const c_char, name_len: usize, kind: *mut c_void,
     ) -> *mut c_void;
 
     fn metal_struct_member_new(
@@ -462,11 +464,13 @@ impl MetalCache {
         }
     }
 
-    pub fn get_local(&self, name: &str, kind: Kind<'_>) -> Local<'_> {
+    pub fn get_local(&self, id: &str, name: &str, kind: Kind<'_>) -> Local<'_> {
         unsafe {
             Local(
                 NonNull::new(metal_cache_get_local(
-                    self.raw, name.as_ptr() as *const c_char, name.len(), kind.0.as_ptr(),
+                    self.raw,
+                    id.as_ptr() as *const c_char, id.len(),
+                    name.as_ptr() as *const c_char, name.len(), kind.0.as_ptr(),
                 )).unwrap(),
                 PhantomData,
             )

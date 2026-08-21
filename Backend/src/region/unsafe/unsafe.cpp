@@ -760,14 +760,20 @@ LLVMTypeRef Unsafe::getExternalType(Kind* refMT) {
   // share one; kind distinctness lives in the C typedefs, not this type.
   // Same right-sized handle structs the share region uses: mut concretes cross
   // as 8-byte { i64 obj }, mut interfaces as 16-byte { i64 obj, i64 typeinfo }.
-  if (dynamic_cast<StructKind*>(peel_all_references(refMT)) ||
-      dynamic_cast<StaticSizedArrayT*>(peel_all_references(refMT)) ||
-      dynamic_cast<RuntimeSizedArrayT*>(peel_all_references(refMT))) {
+  auto kind = peel_all_references(refMT);
+  if (dynamic_cast<StructKind*>(kind) ||
+      dynamic_cast<StaticSizedArrayT*>(kind) ||
+      dynamic_cast<RuntimeSizedArrayT*>(kind)) {
     return globalState->getFfiHandleStructs()->getConcreteHandleStructLT();
-  } else if (dynamic_cast<InterfaceKind*>(peel_all_references(refMT))) {
+  } else if (dynamic_cast<InterfaceKind*>(kind)) {
     return globalState->getFfiHandleStructs()->getInterfaceHandleStructLT();
+  } else if (dynamic_cast<Bool*>(kind)) {
+    // Bool crosses the C boundary as i8 (see sendValeObjectIntoHost / receiveHostObjectIntoVale).
+    return LLVMInt8TypeInContext(globalState->context);
   } else {
-    { assert(false); throw 1337; }
+    // Other primitives (Int/Float/Void/Never) cross as their scalar C-ABI type.
+    DefaultPrimitives primitives;
+    return primitives.translatePrimitive(globalState, kind);
   }
 }
 
@@ -915,8 +921,20 @@ std::string Unsafe::getExportName(
     Package* package,
     Kind* reference,
     bool includeProjectName) {
-  { assert(false); throw 1337; }
-  // return package->getKindExportName(reference->kind, includeProjectName) + (reference->location == Location::YONDER ? "Ref" : "");
+  // Mirrors RCImm::getExportName: primitives get their raw C type names; concretes cross as
+  // right-sized handle value-type typedefs (no `*` suffix). Placement is not part of the ABI name.
+  // VCOORD: make sure this is in the right place and isnt duplicated
+  auto kind = peel_all_references(reference);
+  if (auto innt = dynamic_cast<Int*>(kind)) {
+    return std::string() + "int" + std::to_string(innt->bits) + "_t";
+  } else if (dynamic_cast<Bool*>(kind)) {
+    return "int8_t";
+  } else if (dynamic_cast<Float*>(kind)) {
+    return "double";
+  } else if (dynamic_cast<Void*>(kind) || dynamic_cast<Never*>(kind)) {
+    return "void";
+  }
+  return package->getKindExportName(kind, includeProjectName);
 }
 
 LiveRef Unsafe::checkRefLive(

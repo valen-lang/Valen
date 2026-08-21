@@ -58,7 +58,7 @@ Ref translateExpressionInner(
     // See ULTMCIE for why we load and store here.
     auto resultLE = makeConstIntExpr(functionState, builder, LLVMIntTypeInContext(globalState->context, constantInt->bits), constantInt->value);
     auto intType =
-        globalState->metalCache->getInt(globalState->metalCache->rcImmRegionId, constantInt->bits);
+        globalState->metalCache->getInt(globalState->metalCache->mutRegionId, constantInt->bits);
     return toRef(globalState->getRegion(intType), intType, resultLE);
   } else if (auto constantVoid = dynamic_cast<ConstantVoid*>(expr)) {
     // See ULTMCIE for why we load and store here.
@@ -106,7 +106,7 @@ Ref translateExpressionInner(
           globalState->getRegion(ret->sourceType)
               ->checkValidReference(FL(), functionState, builder, false, ret->sourceType, sourceRef);
       LLVMBuildRet(builder, toReturnLE);
-      return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverPtrLE);
+      return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverLE);
     }
   } else if (auto breeak = dynamic_cast<Break*>(expr)) {
     if (auto nearestLoopBlockStateAndEnd = blockState->getNearestLoopEnd()) {
@@ -116,7 +116,7 @@ Ref translateExpressionInner(
 
       return toRef(
         globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType,
-        globalState->neverPtrLE);
+        globalState->neverLE);
 
 //      buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
 //      auto sourceRef = translateExpression(globalState, functionState, blockState, builder, ret->sourceExpr);
@@ -149,7 +149,7 @@ Ref translateExpressionInner(
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     // The purpose of LocalStore is to put a swap value into a local, and give
     // what was in it.
-    auto localAddr = blockState->getLocalAddr(restackify->variable, false);
+    auto localAddr = blockState->getLocalAddr(restackify->variable->id, false);
 
     auto refToStore =
         translateExpression(
@@ -157,7 +157,7 @@ Ref translateExpressionInner(
 
     // This needs to be after translating sourceExpr because it might be unstackified then, and then
     // we immediately restackify it after.
-    blockState->restackify(restackify->variable);
+    blockState->restackify(restackify->variable->id);
 
     // We need to load the old ref *after* we evaluate the source expression,
     // Because of expressions like: Ship() = (mut b = (mut a = (mut b = Ship())));
@@ -219,8 +219,8 @@ Ref translateExpressionInner(
     // The purpose of Unstackify is to destroy the local and give what was in
     // it, but in LLVM there's no instruction (or need) for destroying a local.
     // So, we just give what was in it. It's ironically identical to LocalLoad.
-    auto localAddr = blockState->getLocalAddr(unstackify->variable, true);
-    blockState->markLocalUnstackified(unstackify->variable);
+    auto localAddr = blockState->getLocalAddr(unstackify->variable->id, true);
+    blockState->markLocalUnstackified(unstackify->variable->id);
     return globalState->getRegion(unstackify->variable->type)->unstackify(functionState, builder, unstackify->variable, localAddr);
   } else if (auto argument = dynamic_cast<Argument*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name(), " arg ", argument->paramIndex);
