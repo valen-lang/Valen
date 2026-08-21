@@ -319,8 +319,8 @@ Ref buildIfElseV(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Ref conditionRef,
-    Reference* thenResultMT,
-    Reference* elseResultMT,
+    Kind* thenResultMT,
+    Kind* elseResultMT,
     std::function<Ref(LLVMBuilderRef)> buildThen,
     std::function<Ref(LLVMBuilderRef)> buildElse) {
 
@@ -368,14 +368,14 @@ Ref buildIfElseV(
   auto elseFinalBlockL = LLVMGetInsertBlock(elseBlockBuilder);
 
   auto conditionLE =
-      globalState->getRegion(globalState->metalCache->boolRef)
-          ->checkValidReference(FL(), functionState, builder, true, globalState->metalCache->boolRef, conditionRef);
+      globalState->getRegion(globalState->metalCache->boolType)
+          ->checkValidReference(FL(), functionState, builder, true, globalState->metalCache->boolType, conditionRef);
   LLVMBuildCondBr(builder, conditionLE, thenStartBlockL, elseStartBlockL);
 
-  if (thenResultMT == globalState->metalCache->neverRef && elseResultMT == globalState->metalCache->neverRef) {
+  if (thenResultMT == globalState->metalCache->neverType && elseResultMT == globalState->metalCache->neverType) {
     // Bail early, even though builder is still pointing at the preceding block. Nobody should use
     // it, since nothing can happen after a never.
-    return toRef(globalState->getRegion(globalState->metalCache->neverRef), globalState->metalCache->neverRef, globalState->neverPtrLE);
+    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverPtrLE);
 //    { assert(false); throw 1337; } // impl
   }
 
@@ -383,12 +383,12 @@ Ref buildIfElseV(
       LLVMAppendBasicBlockInContext(globalState->context,
           functionState->containingFuncL,
           functionState->nextBlockName().c_str());
-  if (thenResultMT != globalState->metalCache->neverRef) {
+  if (thenResultMT != globalState->metalCache->neverType) {
     // Instruction to jump to the afterward block.
     LLVMBuildBr(thenBlockBuilder, afterwardBlockL);
   }
   LLVMDisposeBuilder(thenBlockBuilder);
-  if (elseResultMT != globalState->metalCache->neverRef) {
+  if (elseResultMT != globalState->metalCache->neverType) {
     // Instruction to jump to the afterward block.
     LLVMBuildBr(elseBlockBuilder, afterwardBlockL);
   }
@@ -400,9 +400,9 @@ Ref buildIfElseV(
   LLVMPositionBuilderAtEnd(builder, afterwardBlockL);
 
 
-  if (thenResultMT == globalState->metalCache->neverRef) {
+  if (thenResultMT == globalState->metalCache->neverType) {
     return elseResultRef;
-  } else if (elseResultMT == globalState->metalCache->neverRef) {
+  } else if (elseResultMT == globalState->metalCache->neverType) {
     return thenResultRef;
   } else {
     assert(LLVMTypeOf(thenResultLE) == LLVMTypeOf(elseResultLE));
@@ -471,9 +471,9 @@ void buildBoolyWhileV(
       [globalState, functionState, buildBody](LLVMBuilderRef builder) {
         auto continueRef = buildBody(builder);
         auto continueLE =
-            globalState->getRegion(globalState->metalCache->boolRef)->
+            globalState->getRegion(globalState->metalCache->boolType)->
                 checkValidReference(
-                    FL(), functionState, builder, true, globalState->metalCache->boolRef, continueRef);
+                    FL(), functionState, builder, true, globalState->metalCache->boolType, continueRef);
         return continueLE;
       });
 }
@@ -510,7 +510,7 @@ void buildBreakyWhile(
   LLVMBuildBr(builder, bodyStartBlockL);
 
   //buildBody(bodyBlockBuilder);
-//  auto continueLE = globalState->getRegion(globalState->metalCache->boolRef)->checkValidReference(FL(), functionState, builder, globalState->metalCache->boolRef, continueRef);
+//  auto continueLE = globalState->getRegion(globalState->metalCache->boolType)->checkValidReference(FL(), functionState, builder, globalState->metalCache->boolType, continueRef);
 
   LLVMBasicBlockRef afterwardBlockL =
       LLVMAppendBasicBlockInContext(globalState->context,
@@ -543,8 +543,8 @@ void buildWhile(
             bodyBuilder,
             LLVMInt1TypeInContext(globalState->context),
             conditionLE,
-//            globalState->metalCache->boolRef,
-//            globalState->metalCache->boolRef,
+//            globalState->metalCache->boolType,
+//            globalState->metalCache->boolType,
             [globalState, functionState, buildBody](LLVMBuilderRef thenBlockBuilder) {
               buildBody(thenBlockBuilder);
               // Return true, so the while loop will keep executing.
@@ -571,13 +571,13 @@ void buildWhileV(
       [globalState, functionState, buildCondition](LLVMBuilderRef conditionBuilder) -> LLVMValueRef {
         auto resultRef = buildCondition(conditionBuilder);
         return globalState
-            ->getRegion(globalState->metalCache->boolRef)
+            ->getRegion(globalState->metalCache->boolType)
             ->checkValidReference(
                 FL(),
                 functionState,
                 conditionBuilder,
                 false,
-                globalState->metalCache->boolRef,
+                globalState->metalCache->boolType,
                 resultRef);
       },
       buildBody);

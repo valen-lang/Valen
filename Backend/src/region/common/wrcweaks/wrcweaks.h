@@ -16,68 +16,68 @@ public:
       LLVMBuilderRef builder,
       WeakFatPtrLE sourceRefLE,
       StructKind *sourceStructKindM,
-      Reference *sourceStructTypeM,
+      Kind *sourceStructTypeM,
       InterfaceKind *targetInterfaceKindM,
-      Reference *targetInterfaceTypeM);
+      Kind *targetInterfaceTypeM);
 
   Ref assembleWeakRef(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* sourceType,
-      Reference* targetType,
+      Kind* sourceType,
+      Kind* targetType,
       Ref sourceRef);
 
   // Makes a non-weak interface ref into a weak interface ref
   WeakFatPtrLE assembleInterfaceWeakRef(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* sourceType,
-      Reference* targetType,
+      Kind* sourceType,
+      Kind* targetType,
       InterfaceKind* interfaceKindM,
       InterfaceFatPtrLE sourceInterfaceFatPtrLE);
 
   WeakFatPtrLE assembleStructWeakRef(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* structTypeM,
-      Reference* targetTypeM,
+      Kind* structTypeM,
+      Kind* targetTypeM,
       StructKind* structKindM,
       WrapperPtrLE objPtrLE);
 
   WeakFatPtrLE assembleStaticSizedArrayWeakRef(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* sourceSSAMT,
+      Kind* sourceSSAMT,
       StaticSizedArrayT* staticSizedArrayMT,
-      Reference* targetSSAWeakRefMT,
+      Kind* targetSSAWeakRefMT,
       WrapperPtrLE objPtrLE);
 
   WeakFatPtrLE assembleRuntimeSizedArrayWeakRef(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* sourceType,
+      Kind* sourceType,
       RuntimeSizedArrayT* runtimeSizedArrayMT,
-      Reference* targetRSAWeakRefMT,
+      Kind* targetRSAWeakRefMT,
       WrapperPtrLE sourceRefLE);
 
   LLVMValueRef lockWrciFatPtr(
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* refM,
+      Kind* refM,
       WeakFatPtrLE weakFatPtrLE);
 
 
   void innerNoteWeakableDestroyed(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* concreteRefM,
+      Kind* concreteRefM,
       ControlBlockPtrLE controlBlockPtrLE);
 
   LLVMValueRef getIsAliveFromWeakFatPtr(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* weakRefM,
+      Kind* weakRefM,
       WeakFatPtrLE weakFatPtrLE);
 
   LLVMValueRef fillWeakableControlBlock(
@@ -90,34 +90,34 @@ public:
   WeakFatPtrLE weakInterfaceRefToWeakStructRef(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* weakInterfaceRefMT,
+      Kind* weakInterfaceRefMT,
       WeakFatPtrLE weakInterfaceFatPtrLE);
 
   void aliasWeakRef(
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* weakRefMT,
+      Kind* weakRefMT,
       Ref weakRef);
 
   void discardWeakRef(
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* weakRefMT,
+      Kind* weakRefMT,
       Ref weakRef);
 
   Ref getIsAliveFromWeakRef(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* weakRefM,
+      Kind* weakRefM,
       Ref weakRef);
 
   void buildCheckWeakRef(
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* weakRefM,
+      Kind* weakRefM,
       Ref weakRef);
 
   LLVMValueRef getWrciFromWeakRef(

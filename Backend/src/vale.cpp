@@ -705,11 +705,11 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   globalState->mutRegion = new Unsafe(globalState);
   globalState->regions.emplace(globalState->mutRegion->getRegionId(), globalState->mutRegion);
 
-  assert(LLVMTypeOf(globalState->neverPtrLE) == globalState->getRegion(globalState->metalCache->neverRef)->translateType(globalState->metalCache->neverRef));
+  assert(LLVMTypeOf(globalState->neverPtrLE) == globalState->getRegion(globalState->metalCache->neverType)->translateType(globalState->metalCache->neverType));
 
   auto mainSetupFuncName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__Vale_mainSetup");
   auto mainSetupFuncProto =
-      globalState->metalCache->getPrototype(mainSetupFuncName, globalState->metalCache->i64Ref, {});
+      globalState->metalCache->getPrototype(mainSetupFuncName, globalState->metalCache->i64Type, {});
   declareAndDefineExtraFunction(
       globalState, mainSetupFuncProto, mainSetupFuncName->name,
       [globalState](FunctionState* functionState, LLVMBuilderRef builder) {
@@ -1054,7 +1054,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
 
   auto mainCleanupFuncName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__Vale_mainCleanup");
   auto mainCleanupFuncProto =
-      globalState->metalCache->getPrototype(mainCleanupFuncName, globalState->metalCache->i64Ref, {});
+      globalState->metalCache->getPrototype(mainCleanupFuncName, globalState->metalCache->i64Type, {});
   declareAndDefineExtraFunction(
       globalState, mainCleanupFuncProto, mainCleanupFuncName->name,
       [globalState](FunctionState* functionState, LLVMBuilderRef builder) {

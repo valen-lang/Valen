@@ -21,9 +21,9 @@ Ref translateWhile(
             parentBlockState->addressNumberer, parentBlockState, std::optional(loopEnd));
         auto resultRef =
             translateExpression(
-                globalState, functionState, &childBlockState, bodyBuilder, whiile->bodyExpr);
-        globalState->getRegion(globalState->metalCache->voidRef)
-            ->checkValidReference(FL(), functionState, bodyBuilder, false, globalState->metalCache->voidRef, resultRef);
+                globalState, functionState, &childBlockState, bodyBuilder, whiile->block);
+        globalState->getRegion(globalState->metalCache->voidType)
+            ->checkValidReference(FL(), functionState, bodyBuilder, false, globalState->metalCache->voidType, resultRef);
       });
   // Nobody should use a result of a while, so we'll just return a Never.
   return makeVoidRef(globalState);

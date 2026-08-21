@@ -3,30 +3,30 @@
 #include "../../../region/iregion.h"
 #include "../../../globalstate.h"
 
-Ref toRef(IRegion* region, Reference* refM, LLVMValueRef exprLE) {
+Ref toRef(IRegion* region, Kind* refM, LLVMValueRef exprLE) {
   assert(LLVMTypeOf(exprLE) == region->translateType(refM));
   return Ref(refM, exprLE);
 }
 
-Ref toRef(IRegion* region, Reference* refM, WrapperPtrLE wrapperPtr) {
+Ref toRef(IRegion* region, Kind* refM, WrapperPtrLE wrapperPtr) {
   assert(refM == wrapperPtr.refM);
   assert(LLVMTypeOf(wrapperPtr.refLE) == region->translateType(refM));
   return Ref(refM, wrapperPtr.refLE);
 }
 
-Ref toRef(IRegion* region, Reference* refM, InterfaceFatPtrLE interfaceFatPtrLE) {
+Ref toRef(IRegion* region, Kind* refM, InterfaceFatPtrLE interfaceFatPtrLE) {
   assert(refM == interfaceFatPtrLE.refM);
   assert(LLVMTypeOf(interfaceFatPtrLE.refLE) == region->translateType(refM));
   return Ref(refM, interfaceFatPtrLE.refLE);
 }
 
-Ref toRef(IRegion* region, Reference* refM, WeakFatPtrLE weakFatPtrLE) {
+Ref toRef(IRegion* region, Kind* refM, WeakFatPtrLE weakFatPtrLE) {
   assert(refM == weakFatPtrLE.refM);
   assert(LLVMTypeOf(weakFatPtrLE.refLE) == region->translateType(refM));
   return Ref(refM, weakFatPtrLE.refLE);
 }
 
-Ref toRef(GlobalState* globalState, Reference* refM, LiveRef liveRef) {
+Ref toRef(GlobalState* globalState, Kind* refM, LiveRef liveRef) {
   assert(refM == liveRef.refM);
   return toRef(globalState->getRegion(refM), refM, liveRef.refLE);
 }
@@ -36,7 +36,7 @@ LiveRef toLiveRef(WrapperPtrLE wrapperPtrLE) {
   return LiveRef(wrapperPtrLE.refM, wrapperPtrLE.refLE);
 }
 
-WrapperPtrLE toWrapperPtr(FunctionState* functionState, LLVMBuilderRef builder, KindStructs* kindStructs, Reference* refMT, LiveRef liveRef) {
+WrapperPtrLE toWrapperPtr(FunctionState* functionState, LLVMBuilderRef builder, KindStructs* kindStructs, Kind* refMT, LiveRef liveRef) {
   return kindStructs->makeWrapperPtr(FL(), functionState, builder, refMT, liveRef.refLE);
 }
 
@@ -46,7 +46,7 @@ LiveRef toLiveRef(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Ref regionInstanceRef,
-    Reference* refM,
+    Kind* refM,
     LLVMValueRef refLE) {
   return globalState->getRegion(refM)->wrapToLiveRef(
       checkerAFL, functionState, builder, regionInstanceRef, refM, refLE);
@@ -58,9 +58,8 @@ LiveRef toLiveRef(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Ref regionInstanceRef,
-    Reference* refM,
-    Ref ref,
-    bool knownLive) {
+    Kind* refM,
+    Ref ref) {
   return globalState->getRegion(refM)->checkRefLive(
       checkerAFL, functionState, builder, regionInstanceRef, refM, ref, knownLive);
 }
@@ -71,7 +70,7 @@ LLVMValueRef checkValidInternalReference(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     bool expectLive,
-    Reference* refM,
+    Kind* refM,
     Ref ref) {
   return globalState->getRegion(refM)
       ->checkValidReference(checkerAFL, functionState, builder, expectLive, refM, ref);

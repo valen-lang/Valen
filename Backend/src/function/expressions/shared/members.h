@@ -18,11 +18,11 @@ Ref loadMember(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Ref structRegionInstanceRef,
-    Reference* structRefM,
+    Kind* structRefM,
     LiveRef structRef,
-    Reference* memberType,
+    Kind* memberType,
     int memberIndex,
-    Reference* resultType,
+    Kind* resultType,
     const std::string& memberName);
 
 Ref swapMember(
@@ -31,7 +31,7 @@ Ref swapMember(
     LLVMBuilderRef builder,
     Ref structRegionInstanceRef,
     StructDefinition* structDefM,
-    Reference* structRefMT,
+    Kind* structRefMT,
     LiveRef structRef,
     int memberIndex,
     const std::string& memberName,

@@ -83,12 +83,12 @@ struct InBoundsLE {
 
 
 struct WrapperPtrLE {
-  Reference* const refM;
+  Kind* const refM;
   LLVMTypeRef wrapperStructLT;
   // TODO rename to ptrLE
   LLVMValueRef const refLE;
 
-  WrapperPtrLE(Reference* refM_, LLVMTypeRef wrapperStructLT_, LLVMValueRef refLE_)
+  WrapperPtrLE(Kind* refM_, LLVMTypeRef wrapperStructLT_, LLVMValueRef refLE_)
       : refM(refM_), wrapperStructLT(wrapperStructLT_), refLE(refLE_) {
     assert(LLVMTypeOf(refLE) == LLVMPointerType(wrapperStructLT, 0));
   }
@@ -110,43 +110,39 @@ struct ControlBlockPtrLE {
 
 
 struct InterfaceFatPtrLE {
-  Reference* const refM;
+  Kind* const refM;
   // TODO rename to ptrLE
   LLVMValueRef const refLE;
 
-  InterfaceFatPtrLE(Reference* refM_, LLVMValueRef refLE_)
+  InterfaceFatPtrLE(Kind* refM_, LLVMValueRef refLE_)
       : refM(refM_), refLE(refLE_) { }
 };
 
 
 struct WeakFatPtrLE {
-  Reference* const refM;
+  Kind* const refM;
   // TODO rename to ptrLE
   LLVMValueRef const refLE;
 
-  WeakFatPtrLE(Reference* refM_, LLVMValueRef refLE_)
+  WeakFatPtrLE(Kind* refM_, LLVMValueRef refLE_)
       : refM(refM_), refLE(refLE_) { }
 };
 
 // Represents the result of a previous instruction.
 struct Ref {
-  Ref(Reference* refM_, LLVMValueRef refLE_) : refM(refM_), refLE(refLE_) {}
-
-  void assertOwnership(Ownership ownership) {
-    assert(refM->ownership == ownership);
-  }
+  Ref(Kind* refM_, LLVMValueRef refLE_) : refM(refM_), refLE(refLE_) {}
 
 private:
   // This is private to keep us from just grabbing this to hand in to checkValidReference.
   // We should instead always pipe through the code the actual expected type.
-  Reference* refM;
+  Kind* refM;
 
   LLVMValueRef refLE;
 
-  friend std::tuple<Reference*, LLVMValueRef> megaGetRefInnardsForChecking(Ref ref);
-  friend std::tuple<Reference*, LLVMValueRef> hgmGetRefInnardsForChecking(Ref ref);
-  friend std::tuple<Reference*, LLVMValueRef> lgtGetRefInnardsForChecking(Ref ref);
-  friend std::tuple<Reference*, LLVMValueRef> wrcGetRefInnardsForChecking(Ref ref);
+  friend std::tuple<Kind*, LLVMValueRef> megaGetRefInnardsForChecking(Ref ref);
+  friend std::tuple<Kind*, LLVMValueRef> hgmGetRefInnardsForChecking(Ref ref);
+  friend std::tuple<Kind*, LLVMValueRef> lgtGetRefInnardsForChecking(Ref ref);
+  friend std::tuple<Kind*, LLVMValueRef> wrcGetRefInnardsForChecking(Ref ref);
 
   friend void buildPrint(GlobalState* globalState, LLVMBuilderRef builder, Ref ref);
   friend void buildPrintToStderr(GlobalState* globalState, LLVMBuilderRef builder, Ref ref);
@@ -176,22 +172,22 @@ private:
 // This isn't necessarily the same LLVMValueRef as would be in a Ref. It's up to the particular
 // region to decide what would be in here. It's probably either a WrapperPtrLE or a raw pointer.
 struct LiveRef {
-  Reference* const refM;
+  Kind* const refM;
   // TODO rename to ptrLE
   LLVMValueRef const refLE;
 
-  LiveRef(Reference* refM_, LLVMValueRef refLE_)
+  LiveRef(Kind* refM_, LLVMValueRef refLE_)
   : refM(refM_), refLE(refLE_) { }
 };
 
-Ref toRef(IRegion* region, Reference* refM, LLVMValueRef exprLE);
-Ref toRef(IRegion* region, Reference* refM, WrapperPtrLE exprLE);
-Ref toRef(IRegion* region, Reference* refM, InterfaceFatPtrLE exprLE);
-Ref toRef(IRegion* region, Reference* refM, WeakFatPtrLE exprLE);
-Ref toRef(GlobalState* globalState, Reference* refM, LiveRef exprLE);
+Ref toRef(IRegion* region, Kind* refM, LLVMValueRef exprLE);
+Ref toRef(IRegion* region, Kind* refM, WrapperPtrLE exprLE);
+Ref toRef(IRegion* region, Kind* refM, InterfaceFatPtrLE exprLE);
+Ref toRef(IRegion* region, Kind* refM, WeakFatPtrLE exprLE);
+Ref toRef(GlobalState* globalState, Kind* refM, LiveRef exprLE);
 
 
-WrapperPtrLE toWrapperPtr(FunctionState* functionState, LLVMBuilderRef builder, KindStructs* kindStructs, Reference* refMT, LiveRef liveRef);
+WrapperPtrLE toWrapperPtr(FunctionState* functionState, LLVMBuilderRef builder, KindStructs* kindStructs, Kind* refMT, LiveRef liveRef);
 
 LiveRef toLiveRef(WrapperPtrLE wrapperPtrLE);
 LiveRef toLiveRef(
@@ -200,9 +196,9 @@ LiveRef toLiveRef(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Ref regionInstanceRef,
-    Reference* refM,
+    Kind* refM,
     LLVMValueRef untrustedRefLE);
-LiveRef toLiveRef(AreaAndFileAndLine checkerAFL, GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, Ref regionInstanceRef, Reference* refM, Ref ref, bool knownLive);
+LiveRef toLiveRef(AreaAndFileAndLine checkerAFL, GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, Ref regionInstanceRef, Kind* refM, Ref ref);
 
 
 
@@ -212,7 +208,7 @@ LLVMValueRef checkValidInternalReference(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     bool expectLive,
-    Reference* refM,
+    Kind* refM,
     Ref ref);
 
 

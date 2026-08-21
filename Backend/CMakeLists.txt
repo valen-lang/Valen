@@ -47,7 +47,6 @@ set(BACKEND_LIB_SRCS
 		src/ffi.cpp
 		src/globalstate.cpp
 		src/metal/ast.cpp
-		src/metal/instructions.cpp
 		src/metal/metal_cache_ffi.cpp
 		src/metal/types.cpp
 		src/translatetype.cpp

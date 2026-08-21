@@ -191,7 +191,7 @@ RawFuncPtrLE declareExternFunction(
     Package* package,
     Prototype* prototypeM);
 
-//LLVMTypeRef translateExternType(GlobalState* globalState, Reference* reference);
+//LLVMTypeRef translateExternType(GlobalState* globalState, Kind* reference);
 
 
 void declareExtraFunction(
@@ -210,8 +210,8 @@ void declareAndDefineExtraFunction(
     std::string llvmName,
     std::function<void(FunctionState*, LLVMBuilderRef)> definer);
 
-bool typeNeedsPointerParameter(GlobalState* globalState, Reference* returnMT);
-bool translatesToCVoid(GlobalState* globalState, Reference* returnMT);
-LLVMTypeRef translateExternReturnType(GlobalState* globalState, Reference* returnMT);
+bool typeNeedsPointerParameter(GlobalState* globalState, Kind* returnMT);
+bool translatesToCVoid(GlobalState* globalState, Kind* returnMT);
+LLVMTypeRef translateExternReturnType(GlobalState* globalState, Kind* returnMT);
 
 #endif

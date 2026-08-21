@@ -34,8 +34,8 @@ Ref buildIfElseV(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Ref conditionRef,
-    Reference* thenResultMT,
-    Reference* elseResultMT,
+    Kind* thenResultMT,
+    Kind* elseResultMT,
     std::function<Ref(LLVMBuilderRef)> buildThen,
     std::function<Ref(LLVMBuilderRef)> buildElse);
 

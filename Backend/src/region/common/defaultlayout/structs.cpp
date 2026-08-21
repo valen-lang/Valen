@@ -412,7 +412,7 @@ void KindStructs::defineStaticSizedArray(
   }
 }
 
-WeakFatPtrLE KindStructs::makeWeakFatPtr(Reference* referenceM_, LLVMValueRef ptrLE) {
+WeakFatPtrLE KindStructs::makeWeakFatPtr(Kind* referenceM_, LLVMValueRef ptrLE) {
   if (auto structKindM = dynamic_cast<StructKind*>(referenceM_->kind)) {
     assert(LLVMTypeOf(ptrLE) == getStructWeakRefStruct(structKindM));
   } else if (auto interfaceKindM = dynamic_cast<InterfaceKind*>(referenceM_->kind)) {
@@ -432,7 +432,7 @@ WeakFatPtrLE KindStructs::makeWeakFatPtr(Reference* referenceM_, LLVMValueRef pt
 WeakFatPtrLE KindStructs::downcastWeakFatPtr(
     LLVMBuilderRef builder,
     StructKind* targetStructKind,
-    Reference* targetRefMT,
+    Kind* targetRefMT,
     LLVMValueRef sourceWeakFatPtrLE) {
   assert(targetRefMT->kind == targetStructKind);
   auto weakRefVoidStructLT = getWeakVoidRefStruct(targetStructKind);
@@ -461,7 +461,7 @@ ControlBlockPtrLE KindStructs::getConcreteControlBlockPtr(
     AreaAndFileAndLine from,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* reference,
+    Kind* reference,
     WrapperPtrLE wrapperPtrLE) {
   auto controlBlock = getControlBlock(reference->kind);
   // Control block is always the 0th element of every concrete struct.
@@ -476,7 +476,7 @@ ControlBlockPtrLE KindStructs::getConcreteControlBlockPtrWithoutChecking(
     AreaAndFileAndLine from,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* reference,
+    Kind* reference,
     WrapperPtrLE wrapperPtrLE) {
   // Control block is always the 0th element of every concrete struct.
   return makeControlBlockPtrWithoutChecking(
@@ -490,7 +490,7 @@ WrapperPtrLE KindStructs::makeWrapperPtr(
     AreaAndFileAndLine checkerAFL,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* referenceM,
+    Kind* referenceM,
     LLVMValueRef ptrLE) {
   assert(ptrLE != nullptr);
   Kind* kind = referenceM->kind;
@@ -521,7 +521,7 @@ InterfaceFatPtrLE KindStructs::makeInterfaceFatPtr(
     AreaAndFileAndLine checkerAFL,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* referenceM_,
+    Kind* referenceM_,
     LLVMValueRef ptrLE) {
   auto interfaceFatPtrLE =
       makeInterfaceFatPtrWithoutChecking(checkerAFL, functionState, builder, referenceM_, ptrLE);
@@ -536,7 +536,7 @@ InterfaceFatPtrLE KindStructs::makeInterfaceFatPtrWithoutChecking(
     AreaAndFileAndLine checkerAFL,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* referenceM_,
+    Kind* referenceM_,
     LLVMValueRef ptrLE) {
   auto interfaceKindM = dynamic_cast<InterfaceKind*>(referenceM_->kind);
   assert(interfaceKindM);
@@ -626,7 +626,7 @@ ControlBlockPtrLE KindStructs::getControlBlockPtr(
     LLVMBuilderRef builder,
     // This will be a pointer if a mutable struct, or a fat ref if an interface.
     Ref ref,
-    Reference* referenceM) {
+    Kind* referenceM) {
   auto kindM = referenceM->kind;
   if (dynamic_cast<InterfaceKind*>(kindM)) {
     auto referenceLE =
@@ -674,7 +674,7 @@ ControlBlockPtrLE KindStructs::getControlBlockPtr(
     LLVMBuilderRef builder,
     // This will be a pointer if a mutable struct, or a fat ref if an interface.
     LLVMValueRef ref,
-    Reference* referenceM) {
+    Kind* referenceM) {
   auto kindM = referenceM->kind;
   if (dynamic_cast<InterfaceKind*>(kindM)) {
     auto referenceLE = makeInterfaceFatPtr(from, functionState, builder, referenceM, ref);
@@ -702,7 +702,7 @@ ControlBlockPtrLE KindStructs::getControlBlockPtrWithoutChecking(
     LLVMBuilderRef builder,
     // This will be a pointer if a mutable struct, or a fat ref if an interface.
     LLVMValueRef ref,
-    Reference* referenceM) {
+    Kind* referenceM) {
   auto kindM = referenceM->kind;
   if (dynamic_cast<InterfaceKind*>(kindM)) {
     auto referenceLE = makeInterfaceFatPtrWithoutChecking(from, functionState, builder, referenceM, ref);
@@ -739,7 +739,7 @@ LLVMValueRef KindStructs::getStructContentsPtr(
 LLVMValueRef KindStructs::getVoidPtrFromInterfacePtr(
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* virtualParamMT,
+    Kind* virtualParamMT,
     InterfaceFatPtrLE virtualArgLE) {
   assert(LLVMTypeOf(virtualArgLE.refLE) == globalState->getRegion(virtualParamMT)->translateType(virtualParamMT));
   return LLVMBuildPointerCast(
@@ -767,7 +767,7 @@ LLVMValueRef KindStructs::getObjIdFromControlBlockPtr(
       "objId");
 }
 
-LLVMValueRef KindStructs::downcastPtr(LLVMBuilderRef builder, Reference* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE) {
+LLVMValueRef KindStructs::downcastPtr(LLVMBuilderRef builder, Kind* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE) {
   auto resultStructRefLT = globalState->getRegion(resultStructRefMT)->translateType(resultStructRefMT);
   auto resultStructRefLE =
       LLVMBuildPointerCast(builder, unknownPossibilityPtrLE, resultStructRefLT, "subtypePtr");
@@ -778,9 +778,9 @@ LLVMValueRef KindStructs::downcastPtr(LLVMBuilderRef builder, Reference* resultS
 // See CRCISFAORC for why we don't take in a mutability.
 LLVMValueRef KindStructs::getStrongRcPtrFromControlBlockPtr(
     LLVMBuilderRef builder,
-    Reference* refM,
+    Kind* refM,
     ControlBlockPtrLE controlBlockPtr) {
-  assert(refM->ownership == Ownership::MUTABLE_SHARE || refM->ownership == Ownership::IMMUTABLE_SHARE);
+  assert(dynamic_cast<ShareRef*>(refM) != nullptr);
 
   return LLVMBuildStructGEP2(
       builder,
@@ -791,7 +791,7 @@ LLVMValueRef KindStructs::getStrongRcPtrFromControlBlockPtr(
 }
 
 WrapperPtrLE KindStructs::makeWrapperPtrWithoutChecking(
-    Reference* referenceM,
+    Kind* referenceM,
     LLVMValueRef ptrLE) {
   assert(ptrLE != nullptr);
 

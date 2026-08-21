@@ -18,7 +18,7 @@ Ref translateNewRuntimeSizedArray(
     NewRuntimeSizedArray* constructRuntimeSizedArray) {
 
   auto sizeKind = constructRuntimeSizedArray->sizeKind;
-  auto sizeExpr = constructRuntimeSizedArray->sizeExpr;
+  auto sizeExpr = constructRuntimeSizedArray->capacityExpr;
   auto sizeType = constructRuntimeSizedArray->sizeType;
   auto elementType = constructRuntimeSizedArray->elementType;
   auto arrayRefType = constructRuntimeSizedArray->arrayRefType;

@@ -33,16 +33,16 @@ ValeFuncPtrLE declareFunction(
   return valeFunctionL;
 }
 
-bool translatesToCVoid(GlobalState* globalState, Reference* returnMT) {
-  if (returnMT == globalState->metalCache->neverRef) {
+bool translatesToCVoid(GlobalState* globalState, Kind* returnMT) {
+  if (returnMT == globalState->metalCache->neverType) {
     return true;
-  } else if (returnMT == globalState->metalCache->voidRef) {
+  } else if (returnMT == globalState->metalCache->voidType) {
     return true;
   } else {
     return false;
   }
 }
-bool typeNeedsPointerParameter(GlobalState* globalState, Reference* returnMT) {
+bool typeNeedsPointerParameter(GlobalState* globalState, Kind* returnMT) {
   if (translatesToCVoid(globalState, returnMT)) {
     return false;
   }
@@ -54,10 +54,10 @@ bool typeNeedsPointerParameter(GlobalState* globalState, Reference* returnMT) {
   }
 }
 
-LLVMTypeRef translateExternReturnType(GlobalState* globalState, Reference* returnMT) {
-  if (returnMT == globalState->metalCache->neverRef) {
+LLVMTypeRef translateExternReturnType(GlobalState* globalState, Kind* returnMT) {
+  if (returnMT == globalState->metalCache->neverType) {
     return LLVMVoidTypeInContext(globalState->context);
-  } else if (returnMT == globalState->metalCache->voidRef) {
+  } else if (returnMT == globalState->metalCache->voidType) {
     return LLVMVoidTypeInContext(globalState->context);
   } else {
     auto logicalReturnTypeL = globalState->getRegion(returnMT)->getExternalType(returnMT);
@@ -157,7 +157,7 @@ void exportFunction(GlobalState* globalState, Package* package, const std::strin
   buildFlare(FL(), globalState, &functionState, builder, "Done calling vale function ", prototypeM->name->name);
   buildFlare(FL(), globalState, &functionState, builder, "Resuming export function ", functionState.containingFuncName);
 
-  if (prototypeM->returnType == globalState->metalCache->voidRef) {
+  if (prototypeM->returnType == globalState->metalCache->voidType) {
     LLVMBuildRetVoid(builder);
   } else {
     auto valeReturnRef = valeReturnRefOrVoid;

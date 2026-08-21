@@ -13,23 +13,23 @@ Ref translateInterfaceCall(
     LLVMBuilderRef builder,
     InterfaceCall* call) {
 
-  auto argExprs = call->argExprs;
+  auto argExprs = call->args;
   auto virtualParamIndex = call->virtualParamIndex;
   auto interfaceRef = call->interfaceRef;
   auto indexInEdge = call->indexInEdge;
   auto functionType = call->functionType;
 
   auto argExprsLE =
-      translateExpressions(globalState, functionState, blockState, builder, call->argExprs);
+      translateExpressions(globalState, functionState, blockState, builder, call->args);
 
   buildFlare(FL(), globalState, functionState, builder);
 
   auto argsLE = std::vector<Ref>{};
-  argsLE.reserve(call->argExprs.size());
-  for (int i = 0; i < call->argExprs.size(); i++) {
+  argsLE.reserve(call->args.size());
+  for (int i = 0; i < call->args.size(); i++) {
     buildFlare(FL(), globalState, functionState, builder);
 
-    auto argLE = translateExpression(globalState, functionState, blockState, builder, call->argExprs[i]);
+    auto argLE = translateExpression(globalState, functionState, blockState, builder, call->args[i]);
     globalState->getRegion(call->functionType->params[i])
         ->checkValidReference(FL(), functionState, builder, false, call->functionType->params[i], argLE);
     argsLE.push_back(argLE);
@@ -63,10 +63,10 @@ Ref translateInterfaceCall(
   globalState->getRegion(call->functionType->returnType)
       ->checkValidReference(FL(), functionState, builder, false, call->functionType->returnType, resultLE);
 
-  if (call->functionType->returnType->kind == globalState->metalCache->never) {
+  if (call->functionType->returnType->kind == globalState->metalCache->neverType) {
     return toRef(
-        globalState->getRegion(globalState->metalCache->neverRef),
-        globalState->metalCache->neverRef,
+        globalState->getRegion(globalState->metalCache->neverType),
+        globalState->metalCache->neverType,
         LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL)));
   } else {
     return resultLE;

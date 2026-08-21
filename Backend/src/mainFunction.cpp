@@ -41,7 +41,7 @@ Prototype* makeValeMainFunction(
 
   auto valeMainName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__Vale_Main");
   auto valeMainProto =
-      globalState->metalCache->getPrototype(valeMainName, globalState->metalCache->i64Ref, {});
+      globalState->metalCache->getPrototype(valeMainName, globalState->metalCache->i64Type, {});
   declareAndDefineExtraFunction(
       globalState, valeMainProto, valeMainName->name,
       [globalState, stringSetupFunctionL, mainSetupFuncProto, int64LT, userMainFunctionPrototype, mainCleanupFunctionPrototype](
@@ -124,16 +124,16 @@ Prototype* makeValeMainFunction(
         }
         buildFlare(FL(), globalState, functionState, entryBuilder);
 
-        if (userMainFunctionPrototype->returnType->kind == globalState->metalCache->vooid) {
+        if (userMainFunctionPrototype->returnType == globalState->metalCache->voidType) {
           buildFlare(FL(), globalState, functionState, entryBuilder);
           LLVMBuildRet(entryBuilder, LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 0, true));
-        } else if (userMainFunctionPrototype->returnType->kind == globalState->metalCache->i64) {
+        } else if (userMainFunctionPrototype->returnType == globalState->metalCache->i64Type) {
           buildFlare(FL(), globalState, functionState, entryBuilder, userMainResultLE);
           LLVMBuildRet(entryBuilder, userMainResultLE);
-        } else if (userMainFunctionPrototype->returnType->kind == globalState->metalCache->i32) {
+        } else if (userMainFunctionPrototype->returnType == globalState->metalCache->i32Type) {
           buildFlare(FL(), globalState, functionState, entryBuilder, userMainResultLE);
           LLVMBuildRet(entryBuilder, LLVMBuildZExt(entryBuilder, userMainResultLE, LLVMInt64TypeInContext(globalState->context), "extended"));
-        } else if (userMainFunctionPrototype->returnType->kind == globalState->metalCache->never) {
+        } else if (userMainFunctionPrototype->returnType == globalState->metalCache->neverType) {
           buildFlare(FL(), globalState, functionState, entryBuilder);
           LLVMBuildRet(entryBuilder, LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 0, true));
         } else {

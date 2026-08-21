@@ -20,14 +20,14 @@ public:
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* desiredStructMT,
+      Kind* desiredStructMT,
       const std::vector<Ref>& memberRefs) = 0;
 
   virtual WrapperPtrLE lockWeakRef(
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* refM,
+      Kind* refM,
       Ref weakRefLE,
       bool weakRefKnownLive) = 0;
 
@@ -35,36 +35,36 @@ public:
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* sourceRef,
+      Kind* sourceRef,
       Ref expr) = 0;
 
   virtual void dealias(
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* sourceMT,
+      Kind* sourceMT,
       Ref sourceRef) = 0;
 
   virtual void storeMember(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* structRefMT,
+      Kind* structRefMT,
       LiveRef structRef,
       int memberIndex,
       const std::string& memberName,
-      Reference* newMemberRefMT,
+      Kind* newMemberRefMT,
       Ref newMemberRef) = 0;
 
   virtual Ref loadMember(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* structRefMT,
+      Kind* structRefMT,
       LiveRef structRef,
       int memberIndex,
-      Reference* expectedMemberType,
-      Reference* targetMemberType,
+      Kind* expectedMemberType,
+      Kind* targetMemberType,
       const std::string& memberName) = 0;
 
   virtual Ref upcastWeak(
@@ -72,19 +72,19 @@ public:
       LLVMBuilderRef builder,
       WeakFatPtrLE sourceRefLE,
       StructKind* sourceStructKindM,
-      Reference* sourceStructTypeM,
+      Kind* sourceStructTypeM,
       InterfaceKind* targetInterfaceKindM,
-      Reference* targetInterfaceTypeM) = 0;
+      Kind* targetInterfaceTypeM) = 0;
 
   virtual Ref upcast(
       FunctionState* functionState,
       LLVMBuilderRef builder,
 
-      Reference* sourceStructMT,
+      Kind* sourceStructMT,
       StructKind* sourceStructKindM,
       Ref sourceRefLE,
 
-      Reference* targetInterfaceTypeM,
+      Kind* targetInterfaceTypeM,
       InterfaceKind* targetInterfaceKindM) = 0;
 
   virtual Ref lockWeak(
@@ -92,9 +92,9 @@ public:
       LLVMBuilderRef builder,
       bool thenResultIsNever,
       bool elseResultIsNever,
-      Reference* resultOptTypeM,
-      Reference* constraintRefM,
-      Reference* sourceWeakRefMT,
+      Kind* resultOptTypeM,
+      Kind* constraintRefM,
+      Kind* sourceWeakRefMT,
       Ref sourceWeakRefLE,
       bool weakRefKnownLive,
       std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
@@ -103,8 +103,8 @@ public:
   virtual Ref asSubtype(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* resultOptTypeM,
-      Reference* sourceInterfaceRefMT,
+      Kind* resultOptTypeM,
+      Kind* sourceInterfaceRefMT,
       Ref sourceInterfaceRefLE,
       bool sourceRefKnownLive,
       Kind* targetKind,
@@ -115,7 +115,7 @@ public:
       Ref regionInstanceRef,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* referenceM,
+      Kind* referenceM,
       StaticSizedArrayT* kindM) = 0;
 
   virtual LiveRef checkRefLive(
@@ -123,7 +123,7 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* refMT,
+      Kind* refMT,
       Ref ref,
       bool refKnownLive) = 0;
 
@@ -132,7 +132,7 @@ public:
         FunctionState* functionState,
         LLVMBuilderRef builder,
         Ref regionInstanceRef,
-        Reference* refMT,
+        Kind* refMT,
         LLVMValueRef ref) = 0;
 
   virtual LiveRef preCheckBorrow(
@@ -140,7 +140,7 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* refMT,
+      Kind* refMT,
       Ref ref,
       bool refKnownLive) = 0;
 
@@ -149,31 +149,31 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* refMT,
+      Kind* refMT,
       Ref ref,
-      Reference* targetRefMT) = 0;
+      Kind* targetRefMT) = 0;
 
   virtual LiveRef immutabilify(
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* refMT,
+      Kind* refMT,
       Ref ref,
-      Reference* targetRefMT) = 0;
+      Kind* targetRefMT) = 0;
 
   virtual Ref getRuntimeSizedArrayLength(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* rsaRefMT,
+      Kind* rsaRefMT,
       LiveRef arrayRef) = 0;
 
   virtual Ref getRuntimeSizedArrayCapacity(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* rsaRefMT,
+      Kind* rsaRefMT,
       LiveRef arrayRef) = 0;
 
   virtual LLVMValueRef checkValidReference(
@@ -181,14 +181,14 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       bool expectLive,
-      Reference* refM,
+      Kind* refM,
       Ref ref) = 0;
 
   LLVMValueRef checkValidReference(
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* refM,
+      Kind* refM,
       LiveRef liveRef) {
     auto ref = toRef(this, refM, liveRef.refLE);
     return checkValidReference(checkerAFL, functionState, builder, true, refM, ref);
@@ -198,19 +198,19 @@ public:
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* refM,
+      Kind* refM,
       Ref ref) = 0;
 
-  virtual LLVMTypeRef translateType(Reference* referenceM) = 0;
+  virtual LLVMTypeRef translateType(Kind* referenceM) = 0;
 
 
   virtual std::string getExportName(
       Package* package,
-      Reference* reference,
+      Kind* reference,
       bool includeProjectName) = 0;
 
 //  virtual std::string getMemberArbitraryRefNameCSeeMMEDT(
-//      Reference* refMT) = 0;
+//      Kind* refMT) = 0;
   virtual std::string generateStructDefsC(
     Package* currentPackage,
       StructDefinition* refMT) = 0;
@@ -251,20 +251,20 @@ public:
   virtual void defineExtraFunctions() = 0;
 
 
-  virtual Ref weakAlias(FunctionState* functionState, LLVMBuilderRef builder, Reference* sourceRefMT, Reference* targetRefMT, Ref sourceRef) = 0;
+  virtual Ref weakAlias(FunctionState* functionState, LLVMBuilderRef builder, Kind* sourceRefMT, Kind* targetRefMT, Ref sourceRef) = 0;
 
   virtual void discardOwningRef(
       AreaAndFileAndLine from,
       FunctionState* functionState,
       BlockState* blockState,
       LLVMBuilderRef builder,
-      Reference* sourceMT,
+      Kind* sourceMT,
       LiveRef sourceRef) = 0;
 
   virtual void noteWeakableDestroyed(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* refM,
+      Kind* refM,
       ControlBlockPtrLE controlBlockPtrLE) = 0;
 
   // Gets the itable PTR and the new value that we should put into the virtual param's slot
@@ -272,13 +272,13 @@ public:
   virtual std::tuple<LLVMValueRef, LLVMValueRef> explodeInterfaceRef(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* virtualParamMT,
+      Kind* virtualParamMT,
       Ref virtualArgRef) = 0;
 
   virtual ValeFuncPtrLE getInterfaceMethodFunctionPtr(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* virtualParamMT,
+      Kind* virtualParamMT,
       Ref virtualArgRef,
       int indexInEdge) = 0;
 
@@ -286,28 +286,27 @@ public:
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* weakRefMT,
+      Kind* weakRefMT,
       Ref weakRef) = 0;
 
   virtual void discardWeakRef(
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* weakRefMT,
+      Kind* weakRefMT,
       Ref weakRef) = 0;
 
   virtual Ref getIsAliveFromWeakRef(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* weakRefM,
-      Ref weakRef,
-      bool knownLive) = 0;
+      Kind* weakRefM,
+      Ref weakRef) = 0;
 
   virtual LoadResult loadElementFromRSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* rsaRefMT,
+      Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef structRef,
       InBoundsLE indexLE) = 0;
@@ -316,7 +315,7 @@ public:
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* refMT,
+      Kind* refMT,
       LiveRef ref) = 0;
 
 
@@ -324,7 +323,7 @@ public:
       Ref regionInstanceRef,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* rsaMT,
+      Kind* rsaMT,
       RuntimeSizedArrayT* runtimeSizedArrayT,
       Ref capacityRef,
       const std::string& typeName) = 0;
@@ -333,7 +332,7 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* rsaRefMT,
+      Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef arrayRef,
       InBoundsLE sizeLE,
@@ -343,7 +342,7 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* rsaRefMT,
+      Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef arrayRef,
       InBoundsLE indexLE) = 0;
@@ -352,7 +351,7 @@ public:
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* ssaRefMT,
+      Kind* ssaRefMT,
       StaticSizedArrayT* ssaMT,
       LiveRef structRef,
       InBoundsLE indexLE,
@@ -361,7 +360,7 @@ public:
   virtual Ref deinitializeElementFromSSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* ssaRefMT,
+      Kind* ssaRefMT,
       StaticSizedArrayT* ssaMT,
       LiveRef structRef,
       InBoundsLE indexLE) = 0;
@@ -369,7 +368,7 @@ public:
   virtual Ref storeElementInRSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* rsaRefMT,
+      Kind* rsaRefMT,
       RuntimeSizedArrayT* rsaMT,
       LiveRef structRef,
       InBoundsLE indexLE,
@@ -378,27 +377,27 @@ public:
   virtual void checkInlineStructType(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* refMT,
+      Kind* refMT,
       Ref ref) = 0;
 
   virtual Ref upgradeLoadResultToRefWithTargetOwnership(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* sourceType,
-      Reference* targetType,
+      Kind* sourceType,
+      Kind* targetType,
       LoadResult sourceRef,
       bool resultKnownLive) = 0;
 
   // For instance regions, this will return the handle's type.
   // The C-ABI type a ref of this region crosses the FFI boundary as.
-  virtual LLVMTypeRef getExternalType(Reference* refMT) = 0;
+  virtual LLVMTypeRef getExternalType(Kind* refMT) = 0;
 
   virtual LoadResult loadElementFromSSA(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Ref regionInstanceRef,
-      Reference* ssaRefMT,
+      Kind* ssaRefMT,
       StaticSizedArrayT* ssaMT,
       LiveRef structRef,
       InBoundsLE indexRef) = 0;
@@ -407,26 +406,26 @@ public:
   virtual Ref receiveAndDecryptFamiliarReference(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* sourceRefMT,
+      Kind* sourceRefMT,
       LLVMValueRef sourceRefLE) = 0;
 
   // Encrypts and sends a reference to an object in this region.
   virtual LLVMValueRef encryptAndSendFamiliarReference(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* sourceRefMT,
+      Kind* sourceRefMT,
       Ref sourceRef) = 0;
 
   virtual LLVMValueRef getStringBytesPtr(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* refMT,
+      Kind* refMT,
       Ref regionInstanceRef,
       LiveRef ref) = 0;
   virtual LLVMValueRef getStringLen(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* refMT,
+      Kind* refMT,
       Ref regionInstanceRef,
       LiveRef ref) = 0;
   // TODO:
@@ -440,26 +439,25 @@ public:
       LLVMValueRef sourceCharsPtrLE) = 0;
 
   virtual LLVMTypeRef getInterfaceMethodVirtualParamAnyType(
-      Reference* reference) = 0;
+      Kind* reference) = 0;
 
   virtual RegionId* getRegionId() = 0;
 
   virtual Weakability getKindWeakability(Kind* kind) = 0;
 
   virtual LLVMValueRef stackify(
-      FunctionState* functionState, LLVMBuilderRef builder, Local* local, Ref refToStore,
-      bool knownLive) = 0;
+      FunctionState* functionState, LLVMBuilderRef builder, Local* local, Ref refToStore) = 0;
 
   virtual Ref unstackify(FunctionState* functionState, LLVMBuilderRef builder, Local* local, LLVMValueRef localAddr) = 0;
 
   virtual Ref loadLocal(FunctionState* functionState, LLVMBuilderRef builder, Local* local, LLVMValueRef localAddr) = 0;
 
-  virtual Ref localStore(FunctionState* functionState, LLVMBuilderRef builder, Local* local, LLVMValueRef localAddr, Ref refToStore, bool knownLive) = 0;
+  virtual Ref localStore(FunctionState* functionState, LLVMBuilderRef builder, Local* local, LLVMValueRef localAddr, Ref refToStore) = 0;
 
   virtual void mainSetup(FunctionState* functionState, LLVMBuilderRef builder) = 0;
   virtual void mainCleanup(FunctionState* functionState, LLVMBuilderRef builder) = 0;
 
-  virtual Reference* getRegionRefType() = 0;
+  virtual Kind* getRegionRefType() = 0;
 
   // This is only temporarily virtual, while we're still creating fake ones on the fly.
   // Soon it'll be non-virtual, and parameters will differ by region.
@@ -474,7 +472,7 @@ LLVMValueRef checkValidReference(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     bool expectLive,
-    Reference* refM,
+    Kind* refM,
     Ref ref);
 
 LLVMValueRef checkValidReference(
@@ -483,7 +481,7 @@ LLVMValueRef checkValidReference(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     bool expectLive,
-    Reference* refM,
+    Kind* refM,
     LiveRef liveRef);
 
 

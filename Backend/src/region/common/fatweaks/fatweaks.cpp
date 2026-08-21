@@ -12,9 +12,9 @@ constexpr int WEAK_REF_MEMBER_INDEX_FOR_OBJPTR = 1;
 LLVMValueRef FatWeaks::getInnerRefFromWeakRef(
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* weakRefM,
+    Kind* weakRefM,
     WeakFatPtrLE weakFatPtrLE) {
-  assert(weakRefM->ownership == Ownership::WEAK);
+  assert(dynamic_cast<WeakRef*>(weakRefM) != nullptr);
 
 //  globalState->getRegion(refHere)->checkValidReference(FL(), functionState, builder, weakRefM, weakFatPtrLE);
 
@@ -27,9 +27,9 @@ LLVMValueRef FatWeaks::getInnerRefFromWeakRef(
 LLVMValueRef FatWeaks::getInnerRefFromWeakRefWithoutCheck(
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* weakRefM,
+    Kind* weakRefM,
     WeakFatPtrLE weakRefLE) {
-  assert(weakRefM->ownership == Ownership::WEAK);
+  assert(dynamic_cast<WeakRef*>(weakRefM) != nullptr);
 
   auto innerRefLE = LLVMBuildExtractValue(builder, weakRefLE.refLE, WEAK_REF_MEMBER_INDEX_FOR_OBJPTR, "");
   // We dont check that its valid because if it's a weak ref, it might *not* be pointing at
@@ -46,7 +46,7 @@ LLVMValueRef FatWeaks::getHeaderFromWeakRef(
 WeakFatPtrLE FatWeaks::assembleWeakFatPtr(
     FunctionState *functionState,
     LLVMBuilderRef builder,
-    Reference* weakRefMT,
+    Kind* weakRefMT,
     LLVMTypeRef weakRefStruct,
     LLVMValueRef headerLE,
     LLVMValueRef innerRefLE) {
@@ -59,7 +59,7 @@ WeakFatPtrLE FatWeaks::assembleWeakFatPtr(
 // Used in interface calling, when we dont know what the underlying struct type is yet.
 WeakFatPtrLE FatWeaks::assembleVoidStructWeakRef(
     LLVMBuilderRef builder,
-    Reference* refM,
+    Kind* refM,
     ControlBlockPtrLE controlBlockPtrLE,
     LLVMValueRef headerLE) {
   auto objVoidPtrLE =

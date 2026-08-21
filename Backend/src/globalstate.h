@@ -243,13 +243,12 @@ public:
   std::vector<LLVMTypeRef> getInterfaceFunctionPointerTypes(InterfaceKind* kind);
 
 
-  IRegion* getRegion(Reference* referenceM);
   IRegion* getRegion(Kind* kindM);
   IRegion* getRegion(RegionId* regionId);
 
   // Convenience wrapper around getRegion(refM)->translateType(refM); the
   // most common cross-region dispatch, spelled shorter.
-  LLVMTypeRef translateType(Reference* refM);
+  LLVMTypeRef translateType(Kind* refM);
 
   ValeFuncPtrLE getFunction(Prototype* proto);
   LLVMValueRef getInterfaceTablePtr(Edge* edge);

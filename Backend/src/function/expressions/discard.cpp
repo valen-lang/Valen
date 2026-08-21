@@ -12,14 +12,14 @@ Ref translateDiscard(
     BlockState* blockState,
     LLVMBuilderRef builder,
     Discard* discardM) {
-  auto sourceExpr = discardM->sourceExpr;
+  auto sourceExpr = discardM->expr;
   auto sourceResultType = discardM->sourceResultType;
 
   auto sourceRef =
       translateExpression(
           globalState, functionState, blockState, builder, sourceExpr);
 
-  if (sourceResultType == globalState->metalCache->voidRef) {
+  if (sourceResultType == globalState->metalCache->voidType) {
     return sourceRef;
   }
 

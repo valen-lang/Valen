@@ -15,26 +15,26 @@ public:
   static constexpr int VOID_INT_BITS = 37;
 
 
-  bool isPrimitive(Reference* referenceM) {
-    return dynamic_cast<Void *>(referenceM->kind) != nullptr ||
-        dynamic_cast<Int *>(referenceM->kind) != nullptr ||
-        dynamic_cast<Bool *>(referenceM->kind) != nullptr ||
-        dynamic_cast<Float *>(referenceM->kind) != nullptr;
+  bool isPrimitive(Kind* typeM) {
+    return dynamic_cast<Void *>(typeM) != nullptr ||
+        dynamic_cast<Int *>(typeM) != nullptr ||
+        dynamic_cast<Bool *>(typeM) != nullptr ||
+        dynamic_cast<Float *>(typeM) != nullptr;
   }
 
   // Phase 1 of Option A2 (vcoord-handoff.md): primitives can flow non-Own (borrow-flavor), so
   // translatePrimitive always returns the scalar type regardless of ownership. Phase 2 (when
   // `*int_ptr = 42` semantics land) will dispatch on ownership — scalar for Own, pointer for Borrow.
-  LLVMTypeRef translatePrimitive(GlobalState* globalState, Reference* referenceM) {
-    if (auto innt = dynamic_cast<Int*>(referenceM->kind)) {
+  LLVMTypeRef translatePrimitive(GlobalState* globalState, Kind* referenceM) {
+    if (auto innt = dynamic_cast<Int*>(referenceM)) {
       return LLVMIntTypeInContext(globalState->context, innt->bits);
-    } else if (auto vooid = dynamic_cast<Void*>(referenceM->kind)) {
+    } else if (auto vooid = dynamic_cast<Void*>(referenceM)) {
       return LLVMIntTypeInContext(globalState->context, VOID_INT_BITS);
-    } else if (dynamic_cast<Bool*>(referenceM->kind) != nullptr) {
+    } else if (dynamic_cast<Bool*>(referenceM) != nullptr) {
       return LLVMInt1TypeInContext(globalState->context);
-    } else if (dynamic_cast<Float*>(referenceM->kind) != nullptr) {
+    } else if (dynamic_cast<Float*>(referenceM) != nullptr) {
       return LLVMDoubleTypeInContext(globalState->context);
-    } else if (dynamic_cast<Never*>(referenceM->kind) != nullptr) {
+    } else if (dynamic_cast<Never*>(referenceM) != nullptr) {
       return LLVMArrayType(LLVMIntTypeInContext(globalState->context, NEVER_INT_BITS), 0);
     } else {
       { assert(false); throw 1337; }

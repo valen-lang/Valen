@@ -18,11 +18,11 @@ Ref buildResultOrEarlyReturnOfNever(
     LLVMBuilderRef builder,
     Prototype* prototype,
     Ref resultRef) {
-  if (prototype->returnType->kind == globalState->metalCache->never) {
+  if (prototype->returnType->kind == globalState->metalCache->neverType) {
     LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL));
-    return toRef(globalState->getRegion(globalState->metalCache->neverRef), globalState->metalCache->neverRef, globalState->neverPtrLE);
+    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverPtrLE);
   } else {
-    if (prototype->returnType == globalState->metalCache->voidRef) {
+    if (prototype->returnType == globalState->metalCache->voidType) {
       return makeVoidRef(globalState);
     } else {
       return resultRef;
@@ -271,7 +271,7 @@ Ref buildExternCall(
 
     auto strRegionInstanceRef =
         // At some point, look up the actual region instance, perhaps from the FunctionState?
-        globalState->getRegion(globalState->metalCache->mutStrRef)
+        globalState->getRegion(globalState->metalCache->mutStrType)
             ->createRegionInstanceLocal(functionState, builder);
 
     auto expectedOwnership = prototype->params[0]->ownership;
@@ -279,8 +279,8 @@ Ref buildExternCall(
 
     auto expectedType =
         expectedOwnership == Ownership::MUTABLE_SHARE ?
-        globalState->metalCache->mutStrRef :
-        globalState->metalCache->immStrRef;
+        globalState->metalCache->mutStrType :
+        globalState->metalCache->immStrType;
 
     auto strLiveRef =
         globalState->getRegion(expectedType)
@@ -314,14 +314,14 @@ Ref buildExternCall(
     // Signature: (a str, aBegin i32, aEnd i32, b str, bBegin i32, bEnd i32) -> str|bool|i32
     assert(args.size() == 6);
     auto strRegionInstanceRef =
-        globalState->getRegion(globalState->metalCache->mutStrRef)
+        globalState->getRegion(globalState->metalCache->mutStrType)
             ->createRegionInstanceLocal(functionState, builder);
     auto ownershipA = prototype->params[0]->ownership;
     auto ownershipB = prototype->params[3]->ownership;
     auto strTypeA = (ownershipA == Ownership::MUTABLE_SHARE)
-        ? globalState->metalCache->mutStrRef : globalState->metalCache->immStrRef;
+        ? globalState->metalCache->mutStrType : globalState->metalCache->immStrType;
     auto strTypeB = (ownershipB == Ownership::MUTABLE_SHARE)
-        ? globalState->metalCache->mutStrRef : globalState->metalCache->immStrRef;
+        ? globalState->metalCache->mutStrType : globalState->metalCache->immStrType;
 
     auto aLiveRef = globalState->getRegion(strTypeA)
         ->checkRefLive(FL(), functionState, builder, strRegionInstanceRef, strTypeA, args[0], false);
@@ -359,13 +359,13 @@ Ref buildExternCall(
       // output would be wrong when a or b contain internal nulls, so we
       // overwrite both halves with explicit memcpys below.
       auto totalLenLE = LLVMBuildAdd(builder, aLenLE, bLenLE, "totalLen");
-      auto strResultRef = globalState->getRegion(globalState->metalCache->mutStrRef)
+      auto strResultRef = globalState->getRegion(globalState->metalCache->mutStrType)
           ->mallocStr(strRegionInstanceRef, functionState, builder, totalLenLE, aStartLE);
-      auto strResultLiveRef = globalState->getRegion(globalState->metalCache->mutStrRef)
+      auto strResultLiveRef = globalState->getRegion(globalState->metalCache->mutStrType)
           ->checkRefLive(FL(), functionState, builder, strRegionInstanceRef,
-              globalState->metalCache->mutStrRef, strResultRef, true);
-      auto resultBaseLE = globalState->getRegion(globalState->metalCache->mutStrRef)
-          ->getStringBytesPtr(functionState, builder, globalState->metalCache->mutStrRef, strRegionInstanceRef, strResultLiveRef);
+              globalState->metalCache->mutStrType, strResultRef, true);
+      auto resultBaseLE = globalState->getRegion(globalState->metalCache->mutStrType)
+          ->getStringBytesPtr(functionState, builder, globalState->metalCache->mutStrType, strRegionInstanceRef, strResultLiveRef);
       // memcpy(resultBase, aStart, aLen)
       auto aLenI64LE = LLVMBuildZExt(builder, aLenLE, LLVMInt64TypeInContext(globalState->context), "aLenI64");
       buildCallWith64BitSExt(globalState, builder, globalState->externs->memcpy, {resultBaseLE, aStartLE, aLenI64LE});
@@ -425,11 +425,11 @@ Ref buildExternCall(
     // Signature: (s str, begin i32, end i32) -> str
     assert(args.size() == 3);
     auto strRegionInstanceRef =
-        globalState->getRegion(globalState->metalCache->mutStrRef)
+        globalState->getRegion(globalState->metalCache->mutStrType)
             ->createRegionInstanceLocal(functionState, builder);
     auto ownership = prototype->params[0]->ownership;
     auto strType = (ownership == Ownership::MUTABLE_SHARE)
-        ? globalState->metalCache->mutStrRef : globalState->metalCache->immStrRef;
+        ? globalState->metalCache->mutStrType : globalState->metalCache->immStrType;
     auto liveRef = globalState->getRegion(strType)
         ->checkRefLive(FL(), functionState, builder, strRegionInstanceRef, strType, args[0], false);
     auto baseLE = globalState->getRegion(strType)
@@ -440,14 +440,14 @@ Ref buildExternCall(
     auto lenLE = LLVMBuildSub(builder, endLE, beginLE, "len");
     auto startLE = LLVMBuildInBoundsGEP2(builder, int8LT, baseLE, &beginLE, 1, "start");
 
-    auto strResultRef = globalState->getRegion(globalState->metalCache->mutStrRef)
+    auto strResultRef = globalState->getRegion(globalState->metalCache->mutStrType)
         ->mallocStr(strRegionInstanceRef, functionState, builder, lenLE, startLE);
     // Overwrite via memcpy to guard against internal nulls in source.
-    auto strResultLiveRef = globalState->getRegion(globalState->metalCache->mutStrRef)
+    auto strResultLiveRef = globalState->getRegion(globalState->metalCache->mutStrType)
         ->checkRefLive(FL(), functionState, builder, strRegionInstanceRef,
-            globalState->metalCache->mutStrRef, strResultRef, true);
-    auto resultBaseLE = globalState->getRegion(globalState->metalCache->mutStrRef)
-        ->getStringBytesPtr(functionState, builder, globalState->metalCache->mutStrRef, strRegionInstanceRef, strResultLiveRef);
+            globalState->metalCache->mutStrType, strResultRef, true);
+    auto resultBaseLE = globalState->getRegion(globalState->metalCache->mutStrType)
+        ->getStringBytesPtr(functionState, builder, globalState->metalCache->mutStrType, strRegionInstanceRef, strResultLiveRef);
     auto lenI64LE = LLVMBuildZExt(builder, lenLE, LLVMInt64TypeInContext(globalState->context), "lenI64");
     buildCallWith64BitSExt(globalState, builder, globalState->externs->memcpy, {resultBaseLE, startLE, lenI64LE});
 
@@ -458,11 +458,11 @@ Ref buildExternCall(
     // Loads byte at s.chars[begin] and returns it zero-extended.
     assert(args.size() == 3);
     auto strRegionInstanceRef =
-        globalState->getRegion(globalState->metalCache->mutStrRef)
+        globalState->getRegion(globalState->metalCache->mutStrType)
             ->createRegionInstanceLocal(functionState, builder);
     auto ownership = prototype->params[0]->ownership;
     auto strType = (ownership == Ownership::MUTABLE_SHARE)
-        ? globalState->metalCache->mutStrRef : globalState->metalCache->immStrRef;
+        ? globalState->metalCache->mutStrType : globalState->metalCache->immStrType;
     auto liveRef = globalState->getRegion(strType)
         ->checkRefLive(FL(), functionState, builder, strRegionInstanceRef, strType, args[0], false);
     auto baseLE = globalState->getRegion(strType)
@@ -481,7 +481,7 @@ Ref buildExternCall(
     // Builds a 1-char string from the given ASCII code.
     assert(args.size() == 1);
     auto strRegionInstanceRef =
-        globalState->getRegion(globalState->metalCache->mutStrRef)
+        globalState->getRegion(globalState->metalCache->mutStrType)
             ->createRegionInstanceLocal(functionState, builder);
     auto codeLE = checkValidInternalReference(FL(), globalState, functionState, builder, true, prototype->params[0], args[0]);
     auto int8LT = LLVMInt8TypeInContext(globalState->context);
@@ -489,18 +489,18 @@ Ref buildExternCall(
     // Stash the low byte in a stack local so we can hand mallocStr a pointer.
     auto byteLE = LLVMBuildTrunc(builder, codeLE, int8LT, "byteLE");
     auto bufLE = makeBackendLocal(functionState, builder, int8LT, "asciiByte", byteLE);
-    return globalState->getRegion(globalState->metalCache->mutStrRef)
+    return globalState->getRegion(globalState->metalCache->mutStrType)
         ->mallocStr(strRegionInstanceRef, functionState, builder,
             LLVMConstInt(int32LT, 1, false), bufLE);
   } else if (prototype->name->name == "__vbi_printstr") {
     // Signature: (s str, start i32, length i32) -> void
     assert(args.size() == 3);
     auto strRegionInstanceRef =
-        globalState->getRegion(globalState->metalCache->mutStrRef)
+        globalState->getRegion(globalState->metalCache->mutStrType)
             ->createRegionInstanceLocal(functionState, builder);
     auto ownership = prototype->params[0]->ownership;
     auto strType = (ownership == Ownership::MUTABLE_SHARE)
-        ? globalState->metalCache->mutStrRef : globalState->metalCache->immStrRef;
+        ? globalState->metalCache->mutStrType : globalState->metalCache->immStrType;
     auto liveRef = globalState->getRegion(strType)
         ->checkRefLive(FL(), functionState, builder, strRegionInstanceRef, strType, args[0], false);
     auto baseLE = globalState->getRegion(strType)
@@ -520,7 +520,7 @@ Ref buildExternCall(
     // uses argv storage directly instead of a formatted stack buffer.
     assert(args.size() == 1);
     auto strRegionInstanceRef =
-        globalState->getRegion(globalState->metalCache->mutStrRef)
+        globalState->getRegion(globalState->metalCache->mutStrType)
             ->createRegionInstanceLocal(functionState, builder);
     auto int32LT = LLVMInt32TypeInContext(globalState->context);
     auto int64LT = LLVMInt64TypeInContext(globalState->context);
@@ -533,7 +533,7 @@ Ref buildExternCall(
     // Pointer return passes through unmodified (buildCallWith64BitSExt only
     // sign-extends integer returns narrower than 64 bits).
     auto bytesPtrLE = buildCallWith64BitSExt(globalState, builder, globalState->externs->valeRtGetMainArgPtrLF, {iI64LE});
-    return globalState->getRegion(globalState->metalCache->mutStrRef)
+    return globalState->getRegion(globalState->metalCache->mutStrType)
         ->mallocStr(strRegionInstanceRef, functionState, builder, lenI32LE, bytesPtrLE);
   } else if (prototype->name->name == "__vbi_castI32Str" ||
              prototype->name->name == "__vbi_castI64Str" ||
@@ -542,7 +542,7 @@ Ref buildExternCall(
     // Format the primitive into a stack buffer via a C helper, then mallocStr.
     assert(args.size() == 1);
     auto strRegionInstanceRef =
-        globalState->getRegion(globalState->metalCache->mutStrRef)
+        globalState->getRegion(globalState->metalCache->mutStrType)
             ->createRegionInstanceLocal(functionState, builder);
     auto int8LT = LLVMInt8TypeInContext(globalState->context);
     auto int32LT = LLVMInt32TypeInContext(globalState->context);
@@ -567,21 +567,21 @@ Ref buildExternCall(
     // buildCallWith64BitSExt sign-extends the i32 return to i64; truncate
     // back before handing to mallocStr, which asserts i32 length.
     auto writtenI32LE = LLVMBuildTrunc(builder, writtenLE, int32LT, "writtenI32");
-    return globalState->getRegion(globalState->metalCache->mutStrRef)
+    return globalState->getRegion(globalState->metalCache->mutStrType)
         ->mallocStr(strRegionInstanceRef, functionState, builder, writtenI32LE, bufPtrLE);
   } else if (prototype->name->name == "__vbi_addFloatFloat") {
     assert(args.size() == 2);
     auto leftLE = checkValidInternalReference(FL(), globalState, functionState, builder, true, prototype->params[0], args[0]);
     auto rightLE = checkValidInternalReference(FL(), globalState, functionState, builder, true, prototype->params[1], args[1]);
     auto result = LLVMBuildFAdd(builder, leftLE, rightLE, "add");
-    return toRef(globalState->getRegion(globalState->metalCache->floatRef), globalState->metalCache->floatRef, result);
+    return toRef(globalState->getRegion(globalState->metalCache->floatType), globalState->metalCache->floatType, result);
   } else if (prototype->name->name == "__vbi_panic") {
     buildPrintToStderr(globalState, builder, "(panic)\n");
     // See MPESC for status codes
     auto exitCodeLE = makeConstIntExpr(functionState, builder, LLVMInt64TypeInContext(globalState->context), 1);
     buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {exitCodeLE});
     LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL));
-    return toRef(globalState->getRegion(globalState->metalCache->neverRef), globalState->metalCache->neverRef, globalState->neverPtrLE);
+    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverPtrLE);
   } else if (prototype->name->name == "__vbi_getch") {
     auto resultIntLE = buildCallWith64BitSExt(globalState, builder, globalState->externs->getch, {});
     return toRef(globalState->getRegion(prototype->returnType), prototype->returnType, resultIntLE);

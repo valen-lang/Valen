@@ -134,6 +134,7 @@ pub struct LetAndLendIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct LockWeakIE<'s, 'i> {
 	pub inner_expr: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 	pub some_constructor: PrototypeI<'s, 'i>,
 	pub none_constructor: PrototypeI<'s, 'i>,
 	pub some_impl_name: IdI<'s, 'i>,
@@ -147,6 +148,7 @@ pub struct LockWeakIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct BorrowToWeakIE<'s, 'i> {
 	pub inner_expr: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
 
@@ -185,6 +187,7 @@ pub struct UnletIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct DiscardIE<'s, 'i> {
 	pub expr: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 }
 
 
@@ -220,7 +223,9 @@ pub struct WhileIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct MutateIE<'s, 'i> {
 	pub destination_expr: ExpressionIE<'s, 'i>,
+	pub destination_type: &'i BorrowRefIT<'s, 'i>,
 	pub source_expr: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
 
@@ -230,6 +235,7 @@ pub struct MutateIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct ReturnIE<'s, 'i> {
 	pub source_expr: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 }
 
 
@@ -294,7 +300,9 @@ pub struct ArraySizeIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct IsSameInstanceIE<'s, 'i> {
 	pub left: ExpressionIE<'s, 'i>,
+	pub left_type: KindIT<'s, 'i>,
 	pub right: ExpressionIE<'s, 'i>,
+	pub right_type: KindIT<'s, 'i>,
 }
 
 
@@ -310,6 +318,7 @@ impl<'s, 'i> IsSameInstanceIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct AsSubtypeIE<'s, 'i> {
 	pub source_expr: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 	pub target_type: KindIT<'s, 'i>,
 	pub ok_constructor: &'i PrototypeI<'s, 'i>,
 	pub err_constructor: &'i PrototypeI<'s, 'i>,
@@ -431,8 +440,9 @@ impl<'s, 'i> ArgLookupIE<'s, 'i> {
 pub struct StaticSizedArrayLookupIE<'s, 'i> {
 	pub range: RangeS<'s>,
 	pub array_expr: ExpressionIE<'s, 'i>,
-	pub array_type: &'i StaticSizedArrayIT<'s, 'i>,
+	pub array_type: &'i BorrowRefIT<'s, 'i>,
 	pub index_expr: ExpressionIE<'s, 'i>,
+	pub index_type: KindIT<'s, 'i>,
 	pub result: &'i BorrowRefIT<'s, 'i>,
 }
 
@@ -443,8 +453,9 @@ pub struct StaticSizedArrayLookupIE<'s, 'i> {
 pub struct RuntimeSizedArrayLookupIE<'s, 'i> {
 	pub range: RangeS<'s>,
 	pub array_expr: ExpressionIE<'s, 'i>,
-	pub array_type: &'i RuntimeSizedArrayIT<'s, 'i>,
+	pub array_type: &'i BorrowRefIT<'s, 'i>,
 	pub index_expr: ExpressionIE<'s, 'i>,
+	pub index_type: KindIT<'s, 'i>,
 	pub result: &'i BorrowRefIT<'s, 'i>,
 }
 
@@ -454,6 +465,7 @@ pub struct RuntimeSizedArrayLookupIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct ArrayLengthIE<'s, 'i> {
 	pub array_expr: ExpressionIE<'s, 'i>,
+	pub array_type: &'i BorrowRefIT<'s, 'i>,
 }
 
 
@@ -471,6 +483,7 @@ impl<'s, 'i> ArrayLengthIE<'s, 'i> {
 pub struct MemberLookupIE<'s, 'i> {
 	pub range: RangeS<'s>,
 	pub struct_expr: ExpressionIE<'s, 'i>,
+	pub struct_type: &'i BorrowRefIT<'s, 'i>,
 	pub member_name: IVarNameI<'s, 'i>,
 	pub result: &'i BorrowRefIT<'s, 'i>,
 }
@@ -585,6 +598,7 @@ impl<'s, 'i> DestroyStaticSizedArrayIntoLocalsIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyRuntimeSizedArrayIE<'s, 'i> {
 	pub array_expr: ExpressionIE<'s, 'i>,
+	pub array_type: KindIT<'s, 'i>,
 }
 
 impl<'s, 'i> DestroyRuntimeSizedArrayIE<'s, 'i> {
@@ -598,6 +612,7 @@ impl<'s, 'i> DestroyRuntimeSizedArrayIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct RuntimeSizedArrayCapacityIE<'s, 'i> {
 	pub array_expr: ExpressionIE<'s, 'i>,
+	pub array_type: &'i BorrowRefIT<'s, 'i>,
 }
 
 
@@ -613,7 +628,9 @@ impl<'s, 'i> RuntimeSizedArrayCapacityIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct PushRuntimeSizedArrayIE<'s, 'i> {
 	pub array_expr: ExpressionIE<'s, 'i>,
+	pub array_type: &'i BorrowRefIT<'s, 'i>,
 	pub new_element_expr: ExpressionIE<'s, 'i>,
+	pub element_type: KindIT<'s, 'i>,
 }
 
 
@@ -629,6 +646,7 @@ impl<'s, 'i> PushRuntimeSizedArrayIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct PopRuntimeSizedArrayIE<'s, 'i> {
 	pub array_expr: ExpressionIE<'s, 'i>,
+	pub array_type: &'i BorrowRefIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
 
@@ -648,6 +666,7 @@ pub struct InterfaceToInterfaceUpcastIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct UpcastIE<'s, 'i> {
 	pub inner_expr: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 	pub target_interface: InterfaceIT<'s, 'i>,
 	pub impl_name: IdI<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
@@ -661,6 +680,7 @@ pub struct UpcastIE<'s, 'i> {
 pub struct DerefIE<'s, 'i> {
 	pub range: RangeS<'s>,
 	pub inner: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
 

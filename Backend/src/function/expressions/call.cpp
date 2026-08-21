@@ -13,14 +13,14 @@ Ref translateCall(
     LLVMBuilderRef builder,
     Call* call) {
   auto argsLE = std::vector<Ref>{};
-  argsLE.reserve(call->argExprs.size());
-  for (int i = 0; i < call->argExprs.size(); i++) {
-    auto argLE = translateExpression(globalState, functionState, blockState, builder, call->argExprs[i]);
+  argsLE.reserve(call->args.size());
+  for (int i = 0; i < call->args.size(); i++) {
+    auto argLE = translateExpression(globalState, functionState, blockState, builder, call->args[i]);
     buildFlare(FL(), globalState, functionState, builder);
-    globalState->getRegion(call->function->params[i])
-        ->checkValidReference(FL(), functionState, builder, false, call->function->params[i], argLE);
+    globalState->getRegion(call->callable->params[i])
+        ->checkValidReference(FL(), functionState, builder, false, call->callable->params[i], argLE);
     argsLE.push_back(argLE);
   }
 
-  return buildCallV(globalState, functionState, builder, call->function, argsLE);
+  return buildCallV(globalState, functionState, builder, call->callable, argsLE);
 }

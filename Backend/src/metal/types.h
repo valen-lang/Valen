@@ -14,7 +14,6 @@ class PackageCoordinate;
 class CodeLocation;
 
 // Defined in this file
-class Reference;
 class Kind;
 class Int;
 class Bool;
@@ -74,38 +73,6 @@ struct RegionId {
 
   RegionId(PackageCoordinate* packageCoord_, std::string id_) :
       packageCoord(packageCoord_), id(id_) {}
-};
-
-// Interned
-class Reference {
-public:
-  Ownership ownership;
-  Location location;
-  Kind* kind;
-//  std::string debugStr;
-
-  Reference(
-      Ownership ownership_,
-      Location location_,
-      Kind* kind_
-//      , const std::string& debugStr_
-  ) :
-      ownership(ownership_),
-      location(location_),
-      kind(kind_)
-//    , debugStr(debugStr_)
-  {
-
-    if (location == Location::INLINE) {
-      assert(ownership == Ownership::OWN || ownership == Ownership::MUTABLE_SHARE);
-    }
-    if (ownership == Ownership::MUTABLE_BORROW || ownership == Ownership::IMMUTABLE_BORROW || ownership == Ownership::WEAK) {
-      assert(location == Location::YONDER);
-    }
-  }
-
-  // Someday, have a nice way to print out this Reference...
-  std::string str() { return ""; }
 };
 
 class Kind {
@@ -322,6 +289,7 @@ public:
   PackageCoordinate* getPackageCoordinate() const override { return inner->getPackageCoordinate(); }
 };
 
+bool isValueType(Kind* kind);
 
 class IContainer {
 public:

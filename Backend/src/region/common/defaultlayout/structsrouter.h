@@ -43,28 +43,28 @@
 //      AreaAndFileAndLine from,
 //      FunctionState* functionState,
 //      LLVMBuilderRef builder,
-//      Reference* reference,
+//      Kind* reference,
 //      WrapperPtrLE wrapperPtrLE) override;
 //
 //  WrapperPtrLE makeWrapperPtr(
 //      AreaAndFileAndLine checkerAFL,
 //      FunctionState* functionState,
 //      LLVMBuilderRef builder,
-//      Reference* referenceM,
+//      Kind* referenceM,
 //      LLVMValueRef ptrLE) override;
 //
 //  InterfaceFatPtrLE makeInterfaceFatPtr(
 //      AreaAndFileAndLine checkerAFL,
 //      FunctionState* functionState,
 //      LLVMBuilderRef builder,
-//      Reference* referenceM_,
+//      Kind* referenceM_,
 //      LLVMValueRef ptrLE) override;
 //
 //  InterfaceFatPtrLE makeInterfaceFatPtrWithoutChecking(
 //      AreaAndFileAndLine checkerAFL,
 //      FunctionState* functionState,
 //      LLVMBuilderRef builder,
-//      Reference* referenceM_,
+//      Kind* referenceM_,
 //      LLVMValueRef ptrLE) override;
 //
 ////  ControlBlockPtrLE makeControlBlockPtr(
@@ -103,7 +103,7 @@
 //      LLVMBuilderRef builder,
 //      // This will be a pointer if a mutable struct, or a fat ref if an interface.
 //      Ref ref,
-//      Reference* referenceM) override;
+//      Kind* referenceM) override;
 //
 //   ControlBlockPtrLE getControlBlockPtr(
 //       AreaAndFileAndLine from,
@@ -111,7 +111,7 @@
 //      LLVMBuilderRef builder,
 //      // This will be a pointer if a mutable struct, or a fat ref if an interface.
 //      LLVMValueRef ref,
-//      Reference* referenceM) override;
+//      Kind* referenceM) override;
 //
 //  ControlBlockPtrLE getControlBlockPtrWithoutChecking(
 //      AreaAndFileAndLine from,
@@ -119,7 +119,7 @@
 //      LLVMBuilderRef builder,
 //      // This will be a pointer if a mutable struct, or a fat ref if an interface.
 //      LLVMValueRef ref,
-//      Reference* referenceM) override;
+//      Kind* referenceM) override;
 //
 //  LLVMValueRef getStructContentsPtr(
 //      LLVMBuilderRef builder,
@@ -130,7 +130,7 @@
 //  LLVMValueRef getVoidPtrFromInterfacePtr(
 //      FunctionState* functionState,
 //      LLVMBuilderRef builder,
-//      Reference* virtualParamMT,
+//      Kind* virtualParamMT,
 //      InterfaceFatPtrLE virtualArgLE) override;
 //
 //  LLVMValueRef getObjIdFromControlBlockPtr(
@@ -140,15 +140,15 @@
 //
 //  LLVMValueRef getStrongRcPtrFromControlBlockPtr(
 //      LLVMBuilderRef builder,
-//      Reference* refM,
+//      Kind* refM,
 //      ControlBlockPtrLE controlBlockPtr) override;
 //
 //  LLVMValueRef getStrongRcFromControlBlockPtr(
 //      LLVMBuilderRef builder,
-//      Reference* refM,
+//      Kind* refM,
 //      ControlBlockPtrLE controlBlockPtr) override;
 //
-//  LLVMValueRef downcastPtr(LLVMBuilderRef builder, Reference* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE) override;
+//  LLVMValueRef downcastPtr(LLVMBuilderRef builder, Kind* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE) override;
 //
 //private:
 //  GlobalState* globalState = nullptr;
@@ -166,13 +166,13 @@
 //  LLVMTypeRef getStaticSizedArrayWeakRefStruct(StaticSizedArrayT* ssaMT) override;
 //  LLVMTypeRef getRuntimeSizedArrayWeakRefStruct(RuntimeSizedArrayT* rsaMT) override;
 //  LLVMTypeRef getInterfaceWeakRefStruct(InterfaceKind* interfaceKind) override;
-//  WeakFatPtrLE makeWeakFatPtr(Reference* referenceM_, LLVMValueRef ptrLE) override;
+//  WeakFatPtrLE makeWeakFatPtr(Kind* referenceM_, LLVMValueRef ptrLE) override;
 //  LLVMTypeRef getWeakRefHeaderStruct(Kind* kind) override;
 //  LLVMTypeRef getWeakVoidRefStruct(Kind* kind) override;
 //  WeakFatPtrLE downcastWeakFatPtr(
 //      LLVMBuilderRef builder,
 //      StructKind* targetStructKind,
-//      Reference* targetRefMT,
+//      Kind* targetRefMT,
 //      LLVMValueRef sourceWeakFatPtrLE) override;
 //
 //private:

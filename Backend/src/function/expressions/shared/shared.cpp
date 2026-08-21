@@ -21,7 +21,7 @@ LLVMTypeRef makeNeverType(GlobalState* globalState) {
 }
 
 LLVMValueRef makeVoid(GlobalState* globalState) {
-  return LLVMGetUndef(globalState->rcImm->translateType(globalState->metalCache->voidRef));
+  return LLVMGetUndef(globalState->rcImm->translateType(globalState->metalCache->voidType));
 }
 
 LLVMTypeRef makeEmptyStructType(GlobalState* globalState) {
@@ -33,7 +33,7 @@ LLVMValueRef makeEmptyStruct(GlobalState* globalState) {
 
 Ref makeVoidRef(GlobalState* globalState) {
   auto voidLE = makeVoid(globalState);
-  auto refMT = globalState->metalCache->voidRef;
+  auto refMT = globalState->metalCache->voidType;
   return toRef(globalState->rcImm, refMT, voidLE);
 }
 
@@ -54,8 +54,7 @@ void makeHammerLocal(
     BlockState* blockState,
     LLVMBuilderRef builder,
     Local* local,
-    Ref refToStore,
-    bool knownLive) {
+    Ref refToStore) {
   auto localAddr = globalState->getRegion(local->type)->stackify(functionState, builder, local, refToStore, knownLive);
   blockState->addLocal(local->id, localAddr);
 }
@@ -68,9 +67,9 @@ LLVMValueRef adjustStrongRc(
     KindStructs* kindStructsSource,
     LLVMBuilderRef builder,
     Ref exprRef,
-    Reference* refM,
+    Kind* refM,
     int amount) {
-  assert(refM->ownership == Ownership::MUTABLE_SHARE);
+  assert(dynamic_cast<ShareRef*>(refM) != nullptr);
   // Shouldnt increment IMMUTABLE_SHARE's RC
 
   auto controlBlockPtrLE =
@@ -79,11 +78,11 @@ LLVMValueRef adjustStrongRc(
 //  auto oldRc = unmigratedLLVMBuildLoad(builder, rcPtrLE, "oldRc");
   auto newRc =
       adjustCounterV(
-          globalState, builder, globalState->metalCache->i32, rcPtrLE, amount, globalState->opt->useAtomicRc);
+          globalState, builder, globalState->metalCache->i32Type, rcPtrLE, amount, globalState->opt->useAtomicRc);
 
   if (globalState->opt->printMemOverhead) {
     adjustCounterV(
-        globalState, builder, globalState->metalCache->i64, globalState->mutRcAdjustCounterLE, 1, false);
+        globalState, builder, globalState->metalCache->i64Type, globalState->mutRcAdjustCounterLE, 1, false);
   }
 
 //  flareAdjustStrongRc(from, globalState, functionState, builder, refM, controlBlockPtrLE, oldRc, newRc);
@@ -394,11 +393,11 @@ Ref buildCallV(
   returnRegion->checkValidReference(
       FL(), functionState, builder, false, returnMT, resultRef);
 
-  if (prototype->returnType->kind == globalState->metalCache->never) {
+  if (prototype->returnType->kind == globalState->metalCache->neverType) {
     buildFlare(FL(), globalState, functionState, builder, "Done calling function ", prototype->name->name);
     buildFlare(FL(), globalState, functionState, builder, "Resuming function ", functionState->containingFuncName);
     LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL));
-    return toRef(globalState->getRegion(globalState->metalCache->neverRef), globalState->metalCache->neverRef, globalState->neverPtrLE);
+    return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverPtrLE);
   } else {
     buildFlare(FL(), globalState, functionState, builder, "Done calling function ", prototype->name->name);
     buildFlare(FL(), globalState, functionState, builder, "Resuming function ", functionState->containingFuncName);

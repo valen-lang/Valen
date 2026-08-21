@@ -32,7 +32,7 @@ Ref translateDestructure(
   buildFlare(FL(), globalState, functionState, builder);
 
   auto structKind =
-      dynamic_cast<StructKind *>(destructureM->structType->kind);
+      dynamic_cast<StructKind *>(destructureM->structType);
   assert(structKind);
 
   auto structM = globalState->program->getStruct(structKind);
@@ -45,16 +45,16 @@ Ref translateDestructure(
         globalState->getRegion(destructureM->structType)->loadMember(
             functionState, builder, structRegionInstanceRef, destructureM->structType, structLiveRef, i, memberType, memberType, memberName);
     makeHammerLocal(
-        globalState, functionState, blockState, builder, destructureM->localIndices[i], memberLE, destructureM->localsKnownLives[i]);
+        globalState, functionState, blockState, builder, destructureM->destinationLocals[i], memberLE);
     buildFlare(FL(), globalState, functionState, builder);
   }
   buildFlare(FL(), globalState, functionState, builder);
 
-  if (destructureM->structType->ownership == Ownership::OWN) {
+  if (isValueType(destructureM->structType)) {
     buildFlare(FL(), globalState, functionState, builder);
     globalState->getRegion(destructureM->structType)
         ->discardOwningRef(FL(), functionState, blockState, builder, destructureM->structType, structLiveRef);
-  } else if (destructureM->structType->ownership == Ownership::MUTABLE_SHARE || destructureM->structType->ownership == Ownership::IMMUTABLE_SHARE) {
+  } else if (dynamic_cast<ShareRef*>(destructureM->structType) != nullptr) {
     buildFlare(FL(), globalState, functionState, builder);
     // We dont decrement anything here, we're only here because we already hit zero.
 
@@ -84,7 +84,7 @@ Ref translateDestroySSAIntoLocals(
 
   auto structRef =
       translateExpression(
-          globalState, functionState, blockState, builder, destroySSAIntoLocalsM->arrayExpr);
+          globalState, functionState, blockState, builder, destroySSAIntoLocalsM->expr);
   auto structLiveRef =
       globalState->getRegion(destroySSAIntoLocalsM->arrayType)->checkRefLive(FL(),
                                                                      functionState, builder, structRegionInstanceRef, destroySSAIntoLocalsM->arrayType, structRef, false);
@@ -115,11 +115,11 @@ Ref translateDestroySSAIntoLocals(
   }
   buildFlare(FL(), globalState, functionState, builder);
 
-  if (destroySSAIntoLocalsM->arrayType->ownership == Ownership::OWN) {
+  if (isValueType(destroySSAIntoLocalsM->arrayType)) {
     buildFlare(FL(), globalState, functionState, builder);
     globalState->getRegion(destroySSAIntoLocalsM->arrayType)
         ->discardOwningRef(FL(), functionState, blockState, builder, destroySSAIntoLocalsM->arrayType, structLiveRef);
-  } else if (destroySSAIntoLocalsM->arrayType->ownership == Ownership::MUTABLE_SHARE || destroySSAIntoLocalsM->arrayType->ownership == Ownership::IMMUTABLE_SHARE) {
+  } else if (dynamic_cast<ShareRef*>(destroySSAIntoLocalsM->arrayType) != nullptr) {
     buildFlare(FL(), globalState, functionState, builder);
     // We dont decrement anything here, we're only here because we already hit zero.
 

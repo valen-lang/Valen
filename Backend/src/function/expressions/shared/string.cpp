@@ -68,7 +68,7 @@ Ref buildConstantVStr(
   auto lengthLE = constI32LE(globalState, contents.length());
 
   auto strRef =
-      globalState->getRegion(globalState->metalCache->mutStrRef)
+      globalState->getRegion(globalState->metalCache->mutStrType)
           ->mallocStr(
               makeVoidRef(globalState),
               functionState, builder, lengthLE,
@@ -79,7 +79,7 @@ Ref buildConstantVStr(
 //
 //  // Fill the chars
 //  std::vector<LLVMValueRef> argsLE = {
-//      globalState->getRegion(globalState->metalCache->strRef)->getStringBytesPtr(functionState, builder, strRef),
+//      globalState->getRegion(globalState->metalCache->strType)->getStringBytesPtr(functionState, builder, strRef),
 //      ,
 //      lengthLE
 //  };

@@ -10,7 +10,7 @@
 
 std::vector<LLVMTypeRef> translateTypes(
     GlobalState* globalState,
-    std::vector<Reference*> referencesM);
+    std::vector<Kind*> referencesM);
 
 
 // We need to pick an arbitrary type to map "Never" to. It shouldn't matter,

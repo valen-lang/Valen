@@ -7,8 +7,8 @@ Ref receiveHostObjectIntoVale(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* hostRefMT,
-    Reference* valeRefMT,
+    Kind* hostRefMT,
+    Kind* valeRefMT,
     LLVMValueRef hostRefLE) {
   // Per @FRMACZ, this conversion does no reference counting — share refs arrive
   // as right-sized handle structs (8B concrete / 16B interface) which we decrypt
@@ -41,7 +41,7 @@ LLVMValueRef sendValeObjectIntoHost(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* valeRefMT,
+    Kind* valeRefMT,
     Ref valeRef) {
   // Under the opaque-handle FFI, share refs (struct/interface/RSA/SSA/Str)
   // cross as right-sized handle structs (8B concrete / 16B interface) via

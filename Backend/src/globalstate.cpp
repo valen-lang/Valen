@@ -91,10 +91,6 @@ std::vector<ValeFuncPtrLE> GlobalState::getEdgeFunctions(Edge* edge) {
   return edgeFunctionsL;
 }
 
-IRegion* GlobalState::getRegion(Reference* referenceM) {
-  return getRegion(referenceM->kind);
-}
-
 IRegion* GlobalState::getRegion(Kind* kindM) {
   if (auto innt = dynamic_cast<Int*>(kindM)) {
     return getRegion(innt->regionId);
@@ -129,7 +125,7 @@ IRegion* GlobalState::getRegion(RegionId* regionId) {
   }
 }
 
-LLVMTypeRef GlobalState::translateType(Reference* refM) {
+LLVMTypeRef GlobalState::translateType(Kind* refM) {
   return getRegion(refM)->translateType(refM);
 }
 
@@ -170,32 +166,32 @@ LLVMValueRef GlobalState::getOrMakeStringConstant(const std::string& str) {
 }
 
 Ref GlobalState::constI64(int64_t x) {
-  return toRef(getRegion(metalCache->i64Ref), metalCache->i64Ref, constI64LE(this, x));
+  return toRef(getRegion(metalCache->i64Type), metalCache->i64Type, constI64LE(this, x));
 }
 Ref GlobalState::constI32(int32_t x) {
-  return toRef(getRegion(metalCache->i32Ref), metalCache->i32Ref, constI32LE(this, x));
+  return toRef(getRegion(metalCache->i32Type), metalCache->i32Type, constI32LE(this, x));
 }
 Ref GlobalState::constI1(bool b) {
-  return toRef(getRegion(metalCache->boolRef), metalCache->boolRef, constI1LE(this, b));
+  return toRef(getRegion(metalCache->boolType), metalCache->boolType, constI1LE(this, b));
 }
 Ref GlobalState::buildAdd(FunctionState* functionState, LLVMBuilderRef builder, Ref a, Ref b) {
-  auto intMT = metalCache->i32Ref;
+  auto intMT = metalCache->i32Type;
   auto addPrototype = metalCache->getPrototype(metalCache->getName(metalCache->builtinPackageCoord, "__addI32"), intMT, {intMT, intMT});
   return buildExternCall(this, functionState, builder, addPrototype, { a, b });
 }
 Ref GlobalState::buildMod(FunctionState* functionState, LLVMBuilderRef builder, Ref a, Ref b) {
-  auto intMT = metalCache->i32Ref;
+  auto intMT = metalCache->i32Type;
   auto addPrototype = metalCache->getPrototype(metalCache->getName(metalCache->builtinPackageCoord, "__mod"), intMT, {intMT, intMT});
   return buildExternCall(this, functionState, builder, addPrototype, { a, b });
 }
 Ref GlobalState::buildDivide(FunctionState* functionState, LLVMBuilderRef builder, Ref a, Ref b) {
-  auto intMT = metalCache->i32Ref;
+  auto intMT = metalCache->i32Type;
   auto addPrototype = metalCache->getPrototype(metalCache->getName(metalCache->builtinPackageCoord, "__divideI32"), intMT, {intMT, intMT});
   return buildExternCall(this, functionState, builder, addPrototype, { a, b });
 }
 
 Ref GlobalState::buildMultiply(FunctionState* functionState, LLVMBuilderRef builder, Ref a, Ref b) {
-  auto intMT = metalCache->i32Ref;
+  auto intMT = metalCache->i32Type;
   auto addPrototype = metalCache->getPrototype(metalCache->getName(metalCache->builtinPackageCoord, "__multiplyIntInt"), intMT, {intMT, intMT});
   return buildExternCall(this, functionState, builder, addPrototype, { a, b });
 }

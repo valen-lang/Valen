@@ -16,19 +16,19 @@ public:
   LLVMValueRef getInnerRefFromWeakRef(
       FunctionState *functionState,
       LLVMBuilderRef builder,
-      Reference *weakRefM,
+      Kind *weakRefM,
       WeakFatPtrLE weakRefLE);
 
   LLVMValueRef getInnerRefFromWeakRefWithoutCheck(
       FunctionState *functionState,
       LLVMBuilderRef builder,
-      Reference *weakRefM,
+      Kind *weakRefM,
       WeakFatPtrLE weakRefLE);
 
   WeakFatPtrLE assembleWeakFatPtr(
       FunctionState *functionState,
       LLVMBuilderRef builder,
-      Reference* weakRefMT,
+      Kind* weakRefMT,
       LLVMTypeRef weakRefStruct,
       LLVMValueRef headerLE,
       LLVMValueRef innerRefLE);
@@ -39,7 +39,7 @@ public:
 
   WeakFatPtrLE assembleVoidStructWeakRef(
       LLVMBuilderRef builder,
-      Reference* refM,
+      Kind* refM,
       ControlBlockPtrLE controlBlockPtrLE,
       LLVMValueRef headerLE);
 

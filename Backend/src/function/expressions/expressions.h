@@ -39,7 +39,7 @@ Ref translateConstruct(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* desiredStructMT,
+    Kind* desiredStructMT,
     const std::vector<Ref>& memberRefs);
 
 Ref translateCall(
@@ -119,13 +119,12 @@ Ref translateConstantStr(
     LLVMBuilderRef builder,
     ConstantStr* constantStr);
 
-Ref translateDerefLocalLookup(
+Ref translateLocalLoad(
     GlobalState* globalState,
     FunctionState* functionState,
     BlockState* blockState,
     LLVMBuilderRef builder,
-    LocalLookup* lookup,
-    Kind* targetKind);
+    LocalLoad* localLoad);
 
 bool exprResultKnownLive(GlobalState* globalState, Expression* expr);
 

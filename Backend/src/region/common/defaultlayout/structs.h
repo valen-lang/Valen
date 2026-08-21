@@ -43,18 +43,18 @@ public:
   LLVMTypeRef getRuntimeSizedArrayWeakRefStruct(RuntimeSizedArrayT* rsaMT);
   LLVMTypeRef getInterfaceWeakRefStruct(InterfaceKind* interfaceKind);
 
-  WeakFatPtrLE makeWeakFatPtr(Reference* referenceM_, LLVMValueRef ptrLE);
+  WeakFatPtrLE makeWeakFatPtr(Kind* referenceM_, LLVMValueRef ptrLE);
   WeakFatPtrLE downcastWeakFatPtr(
       LLVMBuilderRef builder,
       StructKind* targetStructKind,
-      Reference* targetRefMT,
+      Kind* targetRefMT,
       LLVMValueRef sourceWeakFatPtrLE);
 
   ControlBlockPtrLE getConcreteControlBlockPtr(
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* reference,
+      Kind* reference,
       WrapperPtrLE wrapperPtrLE);
 
   LLVMTypeRef getStringWrapperStruct();
@@ -63,21 +63,21 @@ public:
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* referenceM,
+      Kind* referenceM,
       LLVMValueRef ptrLE);
 
   InterfaceFatPtrLE makeInterfaceFatPtr(
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* referenceM_,
+      Kind* referenceM_,
       LLVMValueRef ptrLE);
 
   InterfaceFatPtrLE makeInterfaceFatPtrWithoutChecking(
       AreaAndFileAndLine checkerAFL,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* referenceM_,
+      Kind* referenceM_,
       LLVMValueRef ptrLE);
 
 //  ControlBlockPtrLE makeControlBlockPtr(
@@ -117,7 +117,7 @@ public:
       LLVMBuilderRef builder,
       // This will be a pointer if a mutable struct, or a fat ref if an interface.
       Ref ref,
-      Reference* referenceM);
+      Kind* referenceM);
 
   ControlBlockPtrLE getControlBlockPtr(
       AreaAndFileAndLine from,
@@ -125,7 +125,7 @@ public:
       LLVMBuilderRef builder,
       // This will be a pointer if a mutable struct, or a fat ref if an interface.
       LLVMValueRef ref,
-      Reference* referenceM);
+      Kind* referenceM);
 
   ControlBlockPtrLE getControlBlockPtrWithoutChecking(
       AreaAndFileAndLine from,
@@ -133,7 +133,7 @@ public:
       LLVMBuilderRef builder,
       // This will be a pointer if a mutable struct, or a fat ref if an interface.
       LLVMValueRef ref,
-      Reference* referenceM);
+      Kind* referenceM);
 
   LLVMValueRef getStructContentsPtr(
       LLVMBuilderRef builder,
@@ -143,7 +143,7 @@ public:
   LLVMValueRef getVoidPtrFromInterfacePtr(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* virtualParamMT,
+      Kind* virtualParamMT,
       InterfaceFatPtrLE virtualArgLE);
 
   LLVMValueRef getObjIdFromControlBlockPtr(
@@ -155,17 +155,17 @@ public:
   // Strong means owning or borrow or shared; things that control the lifetime.
   LLVMValueRef getStrongRcPtrFromControlBlockPtr(
       LLVMBuilderRef builder,
-      Reference* refM,
+      Kind* refM,
       ControlBlockPtrLE controlBlockPtr);
 
 //  // See CRCISFAORC for why we don't take in a mutability.
 //  // Strong means owning or borrow or shared; things that control the lifetime.
 //  LLVMValueRef getStrongRcFromControlBlockPtr(
 //      LLVMBuilderRef builder,
-//      Reference* refM,
+//      Kind* refM,
 //      ControlBlockPtrLE controlBlockPtr);
 
-  LLVMValueRef downcastPtr(LLVMBuilderRef builder, Reference* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE);
+  LLVMValueRef downcastPtr(LLVMBuilderRef builder, Kind* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE);
 
   LLVMTypeRef getWeakRefHeaderStruct(Kind* kind) {
     return weakRefHeaderStructL;
@@ -186,7 +186,7 @@ public:
   }
 
   WrapperPtrLE makeWrapperPtrWithoutChecking(
-      Reference* referenceM,
+      Kind* referenceM,
       LLVMValueRef ptrLE);
 
 private:
@@ -208,7 +208,7 @@ private:
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Reference* reference,
+      Kind* reference,
       WrapperPtrLE wrapperPtrLE);
 
   Weakability structIsWeakable(StructKind* struuct);

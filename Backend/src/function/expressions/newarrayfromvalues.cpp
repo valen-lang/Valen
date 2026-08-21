@@ -21,7 +21,7 @@ Ref translateNewArrayFromValues(
 
   auto elementsLE =
       translateExpressions(
-          globalState, functionState, blockState, builder, newArrayFromValues->sourceExprs);
+          globalState, functionState, blockState, builder, newArrayFromValues->elements);
   auto ssaDefM = globalState->program->getStaticSizedArray(newArrayFromValues->arrayKind);
   for (auto elementLE : elementsLE) {
     globalState->getRegion(ssaDefM->elementType)

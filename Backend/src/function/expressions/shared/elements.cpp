@@ -13,7 +13,7 @@ InBoundsLE checkIndexInBounds(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* intRefMT,
+    Kind* intRefMT,
     Ref sizeRef,
     LLVMValueRef indexLE,
     const char* failMessage) {
@@ -40,7 +40,7 @@ InBoundsLE checkLastElementExists(
     LLVMBuilderRef builder,
     Ref sizeRef,
     const char* failMessage) {
-  auto intRefMT = globalState->metalCache->i32Ref;
+  auto intRefMT = globalState->metalCache->i32Type;
   auto sizeLE =
       globalState->getRegion(intRefMT)
           ->checkValidReference(FL(), functionState, builder, true, intRefMT, sizeRef);
@@ -68,7 +68,7 @@ void checkArrayEmpty(
     LLVMBuilderRef builder,
     Ref sizeRef,
     const char* failMessage) {
-  auto intRefMT = globalState->metalCache->i32Ref;
+  auto intRefMT = globalState->metalCache->i32Type;
   auto sizeLE =
       globalState->getRegion(intRefMT)
           ->checkValidReference(FL(), functionState, builder, true, intRefMT, sizeRef);
@@ -121,7 +121,7 @@ void initializeElementInRSAWithoutIncrementSize(
     LLVMBuilderRef builder,
     bool capacityExists,
     RuntimeSizedArrayT* rsaMT,
-    Reference* rsaRefMT,
+    Kind* rsaRefMT,
     WrapperPtrLE rsaWPtrLE,
     InBoundsLE indexLE,
     Ref elementRef,
@@ -137,12 +137,12 @@ IncrementedSize incrementRSASize(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* rsaRefMT,
+    Kind* rsaRefMT,
     WrapperPtrLE rsaWPtrLE) {
   auto sizePtrLE = ::getRuntimeSizedArrayLengthPtr(globalState, builder, rsaWPtrLE);
   assert(rsaRefMT->location != Location::INLINE); // impl
 
-  adjustCounterV(globalState, builder, globalState->metalCache->i32, sizePtrLE, 1, false);
+  adjustCounterV(globalState, builder, globalState->metalCache->i32Type, sizePtrLE, 1, false);
 
 //  // Manually making an InBoundsLE because we know it's in bounds because it's the previous size.
 //  return InBoundsLE{indexLE};
@@ -158,7 +158,7 @@ Ref getRuntimeSizedArrayLength(
   auto int32LT = LLVMInt32TypeInContext(globalState->context);
   auto lengthPtrLE = getRuntimeSizedArrayLengthPtr(globalState, builder, arrayRefLE);
   auto intLE = LLVMBuildLoad2(builder, int32LT, lengthPtrLE, "rsaLen");
-  return toRef(globalState->getRegion(globalState->metalCache->i32Ref), globalState->metalCache->i32Ref, intLE);
+  return toRef(globalState->getRegion(globalState->metalCache->i32Type), globalState->metalCache->i32Type, intLE);
 }
 
 void regularInitializeElementInSSA(
@@ -166,8 +166,8 @@ void regularInitializeElementInSSA(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     KindStructs* kindStructs,
-    Reference* ssaRefMT,
-    Reference* elementType,
+    Kind* ssaRefMT,
+    Kind* elementType,
     LiveRef arrayRef,
     InBoundsLE indexLE,
     Ref elementRef) {
@@ -185,8 +185,8 @@ LoadResult regularloadElementFromSSA(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* ssaRefMT,
-    Reference* elementType,
+    Kind* ssaRefMT,
+    Kind* elementType,
     LiveRef arrayRef,
     InBoundsLE indexLE,
     KindStructs* kindStructs) {
@@ -227,16 +227,16 @@ LLVMValueRef getRuntimeSizedArrayCapacityPtr(
   return resultLE;
 }
 
-void decrementRSASize(GlobalState* globalState, FunctionState *functionState, KindStructs* kindStructs, LLVMBuilderRef builder, Reference *rsaRefMT, WrapperPtrLE rsaWrapperPtrLE) {
+void decrementRSASize(GlobalState* globalState, FunctionState *functionState, KindStructs* kindStructs, LLVMBuilderRef builder, Kind *rsaRefMT, WrapperPtrLE rsaWrapperPtrLE) {
   auto sizePtrLE = getRuntimeSizedArrayLengthPtr(globalState, builder, rsaWrapperPtrLE);
-  adjustCounterV(globalState, builder, globalState->metalCache->i32, sizePtrLE, -1, false);
+  adjustCounterV(globalState, builder, globalState->metalCache->i32Type, sizePtrLE, -1, false);
 }
 
 LoadResult loadElementFromSSAInner(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* elementType,
+    Kind* elementType,
     InBoundsLE indexLE,
     LLVMValueRef arrayElementsPtrLE) {
   return loadElement(
@@ -249,8 +249,8 @@ LoadResult regularLoadElementFromRSAWithoutUpgrade(
     LLVMBuilderRef builder,
     KindStructs* kindStructs,
     bool capacityExists,
-    Reference* rsaRefMT,
-    Reference* elementType,
+    Kind* rsaRefMT,
+    Kind* elementType,
     LiveRef arrayRef,
     InBoundsLE indexLE) {
   auto arrayWPtrLE = toWrapperPtr(functionState, builder, kindStructs, rsaRefMT, arrayRef);
@@ -267,7 +267,7 @@ LoadResult loadElement(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     LLVMValueRef elemsPtrLE,
-    Reference* elementRefM,
+    Kind* elementRefM,
     InBoundsLE indexLE) {
   assert(LLVMGetTypeKind(LLVMTypeOf(elemsPtrLE)) == LLVMPointerTypeKind);
   LLVMValueRef indices[2] = {
@@ -309,13 +309,13 @@ void storeInnerArrayMember(
 //    FunctionState* functionState,
 //    BlockState* blockState,
 //    LLVMBuilderRef builder,
-//    Reference* arrayRefM,
-//    Reference* elementRefM,
+//    Kind* arrayRefM,
+//    Kind* elementRefM,
 //    Ref sizeRef,
 //    LLVMValueRef arrayPtrLE,
 //    Mutability mutability,
 //    Ref indexRef,
-//    Reference* resultRefM) {
+//    Kind* resultRefM) {
 //  auto fromArrayRef =
 //      loadElement(
 //          globalState, functionState, builder, arrayRefM, elementRefM, sizeRef, arrayPtrLE, mutability, indexRef);
@@ -329,7 +329,7 @@ Ref swapElement(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Location location,
-    Reference* elementRefM,
+    Kind* elementRefM,
     LLVMValueRef arrayElemsPtrLE,
     InBoundsLE indexLE,
     Ref sourceRef) {
@@ -354,7 +354,7 @@ void initializeElementWithoutIncrementSize(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Location location,
-    Reference* elementRefM,
+    Kind* elementRefM,
     LLVMValueRef elemsPtrLE,
     InBoundsLE indexLE,
     Ref sourceRef,
@@ -377,12 +377,12 @@ void intRangeLoopV(
     Ref sizeRef,
     std::function<void(Ref, LLVMBuilderRef)> iterationBuilder) {
   auto sizeLE =
-      globalState->getRegion(globalState->metalCache->i32Ref)
-          ->checkValidReference(FL(), functionState, builder, true, globalState->metalCache->i32Ref, sizeRef);
+      globalState->getRegion(globalState->metalCache->i32Type)
+          ->checkValidReference(FL(), functionState, builder, true, globalState->metalCache->i32Type, sizeRef);
   intRangeLoop(
       globalState, functionState, builder, sizeLE,
       [globalState, iterationBuilder](LLVMValueRef iterationIndexLE, LLVMBuilderRef builder) {
-        auto iterationIndexRef = toRef(globalState->getRegion(globalState->metalCache->i32Ref), globalState->metalCache->i32Ref, iterationIndexLE);
+        auto iterationIndexRef = toRef(globalState->getRegion(globalState->metalCache->i32Type), globalState->metalCache->i32Type, iterationIndexLE);
         iterationBuilder(iterationIndexRef, builder);
       });
 }
@@ -421,7 +421,7 @@ void intRangeLoop(
         auto iterationIndexLE = LLVMBuildLoad2(bodyBuilder, int32LT, iterationIndexPtrLE, "iterationIndex");
         iterationBuilder(iterationIndexLE, bodyBuilder);
         adjustCounterV(
-            globalState, bodyBuilder, globalState->metalCache->i32, iterationIndexPtrLE, 1, false);
+            globalState, bodyBuilder, globalState->metalCache->i32Type, iterationIndexPtrLE, 1, false);
       });
 }
 
@@ -430,7 +430,7 @@ void intRangeLoopReverse(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* intRefMT,
+    Kind* intRefMT,
     LLVMValueRef sizeLE,
     std::function<void(LLVMValueRef, LLVMBuilderRef)> iterationBuilder) {
   auto innt = dynamic_cast<Int*>(intRefMT->kind);
@@ -460,7 +460,7 @@ void intRangeLoopReverseV(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* intRefMT,
+    Kind* intRefMT,
     Ref sizeRef,
     std::function<void(Ref, LLVMBuilderRef)> iterationBuilder) {
   auto sizeLE =

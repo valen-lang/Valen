@@ -1,3 +1,5 @@
+# Glossary
+
 In this codebase, we don't like jargon.
 
 We will only use terms known to general programmers, plus the terms listed below.
@@ -14,3 +16,5 @@ Explicitly don't use these words:
  * Dynamism
 
 This file/process is new, so please eagerly flag anything that you're unsure of, so we can build up this file.
+
+## Proposed Additions

@@ -7,21 +7,28 @@
 #include "../expression.h"
 #include "shared/shared.h"
 #include "../../region/common/heap.h"
-#include "../../metal/onion.h"
 
-// Reads a local through `Deref(LocalLookup)`: load the local, then upgrade it to the deref's target
-// ownership. targetKind is the Deref node's result kind; the local's own type comes from the Local.
-Ref translateDerefLocalLookup(
+Ref translateLocalLoad(
     GlobalState* globalState,
     FunctionState* functionState,
     BlockState* blockState,
     LLVMBuilderRef builder,
-    LocalLookup* lookup,
-    Kind* targetKind) {
-  auto cache = globalState->metalCache;
-  auto local = lookup->localVariable;
-  auto localType = refFromKind(cache, local->type);
-  auto resultType = refFromKind(cache, targetKind);
+    LocalLoad* localLoad) {
+  auto local = localLoad->local;
+  auto localId = local->id;
+  auto localName = localLoad->localName;
+  auto localType = local->type;
+  auto targetOwnership = localLoad->targetOwnership;
+  // VCOORD: revisit
+  // OWN and SHARE both keep the local's location (Inline for primitives).
+  auto targetLocation =
+      (targetOwnership == Ownership::MUTABLE_SHARE || targetOwnership == Ownership::OWN)
+        ? localType->location
+        : Location::YONDER;
+  // /VCOORD
+  auto resultType =
+      globalState->metalCache->getReference(
+          targetOwnership, targetLocation, localType->kind);
 
   auto regionInstanceRef =
       // At some point, look up the actual region instance, perhaps from the FunctionState?
@@ -29,7 +36,7 @@ Ref translateDerefLocalLookup(
 
   buildFlare(FL(), globalState, functionState, builder);
 
-  auto localAddr = blockState->getLocalAddr(local, true);
+  auto localAddr = blockState->getLocalAddr(localId, true);
 
   auto sourceRef = globalState->getRegion(localType)->loadLocal(functionState, builder, local, localAddr);
 

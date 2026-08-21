@@ -286,8 +286,8 @@ impl<'cache> Lowerer<'cache> {
             ExpressionIE::VoidLiteral(_) => c.expr_constant_void(),
             ExpressionIE::Break(_) => c.expr_break(),
 
-            ExpressionIE::Return(x) => c.expr_return(self.lower_expression(&x.source_expr)),
-            ExpressionIE::Discard(x) => c.expr_discard(self.lower_expression(&x.expr)),
+            ExpressionIE::Return(x) => c.expr_return(self.lower_expression(&x.source_expr), self.lower_kind(x.source_type)),
+            ExpressionIE::Discard(x) => c.expr_discard(self.lower_expression(&x.expr), self.lower_kind(x.source_type)),
             ExpressionIE::Block(x) => c.expr_block(self.lower_expression(&x.inner), self.lower_kind(x.result)),
             ExpressionIE::Consecutor(x) => c.expr_consecutor(&self.lower_exprs(x.exprs), self.lower_kind(x.result)),
 
@@ -313,28 +313,33 @@ impl<'cache> Lowerer<'cache> {
                 c.expr_local_lookup(local, self.lower_borrow(x.result))
             }
 
-            ExpressionIE::Deref(x) => c.expr_deref(self.lower_expression(&x.inner), self.lower_kind(x.result)),
+            ExpressionIE::Deref(x) => c.expr_deref(self.lower_expression(&x.inner), self.lower_kind(x.source_type), self.lower_kind(x.result)),
             ExpressionIE::MemberLookup(x) => c.expr_member_lookup(
                 self.lower_expression(&x.struct_expr),
+                self.lower_borrow(x.struct_type),
                 &humanize_var_name(x.member_name),
                 self.lower_borrow(x.result),
             ),
             ExpressionIE::StaticSizedArrayLookup(x) => c.expr_static_sized_array_lookup(
                 self.lower_expression(&x.array_expr),
-                self.lower_static_array_kind(x.array_type),
+                self.lower_borrow(x.array_type),
                 self.lower_expression(&x.index_expr),
+                self.lower_kind(x.index_type),
                 self.lower_borrow(x.result),
             ),
             ExpressionIE::RuntimeSizedArrayLookup(x) => c.expr_runtime_sized_array_lookup(
                 self.lower_expression(&x.array_expr),
-                self.lower_kind(KindIT::RuntimeSizedArrayIT(x.array_type)),
+                self.lower_borrow(x.array_type),
                 self.lower_expression(&x.index_expr),
+                self.lower_kind(x.index_type),
                 self.lower_borrow(x.result),
             ),
 
             ExpressionIE::Mutate(x) => c.expr_mutate(
                 self.lower_expression(&x.destination_expr),
+                self.lower_borrow(x.destination_type),
                 self.lower_expression(&x.source_expr),
+                self.lower_kind(x.source_type),
                 self.lower_kind(x.result),
             ),
 
@@ -352,6 +357,7 @@ impl<'cache> Lowerer<'cache> {
 
             ExpressionIE::Upcast(x) => c.expr_struct_to_interface_upcast(
                 self.lower_expression(&x.inner_expr),
+                self.lower_kind(x.source_type),
                 self.lower_interface_kind(x.target_interface),
                 self.lower_id_to_name(&x.impl_name),
                 self.lower_kind(x.result),
@@ -363,6 +369,7 @@ impl<'cache> Lowerer<'cache> {
             ),
             ExpressionIE::AsSubtype(x) => c.expr_as_subtype(
                 self.lower_expression(&x.source_expr),
+                self.lower_kind(x.source_type),
                 self.lower_kind(x.target_type),
                 self.lower_prototype(x.ok_constructor),
                 self.lower_prototype(x.err_constructor),
@@ -372,12 +379,13 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_kind(x.result),
             ),
             ExpressionIE::IsSameInstance(x) => {
-                c.expr_is_same_instance(self.lower_expression(&x.left), self.lower_expression(&x.right))
+                c.expr_is_same_instance(self.lower_expression(&x.left), self.lower_kind(x.left_type), self.lower_expression(&x.right), self.lower_kind(x.right_type))
             }
 
-            ExpressionIE::BorrowToWeak(x) => c.expr_weak_alias(self.lower_expression(&x.inner_expr), self.lower_kind(x.result)),
+            ExpressionIE::BorrowToWeak(x) => c.expr_weak_alias(self.lower_expression(&x.inner_expr), self.lower_kind(x.source_type), self.lower_kind(x.result)),
             ExpressionIE::LockWeak(x) => c.expr_lock_weak(
                 self.lower_expression(&x.inner_expr),
+                self.lower_kind(x.source_type),
                 self.lower_prototype(&x.some_constructor),
                 self.lower_prototype(&x.none_constructor),
                 self.lower_id_to_name(&x.some_impl_name),
@@ -429,15 +437,18 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_prototype(&x.generator_method),
                 self.lower_kind(x.result),
             ),
-            ExpressionIE::ArrayLength(x) => c.expr_array_length(self.lower_expression(&x.array_expr)),
-            ExpressionIE::RuntimeSizedArrayCapacity(x) => c.expr_array_capacity(self.lower_expression(&x.array_expr)),
+            ExpressionIE::ArrayLength(x) => c.expr_array_length(self.lower_expression(&x.array_expr), self.lower_borrow(x.array_type)),
+            ExpressionIE::RuntimeSizedArrayCapacity(x) => c.expr_array_capacity(self.lower_expression(&x.array_expr), self.lower_borrow(x.array_type)),
             ExpressionIE::ArraySize(x) => c.expr_array_size(self.lower_expression(&x.array), self.lower_kind(x.result)),
             ExpressionIE::PushRuntimeSizedArray(x) => c.expr_push_runtime_sized_array(
                 self.lower_expression(&x.array_expr),
+                self.lower_borrow(x.array_type),
                 self.lower_expression(&x.new_element_expr),
+                self.lower_kind(x.element_type),
             ),
             ExpressionIE::PopRuntimeSizedArray(x) => c.expr_pop_runtime_sized_array(
                 self.lower_expression(&x.array_expr),
+                self.lower_borrow(x.array_type),
                 self.lower_kind(x.result),
             ),
             ExpressionIE::DestroyStaticSizedArrayIntoFunction(x) => c.expr_destroy_static_sized_array_into_function(

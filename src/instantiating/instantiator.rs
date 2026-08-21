@@ -1231,41 +1231,54 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ExpressionTE::MemberLookup(rml) => {
                 let MemberLookupTE { range, struct_expr: struct_expr_t, member_name: member_name_t, .. } = **rml;
-                let (_struct_it, struct_ce) =
+                let (struct_it, struct_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &struct_expr_t);
+                let struct_borrow = match struct_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("MemberLookup struct_expr must produce a borrow, got {:?}", other),
+                };
                 let member_name = Self::translate_var_name(self.interner, &member_name_t);
                 ExpressionIE::MemberLookup(self.interner.bump().alloc(MemberLookupIE {
                     range,
                     struct_expr: struct_ce,
+                    struct_type: struct_borrow,
                     member_name,
                     result: result_borrow,
                 }))
             }
             ExpressionTE::StaticSizedArrayLookup(s) => {
-                let StaticSizedArrayLookupTE { range, array_expr: array_expr_t, array_type, index_expr: index_expr_t, .. } = **s;
-                let (_array_it, array_ce) =
+                let StaticSizedArrayLookupTE { range, array_expr: array_expr_t, index_expr: index_expr_t, .. } = **s;
+                let (array_it, array_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr_t);
-                let (_index_it, index_ce) =
+                let (index_it, index_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &index_expr_t);
-                let ssa_it = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type);
+                let array_borrow = match array_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("StaticSizedArrayLookup array_expr must produce a borrow, got {:?}", other),
+                };
                 ExpressionIE::StaticSizedArrayLookup(self.interner.alloc(StaticSizedArrayLookupIE {
                     range,
                     array_expr: array_ce,
-                    array_type: self.interner.alloc(ssa_it),
+                    array_type: array_borrow,
                     index_expr: index_ce,
+                    index_type: index_it,
                     result: result_borrow,
                 }))
             }
             ExpressionTE::RuntimeSizedArrayLookup(rslt) => {
-                let RuntimeSizedArrayLookupTE { range, array_expr, array_type: rsa_tt, index_expr, .. } = **rslt;
-                let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
-                let rsa_it = self.translate_runtime_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, rsa_tt);
-                let (_index_it, index_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &index_expr);
+                let RuntimeSizedArrayLookupTE { range, array_expr, index_expr, .. } = **rslt;
+                let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let (index_it, index_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &index_expr);
+                let array_borrow = match array_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("RuntimeSizedArrayLookup array_expr must produce a borrow, got {:?}", other),
+                };
                 ExpressionIE::RuntimeSizedArrayLookup(self.interner.alloc(RuntimeSizedArrayLookupIE {
                     range,
                     array_expr: array_ce,
-                    array_type: self.interner.alloc(rsa_it),
+                    array_type: array_borrow,
                     index_expr: index_ce,
+                    index_type: index_it,
                     result: result_borrow,
                 }))
             }
@@ -1300,7 +1313,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ExpressionTE::LockWeak(lw) => {
                 let LockWeakTE { inner_expr, some_constructor, none_constructor, some_impl_name, none_impl_name, .. } = **lw;
-                let (_inner_it, inner_ce) =
+                let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
                 let some_proto =
                     self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, some_constructor);
@@ -1310,6 +1323,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let none_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &none_impl_name);
                 ExpressionIE::LockWeak(self.interner.bump().alloc(LockWeakIE {
                     inner_expr: inner_ce,
+                    source_type: inner_it,
                     some_constructor: some_proto,
                     none_constructor: none_proto,
                     some_impl_name: some_impl_id,
@@ -1319,9 +1333,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ExpressionTE::BorrowToWeak(b) => {
                 let BorrowToWeakTE { inner_expr, .. } = **b;
-                let (_inner_it, inner_ce) =
+                let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
-                ExpressionIE::BorrowToWeak(self.interner.bump().alloc(BorrowToWeakIE { inner_expr: inner_ce, result: result_it }))
+                ExpressionIE::BorrowToWeak(self.interner.bump().alloc(BorrowToWeakIE { inner_expr: inner_ce, source_type: inner_it, result: result_it }))
             }
             ExpressionTE::LetNormal(l) => {
                 let (_inner_it, inner_ce) =
@@ -1343,9 +1357,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }))
             }
             ExpressionTE::Discard(d) => {
-                let (_inner_it, inner_ce) =
+                let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &d.expr);
-                ExpressionIE::Discard(self.interner.alloc(DiscardIE { expr: inner_ce }))
+                ExpressionIE::Discard(self.interner.alloc(DiscardIE { expr: inner_ce, source_type: inner_it }))
             }
             ExpressionTE::If(if_te) => {
                 let (_condition_it, condition_ce) =
@@ -1371,11 +1385,17 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ExpressionTE::Mutate(m) => {
                 let MutateTE { destination_expr: destination_tt, source_expr, .. } = **m;
-                let (_destination_it, destination_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &destination_tt);
-                let (_source_it, source_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
+                let (destination_it, destination_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &destination_tt);
+                let (source_it, source_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
+                let destination_borrow = match destination_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("Mutate destination_expr must produce a borrow, got {:?}", other),
+                };
                 ExpressionIE::Mutate(self.interner.bump().alloc(MutateIE {
                     destination_expr: destination_ce,
+                    destination_type: destination_borrow,
                     source_expr: source_ce,
+                    source_type: source_it,
                     result: result_it,
                 }))
             }
@@ -1391,10 +1411,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }))
             }
             ExpressionTE::Return(r) => {
-                let (_inner_it, inner_ce) =
+                let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &r.source_expr);
                 ExpressionIE::Return(self.interner.alloc(ReturnIE {
                     source_expr: inner_ce,
+                    source_type: inner_it,
                 }))
             }
             ExpressionTE::Break(_) => {
@@ -1435,18 +1456,20 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ExpressionTE::IsSameInstance(isi) => {
                 let IsSameInstanceTE { left, right, .. } = **isi;
-                let (_left_it, left_ce) =
+                let (left_it, left_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &left);
-                let (_right_it, right_ce) =
+                let (right_it, right_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &right);
                 ExpressionIE::IsSameInstance(self.interner.alloc(IsSameInstanceIE {
                     left: left_ce,
+                    left_type: left_it,
                     right: right_ce,
+                    right_type: right_it,
                 }))
             }
             ExpressionTE::AsSubtype(asx) => {
                 let AsSubtypeTE { source_expr, target_type: target_subtype, ok_constructor, err_constructor, impl_name: impl_id_t, ok_impl_name: ok_result_impl_id_t, err_impl_name: err_result_impl_id_t, .. } = **asx;
-                let (_source_it, source_ce) =
+                let (source_it, source_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
                 let target_coord = self.translate_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &target_subtype);
                 let ok = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, ok_constructor);
@@ -1456,6 +1479,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let err_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &err_result_impl_id_t);
                 ExpressionIE::AsSubtype(self.interner.bump().alloc(AsSubtypeIE {
                     source_expr: source_ce,
+                    source_type: source_it,
                     target_type: target_coord,
                     ok_constructor: self.interner.bump().alloc(ok),
                     err_constructor: self.interner.bump().alloc(err),
@@ -1489,9 +1513,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ExpressionTE::ArrayLength(al) => {
                 let ArrayLengthTE { array_expr, .. } = **al;
-                let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let array_borrow = match array_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("ArrayLength array_expr must produce a borrow, got {:?}", other),
+                };
                 ExpressionIE::ArrayLength(self.interner.alloc(ArrayLengthIE {
                     array_expr: array_ce,
+                    array_type: array_borrow,
                 }))
             }
             ExpressionTE::InterfaceFunctionCall(ifc) => {
@@ -1645,32 +1674,49 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ExpressionTE::DestroyRuntimeSizedArray(d) => {
                 let DestroyRuntimeSizedArrayTE { array_expr, .. } = **d;
-                let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
                 ExpressionIE::DestroyRuntimeSizedArray(self.interner.alloc(DestroyRuntimeSizedArrayIE {
                     array_expr: array_ce,
+                    array_type: array_it,
                 }))
             }
             ExpressionTE::RuntimeSizedArrayCapacity(r) => {
                 let RuntimeSizedArrayCapacityTE { array_expr, .. } = **r;
-                let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let array_borrow = match array_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("RuntimeSizedArrayCapacity array_expr must produce a borrow, got {:?}", other),
+                };
                 ExpressionIE::RuntimeSizedArrayCapacity(self.interner.alloc(RuntimeSizedArrayCapacityIE {
                     array_expr: array_ce,
+                    array_type: array_borrow,
                 }))
             }
             ExpressionTE::PushRuntimeSizedArray(prsa) => {
                 let PushRuntimeSizedArrayTE { array_expr, new_element_expr, .. } = **prsa;
-                let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
-                let (_element_it, element_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &new_element_expr);
+                let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let (element_it, element_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &new_element_expr);
+                let array_borrow = match array_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("PushRuntimeSizedArray array_expr must produce a borrow, got {:?}", other),
+                };
                 ExpressionIE::PushRuntimeSizedArray(self.interner.alloc(PushRuntimeSizedArrayIE {
                     array_expr: array_ce,
+                    array_type: array_borrow,
                     new_element_expr: element_ce,
+                    element_type: element_it,
                 }))
             }
             ExpressionTE::PopRuntimeSizedArray(p) => {
                 let PopRuntimeSizedArrayTE { array_expr, .. } = **p;
-                let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let array_borrow = match array_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("PopRuntimeSizedArray array_expr must produce a borrow, got {:?}", other),
+                };
                 ExpressionIE::PopRuntimeSizedArray(self.interner.alloc(PopRuntimeSizedArrayIE {
                     array_expr: array_ce,
+                    array_type: array_borrow,
                     result: result_it,
                 }))
             }
@@ -1680,10 +1726,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ExpressionTE::Upcast(u) => {
                 let UpcastTE { inner_expr: inner_expr_unsubstituted, target_super_kind, impl_name: untranslated_impl_id, .. } = *u;
                 let impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &untranslated_impl_id);
-                let (_inner_it, inner_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr_unsubstituted);
+                let (inner_it, inner_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr_unsubstituted);
                 let super_kind = self.translate_super_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &target_super_kind);
                 ExpressionIE::Upcast(self.interner.bump().alloc(UpcastIE {
                     inner_expr: inner_ce,
+                    source_type: inner_it,
                     target_interface: super_kind,
                     impl_name: impl_id,
                     result: result_it,
@@ -1706,11 +1753,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }))
             }
             ExpressionTE::Deref(d) => {
-                let (_inner_it, inner_ce) =
+                let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &d.inner);
                 ExpressionIE::Deref(self.interner.alloc(DerefIE {
                     range: d.range,
                     inner: inner_ce,
+                    source_type: inner_it,
                     result: result_it,
                 }))
             }

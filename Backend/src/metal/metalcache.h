@@ -85,7 +85,6 @@ public:
       weakRefs(0, addressNumberer->makeHasher<Kind*>()),
       runtimeSizedArrays(0, addressNumberer->makeHasher<Name*>()),
       staticSizedArrays(0, addressNumberer->makeHasher<Name*>()),
-      unconvertedReferences(0, addressNumberer->makeHasher<Kind*>()),
       prototypes(0, addressNumberer->makeHasher<Name*>()),
       interfaceMethods(0, addressNumberer->makeHasher<Prototype*>()) {
 
@@ -97,25 +96,13 @@ public:
     // owned; the wrap layers (getBorrowRef/getShareRef/…) express references, and placement is
     // derived from the onion shape at codegen.
     // VCOORD: Str should be different soon
-    i32 = getInt(rcImmRegionId, 32);
-    i64 = getInt(rcImmRegionId, 64);
-    boool = getBool(rcImmRegionId);
-    flooat = getFloat(rcImmRegionId);
+    i32Type = getInt(rcImmRegionId, 32);
+    i64Type = getInt(rcImmRegionId, 64);
+    boolType = getBool(rcImmRegionId);
+    floatType = getFloat(rcImmRegionId);
     str = getStr(rcImmRegionId);
-    never = getNever(rcImmRegionId);
-    vooid = getVoid(rcImmRegionId);
-
-    // Codegen-internal Reference singletons for the primitives. The region layer still runs on
-    // Reference{ownership, location, kind}; these are the canonical references codegen builds from
-    // the bare kinds (a primitive is OWN and INLINE; a string is a shared yonder value).
-    i32Ref = getReference(Ownership::OWN, Location::INLINE, i32);
-    i64Ref = getReference(Ownership::OWN, Location::INLINE, i64);
-    boolRef = getReference(Ownership::OWN, Location::INLINE, boool);
-    floatRef = getReference(Ownership::OWN, Location::INLINE, flooat);
-    mutStrRef = getReference(Ownership::MUTABLE_SHARE, Location::YONDER, str);
-    immStrRef = getReference(Ownership::IMMUTABLE_SHARE, Location::YONDER, str);
-    neverRef = getReference(Ownership::OWN, Location::INLINE, never);
-    voidRef = getReference(Ownership::OWN, Location::INLINE, vooid);
+    neverType = getNever(rcImmRegionId);
+    voidType = getVoid(rcImmRegionId);
   }
 
   PackageCoordinate* getPackageCoordinate(const std::string& projectName, const std::vector<std::string>& packageSteps) {
@@ -230,16 +217,6 @@ public:
     return makeIfNotPresent(&weakRefs, inner, [&](){ return new WeakRef(inner); });
   }
 
-  // Codegen-internal: intern a Reference{ownership, location, kind}. The onion IR no longer hands
-  // codegen a Reference (it hands an onion Kind*); codegen derives one via refFromKind and interns
-  // it here so the region layer, which still runs on Reference*, keeps working.
-  Reference* getReference(Ownership ownership, Location location, Kind* kind) {
-    return makeIfNotPresent<Location, Reference*>(
-        &unconvertedReferences[kind][ownership],
-        location,
-        [&](){ return new Reference(ownership, location, kind); });
-  }
-
   Prototype* getPrototype(Name* name, Kind* returnType, std::vector<Kind*> paramTypes) {
     return makeIfNotPresent(
         &makeIfNotPresent(
@@ -285,16 +262,6 @@ public:
   std::unordered_map<Name*, RuntimeSizedArrayT*, AddressHasher<Name*>> runtimeSizedArrays;
   std::unordered_map<Name*, StaticSizedArrayT*, AddressHasher<Name*>> staticSizedArrays;
 
-  // Codegen-internal Reference interning, keyed kind -> ownership -> location.
-  std::unordered_map<
-      Kind*,
-      std::unordered_map<
-          Ownership,
-          std::unordered_map<
-              Location,
-              Reference*>>,
-      AddressHasher<Kind*>> unconvertedReferences;
-
   using PrototypeByParamListMap =
       std::unordered_map<std::vector<Kind*>, Prototype*, HashKindVec, KindVecEquals>;
   using PrototypeByParamListByReturnTypeMap =
@@ -309,21 +276,13 @@ public:
   RegionId* mutRegionId = nullptr;
 
   PackageCoordinate* builtinPackageCoord = nullptr;
-  Int* i32 = nullptr;
-  Reference* i32Ref = nullptr;
-  Int* i64 = nullptr;
-  Reference* i64Ref = nullptr;
-  Bool* boool = nullptr;
-  Reference* boolRef = nullptr;
-  Float* flooat = nullptr;
-  Reference* floatRef = nullptr;
+  Int* i32Type = nullptr;
+  Int* i64Type = nullptr;
+  Bool* boolType = nullptr;
+  Float* floatType = nullptr;
   Str* str = nullptr;
-  Reference* immStrRef = nullptr;
-  Reference* mutStrRef = nullptr;
-  Never* never = nullptr;
-  Reference* neverRef = nullptr;
-  Void* vooid = nullptr;
-  Reference* voidRef = nullptr;
+  Never* neverType = nullptr;
+  Void* voidType = nullptr;
 };
 
 

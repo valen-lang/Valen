@@ -8,15 +8,15 @@ Ref receiveHostObjectIntoVale(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* hostRefMT,
-    Reference* valeRefMT,
+    Kind* hostRefMT,
+    Kind* valeRefMT,
     LLVMValueRef hostRefLE);
 
 LLVMValueRef sendValeObjectIntoHost(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Reference* valeRefMT,
+    Kind* valeRefMT,
     Ref valeRef);
 
 #endif

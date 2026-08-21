@@ -70,6 +70,5 @@ We'll use "two-phase communication" throughout this entire process, please see t
 ## Required reading
 
  * prose-reviewer
- * prose-tactical
  * update-handoff
  * two-phase

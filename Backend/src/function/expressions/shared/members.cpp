@@ -12,11 +12,11 @@ Ref loadMember(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Ref structRegionInstanceRef,
-    Reference* structRefM,
+    Kind* structRefM,
     LiveRef structRef,
-    Reference* memberType,
+    Kind* memberType,
     int memberIndex,
-    Reference* resultType,
+    Kind* resultType,
     const std::string& memberName) {
   auto memberRef =
       globalState->getRegion(structRefM)->loadMember(
@@ -31,14 +31,14 @@ Ref swapMember(
     LLVMBuilderRef builder,
     Ref structRegionInstanceRef,
     StructDefinition* structDefM,
-    Reference* structRefMT,
+    Kind* structRefMT,
     LiveRef structRef,
     int memberIndex,
     const std::string& memberName,
     Ref newMemberRef) {
   auto memberRefMT = structDefM->members[memberIndex]->type;
 
-  assert(structRef.refM->ownership == Ownership::MUTABLE_BORROW);
+  assert(dynamic_cast<BorrowRef*>(structRef.refM) != nullptr);
 
   assert(structDefM->sharedness == Sharedness::SINGLE);
 

@@ -5,7 +5,7 @@
 
 std::vector<LLVMTypeRef> translateTypes(
     GlobalState* globalState,
-    std::vector<Reference*> referencesM) {
+    std::vector<Kind*> referencesM) {
   std::vector<LLVMTypeRef> result;
   for (auto referenceM : referencesM) {
     result.push_back(

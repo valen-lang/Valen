@@ -70,7 +70,7 @@
 //    AreaAndFileAndLine from,
 //    FunctionState* functionState,
 //    LLVMBuilderRef builder,
-//    Reference* reference,
+//    Kind* reference,
 //    WrapperPtrLE wrapperPtrLE) {
 //  return getKindStructsSource(reference->kind)->getConcreteControlBlockPtr(from, functionState, builder, reference, wrapperPtrLE);
 //}
@@ -80,7 +80,7 @@
 //    AreaAndFileAndLine checkerAFL,
 //    FunctionState* functionState,
 //    LLVMBuilderRef builder,
-//    Reference* referenceM,
+//    Kind* referenceM,
 //    LLVMValueRef ptrLE) {
 //  return getKindStructsSource(referenceM->kind)->makeWrapperPtr(checkerAFL, functionState, builder, referenceM, ptrLE);
 //}
@@ -89,7 +89,7 @@
 //    AreaAndFileAndLine checkerAFL,
 //    FunctionState* functionState,
 //    LLVMBuilderRef builder,
-//    Reference* referenceM,
+//    Kind* referenceM,
 //    LLVMValueRef ptrLE) {
 //  return getKindStructsSource(referenceM->kind)->makeInterfaceFatPtr(checkerAFL, functionState, builder, referenceM, ptrLE);
 //}
@@ -98,7 +98,7 @@
 //    AreaAndFileAndLine checkerAFL,
 //    FunctionState* functionState,
 //    LLVMBuilderRef builder,
-//    Reference* referenceM,
+//    Kind* referenceM,
 //    LLVMValueRef ptrLE) {
 //  return getKindStructsSource(referenceM->kind)->makeInterfaceFatPtrWithoutChecking(checkerAFL, functionState, builder, referenceM, ptrLE);
 //}
@@ -147,7 +147,7 @@
 //    LLVMBuilderRef builder,
 //    // This will be a pointer if a mutable struct, or a fat ref if an interface.
 //    Ref ref,
-//    Reference* referenceM) {
+//    Kind* referenceM) {
 //  return getKindStructsSource(referenceM->kind)->getControlBlockPtr(from, functionState, builder, ref, referenceM);
 //}
 //
@@ -164,7 +164,7 @@
 //    LLVMBuilderRef builder,
 //    // This will be a pointer if a mutable struct, or a fat ref if an interface.
 //    LLVMValueRef ref,
-//    Reference* referenceM) {
+//    Kind* referenceM) {
 //  return getKindStructsSource(referenceM->kind)->getControlBlockPtr(from, functionState, builder, ref, referenceM);
 //}
 //
@@ -174,7 +174,7 @@
 //    LLVMBuilderRef builder,
 //    // This will be a pointer if a mutable struct, or a fat ref if an interface.
 //    LLVMValueRef ref,
-//    Reference* referenceM) {
+//    Kind* referenceM) {
 //  return getKindStructsSource(referenceM->kind)->getControlBlockPtrWithoutChecking(
 //      from, functionState, builder, ref, referenceM);
 //}
@@ -182,7 +182,7 @@
 //LLVMValueRef KindStructsRouter::getVoidPtrFromInterfacePtr(
 //    FunctionState* functionState,
 //    LLVMBuilderRef builder,
-//    Reference* virtualParamMT,
+//    Kind* virtualParamMT,
 //    InterfaceFatPtrLE virtualArgLE) {
 //  return getKindStructsSource(virtualParamMT->kind)->getVoidPtrFromInterfacePtr(functionState, builder, virtualParamMT, virtualArgLE);
 //}
@@ -196,20 +196,20 @@
 //
 //LLVMValueRef KindStructsRouter::getStrongRcPtrFromControlBlockPtr(
 //    LLVMBuilderRef builder,
-//    Reference* refM,
+//    Kind* refM,
 //    ControlBlockPtrLE controlBlockPtr) {
 //  return getKindStructsSource(refM->kind)->getStrongRcPtrFromControlBlockPtr(builder, refM, controlBlockPtr);
 //}
 //
 //LLVMValueRef KindStructsRouter::getStrongRcFromControlBlockPtr(
 //    LLVMBuilderRef builder,
-//    Reference* refM,
+//    Kind* refM,
 //    ControlBlockPtrLE controlBlockPtr) {
 //  return getKindStructsSource(refM->kind)->getStrongRcFromControlBlockPtr(builder, refM, controlBlockPtr);
 //}
 //
 //LLVMValueRef KindStructsRouter::downcastPtr(
-//    LLVMBuilderRef builder, Reference* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE) {
+//    LLVMBuilderRef builder, Kind* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE) {
 //  return getKindStructsSource(resultStructRefMT->kind)->downcastPtr(builder, resultStructRefMT, unknownPossibilityPtrLE);
 //}
 //
@@ -226,7 +226,7 @@
 //LLVMTypeRef WeakRefStructsRouter::getInterfaceWeakRefStruct(InterfaceKind* interfaceKind) {
 //  return getWeakRefStructsSource(interfaceKind)->getInterfaceWeakRefStruct(interfaceKind);
 //}
-//WeakFatPtrLE WeakRefStructsRouter::makeWeakFatPtr(Reference* referenceM_, LLVMValueRef ptrLE) {
+//WeakFatPtrLE WeakRefStructsRouter::makeWeakFatPtr(Kind* referenceM_, LLVMValueRef ptrLE) {
 //  return getWeakRefStructsSource(referenceM_->kind)->makeWeakFatPtr(referenceM_, ptrLE);
 //}
 //
@@ -234,7 +234,7 @@
 //WeakFatPtrLE WeakRefStructsRouter::downcastWeakFatPtr(
 //    LLVMBuilderRef builder,
 //    StructKind* targetStructKind,
-//    Reference* targetRefMT,
+//    Kind* targetRefMT,
 //    LLVMValueRef sourceWeakFatPtrLE) {
 //  return getWeakRefStructsSource(targetStructKind)->downcastWeakFatPtr(
 //      builder, targetStructKind, targetRefMT, sourceWeakFatPtrLE);

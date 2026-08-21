@@ -36,8 +36,7 @@ void makeHammerLocal(
     BlockState* blockState,
     LLVMBuilderRef builder,
     Local* local,
-    Ref valueToStore,
-    bool knownLive);
+    Ref valueToStore);
 
 
 // Returns the new RC
@@ -48,14 +47,14 @@ LLVMValueRef adjustStrongRc(
     KindStructs* kindStructsSource,
     LLVMBuilderRef builder,
     Ref ref,
-    Reference* refM,
+    Kind* refM,
     int amount);
 
 //LLVMValueRef strongRcIsZero(
 //    GlobalState* globalState,
 //    KindStructs* structs,
 //    LLVMBuilderRef builder,
-//    Reference* refM,
+//    Kind* refM,
 //    ControlBlockPtrLE exprLE);
 
 

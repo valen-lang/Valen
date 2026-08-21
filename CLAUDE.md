@@ -86,6 +86,7 @@ Instead, use the same file.
 - **Read when reviewing a plan document or code, to flag suspicious patterns — newly-visible mutation, field mutation instead of methods, and fallbacks.** → docs/skills/approach-review.md
 - **Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.** → docs/skills/bug-repro.md
 - **Read when the human asks to close, end, or shut down the current Claude Code session.** → docs/skills/close-session.md
+- **Read when the user says they want you to act as the code assistant.** → docs/skills/code-assistant.md
 - **Read when investigating a compiler bug by tracing execution and narrowing the call graph.** → docs/skills/collapsed-call-tree.md
 - **Read when the human says this session continues, resumes, or picks up an earlier session or convo.** → docs/skills/continue-session.md
 - **Read when asked to deep-read a document, or when a skill or doc has a Required reading section that must be followed recursively.** → docs/skills/deep-read.md
@@ -121,4 +122,3 @@ Instead, use the same file.
 - **Read when a human asks you to use the mailbox to send mail, or you have trouble arming a mail watcher.** → docs/skills/use-mailbox.md
 - **Read when reviewing a plan document or FrontendRust code, to flag suspicious patterns — new jargon, broken existing patterns, and creation-order changes that reduce decoupling.** → docs/skills/valec-approach-review.md
 - **Read when reviewing or writing FrontendRust compiler code in any pass.** → docs/skills/valec-reviewer.md
-- **Read when writing, testing, or reviewing borrow checker code.** → src/typing/docs/borrow-checker-guidelines.md

@@ -4,7 +4,7 @@
 //
 // This layer is dumb, faithful 1:1 plumbing: each builder constructs the corresponding
 // onion node (metal/instructions.h) with exactly the fields the IR carries. There is no
-// Reference / ownership / location, no member-name→index, no Deref/load fusion, no
+// Kind / ownership / location, no member-name→index, no Deref/load fusion, no
 // placement. All lowering is done downstream in C++ codegen. Types are the onion
 // `KindHandle*` (a bare kind is owned; the wrap builders express references).
 //
@@ -162,8 +162,8 @@ ExpressionHandle* metal_expr_constant_bool(int32_t value /* 0 or 1 */);
 ExpressionHandle* metal_expr_constant_f64(double value);
 ExpressionHandle* metal_expr_constant_str(const char* value_ptr, size_t value_len, KindHandle* result);
 ExpressionHandle* metal_expr_break(void);
-ExpressionHandle* metal_expr_return(ExpressionHandle* source_expr);
-ExpressionHandle* metal_expr_discard(ExpressionHandle* expr);
+ExpressionHandle* metal_expr_return(ExpressionHandle* source_expr, KindHandle* source_type);
+ExpressionHandle* metal_expr_discard(ExpressionHandle* expr, KindHandle* source_type);
 ExpressionHandle* metal_expr_block(ExpressionHandle* inner, KindHandle* result);
 ExpressionHandle* metal_expr_consecutor(ExpressionHandle* const* exprs, size_t expr_count, KindHandle* result);
 
@@ -178,17 +178,17 @@ ExpressionHandle* metal_expr_unstackify(LocalHandle* variable, KindHandle* resul
 ExpressionHandle* metal_expr_local_lookup(LocalHandle* local_variable, KindHandle* result);
 
 // Deref / member & array lookups.
-ExpressionHandle* metal_expr_deref(ExpressionHandle* inner, KindHandle* result);
+ExpressionHandle* metal_expr_deref(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result);
 ExpressionHandle* metal_expr_member_lookup(
-    ExpressionHandle* struct_expr, const char* member_name_ptr, size_t member_name_len, KindHandle* result);
+    ExpressionHandle* struct_expr, KindHandle* struct_type, const char* member_name_ptr, size_t member_name_len, KindHandle* result);
 ExpressionHandle* metal_expr_static_sized_array_lookup(
-    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* result);
+    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result);
 ExpressionHandle* metal_expr_runtime_sized_array_lookup(
-    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* result);
+    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result);
 
 // Mutate (unified store over a destination lvalue).
 ExpressionHandle* metal_expr_mutate(
-    ExpressionHandle* destination_expr, ExpressionHandle* source_expr, KindHandle* result);
+    ExpressionHandle* destination_expr, KindHandle* destination_type, ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* result);
 
 // Construct / destroy.
 ExpressionHandle* metal_expr_new_struct(
@@ -201,20 +201,20 @@ ExpressionHandle* metal_expr_copy_prim(ExpressionHandle* inner, KindHandle* resu
 
 // Upcast / subtype.
 ExpressionHandle* metal_expr_struct_to_interface_upcast(
-    ExpressionHandle* inner_expr, KindHandle* target_interface, NameHandle* impl_name, KindHandle* result);
+    ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* target_interface, NameHandle* impl_name, KindHandle* result);
 ExpressionHandle* metal_expr_interface_to_interface_upcast(
     ExpressionHandle* inner_expr, KindHandle* target_interface, KindHandle* result);
 ExpressionHandle* metal_expr_as_subtype(
-    ExpressionHandle* source_expr, KindHandle* target_type,
+    ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* target_type,
     PrototypeHandle* ok_constructor, PrototypeHandle* err_constructor,
     NameHandle* impl_name, NameHandle* ok_impl_name, NameHandle* err_impl_name,
     KindHandle* result);
-ExpressionHandle* metal_expr_is_same_instance(ExpressionHandle* left, ExpressionHandle* right);
+ExpressionHandle* metal_expr_is_same_instance(ExpressionHandle* left, KindHandle* left_type, ExpressionHandle* right, KindHandle* right_type);
 
 // Weak refs.
-ExpressionHandle* metal_expr_weak_alias(ExpressionHandle* inner_expr, KindHandle* result);
+ExpressionHandle* metal_expr_weak_alias(ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* result);
 ExpressionHandle* metal_expr_lock_weak(
-    ExpressionHandle* inner_expr,
+    ExpressionHandle* inner_expr, KindHandle* source_type,
     PrototypeHandle* some_constructor, PrototypeHandle* none_constructor,
     NameHandle* some_impl_name, NameHandle* none_impl_name,
     KindHandle* result);
@@ -240,12 +240,12 @@ ExpressionHandle* metal_expr_new_mut_runtime_sized_array(
     KindHandle* array_type, ExpressionHandle* capacity_expr, KindHandle* result);
 ExpressionHandle* metal_expr_static_array_from_callable(
     KindHandle* array_type, ExpressionHandle* generator, PrototypeHandle* generator_method, KindHandle* result);
-ExpressionHandle* metal_expr_array_length(ExpressionHandle* array_expr);
-ExpressionHandle* metal_expr_array_capacity(ExpressionHandle* array_expr);
+ExpressionHandle* metal_expr_array_length(ExpressionHandle* array_expr, KindHandle* array_type);
+ExpressionHandle* metal_expr_array_capacity(ExpressionHandle* array_expr, KindHandle* array_type);
 ExpressionHandle* metal_expr_array_size(ExpressionHandle* array, KindHandle* result);
 ExpressionHandle* metal_expr_push_runtime_sized_array(
-    ExpressionHandle* array_expr, ExpressionHandle* new_element_expr);
-ExpressionHandle* metal_expr_pop_runtime_sized_array(ExpressionHandle* array_expr, KindHandle* result);
+    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* new_element_expr, KindHandle* element_type);
+ExpressionHandle* metal_expr_pop_runtime_sized_array(ExpressionHandle* array_expr, KindHandle* array_type, KindHandle* result);
 ExpressionHandle* metal_expr_destroy_static_sized_array_into_function(
     ExpressionHandle* array_expr, KindHandle* array_type,
     ExpressionHandle* consumer, PrototypeHandle* consumer_method);

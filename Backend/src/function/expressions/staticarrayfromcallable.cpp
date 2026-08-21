@@ -18,7 +18,7 @@ Ref translateStaticArrayFromCallable(
     StaticArrayFromCallable* staticArrayFromCallable) {
 
   auto generatorType = staticArrayFromCallable->generatorType;
-  auto generatorExpr = staticArrayFromCallable->generatorExpr;
+  auto generatorExpr = staticArrayFromCallable->generator;
   auto elementType = staticArrayFromCallable->elementType;
   auto arrayRefType = staticArrayFromCallable->arrayRefType;
   auto staticSizedArrayMT = dynamic_cast<StaticSizedArrayT*>(staticArrayFromCallable->arrayRefType->kind);

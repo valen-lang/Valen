@@ -6,7 +6,7 @@ LLVMValueRef checkValidReference(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     bool expectLive,
-    Reference* refM,
+    Kind* refM,
     Ref ref) {
   return globalState->getRegion(refM)->checkValidReference(
       checkerAFL, functionState, builder, expectLive, refM, ref);
@@ -18,7 +18,7 @@ LLVMValueRef checkValidReference(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     bool expectLive,
-    Reference* refM,
+    Kind* refM,
     LiveRef liveRef) {
   auto ref = toRef(globalState, refM, liveRef);
   return checkValidReference(
