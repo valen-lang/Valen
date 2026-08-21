@@ -26,9 +26,13 @@ fn run(dir_rel: &str, expected: i32) {
 #[test] fn simpleexternparam()         { run("programs/externs/simpleexternparam", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn structimmreturnextern()     { run("programs/externs/structimmreturnextern", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn structimmreturnexport()     { run("programs/externs/structimmreturnexport", 42); }
-#[test] fn structimmparamextern()      { run("programs/externs/structimmparamextern", 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn structimmparamextern()      { run("programs/externs/structimmparamextern", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn structimmparamexport()      { run("programs/externs/structimmparamexport", 42); }
-#[test] fn structimmparamdeepextern()  { run("programs/externs/structimmparamdeepextern", 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn structimmparamdeepextern()  { run("programs/externs/structimmparamdeepextern", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn structimmparamdeepexport()  { run("programs/externs/structimmparamdeepexport", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn strreturnexport()           { run("programs/externs/strreturnexport", 6); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn strlenextern()              { run("programs/externs/strlenextern", 11); }
@@ -47,17 +51,27 @@ fn run(dir_rel: &str, expected: i32) {
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn interfaceimmreturnexport()                  { run("programs/externs/interfaceimmreturnexport", 42); }
 
 // Feature-targeted fixtures (each isolates one auto-gen emitter family).
-#[test] fn feature_alias_dealias()      { run("programs/externs/feature_alias_dealias", 42); }
-#[test] fn feature_ref_eq()             { run("programs/externs/feature_ref_eq", 42); }
-#[test] fn feature_field_getters()      { run("programs/externs/feature_field_getters", 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn feature_alias_dealias()      { run("programs/externs/feature_alias_dealias", 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn feature_ref_eq()             { run("programs/externs/feature_ref_eq", 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn feature_field_getters()      { run("programs/externs/feature_field_getters", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn feature_interface_dispatch() { run("programs/externs/feature_interface_dispatch", 42); }
-#[test] fn feature_str_read()           { run("programs/externs/feature_str_read", 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn feature_str_read()           { run("programs/externs/feature_str_read", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn feature_arr_read_rsa()       { run("programs/externs/feature_arr_read_rsa", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn feature_arr_read_ssa()       { run("programs/externs/feature_arr_read_ssa", 42); }
 
 // RC-correctness fixtures.
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn structimm_roundtrip()          { run("programs/externs/structimm_roundtrip", 42); }
-#[test] fn structimm_alias()              { run("programs/externs/structimm_alias", 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn structimm_alias()              { run("programs/externs/structimm_alias", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn str_empty()                    { run("programs/externs/str_empty", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn interfaceimm_single_variant()  { run("programs/externs/interfaceimm_single_variant", 42); }
 

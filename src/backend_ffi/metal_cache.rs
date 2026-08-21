@@ -903,13 +903,13 @@ mod tests {
     fn singletons_match_constructor_inits() {
         let cache = MetalCache::new();
         let i32_via_singleton = cache.i32();
-        let i32_via_get = cache.get_int(cache.rcimm_region_id(), 32);
-        assert_eq!(i32_via_singleton, i32_via_get, "i32 singleton must dedupe with get_int(rcimm, 32)");
+        let i32_via_get = cache.get_int(cache.mut_region_id(), 32);
+        assert_eq!(i32_via_singleton, i32_via_get, "i32 singleton must dedupe with get_int(mut, 32)");
 
-        let i32_again = cache.get_int(cache.rcimm_region_id(), 32);
+        let i32_again = cache.get_int(cache.mut_region_id(), 32);
         assert_eq!(i32_via_get, i32_again);
 
-        let i64 = cache.get_int(cache.rcimm_region_id(), 64);
+        let i64 = cache.get_int(cache.mut_region_id(), 64);
         assert_ne!(i32_via_get, i64);
     }
 

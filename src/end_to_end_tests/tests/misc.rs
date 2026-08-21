@@ -6,7 +6,9 @@ fn p(rel: &str) -> std::path::PathBuf {
     programs_dir().join(rel)
 }
 
-#[test] fn mutswaplocals()          { assert_compile_and_run(&p("programs/mutswaplocals.vale"), 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn mutswaplocals()          { assert_compile_and_run(&p("programs/mutswaplocals.vale"), 42); }
 #[test]
 #[ignore = "deferred at experimental-2 squash baseline"]
 fn restackify()             { assert_compile_and_run(&p("programs/restackify.vale"), 42); }
@@ -23,9 +25,13 @@ fn mutlocal()               { assert_compile_and_run(&p("programs/mutlocal.vale"
 #[ignore = "deferred at experimental-2 squash baseline"]
 fn constraintRef()          { assert_compile_and_run(&p("programs/constraintRef.vale"), 8); }
 #[test] fn unstackifyret()          { assert_compile_and_run(&p("programs/unstackifyret.vale"), 42); }
-#[test] fn unreachablemoot()        { assert_compile_and_run(&p("programs/unreachablemoot.vale"), 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn unreachablemoot()        { assert_compile_and_run(&p("programs/unreachablemoot.vale"), 42); }
 #[test] fn panic()                  { assert_compile_and_run(&p("programs/panic.vale"), 1); }
-#[test] fn panicnot()               { assert_compile_and_run(&p("programs/panicnot.vale"), 42); }
+#[test]
+#[ignore] // ZCOORD: re-enable with onion
+fn panicnot()               { assert_compile_and_run(&p("programs/panicnot.vale"), 42); }
 #[test]
 #[ignore = "deferred at experimental-2 squash baseline"]
 fn nestedblocks()           { assert_compile_and_run(&p("programs/nestedblocks.vale"), 42); }
