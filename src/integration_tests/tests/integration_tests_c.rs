@@ -1,25 +1,10 @@
-use crate::collect_only_tnode;
-use crate::final_ast::types::HamutsFunctionExtern;
-use crate::final_ast::types::IntHT;
-use crate::final_ast::types::KindHT;
-use crate::instantiating::ast::names::FunctionNameIX;
-use crate::instantiating::ast::names::FunctionTemplateNameI;
-use crate::instantiating::ast::names::INameI;
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::tests::tests::load_expected;
 use crate::testvm::vivem::VmRuntimeErrorV;
-use crate::typing::test::traverse::NodeRefT;
-use crate::typing::types::types::CoordT;
-use crate::typing::types::types::IRegionT;
-use crate::typing::types::types::IntT;
-use crate::typing::types::types::KindT;
-use crate::typing::types::types::OwnershipT;
-use crate::typing::types::types::RegionT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::testvm::von::IVonData;
@@ -28,7 +13,10 @@ use crate::testvm::von::VonInt;
 pub struct IntegrationTestsC;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn tests_floats() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -59,10 +47,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn get_or_function() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -86,10 +78,14 @@ fn get_or_function() {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn panic_on_drop_because_of_outstanding_borrow() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -121,12 +117,16 @@ exported func main() {
         Err(VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
         other => panic!("Expected ConstraintViolatedException, got {:?}", other),
     }
+    */
 }
 
 // Not sure if this is desirable behavior, because borrow_ship isnt really used after
 // we drop ship. Still, let's have this test so we don't *accidentally* change it.
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn unlet_to_avoid_an_outstanding_borrow_panic() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -156,10 +156,14 @@ exported func main() {
     );
     let _ = compile.expect_compiler_outputs();
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn function_return_with_return_upcasts() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -191,10 +195,14 @@ fn function_return_with_return_upcasts() {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn test_shaking() {
+    unimplemented!();
+    /*
     // Make sure that functions that cant be called by main will not be included.
 
     let compilation_bump = bumpalo::Bump::new();
@@ -240,10 +248,14 @@ exported func main() {
                 ..
             })
         )).is_some());
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn test_overloading_between_borrow_and_weak() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -281,10 +293,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn truncate_i64_to_i32() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -312,10 +328,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5032704 }) => {}
         other => panic!("expected VonInt(5032704), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn return_without_return() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -338,10 +358,14 @@ fn return_without_return() {
         IVonData::Int(VonInt { value: 73 }) => {}
         other => panic!("expected VonInt(73), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn test_export_functions() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -365,10 +389,14 @@ exported func moo() int {
 ",
     );
     let _hamuts = compile.get_hamuts();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn test_extern_functions() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -409,10 +437,14 @@ fn test_extern_functions() {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn test_narrowing_between_borrow_and_owning_overloads() {
+    unimplemented!();
+    /*
     // See NMORFI for why this test is here. Before the SCCTT fix, it couldn't resolve between the two
     // `get` overloads, because the borrow ownership (from the opt.get()) was creeping into the rules
     // too far.
@@ -455,10 +487,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn test_catch_deref_after_drop() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -482,12 +518,16 @@ fn test_catch_deref_after_drop() {
         Err(VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
         other => panic!("Expected ConstraintViolatedException, got {:?}", other),
     }
+    */
 }
 
 // This test is here because we had a bug where the compiler was enforcing that we unstackify
 // the same locals from all branches of if, even if they were constraint refs.
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn using_same_constraint_ref_from_both_branches_of_if() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -526,11 +566,15 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 // Compiler should be fine with moving things from if statements if we return out.
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn moving_same_thing_from_both_branches_of_if() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -569,10 +613,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn exporting_array() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -597,10 +645,14 @@ fn exporting_array() {
     let builtin_package = hamuts.lookup_package(*PackageCoordinate::builtin(&parse_arena, &parser_keywords));
     let rsa = builtin_package.runtime_sized_arrays.iter().find(|r| KindHT::RuntimeSizedArrayHT(r.kind(&hammer_interner)) == kind_h).expect("vassertSome: RSA matching IntArray");
     assert_eq!(rsa.element_type.kind, KindHT::IntHT(IntHT { bits: 32 }));
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn call_borrow_parameter_with_shared_reference() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -630,10 +682,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 6 }) => {}
         other => panic!("expected VonInt(6), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn supplying_bounded_struct_to_struct_accepting() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -665,10 +721,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn same_type_multiple_times_in_an_invocation() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -700,10 +760,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn restackify() {
+    unimplemented!();
+    /*
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -728,10 +792,14 @@ fn restackify() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn destructure_restackify() {
+    unimplemented!();
+    /*
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -756,10 +824,14 @@ fn destructure_restackify() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn loop_restackify() {
+    unimplemented!();
+    /*
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -784,10 +856,14 @@ fn loop_restackify() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn ignoring_receiver() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -824,5 +900,6 @@ exported func main() int { [_, y] = (Marine(6), Marine(8)); return __copy_prim(&
         IVonData::Int(VonInt { value: 8 }) => {}
         other => panic!("expected VonInt(8), got {:?}", other),
     }
+    */
 }
 

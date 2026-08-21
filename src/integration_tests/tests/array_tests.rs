@@ -1,27 +1,10 @@
-use crate::collect_only_tnode;
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::tests::tests::load_expected;
-use crate::typing::ast::expressions::LetNormalTE;
-use crate::typing::ast::expressions::NewRuntimeSizedArrayTE;
-use crate::typing::ast::expressions::RuntimeSizedArrayLookupTE;
-use crate::typing::ast::expressions::StaticSizedArrayLookupTE;
-use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::typing::env::function_environment_t::ILocalVariableT;
-use crate::typing::env::function_environment_t::ReferenceLocalVariableT;
-use crate::typing::names::names::MemberNameT;
-use crate::typing::names::names::IVarNameT;
-use crate::typing::templata::templata::ITemplataT;
-use crate::typing::test::traverse::NodeRefT;
-use crate::typing::types::types::CoordT;
-use crate::typing::types::types::KindT;
-use crate::typing::types::types::SharednessT;
-use crate::typing::types::types::OwnershipT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::testvm::von::IVonData;
 use crate::testvm::von::VonBool;
@@ -31,7 +14,10 @@ use crate::testvm::von::VonStr;
 pub struct ArrayTests;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn returning_static_array_from_function_and_dotting_it() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -62,10 +48,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn simple_static_array_and_runtime_index_lookup() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -103,10 +93,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn destroy_ssa_into_function() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -137,10 +131,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn destroy_rsa_into_function() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -172,10 +170,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn migrate_rsa() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -208,10 +210,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn migrate_ssa() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -244,10 +250,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn unspecified_mutability_static_array_from_lambda_defaults_to_mutable() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -285,10 +295,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn static_array_from_lambda() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -320,10 +334,14 @@ fn static_array_from_lambda() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn mutable_static_array_from_values() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -355,10 +373,14 @@ fn mutable_static_array_from_values() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn unspecified_mutability_runtime_array_from_lambda_defaults_to_mutable() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -397,10 +419,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn mutable_runtime_array_from_lambda() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -432,12 +458,16 @@ fn mutable_runtime_array_from_lambda() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 //m [<mut> 3 * [#3]<mut>int] = [mut][ [mut][1, 2, 3], [mut][4, 5, 6], [mut][7, 8, 9] ];
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn take_arraysequence_as_a_parameter() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -469,10 +499,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn borrow_arraysequence_as_a_parameter() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -508,14 +542,18 @@ exported func main() int {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
+    */
 }
 
 // the argument to __Array doesnt even have to be a struct or a lambda or an
 // interface or whatever, its just passed straight through to the prototype
 
 #[test]
+// ZONION: re-enable for onion
 #[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn array_map_with_int() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -558,10 +596,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn new_rsa() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -613,11 +655,15 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+// ZONION: re-enable for onion
 #[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn array_map_with_lambda() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -662,10 +708,14 @@ where F Prot = func(&Lam, int)int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn array_map_with_single_lambda() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -697,10 +747,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn make_array_map_with_struct() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -734,10 +788,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn make_array_map_with_lambda() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -767,10 +825,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn array_map_with_interface() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -814,11 +876,15 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 #[test]
+// ZONION: re-enable for onion
 #[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn array_map_taking_a_closure_which_captures_something() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -848,10 +914,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn simple_array_map_with_runtime_index_lookup() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -881,10 +951,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn nested_array() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -912,11 +986,15 @@ exported func main() int {
         IVonData::Int(VonInt { value: 2 }) => {}
         other => panic!("expected VonInt(2), got {:?}", other),
     }
+    */
 }
 
 #[test]
+// ZONION: re-enable for onion
 #[ignore = "passes in isolation, fails in full-suite (test-interaction; suspected shared state)"]
 fn two_dimensional_array() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -949,10 +1027,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn array_with_capture() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -987,10 +1069,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn capture() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1031,10 +1117,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn mutate_array() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1065,10 +1155,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 1337 }) => {}
         other => panic!("expected VonInt(1337), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn capture_mutable_array() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1099,10 +1193,14 @@ exported func main() {
 ",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "6");
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn swap_out_of_array() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1134,10 +1232,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn test_array_length() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1166,10 +1268,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 11 }) => {}
         other => panic!("expected VonInt(11), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn map_using_array_construct() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1203,10 +1309,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn map_from_hardcoded_values() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1240,10 +1350,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn array_foreach() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1274,11 +1388,15 @@ exported func main() int {
         IVonData::Int(VonInt { value: 169 }) => {}
         other => panic!("expected VonInt(169), got {:?}", other),
     }
+    */
 }
 
 #[test]
+// ZONION: re-enable for onion
 #[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn array_has() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1307,10 +1425,14 @@ exported func main() bool {
         IVonData::Bool(VonBool { value: true }) => {}
         other => panic!("expected VonBool(true), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn each_on_ssa() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1339,6 +1461,7 @@ exported func main() {
 "#,
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "VenusEarthMars");
+    */
 }
 
 

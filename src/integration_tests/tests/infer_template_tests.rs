@@ -1,29 +1,8 @@
-use crate::collect_only_tnode;
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
-use crate::typing::ast::ast::ParameterT;
-use crate::typing::ast::ast::PrototypeT;
-use crate::typing::ast::expressions::FunctionCallTE;
-use crate::typing::names::names::MemberNameT;
-use crate::typing::names::names::FunctionNameT;
-use crate::typing::names::names::FunctionTemplateNameT;
-use crate::typing::names::names::INameT;
-use crate::typing::names::names::IStructTemplateNameT;
-use crate::typing::names::names::IVarNameT;
-use crate::typing::names::names::IdT;
-use crate::typing::names::names::StructNameT;
-use crate::typing::names::names::StructTemplateNameT;
-use crate::typing::templata::templata::KindTemplataT;
-use crate::typing::templata::templata::ITemplataT;
-use crate::typing::test::traverse::NodeRefT;
-use crate::typing::types::types::CoordT;
-use crate::typing::types::types::KindT;
-use crate::typing::types::types::OwnershipT;
-use crate::typing::types::types::StructTT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
@@ -31,7 +10,10 @@ use crate::testvm::von::VonInt;
 pub struct InferTemplateTests;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 pub fn test_inferring_a_borrowed_argument() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -111,10 +93,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 pub fn test_inferring_a_borrowed_static_sized_array() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -145,10 +131,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 pub fn test_inferring_an_owning_static_sized_array() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -179,5 +169,6 @@ exported func main() int {
         IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
+    */
 }
 

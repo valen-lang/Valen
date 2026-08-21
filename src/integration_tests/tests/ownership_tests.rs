@@ -1,36 +1,18 @@
-use crate::collect_only_tnode;
-use crate::collect_where_tnode;
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
-use crate::typing::ast::expressions::FunctionCallTE;
-use crate::typing::env::function_environment_t::ILocalVariableT;
-use crate::typing::env::function_environment_t::ReferenceLocalVariableT;
-use crate::typing::names::names::FunctionNameT;
-use crate::typing::names::names::FunctionTemplateNameT;
-use crate::typing::names::names::INameT;
-use crate::typing::names::names::IStructTemplateNameT;
-use crate::typing::names::names::IVarNameT;
-use crate::typing::names::names::IdT;
-use crate::typing::names::names::StructNameT;
-use crate::typing::names::names::StructTemplateNameT;
-use crate::typing::templata::templata_utils::unapply_function_name_prototype;
-use crate::typing::templata::templata_utils::unapply_simple_name;
-use crate::typing::test::traverse::NodeRefT;
-use crate::typing::types::types::CoordT;
-use crate::typing::types::types::KindT;
-use crate::typing::types::types::OwnershipT;
-use crate::typing::types::types::StructTT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
 pub struct OwnershipTests;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn borrowing_a_temporary_mutable_makes_a_local_var() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -85,12 +67,16 @@ exported func main() int {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn owning_ref_method_call() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -126,12 +112,16 @@ exported func main() int {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn derive_drop() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -174,12 +164,16 @@ exported func main() {
         assert_eq!(matches.len(), 2);
     }
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn custom_drop_result_is_an_owning_ref_calls_destructor() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -228,12 +222,16 @@ exported func main() {
         assert_eq!(matches.len(), 2);
     }
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying!\n");
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn saves_return_value_then_destroys_temporary() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -281,12 +279,16 @@ exported func main() int {
         (IVonData::Int(VonInt { value: 10 }), ref s) if s == "Destroying!\n" => {}
         other => panic!("expected (VonInt(10), \"Destroying!\\n\"), got {:?}", other),
     }
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn calls_destructor_on_local_var() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -335,12 +337,16 @@ exported func main() {
         assert_eq!(matches.len(), 2);
     }
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying!\n");
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn calls_destructor_on_local_var_unless_moved() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -444,12 +450,16 @@ exported func main() {
         assert_eq!(main_drops.len(), 0);
     }
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying!\n");
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn saves_return_value_then_destroys_local_var() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -503,12 +513,16 @@ exported func main() int {
         (IVonData::Int(VonInt { value: 10 }), ref s) if s == "Destroying!\n" => {}
         other => panic!("expected (VonInt(10), \"Destroying!\\n\"), got {:?}", other),
     }
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn gets_from_temporary_struct_a_members_member() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -542,12 +556,16 @@ exported func main() int {
         IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("Expected VonInt(10), got {:?}", other),
     }
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn unstackifies_local_vars() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -582,12 +600,16 @@ exported func main() int {
         NodeRefT::Unlet(_) => Some(())
     );
     assert_eq!(unlets.len(), num_variables.len());
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn basic_builder_pattern() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -625,12 +647,16 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn member_access_on_returned_owning_ref() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -659,6 +685,7 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 

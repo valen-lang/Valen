@@ -1,14 +1,16 @@
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
 
 pub struct PrintTests;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn printlning_an_int() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -33,10 +35,14 @@ exported func main() {
 ",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "6\n");
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn printlning_a_bool() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -61,6 +67,7 @@ exported func main() {
 ",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "true\n");
+    */
 }
 
 

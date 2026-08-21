@@ -1,8 +1,7 @@
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
 use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
@@ -10,7 +9,10 @@ use crate::testvm::von::VonInt;
 pub struct WhileTests;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn simple_while_loop_that_doesnt_execute() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -38,10 +40,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn test_a_for_ish_while_loop() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -72,10 +78,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn tests_a_while_loop_with_a_complex_condition() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -109,10 +119,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 99 }) => {}
         other => panic!("expected VonInt(99), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn tests_a_while_loop_with_a_set_in_it() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -148,10 +162,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 99 }) => {}
         other => panic!("expected VonInt(99), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn tests_a_while_loop_with_a_declaration_in_it() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -182,10 +200,14 @@ exported func main() {
 ",
     );
     compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn return_from_infinite_while_loop() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -215,10 +237,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_conditional_break() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -251,10 +277,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_unconditional_break() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -284,10 +314,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_conditional_break_from_both_sides() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -321,10 +355,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_conditional_return() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -357,10 +395,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_unconditional_return() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -390,10 +432,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_conditional_return_from_both_sides() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -427,10 +473,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn while_with_condition_declaration() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -458,10 +508,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn each_on_int_range() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -494,10 +548,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 45 }) => {}
         other => panic!("expected VonInt(45), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn parallel_foreach() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -532,10 +590,14 @@ exported func main() {
 ",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap().trim(), "[1, 2, 3, 4, 5]");
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn mutable_foreach() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -588,10 +650,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn each_on_int_range_with_conditional_break() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -629,10 +695,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn each_on_int_range_with_unconditional_break() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -665,10 +735,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn each_on_int_range_with_conditional_break_from_both_branches() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -705,5 +779,6 @@ exported func main() int {
         IVonData::Int(VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
+    */
 }
 

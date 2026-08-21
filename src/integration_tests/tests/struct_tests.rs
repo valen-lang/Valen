@@ -1,9 +1,8 @@
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::tests::tests::load_expected;
 use crate::testvm::vivem::VmRuntimeErrorV;
 use crate::typing::typing_interner::TypingInterner;
@@ -13,7 +12,10 @@ use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn make_empty_imm_struct() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -39,10 +41,14 @@ exported func main() {
 ",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn make_imm_struct_with_one_member() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -68,10 +74,14 @@ exported func main() {
 ",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn make_nested_imm_struct() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -98,10 +108,14 @@ exported func main() {
 ",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn make_empty_mut_struct() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -126,10 +140,14 @@ exported func main() {
 ",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn constructor_with_self() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -153,10 +171,14 @@ fn constructor_with_self() {
         IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("Expected VonInt(10), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn make_struct() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -181,10 +203,14 @@ exported func main() {
 ",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn make_struct_and_get_member() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -208,10 +234,14 @@ fn make_struct_and_get_member() {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn mutate_struct() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -235,10 +265,14 @@ fn mutate_struct() {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("Expected VonInt(4), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn normal_destructure() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -271,10 +305,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("Expected VonInt(7), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn sugar_destructure() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -307,10 +345,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn destroy_members_at_right_times() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -350,11 +392,15 @@ exported func main() {
 "#,
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying marine!\nDestroying weapon!\n");
+    */
 }
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn panic_function() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -398,10 +444,14 @@ exported func main() int {
         Err(VmRuntimeErrorV::PanicException(_)) => {}
         other => panic!("Expected PanicException, got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn odmfrc() {
+    unimplemented!();
+    /*
     let code = r"
 import v.builtins.opt.*;
 
@@ -447,5 +497,6 @@ struct _Z {
         );
         let _ = compile.get_monouts();
     }
+    */
 }
 

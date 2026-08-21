@@ -33,7 +33,7 @@ pub mod compile_options;
 // #[cfg(test)]
 // pub mod end_to_end_tests;
 // #[cfg(test)]
-// pub mod integration_tests;
+pub mod integration_tests;
 pub mod instantiating;
 pub mod interner;
 pub mod keywords;

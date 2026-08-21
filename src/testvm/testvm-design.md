@@ -32,6 +32,8 @@ Soon, when we have group borrowing do invalidation, we'll want to switch our bor
 
 (In the distant future, we'll have them inline, probably using random generational references.)
 
+We might need to enable placement-destroy and placement-new to really make this work well.
+
 ### Double References
 
 TestVM treats double refs (`&&`) as single refs (`&`).
@@ -67,6 +69,21 @@ value.
 
 ## Details
 
+### Current state
+
+The VM compiles and is linked test-only (`#[cfg(test)] pub mod testvm` in `lib.rs`) on the onion IR:
+entry points in `vivem.rs` return `IVonData` (via `Heap::to_von`) from a `HinputsI`. Two vivem tests
+(`return_7`, `adding`) and one integration test (`simple_program_returning_an_int` in
+`integration_tests/tests/smoke_tests.rs`) run real `.vale` programs through the instantiator (S6);
+the integration harness `run_compilation.rs` is on the onion path (`InstantiatedCompilation`), the
+rest of `integration_tests/tests/mod.rs` commented out pending revival. Only trivial programs run —
+most expression arms are still `panic!("unimplemented")` (structs, arrays, if/while, interfaces,
+weak, the S7 inline-struct mutate path); `grep -rn 'unimplemented\|vimpl' src/testvm/` lists them.
+
+Run every suite under `--features no_backend` (plain `cargo test`/`build` invokes the intentionally-red
+C++ backend via `build.rs`); this is branch-wide, and why the standard fire-commit test gate needs
+`fire override green` here.
+
 <!-- Derived from the Design. Each item names its S-number. Empty while we design. -->
 
 ## Discussed examples and test cases
@@ -91,8 +108,9 @@ field.
 ### The VM represents every value as a heap allocation
 
 A runtime value is always a `ReferenceV` (`struct ReferenceV` in `src/testvm/values.rs`). It carries
-`actual_kind`, `seen_as_kind`, `ownership: OwnershipH`, `location: LocationH`, and `num` (the
-allocation number). The payload data lives in `KindV` (Void/Int/Bool/Float/Str/Opaque/
+`actual_kind`/`seen_as_kind` (`RRKindV`, stored stripped of wraps), a wrap-derived `ownership:
+OwnershipV`, and `num` (the allocation number); `location` is gone and `ownership` is no longer stored
+as a coord field (S4). The payload data lives in `KindV` (Void/Int/Bool/Float/Str/Opaque/
 StructInstance/ArrayInstance) inside an `AllocationV` held in the heap's `objects_by_id` map
 (`struct AllocationV`, `struct HeapV` in `src/testvm/heap.rs`). Even an `Int` is a `KindV::Int`
 inside its own `AllocationV`.
@@ -112,13 +130,6 @@ checking, expressed as referrer bookkeeping.
 (`src/testvm/values.rs`). A struct does not embed its members; it refers to them. Today
 `fn mutate_struct` (`src/testvm/heap.rs`) always repoints via `fn set_reference_member`
 (`src/testvm/values.rs`).
-
-### The coupling to the deleted coord model
-
-`fn ReferenceV::new` (`src/testvm/values.rs`) asserts legality by constructing
-`CoordH::new(ownership, location, kind)`. `fn check_reference` (`src/testvm/heap.rs`) already relaxes
-this for primitive kinds: only the kind must match, while ownership and location flavors may differ
-(the `VCOORD` block there). That relaxation is the pre-landed hook for this migration.
 
 ### The onion IR the VM must consume
 
@@ -144,23 +155,19 @@ result before writing the new ones.
 
 `src/final_ast/` and `src/simplifying/` are deleted, so `ProgramH`, `CoordH`, `KindHT`,
 `OwnershipH`, `LocationH`, `PrototypeH`, `StructDefinitionH`, and `HammerInterner` no longer exist.
-`src/testvm/` is commented out of `src/lib.rs` (the `// pub mod testvm;` line), so it does not
-compile today; every `final_ast` reference in it is currently dead.
 
 ### Entry points and execution shape
 
 `fn execute_with_primitive_args` and `fn execute_with_heap` (`src/testvm/vivem.rs`) set up a heap and
 call `fn inner_execute`, which finds `main` through the program's export map, runs it, reads the
 return value back out with `fn to_von` (`src/testvm/heap.rs`), drops it, and runs the leak check.
-`fn execute_node_inner` (`src/testvm/expression_vivem.rs`) is the main expression walk with 46 live
-`ExpressionH` arms to port to `ExpressionIE`.
+`fn execute_node_inner` (`src/testvm/expression_vivem.rs`) is the main expression walk over
+`ExpressionIE` arms (most still stubbed — see Details > Current state).
 
 ### Externs and tests
 
-`src/testvm/vivem_externs.rs` holds ~40 extern implementations. Almost all return via
-`memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, ...)`; four string externs
-use `(MutableShareH, YonderH)`. `src/testvm/test/vivem_tests.rs` has two tests (`return_7`,
-`adding`), both hand-building a `ProgramH` fixture and asserting on the computed VON return value.
+`src/testvm/vivem_externs.rs` holds ~40 extern implementations (arithmetic, casts, string ops, array
+builtins). The vivem and integration tests are described under Details > Current state.
 
 ### The design already ruled on inline in the VM
 

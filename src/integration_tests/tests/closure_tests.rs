@@ -1,52 +1,9 @@
-use crate::collect_only_tnode;
-use crate::collect_where_tnode;
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::postparsing::expressions::LocalS;
-use crate::postparsing::ast::LocationInDenizenBuilder;
-use crate::postparsing::names::{CodeVarNameS, IVarDeclarationNameS};
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::tests::tests::load_expected;
-use crate::typing::ast::ast::PrototypeT;
-use crate::typing::ast::citizens::AddressMemberTypeT;
-use crate::typing::ast::citizens::IMemberTypeT;
-use crate::typing::ast::citizens::IStructMemberT;
-use crate::typing::ast::citizens::NormalStructMemberT;
-use crate::typing::ast::citizens::ReferenceMemberTypeT;
-use crate::typing::ast::expressions::AddressExpressionTE;
-use crate::typing::ast::expressions::AddressMemberLookupTE;
-use crate::typing::ast::expressions::ConstructTE;
-use crate::typing::ast::expressions::FunctionCallTE;
-use crate::typing::ast::expressions::LetNormalTE;
-use crate::typing::ast::expressions::LocalLookupTE;
-use crate::typing::ast::expressions::MutateTE;
-use crate::typing::ast::expressions::MemberLookupTE;
-use crate::typing::compiler::Compiler;
-use crate::typing::env::function_environment_t::AddressibleLocalVariableT;
-use crate::typing::env::function_environment_t::ILocalVariableT;
-use crate::typing::env::function_environment_t::ReferenceLocalVariableT;
-use crate::typing::names::names::MemberNameT;
-use crate::typing::names::names::FunctionNameT;
-use crate::typing::names::names::FunctionTemplateNameT;
-use crate::typing::names::names::INameT;
-use crate::typing::names::names::IVarNameT;
-use crate::typing::names::names::IdT;
-use crate::typing::names::names::LambdaCallFunctionNameT;
-use crate::typing::names::names::LambdaCitizenNameT;
-use crate::typing::names::names::LambdaCitizenTemplateNameT;
-use crate::typing::templata::templata::ITemplataT;
-use crate::typing::test::traverse::NodeRefT;
-use crate::typing::types::types::CoordT;
-use crate::typing::types::types::IRegionT;
-use crate::typing::types::types::IntT;
-use crate::typing::types::types::KindT;
-use crate::typing::types::types::SharednessT;
-use crate::typing::types::types::OwnershipT;
-use crate::typing::types::types::RegionT;
-use crate::typing::types::types::StructTT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::FileCoordinate;
 use crate::utils::code_hierarchy::PackageCoordinate;
@@ -54,12 +11,13 @@ use crate::utils::range::CodeLocationS;
 use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
 use std::marker::PhantomData;
-use crate::postparsing::expressions::IVariableUseCertainty::NotUsed;
-use crate::postparsing::expressions::IVariableUseCertainty::Used;
 pub struct ClosureTests;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 pub fn addressibility() {
+    unimplemented!();
+    /*
     let scout_bump = bumpalo::Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let calc = |self_borrowed, self_moved, self_mutated, child_borrowed, child_moved, child_mutated| {
@@ -108,10 +66,14 @@ pub fn addressibility() {
     assert_eq!(calc(NotUsed, NotUsed, NotUsed, NotUsed, Used, NotUsed), (true, false));
     // If we're certain children mutate it, it also has to be addressible.
     assert_eq!(calc(NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used), (true, true));
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 pub fn captured_own_is_borrow() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -151,10 +113,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn test_closure_s_local_variables() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -220,11 +186,15 @@ fn test_closure_s_local_variables() {
             ..
         }) => Some(())
     );
+    */
 }
 
 #[test]
+// ZONION: re-enable for onion
 #[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -377,10 +347,14 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn mutates_from_inside_a_closure() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -461,10 +435,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 pub fn mutates_from_inside_a_closure_inside_a_closure() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -487,11 +465,15 @@ pub fn mutates_from_inside_a_closure_inside_a_closure() {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
+    */
 }
 
 #[test]
+// ZONION: re-enable for onion
 #[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn read_from_inside_a_closure_inside_a_closure() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -520,10 +502,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 pub fn mutable_lambda() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -572,5 +558,6 @@ pub fn mutable_lambda() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
+    */
 }
 

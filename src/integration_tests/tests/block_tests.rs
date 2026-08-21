@@ -1,18 +1,8 @@
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::postparsing::ast::CodeBodyS;
-use crate::postparsing::ast::IBodyS;
-use crate::postparsing::expressions::BlockSE;
-use crate::postparsing::expressions::BodySE;
-use crate::postparsing::expressions::ConsecutorSE;
-use crate::postparsing::expressions::IExpressionSE;
-use crate::postparsing::expressions::IVariableUseCertainty;
-use crate::postparsing::expressions::LocalS;
-use crate::postparsing::names::{CodeVarNameS, IVarDeclarationNameS};
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
 use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
@@ -20,7 +10,10 @@ use crate::testvm::von::VonInt;
 pub struct BlockTests;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn empty_block() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -69,11 +62,15 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn simple_block_with_a_variable() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -139,11 +136,15 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn simple_block_with_a_variable_another_variable_outside_with_same_name() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -175,6 +176,7 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 

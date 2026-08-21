@@ -1,49 +1,10 @@
-use crate::collect_only_tnode;
-use crate::instantiating::ast::ast::PrototypeI;
-use crate::instantiating::ast::expressions::FunctionCallIE;
-use crate::instantiating::ast::expressions::LetNormalIE;
-use crate::instantiating::ast::expressions::ReferenceExpressionIE;
-use crate::instantiating::ast::names::FunctionNameIX;
-use crate::instantiating::ast::names::FunctionTemplateNameI;
-use crate::instantiating::ast::names::IInterfaceNameI;
-use crate::instantiating::ast::names::INameI;
-use crate::instantiating::ast::names::IdI;
-use crate::instantiating::ast::templata::expect_coord_templata as expect_coord_templata_i;
-use crate::instantiating::ast::types::OwnershipI;
-use crate::instantiating::collector::NodeRefI;
-use crate::instantiating::collector::only_in_function;
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::tests::tests::load_expected;
-use crate::typing::ast::ast::AbstractT;
-use crate::typing::ast::ast::PrototypeT;
-use crate::typing::ast::ast::SignatureT;
-use crate::typing::ast::expressions::FunctionCallTE;
-use crate::typing::ast::expressions::LetNormalTE;
-use crate::typing::ast::expressions::ReferenceExpressionTE;
-use crate::typing::names::names::FunctionNameT;
-use crate::typing::names::names::FunctionNameValT;
-use crate::typing::names::names::FunctionTemplateNameT;
-use crate::typing::names::names::ICitizenNameT;
-use crate::typing::names::names::INameT;
-use crate::typing::names::names::IdT;
-use crate::typing::names::names::IdValT;
-use crate::typing::names::names::InterfaceNameValT;
-use crate::typing::names::names::InterfaceTemplateNameT;
-use crate::typing::templata::templata::expect_coord_templata as expect_coord_templata_t;
-use crate::typing::test::traverse::NodeRefT;
-use crate::typing::types::types::CoordT;
-use crate::typing::types::types::IRegionT;
-use crate::typing::types::types::IntT;
-use crate::typing::types::types::InterfaceTTValT;
-use crate::typing::types::types::KindT;
-use crate::typing::types::types::OwnershipT;
-use crate::typing::types::types::RegionT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::CodeLocationS;
@@ -55,7 +16,10 @@ use std::marker::PhantomData;
 pub struct VirtualTests;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn simple_program_containing_a_virtual_function() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -129,10 +93,14 @@ func main(i I) int {
     let do_thing = coutputs.lookup_function_by_signature(
         SignatureT { id: *do_thing_id }).expect("vassertSome");
     assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn can_call_virtual_function() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -206,10 +174,14 @@ func main(i I) int {
     let do_thing = coutputs.lookup_function_by_signature(
         SignatureT { id: *do_thing_id }).expect("vassertSome");
     assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn owning_interface() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -238,10 +210,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("Expected VonInt(7), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn simple_override_with_param_and_bound() {
+    unimplemented!();
+    /*
     // This is the Serenity case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -278,10 +254,14 @@ exported func main() {
 ",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn struct_with_different_ordered_runes() {
+    unimplemented!();
+    /*
     // This is the Firefly case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -318,10 +298,14 @@ exported func main() {
 ",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn struct_with_less_generic_params_than_interface() {
+    unimplemented!();
+    /*
     // This is the Raza case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -357,10 +341,14 @@ exported func main() {
 ",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn struct_with_more_generic_params_than_interface() {
+    unimplemented!();
+    /*
     // This is the Milano case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -396,10 +384,14 @@ exported func main() {
 ",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn struct_repeating_generic_params_for_interface() {
+    unimplemented!();
+    /*
     // This is the Enterprise case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -435,10 +427,14 @@ exported func main() {
 ",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn imm_interface() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -462,10 +458,14 @@ fn imm_interface() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn can_call_interface_envs_function_from_outside() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -504,10 +504,14 @@ func main(i I) int {
 
     let do_thing = coutputs.lookup_function_by_str("doThing");
     assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn interface_with_method_with_param_of_substruct() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -535,10 +539,14 @@ func collectHeaders2(header &List<&Header>, this &Header) { }
 ",
     );
     let _coutputs = compile.get_hamuts();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn feeding_instantiation_bounds_for_something_created_in_same_function() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -577,10 +585,14 @@ exported func main() int {
 ",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn generic_interface_forwarder_with_bound() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -627,10 +639,14 @@ exported func main() int {
 ",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn generic_interface_forwarder_with_drop_bound() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -673,10 +689,14 @@ exported func main() int {
 ",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn open_interface_constructor() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -716,10 +736,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn open_interface_constructor_multiple_methods() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -766,11 +790,15 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
+    */
 }
 
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn successful_pointer_downcast_with_as() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -794,10 +822,14 @@ fn successful_pointer_downcast_with_as() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn failed_pointer_downcast_with_as() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -880,10 +912,14 @@ fn failed_pointer_downcast_with_as() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn successful_owning_downcast_with_as() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -907,10 +943,14 @@ fn successful_owning_downcast_with_as() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn failed_owning_downcast_with_as() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -934,10 +974,14 @@ fn failed_owning_downcast_with_as() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn lambda_is_compatible_anonymous_interface() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -970,5 +1014,6 @@ exported func main() str {
         IVonData::Str(VonStr { value }) if value == "42true" => {}
         other => panic!("Expected VonStr(\"42true\"), got {:?}", other),
     }
+    */
 }
 

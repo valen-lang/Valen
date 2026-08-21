@@ -35,10 +35,25 @@ A declaration name is made of two things: an imprecise name plus a location (LIF
 
 ## Background
 
-### Self-evident from the code
+### Landed in the code
 
-### Documented
+A declaration name (`IVarDeclarationNameS`) is identity-bearing and never interned (@WVSBIZ): a user
+local's `CodeVarName` carries a `lid: LocationInDenizen`, and `LocalNameT { name, lid }` keys on that
+lid rather than a typing-pass `life`, so `make_user_local_variable` translates uniformly with no
+`CodeVarName` special-case. `imprecise_name` is a method on `IVarDeclarationNameS` (postparse) and
+`IVarNameT` (typing); use-sites (`LocalLoad`/`Unlet`/`LocalMutate`/`GroupS::Local`) carry imprecise
+names. The former `CodeVarNameT` is now `MemberNameT` (struct members only; `IVarNameT::CodeVar` is
+`Member`).
 
-### Undocumented
+### Design not yet in the code
+
+- `life` is still minted fresh in the typing pass (the header setup in `function_compiler_core.rs`,
+  extended by `LocationInFunctionEnvironmentT::add`), NOT seeded from a declaration's lid via the
+  `.0` rule — the collision-free LID→LIFE continuation is unbuilt.
+- The range/location declaration variants (`IterableName`/`IteratorName`/`ClosureParamName`/
+  `MagicParamName`/...) still carry a `RangeS`/`CodeLocationS`, not a lid.
+- `ClosureParamName`/`MagicParamName` are the only declaration names still interned (via
+  `INameValS::VarName` in `function_scout.rs`); de-interning them and deleting
+  `IVarDeclarationNameValS` is gated on confirming nothing compares `INameS::VarName` by `ptr_eq`.
 
 ## Open Questions

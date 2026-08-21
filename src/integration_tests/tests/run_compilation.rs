@@ -1,266 +1,99 @@
-use crate::code_source::{CodeSource, Source};
-use crate::builtins::builtins::get_embedded_modulized_code_map;
-use crate::compile_options::GlobalOptions;
-use crate::final_ast::ast::ProgramH;
-use crate::instantiating::ast::hinputs::HinputsI;
-use crate::interner::StrI;
-use crate::keywords::Keywords;
-use crate::lexing::ast::RangeL;
-use crate::lexing::errors::FailedParse;
-use crate::parse_arena::ParseArena;
-use crate::parsing::ast::FileP;
-use crate::postparsing::ast::ProgramS;
-use crate::postparsing::post_parser::ICompileErrorS;
-use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_compilation::HammerCompilation;
-use crate::simplifying::hammer_compilation::HammerCompilationOptions;
-use crate::simplifying::hammer_interner::HammerInterner;
-use crate::tests::tests::test_source_from_dir;
-use crate::testvm::heap::HeapV;
-use crate::testvm::values::PrimitiveKindV;
-use crate::testvm::values::ReferenceV;
-use crate::testvm::vivem::VmRuntimeErrorV;
-use crate::testvm::vivem::empty_stdin;
-use crate::testvm::vivem::execute_with_heap;
-use crate::testvm::vivem::execute_with_primitive_args;
-use crate::testvm::vivem::regular_stdout;
-use crate::testvm::vivem::stdin_from_list;
-use crate::testvm::vivem::stdout_collector;
-use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::typing::hinputs_t::HinputsT;
-use crate::typing::typing_interner::TypingInterner;
-use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::tests::tests::new_test_code_map;
-use crate::testvm::von::IVonData;
-use crate::utils::fx::HashMap;
+//! Dark-box integration harness on the onion path. `test`/`test_no_builtins` compile a real `.vale`
+//! program through `InstantiatedCompilation` to a `HinputsI`; `RunCompilation` then runs `main` in
+//! the TestVM and returns the computed VON. Replaces the deleted Hammer/`ProgramH` path (mirrors
+//! `testvm::test::vivem_tests::run_vale`).
+
 use std::io::stdout;
+use std::sync::Arc;
+use bumpalo::Bump;
+use crate::code_source::{CodeSource, Source};
+use crate::compile_options::GlobalOptions;
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::instantiated_compilation::{InstantiatedCompilation, InstantiatorCompilationOptions};
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::tests::tests::{new_test_code_map, test_source_from_dir};
+use crate::testvm::values::PrimitiveKindV;
+use crate::testvm::vivem::{empty_stdin, execute_with_primitive_args, regular_stdout, VmRuntimeErrorV};
+use crate::testvm::von::IVonData;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::PackageCoordinate;
 
+fn global_options() -> GlobalOptions {
+    GlobalOptions {
+        sanity_check: true,
+        use_overload_index: true,
+        use_optimized_solver: true,
+        verbose_errors: true,
+        debug_output: true,
+    }
+}
 
+fn instantiator_options() -> InstantiatorCompilationOptions {
+    InstantiatorCompilationOptions { debug_out: Arc::new(|x: &str| println!("{}", x)) }
+}
 
-pub fn test<'s, 'h, 'ctx, 't, 'i, 'p>(
-    compilation_bump: &'ctx bumpalo::Bump,
-    interner: &'ctx HammerInterner<'s, 'h>,
+/// Compile `code` alone (no builtins) — the program must stand on its own.
+pub fn test_no_builtins<'s, 'ctx, 't, 'i, 'p>(
+    compilation_bump: &'ctx Bump,
     typing_interner: &'ctx TypingInterner<'s, 't>,
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
-    instantiating_bump: &'i bumpalo::Bump,
+    instantiating_bump: &'i Bump,
     code: &str,
-) -> RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+) -> RunCompilation<'s, 'ctx, 't, 'i, 'p>
+where 's: 't, 's: 'i, 'p: 'ctx,
 {
     let packages_to_build: Vec<&'p PackageCoordinate<'p>> =
-        vec![
-            PackageCoordinate::builtin(parse_arena, parser_keywords),
-            PackageCoordinate::test_tld(parse_arena, parser_keywords),
-        ];
+        vec![PackageCoordinate::test_tld(parse_arena, parser_keywords)];
     let code_source: &'ctx CodeSource<'p> = compilation_bump.alloc(CodeSource::new(vec![
-        Source::builtins(parse_arena, parser_keywords),
         new_test_code_map(parse_arena, code),
         Source::Fn(test_source_from_dir),
     ]));
-    let options = HammerCompilationOptions {
-        global_options: GlobalOptions {
-            sanity_check: true,
-            use_overload_index: true,
-            use_optimized_solver: true,
-            verbose_errors: true,
-            debug_output: true,
-        },
-        ..HammerCompilationOptions::new()
-    };
-    RunCompilation {
-        interner: typing_interner,
-        hammer_compilation: HammerCompilation::new(
-            scout_arena, interner, typing_interner, keywords, parser_keywords, parse_arena,
-            packages_to_build, code_source, options, instantiating_bump,
-        ),
+    let compilation = InstantiatedCompilation::new(
+        typing_interner, scout_arena, keywords, parser_keywords, parse_arena,
+        packages_to_build, code_source, global_options(), instantiator_options(), instantiating_bump,
+    );
+    RunCompilation { compilation, scout_arena }
+}
+
+pub struct RunCompilation<'s, 'ctx, 't, 'i, 'p>
+where 's: 't, 's: 'i,
+{
+    pub compilation: InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>,
+    pub scout_arena: &'ctx ScoutArena<'s>,
+}
+
+impl<'s, 'ctx, 't, 'i, 'p> RunCompilation<'s, 'ctx, 't, 'i, 'p>
+where 's: 't, 's: 'i,
+{
+    /// Drive the instantiator, yielding the monomorphized `HinputsI`.
+    pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
+        self.compilation.get_monouts()
     }
-}
 
-
-
-pub fn test_no_builtins<'s, 'h, 'ctx, 't, 'i, 'p>(
-    compilation_bump: &'ctx bumpalo::Bump,
-    interner: &'ctx HammerInterner<'s, 'h>,
-    typing_interner: &'ctx TypingInterner<'s, 't>,
-    scout_arena: &'ctx ScoutArena<'s>,
-    keywords: &'ctx Keywords<'s>,
-    parser_keywords: &'ctx Keywords<'p>,
-    parse_arena: &'ctx ParseArena<'p>,
-    instantiating_bump: &'i bumpalo::Bump,
-    code: &str,
-) -> RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
-{
-    let packages_to_build: Vec<&'p PackageCoordinate<'p>> =
-        vec![
-            PackageCoordinate::test_tld(parse_arena, parser_keywords),
-        ];
-    let base_code_map = get_embedded_modulized_code_map(parse_arena, parser_keywords);
-    let code_source: &'ctx CodeSource<'p> = compilation_bump.alloc(CodeSource::new(vec![
-        Source::from_code_map(&base_code_map),
-        new_test_code_map(parse_arena, code),
-        Source::Fn(test_source_from_dir),
-    ]));
-    let options = HammerCompilationOptions {
-        global_options: GlobalOptions {
-            sanity_check: true,
-            use_overload_index: true,
-            use_optimized_solver: true,
-            verbose_errors: true,
-            debug_output: true,
-        },
-        ..HammerCompilationOptions::new()
-    };
-    RunCompilation {
-        interner: typing_interner,
-        hammer_compilation: HammerCompilation::new(
-            scout_arena, interner, typing_interner, keywords, parser_keywords, parse_arena,
-            packages_to_build, code_source, options, instantiating_bump,
-        ),
+    /// Compile through the instantiator, run `main` in the TestVM with primitive args, return the VON.
+    pub fn eval_for_kind_primitive_args<'v>(
+        &mut self,
+        args: Vec<PrimitiveKindV<'v, 'i, 's>>,
+    ) -> Result<IVonData, VmRuntimeErrorV<'s>> {
+        self.compilation.get_monouts();
+        let program_h = self.compilation.cached_monouts();
+        let interner = &self.compilation.instantiating_interner;
+        let mut vivem_dout = stdout();
+        let vivem_bump = Bump::new();
+        execute_with_primitive_args(
+            program_h,
+            interner,
+            self.scout_arena,
+            &args,
+            &mut vivem_dout,
+            &vivem_bump,
+            &empty_stdin,
+            &regular_stdout,
+        )
     }
-}
-
-
-
-pub struct RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
-{
-    pub interner: &'ctx TypingInterner<'s, 't>,
-    pub hammer_compilation: HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>,
-}
-
-impl<'s, 'h, 'ctx, 't, 'i, 'p> RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
-{
-  pub fn get_code_map(&self) { panic!("Unimplemented: get_code_map"); }
-
-
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
-    self.hammer_compilation.get_parseds()
-  }
-  
-
-  pub fn get_vpst_map(&self) { panic!("Unimplemented: get_vpst_map"); }
-
-
-  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
-      self.hammer_compilation.get_scoutput()
-  }
-  
-
-  pub fn get_astrouts(&self) { panic!("Unimplemented: get_astrouts"); }
-
-
-  pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
-      self.hammer_compilation.get_compiler_outputs()
-  }
-  
-
-
-  pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
-    self.hammer_compilation.expect_compiler_outputs()
-  }
-  
-
-
-  pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
-    self.hammer_compilation.get_monouts()
-  }
-  
-
-
-  pub fn get_hamuts(&mut self) -> &'h ProgramH<'s, 'h> {
-      self.hammer_compilation.get_hamuts()
-  }
-  
-
-  pub fn eval_for_kind_heap_args<'v>(&self, _heap: HeapV<'v, 'h, 's>, _args: Vec<ReferenceV<'v, 'h, 's>>) -> IVonData { panic!("Unimplemented: eval_for_kind_heap_args"); }
-
-  pub fn run_heap_args<'v>(&mut self, mut heap: HeapV<'v, 'h, 's>, args: Vec<ReferenceV<'v, 'h, 's>>) -> Result<(), VmRuntimeErrorV<'s>> {
-      let interner = self.hammer_compilation.interner;
-      let scout_arena = self.hammer_compilation.scout_arena;
-      let hamuts = self.get_hamuts();
-      let input_argument_references: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&args);
-      execute_with_heap(
-          hamuts, interner, scout_arena, &mut heap, input_argument_references, &empty_stdin, &regular_stdout,
-      ).map(|_| ())
-  }
-  
-
-
-  pub fn run_primitive_args<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>) -> Result<(), VmRuntimeErrorV<'s>> {
-      let interner = self.hammer_compilation.interner;
-      let scout_arena = self.hammer_compilation.scout_arena;
-      let hamuts = self.get_hamuts();
-      let mut vivem_dout = stdout();
-      let vivem_bump = bumpalo::Bump::new();
-      execute_with_primitive_args(
-          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &empty_stdin, &regular_stdout,
-      ).map(|_| ())
-  }
-  
-
-
-  pub fn eval_for_kind_primitive_args<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>) -> Result<IVonData, VmRuntimeErrorV<'s>> {
-      let interner = self.hammer_compilation.interner;
-      let scout_arena = self.hammer_compilation.scout_arena;
-      let hamuts = self.get_hamuts();
-      let mut vivem_dout = stdout();
-      let vivem_bump = bumpalo::Bump::new();
-      execute_with_primitive_args(
-          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &empty_stdin, &regular_stdout,
-      )
-  }
-  
-
-
-  pub fn eval_for_kind_primitive_args_with_stdin<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>, stdin: Vec<String>) -> Result<IVonData, VmRuntimeErrorV<'s>> {
-      let scout_arena = self.hammer_compilation.scout_arena;
-      let interned_stdin: Vec<StrI<'s>> = stdin.iter().map(|s| scout_arena.intern_str(s)).collect();
-      let interner = self.hammer_compilation.interner;
-      let hamuts = self.get_hamuts();
-      let mut vivem_dout = stdout();
-      let vivem_bump = bumpalo::Bump::new();
-      let stdin_fn = stdin_from_list(&interned_stdin);
-      execute_with_primitive_args(
-          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &*stdin_fn, &regular_stdout,
-      )
-  }
-  
-
-
-  pub fn eval_for_stdout<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>) -> Result<String, VmRuntimeErrorV<'s>> {
-      let (stdoutput_string_builder, stdout_func) = stdout_collector::<'s>();
-      let interner = self.hammer_compilation.interner;
-      let scout_arena = self.hammer_compilation.scout_arena;
-      let hamuts = self.get_hamuts();
-      let mut vivem_dout = stdout();
-      let vivem_bump = bumpalo::Bump::new();
-      execute_with_primitive_args(
-          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &empty_stdin, &*stdout_func,
-      )?;
-      let result = stdoutput_string_builder.borrow().clone();
-      Ok(result)
-  }
-  
-
-
-  pub fn eval_for_kind_and_stdout<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>) -> Result<(IVonData, String), VmRuntimeErrorV<'s>> {
-      let (stdoutput_string_builder, stdout_func) = stdout_collector::<'s>();
-      let interner = self.hammer_compilation.interner;
-      let scout_arena = self.hammer_compilation.scout_arena;
-      let hamuts = self.get_hamuts();
-      let mut vivem_dout = stdout();
-      let vivem_bump = bumpalo::Bump::new();
-      let kind = execute_with_primitive_args(
-          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &empty_stdin, &*stdout_func,
-      )?;
-      let result = stdoutput_string_builder.borrow().clone();
-      Ok((kind, result))
-  }
-  
 }

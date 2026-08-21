@@ -1,9 +1,8 @@
-use crate::integration_tests::tests::run_compilation::test;
+#![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
 use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
@@ -11,7 +10,10 @@ use crate::testvm::von::VonInt;
 pub struct HashMapTest;
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn monomorphize_problem() {
+    unimplemented!();
+    /*
     // See NBIFP, the instantiator has to grab bounds from its params too
 
     let compilation_bump = bumpalo::Bump::new();
@@ -55,10 +57,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn supply_bounds_to_child_functions() {
+    unimplemented!();
+    /*
     // We need to supply our bounds to our lambdas and drop functions, see LCCPGB and LCNBAFA.
     // This test's `add` function will try to call
     //   add:204<int, int, ^IntHasher>(&HashMap<int, int, ^IntHasher>)
@@ -111,10 +117,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn hash_map_update() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -149,10 +159,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 108 }) => {}
         other => panic!("expected VonInt(108), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn hash_map_collisions() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -208,10 +222,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 111 }) => {}
         other => panic!("expected VonInt(111), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn hash_map_with_functors() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -246,11 +264,15 @@ exported func main() int {
         IVonData::Int(VonInt { value: 100 }) => {}
         other => panic!("expected VonInt(100), got {:?}", other),
     }
+    */
 }
 
 #[test]
+// ZONION: re-enable for onion
 #[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn hash_map_with_struct_as_key() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -302,10 +324,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 100 }) => {}
         other => panic!("expected VonInt(100), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn hash_map_has() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -347,10 +373,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 111 }) => {}
         other => panic!("expected VonInt(111), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
+    unimplemented!();
+    /*
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
 
@@ -410,10 +440,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 1337 }) => {}
         other => panic!("expected VonInt(1337), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() {
+    unimplemented!();
+    /*
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
 
@@ -471,10 +505,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 1337 }) => {}
         other => panic!("expected VonInt(1337), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn hash_map_values() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -515,10 +553,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 1337 }) => {}
         other => panic!("expected VonInt(1337), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn hash_map_with_mutable_values() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -561,10 +603,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 1337 }) => {}
         other => panic!("expected VonInt(1337), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn hash_map_remove() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -607,10 +653,14 @@ exported func main() int {
         IVonData::Int(VonInt { value: 1337 }) => {}
         other => panic!("expected VonInt(1337), got {:?}", other),
     }
+    */
 }
 
 #[test]
+#[ignore] // ZONION: re-enable for onion
 fn hash_map_remove_2() {
+    unimplemented!();
+    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -655,5 +705,6 @@ exported func main() int {
         IVonData::Int(VonInt { value: 1337 }) => {}
         other => panic!("expected VonInt(1337), got {:?}", other),
     }
+    */
 }
 
