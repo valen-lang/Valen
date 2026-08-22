@@ -55,7 +55,7 @@ void makeHammerLocal(
     LLVMBuilderRef builder,
     Local* local,
     Ref refToStore) {
-  auto localAddr = globalState->getRegion(peel_all_references(local->type))->stackify(functionState, builder, local, refToStore);
+  auto localAddr = globalState->getRegion(local->type)->stackify(functionState, builder, local, refToStore);
   blockState->addLocal(local->id, localAddr);
 }
 
@@ -276,8 +276,9 @@ Ref buildInterfaceCall(
     std::vector<Ref> argRefs,
     int virtualParamIndex) {
   auto virtualParamMT = prototype->params[virtualParamIndex];
+  auto virtualParamValueType = peel_all_references(virtualParamMT);
 
-  auto interfaceKindM = dynamic_cast<InterfaceKind*>(peel_all_references(virtualParamMT));
+  auto interfaceKindM = dynamic_cast<InterfaceKind*>(virtualParamValueType);
   assert(interfaceKindM);
 //  int indexInEdge = globalState->getInterfaceMethod(interfaceKindM, prototype);
 
@@ -285,7 +286,7 @@ Ref buildInterfaceCall(
 
   LLVMValueRef itablePtrLE = nullptr;
   LLVMValueRef newVirtualArgLE = nullptr;
-  auto virtualParamRegion = globalState->getRegion(peel_all_references(virtualParamMT));
+  auto virtualParamRegion = globalState->getRegion(virtualParamValueType);
   std::tie(itablePtrLE, newVirtualArgLE) =
       virtualParamRegion->explodeInterfaceRef(
           functionState, builder, virtualParamMT, virtualArgRef);
@@ -296,7 +297,7 @@ Ref buildInterfaceCall(
   for (int i = 0; i < argRefs.size(); i++) {
     auto paramMT = prototype->params[i];
     argsLE.push_back(
-        globalState->getRegion(peel_all_references(paramMT))->checkValidReference(
+        globalState->getRegion(paramMT)->checkValidReference(
             FL(), functionState, builder, false, paramMT, argRefs[i]));
   }
   argsLE[virtualParamIndex] = newVirtualArgLE;
@@ -309,7 +310,7 @@ Ref buildInterfaceCall(
   assert(LLVMTypeOf(resultLE) == LLVMGetReturnType(methodFunctionPtrLE.inner.funcLT));
   buildFlare(FL(), globalState, functionState, builder);
   auto returnMT = prototype->returnType;
-  return toRef(globalState->getRegion(peel_all_references(returnMT)), returnMT, resultLE);
+  return toRef(globalState->getRegion(returnMT), returnMT, resultLE);
 }
 
 LLVMValueRef makeConstExpr(FunctionState* functionState, LLVMBuilderRef builder, LLVMTypeRef type, LLVMValueRef constExpr) {
@@ -377,7 +378,7 @@ Ref buildCallV(
   for (int i = 0; i < argRefs.size(); i++) {
     auto paramMT = prototype->params[i];
     argsLE.push_back(
-        globalState->getRegion(peel_all_references(paramMT))->checkValidReference(
+        globalState->getRegion(paramMT)->checkValidReference(
             FL(), functionState, builder, false, paramMT, argRefs[i]));
   }
 
@@ -388,12 +389,13 @@ Ref buildCallV(
   buildFlare(FL(), globalState, functionState, builder, "Done with call");
 
   auto returnMT = prototype->returnType;
-  auto returnRegion = globalState->getRegion(peel_all_references(returnMT));
+  auto returnValueType = peel_all_references(returnMT);
+  auto returnRegion = globalState->getRegion(returnValueType);
   Ref resultRef = toRef(returnRegion, returnMT, resultLE);
   returnRegion->checkValidReference(
       FL(), functionState, builder, false, returnMT, resultRef);
 
-  if (peel_all_references(prototype->returnType) == globalState->metalCache->neverType) {
+  if (returnValueType == globalState->metalCache->neverType) {
     buildFlare(FL(), globalState, functionState, builder, "Done calling function ", prototype->name->name);
     buildFlare(FL(), globalState, functionState, builder, "Resuming function ", functionState->containingFuncName);
     LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL));

@@ -18,7 +18,7 @@ InBoundsLE checkIndexInBounds(
     LLVMValueRef indexLE,
     const char* failMessage) {
   auto sizeLE =
-      globalState->getRegion(peel_all_references(intRefMT))
+      globalState->getRegion(intRefMT)
           ->checkValidReference(FL(), functionState, builder, true, intRefMT, sizeRef);
   auto outOfBounds = LLVMBuildICmp(builder, LLVMIntUGE, indexLE, sizeLE, "outOfBounds");
   buildIfNever(
@@ -273,7 +273,7 @@ LoadResult loadElement(
       indexLE.refLE
   };
 
-  auto elementRegion = globalState->getRegion(peel_all_references(elementRefM));
+  auto elementRegion = globalState->getRegion(elementRefM);
   auto elementLT = elementRegion->translateType(elementRefM);
   auto elementPtrLE =
       LLVMBuildInBoundsGEP2(builder, LLVMArrayType(elementLT, 0), elemsPtrLE, indices, 2, "indexPtr");
@@ -330,10 +330,11 @@ Ref swapElement(
     LLVMValueRef arrayElemsPtrLE,
     InBoundsLE indexLE,
     Ref sourceRef) {
+  auto elementValueType = peel_all_references(elementRefM);
   auto sourceLE =
-      globalState->getRegion(peel_all_references(elementRefM))
+      globalState->getRegion(elementValueType)
           ->checkValidReference(FL(), functionState, builder, false, elementRefM, sourceRef);
-  auto elementLT = globalState->getRegion(peel_all_references(elementRefM))->translateType(elementRefM);
+  auto elementLT = globalState->getRegion(elementValueType)->translateType(elementRefM);
 
   buildFlare(FL(), globalState, functionState, builder);
 
@@ -355,10 +356,11 @@ void initializeElementWithoutIncrementSize(
     IncrementedSize incrementedSize) {
   // Ignore incrementedSize, it's just a reminder to the caller.
 
+  auto elementValueType = peel_all_references(elementRefM);
   auto sourceLE =
-      globalState->getRegion(peel_all_references(elementRefM))
+      globalState->getRegion(elementValueType)
           ->checkValidReference(FL(), functionState, builder, false, elementRefM, sourceRef);
-  auto elementLT = globalState->getRegion(peel_all_references(elementRefM))->translateType(elementRefM);
+  auto elementLT = globalState->getRegion(elementValueType)->translateType(elementRefM);
   storeInnerArrayMember(globalState, functionState, builder, elementLT, elemsPtrLE, indexLE, sourceLE);
 }
 
@@ -455,14 +457,15 @@ void intRangeLoopReverseV(
     Kind* intRefMT,
     Ref sizeRef,
     std::function<void(Ref, LLVMBuilderRef)> iterationBuilder) {
+  auto intValueType = peel_all_references(intRefMT);
   auto sizeLE =
-      globalState->getRegion(peel_all_references(intRefMT))
+      globalState->getRegion(intValueType)
           ->checkValidReference(FL(), functionState, builder, true, intRefMT, sizeRef);
 
   intRangeLoopReverse(
-      globalState, functionState, builder, peel_all_references(intRefMT), sizeLE,
-      [globalState, iterationBuilder, intRefMT](LLVMValueRef indexLE, LLVMBuilderRef bodyBuilder) {
-        auto indexRef = toRef(globalState->getRegion(peel_all_references(intRefMT)), intRefMT, indexLE);
+      globalState, functionState, builder, intValueType, sizeLE,
+      [globalState, iterationBuilder, intRefMT, intValueType](LLVMValueRef indexLE, LLVMBuilderRef bodyBuilder) {
+        auto indexRef = toRef(globalState->getRegion(intValueType), intRefMT, indexLE);
         iterationBuilder(indexRef, bodyBuilder);
       });
 }

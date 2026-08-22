@@ -14,6 +14,7 @@ Ref translateDiscard(
     Discard* discardM) {
   auto sourceExpr = discardM->expr;
   auto sourceResultType = discardM->sourceType;
+  auto sourceResultValueType = peel_all_references(sourceResultType);
 
   auto sourceRef =
       translateExpression(
@@ -23,10 +24,10 @@ Ref translateDiscard(
     return sourceRef;
   }
 
-  globalState->getRegion(peel_all_references(sourceResultType))
+  globalState->getRegion(sourceResultValueType)
       ->checkValidReference(FL(), functionState, builder, false, sourceResultType, sourceRef);
   buildFlare(FL(), globalState, functionState, builder, "discarding!");
-  globalState->getRegion(peel_all_references(sourceResultType))
+  globalState->getRegion(sourceResultValueType)
       ->dealias(
           AFL(std::string("Discard ") + typeid(*discardM->sourceType).name() + " from " + typeid(*sourceExpr).name()),
           functionState,

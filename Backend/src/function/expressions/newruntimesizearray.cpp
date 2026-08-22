@@ -20,12 +20,13 @@ Ref translateNewRuntimeSizedArray(
   auto sizeExpr = constructRuntimeSizedArray->capacityExpr;
 
   auto runtimeSizedArrayMT = constructRuntimeSizedArray->arrayType;
+  auto resultValueType = peel_all_references(constructRuntimeSizedArray->result);
 
   auto capacityRef = translateExpression(globalState, functionState, blockState, builder, sizeExpr);
 
   // arrayLT is a pointer to our counted struct.
   auto rsaLiveRef =
-      globalState->getRegion(peel_all_references(constructRuntimeSizedArray->result))->constructRuntimeSizedArray(
+      globalState->getRegion(resultValueType)->constructRuntimeSizedArray(
           functionState,
           builder,
           constructRuntimeSizedArray->result,
@@ -34,7 +35,7 @@ Ref translateNewRuntimeSizedArray(
           runtimeSizedArrayMT->name->name);
   auto rsaRef = toRef(globalState, constructRuntimeSizedArray->result, rsaLiveRef);
   buildFlare(FL(), globalState, functionState, builder);
-  globalState->getRegion(peel_all_references(constructRuntimeSizedArray->result))
+  globalState->getRegion(resultValueType)
       ->checkValidReference(FL(), functionState, builder, true, constructRuntimeSizedArray->result, rsaRef);
 
   return rsaRef;

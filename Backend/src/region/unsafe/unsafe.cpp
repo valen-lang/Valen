@@ -78,7 +78,8 @@ Ref Unsafe::allocate(
     LLVMBuilderRef builder,
     Kind* desiredReference,
     const std::vector<Ref>& memberRefs) {
-  auto structKind = dynamic_cast<StructKind*>(peel_all_references(desiredReference));
+  auto desiredValueType = peel_all_references(desiredReference);
+  auto structKind = dynamic_cast<StructKind*>(desiredValueType);
   auto structM = globalState->program->getStruct(structKind);
   auto countedStructL = kindStructs.getStructWrapperStruct(structKind);
 
@@ -89,7 +90,7 @@ Ref Unsafe::allocate(
           FL(), functionState, builder, desiredReference,
           ptrLE);
   fillControlBlock(
-      FL(), functionState, builder, peel_all_references(desiredReference),
+      FL(), functionState, builder, desiredValueType,
       kindStructs.getConcreteControlBlockPtr(
           FL(), functionState, builder, newStructWrapperPtrLE),
       structM->name->name);
@@ -105,11 +106,11 @@ Ref Unsafe::allocate(
       structContentsPtrLT,
       structContentsPtrLE);
 
-  auto resultRef = toRef(globalState->getRegion(peel_all_references(desiredReference)), desiredReference, newStructWrapperPtrLE.refLE);
+  auto resultRef = toRef(globalState->getRegion(desiredValueType), desiredReference, newStructWrapperPtrLE.refLE);
 
   if (globalState->opt->census) {
     auto objIdLE =
-        globalState->getRegion(peel_all_references(desiredReference))
+        globalState->getRegion(desiredValueType)
             ->getCensusObjectId(FL(), functionState, builder, desiredReference, resultRef);
     buildFlare(
         FL(), globalState, functionState, builder,
@@ -232,7 +233,7 @@ Ref Unsafe::lockWeak(
   auto isAliveLE =
       getIsAliveFromWeakRef(
           functionState, builder, sourceWeakRefMT, sourceWeakRefLE);
-  auto resultOptTypeLE = globalState->getRegion(peel_all_references(resultOptTypeM))->translateType(resultOptTypeM);
+  auto resultOptTypeLE = globalState->getRegion(resultOptTypeM)->translateType(resultOptTypeM);
   return regularInnerLockWeak(
       globalState, functionState, builder, thenResultIsNever, elseResultIsNever, resultOptTypeM,
       constraintRefM, sourceWeakRefMT, sourceWeakRefLE, buildThen, buildElse,
@@ -292,7 +293,7 @@ void Unsafe::declareRuntimeSizedArray(
 void Unsafe::defineRuntimeSizedArray(
     RuntimeSizedArrayDefinitionT* runtimeSizedArrayMT) {
   auto elementLT =
-      globalState->getRegion(peel_all_references(runtimeSizedArrayMT->elementType))
+      globalState->getRegion(runtimeSizedArrayMT->elementType)
           ->translateType(runtimeSizedArrayMT->elementType);
   kindStructs.defineRuntimeSizedArray(runtimeSizedArrayMT, elementLT, true);
 }
@@ -300,7 +301,7 @@ void Unsafe::defineRuntimeSizedArray(
 void Unsafe::defineStaticSizedArray(
     StaticSizedArrayDefinitionT* staticSizedArrayMT) {
   auto elementLT =
-      globalState->getRegion(peel_all_references(staticSizedArrayMT->elementType))
+      globalState->getRegion(staticSizedArrayMT->elementType)
           ->translateType(staticSizedArrayMT->elementType);
   kindStructs.defineStaticSizedArray(staticSizedArrayMT, elementLT);
 }
@@ -317,7 +318,7 @@ void Unsafe::defineStruct(
   std::vector<LLVMTypeRef> innerStructMemberTypesL;
   for (int i = 0; i < structM->members.size(); i++) {
     innerStructMemberTypesL.push_back(
-        globalState->getRegion(peel_all_references(structM->members[i]->type))
+        globalState->getRegion(structM->members[i]->type)
             ->translateType(structM->members[i]->type));
   }
   kindStructs.defineStruct(structM->kind, innerStructMemberTypesL);
@@ -401,7 +402,7 @@ void Unsafe::storeMember(
     Kind* newMemberRefMT,
     Ref newMemberRef) {
   auto newMemberLE =
-      globalState->getRegion(peel_all_references(newMemberRefMT))->checkValidReference(
+      globalState->getRegion(newMemberRefMT)->checkValidReference(
           FL(), functionState, builder, false, newMemberRefMT, newMemberRef);
   storeMemberStrong(
       globalState, functionState, builder, &kindStructs, structRefMT, structRef,
@@ -678,7 +679,7 @@ LiveRef Unsafe::constructRuntimeSizedArray(
       kindStructs.getRuntimeSizedArrayWrapperStruct(runtimeSizedArrayT);
   auto rsaDef = globalState->program->getRuntimeSizedArray(runtimeSizedArrayT);
   auto elementType = globalState->program->getRuntimeSizedArray(runtimeSizedArrayT)->elementType;
-  auto rsaElementLT = globalState->getRegion(peel_all_references(elementType))->translateType(elementType);
+  auto rsaElementLT = globalState->getRegion(elementType)->translateType(elementType);
   auto resultRef =
       ::constructRuntimeSizedArray(
            globalState, functionState, builder, &kindStructs, rsaMT, rsaDef->elementType, runtimeSizedArrayT,

@@ -85,7 +85,7 @@ Prototype* makeValeMainFunction(
 
         auto userMainResultRef = buildCallV(globalState, functionState, entryBuilder, userMainFunctionPrototype, {});
         auto userMainResultLE =
-            globalState->getRegion(peel_all_references(userMainFunctionPrototype->returnType))
+            globalState->getRegion(userMainFunctionPrototype->returnType)
                 ->checkValidReference(
                     FL(), functionState, entryBuilder, true, userMainFunctionPrototype->returnType, userMainResultRef);
 
@@ -191,7 +191,7 @@ LLVMValueRef makeEntryFunction(
   auto calleeUserFunction = globalState->lookupFunction(valeMainPrototype);
   auto calleeUserFunctionReturnMT = valeMainPrototype->returnType;
   auto calleeUserFunctionReturnLT =
-      globalState->getRegion(peel_all_references(calleeUserFunctionReturnMT))->translateType(calleeUserFunctionReturnMT);
+      globalState->getRegion(calleeUserFunctionReturnMT)->translateType(calleeUserFunctionReturnMT);
   auto resultLE =
       buildMaybeNeverCallV(
           globalState, entryBuilder, calleeUserFunction, {});

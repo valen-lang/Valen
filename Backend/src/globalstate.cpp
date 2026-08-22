@@ -91,24 +91,24 @@ std::vector<ValeFuncPtrLE> GlobalState::getEdgeFunctions(Edge* edge) {
   return edgeFunctionsL;
 }
 
-IRegion* GlobalState::getRegion(ValueKind* kindM) {
-  // Callers pass the peeled ValueKind; a reference lives in the region of the kind it wraps.
-  if (auto innt = dynamic_cast<Int*>(kindM)) {
+IRegion* GlobalState::getRegion(Kind* typeM) {
+  auto valueTypeM = peel_all_references(typeM);
+  if (auto innt = dynamic_cast<Int*>(valueTypeM)) {
     return getRegion(innt->regionId);
-  } else if (auto vooid = dynamic_cast<Void*>(kindM)) {
+  } else if (auto vooid = dynamic_cast<Void*>(valueTypeM)) {
     return getRegion(vooid->regionId);
-  } else if (auto boool = dynamic_cast<Bool*>(kindM)) {
+  } else if (auto boool = dynamic_cast<Bool*>(valueTypeM)) {
     return getRegion(boool->regionId);
-  } else if (auto flooat = dynamic_cast<Float*>(kindM)) {
+  } else if (auto flooat = dynamic_cast<Float*>(valueTypeM)) {
     return getRegion(flooat->regionId);
-  } else if (auto never = dynamic_cast<Never*>(kindM)) {
+  } else if (auto never = dynamic_cast<Never*>(valueTypeM)) {
     return getRegion(never->regionId);
-  } else if (auto str = dynamic_cast<Str*>(kindM)) {
+  } else if (auto str = dynamic_cast<Str*>(valueTypeM)) {
     return getRegion(str->regionId);
   } else {
-    auto iter = regionIdByKind.find(kindM);
+    auto iter = regionIdByKind.find(valueTypeM);
     if (iter == regionIdByKind.end()) {
-      std::cerr << "Couldn't find region for: " << typeid(*kindM).name() << std::endl;
+      std::cerr << "Couldn't find region for: " << typeid(*valueTypeM).name() << std::endl;
       exit(1);
     }
     auto regionId = iter->second;

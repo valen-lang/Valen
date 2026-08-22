@@ -18,18 +18,19 @@ Ref translateLocalLoad(
   auto localId = local->id;
   auto localName = localLoad->localName;
   auto localType = local->type;
+  auto localValueType = peel_all_references(localType);
   auto resultType = globalState->metalCache->getBorrowRef(local->type);
 
   buildFlare(FL(), globalState, functionState, builder);
 
   auto localAddr = blockState->getLocalAddr(localId, true);
 
-  auto sourceRef = globalState->getRegion(peel_all_references(localType))->loadLocal(functionState, builder, local, localAddr);
+  auto sourceRef = globalState->getRegion(localValueType)->loadLocal(functionState, builder, local, localAddr);
 
   auto resultRef =
-      globalState->getRegion(peel_all_references(localType))->upgradeLoadResultToRefWithTargetOwnership(
+      globalState->getRegion(localValueType)->upgradeLoadResultToRefWithTargetOwnership(
           functionState, builder, localType, resultType, LoadResult{sourceRef});
-  globalState->getRegion(peel_all_references(resultType))->alias(FL(), functionState, builder, resultType, resultRef);
+  globalState->getRegion(resultType)->alias(FL(), functionState, builder, resultType, resultRef);
 
   return resultRef;
 }

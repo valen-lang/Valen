@@ -16,7 +16,7 @@ Ref translateConstruct(
     LLVMBuilderRef builder,
     Kind* desiredReference,
     const std::vector<Ref>& memberRefs) {
-  return globalState->getRegion(peel_all_references(desiredReference))
+  return globalState->getRegion(desiredReference)
       ->allocate(
           from, functionState, builder, desiredReference, memberRefs);
 }

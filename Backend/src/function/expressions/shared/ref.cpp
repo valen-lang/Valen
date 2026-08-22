@@ -28,7 +28,7 @@ Ref toRef(IRegion* region, Kind* refM, WeakFatPtrLE weakFatPtrLE) {
 
 Ref toRef(GlobalState* globalState, Kind* refM, LiveRef liveRef) {
   assert(refM == liveRef.refM);
-  return toRef(globalState->getRegion(peel_all_references(refM)), refM, liveRef.refLE);
+  return toRef(globalState->getRegion(refM), refM, liveRef.refLE);
 }
 
 // All wrapper pointers are regular references, so we can just translate directly
@@ -47,7 +47,7 @@ LiveRef toLiveRef(
     LLVMBuilderRef builder,
     Kind* refM,
     LLVMValueRef refLE) {
-  return globalState->getRegion(peel_all_references(refM))->wrapToLiveRef(
+  return globalState->getRegion(refM)->wrapToLiveRef(
       checkerAFL, functionState, builder, refM, refLE);
 }
 
@@ -58,7 +58,7 @@ LiveRef toLiveRef(
     LLVMBuilderRef builder,
     Kind* refM,
     Ref ref) {
-  return globalState->getRegion(peel_all_references(refM))->checkRefLive(
+  return globalState->getRegion(refM)->checkRefLive(
       checkerAFL, functionState, builder, refM, ref);
 }
 
@@ -70,6 +70,6 @@ LLVMValueRef checkValidInternalReference(
     bool expectLive,
     Kind* refM,
     Ref ref) {
-  return globalState->getRegion(peel_all_references(refM))
+  return globalState->getRegion(refM)
       ->checkValidReference(checkerAFL, functionState, builder, expectLive, refM, ref);
 }

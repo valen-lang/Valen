@@ -924,15 +924,16 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto interfaceKind = dynamic_cast<InterfaceKind*>(kind);
       auto rsaKind = dynamic_cast<RuntimeSizedArrayT*>(kind);
       auto ssaKind = dynamic_cast<StaticSizedArrayT*>(kind);
+      auto kindValueType = peel_all_references(kind);
       // A kind is share exactly when it lives in the rcImm (share) region.
       // VCOORD: make this more consistent
       bool isShare = (structKind || interfaceKind || rsaKind || ssaKind)
-          && globalState->getRegion(peel_all_references(kind)) == globalState->rcImm;
+          && globalState->getRegion(kindValueType) == globalState->rcImm;
       if (isShare) {
         auto& autoExports = globalState->autoExportsByPackage[packageCoord];
-        auto aliasP = globalState->rcImm->getAliasPrototype(peel_all_references(kind));
-        auto dealiasP = globalState->rcImm->getDealiasPrototype(peel_all_references(kind));
-        auto refEqP = globalState->rcImm->getRefEqPrototype(peel_all_references(kind));
+        auto aliasP = globalState->rcImm->getAliasPrototype(kindValueType);
+        auto dealiasP = globalState->rcImm->getDealiasPrototype(kindValueType);
+        auto refEqP = globalState->rcImm->getRefEqPrototype(kindValueType);
         autoExports.emplace(exportName + "_alias", aliasP);
         autoExports.emplace(exportName + "_dealias", dealiasP);
         autoExports.emplace(exportName + "_ref_eq", refEqP);

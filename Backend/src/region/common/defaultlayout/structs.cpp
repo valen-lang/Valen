@@ -413,15 +413,16 @@ void KindStructs::defineStaticSizedArray(
 }
 
 WeakFatPtrLE KindStructs::makeWeakFatPtr(Kind* referenceM_, LLVMValueRef ptrLE) {
-  if (auto structKindM = dynamic_cast<StructKind*>(peel_all_references(referenceM_))) {
+  auto valueType = peel_all_references(referenceM_);
+  if (auto structKindM = dynamic_cast<StructKind*>(valueType)) {
     assert(LLVMTypeOf(ptrLE) == getStructWeakRefStruct(structKindM));
-  } else if (auto interfaceKindM = dynamic_cast<InterfaceKind*>(peel_all_references(referenceM_))) {
+  } else if (auto interfaceKindM = dynamic_cast<InterfaceKind*>(valueType)) {
     assert(
         LLVMTypeOf(ptrLE) == weakVoidRefStructL ||
             LLVMTypeOf(ptrLE) == getInterfaceWeakRefStruct(interfaceKindM));
-  } else if (auto ssaT = dynamic_cast<StaticSizedArrayT*>(peel_all_references(referenceM_))) {
+  } else if (auto ssaT = dynamic_cast<StaticSizedArrayT*>(valueType)) {
     assert(LLVMTypeOf(ptrLE) == getStaticSizedArrayWeakRefStruct(ssaT));
-  } else if (auto rsaT = dynamic_cast<RuntimeSizedArrayT*>(peel_all_references(referenceM_))) {
+  } else if (auto rsaT = dynamic_cast<RuntimeSizedArrayT*>(valueType)) {
     assert(LLVMTypeOf(ptrLE) == getRuntimeSizedArrayWeakRefStruct(rsaT));
   } else {
     { assert(false); throw 1337; }
@@ -628,35 +629,35 @@ ControlBlockPtrLE KindStructs::getControlBlockPtr(
     auto referenceLE =
         makeInterfaceFatPtr(
             from, functionState, builder, referenceM,
-            globalState->getRegion(peel_all_references(referenceM))
+            globalState->getRegion(kindM)
                 ->checkValidReference(from, functionState, builder, true, referenceM, ref));
     return getControlBlockPtr(from, functionState, builder, referenceLE);
   } else if (dynamic_cast<StructKind*>(kindM)) {
     auto referenceLE =
         makeWrapperPtr(
             from, functionState, builder, referenceM,
-            globalState->getRegion(peel_all_references(referenceM))
+            globalState->getRegion(kindM)
                 ->checkValidReference(from, functionState, builder, true, referenceM, ref));
     return getConcreteControlBlockPtr(from, functionState, builder, referenceLE);
   } else if (dynamic_cast<StaticSizedArrayT*>(kindM)) {
     auto referenceLE =
         makeWrapperPtr(
             from, functionState, builder, referenceM,
-            globalState->getRegion(peel_all_references(referenceM))
+            globalState->getRegion(kindM)
                 ->checkValidReference(from, functionState, builder, true, referenceM, ref));
     return getConcreteControlBlockPtr(from, functionState, builder, referenceLE);
   } else if (dynamic_cast<RuntimeSizedArrayT*>(kindM)) {
     auto referenceLE =
         makeWrapperPtr(
             from, functionState, builder, referenceM,
-            globalState->getRegion(peel_all_references(referenceM))
+            globalState->getRegion(kindM)
                 ->checkValidReference(from, functionState, builder, true, referenceM, ref));
     return getConcreteControlBlockPtr(from, functionState, builder, referenceLE);
   } else if (dynamic_cast<Str*>(kindM)) {
     auto referenceLE =
         makeWrapperPtr(
             from, functionState, builder, referenceM,
-            globalState->getRegion(peel_all_references(referenceM))
+            globalState->getRegion(kindM)
                 ->checkValidReference(from, functionState, builder, true, referenceM, ref));
     return getConcreteControlBlockPtr(from, functionState, builder, referenceLE);
   } else {
@@ -736,7 +737,7 @@ LLVMValueRef KindStructs::getVoidPtrFromInterfacePtr(
     LLVMBuilderRef builder,
     Kind* virtualParamMT,
     InterfaceFatPtrLE virtualArgLE) {
-  assert(LLVMTypeOf(virtualArgLE.refLE) == globalState->getRegion(peel_all_references(virtualParamMT))->translateType(virtualParamMT));
+  assert(LLVMTypeOf(virtualArgLE.refLE) == globalState->getRegion(virtualParamMT)->translateType(virtualParamMT));
   return LLVMBuildPointerCast(
       builder,
       getControlBlockPtr(FL(), functionState, builder, virtualArgLE).refLE,
@@ -763,7 +764,7 @@ LLVMValueRef KindStructs::getObjIdFromControlBlockPtr(
 }
 
 LLVMValueRef KindStructs::downcastPtr(LLVMBuilderRef builder, Kind* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE) {
-  auto resultStructRefLT = globalState->getRegion(peel_all_references(resultStructRefMT))->translateType(resultStructRefMT);
+  auto resultStructRefLT = globalState->getRegion(resultStructRefMT)->translateType(resultStructRefMT);
   auto resultStructRefLE =
       LLVMBuildPointerCast(builder, unknownPossibilityPtrLE, resultStructRefLT, "subtypePtr");
   return resultStructRefLE;
@@ -777,11 +778,12 @@ LLVMValueRef KindStructs::getStrongRcPtrFromControlBlockPtr(
     ControlBlockPtrLE controlBlockPtr) {
   assert(dynamic_cast<ShareRef*>(refM) != nullptr);
 
+  auto controlBlock = getControlBlock(peel_all_references(refM));
   return LLVMBuildStructGEP2(
       builder,
-      getControlBlock(peel_all_references(refM))->getStruct(),
+      controlBlock->getStruct(),
       controlBlockPtr.refLE,
-      getControlBlock(peel_all_references(refM))->getMemberIndex(ControlBlockMember::STRONG_RC_32B),
+      controlBlock->getMemberIndex(ControlBlockMember::STRONG_RC_32B),
       "rcPtr");
 }
 

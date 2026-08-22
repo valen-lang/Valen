@@ -323,6 +323,7 @@ Ref buildIfElseV(
     Kind* elseResultMT,
     std::function<Ref(LLVMBuilderRef)> buildThen,
     std::function<Ref(LLVMBuilderRef)> buildElse) {
+  auto thenResultValueType = peel_all_references(thenResultMT);
 
   // We already are in the "current" block (which is what `builder` is
   // pointing at currently), but we're about to make three more: "then",
@@ -345,7 +346,7 @@ Ref buildIfElseV(
   // Now, we fill in the "then" block.
   auto thenResultRef = buildThen(thenBlockBuilder);
   auto thenResultLE =
-      globalState->getRegion(peel_all_references(thenResultMT))
+      globalState->getRegion(thenResultValueType)
           ->checkValidReference(FL(), functionState, thenBlockBuilder, false, thenResultMT, thenResultRef);
   // A builder can point to different blocks, so get the latest one so we can
   // pull from it for the phi.
@@ -361,7 +362,7 @@ Ref buildIfElseV(
   // Now, we fill in the "else" block.
   auto elseResultRef = buildElse(elseBlockBuilder);
   auto elseResultLE =
-      globalState->getRegion(peel_all_references(elseResultMT))
+      globalState->getRegion(elseResultMT)
           ->checkValidReference(FL(), functionState, elseBlockBuilder, false, elseResultMT, elseResultRef);
   // A builder can point to different blocks, so get the latest one so we can
   // pull from it for the phi.
@@ -418,7 +419,7 @@ Ref buildIfElseV(
     // We re-pointed the `builder` to point at the "afterward" block, and
     // subsequent instructions after the if will keep adding to that.
 
-    return toRef(globalState->getRegion(peel_all_references(thenResultMT)), thenResultMT, phi);
+    return toRef(globalState->getRegion(thenResultValueType), thenResultMT, phi);
   }
 }
 

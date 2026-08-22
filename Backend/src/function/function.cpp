@@ -16,7 +16,7 @@ ValeFuncPtrLE declareFunction(
 
   auto valeParamTypesL = translateTypes(globalState, functionM->prototype->params);
   auto valeReturnTypeL =
-      globalState->getRegion(peel_all_references(functionM->prototype->returnType))
+      globalState->getRegion(functionM->prototype->returnType)
           ->translateType(functionM->prototype->returnType);
 
   auto valeFunctionNameL = functionM->prototype->name->name;
@@ -230,7 +230,7 @@ void translateFunction(
 
   auto functionL = globalState->getFunction(functionM->prototype);
   auto returnTypeL =
-      globalState->getRegion(peel_all_references(functionM->prototype->returnType))->translateType(functionM->prototype->returnType);
+      globalState->getRegion(functionM->prototype->returnType)->translateType(functionM->prototype->returnType);
 
   defineValeFunctionBody(
       globalState->context,

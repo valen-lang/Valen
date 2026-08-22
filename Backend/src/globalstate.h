@@ -243,7 +243,7 @@ public:
   std::vector<LLVMTypeRef> getInterfaceFunctionPointerTypes(InterfaceKind* kind);
 
 
-  IRegion* getRegion(ValueKind* kindM);
+  IRegion* getRegion(Kind* kindM);
   IRegion* getRegion(RegionId* regionId);
 
   // Convenience wrapper around getRegion(refM)->translateType(refM); the
