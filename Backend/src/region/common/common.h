@@ -29,9 +29,9 @@ LLVMValueRef upcastThinPtr(
     Kind* targetInterfaceTypeM,
     InterfaceKind* targetInterfaceKindM);
 
-LLVMTypeRef translateReferenceSimple(GlobalState* globalState, KindStructs* structs, Kind* kind);
+LLVMTypeRef translateReferenceSimple(GlobalState* globalState, KindStructs* structs, ValueKind* kind);
 
-LLVMTypeRef translateWeakReference(GlobalState* globalState, KindStructs* weakRefStructs, Kind* kind);
+LLVMTypeRef translateWeakReference(GlobalState* globalState, KindStructs* weakRefStructs, ValueKind* kind);
 
 
 
@@ -67,7 +67,7 @@ LLVMValueRef fillControlBlockCensusFields(
     FunctionState* functionState,
     KindStructs* structs,
     LLVMBuilderRef builder,
-    Kind* kindM,
+    ValueKind* kindM,
     LLVMValueRef newControlBlockLE,
     const std::string& typeName);
 
@@ -75,7 +75,7 @@ LLVMValueRef insertStrongRc(
     GlobalState* globalState,
     LLVMBuilderRef builder,
     KindStructs* structs,
-    Kind* kindM,
+    ValueKind* kindM,
     LLVMValueRef newControlBlockLE);
 
 LLVMValueRef makeInterfaceRefStruct(
@@ -352,7 +352,7 @@ void regularFillControlBlock(
     FunctionState* functionState,
     KindStructs* structs,
     LLVMBuilderRef builder,
-    Kind* kindM,
+    ValueKind* kindM,
     ControlBlockPtrLE controlBlockPtrLE,
     const std::string& typeName,
     WrcWeaks* wrcWeaks);

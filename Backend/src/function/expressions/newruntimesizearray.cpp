@@ -25,7 +25,7 @@ Ref translateNewRuntimeSizedArray(
 
   // arrayLT is a pointer to our counted struct.
   auto rsaLiveRef =
-      globalState->getRegion(constructRuntimeSizedArray->result)->constructRuntimeSizedArray(
+      globalState->getRegion(peel_all_references(constructRuntimeSizedArray->result))->constructRuntimeSizedArray(
           functionState,
           builder,
           constructRuntimeSizedArray->result,
@@ -34,7 +34,7 @@ Ref translateNewRuntimeSizedArray(
           runtimeSizedArrayMT->name->name);
   auto rsaRef = toRef(globalState, constructRuntimeSizedArray->result, rsaLiveRef);
   buildFlare(FL(), globalState, functionState, builder);
-  globalState->getRegion(constructRuntimeSizedArray->result)
+  globalState->getRegion(peel_all_references(constructRuntimeSizedArray->result))
       ->checkValidReference(FL(), functionState, builder, true, constructRuntimeSizedArray->result, rsaRef);
 
   return rsaRef;

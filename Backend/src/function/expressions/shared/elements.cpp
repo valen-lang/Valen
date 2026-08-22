@@ -18,7 +18,7 @@ InBoundsLE checkIndexInBounds(
     LLVMValueRef indexLE,
     const char* failMessage) {
   auto sizeLE =
-      globalState->getRegion(intRefMT)
+      globalState->getRegion(peel_all_references(intRefMT))
           ->checkValidReference(FL(), functionState, builder, true, intRefMT, sizeRef);
   auto outOfBounds = LLVMBuildICmp(builder, LLVMIntUGE, indexLE, sizeLE, "outOfBounds");
   buildIfNever(
@@ -121,7 +121,6 @@ void initializeElementInRSAWithoutIncrementSize(
     LLVMBuilderRef builder,
     bool capacityExists,
     RuntimeSizedArrayT* rsaMT,
-    Kind* rsaRefMT,
     WrapperPtrLE rsaWPtrLE,
     InBoundsLE indexLE,
     Ref elementRef,
@@ -137,7 +136,6 @@ IncrementedSize incrementRSASize(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Kind* rsaRefMT,
     WrapperPtrLE rsaWPtrLE) {
   auto sizePtrLE = ::getRuntimeSizedArrayLengthPtr(globalState, builder, rsaWPtrLE);
   assert(false); // implement inline arrays
@@ -227,7 +225,7 @@ LLVMValueRef getRuntimeSizedArrayCapacityPtr(
   return resultLE;
 }
 
-void decrementRSASize(GlobalState* globalState, FunctionState *functionState, KindStructs* kindStructs, LLVMBuilderRef builder, Kind *rsaRefMT, WrapperPtrLE rsaWrapperPtrLE) {
+void decrementRSASize(GlobalState* globalState, FunctionState *functionState, KindStructs* kindStructs, LLVMBuilderRef builder, WrapperPtrLE rsaWrapperPtrLE) {
   auto sizePtrLE = getRuntimeSizedArrayLengthPtr(globalState, builder, rsaWrapperPtrLE);
   adjustCounterV(globalState, builder, globalState->metalCache->i32Type, sizePtrLE, -1, false);
 }
@@ -275,7 +273,7 @@ LoadResult loadElement(
       indexLE.refLE
   };
 
-  auto elementRegion = globalState->getRegion(elementRefM);
+  auto elementRegion = globalState->getRegion(peel_all_references(elementRefM));
   auto elementLT = elementRegion->translateType(elementRefM);
   auto elementPtrLE =
       LLVMBuildInBoundsGEP2(builder, LLVMArrayType(elementLT, 0), elemsPtrLE, indices, 2, "indexPtr");
@@ -333,9 +331,9 @@ Ref swapElement(
     InBoundsLE indexLE,
     Ref sourceRef) {
   auto sourceLE =
-      globalState->getRegion(elementRefM)
+      globalState->getRegion(peel_all_references(elementRefM))
           ->checkValidReference(FL(), functionState, builder, false, elementRefM, sourceRef);
-  auto elementLT = globalState->getRegion(elementRefM)->translateType(elementRefM);
+  auto elementLT = globalState->getRegion(peel_all_references(elementRefM))->translateType(elementRefM);
 
   buildFlare(FL(), globalState, functionState, builder);
 
@@ -358,9 +356,9 @@ void initializeElementWithoutIncrementSize(
   // Ignore incrementedSize, it's just a reminder to the caller.
 
   auto sourceLE =
-      globalState->getRegion(elementRefM)
+      globalState->getRegion(peel_all_references(elementRefM))
           ->checkValidReference(FL(), functionState, builder, false, elementRefM, sourceRef);
-  auto elementLT = globalState->getRegion(elementRefM)->translateType(elementRefM);
+  auto elementLT = globalState->getRegion(peel_all_references(elementRefM))->translateType(elementRefM);
   storeInnerArrayMember(globalState, functionState, builder, elementLT, elemsPtrLE, indexLE, sourceLE);
 }
 
@@ -424,10 +422,10 @@ void intRangeLoopReverse(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Kind* intRefMT,
+    ValueKind* intRefMT,
     LLVMValueRef sizeLE,
     std::function<void(LLVMValueRef, LLVMBuilderRef)> iterationBuilder) {
-  auto innt = dynamic_cast<Int*>(peel_all_references(intRefMT));
+  auto innt = dynamic_cast<Int*>(intRefMT);
   auto intLT = LLVMIntTypeInContext(globalState->context, innt->bits);
 
   LLVMValueRef iterationIndexPtrLE =
@@ -458,13 +456,13 @@ void intRangeLoopReverseV(
     Ref sizeRef,
     std::function<void(Ref, LLVMBuilderRef)> iterationBuilder) {
   auto sizeLE =
-      globalState->getRegion(intRefMT)
+      globalState->getRegion(peel_all_references(intRefMT))
           ->checkValidReference(FL(), functionState, builder, true, intRefMT, sizeRef);
 
   intRangeLoopReverse(
-      globalState, functionState, builder, intRefMT, sizeLE,
+      globalState, functionState, builder, peel_all_references(intRefMT), sizeLE,
       [globalState, iterationBuilder, intRefMT](LLVMValueRef indexLE, LLVMBuilderRef bodyBuilder) {
-        auto indexRef = toRef(globalState->getRegion(intRefMT), intRefMT, indexLE);
+        auto indexRef = toRef(globalState->getRegion(peel_all_references(intRefMT)), intRefMT, indexLE);
         iterationBuilder(indexRef, bodyBuilder);
       });
 }

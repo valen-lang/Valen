@@ -198,7 +198,7 @@ public:
     { assert(false); throw 1337; }
   }
 
-  Weakability getKindWeakability(Kind* kind);
+  Weakability getKindWeakability(ValueKind* kind);
 
   Ref constI64(int64_t x);
   Ref constI32(int32_t x);
@@ -208,7 +208,7 @@ public:
   Ref buildMultiply(FunctionState* functionState, LLVMBuilderRef builder, Ref a, Ref b);
   Ref buildDivide(FunctionState* functionState, LLVMBuilderRef builder, Ref a, Ref b);
 
-  Name* getKindName(Kind* kind);
+  Name* getKindName(ValueKind* kind);
 
   template<typename T>
   AddressHasher<T> makeAddressHasher() {
@@ -243,7 +243,7 @@ public:
   std::vector<LLVMTypeRef> getInterfaceFunctionPointerTypes(InterfaceKind* kind);
 
 
-  IRegion* getRegion(Kind* kindM);
+  IRegion* getRegion(ValueKind* kindM);
   IRegion* getRegion(RegionId* regionId);
 
   // Convenience wrapper around getRegion(refM)->translateType(refM); the

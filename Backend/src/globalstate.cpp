@@ -91,9 +91,8 @@ std::vector<ValeFuncPtrLE> GlobalState::getEdgeFunctions(Edge* edge) {
   return edgeFunctionsL;
 }
 
-IRegion* GlobalState::getRegion(Kind* kindM) {
-  // A reference lives in the region of the kind it wraps; peel the onion wraps first.
-  kindM = peel_all_references(kindM);
+IRegion* GlobalState::getRegion(ValueKind* kindM) {
+  // Callers pass the peeled ValueKind; a reference lives in the region of the kind it wraps.
   if (auto innt = dynamic_cast<Int*>(kindM)) {
     return getRegion(innt->regionId);
   } else if (auto vooid = dynamic_cast<Void*>(kindM)) {
@@ -128,7 +127,7 @@ IRegion* GlobalState::getRegion(RegionId* regionId) {
 }
 
 LLVMTypeRef GlobalState::translateType(Kind* refM) {
-  return getRegion(refM)->translateType(refM);
+  return getRegion(peel_all_references(refM))->translateType(refM);
 }
 
 ValeFuncPtrLE GlobalState::getFunction(Prototype* prototype) {
@@ -198,7 +197,7 @@ Ref GlobalState::buildMultiply(FunctionState* functionState, LLVMBuilderRef buil
   return buildExternCall(this, functionState, builder, addPrototype, { a, b });
 }
 
-Name* GlobalState::getKindName(Kind* kind) {
+Name* GlobalState::getKindName(ValueKind* kind) {
   if (auto structKind = dynamic_cast<StructKind*>(kind)) {
     return structKind->fullName;
   } else if (auto interfaceKind = dynamic_cast<InterfaceKind*>(kind)) {
@@ -213,6 +212,6 @@ Name* GlobalState::getKindName(Kind* kind) {
   return nullptr;
 }
 
-Weakability GlobalState::getKindWeakability(Kind* kind) {
+Weakability GlobalState::getKindWeakability(ValueKind* kind) {
   return getRegion(kind)->getKindWeakability(kind);
 }

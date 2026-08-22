@@ -364,7 +364,7 @@ public:
       LiveRef ref) override;
 
 
-  std::string getExportName(Package* currentPackage, Kind* refMT, bool includeProjectName) override;
+  std::string getExportName(Package* currentPackage, ValueKind* refMT, bool includeProjectName) override;
   std::string generateStructDefsC(
     Package* currentPackage,
       StructDefinition* refMT) override;
@@ -380,7 +380,7 @@ public:
 
 
   LLVMTypeRef getExternalType(
-      Kind* refMT) override;
+      ValueKind* refMT) override;
 
   Ref receiveAndDecryptFamiliarReference(
       FunctionState* functionState,
@@ -394,7 +394,7 @@ public:
       Kind* sourceRefMT,
       Ref sourceRef) override;
 
-  LLVMTypeRef getInterfaceMethodVirtualParamAnyType(Kind* reference) override;
+  LLVMTypeRef getInterfaceMethodVirtualParamAnyType() override;
 
   void discard(
       AreaAndFileAndLine from,
@@ -422,7 +422,7 @@ public:
       Kind* refM,
       LLVMValueRef refLE);
 
-  Weakability getKindWeakability(Kind* kind) override;
+  Weakability getKindWeakability(ValueKind* kind) override;
 
   ValeFuncPtrLE getInterfaceMethodFunctionPtr(
       FunctionState* functionState,
@@ -431,7 +431,7 @@ public:
       Ref virtualArgRef,
       int indexInEdge) override;
 
-  Prototype* getFreePrototype(Kind* valeKind);
+  Prototype* getFreePrototype(ValueKind* valeKind);
   Prototype* getFreeThunkPrototype(StructKind* structKind, InterfaceKind* interfaceKind);
 
   LLVMValueRef stackify(
@@ -466,15 +466,15 @@ public:
       Kind* targetRefMT) override;
 
 private:
-  void declareConcreteFreeFunction(Kind* valeKindM);
-  void defineConcreteFreeFunction(Kind* valeKindM);
+  void declareConcreteFreeFunction(ValueKind* valeKindM);
+  void defineConcreteFreeFunction(ValueKind* valeKindM);
   void declareInterfaceFreeFunction(InterfaceKind* kind);
   void defineEdgeFreeFunction(Edge* edge);
 
 public:
-  Prototype* getAliasPrototype(Kind* valeKind);
-  Prototype* getDealiasPrototype(Kind* valeKind);
-  Prototype* getRefEqPrototype(Kind* valeKind);
+  Prototype* getAliasPrototype(ValueKind* valeKind);
+  Prototype* getDealiasPrototype(ValueKind* valeKind);
+  Prototype* getRefEqPrototype(ValueKind* valeKind);
 
   Prototype* getFieldGetterPrototype(StructKind* structKind, int memberIndex);
   void declareConcreteFieldGetter(StructDefinition* structDefM, int memberIndex);
@@ -502,12 +502,12 @@ public:
   // RCImm::generateInterfaceDefsC to emit TAG_* constants.
   const std::vector<Edge*>* getEdgesForInterface(InterfaceKind* interfaceKind);
 private:
-  void declareConcreteAliasFunction(Kind* valeKind);
-  void defineConcreteAliasFunction(Kind* valeKind);
-  void declareConcreteDealiasFunction(Kind* valeKind);
-  void defineConcreteDealiasFunction(Kind* valeKind);
-  void declareConcreteRefEqFunction(Kind* valeKind);
-  void defineConcreteRefEqFunction(Kind* valeKind);
+  void declareConcreteAliasFunction(ValueKind* valeKind);
+  void defineConcreteAliasFunction(ValueKind* valeKind);
+  void declareConcreteDealiasFunction(ValueKind* valeKind);
+  void defineConcreteDealiasFunction(ValueKind* valeKind);
+  void declareConcreteRefEqFunction(ValueKind* valeKind);
+  void defineConcreteRefEqFunction(ValueKind* valeKind);
 
   void declareConcreteTypeTagFunction(InterfaceKind* interfaceKind);
   void defineConcreteTypeTagFunction(InterfaceKind* interfaceKind);
@@ -530,12 +530,12 @@ private:
   void declareConcreteSsaAtFunction(StaticSizedArrayT* ssaKind);
   void defineConcreteSsaAtFunction(StaticSizedArrayDefinitionT* ssaDef);
 
-  InterfaceMethod* getFreeInterfaceMethod(Kind* valeKind);
+  InterfaceMethod* getFreeInterfaceMethod(ValueKind* valeKind);
 
   void callFree(
       FunctionState *functionState,
       LLVMBuilderRef builder,
-      Kind* kind,
+      ValueKind* kind,
       Ref objectRef);
 
 //  // Does the entire serialization process: measuring the length, allocating a buffer, and
@@ -545,7 +545,7 @@ private:
 //      LLVMBuilderRef builder,
 //      Ref regionInstanceRef,
 //      Ref sourceRegionInstanceRef,
-//      Kind* valeKind,
+//      ValueKind* valeKind,
 //      Ref ref);
 
   GlobalState* globalState = nullptr;

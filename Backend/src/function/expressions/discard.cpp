@@ -23,10 +23,10 @@ Ref translateDiscard(
     return sourceRef;
   }
 
-  globalState->getRegion(sourceResultType)
+  globalState->getRegion(peel_all_references(sourceResultType))
       ->checkValidReference(FL(), functionState, builder, false, sourceResultType, sourceRef);
   buildFlare(FL(), globalState, functionState, builder, "discarding!");
-  globalState->getRegion(sourceResultType)
+  globalState->getRegion(peel_all_references(sourceResultType))
       ->dealias(
           AFL(std::string("Discard ") + typeid(*discardM->sourceType).name() + " from " + typeid(*sourceExpr).name()),
           functionState,

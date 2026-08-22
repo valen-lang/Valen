@@ -15,9 +15,9 @@ public:
       LLVMTypeRef weakRefHeaderStructL_);
 
 //  ControlBlock* getControlBlock();
-  ControlBlock* getControlBlock(Kind* kind);
+  ControlBlock* getControlBlock(ValueKind* kind);
   LLVMTypeRef getStructInnerStruct(StructKind* structKind);
-  LLVMTypeRef getWrapperStruct(Kind* kind);
+  LLVMTypeRef getWrapperStruct(ValueKind* kind);
   LLVMTypeRef getStructWrapperStruct(StructKind* structKind);
   LLVMTypeRef getStaticSizedArrayWrapperStruct(StaticSizedArrayT* ssaMT);
   LLVMTypeRef getRuntimeSizedArrayWrapperStruct(RuntimeSizedArrayT* rsaMT);
@@ -54,7 +54,6 @@ public:
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Kind* reference,
       WrapperPtrLE wrapperPtrLE);
 
   LLVMTypeRef getStringWrapperStruct();
@@ -101,14 +100,12 @@ public:
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Kind* kindM,
       InterfaceFatPtrLE interfaceFatPtrLE);
 
   ControlBlockPtrLE getControlBlockPtrWithoutChecking(
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Kind* kindM,
       InterfaceFatPtrLE interfaceFatPtrLE);
 
   ControlBlockPtrLE getControlBlockPtr(
@@ -147,7 +144,7 @@ public:
 
   LLVMValueRef getObjIdFromControlBlockPtr(
       LLVMBuilderRef builder,
-      Kind* kindM,
+      ValueKind* kindM,
       ControlBlockPtrLE controlBlockPtr);
 
   // See CRCISFAORC for why we don't take in a mutability.
@@ -166,13 +163,13 @@ public:
 
   LLVMValueRef downcastPtr(LLVMBuilderRef builder, Kind* resultStructRefMT, LLVMValueRef unknownPossibilityPtrLE);
 
-  LLVMTypeRef getWeakRefHeaderStruct(Kind* kind) {
+  LLVMTypeRef getWeakRefHeaderStruct() {
     return weakRefHeaderStructL;
   }
   // This is a weak ref to a void*. When we're calling an interface method on a weak,
   // we have no idea who the receiver is. They'll receive this struct as the correctly
   // typed flavor of it (from structWeakRefStructs).
-  LLVMTypeRef getWeakVoidRefStruct(Kind* kind) {
+  LLVMTypeRef getWeakVoidRefStruct() {
     return weakVoidRefStructL;
   }
 
@@ -207,7 +204,6 @@ private:
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Kind* reference,
       WrapperPtrLE wrapperPtrLE);
 
   Weakability structIsWeakable(StructKind* struuct);

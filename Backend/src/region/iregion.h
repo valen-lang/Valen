@@ -190,7 +190,7 @@ public:
 
   virtual std::string getExportName(
       Package* package,
-      Kind* reference,
+      ValueKind* reference,
       bool includeProjectName) = 0;
 
 //  virtual std::string getMemberArbitraryRefNameCSeeMMEDT(
@@ -368,7 +368,7 @@ public:
 
   // For instance regions, this will return the handle's type.
   // The C-ABI type a ref of this region crosses the FFI boundary as.
-  virtual LLVMTypeRef getExternalType(Kind* refMT) = 0;
+  virtual LLVMTypeRef getExternalType(ValueKind* refMT) = 0;
 
   virtual LoadResult loadElementFromSSA(
       FunctionState* functionState,
@@ -411,12 +411,11 @@ public:
       LLVMValueRef lengthLE,
       LLVMValueRef sourceCharsPtrLE) = 0;
 
-  virtual LLVMTypeRef getInterfaceMethodVirtualParamAnyType(
-      Kind* reference) = 0;
+  virtual LLVMTypeRef getInterfaceMethodVirtualParamAnyType() = 0;
 
   virtual RegionId* getRegionId() = 0;
 
-  virtual Weakability getKindWeakability(Kind* kind) = 0;
+  virtual Weakability getKindWeakability(ValueKind* kind) = 0;
 
   virtual LLVMValueRef stackify(
       FunctionState* functionState, LLVMBuilderRef builder, Local* local, Ref refToStore) = 0;

@@ -24,12 +24,12 @@ Ref translateLocalLoad(
 
   auto localAddr = blockState->getLocalAddr(localId, true);
 
-  auto sourceRef = globalState->getRegion(localType)->loadLocal(functionState, builder, local, localAddr);
+  auto sourceRef = globalState->getRegion(peel_all_references(localType))->loadLocal(functionState, builder, local, localAddr);
 
   auto resultRef =
-      globalState->getRegion(localType)->upgradeLoadResultToRefWithTargetOwnership(
+      globalState->getRegion(peel_all_references(localType))->upgradeLoadResultToRefWithTargetOwnership(
           functionState, builder, localType, resultType, LoadResult{sourceRef});
-  globalState->getRegion(resultType)->alias(FL(), functionState, builder, resultType, resultRef);
+  globalState->getRegion(peel_all_references(resultType))->alias(FL(), functionState, builder, resultType, resultRef);
 
   return resultRef;
 }

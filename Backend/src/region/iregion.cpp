@@ -8,7 +8,7 @@ LLVMValueRef checkValidReference(
     bool expectLive,
     Kind* refM,
     Ref ref) {
-  return globalState->getRegion(refM)->checkValidReference(
+  return globalState->getRegion(peel_all_references(refM))->checkValidReference(
       checkerAFL, functionState, builder, expectLive, refM, ref);
 }
 

@@ -77,14 +77,13 @@ public:
   LLVMValueRef getIsAliveFromWeakFatPtr(
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Kind* weakRefM,
       WeakFatPtrLE weakFatPtrLE);
 
   LLVMValueRef fillWeakableControlBlock(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       KindStructs* structs,
-      Kind* kindM,
+      ValueKind* kindM,
       LLVMValueRef controlBlockLE);
 
   WeakFatPtrLE weakInterfaceRefToWeakStructRef(

@@ -409,13 +409,13 @@ public:
       AreaAndFileAndLine from,
       FunctionState* functionState,
       LLVMBuilderRef builder,
-      Kind* kindM,
+      ValueKind* kindM,
       ControlBlockPtrLE controlBlockPtrLE,
       const std::string& typeName);
 
 
 
-  std::string getExportName(Package* currentPackage, Kind* refMT, bool includeProjectName) override;
+  std::string getExportName(Package* currentPackage, ValueKind* refMT, bool includeProjectName) override;
   std::string generateStructDefsC(
     Package* currentPackage,
       StructDefinition* refMT) override;
@@ -429,7 +429,7 @@ public:
     Package* currentPackage,
       RuntimeSizedArrayDefinitionT* rsaDefM) override;
 
-  LLVMTypeRef getExternalType(Kind* refMT) override;
+  LLVMTypeRef getExternalType(ValueKind* refMT) override;
 
   Ref receiveAndDecryptFamiliarReference(
       FunctionState* functionState,
@@ -443,7 +443,7 @@ public:
       Kind* sourceRefMT,
       Ref sourceRef) override;
 
-  LLVMTypeRef getInterfaceMethodVirtualParamAnyType(Kind* reference) override;
+  LLVMTypeRef getInterfaceMethodVirtualParamAnyType() override;
 
   void defineStaticSizedArrayExtraFunctions(StaticSizedArrayDefinitionT* ssaDef) override {}
   void defineRuntimeSizedArrayExtraFunctions(RuntimeSizedArrayDefinitionT* rsaDefM) override {}
@@ -453,7 +453,7 @@ public:
   void declareExtraFunctions() override {}
   void defineExtraFunctions() override {}
 
-  Weakability getKindWeakability(Kind* kind) override;
+  Weakability getKindWeakability(ValueKind* kind) override;
 
   void declareStructExtraFunctions(StructDefinition* structDefM) override {}
   void declareStaticSizedArrayExtraFunctions(StaticSizedArrayDefinitionT* ssaDef) override {}

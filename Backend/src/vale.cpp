@@ -214,14 +214,15 @@ std::string generateFunctionC(
     Prototype* prototype,
     CFuncLineMode lineMode,
     bool isExport) {
+  auto returnKind = peel_all_references(prototype->returnType);
   auto returnTypeExportName =
-      globalState->getRegion(prototype->returnType)->getExportName(package, prototype->returnType, true);
+      globalState->getRegion(returnKind)->getExportName(package, returnKind, true);
   auto projectName = package->packageCoordinate->projectName;
   std::string userFuncName =
       package->packageCoordinate->projectName + "_" + outsideName;
   std::string abiFuncName = std::string("vale_abi_") + userFuncName;
 
-  bool abiUsingRetOutParam = typeNeedsPointerParameter(globalState, prototype->returnType);
+  bool abiUsingRetOutParam = typeNeedsPointerParameter(globalState, returnKind);
 
   std::stringstream s;
   switch (lineMode) {
@@ -236,7 +237,7 @@ std::string generateFunctionC(
       break;
     }
     case CFuncLineMode::EXTERN_INTERMEDIATE_BODY: {
-      if (translatesToCVoid(globalState, prototype->returnType)) {
+      if (translatesToCVoid(globalState, returnKind)) {
         s << userFuncName << "(";
       } else {
         if (abiUsingRetOutParam) {
@@ -250,7 +251,7 @@ std::string generateFunctionC(
       break;
     }
     case CFuncLineMode::EXPORT_INTERMEDIATE_BODY: {
-      if (translatesToCVoid(globalState, prototype->returnType)) {
+      if (translatesToCVoid(globalState, returnKind)) {
         s << abiFuncName << "(";
       } else {
         if (abiUsingRetOutParam) {
@@ -295,9 +296,10 @@ std::string generateFunctionC(
     if (addedAnyParam) {
       s << ", ";
     }
+    auto paramKind = peel_all_references(prototype->params[i]);
     auto paramTypeExportName =
-        globalState->getRegion(prototype->params[i])->getExportName(package, prototype->params[i], true);
-    auto abiUsesPointer = typeNeedsPointerParameter(globalState, prototype->params[i]);
+        globalState->getRegion(paramKind)->getExportName(package, paramKind, true);
+    auto abiUsesPointer = typeNeedsPointerParameter(globalState, paramKind);
     switch (lineMode) {
       case CFuncLineMode::EXTERN_INTERMEDIATE_PROTOTYPE:
       case CFuncLineMode::EXPORT_USER_PROTOTYPE:
@@ -496,13 +498,14 @@ void makeExternOrExportFunction(
     Prototype *prototype,
     bool isExport) {
   for (auto param : prototype->params) {
-    if (translatesToCVoid(globalState, param) ||
-        dynamic_cast<Int *>(param) ||
-        dynamic_cast<Bool *>(param) ||
-        dynamic_cast<Float *>(param)) {
+    auto paramKind = peel_all_references(param);
+    if (translatesToCVoid(globalState, paramKind) ||
+        dynamic_cast<Int *>(paramKind) ||
+        dynamic_cast<Bool *>(paramKind) ||
+        dynamic_cast<Float *>(paramKind)) {
       // Do nothing, no need to include anything for these
     } else {
-      auto paramTypeExportName = package->getKindExportName(param, false);
+      auto paramTypeExportName = package->getKindExportName(paramKind, false);
 //      if (ownershipToSharedness(param->ownership) == Sharedness::SINGLE) {
 //        paramTypeExportName += "Ref";
 //      }
@@ -510,8 +513,8 @@ void makeExternOrExportFunction(
     }
   }
   {
-    auto returnType = prototype->returnType;
-    if (translatesToCVoid(globalState, prototype->returnType) ||
+    auto returnType = peel_all_references(prototype->returnType);
+    if (translatesToCVoid(globalState, returnType) ||
         dynamic_cast<Int *>(returnType) ||
         dynamic_cast<Bool *>(returnType) ||
         dynamic_cast<Float *>(returnType)) {
@@ -924,12 +927,12 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       // A kind is share exactly when it lives in the rcImm (share) region.
       // VCOORD: make this more consistent
       bool isShare = (structKind || interfaceKind || rsaKind || ssaKind)
-          && globalState->getRegion(kind) == globalState->rcImm;
+          && globalState->getRegion(peel_all_references(kind)) == globalState->rcImm;
       if (isShare) {
         auto& autoExports = globalState->autoExportsByPackage[packageCoord];
-        auto aliasP = globalState->rcImm->getAliasPrototype(kind);
-        auto dealiasP = globalState->rcImm->getDealiasPrototype(kind);
-        auto refEqP = globalState->rcImm->getRefEqPrototype(kind);
+        auto aliasP = globalState->rcImm->getAliasPrototype(peel_all_references(kind));
+        auto dealiasP = globalState->rcImm->getDealiasPrototype(peel_all_references(kind));
+        auto refEqP = globalState->rcImm->getRefEqPrototype(peel_all_references(kind));
         autoExports.emplace(exportName + "_alias", aliasP);
         autoExports.emplace(exportName + "_dealias", dealiasP);
         autoExports.emplace(exportName + "_ref_eq", refEqP);

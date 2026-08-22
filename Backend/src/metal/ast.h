@@ -178,10 +178,9 @@ public:
 //    return iter->second;
 //  }
 
-  std::string getKindExportName(Kind* rawKind, bool includeProjectName) const {
-    // The export name of a reference is its concrete kind's export name — the onion wrap is just
-    // how it's held, not part of the C ABI type name. Peel before dispatching.
-    auto kind = peel_all_references(rawKind);
+  std::string getKindExportName(ValueKind* kind, bool includeProjectName) const {
+    // The export name of a kind is its own C ABI type name; the onion wrap a reference adds is not
+    // part of it, so callers pass the peeled ValueKind.
     if (auto innt = dynamic_cast<Int *>(kind)) {
       return std::string() + "int" + std::to_string(innt->bits) + "_t";
     } else if (dynamic_cast<Bool *>(kind)) {
@@ -202,8 +201,7 @@ public:
       return (includeProjectName ? packageCoordinate->projectName + "_" : "") + iter->second;
     }
   }
-  std::string getKindHumanName(Kind* rawKind) const {
-    auto kind = peel_all_references(rawKind);
+  std::string getKindHumanName(ValueKind* kind) const {
     if (auto innt = dynamic_cast<Int *>(kind)) {
       return std::string() + "i" + std::to_string(innt->bits);
     } else if (dynamic_cast<Bool *>(kind)) {
@@ -229,7 +227,7 @@ public:
     assert(iter != functionToExportName.end());
     return packageCoordinate->projectName + "_" + iter->second;
   }
-  std::string getKindExternName(Kind* kind) const {
+  std::string getKindExternName(ValueKind* kind) const {
     auto iter = kindToExternName.find(kind);
     assert(iter != kindToExternName.end());
     return packageCoordinate->projectName + "_" + iter->second;

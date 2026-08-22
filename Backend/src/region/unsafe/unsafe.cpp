@@ -91,7 +91,7 @@ Ref Unsafe::allocate(
   fillControlBlock(
       FL(), functionState, builder, peel_all_references(desiredReference),
       kindStructs.getConcreteControlBlockPtr(
-          FL(), functionState, builder, desiredReference, newStructWrapperPtrLE),
+          FL(), functionState, builder, newStructWrapperPtrLE),
       structM->name->name);
   auto structContentsPtrLT = kindStructs.getStructInnerStruct(structM->kind);
   auto structContentsPtrLE =
@@ -105,11 +105,11 @@ Ref Unsafe::allocate(
       structContentsPtrLT,
       structContentsPtrLE);
 
-  auto resultRef = toRef(globalState->getRegion(desiredReference), desiredReference, newStructWrapperPtrLE.refLE);
+  auto resultRef = toRef(globalState->getRegion(peel_all_references(desiredReference)), desiredReference, newStructWrapperPtrLE.refLE);
 
   if (globalState->opt->census) {
     auto objIdLE =
-        globalState->getRegion(desiredReference)
+        globalState->getRegion(peel_all_references(desiredReference))
             ->getCensusObjectId(FL(), functionState, builder, desiredReference, resultRef);
     buildFlare(
         FL(), globalState, functionState, builder,
@@ -232,7 +232,7 @@ Ref Unsafe::lockWeak(
   auto isAliveLE =
       getIsAliveFromWeakRef(
           functionState, builder, sourceWeakRefMT, sourceWeakRefLE);
-  auto resultOptTypeLE = globalState->getRegion(resultOptTypeM)->translateType(resultOptTypeM);
+  auto resultOptTypeLE = globalState->getRegion(peel_all_references(resultOptTypeM))->translateType(resultOptTypeM);
   return regularInnerLockWeak(
       globalState, functionState, builder, thenResultIsNever, elseResultIsNever, resultOptTypeM,
       constraintRefM, sourceWeakRefMT, sourceWeakRefLE, buildThen, buildElse,
@@ -256,7 +256,7 @@ Ref Unsafe::asSubtype(
 }
 
 LLVMTypeRef Unsafe::translateType(Kind* referenceM) {
-  return translateReferenceSimple(globalState, &kindStructs, referenceM);
+  return translateReferenceSimple(globalState, &kindStructs, peel_all_references(referenceM));
 }
 
 Ref Unsafe::upcastWeak(
@@ -292,7 +292,7 @@ void Unsafe::declareRuntimeSizedArray(
 void Unsafe::defineRuntimeSizedArray(
     RuntimeSizedArrayDefinitionT* runtimeSizedArrayMT) {
   auto elementLT =
-      globalState->getRegion(runtimeSizedArrayMT->elementType)
+      globalState->getRegion(peel_all_references(runtimeSizedArrayMT->elementType))
           ->translateType(runtimeSizedArrayMT->elementType);
   kindStructs.defineRuntimeSizedArray(runtimeSizedArrayMT, elementLT, true);
 }
@@ -300,7 +300,7 @@ void Unsafe::defineRuntimeSizedArray(
 void Unsafe::defineStaticSizedArray(
     StaticSizedArrayDefinitionT* staticSizedArrayMT) {
   auto elementLT =
-      globalState->getRegion(staticSizedArrayMT->elementType)
+      globalState->getRegion(peel_all_references(staticSizedArrayMT->elementType))
           ->translateType(staticSizedArrayMT->elementType);
   kindStructs.defineStaticSizedArray(staticSizedArrayMT, elementLT);
 }
@@ -317,7 +317,7 @@ void Unsafe::defineStruct(
   std::vector<LLVMTypeRef> innerStructMemberTypesL;
   for (int i = 0; i < structM->members.size(); i++) {
     innerStructMemberTypesL.push_back(
-        globalState->getRegion(structM->members[i]->type)
+        globalState->getRegion(peel_all_references(structM->members[i]->type))
             ->translateType(structM->members[i]->type));
   }
   kindStructs.defineStruct(structM->kind, innerStructMemberTypesL);
@@ -401,7 +401,7 @@ void Unsafe::storeMember(
     Kind* newMemberRefMT,
     Ref newMemberRef) {
   auto newMemberLE =
-      globalState->getRegion(newMemberRefMT)->checkValidReference(
+      globalState->getRegion(peel_all_references(newMemberRefMT))->checkValidReference(
           FL(), functionState, builder, false, newMemberRefMT, newMemberRef);
   storeMemberStrong(
       globalState, functionState, builder, &kindStructs, structRefMT, structRef,
@@ -582,7 +582,7 @@ void Unsafe::fillControlBlock(
     AreaAndFileAndLine from,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Kind* kindM,
+    ValueKind* kindM,
     ControlBlockPtrLE controlBlockPtrLE,
     const std::string& typeName) {
 
@@ -678,7 +678,7 @@ LiveRef Unsafe::constructRuntimeSizedArray(
       kindStructs.getRuntimeSizedArrayWrapperStruct(runtimeSizedArrayT);
   auto rsaDef = globalState->program->getRuntimeSizedArray(runtimeSizedArrayT);
   auto elementType = globalState->program->getRuntimeSizedArray(runtimeSizedArrayT)->elementType;
-  auto rsaElementLT = globalState->getRegion(elementType)->translateType(elementType);
+  auto rsaElementLT = globalState->getRegion(peel_all_references(elementType))->translateType(elementType);
   auto resultRef =
       ::constructRuntimeSizedArray(
            globalState, functionState, builder, &kindStructs, rsaMT, rsaDef->elementType, runtimeSizedArrayT,
@@ -755,12 +755,11 @@ std::string Unsafe::generateInterfaceDefsC(
 }
 
 
-LLVMTypeRef Unsafe::getExternalType(Kind* refMT) {
+LLVMTypeRef Unsafe::getExternalType(ValueKind* kind) {
   // Per @HTSLVBDTCZ, all concretes share one handle type and all interfaces
   // share one; kind distinctness lives in the C typedefs, not this type.
   // Same right-sized handle structs the share region uses: mut concretes cross
   // as 8-byte { i64 obj }, mut interfaces as 16-byte { i64 obj, i64 typeinfo }.
-  auto kind = peel_all_references(refMT);
   if (dynamic_cast<StructKind*>(kind) ||
       dynamic_cast<StaticSizedArrayT*>(kind) ||
       dynamic_cast<RuntimeSizedArrayT*>(kind)) {
@@ -787,7 +786,7 @@ Ref Unsafe::receiveAndDecryptFamiliarReference(
       globalState, functionState, builder, &kindStructs, sourceRefMT, sourceRefLE);
 }
 
-LLVMTypeRef Unsafe::getInterfaceMethodVirtualParamAnyType(Kind* reference) {
+LLVMTypeRef Unsafe::getInterfaceMethodVirtualParamAnyType() {
   return LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0);
 }
 
@@ -814,9 +813,9 @@ void Unsafe::pushRuntimeSizedArrayNoBoundsCheck(
       toWrapperPtr(functionState, builder, &kindStructs, rsaRefMT, rsaRef);
   auto incrementedSize =
       incrementRSASize(
-          globalState, functionState, builder, rsaRefMT, arrayWrapperPtrLE);
+          globalState, functionState, builder, arrayWrapperPtrLE);
   ::initializeElementInRSAWithoutIncrementSize(
-      globalState, functionState, builder, true, rsaMT, rsaRefMT, arrayWrapperPtrLE, indexInBoundsLE,
+      globalState, functionState, builder, true, rsaMT, arrayWrapperPtrLE, indexInBoundsLE,
       elementRef, incrementedSize);
 }
 
@@ -841,7 +840,7 @@ Ref Unsafe::popRuntimeSizedArrayNoBoundsCheck(
           indexInBoundsLE)
           .move();
   auto rsaWrapperPtrLE = toWrapperPtr(functionState, builder, &kindStructs, rsaRefMT, arrayRef);
-  decrementRSASize(globalState, functionState, &kindStructs, builder, rsaRefMT, rsaWrapperPtrLE);
+  decrementRSASize(globalState, functionState, &kindStructs, builder, rsaWrapperPtrLE);
   return elementLE;
 }
 
@@ -875,7 +874,7 @@ Ref Unsafe::deinitializeElementFromSSA(
   exit(1);
 }
 
-Weakability Unsafe::getKindWeakability(Kind* kind) {
+Weakability Unsafe::getKindWeakability(ValueKind* kind) {
   if (auto structKind = dynamic_cast<StructKind*>(kind)) {
     return globalState->lookupStruct(structKind)->weakability;
   } else if (auto interfaceKind = dynamic_cast<InterfaceKind*>(kind)) {
@@ -919,12 +918,11 @@ Ref Unsafe::localStore(FunctionState* functionState, LLVMBuilderRef builder, Loc
 
 std::string Unsafe::getExportName(
     Package* package,
-    Kind* reference,
+    ValueKind* kind,
     bool includeProjectName) {
   // Mirrors RCImm::getExportName: primitives get their raw C type names; concretes cross as
   // right-sized handle value-type typedefs (no `*` suffix). Placement is not part of the ABI name.
   // VCOORD: make sure this is in the right place and isnt duplicated
-  auto kind = peel_all_references(reference);
   if (auto innt = dynamic_cast<Int*>(kind)) {
     return std::string() + "int" + std::to_string(innt->bits) + "_t";
   } else if (dynamic_cast<Bool*>(kind)) {

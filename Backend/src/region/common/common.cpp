@@ -33,7 +33,7 @@ LLVMValueRef upcastThinPtr(
       dynamic_cast<BorrowRef*>(sourceStructTypeM) != nullptr);
   ControlBlockPtrLE controlBlockPtrLE =
       kindStructsSource->getConcreteControlBlockPtr(
-          FL(), functionState, builder, sourceStructTypeM, sourceRefLE);
+          FL(), functionState, builder, sourceRefLE);
   auto interfaceRefLE =
       makeInterfaceRefStruct(
           globalState, functionState, builder, kindStructsSource, sourceStructKindM, targetInterfaceKindM,
@@ -41,7 +41,7 @@ LLVMValueRef upcastThinPtr(
   return interfaceRefLE;
 }
 
-LLVMTypeRef translateReferenceSimple(GlobalState* globalState, KindStructs* structs, Kind* kind) {
+LLVMTypeRef translateReferenceSimple(GlobalState* globalState, KindStructs* structs, ValueKind* kind) {
   DefaultPrimitives primitives;
   if (primitives.isPrimitive(kind) || dynamic_cast<Never *>(kind) != nullptr) {
     return primitives.translatePrimitive(globalState, kind);
@@ -66,7 +66,7 @@ LLVMTypeRef translateReferenceSimple(GlobalState* globalState, KindStructs* stru
   }
 }
 
-LLVMTypeRef translateWeakReference(GlobalState* globalState, KindStructs* weakRefStructs, Kind* kind) {
+LLVMTypeRef translateWeakReference(GlobalState* globalState, KindStructs* weakRefStructs, ValueKind* kind) {
   if (auto ssaMT = dynamic_cast<StaticSizedArrayT *>(kind)) {
     return weakRefStructs->getStaticSizedArrayWeakRefStruct(ssaMT);
   } else if (auto rsaMT = dynamic_cast<RuntimeSizedArrayT *>(kind)) {
@@ -94,7 +94,7 @@ LoadResult loadInnerInnerStructMember(
   auto ptrToMemberLE =
       LLVMBuildStructGEP2(builder, innerStructLT, innerStructPtrLE, memberIndex, memberName.c_str());
 
-  auto memberRegion = globalState->getRegion(expectedType);
+  auto memberRegion = globalState->getRegion(peel_all_references(expectedType));
   auto memberLT = memberRegion->translateType(expectedType);
   auto resultLE = LLVMBuildLoad2(builder, memberLT, ptrToMemberLE, memberName.c_str());
   return LoadResult{toRef(memberRegion, expectedType, resultLE)};
@@ -122,7 +122,7 @@ LLVMValueRef getItablePtrFromInterfacePtr(
     Kind* virtualParamMT,
     InterfaceFatPtrLE virtualArgLE) {
   buildFlare(FL(), globalState, functionState, builder);
-  assert(LLVMTypeOf(virtualArgLE.refLE) == globalState->getRegion(virtualParamMT)->translateType(virtualParamMT));
+  assert(LLVMTypeOf(virtualArgLE.refLE) == globalState->getRegion(peel_all_references(virtualParamMT))->translateType(virtualParamMT));
   return getTablePtrFromInterfaceRef(builder, virtualArgLE);
 }
 
@@ -133,7 +133,7 @@ LLVMValueRef fillControlBlockCensusFields(
     FunctionState* functionState,
     KindStructs* structs,
     LLVMBuilderRef builder,
-    Kind* kindM,
+    ValueKind* kindM,
     LLVMValueRef newControlBlockLE,
     const std::string& typeName) {
   if (globalState->opt->census) {
@@ -162,7 +162,7 @@ LLVMValueRef insertStrongRc(
     GlobalState* globalState,
     LLVMBuilderRef builder,
     KindStructs* structs,
-    Kind* kindM,
+    ValueKind* kindM,
     LLVMValueRef newControlBlockLE) {
   return LLVMBuildInsertValue(
       builder,
@@ -263,10 +263,10 @@ void innerDeallocateYonder(
   auto ref = toRef(globalState, refMT, liveRef);
   if (globalState->opt->census) {
     auto ptrLE =
-        globalState->getRegion(refMT)
+        globalState->getRegion(peel_all_references(refMT))
             ->checkValidReference(FL(), functionState, builder, true, refMT, ref);
     auto objIdLE =
-        globalState->getRegion(refMT)
+        globalState->getRegion(peel_all_references(refMT))
             ->getCensusObjectId(FL(), functionState, builder, refMT, ref);
     if (dynamic_cast<InterfaceKind*>(peel_all_references(refMT)) == nullptr) {
       buildFlare(FL(), globalState, functionState, builder,
@@ -328,7 +328,7 @@ void fillStaticSizedArray(
   for (int i = 0; i < elementRefs.size(); i++) {
     // Making an InBoundsLE because the bound of the containing loop is the size of the array.
     auto indexInBoundsLE = InBoundsLE{constI64LE(globalState, i)};
-    globalState->getRegion(ssaRefMT)->initializeElementInSSA(
+    globalState->getRegion(peel_all_references(ssaRefMT))->initializeElementInSSA(
         functionState, builder, ssaRefMT, ssaMT, ssaRef, indexInBoundsLE, elementRefs[i]);
   }
 }
@@ -349,7 +349,7 @@ void fillRuntimeSizedArray(
       globalState, functionState, builder, sizeLE,
       [globalState, functionState, rsaRefMT, rsaMT, generatorMethod, generatorType, rsaRef, generatorLE](
           Ref indexRef, LLVMBuilderRef bodyBuilder) {
-        globalState->getRegion(generatorType)->alias(
+        globalState->getRegion(peel_all_references(generatorType))->alias(
             AFL("ConstructRSA generate iteration"),
             functionState, bodyBuilder, generatorType, generatorLE);
         std::vector<Ref> argExprsLE = {generatorLE, indexRef};
@@ -385,7 +385,7 @@ void fillStaticSizedArrayFromCallable(
       globalState, functionState, builder, sizeLE,
       [globalState, functionState, ssaRefMT, ssaMT, generatorMethod, generatorType, ssaRef, generatorLE](
           Ref indexRef, LLVMBuilderRef bodyBuilder) {
-        globalState->getRegion(generatorType)->alias(
+        globalState->getRegion(peel_all_references(generatorType))->alias(
             AFL("ConstructSSA generate iteration"),
             functionState, bodyBuilder, generatorType, generatorLE);
         std::vector<Ref> argExprsLE = {generatorLE, indexRef};
@@ -467,7 +467,7 @@ WrapperPtrLE mallocStr(
   fillControlBlock(
       builder,
       kindStructs->getConcreteControlBlockPtr(
-          FL(), functionState, builder, globalState->metalCache->str, newStrWrapperPtrLE));
+          FL(), functionState, builder, newStrWrapperPtrLE));
   assert(LLVMTypeOf(lenI32LE) == LLVMInt32TypeInContext(globalState->context));
   LLVMBuildStore(
       builder,
@@ -526,7 +526,7 @@ void fillInnerStruct(
     auto ptrLE =
         LLVMBuildStructGEP2(builder, innerStructLT, innerStructPtrLE, i, memberName.c_str());
     auto memberLE =
-        globalState->getRegion(memberType)
+        globalState->getRegion(peel_all_references(memberType))
             ->checkValidReference(FL(), functionState, builder, false, structM->members[i]->type, memberRef);
     LLVMBuildStore(builder, memberLE, ptrLE);
   }
@@ -545,7 +545,7 @@ LLVMValueRef constructInnerStruct(
   LLVMValueRef structValueBeingInitialized = LLVMGetUndef(valStructL);
   for (int i = 0; i < memberRefs.size(); i++) {
     auto memberLE =
-        globalState->getRegion(structM->members[i]->type)
+        globalState->getRegion(peel_all_references(structM->members[i]->type))
             ->checkValidReference(FL(), functionState, builder, false, structM->members[i]->type, memberRefs[i]);
     auto memberName = structM->members[i]->name;
     // Every time we fill in a field, it actually makes a new entire
@@ -575,11 +575,11 @@ Ref transmuteWeakRef(
   auto sourceWeakFatPtrLE =
       weakRefStructs->makeWeakFatPtr(
           sourceWeakRefMT,
-          globalState->getRegion(sourceWeakRefMT)->checkValidReference(
+          globalState->getRegion(peel_all_references(sourceWeakRefMT))->checkValidReference(
               FL(), functionState, builder, false, sourceWeakRefMT, sourceWeakRef));
   auto sourceWeakFatPtrRawLE = sourceWeakFatPtrLE.refLE;
   auto targetWeakFatPtrLE = weakRefStructs->makeWeakFatPtr(targetWeakRefMT, sourceWeakFatPtrRawLE);
-  auto targetWeakRef = toRef(globalState->getRegion(targetWeakRefMT), targetWeakRefMT, targetWeakFatPtrLE);
+  auto targetWeakRef = toRef(globalState->getRegion(peel_all_references(targetWeakRefMT)), targetWeakRefMT, targetWeakFatPtrLE);
   return targetWeakRef;
 }
 
@@ -633,9 +633,9 @@ Ref transmutePtr(
     Ref sourceRef) {
   // The WrapperPtrLE constructors here will make sure that its a safe and valid transmutation.
   auto sourcePtrRawLE =
-      globalState->getRegion(sourceRefMT)
+      globalState->getRegion(peel_all_references(sourceRefMT))
           ->checkValidReference(FL(), functionState, builder, expectLive, sourceRefMT, sourceRef);
-  auto targetWeakRef = toRef(globalState->getRegion(targetRefMT), targetRefMT, sourcePtrRawLE);
+  auto targetWeakRef = toRef(globalState->getRegion(peel_all_references(targetRefMT)), targetRefMT, sourcePtrRawLE);
   return targetWeakRef;
 }
 
@@ -746,7 +746,7 @@ Ref interfaceRefIsForEdge(
   LLVMValueRef itablePtrLE = nullptr;
   LLVMValueRef possibilityPtrLE = nullptr;
   std::tie(itablePtrLE, possibilityPtrLE) =
-      globalState->getRegion(sourceInterfaceRefMT)
+      globalState->getRegion(peel_all_references(sourceInterfaceRefMT))
           ->explodeInterfaceRef(
               functionState, builder, sourceInterfaceRefMT, sourceInterfaceRef);
 
@@ -890,7 +890,7 @@ Ref resilientDowncast(
 }
 
 Ref normalLocalStore(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, Local* local, LLVMValueRef localAddr, Ref refToStore) {
-  auto region = globalState->getRegion(local->type);
+  auto region = globalState->getRegion(peel_all_references(local->type));
   auto localLT = region->translateType(local->type);
   // We need to load the old ref *after* we evaluate the source expression,
   // Because of expressions like: Ship() = (mut b = (mut a = (mut b = Ship())));
@@ -1020,7 +1020,7 @@ LiveRef constructRuntimeSizedArray(
       kindStructs->makeWrapperPtr(FL(), functionState, builder, rsaMT, ptrLE);
   fillControlBlock(
       builder,
-      kindStructs->getConcreteControlBlockPtr(FL(), functionState, builder, rsaMT, rsaWrapperPtrLE));
+      kindStructs->getConcreteControlBlockPtr(FL(), functionState, builder, rsaWrapperPtrLE));
   auto sizeLE =
       globalState->getRegion(globalState->metalCache->i32Type)->checkValidReference(FL(),
           functionState, builder, true, globalState->metalCache->i32Type, initialSizeRef);
@@ -1033,7 +1033,7 @@ LiveRef constructRuntimeSizedArray(
 
   if (globalState->opt->census) {
     auto objIdLE =
-        globalState->getRegion(rsaMT)
+        globalState->getRegion(peel_all_references(rsaMT))
             ->getCensusObjectId(FL(), functionState, builder, rsaMT, rsaRef);
     auto addrIntLE = ptrToIntLE(globalState, builder, ptrLE);
     buildFlare(
@@ -1061,10 +1061,10 @@ LoadResult regularLoadMember(
   if (structDefM->sharedness == Sharedness::SINGLE) {
     auto structRef = toRef(globalState, structRefMT, structLiveRef);
     auto structRefLE =
-        globalState->getRegion(structRefMT)
+        globalState->getRegion(peel_all_references(structRefMT))
             ->checkValidReference(FL(), functionState, builder, true, structRefMT, structRef);
     return LoadResult{
-      toRef(globalState->getRegion(expectedMemberType), expectedMemberType,
+      toRef(globalState->getRegion(peel_all_references(expectedMemberType)), expectedMemberType,
         LLVMBuildExtractValue(
             builder, structRefLE, memberIndex, memberName.c_str()))};
   } else if (structDefM->sharedness == Sharedness::SHARED) {
@@ -1088,14 +1088,14 @@ Ref upcastStrong(
   auto sourceStructWrapperPtrLE =
       kindStructs->makeWrapperPtr(
           FL(), functionState, builder, sourceStructMT,
-          globalState->getRegion(sourceStructMT)
+          globalState->getRegion(peel_all_references(sourceStructMT))
               ->checkValidReference(FL(), functionState, builder, false, sourceStructMT, sourceRefLE));
   auto resultInterfaceFatPtrLE =
       upcastThinPtr(
           globalState, functionState, kindStructs, builder, sourceStructMT,
           sourceStructKindM,
           sourceStructWrapperPtrLE, targetInterfaceTypeM, targetInterfaceKindM);
-  return toRef(globalState->getRegion(targetInterfaceTypeM), targetInterfaceTypeM, resultInterfaceFatPtrLE);
+  return toRef(globalState->getRegion(peel_all_references(targetInterfaceTypeM)), targetInterfaceTypeM, resultInterfaceFatPtrLE);
 }
 
 Ref upcastWeak(
@@ -1111,9 +1111,9 @@ Ref upcastWeak(
   auto sourceWeakStructFatPtrLE =
       weakRefStructs->makeWeakFatPtr(
           sourceStructMT,
-          globalState->getRegion(sourceStructMT)->checkValidReference(FL(),
+          globalState->getRegion(peel_all_references(sourceStructMT))->checkValidReference(FL(),
               functionState, builder, false, sourceStructMT, sourceRefLE));
-  return globalState->getRegion(sourceStructMT)->upcastWeak(
+  return globalState->getRegion(peel_all_references(sourceStructMT))->upcastWeak(
       functionState,
       builder,
       sourceWeakStructFatPtrLE,
@@ -1129,7 +1129,7 @@ void regularFillControlBlock(
     FunctionState* functionState,
     KindStructs* structs,
     LLVMBuilderRef builder,
-    Kind* kindM,
+    ValueKind* kindM,
     ControlBlockPtrLE controlBlockPtrLE,
     const std::string& typeName,
     WrcWeaks* wrcWeaks) {
@@ -1216,7 +1216,7 @@ std::tuple<LLVMValueRef, LLVMValueRef> explodeStrongInterfaceRef(
     Kind* virtualParamMT,
     Ref virtualArgRef) {
   auto virtualArgLE =
-      globalState->getRegion(virtualParamMT)->checkValidReference(
+      globalState->getRegion(peel_all_references(virtualParamMT))->checkValidReference(
           FL(), functionState, builder, false, virtualParamMT, virtualArgRef);
   LLVMValueRef itablePtrLE = nullptr;
   LLVMValueRef newVirtualArgLE = nullptr;
@@ -1247,7 +1247,7 @@ std::tuple<LLVMValueRef, LLVMValueRef> explodeWeakInterfaceRef(
     Ref virtualArgRef,
     std::function<WeakFatPtrLE(WeakFatPtrLE weakInterfaceFatPtrLE)> weakInterfaceRefToWeakStructRef) {
   auto virtualArgLE =
-      globalState->getRegion(virtualParamMT)
+      globalState->getRegion(peel_all_references(virtualParamMT))
           ->checkValidReference(FL(), functionState, builder, false, virtualParamMT, virtualArgRef);
   auto weakFatPtrLE = weakRefStructs->makeWeakFatPtr(virtualParamMT, virtualArgLE);
   // Disassemble the weak interface ref.
@@ -1278,10 +1278,10 @@ Ref regularWeakAlias(
     auto objPtrLE =
         kindStructs->makeWrapperPtr(
             FL(), functionState, builder, sourceRefMT,
-            globalState->getRegion(sourceRefMT)
+            globalState->getRegion(peel_all_references(sourceRefMT))
                 ->checkValidReference(FL(), functionState, builder, false, sourceRefMT, sourceRef));
     return toRef(
-        globalState->getRegion(targetRefMT),
+        globalState->getRegion(peel_all_references(targetRefMT)),
         targetRefMT,
         wrcWeaks->assembleStructWeakRef(
             functionState, builder,
@@ -1290,10 +1290,10 @@ Ref regularWeakAlias(
     auto objPtrLE =
         kindStructs->makeInterfaceFatPtr(
             FL(), functionState, builder, sourceRefMT,
-            globalState->getRegion(sourceRefMT)
+            globalState->getRegion(peel_all_references(sourceRefMT))
                 ->checkValidReference(FL(), functionState, builder, false, sourceRefMT, sourceRef));
     return toRef(
-        globalState->getRegion(targetRefMT),
+        globalState->getRegion(peel_all_references(targetRefMT)),
         targetRefMT,
         wrcWeaks->assembleInterfaceWeakRef(
             functionState, builder,
@@ -1327,7 +1327,7 @@ Ref regularInnerLockWeak(
         auto weakFatPtrLE =
             weakRefStructsSource->makeWeakFatPtr(
                 sourceWeakRefMT,
-                globalState->getRegion(sourceWeakRefMT)
+                globalState->getRegion(peel_all_references(sourceWeakRefMT))
                     ->checkValidReference(FL(), functionState, thenBuilder, false, sourceWeakRefMT, sourceWeakRefLE));
         auto constraintRefLE =
             fatWeaks->getInnerRefFromWeakRef(
@@ -1336,7 +1336,7 @@ Ref regularInnerLockWeak(
                 sourceWeakRefMT,
                 weakFatPtrLE);
         auto constraintRef =
-            toRef(globalState->getRegion(constraintRefM), constraintRefM, constraintRefLE);
+            toRef(globalState->getRegion(peel_all_references(constraintRefM)), constraintRefM, constraintRefLE);
         return buildThen(thenBuilder, constraintRef);
       },
       buildElse);
@@ -1392,7 +1392,7 @@ ValeFuncPtrLE getInterfaceMethodFunctionPtrFromItable(
   LLVMValueRef itablePtrLE = nullptr;
   LLVMValueRef newVirtualArgLE = nullptr;
   std::tie(itablePtrLE, newVirtualArgLE) =
-      globalState->getRegion(virtualParamMT)
+      globalState->getRegion(peel_all_references(virtualParamMT))
           ->explodeInterfaceRef(
               functionState, builder, virtualParamMT, virtualArgRef);
   buildFlare(FL(), globalState, functionState, builder);
@@ -1419,8 +1419,8 @@ ValeFuncPtrLE getInterfaceMethodFunctionPtrFromItable(
 
 
 Ref normalLocalLoad(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, Local* local, LLVMValueRef localAddr) {
-  auto region = globalState->getRegion(local->type);
-  auto localLT = globalState->getRegion(local->type)->translateType(local->type);
+  auto region = globalState->getRegion(peel_all_references(local->type));
+  auto localLT = globalState->getRegion(peel_all_references(local->type))->translateType(local->type);
   auto sourceLE = LLVMBuildLoad2(builder, localLT, localAddr, local->name.c_str());
   auto sourceRef = toRef(region, local->type, sourceLE);
   region->checkValidReference(FL(), functionState, builder, false, local->type, sourceRef);
@@ -1444,17 +1444,17 @@ Ref regularReceiveAndDecryptFamiliarReference(
 
     auto ffiHandleStructs = globalState->getFfiHandleStructs();
 
-    auto refLT = globalState->getRegion(sourceRefMT)->translateType(sourceRefMT);
+    auto refLT = globalState->getRegion(peel_all_references(sourceRefMT))->translateType(sourceRefMT);
 
     auto membersLE = ffiHandleStructs->explodeForRegularConcrete(globalState, functionState, builder, sourceRefLE);
     auto objPtrLE = LLVMBuildIntToPtr(builder, membersLE.objPtrI64LE, refLT, "refA");
 
-    auto ref = toRef(globalState->getRegion(sourceRefMT), sourceRefMT, objPtrLE);
-    globalState->getRegion(sourceRefMT)
+    auto ref = toRef(globalState->getRegion(peel_all_references(sourceRefMT)), sourceRefMT, objPtrLE);
+    globalState->getRegion(peel_all_references(sourceRefMT))
         ->checkValidReference(FL(), functionState, builder, true, sourceRefMT, ref);
 
     // Alias when receiving from the outside world, see DEPAR.
-    globalState->getRegion(sourceRefMT)
+    globalState->getRegion(peel_all_references(sourceRefMT))
         ->alias(FL(), functionState, builder, sourceRefMT, ref);
 
     return ref;
@@ -1465,7 +1465,7 @@ Ref regularReceiveAndDecryptFamiliarReference(
 
     auto itablePtrLT = LLVMPointerType(kindStructs->getInterfaceTableStruct(interfaceMT), 0);
     auto objPtrLT = LLVMPointerType(kindStructs->getControlBlock(interfaceMT)->getStruct(), 0);
-    auto refLT = globalState->getRegion(sourceRefMT)->translateType(sourceRefMT);
+    auto refLT = globalState->getRegion(peel_all_references(sourceRefMT))->translateType(sourceRefMT);
 
     auto membersLE = ffiHandleStructs->explodeForRegularInterface(globalState, functionState, builder, sourceRefLE);
     auto itablePtrLE = LLVMBuildIntToPtr(builder, membersLE.typeInfoPtrI64LE, itablePtrLT, "refC");
@@ -1475,12 +1475,12 @@ Ref regularReceiveAndDecryptFamiliarReference(
 
     auto interfaceFatPtrLE = kindStructs->makeInterfaceFatPtr(FL(), functionState, builder, sourceRefMT, interfaceFatPtrRawLE);
 
-    auto ref = toRef(globalState->getRegion(sourceRefMT), sourceRefMT, interfaceFatPtrLE);
-    globalState->getRegion(sourceRefMT)
+    auto ref = toRef(globalState->getRegion(peel_all_references(sourceRefMT)), sourceRefMT, interfaceFatPtrLE);
+    globalState->getRegion(peel_all_references(sourceRefMT))
         ->checkValidReference(FL(), functionState, builder, true, sourceRefMT, ref);
 
     // Alias when receiving from the outside world, see DEPAR.
-    globalState->getRegion(sourceRefMT)
+    globalState->getRegion(peel_all_references(sourceRefMT))
         ->alias(FL(), functionState, builder, sourceRefMT, ref);
 
     return ref;
@@ -1499,7 +1499,7 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
     Ref sourceRef) {
 
   // Dealias when sending to the outside world, see DEPAR.
-  globalState->getRegion(sourceRefMT)
+  globalState->getRegion(peel_all_references(sourceRefMT))
       ->dealias(FL(), functionState, builder, sourceRefMT, sourceRef);
 
   if (dynamic_cast<StructKind*>(peel_all_references(sourceRefMT)) ||
@@ -1507,7 +1507,7 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
       dynamic_cast<RuntimeSizedArrayT*>(peel_all_references(sourceRefMT)) ||
       dynamic_cast<Str*>(peel_all_references(sourceRefMT))) {
     auto sourceRefLE =
-        globalState->getRegion(sourceRefMT)
+        globalState->getRegion(peel_all_references(sourceRefMT))
             ->checkValidReference(FL(), functionState, builder, false, sourceRefMT, sourceRef);
     auto objPtrI64LE = LLVMBuildPtrToInt(builder, sourceRefLE, LLVMInt64TypeInContext(globalState->context), "objPtrInt");
 
@@ -1516,10 +1516,10 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
             globalState, functionState, builder, objPtrI64LE);
     return handleLE;
   } else if (dynamic_cast<InterfaceKind*>(peel_all_references(sourceRefMT))) {
-    globalState->getRegion(sourceRefMT)
+    globalState->getRegion(peel_all_references(sourceRefMT))
         ->checkValidReference(FL(), functionState, builder, false, sourceRefMT, sourceRef);
     LLVMValueRef itablePtrLE = nullptr, objPtrLE = nullptr;
-    std::tie(itablePtrLE, objPtrLE) = globalState->getRegion(sourceRefMT)->explodeInterfaceRef(functionState, builder, sourceRefMT, sourceRef);
+    std::tie(itablePtrLE, objPtrLE) = globalState->getRegion(peel_all_references(sourceRefMT))->explodeInterfaceRef(functionState, builder, sourceRefMT, sourceRef);
     auto objPtrI64LE = LLVMBuildPtrToInt(builder, objPtrLE, LLVMInt64TypeInContext(globalState->context), "objPtrInt");
     auto itablePtrI64LE = LLVMBuildPtrToInt(builder, itablePtrLE, LLVMInt64TypeInContext(globalState->context), "itablePtrInt");
 

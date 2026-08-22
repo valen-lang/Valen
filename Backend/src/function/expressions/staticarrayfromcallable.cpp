@@ -27,12 +27,12 @@ Ref translateStaticArrayFromCallable(
   auto sizeRef = globalState->constI32(ssaDefMT->size);
 
   auto generatorRef = translateExpression(globalState, functionState, blockState, builder, generatorExpr);
-  globalState->getRegion(generatorType)
+  globalState->getRegion(peel_all_references(generatorType))
       ->checkValidReference(FL(), functionState, builder, true, generatorType, generatorRef);
 
   // arrayLT is a pointer to our counted struct.
   auto ssaLiveRef =
-      globalState->getRegion(staticArrayFromCallable->result)->constructStaticSizedArray(
+      globalState->getRegion(peel_all_references(staticArrayFromCallable->result))->constructStaticSizedArray(
           functionState,
           builder,
           staticArrayFromCallable->result,
@@ -54,10 +54,10 @@ Ref translateStaticArrayFromCallable(
       ssaLiveRef);
   buildFlare(FL(), globalState, functionState, builder);
 
-  globalState->getRegion(staticArrayFromCallable->result)
+  globalState->getRegion(peel_all_references(staticArrayFromCallable->result))
       ->checkValidReference(FL(), functionState, builder, true, staticArrayFromCallable->result, ssaRef);
 
-  globalState->getRegion(generatorType)->dealias(AFL("ConstructRSA"), functionState, builder, generatorType, generatorRef);
+  globalState->getRegion(peel_all_references(generatorType))->dealias(AFL("ConstructRSA"), functionState, builder, generatorType, generatorRef);
 
   return ssaRef;
 }

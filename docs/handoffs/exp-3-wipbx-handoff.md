@@ -29,6 +29,29 @@ expression handler (the `set x = …` case, unimplemented in `translateExpressio
 (`grep -rc '\->location\|\->ownership' Backend/src`; the `VCOORD` sites in `Backend/src`); resolve each
 onto `Sharedness` (see constraint). See `docs/plans/complete-backend-plan.md` Step 4.
 
+## ValueKind — a type-level "wrap-free kind" (orthogonal to the onion migration)
+
+`ValueKind : Kind` (`Backend/src/metal/types.h`) is a compile-time witness that a kind carries no onion
+ref wrap: the 11 value kinds derive from it, the 4 wraps derive from `Kind` directly, `peel_all_references`
+returns `ValueKind*`, and a `= delete`d `peel_all_references(ValueKind*)` overload makes re-peeling a
+compile error. Every audited value-kind inspector now demands the witness: the control-block cluster,
+the naming/export/weakability group (`GlobalState::getKindName`/`getKindWeakability`, region
+`getExportName`/`getExternalType`/`getKindWeakability`, Package `getKindExportName`/`getKindHumanName`/
+`getKindExternName`), the `function.cpp` C-ABI trio (`translatesToCVoid`/`typeNeedsPointerParameter`/
+`translateExternReturnType`), `translateWeakReference`, `fillWeakableControlBlock`, `intRangeLoopReverse`,
+the rcimm `valeKind` prototype cluster, and `getRegion` itself (its ~400 callers peel at the call site).
+The dead never-read `Kind*` params the audit found are deleted (`getInterfaceMethodVirtualParamAnyType`,
+`getWeakRefHeaderStruct`/`getWeakVoidRefStruct`, `getIsAliveFromWeakFatPtr`, the `reference`/`kindM` on the
+`getConcreteControlBlockPtr`/interface-`getControlBlockPtr` variants, and the RSA-size helpers' `rsaRefMT`).
+
+**Signature rule:** a function that only inspects the concrete kind (peels immediately, or dispatches on
+value subtypes with `assert(false)` on wraps) takes `ValueKind*`; one that dynamic_casts the param to a
+wrap, asserts a wrap, or stores/forwards the raw ref (into a `Ref`/fat-ptr/`ControlBlockPtrLE`) keeps
+`Kind*`. A wrap's `inner` stays `Kind*` — wraps nest (`BorrowRef<BorrowRef<…>>` is real).
+
+**Still deferred:** `asSubtype`/`regularDowncast`/`resilientDowncast` `targetKind` — live bodies are
+`assert(false)` stubs; flip to `ValueKind*` when implemented.
+
 ## The load-bearing constraint
 
 Blast `Coord`/`Ownership`/`Location` away wherever you touch it. Ownership is which onion wrap surrounds
@@ -54,8 +77,8 @@ reading typing's edge blueprint (`super_family_root_headers`), not a C++-codegen
   branches are dead/redundant/defensive and collapse — but keep the genuine `Sharedness` branch.
 - `rcimm.cpp` is the shared/heap-and-`Str`-only region; every value type (primitives, single-owner
   aggregates) lives in the `mut` region (`unsafe.cpp`). Primitives route there via their `mutRegionId`
-  singletons (`Backend/src/metal/metalcache.h`) and `getRegion(Kind*)` peels onion wraps to the inner
-  kind's region. Don't add primitive/single handling to `rcimm.cpp`.
+  singletons (`Backend/src/metal/metalcache.h`); `getRegion` resolves any kind to its region by its inner
+  (peeled) kind. Don't add primitive/single handling to `rcimm.cpp`.
 - **Backend local identity is the variable name, not the node pointer.** Metal `Local` carries a
   `VarNameM id` (the frontend declaration name, per-function-unique via its LID); `BlockState`
   (`Backend/src/function/function.h`) keys on it. The instantiator reallocates a fresh `LocalVariableI`

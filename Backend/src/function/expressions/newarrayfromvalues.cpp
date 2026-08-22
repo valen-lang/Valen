@@ -21,7 +21,7 @@ Ref translateNewArrayFromValues(
           globalState, functionState, blockState, builder, newArrayFromValues->elements);
   auto ssaDefM = globalState->program->getStaticSizedArray(newArrayFromValues->arrayType);
   for (auto elementLE : elementsLE) {
-    globalState->getRegion(ssaDefM->elementType)
+    globalState->getRegion(peel_all_references(ssaDefM->elementType))
         ->checkValidReference(
             FL(), functionState, builder, false, ssaDefM->elementType, elementLE);
   }
@@ -30,7 +30,7 @@ Ref translateNewArrayFromValues(
 
   // If we get here, arrayLT is a pointer to our counted struct.
   auto resultRef =
-      globalState->getRegion(newArrayFromValues->result)->constructStaticSizedArray(
+      globalState->getRegion(peel_all_references(newArrayFromValues->result))->constructStaticSizedArray(
           functionState,
           builder,
           newArrayFromValues->result,

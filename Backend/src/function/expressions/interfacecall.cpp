@@ -29,7 +29,7 @@ Ref translateInterfaceCall(
     buildFlare(FL(), globalState, functionState, builder);
 
     auto argLE = translateExpression(globalState, functionState, blockState, builder, call->args[i]);
-    globalState->getRegion(call->superFunctionPrototype->params[i])
+    globalState->getRegion(peel_all_references(call->superFunctionPrototype->params[i]))
         ->checkValidReference(FL(), functionState, builder, false, call->superFunctionPrototype->params[i], argLE);
     argsLE.push_back(argLE);
 
@@ -42,7 +42,7 @@ Ref translateInterfaceCall(
   auto virtualArgRefMT = functionType->params[virtualParamIndex];
   auto virtualArgRef = argsLE[virtualParamIndex];
   auto methodFunctionPtrLE =
-      globalState->getRegion(virtualArgRefMT)
+      globalState->getRegion(peel_all_references(virtualArgRefMT))
           ->getInterfaceMethodFunctionPtr(functionState, builder, virtualArgRefMT, virtualArgRef, indexInEdge);
 
   buildFlare(FL(), globalState, functionState, builder);
@@ -59,7 +59,7 @@ Ref translateInterfaceCall(
 
   buildFlare(FL(), globalState, functionState, builder);
 
-  globalState->getRegion(call->superFunctionPrototype->returnType)
+  globalState->getRegion(peel_all_references(call->superFunctionPrototype->returnType))
       ->checkValidReference(FL(), functionState, builder, false, call->superFunctionPrototype->returnType, resultLE);
 
   if (peel_all_references(call->superFunctionPrototype->returnType) == globalState->metalCache->neverType) {

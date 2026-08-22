@@ -103,7 +103,7 @@ Ref translateExpressionInner(
       return sourceRef;
     } else {
       auto toReturnLE =
-          globalState->getRegion(ret->sourceType)
+          globalState->getRegion(peel_all_references(ret->sourceType))
               ->checkValidReference(FL(), functionState, builder, false, ret->sourceType, sourceRef);
       LLVMBuildRet(builder, toReturnLE);
       return toRef(globalState->getRegion(globalState->metalCache->neverType), globalState->metalCache->neverType, globalState->neverLE);
@@ -140,7 +140,7 @@ Ref translateExpressionInner(
     auto refToStore =
         translateExpression(
             globalState, functionState, blockState, builder, stackify->expr);
-    globalState->getRegion(stackify->variable->type)
+    globalState->getRegion(peel_all_references(stackify->variable->type))
         ->checkValidReference(FL(), functionState, builder, false, stackify->variable->type, refToStore);
     makeHammerLocal(
         globalState, functionState, blockState, builder, stackify->variable, refToStore);
@@ -163,11 +163,11 @@ Ref translateExpressionInner(
     // Because of expressions like: Ship() = (mut b = (mut a = (mut b = Ship())));
     // See mutswaplocals.vale for test case.
     auto oldRef =
-        globalState->getRegion(restackify->variable->type)
+        globalState->getRegion(peel_all_references(restackify->variable->type))
             ->localStore(functionState, builder, restackify->variable, localAddr, refToStore);
 
     auto toStoreLE =
-        globalState->getRegion(restackify->variable->type)->checkValidReference(FL(),
+        globalState->getRegion(peel_all_references(restackify->variable->type))->checkValidReference(FL(),
             functionState, builder, false, restackify->variable->type, refToStore);
     LLVMBuildStore(builder, toStoreLE, localAddr);
     return makeVoidRef(globalState);
@@ -201,12 +201,12 @@ Ref translateExpressionInner(
             globalState, functionState, blockState, builder, weakAlias->innerExpr);
 
     globalState
-        ->getRegion(weakAlias->sourceType)
+        ->getRegion(peel_all_references(weakAlias->sourceType))
             ->checkValidReference(FL(), functionState, builder, false, weakAlias->sourceType, sourceRef);
 
-    auto resultRef = globalState->getRegion(weakAlias->sourceType)->weakAlias(functionState, builder, weakAlias->sourceType, weakAlias->result, sourceRef);
-    globalState->getRegion(weakAlias->result)->aliasWeakRef(FL(), functionState, builder, weakAlias->result, resultRef);
-    globalState->getRegion(weakAlias->sourceType)->dealias(
+    auto resultRef = globalState->getRegion(peel_all_references(weakAlias->sourceType))->weakAlias(functionState, builder, weakAlias->sourceType, weakAlias->result, sourceRef);
+    globalState->getRegion(peel_all_references(weakAlias->result))->aliasWeakRef(FL(), functionState, builder, weakAlias->result, resultRef);
+    globalState->getRegion(peel_all_references(weakAlias->sourceType))->dealias(
         AFL("WeakAlias drop constraintref"),
         functionState, builder, weakAlias->sourceType, sourceRef);
     return resultRef;
@@ -221,14 +221,14 @@ Ref translateExpressionInner(
     // So, we just give what was in it. It's ironically identical to LocalLoad.
     auto localAddr = blockState->getLocalAddr(unstackify->variable->id, true);
     blockState->markLocalUnstackified(unstackify->variable->id);
-    return globalState->getRegion(unstackify->variable->type)->unstackify(functionState, builder, unstackify->variable, localAddr);
+    return globalState->getRegion(peel_all_references(unstackify->variable->type))->unstackify(functionState, builder, unstackify->variable, localAddr);
   } else if (auto argument = dynamic_cast<Argument*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name(), " arg ", argument->paramIndex);
     // This +1 is because the 0th argument is always the next gen ptr, see RPPFNG.
     auto resultLE = functionState->getParam(UserArgIndex{argument->paramIndex});
-    auto resultRef = toRef(globalState->getRegion(argument->tyype), argument->tyype, resultLE);
-    auto resultLT = globalState->getRegion(argument->tyype)->translateType(argument->tyype);
-    globalState->getRegion(argument->tyype)
+    auto resultRef = toRef(globalState->getRegion(peel_all_references(argument->tyype)), argument->tyype, resultLE);
+    auto resultLT = globalState->getRegion(peel_all_references(argument->tyype))->translateType(argument->tyype);
+    globalState->getRegion(peel_all_references(argument->tyype))
         ->checkValidReference(FL(), functionState, builder, false, argument->tyype, resultRef);
 //    buildFlare(FL(), globalState, functionState, builder, "/", typeid(*expr).name());
     return resultRef;
@@ -277,7 +277,7 @@ Ref translateExpressionInner(
     auto memberName = memberLoad->memberName;
 
     auto structLiveRef =
-        globalState->getRegion(memberLoad->structType)
+        globalState->getRegion(peel_all_references(memberLoad->structType))
             ->checkRefLive(FL(), functionState, builder, structType, structRef);
 
     auto resultRef =
@@ -292,16 +292,16 @@ Ref translateExpressionInner(
             memberIndex,
             memberLoad->expectedResultType,
             memberName);
-    globalState->getRegion(memberLoad->expectedResultType)
+    globalState->getRegion(peel_all_references(memberLoad->expectedResultType))
         ->checkValidReference(FL(), functionState, builder, false, memberLoad->expectedResultType, resultRef);
     if (memberLoad->expectedMemberType == globalState->metalCache->i32Type) {
       auto valueForPrintingLE =
-          globalState->getRegion(memberLoad->expectedResultType)
+          globalState->getRegion(peel_all_references(memberLoad->expectedResultType))
               ->checkValidReference(FL(), functionState, builder, true, memberLoad->expectedResultType, resultRef);
       buildFlare(FL(), globalState, functionState, builder, "Loaded value: ", valueForPrintingLE);
     }
 
-    globalState->getRegion(memberLoad->structType)->dealias(
+    globalState->getRegion(peel_all_references(memberLoad->structType))->dealias(
         AFL("MemberLoad drop struct"),
         functionState, builder, memberLoad->structType, structRef);
     return resultRef;
@@ -328,7 +328,7 @@ Ref translateExpressionInner(
     auto arrayRef = translateExpression(globalState, functionState, blockState, builder, arrayExpr);
 
     auto consumerRef = translateExpression(globalState, functionState, blockState, builder, consumerExpr);
-    globalState->getRegion(consumerType)
+    globalState->getRegion(peel_all_references(consumerType))
         ->checkValidReference(FL(), functionState, builder, true, consumerType, consumerRef);
 
     auto arrayLiveRef =
@@ -342,7 +342,7 @@ Ref translateExpressionInner(
           // We know it's in bounds because we used size as a bound for the loop.
           auto inBoundsIndexLE = InBoundsLE{indexLE};
 
-          globalState->getRegion(consumerType)->alias(
+          globalState->getRegion(peel_all_references(consumerType))->alias(
               AFL("DestroySSAIntoF consume iteration"),
               functionState, bodyBuilder, consumerType, consumerRef);
 
@@ -353,7 +353,7 @@ Ref translateExpressionInner(
                   inBoundsIndexLE);
           auto elementRef = elementLoadResult.move();
 
-          globalState->getRegion(elementType)
+          globalState->getRegion(peel_all_references(elementType))
               ->checkValidReference(
                   FL(), functionState, bodyBuilder, false, elementType, elementRef);
           std::vector<Ref> argExprRefs = {consumerRef, elementRef};
@@ -374,7 +374,7 @@ Ref translateExpressionInner(
       { assert(false); throw 1337; }
     }
 
-    globalState->getRegion(consumerType)
+    globalState->getRegion(peel_all_references(consumerType))
         ->dealias(
             AFL("DestroySSAIntoF"), functionState, builder, consumerType, consumerRef);
 
@@ -390,15 +390,15 @@ Ref translateExpressionInner(
     auto newcomerType = pushRuntimeSizedArray->elementType;
 
     auto arrayRef = translateExpression(globalState, functionState, blockState, builder, arrayExpr);
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->checkValidReference(FL(), functionState, builder, true, arrayType, arrayRef);
 
     auto arrayLiveRef =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->checkRefLive(FL(), functionState, builder, arrayType, arrayRef);
 
     auto arrayLenRef =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->getRuntimeSizedArrayLength(
                 functionState, builder, arrayType, arrayLiveRef);
     auto arrayLenLE =
@@ -407,21 +407,21 @@ Ref translateExpressionInner(
                 functionState, builder, true, globalState->metalCache->i32Type, arrayLenRef);
 
     auto arrayCapacityRef =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->getRuntimeSizedArrayCapacity(
                 functionState, builder, arrayType, arrayLiveRef);
 
     auto sizeInBoundsLE = checkIndexInBounds(globalState, functionState, builder, globalState->metalCache->i32Type, arrayCapacityRef, arrayLenLE, "Error: Array has no room for new element!");
 
     auto newcomerRef = translateExpression(globalState, functionState, blockState, builder, newcomerExpr);
-    globalState->getRegion(newcomerType)
+    globalState->getRegion(peel_all_references(newcomerType))
         ->checkValidReference(FL(), functionState, builder, true, newcomerType, newcomerRef);
 
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->pushRuntimeSizedArrayNoBoundsCheck(
             functionState, builder, arrayType, arrayMT, arrayLiveRef, sizeInBoundsLE, newcomerRef);
 
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->dealias(
             AFL("pushRuntimeSizedArrayNoBoundsCheck"), functionState, builder, arrayType, arrayRef);
 
@@ -434,16 +434,16 @@ Ref translateExpressionInner(
     assert(rsaMT);
 
     auto arrayRef = translateExpression(globalState, functionState, blockState, builder, rsaME);
-    globalState->getRegion(rsaRefMT)
+    globalState->getRegion(peel_all_references(rsaRefMT))
         ->checkValidReference(FL(), functionState, builder, true, rsaRefMT, arrayRef);
-    auto rsaLT = globalState->getRegion(rsaRefMT)->translateType(rsaRefMT);
+    auto rsaLT = globalState->getRegion(peel_all_references(rsaRefMT))->translateType(rsaRefMT);
 
     auto arrayLiveRef =
-        globalState->getRegion(rsaRefMT)
+        globalState->getRegion(peel_all_references(rsaRefMT))
             ->checkRefLive(FL(), functionState, builder, rsaRefMT, arrayRef);
 
     auto arrayLenRef =
-        globalState->getRegion(rsaRefMT)
+        globalState->getRegion(peel_all_references(rsaRefMT))
             ->getRuntimeSizedArrayLength(
                 functionState, builder, rsaRefMT, arrayLiveRef);
     auto arrayLenLE =
@@ -461,11 +461,11 @@ Ref translateExpressionInner(
             "Error: Cannot pop element from empty array!");
 
     auto resultRef =
-        globalState->getRegion(rsaRefMT)
+        globalState->getRegion(peel_all_references(rsaRefMT))
             ->popRuntimeSizedArrayNoBoundsCheck(
                 functionState, builder, rsaRefMT, rsaMT, arrayLiveRef, indexInBoundsLE);
 
-    globalState->getRegion(rsaRefMT)
+    globalState->getRegion(peel_all_references(rsaRefMT))
         ->dealias(
             AFL("popRuntimeSizedArrayNoBoundsCheck"), functionState, builder, rsaRefMT, arrayRef);
 
@@ -478,26 +478,26 @@ Ref translateExpressionInner(
     auto arrayRef = translateExpression(globalState, functionState, blockState, builder, arrayExpr);
 
     auto arrayLiveRef =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->checkRefLive(FL(), functionState, builder, arrayType, arrayRef);
 
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->checkValidReference(FL(), functionState, builder, true, arrayType, arrayRef);
     auto arrayLenRef =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->getRuntimeSizedArrayLength(
                 functionState, builder, arrayType, arrayLiveRef);
 
     checkArrayEmpty(globalState, functionState, builder, arrayLenRef, "Error: Destroying non-empty array!");
 
     if (isValueType(arrayType)) {
-      globalState->getRegion(arrayType)
+      globalState->getRegion(peel_all_references(arrayType))
           ->discardOwningRef(FL(), functionState, blockState, builder, arrayType, arrayLiveRef);
     } else if (dynamic_cast<ShareRef*>(arrayType) != nullptr) {
       // We dont decrement anything here, we're only here because we already hit zero.
 
       // Free it!
-      globalState->getRegion(arrayType)
+      globalState->getRegion(peel_all_references(arrayType))
           ->deallocate(
               AFL("DestroyRSAIntoF"), functionState, builder, arrayType, arrayLiveRef);
     } else {
@@ -520,7 +520,7 @@ Ref translateExpressionInner(
 
 
 
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->checkValidReference(FL(), functionState, builder, true, arrayType, arrayRef);
     auto sizeLE =
         toRef(
@@ -528,11 +528,11 @@ Ref translateExpressionInner(
             globalState->metalCache->i32Type,
             constI32LE(globalState, arraySize));
     auto indexRef = translateExpression(globalState, functionState, blockState, builder, indexExpr);
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->dealias(AFL("SSALoad"), functionState, builder, arrayType, arrayRef);
 
     auto arrayLiveRef =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->checkRefLive(FL(), functionState, builder, arrayType, arrayRef);
 
     auto intMT = globalState->metalCache->i32Type;
@@ -547,19 +547,19 @@ Ref translateExpressionInner(
             "Error: Array index out of bounds!");
 
     auto loadResult =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->loadElementFromSSA(
                 functionState, builder, arrayType, arrayKind, arrayLiveRef,
                 indexInBoundsLE);
     auto resultRef =
-        globalState->getRegion(resultType)
+        globalState->getRegion(peel_all_references(resultType))
             ->upgradeLoadResultToRefWithTargetOwnership(
                 functionState, builder, elementType, resultType, loadResult);
-    globalState->getRegion(resultType)
+    globalState->getRegion(peel_all_references(resultType))
         ->checkValidReference(FL(), functionState, builder, false, resultType, resultRef);
-    globalState->getRegion(elementType)
+    globalState->getRegion(peel_all_references(elementType))
         ->alias(FL(), functionState, builder, resultType, resultRef);
-    globalState->getRegion(elementType)
+    globalState->getRegion(peel_all_references(elementType))
         ->checkValidReference(FL(), functionState, builder, false, resultType, resultRef);
     return resultRef;
   } else if (auto runtimeSizedArrayLoad = dynamic_cast<RuntimeSizedArrayLookup*>(expr)) {
@@ -574,14 +574,14 @@ Ref translateExpressionInner(
     auto arrayRef = translateExpression(globalState, functionState, blockState, builder, arrayExpr);
 
     auto arrayLiveRef =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->checkRefLive(FL(), functionState, builder, arrayType, arrayRef);
 
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->checkValidReference(FL(), functionState, builder, true, arrayType, arrayRef);
 
     auto sizeRef =
-        globalState->getRegion(arrayType)->getRuntimeSizedArrayLength(
+        globalState->getRegion(peel_all_references(arrayType))->getRuntimeSizedArrayLength(
             functionState, builder, arrayType, arrayLiveRef);
     auto indexRef = translateExpression(globalState, functionState, blockState, builder, indexExpr);
     auto indexLE =
@@ -593,20 +593,20 @@ Ref translateExpressionInner(
             "Error: Array index out of bounds!");
 
     auto loadResult =
-        globalState->getRegion(arrayType)->loadElementFromRSA(
+        globalState->getRegion(peel_all_references(arrayType))->loadElementFromRSA(
             functionState, builder, arrayType, arrayKind, arrayLiveRef, indexInBoundsLE);
     auto resultRef =
-        globalState->getRegion(elementType)
+        globalState->getRegion(peel_all_references(elementType))
             ->upgradeLoadResultToRefWithTargetOwnership(
                 functionState, builder, elementType, resultType, loadResult);
 
-    globalState->getRegion(resultType)
+    globalState->getRegion(peel_all_references(resultType))
         ->alias(FL(), functionState, builder, resultType, resultRef);
 
-    globalState->getRegion(resultType)
+    globalState->getRegion(peel_all_references(resultType))
         ->checkValidReference(FL(), functionState, builder, false, resultType, resultRef);
 
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->dealias(AFL("RSALoad"), functionState, builder, arrayType, arrayRef);
 
     return resultRef;
@@ -684,18 +684,18 @@ Ref translateExpressionInner(
 
     auto arrayRef =
         translateExpression(globalState, functionState, blockState, builder, arrayExpr);
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->checkValidReference(FL(), functionState, builder, true, arrayType, arrayRef);
 
     auto arrayLiveRef =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->checkRefLive(FL(), functionState, builder, arrayType, arrayRef);
 
     auto sizeLE =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->getRuntimeSizedArrayLength(
                 functionState, builder, arrayType, arrayLiveRef);
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->dealias(AFL("RSALen"), functionState, builder, arrayType, arrayRef);
 
     return sizeLE;
@@ -706,18 +706,18 @@ Ref translateExpressionInner(
 //    auto indexExpr = arrayLength->indexExpr;
 
     auto arrayRef = translateExpression(globalState, functionState, blockState, builder, arrayExpr);
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->checkValidReference(FL(), functionState, builder, true, arrayType, arrayRef);
 
     auto arrayLiveRef =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->checkRefLive(FL(), functionState, builder, arrayType, arrayRef);
 
     auto sizeLE =
-        globalState->getRegion(arrayType)
+        globalState->getRegion(peel_all_references(arrayType))
             ->getRuntimeSizedArrayCapacity(
                 functionState, builder, arrayType, arrayLiveRef);
-    globalState->getRegion(arrayType)
+    globalState->getRegion(peel_all_references(arrayType))
         ->dealias(AFL("RSACapacity"), functionState, builder, arrayType, arrayRef);
 
     return sizeLE;

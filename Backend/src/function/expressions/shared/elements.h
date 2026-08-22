@@ -104,7 +104,7 @@ void intRangeLoopReverse(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Kind* intRefMT,
+    ValueKind* intRefMT,
     LLVMValueRef sizeLE,
     std::function<void(LLVMValueRef, LLVMBuilderRef)> iterationBuilder);
 
@@ -136,7 +136,7 @@ LLVMValueRef getRuntimeSizedArrayCapacityPtr(
     WrapperPtrLE runtimeSizedArrayWrapperPtrLE);
 
 void decrementRSASize(
-    GlobalState* globalState, FunctionState *functionState, KindStructs* kindStructs, LLVMBuilderRef builder, Kind *rsaRefMT, WrapperPtrLE rsaWrapperPtrLE);
+    GlobalState* globalState, FunctionState *functionState, KindStructs* kindStructs, LLVMBuilderRef builder, WrapperPtrLE rsaWrapperPtrLE);
 
 // Returns a ptr to the address it just wrote to
 void storeInnerArrayMember(
@@ -187,7 +187,6 @@ IncrementedSize incrementRSASize(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Kind* rsaRefMT,
     WrapperPtrLE rsaWPtrLE);
 
 void initializeElementInRSAWithoutIncrementSize(
@@ -196,7 +195,6 @@ void initializeElementInRSAWithoutIncrementSize(
     LLVMBuilderRef builder,
     bool capacityExists,
     RuntimeSizedArrayT* rsaMT,
-    Kind* rsaRefMT,
     WrapperPtrLE rsaWPtrLE,
     InBoundsLE indexLE,
     Ref elementRef,

@@ -16,7 +16,7 @@ void fillControlBlock(
     FunctionState* functionState,
     KindStructs* structs,
     LLVMBuilderRef builder,
-    Kind* kindM,
+    ValueKind* kindM,
     ControlBlockPtrLE controlBlockPtrLE,
     const std::string& typeName) {
   LLVMValueRef newControlBlockLE = LLVMGetUndef(structs->getControlBlock(kindM)->getStruct());
@@ -188,7 +188,7 @@ void RCImm::defineStruct(
   std::vector<LLVMTypeRef> innerStructMemberTypesL;
   for (int i = 0; i < structM->members.size(); i++) {
     innerStructMemberTypesL.push_back(
-        globalState->getRegion(structM->members[i]->type)
+        globalState->getRegion(peel_all_references(structM->members[i]->type))
             ->translateType(structM->members[i]->type));
   }
   kindStructs.defineStruct(structM->kind, innerStructMemberTypesL);
@@ -479,7 +479,7 @@ Ref RCImm::allocate(
   fillControlBlock(
       FL(), globalState, functionState, &kindStructs, builder, peel_all_references(desiredReference),
       kindStructs.getConcreteControlBlockPtr(
-          FL(), functionState, builder, desiredReference, newStructWrapperPtrLE),
+          FL(), functionState, builder, newStructWrapperPtrLE),
       structM->name->name);
   auto structContentsPtrLT = kindStructs.getStructInnerStruct(structM->kind);
   auto structContentsPtrLE =
@@ -493,11 +493,11 @@ Ref RCImm::allocate(
       structContentsPtrLT,
       structContentsPtrLE);
 
-  auto resultRef = toRef(globalState->getRegion(desiredReference), desiredReference, newStructWrapperPtrLE.refLE);
+  auto resultRef = toRef(globalState->getRegion(peel_all_references(desiredReference)), desiredReference, newStructWrapperPtrLE.refLE);
 
   if (globalState->opt->census) {
     auto objIdLE =
-        globalState->getRegion(desiredReference)
+        globalState->getRegion(peel_all_references(desiredReference))
             ->getCensusObjectId(FL(), functionState, builder, desiredReference, resultRef);
     buildFlare(
         FL(), globalState, functionState, builder,
@@ -589,7 +589,7 @@ LLVMValueRef RCImm::checkValidReference(
   assert(actualRefM == refM);
   assert(refLE != nullptr);
   //buildFlare(FL(), globalState, functionState, builder);
-  assert(LLVMTypeOf(refLE) == globalState->getRegion(refM)->translateType(refM));
+  assert(LLVMTypeOf(refLE) == globalState->getRegion(peel_all_references(refM))->translateType(refM));
 
   if (globalState->opt->census) {
     checkValidReference(checkerAFL, functionState, builder, &kindStructs, refM, refLE);
@@ -727,7 +727,7 @@ LiveRef RCImm::constructRuntimeSizedArray(
       kindStructs.getRuntimeSizedArrayWrapperStruct(runtimeSizedArrayT);
   auto rsaDef = globalState->program->getRuntimeSizedArray(runtimeSizedArrayT);
   auto elementType = globalState->program->getRuntimeSizedArray(runtimeSizedArrayT)->elementType;
-  auto rsaElementLT = globalState->getRegion(elementType)->translateType(elementType);
+  auto rsaElementLT = globalState->getRegion(peel_all_references(elementType))->translateType(elementType);
   buildFlare(FL(), globalState, functionState, builder);
   auto resultRef =
       ::constructRuntimeSizedArray(
@@ -848,7 +848,7 @@ void RCImm::discard(
 
 
 LLVMTypeRef RCImm::translateType(Kind* referenceM) {
-  if (primitives.isPrimitive(referenceM)) {
+  if (primitives.isPrimitive(peel_all_references(referenceM))) {
     { assert(false); throw 1337; }
     // return primitives.translatePrimitive(globalState, referenceM);
   } else {
@@ -995,7 +995,7 @@ std::string RCImm::generateStaticSizedArrayDefsC(
   return std::string() + "typedef struct " + name + " { void* unused; } " + name + ";\n";
 }
 
-LLVMTypeRef RCImm::getExternalType(Kind* refMT) {
+LLVMTypeRef RCImm::getExternalType(ValueKind* refMT) {
   // Per @HTSLVBDTCZ, all concretes share one handle type and all interfaces
   // share one; kind distinctness lives in the C typedefs, not this type.
   // Under the opaque-handle FFI model, share refs cross the boundary as a
@@ -1005,32 +1005,32 @@ LLVMTypeRef RCImm::getExternalType(Kind* refMT) {
   // The emitted handle typedefs (and the whole per-package C header ABI) are
   // pinned by the *_export_headers_golden tests in
   // src/end_to_end_tests/tests/externs.rs.
-  if (dynamic_cast<InterfaceKind*>(peel_all_references(refMT))) {
+  if (dynamic_cast<InterfaceKind*>(refMT)) {
     return globalState->getFfiHandleStructs()->getInterfaceHandleStructLT();
   }
-  if (dynamic_cast<StructKind*>(peel_all_references(refMT)) ||
-      dynamic_cast<StaticSizedArrayT*>(peel_all_references(refMT)) ||
-      dynamic_cast<RuntimeSizedArrayT*>(peel_all_references(refMT)) ||
-      dynamic_cast<Str*>(peel_all_references(refMT))) {
+  if (dynamic_cast<StructKind*>(refMT) ||
+      dynamic_cast<StaticSizedArrayT*>(refMT) ||
+      dynamic_cast<RuntimeSizedArrayT*>(refMT) ||
+      dynamic_cast<Str*>(refMT)) {
     return globalState->getFfiHandleStructs()->getConcreteHandleStructLT();
   }
   // Primitives (Int/Bool/Float/Void) and Never cross as their C-ABI types.
-  if (auto innt = dynamic_cast<Int*>(peel_all_references(refMT))) {
+  if (auto innt = dynamic_cast<Int*>(refMT)) {
     { assert(false); throw 1337; }
-  } else if (dynamic_cast<Bool*>(peel_all_references(refMT))) {
+  } else if (dynamic_cast<Bool*>(refMT)) {
     { assert(false); throw 1337; }
-  } else if (dynamic_cast<Float*>(peel_all_references(refMT))) {
+  } else if (dynamic_cast<Float*>(refMT)) {
     { assert(false); throw 1337; }
-  } else if (dynamic_cast<Never*>(peel_all_references(refMT))) {
+  } else if (dynamic_cast<Never*>(refMT)) {
     { assert(false); throw 1337; }
-  } else if (dynamic_cast<Void*>(peel_all_references(refMT))) {
+  } else if (dynamic_cast<Void*>(refMT)) {
     { assert(false); throw 1337; }
   }
   { assert(false); throw 1337; }
 }
 
 
-LLVMTypeRef RCImm::getInterfaceMethodVirtualParamAnyType(Kind* reference) {
+LLVMTypeRef RCImm::getInterfaceMethodVirtualParamAnyType() {
   return LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0);
 }
 
@@ -1123,7 +1123,7 @@ Ref RCImm::deinitializeElementFromSSA(
   exit(1);
 }
 
-Weakability RCImm::getKindWeakability(Kind* kind) {
+Weakability RCImm::getKindWeakability(ValueKind* kind) {
   return Weakability::NON_WEAKABLE;
 }
 
@@ -1177,12 +1177,11 @@ Ref RCImm::localStore(FunctionState* functionState, LLVMBuilderRef builder, Loca
 
 std::string RCImm::getExportName(
     Package* package,
-    Kind* reference,
+    ValueKind* kind,
     bool includeProjectName) {
   // Under the opaque-handle FFI, shared kinds cross as right-sized handle
   // value-type typedefs (8B concrete / 16B interface, no `*` suffix).
   // Primitives get their raw C type names.
-  auto kind = peel_all_references(reference);
   if (auto innt = dynamic_cast<Int*>(kind)) {
     return std::string() + "int" + std::to_string(innt->bits) + "_t";
   } else if (dynamic_cast<Bool*>(kind)) {
@@ -1195,13 +1194,13 @@ std::string RCImm::getExportName(
   return package->getKindExportName(kind, includeProjectName);
 }
 
-void RCImm::declareConcreteFreeFunction(Kind* valeKind) {
+void RCImm::declareConcreteFreeFunction(ValueKind* valeKind) {
   auto prototype = getFreePrototype(valeKind);
   auto nameL = globalState->freeName->name + "__" + globalState->getKindName(valeKind)->name;
   declareExtraFunction(globalState, prototype, nameL);
 }
 
-Prototype* RCImm::getAliasPrototype(Kind* valeKind) {
+Prototype* RCImm::getAliasPrototype(ValueKind* valeKind) {
   auto refMT =
       globalState->metalCache->getShareRef(valeKind);
   auto nameL = globalState->aliasName->name + "__" + globalState->getKindName(valeKind)->name;
@@ -1213,7 +1212,7 @@ Prototype* RCImm::getAliasPrototype(Kind* valeKind) {
       perKindName, refMT, {refMT});
 }
 
-Prototype* RCImm::getDealiasPrototype(Kind* valeKind) {
+Prototype* RCImm::getDealiasPrototype(ValueKind* valeKind) {
   auto refMT =
       globalState->metalCache->getShareRef(valeKind);
   auto nameL = globalState->dealiasName->name + "__" + globalState->getKindName(valeKind)->name;
@@ -1222,13 +1221,13 @@ Prototype* RCImm::getDealiasPrototype(Kind* valeKind) {
       perKindName, globalState->metalCache->voidType, {refMT});
 }
 
-void RCImm::declareConcreteAliasFunction(Kind* valeKind) {
+void RCImm::declareConcreteAliasFunction(ValueKind* valeKind) {
   auto prototype = getAliasPrototype(valeKind);
   auto nameL = globalState->aliasName->name + "__" + globalState->getKindName(valeKind)->name;
   declareExtraFunction(globalState, prototype, nameL);
 }
 
-void RCImm::defineConcreteAliasFunction(Kind* valeKind) {
+void RCImm::defineConcreteAliasFunction(ValueKind* valeKind) {
   auto prototype = getAliasPrototype(valeKind);
   defineFunctionBodyV(
       globalState, prototype,
@@ -1237,7 +1236,7 @@ void RCImm::defineConcreteAliasFunction(Kind* valeKind) {
         // so the caller keeps its original AND gets an independent owned handle.
         auto objectRefMT = prototype->params[0];
         auto objectRef =
-            toRef(globalState->getRegion(objectRefMT), objectRefMT,
+            toRef(globalState->getRegion(peel_all_references(objectRefMT)), objectRefMT,
                   functionState->getParam(UserArgIndex{0}));
         alias(FL(), functionState, builder, objectRefMT, objectRef);
         auto resultLE =
@@ -1246,20 +1245,20 @@ void RCImm::defineConcreteAliasFunction(Kind* valeKind) {
       });
 }
 
-void RCImm::declareConcreteDealiasFunction(Kind* valeKind) {
+void RCImm::declareConcreteDealiasFunction(ValueKind* valeKind) {
   auto prototype = getDealiasPrototype(valeKind);
   auto nameL = globalState->dealiasName->name + "__" + globalState->getKindName(valeKind)->name;
   declareExtraFunction(globalState, prototype, nameL);
 }
 
-void RCImm::defineConcreteDealiasFunction(Kind* valeKind) {
+void RCImm::defineConcreteDealiasFunction(ValueKind* valeKind) {
   auto prototype = getDealiasPrototype(valeKind);
   defineFunctionBodyV(
       globalState, prototype,
       [&](FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto objectRefMT = prototype->params[0];
         auto objectRef =
-            toRef(globalState->getRegion(objectRefMT), objectRefMT,
+            toRef(globalState->getRegion(peel_all_references(objectRefMT)), objectRefMT,
                   functionState->getParam(UserArgIndex{0}));
         // Per @FRMACZ, `_dealias` is C's explicit -1 primitive: the boundary
         // receive doesn't touch RC, and this body drops the object's RC by one.
@@ -1268,7 +1267,7 @@ void RCImm::defineConcreteDealiasFunction(Kind* valeKind) {
       });
 }
 
-Prototype* RCImm::getRefEqPrototype(Kind* valeKind) {
+Prototype* RCImm::getRefEqPrototype(ValueKind* valeKind) {
   auto refMT =
       globalState->metalCache->getShareRef(valeKind);
   auto nameL = globalState->refEqName->name + "__" + globalState->getKindName(valeKind)->name;
@@ -1305,7 +1304,7 @@ void RCImm::defineConcreteFieldGetter(StructDefinition* structDefM, int memberIn
       (FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto structRefMT = prototype->params[0];
         auto structRef =
-            toRef(globalState->getRegion(structRefMT), structRefMT,
+            toRef(globalState->getRegion(peel_all_references(structRefMT)), structRefMT,
                   functionState->getParam(UserArgIndex{0}));
         auto structLiveRef =
             checkRefLive(FL(), functionState, builder, structRefMT, structRef);
@@ -1328,7 +1327,7 @@ void RCImm::defineConcreteFieldGetter(StructDefinition* structDefM, int memberIn
       });
 }
 
-void RCImm::declareConcreteRefEqFunction(Kind* valeKind) {
+void RCImm::declareConcreteRefEqFunction(ValueKind* valeKind) {
   auto prototype = getRefEqPrototype(valeKind);
   auto nameL = globalState->refEqName->name + "__" + globalState->getKindName(valeKind)->name;
   declareExtraFunction(globalState, prototype, nameL);
@@ -1379,7 +1378,7 @@ void RCImm::defineConcreteTypeTagFunction(InterfaceKind* interfaceKind) {
       (FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto interfaceRefMT = prototype->params[0];
         auto interfaceRef =
-            toRef(globalState->getRegion(interfaceRefMT), interfaceRefMT,
+            toRef(globalState->getRegion(peel_all_references(interfaceRefMT)), interfaceRefMT,
                   functionState->getParam(UserArgIndex{0}));
 
         LLVMValueRef itablePtrLE = nullptr;
@@ -1438,7 +1437,7 @@ void RCImm::defineConcreteAsSubstructFunction(Edge* edge) {
         auto interfaceRefMT = prototype->params[0];
         auto structRefMT = prototype->returnType;
         auto interfaceRef =
-            toRef(globalState->getRegion(interfaceRefMT), interfaceRefMT,
+            toRef(globalState->getRegion(peel_all_references(interfaceRefMT)), interfaceRefMT,
                   functionState->getParam(UserArgIndex{0}));
 
         LLVMValueRef itablePtrLE = nullptr;
@@ -1455,7 +1454,7 @@ void RCImm::defineConcreteAsSubstructFunction(Edge* edge) {
 
         auto resultStructRefLE = kindStructs.downcastPtr(builder, structRefMT, objPtrLE);
         auto resultStructRef =
-            toRef(globalState->getRegion(structRefMT), structRefMT, resultStructRefLE);
+            toRef(globalState->getRegion(peel_all_references(structRefMT)), structRefMT, resultStructRefLE);
 
         // Normal Vale move semantics: the downcast result and the interface
         // arg are the same object. Alias the result (+1) before dealiasing the
@@ -1524,7 +1523,7 @@ void RCImm::defineConcreteRsaLenFunction(RuntimeSizedArrayDefinitionT* rsaDef) {
       (FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto arrRefMT = prototype->params[0];
         auto arrRef =
-            toRef(globalState->getRegion(arrRefMT), arrRefMT,
+            toRef(globalState->getRegion(peel_all_references(arrRefMT)), arrRefMT,
                   functionState->getParam(UserArgIndex{0}));
         auto arrLiveRef =
             checkRefLive(FL(), functionState, builder, arrRefMT, arrRef);
@@ -1556,7 +1555,7 @@ void RCImm::defineConcreteRsaAtFunction(RuntimeSizedArrayDefinitionT* rsaDef) {
       (FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto arrRefMT = prototype->params[0];
         auto arrRef =
-            toRef(globalState->getRegion(arrRefMT), arrRefMT,
+            toRef(globalState->getRegion(peel_all_references(arrRefMT)), arrRefMT,
                   functionState->getParam(UserArgIndex{0}));
         auto indexRef =
             toRef(globalState->getRegion(globalState->metalCache->i32Type),
@@ -1615,7 +1614,7 @@ void RCImm::defineConcreteSsaLenFunction(StaticSizedArrayDefinitionT* ssaDef) {
         // moved in by C, so normal Vale move semantics consume it.
         auto arrRefMT = prototype->params[0];
         auto arrRef =
-            toRef(globalState->getRegion(arrRefMT), arrRefMT,
+            toRef(globalState->getRegion(peel_all_references(arrRefMT)), arrRefMT,
                   functionState->getParam(UserArgIndex{0}));
         dealias(FL(), functionState, builder, arrRefMT, arrRef);
         LLVMBuildRet(builder, constI32LE(globalState, size));
@@ -1637,7 +1636,7 @@ void RCImm::defineConcreteSsaAtFunction(StaticSizedArrayDefinitionT* ssaDef) {
       (FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto arrRefMT = prototype->params[0];
         auto arrRef =
-            toRef(globalState->getRegion(arrRefMT), arrRefMT,
+            toRef(globalState->getRegion(peel_all_references(arrRefMT)), arrRefMT,
                   functionState->getParam(UserArgIndex{0}));
         auto indexRef =
             toRef(globalState->getRegion(globalState->metalCache->i32Type),
@@ -1709,7 +1708,7 @@ void RCImm::defineConcreteStructNewFunction(StructDefinition* structDefM) {
         for (int i = 0; i < (int)structDefM->members.size(); i++) {
           auto memberRefMT = structDefM->members[i]->type;
           auto memberRef =
-              toRef(globalState->getRegion(memberRefMT), memberRefMT,
+              toRef(globalState->getRegion(peel_all_references(memberRefMT)), memberRefMT,
                     functionState->getParam(UserArgIndex{i}));
           memberRefs.push_back(memberRef);
         }
@@ -1748,7 +1747,7 @@ void RCImm::defineConcreteSsaNewFunction(StaticSizedArrayDefinitionT* ssaDef) {
         auto elementRefMT = ssaDef->elementType;
         for (int i = 0; i < ssaDef->size; i++) {
           auto elementRef =
-              toRef(globalState->getRegion(elementRefMT), elementRefMT,
+              toRef(globalState->getRegion(peel_all_references(elementRefMT)), elementRefMT,
                     functionState->getParam(UserArgIndex{i}));
           auto indexInBoundsLE = InBoundsLE{constI32LE(globalState, i)};
           initializeElementInSSA(
@@ -1774,7 +1773,7 @@ void RCImm::defineConcreteUpcastFunction(Edge* edge) {
         auto structRefMT = prototype->params[0];
         auto interfaceRefMT = prototype->returnType;
         auto structRef =
-            toRef(globalState->getRegion(structRefMT), structRefMT,
+            toRef(globalState->getRegion(peel_all_references(structRefMT)), structRefMT,
                   functionState->getParam(UserArgIndex{0}));
 
         auto interfaceRef =
@@ -1820,7 +1819,7 @@ void RCImm::defineStrPrimitives() {
       globalState, strPrototypeL,
       [this, strPrototypeL](FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto strRefMT = strPrototypeL->params[0];
-        auto strRef = toRef(globalState->getRegion(strRefMT), strRefMT,
+        auto strRef = toRef(globalState->getRegion(peel_all_references(strRefMT)), strRefMT,
                             functionState->getParam(UserArgIndex{0}));
         auto strLiveRef = checkRefLive(FL(), functionState, builder, strRefMT, strRef);
         auto lenLE = getStringLen(functionState, builder, strRefMT, strLiveRef);
@@ -1834,7 +1833,7 @@ void RCImm::defineStrPrimitives() {
       globalState, strCharAtPrototypeL,
       [this, strCharAtPrototypeL](FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto strRefMT = strCharAtPrototypeL->params[0];
-        auto strRef = toRef(globalState->getRegion(strRefMT), strRefMT,
+        auto strRef = toRef(globalState->getRegion(peel_all_references(strRefMT)), strRefMT,
                             functionState->getParam(UserArgIndex{0}));
         auto indexLE = functionState->getParam(UserArgIndex{1});
         auto strLiveRef = checkRefLive(FL(), functionState, builder, strRefMT, strRef);
@@ -1856,15 +1855,15 @@ void RCImm::defineStrPrimitives() {
       });
 }
 
-void RCImm::defineConcreteRefEqFunction(Kind* valeKind) {
+void RCImm::defineConcreteRefEqFunction(ValueKind* valeKind) {
   auto prototype = getRefEqPrototype(valeKind);
   defineFunctionBodyV(
       globalState, prototype,
       [&](FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto refMT = prototype->params[0];
-        auto aRef = toRef(globalState->getRegion(refMT), refMT,
+        auto aRef = toRef(globalState->getRegion(peel_all_references(refMT)), refMT,
                           functionState->getParam(UserArgIndex{0}));
-        auto bRef = toRef(globalState->getRegion(refMT), refMT,
+        auto bRef = toRef(globalState->getRegion(peel_all_references(refMT)), refMT,
                           functionState->getParam(UserArgIndex{1}));
         auto aLE = checkValidReference(FL(), functionState, builder, true, refMT, aRef);
         auto bLE = checkValidReference(FL(), functionState, builder, true, refMT, bRef);
@@ -1893,7 +1892,7 @@ void RCImm::defineConcreteRefEqFunction(Kind* valeKind) {
       });
 }
 
-void RCImm::defineConcreteFreeFunction(Kind* valeKind) {
+void RCImm::defineConcreteFreeFunction(ValueKind* valeKind) {
   auto i32MT = globalState->metalCache->i32Type;
   auto boolMT = globalState->metalCache->boolType;
 
@@ -1909,7 +1908,7 @@ void RCImm::defineConcreteFreeFunction(Kind* valeKind) {
             checkRefLive(
                 FL(), functionState, builder, objectRefMT,
                 toRef(
-                    globalState->getRegion(objectRefMT),
+                    globalState->getRegion(peel_all_references(objectRefMT)),
                     objectRefMT,
                     functionState->getParam(UserArgIndex{0})));
 
@@ -1920,7 +1919,7 @@ void RCImm::defineConcreteFreeFunction(Kind* valeKind) {
             auto memberM = structDefM->members[i];
             auto memberRefMT = memberM->type;
             auto memberRef =
-                globalState->getRegion(objectRefMT)->loadMember(
+                globalState->getRegion(peel_all_references(objectRefMT))->loadMember(
                     functionState, builder, objectRefMT, objectRef,
                     i, memberRefMT, memberRefMT, memberM->name);
             discard(FL(), globalState, functionState, builder, memberRefMT, memberRef);
@@ -1954,7 +1953,7 @@ void RCImm::defineConcreteFreeFunction(Kind* valeKind) {
                 auto indexInBoundsLE = InBoundsLE{indexLE};
 
                 auto memberRef =
-                    globalState->getRegion(objectRefMT)
+                    globalState->getRegion(peel_all_references(objectRefMT))
                         ->loadElementFromRSA(
                             functionState, bodyBuilder, objectRefMT, rsaMT,
                             objectRef, indexInBoundsLE)
@@ -1985,7 +1984,7 @@ void RCImm::defineConcreteFreeFunction(Kind* valeKind) {
                 auto indexInBoundsLE = InBoundsLE{indexLE};
 
                 auto memberRef =
-                    globalState->getRegion(objectRefMT)
+                    globalState->getRegion(peel_all_references(objectRefMT))
                         ->loadElementFromSSA(
                             functionState, bodyBuilder, objectRefMT, hostSsaMT,
                             objectRef, indexInBoundsLE)
@@ -2003,7 +2002,7 @@ void RCImm::defineConcreteFreeFunction(Kind* valeKind) {
 void RCImm::callFree(
     FunctionState *functionState,
     LLVMBuilderRef builder,
-    Kind* kind,
+    ValueKind* kind,
     Ref objectRef) {
   auto prototype = getFreePrototype(kind);
   if (auto interfaceMT = dynamic_cast<InterfaceKind*>(kind)) {
@@ -2012,7 +2011,7 @@ void RCImm::callFree(
     int indexInEdge = globalState->getInterfaceMethodIndex(interfaceMT, prototype);
     buildFlare(FL(), globalState, functionState, builder);
     auto methodFunctionPtrLE =
-        globalState->getRegion(virtualArgRefMT)
+        globalState->getRegion(peel_all_references(virtualArgRefMT))
             ->getInterfaceMethodFunctionPtr(functionState, builder, virtualArgRefMT, objectRef, indexInEdge);
     buildFlare(FL(), globalState, functionState, builder);
     buildInterfaceCall(globalState, functionState, builder, prototype, methodFunctionPtrLE, {objectRef}, 0);
@@ -2021,7 +2020,7 @@ void RCImm::callFree(
   }
 }
 
-Prototype* RCImm::getFreePrototype(Kind* valeKind) {
+Prototype* RCImm::getFreePrototype(ValueKind* valeKind) {
   auto boolMT = globalState->metalCache->boolType;
   auto refMT =
       globalState->metalCache->getShareRef(valeKind);
@@ -2052,7 +2051,7 @@ void RCImm::defineEdgeFreeFunction(Edge* edge) {
         auto objectRefMT = structPrototype->params[0];
 
         auto objectRef =
-            toRef(globalState->getRegion(objectRefMT), objectRefMT, functionState->getParam(UserArgIndex{0}));
+            toRef(globalState->getRegion(peel_all_references(objectRefMT)), objectRefMT, functionState->getParam(UserArgIndex{0}));
 
         buildCallV(
             globalState, functionState, builder, structPrototype,
@@ -2079,7 +2078,7 @@ void RCImm::declareInterfaceFreeFunction(InterfaceKind* kind) {
   globalState->addInterfaceExtraMethod(interface, interfaceMethod);
 }
 
-InterfaceMethod* RCImm::getFreeInterfaceMethod(Kind* valeKind) {
+InterfaceMethod* RCImm::getFreeInterfaceMethod(ValueKind* valeKind) {
   return globalState->metalCache->getInterfaceMethod(
       getFreePrototype(valeKind), 0);
 }

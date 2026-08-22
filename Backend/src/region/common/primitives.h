@@ -15,7 +15,7 @@ public:
   static constexpr int VOID_INT_BITS = 37;
 
 
-  bool isPrimitive(Kind* typeM) {
+  bool isPrimitive(ValueKind* typeM) {
     return dynamic_cast<Void *>(typeM) != nullptr ||
         dynamic_cast<Int *>(typeM) != nullptr ||
         dynamic_cast<Bool *>(typeM) != nullptr ||
@@ -25,7 +25,7 @@ public:
   // Phase 1 of Option A2 (vcoord-handoff.md): primitives can flow non-Own (borrow-flavor), so
   // translatePrimitive always returns the scalar type regardless of ownership. Phase 2 (when
   // `*int_ptr = 42` semantics land) will dispatch on ownership — scalar for Own, pointer for Borrow.
-  LLVMTypeRef translatePrimitive(GlobalState* globalState, Kind* referenceM) {
+  LLVMTypeRef translatePrimitive(GlobalState* globalState, ValueKind* referenceM) {
     if (auto innt = dynamic_cast<Int*>(referenceM)) {
       return LLVMIntTypeInContext(globalState->context, innt->bits);
     } else if (auto vooid = dynamic_cast<Void*>(referenceM)) {

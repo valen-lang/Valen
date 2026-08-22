@@ -19,19 +19,19 @@ Ref receiveHostObjectIntoVale(
       dynamic_cast<Float*>(hostRefMT) || dynamic_cast<Void*>(hostRefMT);
   if (isPrimitive) {
     if (dynamic_cast<Void*>(hostRefMT)) {
-      return toRef(globalState->getRegion(valeRefMT), valeRefMT, makeVoid(globalState));
+      return toRef(globalState->getRegion(peel_all_references(valeRefMT)), valeRefMT, makeVoid(globalState));
     }
     if (dynamic_cast<Bool*>(hostRefMT)) {
       auto asI1LE =
           LLVMBuildTrunc(builder, hostRefLE, LLVMInt1TypeInContext(globalState->context), "boolAsI1");
-      return toRef(globalState->getRegion(valeRefMT), valeRefMT, asI1LE);
+      return toRef(globalState->getRegion(peel_all_references(valeRefMT)), valeRefMT, asI1LE);
     }
-    return toRef(globalState->getRegion(valeRefMT), valeRefMT, hostRefLE);
+    return toRef(globalState->getRegion(peel_all_references(valeRefMT)), valeRefMT, hostRefLE);
   } else {
     // The incoming handle must be exactly the region's external type for this
     // kind (concrete 8B or interface 16B).
-    assert(LLVMTypeOf(hostRefLE) == globalState->getRegion(valeRefMT)->getExternalType(hostRefMT));
-    return globalState->getRegion(valeRefMT)
+    assert(LLVMTypeOf(hostRefLE) == globalState->getRegion(peel_all_references(valeRefMT))->getExternalType(peel_all_references(hostRefMT)));
+    return globalState->getRegion(peel_all_references(valeRefMT))
         ->receiveAndDecryptFamiliarReference(functionState, builder, hostRefMT, hostRefLE);
   }
 }
@@ -51,7 +51,7 @@ LLVMValueRef sendValeObjectIntoHost(
       dynamic_cast<Float*>(valeRefMT) || dynamic_cast<Void*>(valeRefMT);
   if (isPrimitive) {
     auto valeArgLE =
-        globalState->getRegion(valeRefMT)
+        globalState->getRegion(peel_all_references(valeRefMT))
             ->checkValidReference(FL(), functionState, builder, true, valeRefMT, valeRef);
     if (dynamic_cast<Bool*>(valeRefMT)) {
       return LLVMBuildZExt(builder, valeArgLE, LLVMInt8TypeInContext(globalState->context), "boolAsI8");
@@ -59,8 +59,8 @@ LLVMValueRef sendValeObjectIntoHost(
     return valeArgLE;
   }
   auto encryptedValeRefLE =
-      globalState->getRegion(valeRefMT)
+      globalState->getRegion(peel_all_references(valeRefMT))
           ->encryptAndSendFamiliarReference(functionState, builder, valeRefMT, valeRef);
-  assert(LLVMTypeOf(encryptedValeRefLE) == globalState->getRegion(valeRefMT)->getExternalType(valeRefMT));
+  assert(LLVMTypeOf(encryptedValeRefLE) == globalState->getRegion(peel_all_references(valeRefMT))->getExternalType(peel_all_references(valeRefMT)));
   return encryptedValeRefLE;
 }

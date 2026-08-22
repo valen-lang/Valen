@@ -18,9 +18,9 @@ Ref loadMember(
     Kind* resultType,
     const std::string& memberName) {
   auto memberRef =
-      globalState->getRegion(structRefM)->loadMember(
+      globalState->getRegion(peel_all_references(structRefM))->loadMember(
           functionState, builder, structRefM, structRef, memberIndex, memberType, resultType, memberName);
-  globalState->getRegion(resultType)->alias(from, functionState, builder, resultType, memberRef);
+  globalState->getRegion(peel_all_references(resultType))->alias(from, functionState, builder, resultType, memberRef);
   return memberRef;
 }
 
@@ -41,12 +41,12 @@ Ref swapMember(
   assert(structDefM->sharedness == Sharedness::SINGLE);
 
   Ref oldMember =
-      globalState->getRegion(structRefMT)->loadMember(
+      globalState->getRegion(peel_all_references(structRefMT))->loadMember(
           functionState, builder, structRefMT, structRef, memberIndex, memberRefMT, memberRefMT, memberName);
   // We don't adjust the oldMember's RC here because even though we're acquiring
   // a reference to it, the struct is losing its reference, so it cancels out.
 
-  globalState->getRegion(structRefMT)->storeMember(
+  globalState->getRegion(peel_all_references(structRefMT))->storeMember(
       functionState, builder, structRefMT, structRef, memberIndex, memberName, memberRefMT, newMemberRef);
   // We don't adjust the newMember's RC here because even though the struct is
   // acquiring a reference to it, we're losing ours, so it cancels out.

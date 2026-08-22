@@ -61,7 +61,11 @@ public:
     virtual PackageCoordinate* getPackageCoordinate() const = 0;
 };
 
-class Int : public Kind {
+// A ValueKind is any Kind that isn't a reference.
+class ValueKind : public Kind {
+};
+
+class Int : public ValueKind {
 public:
   RegionId* regionId;
   int bits;
@@ -73,7 +77,7 @@ public:
   PackageCoordinate* getPackageCoordinate() const override { return regionId->packageCoord; }
 };
 
-class Bool : public Kind {
+class Bool : public ValueKind {
 public:
   RegionId* regionId;
 
@@ -83,7 +87,7 @@ public:
   PackageCoordinate* getPackageCoordinate() const override { return regionId->packageCoord; }
 };
 
-class Str : public Kind {
+class Str : public ValueKind {
 public:
   RegionId* regionId;
 
@@ -93,7 +97,7 @@ public:
   PackageCoordinate* getPackageCoordinate() const override { return regionId->packageCoord; }
 };
 
-class Float : public Kind {
+class Float : public ValueKind {
 public:
   RegionId* regionId;
 
@@ -103,7 +107,7 @@ public:
   PackageCoordinate* getPackageCoordinate() const override { return regionId->packageCoord; }
 };
 
-class Never : public Kind {
+class Never : public ValueKind {
 public:
   RegionId* regionId;
 
@@ -113,7 +117,7 @@ public:
   PackageCoordinate* getPackageCoordinate() const override { return regionId->packageCoord; }
 };
 
-class Void : public Kind {
+class Void : public ValueKind {
 public:
   RegionId* regionId;
 
@@ -123,7 +127,7 @@ public:
   PackageCoordinate* getPackageCoordinate() const override { return regionId->packageCoord; }
 };
 
-class InterfaceKind : public Kind {
+class InterfaceKind : public ValueKind {
 public:
     Name* fullName;
 
@@ -135,7 +139,7 @@ public:
 };
 
 // Interned
-class StructKind : public Kind {
+class StructKind : public ValueKind {
 public:
     Name* fullName;
 
@@ -147,7 +151,7 @@ public:
 
 
 // Interned
-class StaticSizedArrayT : public Kind {
+class StaticSizedArrayT : public ValueKind {
 public:
   Name* name;
 
@@ -183,7 +187,7 @@ public:
 
 
 // Interned
-class RuntimeSizedArrayT : public Kind {
+class RuntimeSizedArrayT : public ValueKind {
 public:
   Name* name;
 
@@ -213,7 +217,7 @@ public:
 };
 
 
-class USize : public Kind {
+class USize : public ValueKind {
 public:
   RegionId* regionId;
 
@@ -272,9 +276,13 @@ public:
 bool isValueType(Kind* kind);
 
 // Strips every onion ref wrap (BorrowRef/OwnRef/ShareRef/WeakRef) off `kind` and
-// returns the underlying concrete kind (StructKind, InterfaceKind, an array, Int, ...).
+// returns the underlying concrete kind (StructKind, InterfaceKind, an array, Int, ...) as a
+// ValueKind* — a compile-time witness that the result carries no reference wrap.
 // A bare value type is returned unchanged.
-Kind* peel_all_references(Kind* kind);
+ValueKind* peel_all_references(Kind* kind);
+// A ValueKind is already wrap-free, so peeling one is redundant. Delete this overload to make that
+// a compile error — if you hold a ValueKind*, use it directly instead of re-peeling.
+ValueKind* peel_all_references(ValueKind* kind) = delete;
 
 class IContainer {
 public:
