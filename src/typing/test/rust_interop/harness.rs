@@ -41,6 +41,8 @@ use std::sync::Arc;
 
 use crate::code_source::{CodeSource, Source};
 use crate::compile_options::GlobalOptions;
+use crate::instantiating::instantiating_interner::InstantiatingInterner;
+use crate::instantiating::instantiator;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::postparsing::ScoutCompilation;
@@ -84,7 +86,23 @@ impl CompileFailure {
   }
 }
 
-/// What one case observed: whether it compiled, and every question the oracle was asked.
+/// Owned counts from running the instantiator (monomorphizer) on a case's typing output. Present
+/// only when the case both compiled and was run through the instantiator (`run_case_instantiated`).
+///
+/// The instantiator (`instantiator::translate`, typing output → `HinputsI`) is the pass past typing,
+/// toward codegen, and it runs with no oracle and no backend. Reaching it at all is the point: a case
+/// that typechecks but that the instantiator cannot monomorphize `panic!`s inside `translate`, which
+/// surfaces here as a test failure. The counts let a case assert its program actually monomorphized to
+/// denizens rather than to nothing.
+#[derive(Clone, Copy, Debug)]
+pub struct InstantiationSummary {
+  pub functions: usize,
+  pub structs: usize,
+  pub interfaces: usize,
+}
+
+/// What one case observed: whether it compiled, every question the oracle was asked, and — when the
+/// case was run through the instantiator — the monomorphized denizen counts.
 ///
 /// The log is here for one job — **vacuity**. "The program compiled" is weak evidence on its own,
 /// because a program that would compile anyway proves nothing about interop. Everything else is
@@ -92,6 +110,8 @@ impl CompileFailure {
 pub struct CaseOutcome<R> {
   pub compiled: Result<R, CompileFailure>,
   pub oracle_log: Vec<OracleCall>,
+  /// `Some` only when the case ran through the instantiator and typing succeeded.
+  pub instantiation: Option<InstantiationSummary>,
 }
 
 impl<R> CaseOutcome<R> {
@@ -163,6 +183,15 @@ impl<R> CaseOutcome<R> {
   pub fn rendered_log(&self) -> String {
     self.oracle_log.iter().map(|c| c.rendered.as_str()).collect::<Vec<_>>().join("\n")
   }
+
+  /// The monomorphized denizen counts, or a panic if the case did not run through the instantiator
+  /// (or did not compile). Reaching here at all means `translate` did not panic on the program.
+  pub fn expect_instantiated(&self) -> &InstantiationSummary {
+    self
+      .instantiation
+      .as_ref()
+      .expect("case produced no instantiation — run it with `run_case_instantiated` and expect it to compile")
+  }
 }
 
 struct CaseCallbacks<'a, F, R> {
@@ -171,6 +200,9 @@ struct CaseCallbacks<'a, F, R> {
   /// the reserved `rust` module is what makes the reservation observable at all.
   package_module: &'a str,
   extract: F,
+  /// Run the instantiator (`translate`) on the typing output when the program compiles, recording
+  /// the denizen counts. Off by default so most cases stay pure typing-pass tests.
+  instantiate: bool,
   outcome: Option<CaseOutcome<R>>,
 }
 
@@ -265,11 +297,34 @@ where
       },
       Oracles::with_rust(&logging),
     );
+    let mut instantiation: Option<InstantiationSummary> = None;
     let compiled = match compile.get_compiler_outputs() {
-      Ok(coutputs) => Ok((self.extract)(coutputs)),
+      Ok(coutputs) => {
+        let extracted = (self.extract)(coutputs);
+        if self.instantiate {
+          // The pass past typing: monomorphize the typed program to `HinputsI`. No oracle, no backend
+          // — that is `pass_manager::build`'s job downstream. A program that typechecks but cannot be
+          // instantiated panics inside `translate`, which fails the test loudly. That is the coverage.
+          let instantiating_bump = Bump::new();
+          let instantiating_interner = InstantiatingInterner::new(&instantiating_bump);
+          let monouts = instantiator::translate(
+            &global_options,
+            &instantiating_interner,
+            &typing_interner,
+            &keywords,
+            coutputs,
+          );
+          instantiation = Some(InstantiationSummary {
+            functions: monouts.functions.len(),
+            structs: monouts.structs.len(),
+            interfaces: monouts.interfaces.len(),
+          });
+        }
+        Ok(extracted)
+      }
       Err(e) => Err(CompileFailure::from_debug(format!("{e:?}"))),
     };
-    self.outcome = Some(CaseOutcome { compiled, oracle_log: logging.calls() });
+    self.outcome = Some(CaseOutcome { compiled, oracle_log: logging.calls(), instantiation });
 
     Compilation::Stop
   }
@@ -393,7 +448,18 @@ pub fn run_case_in_package<R: Send>(
   package_module: &str,
   extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
 ) -> CaseOutcome<R> {
-  try_run_case_in_package(case, package_module, extract)
+  try_run_case_in_package(case, package_module, false, extract)
+    .expect("rustc returned without ever reaching after_expansion")
+}
+
+/// `run_case`, but also runs the instantiator (monomorphizer) on the typing output, recording the
+/// denizen counts in the outcome's `instantiation`. Use it to prove a case reaches the pass past
+/// typing — `translate` panics if the typechecked program cannot be monomorphized, failing the test.
+pub fn run_case_instantiated<R: Send>(
+  case: &Case,
+  extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
+) -> CaseOutcome<R> {
+  try_run_case_in_package(case, "test", true, extract)
     .expect("rustc returned without ever reaching after_expansion")
 }
 
@@ -403,12 +469,13 @@ pub fn try_run_case<R: Send>(
   case: &Case,
   extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
 ) -> Option<CaseOutcome<R>> {
-  try_run_case_in_package(case, "test", extract)
+  try_run_case_in_package(case, "test", false, extract)
 }
 
 fn try_run_case_in_package<R: Send>(
   case: &Case,
   package_module: &str,
+  instantiate: bool,
   extract: impl for<'s, 't> Fn(&HinputsT<'s, 't>) -> R + Send,
 ) -> Option<CaseOutcome<R>> {
   let fixture_dir = fixtures_dir(case.fixture);
@@ -438,7 +505,7 @@ fn try_run_case_in_package<R: Send>(
   }
 
   let mut callbacks =
-    CaseCallbacks { vale_source: case.vale, package_module, extract, outcome: None };
+    CaseCallbacks { vale_source: case.vale, package_module, extract, instantiate, outcome: None };
   // rustc's fatal-error path does not return — it emits the diagnostic and then **unwinds**,
   // with a `FatalErrorMarker` payload rather than a string. `catch_with_exit_code` is rustc's
   // own way of turning that back into a value, and using it is what keeps a broken fixture from

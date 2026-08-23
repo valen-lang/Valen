@@ -10,6 +10,8 @@
 //
 // `i32` because Vale's `int` is 32-bit (`KindT::Int(IntT { bits: 32 })`).
 
+use std::collections::HashMap;
+
 pub fn add_two_numbers(a: i32, b: i32) -> i32 {
     a + b
 }
@@ -389,4 +391,50 @@ pub struct Hidden {
 
 pub fn takes_hidden(h: Hidden) -> i32 {
     h.magnitude
+}
+
+/// A small Rust type held inside a collection. Vale reads its field through the `location` accessor,
+/// never directly: an imported struct is opaque (no members cross), so a field read on the Vale side
+/// is an inherent `&self` method that returns the field by value.
+pub struct Glyph {
+    location: i32,
+}
+
+impl Glyph {
+    pub fn new(location: i32) -> Glyph {
+        Glyph { location }
+    }
+
+    /// A `&self` accessor. It is called on a value that is *itself* a borrow — `Domino::get_glyph`
+    /// hands back `&Glyph` — so it exercises a borrow receiver on an already-borrowed local.
+    pub fn location(&self) -> i32 {
+        self.location
+    }
+}
+
+/// A Rust type that **wraps a std collection**. The `HashMap` field never crosses into Vale (opaque
+/// import), so this is the "hold a collection, expose it through methods" shape — the map's own
+/// generics and trait bounds never reach the importer, because Vale never names `HashMap`.
+pub struct Domino {
+    glyphs: HashMap<i32, Glyph>,
+}
+
+impl Domino {
+    pub fn new() -> Domino {
+        Domino { glyphs: HashMap::new() }
+    }
+
+    /// A mutating **borrow** receiver (`&mut self`, not a consume): stores a `Glyph` under its location
+    /// and returns that key. Because it borrows rather than consumes, `d` stays usable for `get_glyph`.
+    pub fn add_glyph(&mut self, g: Glyph) -> i32 {
+        let key = g.location;
+        self.glyphs.insert(key, g);
+        key
+    }
+
+    /// A `&self` method returning a **borrow of a held value** (`&Glyph`) — the borrow-return-bound-to-a-
+    /// local probe. Panics if absent, which never runs at tier-1; this only has to typecheck.
+    pub fn get_glyph(&self, key: i32) -> &Glyph {
+        self.glyphs.get(&key).unwrap()
+    }
 }

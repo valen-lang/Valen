@@ -39,6 +39,7 @@ use crate::postparsing::names::{
 use crate::postparsing::rules::rules::{
   BorrowRefSR, CallSR, EqualsSR, IRulexSR, LookupSR, RegionSR, RuneUsage,
 };
+use crate::postparsing::rules::types::{ITypeST, RuneUsageST};
 use crate::scout_arena::ScoutArena;
 use crate::typing::compiler::Compiler;
 use crate::typing::names::names::{INameT, IStructTemplateNameT};
@@ -176,6 +177,12 @@ where
         name: scout_arena.intern_str(&format!("p{}", index)),
         lid: lidb.child().consume_in_arena(scout_arena),
       }),
+      // The param's syntactic type is "whatever `full_type_rune` resolves to" — a bare rune, exactly
+      // what the postparser hands a closure or magic param (`create_lambda_param`/`create_magic_parameters`).
+      // For a `&self` receiver `full_type_rune` is the borrow the outer-ref bucket concludes, so this points
+      // at the full type in both the wrapped and unwrapped cases. The binding rules stay the source of truth
+      // (@PFVSZ); this carries the shape alongside them.
+      ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: full_type_rune })),
       full_type_rune,
       value_type_rune,
       scout_arena.alloc_slice_from_vec(outer_ref_rules),
@@ -216,6 +223,8 @@ where
     tyype,
     scout_arena.alloc_slice_from_vec(params),
     Some(ret_rune),
+    // No effects: an extern Rust function's body is opaque, so it declares none.
+    &[],
     scout_arena.alloc_slice_from_vec(header_rules),
     // No impl bounds, and that is the truth rather than a placeholder. A Rust function's trait
     // obligations are discharged by rustc, never by Vale — and we read no predicates at all,

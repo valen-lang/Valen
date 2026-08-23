@@ -697,25 +697,25 @@ exported func main() int {
 /// called on it — the opaque tier's payoff (`Option::unwrap`'s shape: a method without the variants
 /// being represented). `make_shade()` returns the enum; `.level()` is its inherent `self` method.
 pub const CALLS_A_METHOD_ON_AN_IMPORTED_ENUM: Case = Case {
-    fixture: "fixtures",
-    name: "enum-method",
-    vale: r#"
+  fixture: "fixtures",
+  name: "enum-method",
+  vale: r#"
 import rust.mycrate.Shade;
 import rust.mycrate.make_shade;
 exported func main() int {
   return (make_shade()).level();
 }
 "#,
-    // `make_shade()` builds `Shade::Bright`; `level` returns 2.
-    expect: Expect::Returns(2),
+  // `make_shade()` builds `Shade::Bright`; `level` returns 2.
+  expect: Expect::Returns(2),
 };
 
 /// An imported enum bound to a local and never consumed gets a scope-end drop — an interface's drop,
 /// synthesized on demand exactly like a struct's.
 pub const AN_IMPORTED_ENUM_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP: Case = Case {
-    fixture: "fixtures",
-    name: "enum-scope-end-drop",
-    vale: r#"
+  fixture: "fixtures",
+  name: "enum-scope-end-drop",
+  vale: r#"
 import rust.mycrate.Shade;
 import rust.mycrate.make_shade;
 exported func main() int {
@@ -723,7 +723,7 @@ exported func main() int {
   return 4;
 }
 "#,
-    expect: Expect::Returns(4),
+  expect: Expect::Returns(4),
 };
 
 /// A Rust `usize` imported as the Vale `usize` **primitive** (alongside `int`/`bool`/`float`), rather
@@ -767,9 +767,9 @@ exported func main() int {
 /// an opaque interface), whose inherent `unwrap` consumes it and hands back the element. `Option` comes
 /// from the real `core` crate. Nothing runs; this is a typecheck against live rustc.
 pub const CALLS_POP_THEN_UNWRAP_ON_A_REAL_VEC: Case = Case {
-    fixture: "fixtures",
-    name: "real-vec-pop-unwrap",
-    vale: r#"
+  fixture: "fixtures",
+  name: "real-vec-pop-unwrap",
+  vale: r#"
 import rust.alloc.vec.Vec;
 import rust.alloc.alloc.Global;
 import rust.core.option.Option;
@@ -778,7 +778,7 @@ exported func main() int {
   return (v.pop()).unwrap();
 }
 "#,
-    expect: Expect::Returns(0),
+  expect: Expect::Returns(0),
 };
 
 /// Real `Vec` with a **`&self` method returning `usize`**: `v.len()`. Combines the borrow receiver
@@ -1294,6 +1294,31 @@ exported func main() int {
 }
 "#,
   expect: Expect::Returns(13),
+};
+
+/// A Rust struct that **wraps a `HashMap`**, exercised end to end through methods — the "collection
+/// held behind an opaque type" shape. `Domino` hides a `HashMap<i32, Glyph>` field that never crosses
+/// into Vale, so none of the map's generics or trait bounds reach the importer. The program builds a
+/// `Domino`, adds a `Glyph` through a `&mut self` method, reads one back through a `&self` method
+/// returning a **borrow** (`&Glyph`) bound to a local, and reads the glyph's field through an accessor.
+///
+/// The borrow-return bound to a local (`d_ref`) is the new mechanic here: earlier cases proved borrow
+/// *receivers*, never a borrow *return* of a citizen held in a local.
+pub const A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS: Case = Case {
+  fixture: "fixtures",
+  name: "domino-glyphs",
+  vale: r#"
+import rust.mycrate.Domino;
+import rust.mycrate.Glyph;
+exported func main() int {
+  d = Domino.new();
+  d.add_glyph(Glyph.new(7));
+  d_ref = d.get_glyph(7);
+  return d_ref.location();
+}
+"#,
+  // The glyph stored under key 7 has location 7, so `d_ref.location()` is 7.
+  expect: Expect::Returns(7),
 };
 
 /// The surviving hazard of hosting rustc inside `cargo test --lib`, pinned as a regression test.

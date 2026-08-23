@@ -30,7 +30,10 @@ pub mod clang;
 pub mod code_source;
 pub mod compile_options;
 // pub mod file_coordinate_map;
-#[cfg(test)]
+// Backend-driving e2e tests (pass_manager::build → C++ backend → clang → exec). The interop build
+// deliberately does not link the C++ backend (§4.2), so these are excluded there — they run in the
+// backend-enabled default/nextest gates. Restores the interop-build behavior from before ad4c79a4.
+#[cfg(all(test, not(feature = "rust_interop")))]
 pub mod end_to_end_tests;
 // #[cfg(test)]
 pub mod integration_tests;

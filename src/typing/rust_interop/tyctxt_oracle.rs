@@ -483,26 +483,22 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
       TyKind::Str | TyKind::Slice(_) | TyKind::Dynamic(..) => Err(DeclineReason::Unsized),
       TyKind::Adt(adt_def, adt_args) => {
         let did = adt_def.did();
-        match self.items.iter().position(|i| matches!(i.kind, ItemKind::Type | ItemKind::Enum) && i.def_id == did) {
+        match self
+          .items
+          .iter()
+          .position(|i| matches!(i.kind, ItemKind::Type | ItemKind::Enum) && i.def_id == did)
+        {
           Some(idx) => self.type_kind(idx, adt_args, interner),
           None => Err(DeclineReason::UnimportedType),
         }
       }
       TyKind::Ref(_, inner, _) => {
-        // A Rust `&self` receiver arrives as a borrow. `ValeSig` is over `KindT`, and
-        // the onion refactor dissolved `CoordT` into the reference wraps inside it,
-        // so the borrow is expressed by wrapping rather than by an ownership field.
-        // `RegionT::Default` because Vale has no `ITemplataT::Region` variant, so an
-        // arg list cannot carry a lifetime and the ~6 solver sites that would need
-        // one hardcode this too. Rust lifetimes erase to `re_erased` at the boundary
-        // (@ELASZ), so nothing is lost yet — it becomes lossy when group borrowing
-        // and real lifetime reconciliation land (callout map §5.3).
-        Ok(KindT::BorrowRef(
-          interner.alloc(BorrowRefT {
-            inner: self.lower_ty(*inner, interner)?,
-            region: RegionT::Default,
-          }),
-        ))
+        // A Rust `&self` receiver arrives as a borrow. `ValeSig` is over `KindT`, and the onion
+        // refactor dissolved `CoordT` into the reference wraps inside it, so the borrow is expressed
+        // by wrapping rather than by an ownership field. `BorrowRefT` carries no region (BCHATZ): Rust
+        // lifetimes erase to `re_erased` at the boundary (@ELASZ), so nothing is lost yet — it becomes
+        // lossy when group borrowing and real lifetime reconciliation land.
+        Ok(KindT::BorrowRef(interner.alloc(BorrowRefT { inner: self.lower_ty(*inner, interner)? })))
       }
       _ => Err(DeclineReason::Unrepresentable),
     }

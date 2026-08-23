@@ -26,25 +26,20 @@ fn main() {
   //
   // Read from the cargo feature rather than a cfg because a build script cannot see
   // RUSTFLAGS. Absent the feature this is unset and the backend builds exactly as before.
+  // Both branches below disable the C++ backend, and disabling it is what makes the `backend_ffi`
+  // C symbols unresolved — so both must tell the linker to tolerate that (`emit_allow_unresolved_
+  // backend_symbols`). The interop branch additionally bakes in the rustc-private rpath it needs.
   println!("cargo:rerun-if-env-changed=CARGO_FEATURE_RUST_INTEROP");
   if env::var_os("CARGO_FEATURE_RUST_INTEROP").is_some() {
     emit_rustc_private_rpath();
+    emit_allow_unresolved_backend_symbols();
     return;
   }
 
-  // Frontend/VM test builds (the `no_backend` feature) skip the C++ backend entirely. The backend's
-  // C symbols (backend_ffi) are then unresolved; tell the linker to allow that rather than build the
-  // red C++ backend. Nothing in the frontend or TestVM tests calls them, so they never bind; a stray
-  // call would fault at runtime, which is the honest signal that the backend is absent. Temporary,
-  // until the backend is reshaped for the onion metal IR.
+  // Frontend/VM test builds (the `no_backend` feature) skip the C++ backend entirely.
   println!("cargo:rerun-if-env-changed=CARGO_FEATURE_NO_BACKEND");
   if env::var_os("CARGO_FEATURE_NO_BACKEND").is_some() {
-    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-    if target_os == "macos" {
-      println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
-    } else {
-      println!("cargo:rustc-link-arg=-Wl,--unresolved-symbols=ignore-all");
-    }
+    emit_allow_unresolved_backend_symbols();
     return;
   }
 
@@ -158,6 +153,22 @@ fn emit_rustc_private_rpath() {
   let lib_dir = PathBuf::from(&sysroot).join("lib");
   println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_dir.display());
   println!("cargo:rerun-if-env-changed=RUSTC");
+}
+
+/// Tell the linker to tolerate the unresolved `backend_ffi` C symbols left behind when the C++
+/// backend is not built. Both the `rust_interop` and `no_backend` feature builds skip the backend,
+/// so its symbols have no definition. They are referenced from `pass_manager::build`'s metal lowerer
+/// but never *called* on a typecheck-only path, so leaving them unresolved is safe — a stray call
+/// faults at runtime, the honest signal that the backend is absent. Without this, `-dead_strip` drops
+/// them only while nothing references them; once something does (as the metal lowerer now does), the
+/// link fails instead. Temporary, until the backend is reshaped for the onion metal IR.
+fn emit_allow_unresolved_backend_symbols() {
+  let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+  if target_os == "macos" {
+    println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
+  } else {
+    println!("cargo:rustc-link-arg=-Wl,--unresolved-symbols=ignore-all");
+  }
 }
 
 fn watch_dir_recursive(dir: &std::path::Path) {

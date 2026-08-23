@@ -895,7 +895,9 @@ impl<'cache> Drop for Program<'cache> {
     }
 }
 
-#[cfg(test)]
+// These tests call `MetalCache::new()` → the C++ backend FFI. The interop build doesn't link the
+// backend (§4.2), so they're excluded there and run only in the backend-enabled default/nextest gates.
+#[cfg(all(test, not(feature = "rust_interop")))]
 mod tests {
     use super::*;
 

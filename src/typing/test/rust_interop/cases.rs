@@ -33,7 +33,8 @@ use crate::typing::rust_interop::{
 };
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::test::rust_interop::harness::{
-  compile_check_fixture, run_case, run_case_in_package, try_run_case, CaseOutcome,
+  compile_check_fixture, run_case, run_case_in_package, run_case_instantiated, try_run_case,
+  CaseOutcome,
 };
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::*;
@@ -390,6 +391,60 @@ fn calls_len_on_a_real_vec() {
 #[test]
 fn calls_pop_then_unwrap_on_a_real_vec() {
   assert_rust_callees(&CALLS_POP_THEN_UNWRAP_ON_A_REAL_VEC, &["pop", "unwrap"]);
+}
+
+/// A struct wrapping a `HashMap`, used through methods: build a `Domino`, add a `Glyph` via a `&mut self`
+/// method, read one back via a `&self` method returning a **borrow** (`&Glyph`) bound to a local, then
+/// read the glyph's field through an accessor. The borrow-return bound to a local (`d_ref`) is the new
+/// mechanic — earlier cases proved borrow *receivers*, never a borrow *return* of a citizen held in a
+/// local. `location` returning `int32` is main's observable (the stored glyph's location, 7).
+#[test]
+fn a_struct_wrapping_a_hashmap_is_used_through_methods() {
+  let outcome = run_case(&A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS, callees_in_main);
+  let callees = outcome
+    .check(&A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS)
+    .expect("the case declares it compiles");
+  for name in ["add_glyph", "get_glyph", "location"] {
+    assert!(
+      callees.iter().any(|c| c.name == name && c.rust_backed),
+      "`{name}` did not resolve to a Rust callee: {callees:?}"
+    );
+  }
+  assert!(
+    callees.iter().any(|c| c.name == "location" && c.rust_backed && c.ret == "int32"),
+    "`location` did not return int, so main's observable is wrong: {callees:?}"
+  );
+}
+
+/// The pass **past typing**: run the instantiator (monomorphizer) on an interop program, no backend.
+/// The simplest shape first — a call to a Rust free function — so a failure here isolates "the
+/// instantiator cannot handle a synthesized extern at all" from anything the domino case adds.
+/// `translate` panics if the typechecked program cannot be monomorphized, so reaching the assert means
+/// it survived.
+// Ignored: the instantiator cannot yet translate a call to a Rust extern (it looks up a
+// `FunctionDefinitionT` the extern has no body for — `translate_function_callsite`). That is the
+// instantiator↔rustc-collector handshake work; the backend/LLVM half is exp-3's. Un-ignore when the
+// foreign-call path lands.
+#[ignore = "instantiator has no foreign-call path for Rust externs yet; see rust-interop-handoff"]
+#[test]
+fn a_rust_free_function_call_reaches_the_instantiator() {
+  let outcome = run_case_instantiated(&CALLS_A_RUST_FREE_FUNCTION, callees_in_main);
+  outcome.check(&CALLS_A_RUST_FREE_FUNCTION);
+  let summary = outcome.expect_instantiated();
+  assert!(summary.functions > 0, "nothing monomorphized: {summary:?}");
+}
+
+/// The domino case pushed past typing into the instantiator — opaque struct wrapping a `HashMap`,
+/// `&mut self`/`&self` methods, and a borrow return (`&Glyph`) bound to a local. Proves those
+/// synthesized denizens monomorphize, not merely typecheck.
+#[ignore = "instantiator has no foreign-call path for Rust externs yet; see rust-interop-handoff"]
+#[test]
+fn the_hashmap_wrapping_struct_reaches_the_instantiator() {
+  let outcome =
+    run_case_instantiated(&A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS, callees_in_main);
+  outcome.check(&A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS);
+  let summary = outcome.expect_instantiated();
+  assert!(summary.functions > 0, "nothing monomorphized: {summary:?}");
 }
 
 /// A two-parameter generic value from an associated function, bound to a local and dropped at scope
