@@ -657,10 +657,11 @@ public:
 class CopyPrim : public Expression {
 public:
     Expression* inner;
+    Kind* sourceType;
     Kind* result;
 
-    CopyPrim(Expression* inner_, Kind* result_) :
-        inner(inner_), result(result_) {}
+    CopyPrim(Expression* inner_, Kind* sourceType_, Kind* result_) :
+        inner(inner_), sourceType(sourceType_), result(result_) {}
 };
 
 

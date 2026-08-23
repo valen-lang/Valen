@@ -198,7 +198,7 @@ ExpressionHandle* metal_expr_new_struct(
 ExpressionHandle* metal_expr_destroy(
     ExpressionHandle* expr, KindHandle* struct_kind,
     LocalHandle* const* destination_locals, size_t local_count);
-ExpressionHandle* metal_expr_copy_prim(ExpressionHandle* inner, KindHandle* result);
+ExpressionHandle* metal_expr_copy_prim(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result);
 
 // Upcast / subtype.
 ExpressionHandle* metal_expr_struct_to_interface_upcast(

@@ -29,8 +29,6 @@ LLVMValueRef upcastThinPtr(
     Kind* targetInterfaceTypeM,
     InterfaceKind* targetInterfaceKindM);
 
-LLVMTypeRef translateReferenceSimple(GlobalState* globalState, KindStructs* structs, ValueKind* kind);
-
 LLVMTypeRef translateWeakReference(GlobalState* globalState, KindStructs* weakRefStructs, ValueKind* kind);
 
 
@@ -310,19 +308,6 @@ LoadResult regularLoadStrongMember(
     Kind* expectedMemberType,
     Kind* targetType,
     const std::string& memberName);
-
-LoadResult regularLoadMember(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    KindStructs* kindStructs,
-    Kind* structRefMT,
-    LiveRef structLiveRef,
-    int memberIndex,
-    Kind* expectedMemberType,
-    Kind* targetType,
-    const std::string& memberName);
-
 
 Ref upcastStrong(
     GlobalState* globalState,

@@ -350,7 +350,7 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_struct_kind(x.struct_tt),
                 &self.lower_locals(x.destination_reference_variables),
             ),
-            ExpressionIE::CopyPrim(x) => c.expr_copy_prim(self.lower_expression(&x.inner), self.lower_kind(x.result)),
+            ExpressionIE::CopyPrim(x) => c.expr_copy_prim(self.lower_expression(&x.inner), self.lower_kind(x.source_type), self.lower_kind(x.result)),
 
             ExpressionIE::Upcast(x) => c.expr_struct_to_interface_upcast(
                 self.lower_expression(&x.inner_expr),

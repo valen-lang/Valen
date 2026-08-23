@@ -94,8 +94,18 @@ Ref translateExpressionInner(
     return result;
   } else if (auto copyPrimM = dynamic_cast<CopyPrim*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
-    // We basically just use the incoming value as is, to make LLVM copy it.
-    return translateExpression(globalState, functionState, blockState, builder, copyPrimM->inner);
+    // VCOORD: see if we can merge this and Deref perhaps
+    // CopyPrim reads a primitive by loading it through the borrow its inner (a lookup) produces.
+    auto sourceRef =
+        translateExpression(globalState, functionState, blockState, builder, copyPrimM->inner);
+    auto sourceBorrowType = dynamic_cast<BorrowRef*>(copyPrimM->sourceType);
+    assert(sourceBorrowType);
+    auto resultRef =
+        globalState->getRegion(sourceBorrowType)
+            ->load(functionState, builder, sourceBorrowType, sourceRef);
+    globalState->getRegion(copyPrimM->result)
+        ->checkValidReference(FL(), functionState, builder, false, copyPrimM->result, resultRef);
+    return resultRef;
   } else if (auto ret = dynamic_cast<Return*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     auto sourceRef = translateExpression(globalState, functionState, blockState, builder, ret->sourceExpr);
@@ -238,6 +248,30 @@ Ref translateExpressionInner(
     // We don't need a LLVMBuildLoad2 call here because LocalLookup just wants to produce a *pointer* to the local, it
     // doesnt want the value yet. Whoever wants the value can Deref this.
     return toRef(globalState->getRegion(resultType), resultType, localAddr);
+  } else if (auto letAndLend = dynamic_cast<LetAndLend*>(expr)) {
+    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
+    // Store the value into the local (the Stackify half), then hand back a pointer to that local's
+    // storage as the borrow (the LocalLookup half) — this is how you take an address of a value.
+    auto refToStore =
+        translateExpression(globalState, functionState, blockState, builder, letAndLend->expr);
+    globalState->getRegion(letAndLend->variable->type)
+        ->checkValidReference(FL(), functionState, builder, false, letAndLend->variable->type, refToStore);
+    makeHammerLocal(
+        globalState, functionState, blockState, builder, letAndLend->variable, refToStore);
+    auto localAddr = blockState->getLocalAddr(letAndLend->variable->id, true);
+    return toRef(globalState->getRegion(letAndLend->result), letAndLend->result, localAddr);
+  } else if (auto deref = dynamic_cast<Deref*>(expr)) {
+    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
+    auto sourceRef =
+        translateExpression(globalState, functionState, blockState, builder, deref->inner);
+    auto sourceBorrowType = dynamic_cast<BorrowRef*>(deref->sourceType);
+    assert(sourceBorrowType);
+    auto resultRef =
+        globalState->getRegion(sourceBorrowType)
+            ->load(functionState, builder, sourceBorrowType, sourceRef);
+    globalState->getRegion(deref->result)
+        ->checkValidReference(FL(), functionState, builder, false, deref->result, resultRef);
+    return resultRef;
   } else if (auto unstackify = dynamic_cast<Unstackify*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     // The purpose of Unstackify is to destroy the local and give what was in

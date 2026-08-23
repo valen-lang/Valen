@@ -104,6 +104,11 @@ LLVMTypeRef KindStructs::getStructWrapperStruct(StructKind* structKind) {
   assert(structIter != structWrapperStructs.end());
   return structIter->second;
 }
+LLVMTypeRef KindStructs::getStaticSizedArrayInnerStruct(StaticSizedArrayT* ssaMT) {
+  auto structIter = staticSizedArrayInnerStructs.find(ssaMT->name->name);
+  assert(structIter != staticSizedArrayInnerStructs.end());
+  return structIter->second;
+}
 LLVMTypeRef KindStructs::getStaticSizedArrayWrapperStruct(StaticSizedArrayT* ssaMT) {
   auto structIter = staticSizedArrayWrapperStructs.find(ssaMT->name->name);
   assert(structIter != staticSizedArrayWrapperStructs.end());
@@ -393,6 +398,7 @@ void KindStructs::defineStaticSizedArray(
   auto staticSizedArrayWrapperStruct = getStaticSizedArrayWrapperStruct(staticSizedArrayMT->kind);
 
   auto innerArrayLT = LLVMArrayType(elementLT, staticSizedArrayMT->size);
+  staticSizedArrayInnerStructs.emplace(staticSizedArrayMT->kind->name->name, innerArrayLT);
 
   std::vector<LLVMTypeRef> elementsL;
 

@@ -81,6 +81,9 @@ So, this helps us keep various expressions straight.
 
 *Desired end-state only, at a single consistent point in time. No how-to (that goes in Details).*
 
+- **S7.** A *wrapper struct* (a header wrapping the inner value) exists only for heap/RAM-resident objects, never for inline register/stack values, which use the inner struct directly. The wrapper's reason to exist is to later carry a probabilistic generational reference in the generated unsafe-region code — a runtime sanity check, a last line of defense that catches borrow-checker mistakes.
+- **S6.** `translateType` of a value kind returns the value's *own* LLVM representation, not a pointer to it: a struct → its inner struct value, a static-sized array → its inner array value, an interface → its ref struct. Any pointer comes from a reference wrap (borrow/own), never baked into the value kind. (Runtime-sized arrays stay by-pointer — they're heap.)
+- **S5.** Destructuring a struct loads the whole struct value into a register once (a single load of its inner struct), then copies each field out with an `extractvalue` into the corresponding destination local — not a per-field pointer load.
 - **S4.** Reach full onion directly, with no heap-only intermediate milestone (the direction testvm took).
 - **S3.** A `Kind` carries no `ownership` or `location` field. Ownership is which onion wrap surrounds the kind (or none, for an owned bare kind); placement (inline vs yonder) is derived from the onion shape at codegen.
 - **S1.** The C++ backend consumes the onion `HinputsI` directly — full onion, with no `Coord`/`Ownership`/`Location`.
@@ -102,6 +105,7 @@ So, this helps us keep various expressions straight.
 
 ### Self-evident from the code
 
+- `mallocKnownSize` (`Backend/src/region/common/common.cpp:469`) does **not** malloc — it `makeBackendLocal`s a stack `alloca` (of `LLVMGetUndef(kindLT)`) and returns a pointer to that stack slot (plus census bookkeeping). So `Unsafe::allocate` currently stack-allocs a wrapper struct and returns a pointer to it.
 - `Kind` (`Backend/src/metal/types.h:80`) still carries `Ownership ownership`, `Location location`, `Kind* kind`, and its constructor asserts the coupling (`INLINE ⇒ OWN|MUTABLE_SHARE`; borrow/weak ⇒ `YONDER`) at `:99-104`.
 - The onion wrap `Kind` subclasses `BorrowRef`/`OwnRef`/`ShareRef`/`WeakRef` (each `{ Kind* inner; }`) and `USize` exist alongside the still-present `Ownership`/`Location` enums (all in `Backend/src/metal/types.h`).
 - Coupling to remove under `Backend/src/`: `->location` ×41, `->ownership` ×84, and ~30 `getReference(Ownership, Location, Kind*)` call sites.

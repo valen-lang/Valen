@@ -391,8 +391,8 @@ extern "C" VIS ExpressionHandle* metal_expr_destroy(
   return reinterpret_cast<ExpressionHandle*>(new Destroy(
       ex(expr), reinterpret_cast<StructKind*>(knd(struct_kind)), locals(destination_locals, local_count)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_copy_prim(ExpressionHandle* inner, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new CopyPrim(ex(inner), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_copy_prim(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result) {
+  return reinterpret_cast<ExpressionHandle*>(new CopyPrim(ex(inner), knd(source_type), knd(result)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_struct_to_interface_upcast(

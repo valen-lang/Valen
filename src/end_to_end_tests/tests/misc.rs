@@ -30,6 +30,4 @@ fn unreachablemoot()        { assert_compile_and_run(&p("programs/unreachablemoo
 #[test]
 #[ignore] // ZCOORD: re-enable with onion
 fn panicnot()               { assert_compile_and_run(&p("programs/panicnot.vale"), 42); }
-#[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
-fn nestedblocks()           { assert_compile_and_run(&p("programs/nestedblocks.vale"), 42); }
+#[test] fn nestedblocks()           { assert_compile_and_run(&p("programs/nestedblocks.vale"), 42); }

@@ -41,31 +41,6 @@ LLVMValueRef upcastThinPtr(
   return interfaceRefLE;
 }
 
-LLVMTypeRef translateReferenceSimple(GlobalState* globalState, KindStructs* structs, ValueKind* kind) {
-  DefaultPrimitives primitives;
-  if (primitives.isPrimitive(kind) || dynamic_cast<Never *>(kind) != nullptr) {
-    return primitives.translatePrimitive(globalState, kind);
-  } else if (auto ssaMT = dynamic_cast<StaticSizedArrayT *>(kind)) {
-    auto staticSizedArrayCountedStructLT =
-        structs->getStaticSizedArrayWrapperStruct(ssaMT);
-    return LLVMPointerType(staticSizedArrayCountedStructLT, 0);
-  } else if (auto rsaMT = dynamic_cast<RuntimeSizedArrayT *>(kind)) {
-    auto runtimeSizedArrayCountedStructLT =
-        structs->getRuntimeSizedArrayWrapperStruct(rsaMT);
-    return LLVMPointerType(runtimeSizedArrayCountedStructLT, 0);
-  } else if (auto structKind = dynamic_cast<StructKind *>(kind)) {
-    auto countedStructL = structs->getStructWrapperStruct(structKind);
-    return LLVMPointerType(countedStructL, 0);
-  } else if (auto interfaceKind = dynamic_cast<InterfaceKind *>(kind)) {
-    auto interfaceRefStructL = structs->getInterfaceRefStruct(interfaceKind);
-    return interfaceRefStructL;
-  } else {
-    std::cerr << "Unimplemented type: " << typeid(*kind).name() << std::endl;
-    { assert(false); throw 1337; }
-    return nullptr;
-  }
-}
-
 LLVMTypeRef translateWeakReference(GlobalState* globalState, KindStructs* weakRefStructs, ValueKind* kind) {
   if (auto ssaMT = dynamic_cast<StaticSizedArrayT *>(kind)) {
     return weakRefStructs->getStaticSizedArrayWeakRefStruct(ssaMT);
@@ -490,7 +465,7 @@ WrapperPtrLE mallocStr(
 
   return newStrWrapperPtrLE;
 }
-
+// VCOORD: rename or remove this function
 LLVMValueRef mallocKnownSize(
     GlobalState* globalState,
     FunctionState* functionState,
@@ -1043,38 +1018,6 @@ LiveRef constructRuntimeSizedArray(
   }
 
   return rsaLiveRef;
-}
-
-LoadResult regularLoadMember(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    KindStructs* kindStructs,
-    Kind* structRefMT,
-    LiveRef structLiveRef,
-    int memberIndex,
-    Kind* expectedMemberType,
-    Kind* targetType,
-    const std::string& memberName) {
-  auto structValueType = peel_all_references(structRefMT);
-  auto structKindM = dynamic_cast<StructKind *>(structValueType);
-  assert(structKindM);
-  auto structDefM = globalState->program->getStruct(structKindM);
-  if (structDefM->sharedness == Sharedness::SINGLE) {
-    auto structRef = toRef(globalState, structRefMT, structLiveRef);
-    auto structRefLE =
-        globalState->getRegion(structValueType)
-            ->checkValidReference(FL(), functionState, builder, true, structRefMT, structRef);
-    return LoadResult{
-      toRef(globalState->getRegion(expectedMemberType), expectedMemberType,
-        LLVMBuildExtractValue(
-            builder, structRefLE, memberIndex, memberName.c_str()))};
-  } else if (structDefM->sharedness == Sharedness::SHARED) {
-    return regularLoadStrongMember(
-        globalState, functionState, builder, kindStructs, structRefMT, structLiveRef, memberIndex, expectedMemberType, targetType, memberName);
-  } else {
-    { assert(false); throw 1337; }
-  }
 }
 
 Ref upcastStrong(

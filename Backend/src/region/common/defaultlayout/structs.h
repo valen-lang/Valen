@@ -19,6 +19,7 @@ public:
   LLVMTypeRef getStructInnerStruct(StructKind* structKind);
   LLVMTypeRef getWrapperStruct(ValueKind* kind);
   LLVMTypeRef getStructWrapperStruct(StructKind* structKind);
+  LLVMTypeRef getStaticSizedArrayInnerStruct(StaticSizedArrayT* ssaMT);
   LLVMTypeRef getStaticSizedArrayWrapperStruct(StaticSizedArrayT* ssaMT);
   LLVMTypeRef getRuntimeSizedArrayWrapperStruct(RuntimeSizedArrayT* rsaMT);
   LLVMTypeRef getInterfaceRefStruct(InterfaceKind* interfaceKind);
@@ -243,6 +244,7 @@ private:
 
   // These contain a ref count and an array type. Yon references
   // point to these.
+  std::unordered_map<std::string, LLVMTypeRef> staticSizedArrayInnerStructs;
   std::unordered_map<std::string, LLVMTypeRef> staticSizedArrayWrapperStructs;
   std::unordered_map<std::string, LLVMTypeRef> runtimeSizedArrayWrapperStructs;
 

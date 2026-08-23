@@ -28,14 +28,18 @@ placement/ownership cluster is shrinking but not gone (`grep -rc '\->location\|\
 the `VCOORD` sites in `Backend/src`); resolve each onto `Sharedness` (see constraint). See
 `docs/plans/complete-backend-plan.md` Step 4.
 
-**Lookups yield a borrow *of storage*, not a loaded value.** A `LocalLookup`/`MemberLookup`/array-lookup
-evaluates to a borrow whose representation *is* the storage pointer (the local's alloca, a member GEP) —
-`Deref` reads through it, `Mutate` stores through it, and the own→borrow step folds into the lookup itself
-(no separate load/upgrade). `Mutate` and `LocalLookup` run on this model (`mutswaplocals` passes); next is
-putting `MemberLookup` and the array lookups on it too, which is what dissolves the still-stubbed
-`Unsafe::upgradeLoadResultToRefWithTargetOwnership` — still called by the SSA/RSA-lookup and `destructure`
-load paths, but `→weak` is the explicit `BorrowToWeak` node and own→borrow belongs in the lookup, so don't
-migrate its old ownership/location body.
+**The mut/single struct path compiles through codegen.** Lookups yield a borrow *of storage* — a pointer
+(the local's alloca, a member GEP); `Deref`/`CopyPrim` read through it via `IRegion::load`, `Mutate` stores
+through it. A `StructKind`/SSA translates to its inner value, a reference wrap to a pointer
+(`Unsafe::translateType`); construction assembles the value with `insertvalue` (no wrapper), destructure
+loads the whole struct and `extractvalue`s each field, and `&x` is `LetAndLend` (store into a local, lend
+its pointer). See `Backend/backend-design.md` S5–S7 for the design (wrapper structs are RAM-only).
+`mutswaplocals` and the mut/single struct path (`structmutparamexport`) compile end-to-end.
+
+**Next: the generated C-ABI headers for structs.** `structmutparamexport` now fails at clang, not codegen —
+the export/extern C headers name the struct two ways (`vtest_Spaceship` in the signature vs
+`vtest_SpaceshipRef` typedef) and emit it as an opaque `{ uint64_t }` instead of its real fields (the
+`getExportName`/C-header path, `Backend/src/vale.cpp`).
 
 ## ValueKind — a type-level "wrap-free kind" (orthogonal to the onion migration)
 
@@ -84,10 +88,10 @@ reading typing's edge blueprint (`super_family_root_headers`), not a C++-codegen
   and do **no** lowering. Placement (from `Sharedness`) and member-name→index are resolved downstream in
   C++ codegen; the vtable slot is the exception — supplied by the instantiator from typing's blueprint.
   (Architect preference: don't force lowering into the plumbing.)
-- **Placement is `Sharedness`, and inline aggregates are real.** `SINGLE` structs/arrays are inline/by-value
-  (member access via `extractvalue`, no control block); inline structs/SSAs are wanted, so never delete a
-  `location == INLINE` branch as "dead code." For placement sites, ask what to *remove* — most `location`
-  branches are dead/redundant/defensive and collapse — but keep the genuine `Sharedness` branch.
+- **Placement is `Sharedness`, and inline aggregates are real.** A `SINGLE` struct/array translates to its
+  inner value (no wrapper/control block); a reference to it is a pointer. Never delete a `location == INLINE`
+  branch as "dead code." For placement sites, ask what to *remove* — most `location` branches are
+  dead/redundant/defensive and collapse — but keep the genuine `Sharedness` branch.
 - `rcimm.cpp` is the shared/heap-and-`Str`-only region; every value type (primitives, single-owner
   aggregates) lives in the `mut` region (`unsafe.cpp`). Primitives route there via their `mutRegionId`
   singletons (`Backend/src/metal/metalcache.h`); `getRegion` resolves any kind to its region by its inner

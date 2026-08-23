@@ -22,8 +22,11 @@ Ref translateDestructure(
   auto structLiveRef =
       globalState->getRegion(destructureM->structType)->checkRefLive(FL(),
           functionState, builder, destructureM->structType, structRef);
-  globalState->getRegion(destructureM->structType)->checkValidReference(FL(),
-      functionState, builder, true, destructureM->structType, structRef);
+  // The struct arrives as its whole value in a register (a struct is its inner value now, not a
+  // pointer), so copy each field straight out with extractvalue into the destination local.
+  auto structRefLE =
+      globalState->getRegion(destructureM->structType)->checkValidReference(FL(),
+          functionState, builder, true, destructureM->structType, structRef);
 
   buildFlare(FL(), globalState, functionState, builder);
 
@@ -38,8 +41,8 @@ Ref translateDestructure(
     auto memberName = structM->members[i]->name;
     auto memberType = structM->members[i]->type;
     auto memberLE =
-        globalState->getRegion(destructureM->structType)->loadMember(
-            functionState, builder, destructureM->structType, structLiveRef, i, memberType, memberType, memberName);
+        toRef(globalState->getRegion(memberType), memberType,
+            LLVMBuildExtractValue(builder, structRefLE, i, memberName.c_str()));
     makeHammerLocal(
         globalState, functionState, blockState, builder, destructureM->destinationLocals[i], memberLE);
     buildFlare(FL(), globalState, functionState, builder);

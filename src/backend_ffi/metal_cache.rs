@@ -205,7 +205,7 @@ extern "C" {
         expr: *mut c_void, struct_kind: *mut c_void,
         destination_locals: *const *mut c_void, local_count: usize,
     ) -> *mut c_void;
-    fn metal_expr_copy_prim(inner: *mut c_void, result: *mut c_void) -> *mut c_void;
+    fn metal_expr_copy_prim(inner: *mut c_void, source_type: *mut c_void, result: *mut c_void) -> *mut c_void;
 
     fn metal_expr_struct_to_interface_upcast(
         inner_expr: *mut c_void, source_type: *mut c_void, target_interface: *mut c_void, impl_name: *mut c_void, result: *mut c_void,
@@ -673,8 +673,8 @@ impl MetalCache {
         let ptrs = ptrs!(destination_locals);
         unsafe { Expression(NonNull::new(metal_expr_destroy(expr.0.as_ptr(), struct_kind.0.as_ptr(), ptrs.as_ptr(), ptrs.len())).unwrap(), PhantomData) }
     }
-    pub fn expr_copy_prim<'c>(&'c self, inner: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_copy_prim(inner.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_copy_prim<'c>(&'c self, inner: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_copy_prim(inner.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
     }
 
     pub fn expr_struct_to_interface_upcast<'c>(&'c self, inner_expr: Expression<'c>, source_type: Kind<'c>, target_interface: Kind<'c>, impl_name: Name<'c>, result: Kind<'c>) -> Expression<'c> {

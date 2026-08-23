@@ -81,44 +81,59 @@ Ref Unsafe::allocate(
   auto desiredValueType = peel_all_references(desiredReference);
   auto structKind = dynamic_cast<StructKind*>(desiredValueType);
   auto structM = globalState->program->getStruct(structKind);
-  auto countedStructL = kindStructs.getStructWrapperStruct(structKind);
 
-  auto ptrLE = mallocKnownSize(globalState, functionState, builder, countedStructL);
-
-  WrapperPtrLE newStructWrapperPtrLE =
-      kindStructs.makeWrapperPtr(
-          FL(), functionState, builder, desiredReference,
-          ptrLE);
-  fillControlBlock(
-      FL(), functionState, builder, desiredValueType,
-      kindStructs.getConcreteControlBlockPtr(
-          FL(), functionState, builder, newStructWrapperPtrLE),
-      structM->name->name);
-  auto structContentsPtrLT = kindStructs.getStructInnerStruct(structM->kind);
-  auto structContentsPtrLE =
-      kindStructs.getStructContentsPtr(builder, newStructWrapperPtrLE);
-  fillInnerStruct(
-      globalState,
-      functionState,
-      builder,
-      structM,
-      memberRefs,
-      structContentsPtrLT,
-      structContentsPtrLE);
-
-  auto resultRef = toRef(globalState->getRegion(desiredValueType), desiredReference, newStructWrapperPtrLE.refLE);
-
-  if (globalState->opt->census) {
-    auto objIdLE =
-        globalState->getRegion(desiredValueType)
-            ->getCensusObjectId(FL(), functionState, builder, desiredReference, resultRef);
-    buildFlare(
-        FL(), globalState, functionState, builder,
-        "Allocated object ", structM->name->name, " &", ptrToIntLE(globalState, builder, ptrLE),
-        " obj id ", objIdLE, "\n");
+  assert(structM->sharedness == Sharedness::SINGLE);
+  // A SINGLE struct is an inline value: assemble it in a register from the member values, with no
+  // wrapper, control block, or address.
+  auto innerStructLT = kindStructs.getStructInnerStruct(structKind);
+  LLVMValueRef structValueLE = LLVMGetUndef(innerStructLT);
+  for (int i = 0; i < structM->members.size(); i++) {
+    auto memberType = structM->members[i]->type;
+    auto memberLE =
+        globalState->getRegion(memberType)
+            ->checkValidReference(FL(), functionState, builder, false, memberType, memberRefs[i]);
+    structValueLE = LLVMBuildInsertValue(builder, structValueLE, memberLE, i, "");
   }
+  return toRef(globalState->getRegion(desiredValueType), desiredReference, structValueLE);
 
-  return resultRef;
+  // auto countedStructL = kindStructs.getStructWrapperStruct(structKind);
+  //
+  // auto ptrLE = mallocKnownSize(globalState, functionState, builder, countedStructL);
+  //
+  // WrapperPtrLE newStructWrapperPtrLE =
+  //     kindStructs.makeWrapperPtr(
+  //         FL(), functionState, builder, desiredReference,
+  //         ptrLE);
+  // fillControlBlock(
+  //     FL(), functionState, builder, desiredValueType,
+  //     kindStructs.getConcreteControlBlockPtr(
+  //         FL(), functionState, builder, newStructWrapperPtrLE),
+  //     structM->name->name);
+  // auto structContentsPtrLT = kindStructs.getStructInnerStruct(structM->kind);
+  // auto structContentsPtrLE =
+  //     kindStructs.getStructContentsPtr(builder, newStructWrapperPtrLE);
+  // fillInnerStruct(
+  //     globalState,
+  //     functionState,
+  //     builder,
+  //     structM,
+  //     memberRefs,
+  //     structContentsPtrLT,
+  //     structContentsPtrLE);
+  //
+  // auto resultRef = toRef(globalState->getRegion(desiredValueType), desiredReference, newStructWrapperPtrLE.refLE);
+  //
+  // if (globalState->opt->census) {
+  //   auto objIdLE =
+  //       globalState->getRegion(desiredValueType)
+  //           ->getCensusObjectId(FL(), functionState, builder, desiredReference, resultRef);
+  //   buildFlare(
+  //       FL(), globalState, functionState, builder,
+  //       "Allocated object ", structM->name->name, " &", ptrToIntLE(globalState, builder, ptrLE),
+  //       " obj id ", objIdLE, "\n");
+  // }
+  //
+  // return resultRef;
 }
 
 void Unsafe::alias(
@@ -127,39 +142,7 @@ void Unsafe::alias(
     LLVMBuilderRef builder,
     Kind* sourceRef,
     Ref expr) {
-  { assert(false); throw 1337; }
-  // auto sourceRnd = sourceRef->kind;
-  //
-  // if (dynamic_cast<Int *>(sourceRnd) ||
-  //     dynamic_cast<Bool *>(sourceRnd) ||
-  //     dynamic_cast<Float *>(sourceRnd) ||
-  //     dynamic_cast<Void *>(sourceRnd)) {
-  //   // Do nothing for these, they're always inlined and copied.
-  // } else if (dynamic_cast<InterfaceKind *>(sourceRnd) ||
-  //     dynamic_cast<StructKind *>(sourceRnd) ||
-  //     dynamic_cast<StaticSizedArrayT *>(sourceRnd) ||
-  //     dynamic_cast<RuntimeSizedArrayT *>(sourceRnd) ||
-  //     dynamic_cast<Str *>(sourceRnd)) {
-  //   if (isValueType(sourceRef)) {
-  //     // We might be loading a member as an own if we're destructuring.
-  //     // Don't adjust the RC, since we're only moving it.
-  //   } else if (dynamic_cast<BorrowRef*>(sourceRef) != nullptr) {
-  //     // Do nothing, fast mode doesn't do stuff for borrow refs.
-  //   } else if (dynamic_cast<WeakRef*>(sourceRef) != nullptr) {
-  //     aliasWeakRef(from, functionState, builder, sourceRef, expr);
-  //   } else if (dynamic_cast<ShareRef*>(sourceRef) != nullptr) {
-  //     if (sourceRef->location == Location::INLINE) {
-  //       // Do nothing, we can just let inline structs disappear
-  //     } else {
-  //       adjustStrongRc(from, globalState, functionState, &kindStructs, builder, expr, sourceRef, 1);
-  //     }
-  //   } else
-  //     { assert(false); throw 1337; }
-  // } else {
-  //   std::cerr << "Unimplemented type in acquireReference: "
-  //       << typeid(*sourceRef->kind).name() << std::endl;
-  //   { assert(false); throw 1337; }
-  // }
+  // Do nothing, no alias code needed for borrow refs
 }
 
 void Unsafe::dealias(
@@ -168,17 +151,7 @@ void Unsafe::dealias(
     LLVMBuilderRef builder,
     Kind* sourceMT,
     Ref sourceRef) {
-  if (dynamic_cast<ShareRef*>(sourceMT) != nullptr) {
-    { assert(false); throw 1337; }
-  } else {
-    if (isValueType(sourceMT)) {
-      // This can happen if we're sending an owning reference to the outside world, see DEPAR.
-    } else if (dynamic_cast<BorrowRef*>(sourceMT) != nullptr) {
-      // Do nothing!
-    } else if (dynamic_cast<WeakRef*>(sourceMT) != nullptr) {
-      discardWeakRef(from, functionState, builder, sourceMT, sourceRef);
-    } else { assert(false); throw 1337; }
-  }
+  // Do nothing, no dealias code needed for borrow refs
 }
 
 Ref Unsafe::weakAlias(FunctionState* functionState, LLVMBuilderRef builder, Kind* sourceRefMT, Kind* targetRefMT, Ref sourceRef) {
@@ -256,8 +229,32 @@ Ref Unsafe::asSubtype(
       sourceInterfaceRefMT, sourceInterfaceRef, targetKind, buildThen, buildElse);
 }
 
-LLVMTypeRef Unsafe::translateType(Kind* referenceM) {
-  return translateReferenceSimple(globalState, &kindStructs, peel_all_references(referenceM));
+LLVMTypeRef Unsafe::translateType(Kind* typeM) {
+  DefaultPrimitives primitives;
+  if (auto valueType = dynamic_cast<ValueKind*>(typeM)) {
+    if (primitives.isPrimitive(valueType) || dynamic_cast<Never *>(valueType) != nullptr) {
+      return primitives.translatePrimitive(globalState, valueType);
+    } else if (auto ssaMT = dynamic_cast<StaticSizedArrayT *>(valueType)) {
+      return kindStructs.getStaticSizedArrayInnerStruct(ssaMT);
+    } else if (auto rsaMT = dynamic_cast<RuntimeSizedArrayT *>(valueType)) {
+      auto runtimeSizedArrayCountedStructLT = kindStructs.getRuntimeSizedArrayWrapperStruct(rsaMT);
+      return LLVMPointerType(runtimeSizedArrayCountedStructLT, 0);
+    } else if (auto structKind = dynamic_cast<StructKind *>(valueType)) {
+      return kindStructs.getStructInnerStruct(structKind);
+    } else if (auto interfaceKind = dynamic_cast<InterfaceKind *>(valueType)) {
+      auto interfaceRefStructL = kindStructs.getInterfaceRefStruct(interfaceKind);
+      return interfaceRefStructL;
+    } else {
+      { assert(false); throw 1337; }
+    }
+  } else if (auto borrowRef = dynamic_cast<BorrowRef *>(typeM)) {
+    auto innerLT = translateType(borrowRef->inner);
+    return LLVMPointerType(innerLT, 0);
+  } else {
+    std::cerr << "Unimplemented type: " << typeid(*typeM).name() << std::endl;
+    { assert(false); throw 1337; }
+    return nullptr;
+  }
 }
 
 Ref Unsafe::upcastWeak(
@@ -479,63 +476,17 @@ Ref Unsafe::upgradeLoadResultToRefWithTargetOwnership(
     Kind* sourceType,
     Kind* targetType,
     LoadResult sourceLoadResult) {
-  { assert(false); throw 1337; }
-//   auto sourceRef = sourceLoadResult.extractForAliasingInternals();
-//   auto sourceOwnership = sourceType->ownership;
-//   auto sourceLocation = sourceType->location;
-//   auto targetOwnership = targetType->ownership;
-//   auto targetLocation = targetType->location;
-// //  assert(sourceLocation == targetLocation); // unimplemented
-//
-//   if (sourceOwnership == Ownership::MUTABLE_SHARE || sourceOwnership == Ownership::IMMUTABLE_SHARE) {
-//     if (sourceLocation == Location::INLINE) {
-//       return sourceRef;
-//     } else {
-//       return sourceRef;
-//     }
-//   } else if (sourceOwnership == Ownership::OWN) {
-//     if (targetOwnership == Ownership::OWN) {
-//       // We can never "load" an owning ref from any of these:
-//       // - We can only get owning refs from locals by unstackifying
-//       // - We can only get owning refs from structs by destroying
-//       // - We can only get owning refs from elements by destroying
-//       // However, we CAN load owning refs by:
-//       // - Swapping from a local
-//       // - Swapping from an element
-//       // - Swapping from a member
-//       return sourceRef;
-//     } else if (targetOwnership == Ownership::MUTABLE_BORROW || targetOwnership == Ownership::IMMUTABLE_BORROW) {
-//       auto resultRef = transmutePtr(globalState, functionState, builder, false, sourceType, targetType, sourceRef);
-//       checkValidReference(FL(), functionState, builder, false, targetType, resultRef);
-//       return resultRef;
-//     } else if (targetOwnership == Ownership::WEAK) {
-//       { assert(false); throw 1337; }
-// //      return wrcWeaks.assembleWeakRef(functionState, builder, sourceType, targetType, sourceRef);
-//     } else {
-//       { assert(false); throw 1337; }
-//     }
-//   } else if (sourceOwnership == Ownership::MUTABLE_BORROW || sourceOwnership == Ownership::IMMUTABLE_BORROW) {
-//     buildFlare(FL(), globalState, functionState, builder);
-//
-//     if (targetOwnership == Ownership::OWN) {
-//       { assert(false); throw 1337; } // Cant load an owning reference from a constraint ref local.
-//     } else if (targetOwnership == Ownership::MUTABLE_BORROW || targetOwnership == Ownership::IMMUTABLE_BORROW) {
-//       return sourceRef;
-//     } else if (targetOwnership == Ownership::WEAK) {
-//       // Making a weak ref from a constraint ref local.
-//       assert(dynamic_cast<StructKind*>(peel_all_references(sourceType)) || dynamic_cast<InterfaceKind*>(peel_all_references(sourceType)));
-//       { assert(false); throw 1337; }
-// //      return wrcWeaks.assembleWeakRef(functionState, builder, sourceType, targetType, sourceRef);
-//     } else {
-//       { assert(false); throw 1337; }
-//     }
-//   } else if (sourceOwnership == Ownership::WEAK) {
-//     assert(targetOwnership == Ownership::WEAK);
-//     return sourceRef;
-//   } else {
-//     { assert(false); throw 1337; }
-//   }
-//   { assert(false); throw 1337; }
+  auto sourceRef = sourceLoadResult.move();
+  if (sourceType == targetType) {
+    // Same wrap (a value type, own->own, borrow->borrow, weak->weak): the loaded value already has
+    // the target ownership, so hand it back.
+    return sourceRef;
+  }
+  // The only ownership change a load performs is lending a borrow of an owning member/element: in the
+  // fast region own and borrow share a representation (a pointer, no refcount), so it's a pure pointer
+  // re-tag. Weakening is an explicit BorrowToWeak node, never a load-time upgrade.
+  assert(dynamic_cast<WeakRef*>(sourceType) == nullptr && dynamic_cast<WeakRef*>(targetType) == nullptr);
+  return transmutePtr(globalState, functionState, builder, false, sourceType, targetType, sourceRef);
 }
 
 void Unsafe::aliasWeakRef(
@@ -707,16 +658,25 @@ Ref Unsafe::loadMember(
     Kind* targetType,
     const std::string& memberName) {
 
-  if (dynamic_cast<ShareRef*>(structRefMT) != nullptr) {
-    { assert(false); throw 1337; }
-  } else {
-    auto unupgradedMemberLE =
-        regularLoadMember(
-            globalState, functionState, builder, &kindStructs, structRefMT, structRef,
-            memberIndex, expectedMemberType, targetType, memberName);
-    return upgradeLoadResultToRefWithTargetOwnership(
-        functionState, builder, expectedMemberType, targetType, unupgradedMemberLE);
-  }
+  auto structValueType = peel_all_references(structRefMT);
+  auto structKindM = dynamic_cast<StructKind *>(structValueType);
+  assert(structKindM);
+  auto structDefM = globalState->program->getStruct(structKindM);
+  assert(structDefM->sharedness == Sharedness::SINGLE);
+  auto structRefV = toRef(globalState, structRefMT, structRef);
+  auto structRefLE =
+      globalState->getRegion(structValueType)
+          ->checkValidReference(FL(), functionState, builder, true, structRefMT, structRefV);
+  // A SINGLE struct reference is a pointer to its (control-block-free) inner struct, so GEP to the
+  // member and load it, rather than extractvalue-ing out of an inline aggregate value.
+  auto innerStructLT = kindStructs.getStructInnerStruct(structKindM);
+  assert(LLVMGetTypeKind(LLVMTypeOf(structRefLE)) == LLVMPointerTypeKind);
+  auto ptrToMemberLE =
+      LLVMBuildStructGEP2(builder, innerStructLT, structRefLE, memberIndex, memberName.c_str());
+  // A member lookup yields a *borrow* of the member's storage — the GEP pointer itself — which the
+  // caller Derefs to read the value. No load here.
+  auto memberBorrowType = globalState->metalCache->getBorrowRef(expectedMemberType);
+  return toRef(globalState->getRegion(memberBorrowType), memberBorrowType, ptrToMemberLE);
 }
 
 void Unsafe::checkInlineStructType(
