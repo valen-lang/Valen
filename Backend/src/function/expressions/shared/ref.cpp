@@ -67,7 +67,7 @@ LLVMValueRef checkValidInternalReference(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    bool expectLive,
+    bool expectLive, // VCOORD: remove expectLive
     Kind* refM,
     Ref ref) {
   return globalState->getRegion(refM)

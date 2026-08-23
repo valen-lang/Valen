@@ -172,6 +172,24 @@ Ref translateExpressionInner(
             functionState, builder, false, restackify->variable->type, refToStore);
     LLVMBuildStore(builder, toStoreLE, localAddr);
     return makeVoidRef(globalState);
+  } else if (auto mutate = dynamic_cast<Mutate*>(expr)) {
+    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
+    // The purpose of LocalStore is to put a swap value into a local, and give
+    // what was in it.
+
+    auto destinationRefRef =
+      translateExpression(globalState, functionState, blockState, builder, mutate->destinationExpr);
+    auto oldRef =
+      globalState->getRegion(mutate->destinationType->inner)
+          ->load(functionState, builder, mutate->destinationType, destinationRefRef);
+
+    auto sourceRef =
+      translateExpression(globalState, functionState, blockState, builder, mutate->sourceExpr);
+
+    globalState->getRegion(mutate->destinationType->inner)
+        ->store(functionState, builder, mutate->sourceType, sourceRef, mutate->destinationType, destinationRefRef);
+
+    return oldRef;
   // } else if (auto localStore = dynamic_cast<LocalStore*>(expr)) {
   //   buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
   //   // The purpose of LocalStore is to put a swap value into a local, and give
@@ -212,10 +230,14 @@ Ref translateExpressionInner(
         AFL("WeakAlias drop constraintref"),
         functionState, builder, weakAlias->sourceType, sourceRef);
     return resultRef;
-  } else if (auto localLoad = dynamic_cast<LocalLoad*>(expr)) {
-    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name(), " ", localLoad->localName);
-
-    return translateLocalLoad(globalState, functionState, blockState, builder, localLoad);
+  } else if (auto localLookup = dynamic_cast<LocalLookup*>(expr)) {
+    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name(), " ", localLookup->localVariable->name);
+    auto local = localLookup->localVariable;
+    auto resultType = globalState->metalCache->getBorrowRef(local->type);
+    auto localAddr = blockState->getLocalAddr(local->id, true);
+    // We don't need a LLVMBuildLoad2 call here because LocalLookup just wants to produce a *pointer* to the local, it
+    // doesnt want the value yet. Whoever wants the value can Deref this.
+    return toRef(globalState->getRegion(resultType), resultType, localAddr);
   } else if (auto unstackify = dynamic_cast<Unstackify*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     // The purpose of Unstackify is to destroy the local and give what was in
@@ -269,11 +291,11 @@ Ref translateExpressionInner(
   } else if (auto destroySSAIntoLocalsM = dynamic_cast<DestroyStaticSizedArrayIntoLocals*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
     return translateDestroySSAIntoLocals(globalState, functionState, blockState, builder, destroySSAIntoLocalsM);
-  } else if (auto memberLoad = dynamic_cast<MemberLoad*>(expr)) {
+  } else if (auto memberLoad = dynamic_cast<MemberLookup*>(expr)) {
     buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name(), " ", memberLoad->memberName);
     auto structType = memberLoad->structType;
     auto structValueType = peel_all_references(structType);
-    auto expectedResultValueType = peel_all_references(memberLoad->expectedResultType);
+    auto expectedResultValueType = peel_all_references(memberLoad->result);
 
     auto structRef =
         translateExpression(
@@ -293,16 +315,16 @@ Ref translateExpressionInner(
             builder,
             memberLoad->structType,
             structLiveRef,
-            memberLoad->expectedMemberType,
+            memberLoad->memberType,
             memberIndex,
-            memberLoad->expectedResultType,
+            memberLoad->result,
             memberName);
     globalState->getRegion(expectedResultValueType)
-        ->checkValidReference(FL(), functionState, builder, false, memberLoad->expectedResultType, resultRef);
-    if (memberLoad->expectedMemberType == globalState->metalCache->i32Type) {
+        ->checkValidReference(FL(), functionState, builder, false, memberLoad->result, resultRef);
+    if (memberLoad->memberType == globalState->metalCache->i32Type) {
       auto valueForPrintingLE =
           globalState->getRegion(expectedResultValueType)
-              ->checkValidReference(FL(), functionState, builder, true, memberLoad->expectedResultType, resultRef);
+              ->checkValidReference(FL(), functionState, builder, true, memberLoad->result, resultRef);
       buildFlare(FL(), globalState, functionState, builder, "Loaded value: ", valueForPrintingLE);
     }
 

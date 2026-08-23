@@ -266,6 +266,7 @@ impl BreakIE {
 #[derive(Copy, Clone, Debug)]
 pub struct BlockIE<'s, 'i> {
 	pub inner: ExpressionIE<'s, 'i>,
+	pub inner_type: KindIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
 
@@ -293,6 +294,7 @@ pub struct StaticArrayFromValuesIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct ArraySizeIE<'s, 'i> {
 	pub array: ExpressionIE<'s, 'i>,
+	pub array_type: &'i BorrowRefIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
 
@@ -486,7 +488,9 @@ pub struct MemberLookupIE<'s, 'i> {
 	pub range: RangeS<'s>,
 	pub struct_expr: ExpressionIE<'s, 'i>,
 	pub struct_type: &'i BorrowRefIT<'s, 'i>,
+	pub member_index: i32,
 	pub member_name: IVarNameI<'s, 'i>,
+	pub member_type: KindIT<'s, 'i>,
 	pub result: &'i BorrowRefIT<'s, 'i>,
 }
 
@@ -529,6 +533,7 @@ pub struct FunctionCallIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct CopyPrimIE<'s, 'i> {
     pub inner: ExpressionIE<'s, 'i>,
+    pub source_type: KindIT<'s, 'i>,
     pub result: KindIT<'s, 'i>,
 }
 
@@ -661,6 +666,7 @@ pub struct PopRuntimeSizedArrayIE<'s, 'i> {
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceToInterfaceUpcastIE<'s, 'i> {
 	pub inner_expr: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 	pub target_interface: InterfaceIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }

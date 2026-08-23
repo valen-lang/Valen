@@ -119,11 +119,4 @@ Ref translateConstantStr(
     LLVMBuilderRef builder,
     ConstantStr* constantStr);
 
-Ref translateLocalLoad(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    BlockState* blockState,
-    LLVMBuilderRef builder,
-    LocalLoad* localLoad);
-
 #endif

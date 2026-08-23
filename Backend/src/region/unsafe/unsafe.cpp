@@ -988,3 +988,24 @@ LiveRef Unsafe::immutabilify(
   assert(dynamic_cast<BorrowRef*>(refMT) != nullptr);
   { assert(false); throw 1337; }
 }
+
+void Unsafe::store(FunctionState *functionState, LLVMBuilderRef builder, Kind *sourceMT, Ref sourceRef, Kind* destinationRefMT, Ref referenceRef) {
+  auto sourceLE =
+    globalState->getRegion(sourceMT)
+      ->checkValidReference(FL(), functionState, builder, false, sourceMT, sourceRef);
+  auto destinationRefLE =
+    globalState->getRegion(destinationRefMT)
+      ->checkValidReference(FL(), functionState, builder, false, destinationRefMT, referenceRef);
+  LLVMBuildStore(builder, sourceLE, destinationRefLE);
+}
+
+Ref Unsafe::load(FunctionState *functionState, LLVMBuilderRef builder, BorrowRef *sourceRefMT, Ref sourceRef) {
+  auto sourceValueLT = globalState->getRegion(sourceRefMT->inner)->translateType(sourceRefMT->inner);
+  auto sourceRefLE =
+    globalState->getRegion(sourceRefMT)
+      ->checkValidReference(FL(), functionState, builder, false, sourceRefMT, sourceRef);
+  // VCOORD: something better than "unknown"?
+  auto resultLE =
+    LLVMBuildLoad2(builder, sourceValueLT, sourceRefLE, "unknown");
+  return toRef(globalState->getRegion(sourceRefMT->inner), sourceRefMT->inner, resultLE);
+}

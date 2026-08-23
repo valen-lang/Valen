@@ -186,7 +186,7 @@ extern "C" {
 
     fn metal_expr_deref(inner: *mut c_void, source_type: *mut c_void, result: *mut c_void) -> *mut c_void;
     fn metal_expr_member_lookup(
-        struct_expr: *mut c_void, struct_type: *mut c_void, member_name_ptr: *const c_char, member_name_len: usize, result: *mut c_void,
+        struct_expr: *mut c_void, struct_type: *mut c_void, member_index: i32, member_name_ptr: *const c_char, member_name_len: usize, member_type: *mut c_void, result: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_static_sized_array_lookup(
         array_expr: *mut c_void, array_type: *mut c_void, index_expr: *mut c_void, index_type: *mut c_void, result: *mut c_void,
@@ -644,11 +644,11 @@ impl MetalCache {
     pub fn expr_deref<'c>(&'c self, inner: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
         unsafe { Expression(NonNull::new(metal_expr_deref(inner.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
     }
-    pub fn expr_member_lookup<'c>(&'c self, struct_expr: Expression<'c>, struct_type: Kind<'c>, member_name: &str, result: Kind<'c>) -> Expression<'c> {
+    pub fn expr_member_lookup<'c>(&'c self, struct_expr: Expression<'c>, struct_type: Kind<'c>, member_index: i32, member_name: &str, member_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
         unsafe {
             Expression(
                 NonNull::new(metal_expr_member_lookup(
-                    struct_expr.0.as_ptr(), struct_type.0.as_ptr(), member_name.as_ptr() as *const c_char, member_name.len(), result.0.as_ptr(),
+                    struct_expr.0.as_ptr(), struct_type.0.as_ptr(), member_index, member_name.as_ptr() as *const c_char, member_name.len(), member_type.0.as_ptr(), result.0.as_ptr(),
                 )).unwrap(),
                 PhantomData,
             )

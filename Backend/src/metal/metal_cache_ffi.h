@@ -181,7 +181,7 @@ ExpressionHandle* metal_expr_local_lookup(LocalHandle* local_variable, KindHandl
 // Deref / member & array lookups.
 ExpressionHandle* metal_expr_deref(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result);
 ExpressionHandle* metal_expr_member_lookup(
-    ExpressionHandle* struct_expr, KindHandle* struct_type, const char* member_name_ptr, size_t member_name_len, KindHandle* result);
+    ExpressionHandle* struct_expr, KindHandle* struct_type, int32_t member_index, const char* member_name_ptr, size_t member_name_len, KindHandle* member_type, KindHandle* result);
 ExpressionHandle* metal_expr_static_sized_array_lookup(
     ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result);
 ExpressionHandle* metal_expr_runtime_sized_array_lookup(

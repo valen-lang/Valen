@@ -23,11 +23,19 @@ C++ backend is rewired to consume `HinputsI` directly. Full plan: `docs/plans/co
 
 Steps 1–3 are landed; Step 4 (backend thinks onion) builds and runs. The C++ backend compiles, links,
 and runs simple programs end-to-end. Remaining is the feature set behind the `// ZCOORD` tests — struct
-allocate/members, extern/export roundtrips, string read/len, lambdas, upcast — plus the `Mutate`
-expression handler (the `set x = …` case, unimplemented in `translateExpressionInner`,
-`Backend/src/function/expression.cpp`). A residual placement/ownership cluster is shrinking but not gone
-(`grep -rc '\->location\|\->ownership' Backend/src`; the `VCOORD` sites in `Backend/src`); resolve each
-onto `Sharedness` (see constraint). See `docs/plans/complete-backend-plan.md` Step 4.
+allocate/members, extern/export roundtrips, string read/len, lambdas, upcast. A residual
+placement/ownership cluster is shrinking but not gone (`grep -rc '\->location\|\->ownership' Backend/src`;
+the `VCOORD` sites in `Backend/src`); resolve each onto `Sharedness` (see constraint). See
+`docs/plans/complete-backend-plan.md` Step 4.
+
+**Lookups yield a borrow *of storage*, not a loaded value.** A `LocalLookup`/`MemberLookup`/array-lookup
+evaluates to a borrow whose representation *is* the storage pointer (the local's alloca, a member GEP) —
+`Deref` reads through it, `Mutate` stores through it, and the own→borrow step folds into the lookup itself
+(no separate load/upgrade). `Mutate` and `LocalLookup` run on this model (`mutswaplocals` passes); next is
+putting `MemberLookup` and the array lookups on it too, which is what dissolves the still-stubbed
+`Unsafe::upgradeLoadResultToRefWithTargetOwnership` — still called by the SSA/RSA-lookup and `destructure`
+load paths, but `→weak` is the explicit `BorrowToWeak` node and own→borrow belongs in the lookup, so don't
+migrate its old ownership/location body.
 
 ## ValueKind — a type-level "wrap-free kind" (orthogonal to the onion migration)
 
@@ -38,16 +46,21 @@ compile error. Every audited value-kind inspector now demands the witness: the c
 the naming/export/weakability group (`GlobalState::getKindName`/`getKindWeakability`, region
 `getExportName`/`getExternalType`/`getKindWeakability`, Package `getKindExportName`/`getKindHumanName`/
 `getKindExternName`), the `function.cpp` C-ABI trio (`translatesToCVoid`/`typeNeedsPointerParameter`/
-`translateExternReturnType`), `translateWeakReference`, `fillWeakableControlBlock`, `intRangeLoopReverse`,
-the rcimm `valeKind` prototype cluster, and `getRegion` itself (its ~400 callers peel at the call site).
+`translateExternReturnType`), `translateWeakReference`, `fillWeakableControlBlock`, `intRangeLoopReverse`, and
+the rcimm `valeKind` prototype cluster.
 The dead never-read `Kind*` params the audit found are deleted (`getInterfaceMethodVirtualParamAnyType`,
 `getWeakRefHeaderStruct`/`getWeakVoidRefStruct`, `getIsAliveFromWeakFatPtr`, the `reference`/`kindM` on the
 `getConcreteControlBlockPtr`/interface-`getControlBlockPtr` variants, and the RSA-size helpers' `rsaRefMT`).
+When a function peels the same reference more than once, hoist it into a single `<name>ValueType` local and
+reuse it (the backend follows this; a repeat that reaches into a lambda is added to the lambda's capture).
 
 **Signature rule:** a function that only inspects the concrete kind (peels immediately, or dispatches on
 value subtypes with `assert(false)` on wraps) takes `ValueKind*`; one that dynamic_casts the param to a
 wrap, asserts a wrap, or stores/forwards the raw ref (into a `Ref`/fat-ptr/`ControlBlockPtrLE`) keeps
-`Kind*`. A wrap's `inner` stays `Kind*` — wraps nest (`BorrowRef<BorrowRef<…>>` is real).
+`Kind*`. A wrap's `inner` stays `Kind*` — wraps nest (`BorrowRef<BorrowRef<…>>` is real). `getRegion(Kind*)`
+is the deliberate exception: it peels internally rather than demanding `ValueKind*` (a flip to `ValueKind*`
+was tried and reverted — it only pushed a redundant peel onto its ~400 callers for no real safety gain at
+the region-dispatch boundary).
 
 **Still deferred:** `asSubtype`/`regularDowncast`/`resilientDowncast` `targetKind` — live bodies are
 `assert(false)` stubs; flip to `ValueKind*` when implemented.

@@ -1262,11 +1262,25 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     other => panic!("MemberLookup struct_expr must produce a borrow, got {:?}", other),
                 };
                 let member_name = Self::translate_var_name(self.interner, &member_name_t);
+                // Resolve the member's index by name from the struct definition (typing owns member
+                // order, which instantiation preserves) so downstream codegen never re-derives it.
+                let struct_id_t = match peel_all_references(struct_expr_t.result()) {
+                    KindT::Struct(s) => s.id,
+                    other => panic!("MemberLookup struct_expr type must be a struct, got {:?}", other),
+                };
+                let member_index =
+                    self.find_struct(&struct_id_t).members.iter()
+                        .position(|m| m.name == member_name_t)
+                        .expect("MemberLookup: member name not found in struct") as i32;
+                // The member's (instantiated) type is the storage type the result borrow wraps.
+                let member_type = result_borrow.inner;
                 ExpressionIE::MemberLookup(self.interner.bump().alloc(MemberLookupIE {
                     range,
                     struct_expr: struct_ce,
                     struct_type: struct_borrow,
+                    member_index,
                     member_name,
+                    member_type,
                     result: result_borrow,
                 }))
             }
@@ -1405,7 +1419,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &w.block.inner);
                 ExpressionIE::While(self.interner.alloc(WhileIE {
-                    block: BlockIE { inner: inner_ce, result: inner_it },
+                    block: BlockIE { inner: inner_ce, inner_type: inner_it, result: inner_it },
                     result: result_it,
                 }))
             }
@@ -1448,10 +1462,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 ExpressionIE::Break(self.interner.alloc(BreakIE))
             }
             ExpressionTE::Block(b) => {
-                let (_inner_it, inner_ce) =
+                let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &b.inner);
                 ExpressionIE::Block(self.interner.alloc(BlockIE {
                     inner: inner_ce,
+                    inner_type: inner_it,
                     result: result_it,
                 }))
             }
@@ -1633,10 +1648,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 inner_ce
             }
             ExpressionTE::CopyPrim(cp) => {
-                let (_inner_it, inner_ce) =
+                let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &cp.inner);
                 ExpressionIE::CopyPrim(self.interner.alloc(CopyPrimIE {
                     inner: inner_ce,
+                    source_type: inner_it,
                     result: result_it,
                 }))
             }

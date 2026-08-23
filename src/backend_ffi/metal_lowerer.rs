@@ -312,7 +312,9 @@ impl<'cache> Lowerer<'cache> {
             ExpressionIE::MemberLookup(x) => c.expr_member_lookup(
                 self.lower_expression(&x.struct_expr),
                 self.lower_borrow(x.struct_type),
+                x.member_index,
                 &humanize_var_name(x.member_name),
+                self.lower_kind(x.member_type),
                 self.lower_borrow(x.result),
             ),
             ExpressionIE::StaticSizedArrayLookup(x) => c.expr_static_sized_array_lookup(

@@ -6,9 +6,7 @@ fn p(rel: &str) -> std::path::PathBuf {
     programs_dir().join(rel)
 }
 
-#[test]
-#[ignore] // ZCOORD: re-enable with onion
-fn mutswaplocals()          { assert_compile_and_run(&p("programs/mutswaplocals.vale"), 42); }
+#[test] fn mutswaplocals()          { assert_compile_and_run(&p("programs/mutswaplocals.vale"), 42); }
 #[test]
 #[ignore = "deferred at experimental-2 squash baseline"]
 fn restackify()             { assert_compile_and_run(&p("programs/restackify.vale"), 42); }

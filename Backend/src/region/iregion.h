@@ -43,6 +43,20 @@ public:
       Kind* sourceMT,
       Ref sourceRef) = 0;
 
+  virtual void store(
+    FunctionState *functionState,
+    LLVMBuilderRef builder,
+    Kind *sourceMT,
+    Ref sourceRef,
+    Kind* destinationRefMT,
+    Ref referenceRef) = 0;
+
+  virtual Ref load(
+      FunctionState* functionState,
+      LLVMBuilderRef builder,
+      BorrowRef* sourceRefMT,
+      Ref sourceRef) = 0;
+
   virtual void storeMember(
       FunctionState* functionState,
       LLVMBuilderRef builder,

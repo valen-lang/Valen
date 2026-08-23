@@ -70,7 +70,6 @@ set(BACKEND_LIB_SRCS
 		src/function/expressions/externs.cpp
 		src/function/expressions/if.cpp
 		src/function/expressions/constantstr.cpp
-		src/function/expressions/localload.cpp
 		src/function/expressions/while.cpp
 		src/function/expressions/newruntimesizearray.cpp
 		src/function/expressions/staticarrayfromcallable.cpp

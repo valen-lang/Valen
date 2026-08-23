@@ -226,17 +226,6 @@ public:
       destinationExpr(destinationExpr_), destinationType(destinationType_), sourceExpr(sourceExpr_), sourceType(sourceType_), result(result_) {}
 };
 
-class LocalLoad : public Expression {
-public:
-  Local* local;
-  std::string localName;
-
-  LocalLoad(
-      Local* local,
-      std::string localName) :
-      local(local),
-        localName(localName) {}
-};
 
 // TODO: replace LocalLoad with this perhaps?
 class LocalLookup : public Expression {
@@ -262,44 +251,45 @@ public:
     sourceType(sourceType_),
     result(result_) {}
 };
+//
+// class MemberLoad : public Expression {
+// public:
+//   Expression* structExpr;
+//   StructKind* structId;
+//   Kind* structType;
+//   int memberIndex;
+//   Kind* expectedMemberType;
+//   Kind* expectedResultType;
+//   std::string memberName;
+//
+//   MemberLoad(
+//       Expression* structExpr_,
+//       StructKind* structId_,
+//       Kind* structType_,
+//       int memberIndex_,
+//       Kind* expectedMemberType_,
+//       Kind* expectedResultType_,
+//       std::string memberName_) :
+//     structExpr(structExpr_),
+//     structId(structId_),
+//     structType(structType_),
+//     memberIndex(memberIndex_),
+//     expectedMemberType(expectedMemberType_),
+//     expectedResultType(expectedResultType_),
+//     memberName(memberName_) {}
+// };
 
-class MemberLoad : public Expression {
-public:
-  Expression* structExpr;
-  StructKind* structId;
-  Kind* structType;
-  int memberIndex;
-  Kind* expectedMemberType;
-  Kind* expectedResultType;
-  std::string memberName;
-
-  MemberLoad(
-      Expression* structExpr_,
-      StructKind* structId_,
-      Kind* structType_,
-      int memberIndex_,
-      Kind* expectedMemberType_,
-      Kind* expectedResultType_,
-      std::string memberName_) :
-    structExpr(structExpr_),
-    structId(structId_),
-    structType(structType_),
-    memberIndex(memberIndex_),
-    expectedMemberType(expectedMemberType_),
-    expectedResultType(expectedResultType_),
-    memberName(memberName_) {}
-};
-
-// TODO: replace MemberLoad with this perhaps?
 class MemberLookup : public Expression {
 public:
   Expression* structExpr;
   BorrowRef* structType;
+  int memberIndex;
   std::string memberName;
+  Kind* memberType;
   Kind* result;
 
-  MemberLookup(Expression* structExpr_, BorrowRef* structType_, std::string memberName_, Kind* result_) :
-      structExpr(structExpr_), structType(structType_), memberName(memberName_), result(result_) {}
+  MemberLookup(Expression* structExpr_, BorrowRef* structType_, int memberIndex_, std::string memberName_, Kind* memberType_, Kind* result_) :
+      structExpr(structExpr_), structType(structType_), memberIndex(memberIndex_), memberName(memberName_), memberType(memberType_), result(result_) {}
 };
 
 

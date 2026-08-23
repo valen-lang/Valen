@@ -359,9 +359,9 @@ extern "C" VIS ExpressionHandle* metal_expr_deref(ExpressionHandle* inner, KindH
   return reinterpret_cast<ExpressionHandle*>(new Deref(ex(inner), knd(source_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_member_lookup(
-    ExpressionHandle* struct_expr, KindHandle* struct_type, const char* member_name_ptr, size_t member_name_len, KindHandle* result) {
+    ExpressionHandle* struct_expr, KindHandle* struct_type, int32_t member_index, const char* member_name_ptr, size_t member_name_len, KindHandle* member_type, KindHandle* result) {
   return reinterpret_cast<ExpressionHandle*>(new MemberLookup(
-      ex(struct_expr), brf(struct_type), str(member_name_ptr, member_name_len), knd(result)));
+      ex(struct_expr), brf(struct_type), member_index, str(member_name_ptr, member_name_len), knd(member_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_static_sized_array_lookup(
     ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result) {

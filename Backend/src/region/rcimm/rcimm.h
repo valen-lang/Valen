@@ -465,6 +465,10 @@ public:
       Ref ref,
       Kind* targetRefMT) override;
 
+  void store(FunctionState *functionState, LLVMBuilderRef builder, Kind *sourceMT, Ref sourceRef, Kind* destinationRefMT, Ref referenceRef) override;
+
+  Ref load(FunctionState *functionState, LLVMBuilderRef builder, BorrowRef *sourceRefMT, Ref sourceRef) override;
+
 private:
   void declareConcreteFreeFunction(ValueKind* valeKindM);
   void defineConcreteFreeFunction(ValueKind* valeKindM);
@@ -538,7 +542,8 @@ private:
       ValueKind* kind,
       Ref objectRef);
 
-//  // Does the entire serialization process: measuring the length, allocating a buffer, and
+private:
+  //  // Does the entire serialization process: measuring the length, allocating a buffer, and
 //  // serializing into it.
 //  Ref topLevelFree(
 //      FunctionState* functionState,
