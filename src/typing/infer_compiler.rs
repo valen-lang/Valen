@@ -414,7 +414,7 @@ where
           .human_name();
         let function_name = self
           .scout_arena
-          .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: func_name }));
+          .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: func_name }));
         // Per @ENECCLZ / plan §5: search the environments of the values the bound's generic
         // runes concluded to (the closure's env for `func __call(&Lam)T` at Lam=closure), not
         // the whole parameter type `&closure`, which contributes no namespace.
@@ -1015,7 +1015,7 @@ where
     let extra_envs = self.get_param_environments(state, &full_ranges, &search_kinds, true);
     let function_name = self
       .scout_arena
-      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: c.name }));
+      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: c.name }));
     // Per @ENECCLZ, a bound is satisfied only by a function whose signature matches exactly (exact=true).
     let explicit_template_arg_rules_s = &[];
     let positional_explicit_template_arg_runes_s = &[];

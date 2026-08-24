@@ -37,7 +37,21 @@ impl<'s> VariableDeclarations<'s> {
     match needle {
       IImpreciseNameS::CodeName(needle_name) => {
         self.vars.iter().find_map(|decl| match &decl.name {
-          IVarDeclarationNameS::CodeVarName(haystack) if haystack.name == needle_name.name => {
+          IVarDeclarationNameS::CodeVarName(haystack)
+            if haystack.imprecise_name.name == needle_name.name =>
+          {
+            Some(decl.name.clone())
+          }
+          _ => None,
+        })
+      }
+      // A `self.x` reference resolves to the constructing member the Let-pattern already declared,
+      // by spelling (members are unique by spelling within a constructor).
+      IImpreciseNameS::ConstructingMemberImpreciseName(needle_name) => {
+        self.vars.iter().find_map(|decl| match &decl.name {
+          IVarDeclarationNameS::ConstructingMemberName(haystack)
+            if haystack.imprecise_name.name == needle_name.name =>
+          {
             Some(decl.name.clone())
           }
           _ => None,
@@ -45,7 +59,9 @@ impl<'s> VariableDeclarations<'s> {
       }
       IImpreciseNameS::IterableName(needle_name) => {
         self.vars.iter().find_map(|decl| match &decl.name {
-          IVarDeclarationNameS::IterableName(haystack_name) if *haystack_name == needle_name.range => {
+          IVarDeclarationNameS::IterableName(haystack_name)
+            if haystack_name.imprecise_name.range == needle_name.range =>
+          {
             Some(decl.name.clone())
           }
           _ => None,
@@ -53,7 +69,9 @@ impl<'s> VariableDeclarations<'s> {
       }
       IImpreciseNameS::IteratorName(needle_name) => {
         self.vars.iter().find_map(|decl| match &decl.name {
-          IVarDeclarationNameS::IteratorName(haystack_name) if *haystack_name == needle_name.range => {
+          IVarDeclarationNameS::IteratorName(haystack_name)
+            if haystack_name.imprecise_name.range == needle_name.range =>
+          {
             Some(decl.name.clone())
           }
           _ => None,
@@ -61,14 +79,16 @@ impl<'s> VariableDeclarations<'s> {
       }
       IImpreciseNameS::IterationOptionName(needle_name) => {
         self.vars.iter().find_map(|decl| match &decl.name {
-          IVarDeclarationNameS::IterationOptionName(haystack_name) if *haystack_name == needle_name.range => {
+          IVarDeclarationNameS::IterationOptionName(haystack_name)
+            if haystack_name.imprecise_name.range == needle_name.range =>
+          {
             Some(decl.name.clone())
           }
           _ => None,
         })
       }
       IImpreciseNameS::SelfName(_) => self.vars.iter().find_map(|decl| match &decl.name {
-        IVarDeclarationNameS::SelfName => Some(decl.name.clone()),
+        IVarDeclarationNameS::SelfName(_) => Some(decl.name.clone()),
         _ => None,
       }),
       _ => None,

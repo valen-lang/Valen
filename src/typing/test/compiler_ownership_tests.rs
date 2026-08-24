@@ -228,7 +228,7 @@ exported func main() {
     ICompileErrorT::CouldntFindFunctionToCallT {
       fff:
         FindFunctionFailure {
-          name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("drop") }), ..
+          name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("drop"), .. }), ..
         },
       ..
     } => {}
@@ -392,7 +392,7 @@ fn restackify() {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::Restackify(RestackifyTE {
           variable: LocalVariable {
-              name: IVarNameT::Local(LocalNameT { name: StrI("ship"), .. }),
+              name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("ship"), .. }, .. }),
               ..
           },
           ..
@@ -430,7 +430,7 @@ fn loop_restackify() {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::Restackify(RestackifyTE {
           variable: LocalVariable {
-              name: IVarNameT::Local(LocalNameT { name: StrI("ship"), .. }),
+              name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("ship"), .. }, .. }),
               ..
           },
           ..
@@ -468,7 +468,7 @@ fn destructure_restackify() {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::Restackify(RestackifyTE {
           variable: LocalVariable {
-              name: IVarNameT::Local(LocalNameT { name: StrI("ship"), .. }),
+              name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("ship"), .. }, .. }),
               ..
           },
           ..

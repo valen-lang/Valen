@@ -4,6 +4,7 @@ use crate::collect_only_tnode;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
+use crate::postparsing::names::CodeNameS;
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::new_test_code_map;
 use crate::tests::tests::new_test_package_source;
@@ -231,7 +232,7 @@ exported func main() int {
       NodeRefT::FunctionDefinition(lambda),
       NodeRefT::Parameter(
           ParameterT {
-              name: IVarNameT::Member(MemberNameT { name: StrI("a"), .. }),
+              name: IVarNameT::Member(MemberNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }),
               virtuality: None,
               tyype: KindT::Int(IntT { bits: 32 }),
               ..

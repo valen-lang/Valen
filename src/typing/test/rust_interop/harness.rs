@@ -311,6 +311,7 @@ where
             &global_options,
             &instantiating_interner,
             &typing_interner,
+            &scout_arena,
             &keywords,
             coutputs,
           );

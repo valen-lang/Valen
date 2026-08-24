@@ -564,7 +564,7 @@ fn printable_name<'s, 't>(
     INameS::TopLevelInterfaceDeclaration(n) => n.name.0.to_string(),
     INameS::FunctionDeclaration(n) => match n {
       IFunctionDeclarationNameS::FunctionName(fn_name) => {
-        format!("{}: {}", code_map(fn_name.code_location), fn_name.name.0)
+        format!("{}: {}", code_map(fn_name.code_location), fn_name.imprecise_name.name.0)
       }
       IFunctionDeclarationNameS::LambdaDeclarationName(_) => {
         panic!("implement: printable_name LambdaDeclarationName");
@@ -605,8 +605,8 @@ fn printable_id<'s, 't>(id: IdT<'s, 't>) -> String {
 
 fn printable_var_name<'s, 't>(name: IVarNameT<'s, 't>) -> String {
   match name {
-    IVarNameT::Member(n) => n.name.0.to_string(),
-    IVarNameT::Local(n) => n.name.0.to_string(),
+    IVarNameT::Member(n) => n.imprecise_name.name.0.to_string(),
+    IVarNameT::Local(n) => n.imprecise_name.name.0.to_string(),
     _ => panic!("implement: printable_var_name other"),
   }
 }
@@ -1308,8 +1308,8 @@ pub fn humanize_name<'s, 't>(
     INameT::KindPlaceholderTemplate(n) => {
       crate::postparsing::post_parser_error_humanizer::humanize_rune(n.rune)
     }
-    INameT::Member(n) => n.name.0.to_string(),
-    INameT::Local(n) => n.name.0.to_string(),
+    INameT::Member(n) => n.imprecise_name.name.0.to_string(),
+    INameT::Local(n) => n.imprecise_name.name.0.to_string(),
     INameT::LambdaCitizen(n) => {
       humanize_name(
         scout_arena,

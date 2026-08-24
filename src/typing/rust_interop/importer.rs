@@ -18,7 +18,7 @@
 // in by `&mut`.
 
 use crate::interner::StrI;
-use crate::postparsing::ast::{FunctionS, InterfaceS, StructS};
+use crate::postparsing::ast::{FunctionS, InterfaceS, LocationInDenizen, StructS};
 use crate::postparsing::names::{FunctionNameS, IFunctionDeclarationNameS};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::StructDefinitionT;
@@ -161,8 +161,11 @@ where
   's: 't,
 {
   let loc = CodeLocationS::internal(compiler.scout_arena, SYNTHESIZED_RANGE_OFFSET);
-  let name_s =
-    IFunctionDeclarationNameS::FunctionName(FunctionNameS { name: human_name, code_location: loc });
+  let name_s = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+    imprecise_name: compiler.scout_arena.intern_code_name(human_name),
+    code_location: loc,
+    lid: LocationInDenizen { path: &[] },
+  });
   match compiler.translate_generic_function_name(name_s) {
     IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
     other => panic!("lazy extern function got an unexpected template name shape: {:?}", other),

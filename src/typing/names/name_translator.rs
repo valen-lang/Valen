@@ -7,6 +7,7 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use std::marker::PhantomData;
 use std::mem::discriminant;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where
@@ -43,7 +44,7 @@ where
       }
       IFunctionDeclarationNameS::FunctionName(n) => IFunctionTemplateNameT::FunctionTemplate(
         self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
-          human_name: n.name,
+          human_name: n.imprecise_name.name,
           code_location: self.translate_code_location(n.code_location),
         }),
       ),
@@ -87,12 +88,6 @@ where
             )
           }
         }
-      }
-      IFunctionDeclarationNameS::ImmConcreteDestructorName(_) => {
-        panic!("Unimplemented: ImmConcreteDestructorName in translate_generic_function_name")
-      }
-      IFunctionDeclarationNameS::ImmInterfaceDestructorName(_) => {
-        panic!("Unimplemented: ImmInterfaceDestructorName in translate_generic_function_name")
       }
     }
   }
@@ -230,7 +225,10 @@ where
           }
           IFunctionDeclarationNameS::FunctionName(n) => {
             INameT::FunctionTemplate(self.typing_interner.intern_function_template_name(
-              FunctionTemplateNameT { human_name: n.name, code_location: n.code_location },
+              FunctionTemplateNameT {
+                human_name: n.imprecise_name.name,
+                code_location: n.code_location,
+              },
             ))
           }
           IFunctionDeclarationNameS::ConstructorName(ctor) => {
@@ -259,12 +257,6 @@ where
           IFunctionDeclarationNameS::ForwarderFunctionDeclarationName(_) => {
             panic!("Unimplemented: translate_name_step ForwarderFunctionDeclarationName")
           }
-          IFunctionDeclarationNameS::ImmConcreteDestructorName(_) => {
-            panic!("Unimplemented: translate_name_step ImmConcreteDestructorName")
-          }
-          IFunctionDeclarationNameS::ImmInterfaceDestructorName(_) => {
-            panic!("Unimplemented: translate_name_step ImmInterfaceDestructorName")
-          }
         }
       }
     }
@@ -276,31 +268,40 @@ where
 
   pub fn translate_var_name_step(&self, name: IVarDeclarationNameS<'s>) -> IVarNameT<'s, 't> {
     match name {
-      IVarDeclarationNameS::CodeVarName(n) => IVarNameT::Local(
-        self.typing_interner.intern_local_name(LocalNameT { name: n.name, lid: n.lid }),
-      ),
-      IVarDeclarationNameS::ClosureParamName(closure_param_name_s) => {
-        IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT {
-          code_location: closure_param_name_s.code_location,
-        }))
+      IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name, lid }) => {
+        IVarNameT::Local(
+          self.typing_interner.intern_local_name(LocalNameT { imprecise_name, life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
+        )
       }
-      IVarDeclarationNameS::MagicParamName(code_location) => {
-        IVarNameT::MagicParam(self.typing_interner.intern_magic_param_name(MagicParamNameT {
-          code_location2: self.translate_code_location(code_location),
-        }))
+      IVarDeclarationNameS::ClosureParamName(ClosureParamNameDeclarationS { imprecise_name, lid }) => {
+        IVarNameT::ClosureParam(
+          self.typing_interner.intern_closure_param_name(ClosureParamNameT { imprecise_name, life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
+        )
       }
-      IVarDeclarationNameS::SelfName => IVarNameT::Self_(self.typing_interner.intern_self_name(SelfNameT {})),
-      IVarDeclarationNameS::ConstructingMemberName(n) => IVarNameT::ConstructingMember(
-        self.typing_interner.intern_constructing_member_name(ConstructingMemberNameT { name: n }),
-      ),
-      IVarDeclarationNameS::IterableName(range) => {
-        IVarNameT::Iterable(self.typing_interner.intern_iterable_name(IterableNameT { range }))
+      IVarDeclarationNameS::MagicParamName(MagicParamNameDeclarationS { lid, .. }) => {
+        IVarNameT::MagicParam(
+          self.typing_interner.intern_magic_param_name(MagicParamNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
+        )
       }
-      IVarDeclarationNameS::IteratorName(range) => {
-        IVarNameT::Iterator(self.typing_interner.intern_iterator_name(IteratorNameT { range }))
+      IVarDeclarationNameS::SelfName(SelfNameDeclarationS { lid, .. }) => {
+        IVarNameT::Self_(self.typing_interner.intern_self_name(SelfNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }))
       }
-      IVarDeclarationNameS::IterationOptionName(range) => IVarNameT::IterationOption(
-        self.typing_interner.intern_iteration_option_name(IterationOptionNameT { range }),
+      IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name, lid }) => {
+        IVarNameT::ConstructingMember(
+          self.typing_interner.intern_constructing_member_name(ConstructingMemberNameT {
+            imprecise_name,
+            life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid),
+          }),
+        )
+      }
+      IVarDeclarationNameS::IterableName(IterableNameDeclarationS { lid, .. }) => {
+        IVarNameT::Iterable(self.typing_interner.intern_iterable_name(IterableNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }))
+      }
+      IVarDeclarationNameS::IteratorName(IteratorNameDeclarationS { lid, .. }) => {
+        IVarNameT::Iterator(self.typing_interner.intern_iterator_name(IteratorNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }))
+      }
+      IVarDeclarationNameS::IterationOptionName(IterationOptionNameDeclarationS{ lid, .. }) => IVarNameT::IterationOption(
+        self.typing_interner.intern_iteration_option_name(IterationOptionNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
       ),
       _ => {
         panic!("implement: translate_var_name_step — {:?}", discriminant(&name));

@@ -1,6 +1,6 @@
 use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::names::{ClosureParamImpreciseNameS, CodeNameS, ConstructingMemberImpreciseNameS, IImpreciseNameS};
 use crate::postparsing::names::IRuneS;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::templata::templata::{expect_integer, expect_kind_templata, ITemplataT};
@@ -170,21 +170,16 @@ pub enum INameT<'s, 't> {
   OverrideDispatcher(&'t OverrideDispatcherNameT<'s, 't>),
   OverrideDispatcherCase(&'t OverrideDispatcherCaseNameT<'s, 't>),
   TypingPassBlockResultVar(&'t TypingPassBlockResultVarNameT<'t>),
-  TypingPassFunctionResultVar(&'t TypingPassFunctionResultVarNameT),
+  TypingPassFunctionResultVar(&'t TypingPassFunctionResultVarNameT<'t>),
   TypingPassTemporaryVar(&'t TypingPassTemporaryVarNameT<'t>),
-  TypingPassPatternMember(&'t TypingPassPatternMemberNameT<'t>),
-  TypingPassPatternDestructuree(&'t TypingPassPatternDestructureeNameT<'t>),
-  UnnamedLocal(&'t UnnamedLocalNameT<'s>),
-  ClosureParam(&'t ClosureParamNameT<'s>),
-  ConstructingMember(&'t ConstructingMemberNameT<'s>),
-  WhileCondResult(&'t WhileCondResultNameT<'s>),
-  Iterable(&'t IterableNameT<'s>),
-  Iterator(&'t IteratorNameT<'s>),
-  IterationOption(&'t IterationOptionNameT<'s>),
-  MagicParam(&'t MagicParamNameT<'s>),
-  Member(&'t MemberNameT<'s>),
-  Local(&'t LocalNameT<'s>),
-  AnonymousSubstructMember(&'t AnonymousSubstructMemberNameT),
+  ClosureParam(&'t ClosureParamNameT<'s, 't>),
+  ConstructingMember(&'t ConstructingMemberNameT<'s, 't>),
+  Iterable(&'t IterableNameT<'t>),
+  Iterator(&'t IteratorNameT<'t>),
+  IterationOption(&'t IterationOptionNameT<'t>),
+  MagicParam(&'t MagicParamNameT<'t>),
+  Member(&'t MemberNameT<'s, 't>),
+  Local(&'t LocalNameT<'s, 't>),
   Primitive(&'t PrimitiveNameT<'s>),
   PackageTopLevel(&'t PackageTopLevelNameT),
   Project(&'t ProjectNameT<'s>),
@@ -205,7 +200,7 @@ pub enum INameT<'s, 't> {
   LambdaCallFunction(&'t LambdaCallFunctionNameT<'s, 't>),
   ForwarderFunctionTemplate(&'t ForwarderFunctionTemplateNameT<'s, 't>),
   ConstructorTemplate(&'t ConstructorTemplateNameT<'s>),
-  Self_(&'t SelfNameT),
+  Self_(&'t SelfNameT<'t>),
   Arbitrary(&'t ArbitraryNameT),
   Struct(&'t StructNameT<'s, 't>),
   Interface(&'t InterfaceNameT<'s, 't>),
@@ -1168,22 +1163,22 @@ pub struct OverrideDispatcherCaseNameT<'s, 't> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IVarNameT<'s, 't> {
   TypingPassBlockResultVar(&'t TypingPassBlockResultVarNameT<'t>),
-  TypingPassFunctionResultVar(&'t TypingPassFunctionResultVarNameT),
+  TypingPassFunctionResultVar(&'t TypingPassFunctionResultVarNameT<'t>),
   TypingPassTemporaryVar(&'t TypingPassTemporaryVarNameT<'t>),
-  TypingPassPatternMember(&'t TypingPassPatternMemberNameT<'t>),
-  TypingPassPatternDestructuree(&'t TypingPassPatternDestructureeNameT<'t>),
-  UnnamedLocal(&'t UnnamedLocalNameT<'s>),
-  ClosureParam(&'t ClosureParamNameT<'s>),
-  ConstructingMember(&'t ConstructingMemberNameT<'s>),
-  WhileCondResult(&'t WhileCondResultNameT<'s>),
-  Iterable(&'t IterableNameT<'s>),
-  Iterator(&'t IteratorNameT<'s>),
-  IterationOption(&'t IterationOptionNameT<'s>),
-  MagicParam(&'t MagicParamNameT<'s>),
-  Member(&'t MemberNameT<'s>),
-  Local(&'t LocalNameT<'s>),
-  AnonymousSubstructMember(&'t AnonymousSubstructMemberNameT),
-  Self_(&'t SelfNameT),
+  // TypingPassPatternMember(&'t TypingPassPatternMemberNameT<'t>),
+  // TypingPassPatternDestructuree(&'t TypingPassPatternDestructureeNameT<'t>),
+  // UnnamedLocal(&'t UnnamedLocalNameT<'s>),
+  ClosureParam(&'t ClosureParamNameT<'s, 't>),
+  ConstructingMember(&'t ConstructingMemberNameT<'s, 't>),
+  // WhileCondResult(&'t WhileCondResultNameT<'s>),
+  Iterable(&'t IterableNameT<'t>),
+  Iterator(&'t IteratorNameT<'t>),
+  IterationOption(&'t IterationOptionNameT<'t>),
+  MagicParam(&'t MagicParamNameT<'t>),
+  Member(&'t MemberNameT<'s, 't>),
+  Local(&'t LocalNameT<'s, 't>),
+  // AnonymousSubstructMember(&'t AnonymousSubstructMemberNameT),
+  Self_(&'t SelfNameT<'t>),
 }
 
 /// Interned (see @TFITCX)
@@ -1194,7 +1189,9 @@ pub struct TypingPassBlockResultVarNameT<'t> {
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct TypingPassFunctionResultVarNameT {}
+pub struct TypingPassFunctionResultVarNameT<'t> {
+  pub life: LocationInFunctionEnvironmentT<'t>
+}
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1202,84 +1199,87 @@ pub struct TypingPassTemporaryVarNameT<'t> {
   pub life: LocationInFunctionEnvironmentT<'t>,
 }
 
+// /// Interned (see @TFITCX)
+// #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// pub struct TypingPassPatternMemberNameT<'t> {
+//   pub life: LocationInFunctionEnvironmentT<'t>,
+// }
+
+// /// Interned (see @TFITCX)
+// #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// pub struct TypingPassPatternDestructureeNameT<'t> {
+//   pub life: LocationInFunctionEnvironmentT<'t>,
+// }
+
+// /// Interned (see @TFITCX)
+// #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// pub struct UnnamedLocalNameT<'s> {
+//   pub code_location: CodeLocationS<'s>,
+// }
+
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct TypingPassPatternMemberNameT<'t> {
-  pub life: LocationInFunctionEnvironmentT<'t>,
+pub struct ClosureParamNameT<'s, 't> {
+  pub imprecise_name: &'s ClosureParamImpreciseNameS,
+  pub life: LocationInFunctionEnvironmentT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct TypingPassPatternDestructureeNameT<'t> {
-  pub life: LocationInFunctionEnvironmentT<'t>,
+pub struct ConstructingMemberNameT<'s, 't> {
+  pub imprecise_name: &'s ConstructingMemberImpreciseNameS<'s>,
+  pub life: LocationInFunctionEnvironmentT<'t>
+}
+
+// /// Interned (see @TFITCX)
+// #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// pub struct WhileCondResultNameT<'s> {
+//   pub range: RangeS<'s>,
+// }
+
+/// Interned (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IterableNameT<'t> {
+  pub life: LocationInFunctionEnvironmentT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct UnnamedLocalNameT<'s> {
-  pub code_location: CodeLocationS<'s>,
+pub struct IteratorNameT<'t> {
+  pub life: LocationInFunctionEnvironmentT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct ClosureParamNameT<'s> {
-  pub code_location: CodeLocationS<'s>,
+pub struct IterationOptionNameT<'t> {
+  pub life: LocationInFunctionEnvironmentT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct ConstructingMemberNameT<'s> {
-  pub name: StrI<'s>,
+pub struct MagicParamNameT<'t> {
+  pub life: LocationInFunctionEnvironmentT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct WhileCondResultNameT<'s> {
-  pub range: RangeS<'s>,
+pub struct MemberNameT<'s, 't> {
+  pub imprecise_name: &'s CodeNameS<'s>,
+  pub life: LocationInFunctionEnvironmentT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IterableNameT<'s> {
-  pub range: RangeS<'s>,
+pub struct LocalNameT<'s, 't> {
+  pub imprecise_name: &'s CodeNameS<'s>,
+  pub life: LocationInFunctionEnvironmentT<'t>
 }
 
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IteratorNameT<'s> {
-  pub range: RangeS<'s>,
-}
-
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IterationOptionNameT<'s> {
-  pub range: RangeS<'s>,
-}
-
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct MagicParamNameT<'s> {
-  pub code_location2: CodeLocationS<'s>,
-}
-
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct MemberNameT<'s> {
-  pub name: StrI<'s>,
-}
-
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct LocalNameT<'s> {
-  pub name: StrI<'s>,
-  pub lid: LocationInDenizen<'s>,
-}
-
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct AnonymousSubstructMemberNameT {
-  pub index: i32,
-}
+// /// Interned (see @TFITCX)
+// #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+// pub struct AnonymousSubstructMemberNameT {
+//   pub index: i32,
+// }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1422,7 +1422,9 @@ pub struct ConstructorTemplateNameT<'s> {
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct SelfNameT {}
+pub struct SelfNameT<'t> {
+  pub life: LocationInFunctionEnvironmentT<'t>
+}
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1661,8 +1663,8 @@ impl<'s, 't> From<&'t TypingPassBlockResultVarNameT<'t>> for INameT<'s, 't> {
     INameT::TypingPassBlockResultVar(x)
   }
 }
-impl<'s, 't> From<&'t TypingPassFunctionResultVarNameT> for INameT<'s, 't> {
-  fn from(x: &'t TypingPassFunctionResultVarNameT) -> Self {
+impl<'s, 't> From<&'t TypingPassFunctionResultVarNameT<'t>> for INameT<'s, 't> {
+  fn from(x: &'t TypingPassFunctionResultVarNameT<'t>) -> Self {
     INameT::TypingPassFunctionResultVar(x)
   }
 }
@@ -1671,69 +1673,44 @@ impl<'s, 't> From<&'t TypingPassTemporaryVarNameT<'t>> for INameT<'s, 't> {
     INameT::TypingPassTemporaryVar(x)
   }
 }
-impl<'s, 't> From<&'t TypingPassPatternMemberNameT<'t>> for INameT<'s, 't> {
-  fn from(x: &'t TypingPassPatternMemberNameT<'t>) -> Self {
-    INameT::TypingPassPatternMember(x)
-  }
-}
-impl<'s, 't> From<&'t TypingPassPatternDestructureeNameT<'t>> for INameT<'s, 't> {
-  fn from(x: &'t TypingPassPatternDestructureeNameT<'t>) -> Self {
-    INameT::TypingPassPatternDestructuree(x)
-  }
-}
-impl<'s, 't> From<&'t UnnamedLocalNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t UnnamedLocalNameT<'s>) -> Self {
-    INameT::UnnamedLocal(x)
-  }
-}
-impl<'s, 't> From<&'t ClosureParamNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t ClosureParamNameT<'s>) -> Self {
+impl<'s, 't> From<&'t ClosureParamNameT<'s, 't>> for INameT<'s, 't> {
+  fn from(x: &'t ClosureParamNameT<'s, 't>) -> Self {
     INameT::ClosureParam(x)
   }
 }
-impl<'s, 't> From<&'t ConstructingMemberNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t ConstructingMemberNameT<'s>) -> Self {
+impl<'s, 't> From<&'t ConstructingMemberNameT<'s, 't>> for INameT<'s, 't> {
+  fn from(x: &'t ConstructingMemberNameT<'s, 't>) -> Self {
     INameT::ConstructingMember(x)
   }
 }
-impl<'s, 't> From<&'t WhileCondResultNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t WhileCondResultNameT<'s>) -> Self {
-    INameT::WhileCondResult(x)
-  }
-}
-impl<'s, 't> From<&'t IterableNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t IterableNameT<'s>) -> Self {
+impl<'s, 't> From<&'t IterableNameT<'t>> for INameT<'s, 't> {
+  fn from(x: &'t IterableNameT<'t>) -> Self {
     INameT::Iterable(x)
   }
 }
-impl<'s, 't> From<&'t IteratorNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t IteratorNameT<'s>) -> Self {
+impl<'s, 't> From<&'t IteratorNameT<'t>> for INameT<'s, 't> {
+  fn from(x: &'t IteratorNameT<'t>) -> Self {
     INameT::Iterator(x)
   }
 }
-impl<'s, 't> From<&'t IterationOptionNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t IterationOptionNameT<'s>) -> Self {
+impl<'s, 't> From<&'t IterationOptionNameT<'t>> for INameT<'s, 't> {
+  fn from(x: &'t IterationOptionNameT<'t>) -> Self {
     INameT::IterationOption(x)
   }
 }
-impl<'s, 't> From<&'t MagicParamNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t MagicParamNameT<'s>) -> Self {
+impl<'s, 't> From<&'t MagicParamNameT<'t>> for INameT<'s, 't> {
+  fn from(x: &'t MagicParamNameT<'t>) -> Self {
     INameT::MagicParam(x)
   }
 }
-impl<'s, 't> From<&'t MemberNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t MemberNameT<'s>) -> Self {
+impl<'s, 't> From<&'t MemberNameT<'s, 't>> for INameT<'s, 't> {
+  fn from(x: &'t MemberNameT<'s, 't>) -> Self {
     INameT::Member(x)
   }
 }
-impl<'s, 't> From<&'t LocalNameT<'s>> for INameT<'s, 't> {
-  fn from(x: &'t LocalNameT<'s>) -> Self {
+impl<'s, 't> From<&'t LocalNameT<'s, 't>> for INameT<'s, 't> {
+  fn from(x: &'t LocalNameT<'s, 't>) -> Self {
     INameT::Local(x)
-  }
-}
-impl<'s, 't> From<&'t AnonymousSubstructMemberNameT> for INameT<'s, 't> {
-  fn from(x: &'t AnonymousSubstructMemberNameT) -> Self {
-    INameT::AnonymousSubstructMember(x)
   }
 }
 impl<'s, 't> From<&'t PrimitiveNameT<'s>> for INameT<'s, 't> {
@@ -1836,8 +1813,8 @@ impl<'s, 't> From<&'t ConstructorTemplateNameT<'s>> for INameT<'s, 't> {
     INameT::ConstructorTemplate(x)
   }
 }
-impl<'s, 't> From<&'t SelfNameT> for INameT<'s, 't> {
-  fn from(x: &'t SelfNameT) -> Self {
+impl<'s, 't> From<&'t SelfNameT<'t>> for INameT<'s, 't> {
+  fn from(x: &'t SelfNameT<'t>) -> Self {
     INameT::Self_(x)
   }
 }
@@ -2491,8 +2468,8 @@ impl<'s, 't> From<&'t TypingPassBlockResultVarNameT<'t>> for IVarNameT<'s, 't> {
     IVarNameT::TypingPassBlockResultVar(x)
   }
 }
-impl<'s, 't> From<&'t TypingPassFunctionResultVarNameT> for IVarNameT<'s, 't> {
-  fn from(x: &'t TypingPassFunctionResultVarNameT) -> Self {
+impl<'s, 't> From<&'t TypingPassFunctionResultVarNameT<'t>> for IVarNameT<'s, 't> {
+  fn from(x: &'t TypingPassFunctionResultVarNameT<'t>) -> Self {
     IVarNameT::TypingPassFunctionResultVar(x)
   }
 }
@@ -2501,73 +2478,68 @@ impl<'s, 't> From<&'t TypingPassTemporaryVarNameT<'t>> for IVarNameT<'s, 't> {
     IVarNameT::TypingPassTemporaryVar(x)
   }
 }
-impl<'s, 't> From<&'t TypingPassPatternMemberNameT<'t>> for IVarNameT<'s, 't> {
-  fn from(x: &'t TypingPassPatternMemberNameT<'t>) -> Self {
-    IVarNameT::TypingPassPatternMember(x)
-  }
-}
-impl<'s, 't> From<&'t TypingPassPatternDestructureeNameT<'t>> for IVarNameT<'s, 't> {
-  fn from(x: &'t TypingPassPatternDestructureeNameT<'t>) -> Self {
-    IVarNameT::TypingPassPatternDestructuree(x)
-  }
-}
-impl<'s, 't> From<&'t UnnamedLocalNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t UnnamedLocalNameT<'s>) -> Self {
-    IVarNameT::UnnamedLocal(x)
-  }
-}
-impl<'s, 't> From<&'t ClosureParamNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t ClosureParamNameT<'s>) -> Self {
+// impl<'s, 't> From<&'t TypingPassPatternMemberNameT<'t>> for IVarNameT<'s, 't> {
+//   fn from(x: &'t TypingPassPatternMemberNameT<'t>) -> Self {
+//     IVarNameT::TypingPassPatternMember(x)
+//   }
+// }
+// impl<'s, 't> From<&'t TypingPassPatternDestructureeNameT<'t>> for IVarNameT<'s, 't> {
+//   fn from(x: &'t TypingPassPatternDestructureeNameT<'t>) -> Self {
+//     IVarNameT::TypingPassPatternDestructuree(x)
+//   }
+// }
+// impl<'s, 't> From<&'t UnnamedLocalNameT<'s>> for IVarNameT<'s, 't> {
+//   fn from(x: &'t UnnamedLocalNameT<'s>) -> Self {
+//     IVarNameT::UnnamedLocal(x)
+//   }
+// }
+impl<'s, 't> From<&'t ClosureParamNameT<'s, 't>> for IVarNameT<'s, 't> {
+  fn from(x: &'t ClosureParamNameT<'s, 't>) -> Self {
     IVarNameT::ClosureParam(x)
   }
 }
-impl<'s, 't> From<&'t ConstructingMemberNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t ConstructingMemberNameT<'s>) -> Self {
+impl<'s, 't> From<&'t ConstructingMemberNameT<'s, 't>> for IVarNameT<'s, 't> {
+  fn from(x: &'t ConstructingMemberNameT<'s, 't>) -> Self {
     IVarNameT::ConstructingMember(x)
   }
 }
-impl<'s, 't> From<&'t WhileCondResultNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t WhileCondResultNameT<'s>) -> Self {
-    IVarNameT::WhileCondResult(x)
-  }
-}
-impl<'s, 't> From<&'t IterableNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t IterableNameT<'s>) -> Self {
+// impl<'s, 't> From<&'t WhileCondResultNameT<'s>> for IVarNameT<'s, 't> {
+//   fn from(x: &'t WhileCondResultNameT<'s>) -> Self {
+//     IVarNameT::WhileCondResult(x)
+//   }
+// }
+impl<'s, 't> From<&'t IterableNameT<'t>> for IVarNameT<'s, 't> {
+  fn from(x: &'t IterableNameT<'t>) -> Self {
     IVarNameT::Iterable(x)
   }
 }
-impl<'s, 't> From<&'t IteratorNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t IteratorNameT<'s>) -> Self {
+impl<'s, 't> From<&'t IteratorNameT<'t>> for IVarNameT<'s, 't> {
+  fn from(x: &'t IteratorNameT<'t>) -> Self {
     IVarNameT::Iterator(x)
   }
 }
-impl<'s, 't> From<&'t IterationOptionNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t IterationOptionNameT<'s>) -> Self {
+impl<'s, 't> From<&'t IterationOptionNameT<'t>> for IVarNameT<'s, 't> {
+  fn from(x: &'t IterationOptionNameT<'t>) -> Self {
     IVarNameT::IterationOption(x)
   }
 }
-impl<'s, 't> From<&'t MagicParamNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t MagicParamNameT<'s>) -> Self {
+impl<'s, 't> From<&'t MagicParamNameT<'t>> for IVarNameT<'s, 't> {
+  fn from(x: &'t MagicParamNameT<'t>) -> Self {
     IVarNameT::MagicParam(x)
   }
 }
-impl<'s, 't> From<&'t MemberNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t MemberNameT<'s>) -> Self {
+impl<'s, 't> From<&'t MemberNameT<'s, 't>> for IVarNameT<'s, 't> {
+  fn from(x: &'t MemberNameT<'s, 't>) -> Self {
     IVarNameT::Member(x)
   }
 }
-impl<'s, 't> From<&'t LocalNameT<'s>> for IVarNameT<'s, 't> {
-  fn from(x: &'t LocalNameT<'s>) -> Self {
+impl<'s, 't> From<&'t LocalNameT<'s, 't>> for IVarNameT<'s, 't> {
+  fn from(x: &'t LocalNameT<'s, 't>) -> Self {
     IVarNameT::Local(x)
   }
 }
-impl<'s, 't> From<&'t AnonymousSubstructMemberNameT> for IVarNameT<'s, 't> {
-  fn from(x: &'t AnonymousSubstructMemberNameT) -> Self {
-    IVarNameT::AnonymousSubstructMember(x)
-  }
-}
-impl<'s, 't> From<&'t SelfNameT> for IVarNameT<'s, 't> {
-  fn from(x: &'t SelfNameT) -> Self {
+impl<'s, 't> From<&'t SelfNameT<'t>> for IVarNameT<'s, 't> {
+  fn from(x: &'t SelfNameT<'t>) -> Self {
     IVarNameT::Self_(x)
   }
 }
@@ -2778,19 +2750,14 @@ impl<'s, 't> From<IVarNameT<'s, 't>> for INameT<'s, 't> {
       IVarNameT::TypingPassBlockResultVar(x) => x.into(),
       IVarNameT::TypingPassFunctionResultVar(x) => x.into(),
       IVarNameT::TypingPassTemporaryVar(x) => x.into(),
-      IVarNameT::TypingPassPatternMember(x) => x.into(),
-      IVarNameT::TypingPassPatternDestructuree(x) => x.into(),
-      IVarNameT::UnnamedLocal(x) => x.into(),
       IVarNameT::ClosureParam(x) => x.into(),
       IVarNameT::ConstructingMember(x) => x.into(),
-      IVarNameT::WhileCondResult(x) => x.into(),
       IVarNameT::Iterable(x) => x.into(),
       IVarNameT::Iterator(x) => x.into(),
       IVarNameT::IterationOption(x) => x.into(),
       IVarNameT::MagicParam(x) => x.into(),
       IVarNameT::Member(x) => x.into(),
       IVarNameT::Local(x) => x.into(),
-      IVarNameT::AnonymousSubstructMember(x) => x.into(),
       IVarNameT::Self_(x) => x.into(),
     }
   }
@@ -3210,19 +3177,19 @@ impl<'s, 't> TryFrom<INameT<'s, 't>> for IVarNameT<'s, 't> {
       INameT::TypingPassBlockResultVar(x) => Ok(IVarNameT::TypingPassBlockResultVar(x)),
       INameT::TypingPassFunctionResultVar(x) => Ok(IVarNameT::TypingPassFunctionResultVar(x)),
       INameT::TypingPassTemporaryVar(x) => Ok(IVarNameT::TypingPassTemporaryVar(x)),
-      INameT::TypingPassPatternMember(x) => Ok(IVarNameT::TypingPassPatternMember(x)),
-      INameT::TypingPassPatternDestructuree(x) => Ok(IVarNameT::TypingPassPatternDestructuree(x)),
-      INameT::UnnamedLocal(x) => Ok(IVarNameT::UnnamedLocal(x)),
+      // INameT::TypingPassPatternMember(x) => Ok(IVarNameT::TypingPassPatternMember(x)),
+      // INameT::TypingPassPatternDestructuree(x) => Ok(IVarNameT::TypingPassPatternDestructuree(x)),
+      // INameT::UnnamedLocal(x) => Ok(IVarNameT::UnnamedLocal(x)),
       INameT::ClosureParam(x) => Ok(IVarNameT::ClosureParam(x)),
       INameT::ConstructingMember(x) => Ok(IVarNameT::ConstructingMember(x)),
-      INameT::WhileCondResult(x) => Ok(IVarNameT::WhileCondResult(x)),
+      // INameT::WhileCondResult(x) => Ok(IVarNameT::WhileCondResult(x)),
       INameT::Iterable(x) => Ok(IVarNameT::Iterable(x)),
       INameT::Iterator(x) => Ok(IVarNameT::Iterator(x)),
       INameT::IterationOption(x) => Ok(IVarNameT::IterationOption(x)),
       INameT::MagicParam(x) => Ok(IVarNameT::MagicParam(x)),
       INameT::Member(x) => Ok(IVarNameT::Member(x)),
       INameT::Local(x) => Ok(IVarNameT::Local(x)),
-      INameT::AnonymousSubstructMember(x) => Ok(IVarNameT::AnonymousSubstructMember(x)),
+      // INameT::AnonymousSubstructMember(x) => Ok(IVarNameT::AnonymousSubstructMember(x)),
       INameT::Self_(x) => Ok(IVarNameT::Self_(x)),
       _ => Err(()),
     }
@@ -3745,21 +3712,16 @@ where
   OverrideDispatcher(OverrideDispatcherNameValT<'s, 't, 'tmp>),
   OverrideDispatcherCase(OverrideDispatcherCaseNameValT<'s, 't, 'tmp>),
   TypingPassBlockResultVar(TypingPassBlockResultVarNameT<'t>),
-  TypingPassFunctionResultVar(TypingPassFunctionResultVarNameT),
+  TypingPassFunctionResultVar(TypingPassFunctionResultVarNameT<'t>),
   TypingPassTemporaryVar(TypingPassTemporaryVarNameT<'t>),
-  TypingPassPatternMember(TypingPassPatternMemberNameT<'t>),
-  TypingPassPatternDestructuree(TypingPassPatternDestructureeNameT<'t>),
-  UnnamedLocal(UnnamedLocalNameT<'s>),
-  ClosureParam(ClosureParamNameT<'s>),
-  ConstructingMember(ConstructingMemberNameT<'s>),
-  WhileCondResult(WhileCondResultNameT<'s>),
-  Iterable(IterableNameT<'s>),
-  Iterator(IteratorNameT<'s>),
-  IterationOption(IterationOptionNameT<'s>),
-  MagicParam(MagicParamNameT<'s>),
-  Member(MemberNameT<'s>),
-  Local(LocalNameT<'s>),
-  AnonymousSubstructMember(AnonymousSubstructMemberNameT),
+  ClosureParam(ClosureParamNameT<'s, 't>),
+  ConstructingMember(ConstructingMemberNameT<'s, 't>),
+  Iterable(IterableNameT<'t>),
+  Iterator(IteratorNameT<'t>),
+  IterationOption(IterationOptionNameT<'t>),
+  MagicParam(MagicParamNameT<'t>),
+  Member(MemberNameT<'s, 't>),
+  Local(LocalNameT<'s, 't>),
   Primitive(PrimitiveNameT<'s>),
   PackageTopLevel(PackageTopLevelNameT),
   Project(ProjectNameT<'s>),
@@ -3780,7 +3742,7 @@ where
   LambdaCallFunction(LambdaCallFunctionNameValT<'s, 't, 'tmp>),
   ForwarderFunctionTemplate(ForwarderFunctionTemplateNameT<'s, 't>),
   ConstructorTemplate(ConstructorTemplateNameT<'s>),
-  Self_(SelfNameT),
+  Self_(SelfNameT<'t>),
   Arbitrary(ArbitraryNameT),
   Struct(StructNameValT<'s, 't, 'tmp>),
   Interface(InterfaceNameValT<'s, 't, 'tmp>),
@@ -3874,19 +3836,14 @@ where
       (TypingPassBlockResultVar(a), TypingPassBlockResultVar(b)) => a == b,
       (TypingPassFunctionResultVar(a), TypingPassFunctionResultVar(b)) => a == b,
       (TypingPassTemporaryVar(a), TypingPassTemporaryVar(b)) => a == b,
-      (TypingPassPatternMember(a), TypingPassPatternMember(b)) => a == b,
-      (TypingPassPatternDestructuree(a), TypingPassPatternDestructuree(b)) => a == b,
-      (UnnamedLocal(a), UnnamedLocal(b)) => a == b,
       (ClosureParam(a), ClosureParam(b)) => a == b,
       (ConstructingMember(a), ConstructingMember(b)) => a == b,
-      (WhileCondResult(a), WhileCondResult(b)) => a == b,
       (Iterable(a), Iterable(b)) => a == b,
       (Iterator(a), Iterator(b)) => a == b,
       (IterationOption(a), IterationOption(b)) => a == b,
       (MagicParam(a), MagicParam(b)) => a == b,
       (Member(a), Member(b)) => a == b,
       (Local(a), Local(b)) => a == b,
-      (AnonymousSubstructMember(a), AnonymousSubstructMember(b)) => a == b,
       (Primitive(a), Primitive(b)) => a == b,
       (PackageTopLevel(a), PackageTopLevel(b)) => a == b,
       (Project(a), Project(b)) => a == b,

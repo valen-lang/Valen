@@ -13,8 +13,8 @@ use crate::parsing::ast::{
 use crate::postparsing::ast::{
   AbstractBodyS, AbstractSP, BuiltinS, CodeBodyS, ExportS, ExternBodyS, ExternS, FunctionS,
   GeneratedBodyS, GenericParameterS, IBodyS, IFunctionAttributeS, IGenericParameterTypeS,
-  KindGenericParameterTypeS, LocationInDenizenBuilder, ParameterS, RegionGenericParameterTypeS,
-  UserFunctionS,
+  KindGenericParameterTypeS, LocationInDenizen, LocationInDenizenBuilder, ParameterS,
+  RegionGenericParameterTypeS, UserFunctionS,
 };
 use crate::postparsing::expressions::LocalS;
 use crate::postparsing::expressions::{
@@ -23,11 +23,14 @@ use crate::postparsing::expressions::{
 use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
+use crate::postparsing::names::CodeNameValS;
 use crate::postparsing::names::{
-  ClosureParamNameS, CodeNameS, CodeRuneS, CodeVarNameS, DenizenDefaultRegionRuneS, FunctionNameS,
-  IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IImpreciseNameValS, INameS, INameValS,
-  IRuneS, IRuneValS, IVarDeclarationNameS, IVarDeclarationNameValS, ImplicitRegionRuneValS, ImplicitRuneValS,
-  LambdaDeclarationNameS, LambdaStructDeclarationNameS, MagicParamRuneValS,
+  ClosureParamImpreciseNameS, ClosureParamNameDeclarationS, CodeNameS, CodeRuneS, CodeVarNameS,
+  ConstructingMemberImpreciseNameS, ConstructingMemberNameDeclarationS,
+  DenizenDefaultRegionRuneS, DesugaredParamNameDeclarationS, DesugaredParamNameS,
+  FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameValS,
+  INameS, INameValS, IRuneS, IRuneValS, IVarDeclarationNameS, ImplicitRegionRuneValS,
+  ImplicitRuneValS, LambdaDeclarationNameS, LambdaStructDeclarationNameS, MagicParamRuneValS,
 };
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::patterns::AtomSP;
@@ -81,6 +84,10 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     &self,
     file_coordinate: &'s FileCoordinate<'s>,
     function: &FunctionP<'p>,
+    // The LID this denizen's coordinate space is rooted at: empty for a top-level function or
+    // interface method; the lambda's own unique LID for a lambda, so its declarations nest within
+    // the enclosing top-level function instead of restarting at empty.
+    denizen_root_path: Vec<i32>,
     maybe_parent: IFunctionParent<'s>,
   ) -> Result<(&'s FunctionS<'s>, VariableUses<'s>), ICompileErrorS<'s>> {
     // AFTERM: check the order of these various chunks of logic
@@ -170,32 +177,48 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         }
       }
     }
-    let mut lidb = LocationInDenizenBuilder::new(vec![]);
+    // A denizen's own name sits at its root LID (the seed — `[]` for a top-level function, the
+    // nested path for a lambda). Capture it before the builder takes ownership of the path.
+    let denizen_root_lid =
+      LocationInDenizen { path: self.scout_arena.alloc_slice_copy(&denizen_root_path) };
+    let mut lidb = LocationInDenizenBuilder::new(denizen_root_path);
+    // A lambda's closure (self/env) param is declared once but built at two sites — its capture
+    // declaration below and its ParameterS in create_closure_param — so mint its lid once here,
+    // off the function root, and share it to both, keeping the two constructions one identity.
+    let closure_param_lid = if is_parent_function {
+      Some(lidb.child().consume_in_arena(self.scout_arena))
+    } else {
+      None
+    };
     let mut rules: Vec<IRulexSR<'s>> = Vec::new();
     let mut impl_bounds: Vec<ImplBoundS<'s>> = Vec::new();
-    let function_declaration_name = match (&maybe_parent, function_name) {
-      (IFunctionParent::ParentFunction { .. }, Some(_)) => {
-        panic!("POSTPARSER_SCOUT_LAMBDA_WITH_NAME_NOT_YET_IMPLEMENTED");
-      }
-      (_, Some(function_name)) => self.scout_arena.intern_name(INameValS::FunctionDeclaration(
-        IFunctionDeclarationNameValS::FunctionName(FunctionNameS {
-          name: self.scout_arena.intern_str(function_name.str().as_str()),
+    // Function declaration names are identity (not interned, @WVSBIZ): built directly, carrying the
+    // denizen-root lid and the interned imprecise (spelling) name, then wrapped in
+    // `INameS::FunctionDeclaration` where a denizen name is needed.
+    let function_declaration_name_for_env: IFunctionDeclarationNameS<'s> =
+      match (&maybe_parent, function_name) {
+        (IFunctionParent::ParentFunction { .. }, Some(_)) => {
+          panic!("POSTPARSER_SCOUT_LAMBDA_WITH_NAME_NOT_YET_IMPLEMENTED");
+        }
+        (_, Some(function_name)) => IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+          imprecise_name: self
+            .scout_arena
+            .intern_code_name(self.scout_arena.intern_str(function_name.str().as_str())),
           code_location: Self::eval_pos(file_coordinate, function.range.begin()),
+          lid: denizen_root_lid,
         }),
-      )),
-      (IFunctionParent::ParentFunction { .. }, None) => {
-        self.scout_arena.intern_name(INameValS::FunctionDeclaration(
-          IFunctionDeclarationNameValS::LambdaDeclarationName(LambdaDeclarationNameS {
+        (IFunctionParent::ParentFunction { .. }, None) => {
+          IFunctionDeclarationNameS::LambdaDeclarationName(LambdaDeclarationNameS {
+            imprecise_name: self.scout_arena.intern_lambda_imprecise_name(),
             code_location: Self::eval_pos(file_coordinate, function.range.begin()),
-          }),
-        ))
-      }
-      _ => panic!("POSTPARSER_SCOUT_FUNCTION_WITHOUT_NAME"),
-    };
-    let function_declaration_name_for_env = match &function_declaration_name {
-      INameS::FunctionDeclaration(r) => (*r).clone(),
-      _ => panic!("POSTPARSER_INTERN_FUNCTION_NAME_EXPECTED_FUNCTION_DECLARATION"),
-    };
+            lid: denizen_root_lid,
+          })
+        }
+        _ => panic!("POSTPARSER_SCOUT_FUNCTION_WITHOUT_NAME"),
+      };
+    let function_declaration_name = INameS::FunctionDeclaration(
+      self.scout_arena.alloc_function_declaration_name(function_declaration_name_for_env),
+    );
     let extra_generic_params_from_parent: Vec<&'s GenericParameterS<'s>> = match &maybe_parent {
       IFunctionParent::ParentCitizen(ParentCitizen { citizen_generic_params, .. }) => {
         citizen_generic_params.to_vec()
@@ -374,7 +397,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
               ))),
             };
             let self_name = IVarDeclarationNameS::CodeVarName(CodeVarNameS {
-              name: self.keywords.self_,
+              imprecise_name: self.scout_arena.intern_code_name(self.keywords.self_),
               lid: lidb.child().consume_in_arena(self.scout_arena),
             });
             // Placeholder ITypeST naming the implicit self kind rune (no user-written type).
@@ -410,18 +433,33 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
               Some(destination) => match &destination.decl {
                 INameDeclarationP::LocalNameDeclaration(name_p) => {
                   IVarDeclarationNameS::CodeVarName(CodeVarNameS {
-                    name: self.scout_arena.intern_str(name_p.str().as_str()),
+                    imprecise_name: self
+                      .scout_arena
+                      .intern_code_name(self.scout_arena.intern_str(name_p.str().as_str())),
                     lid: pattern_lidb.child().consume_in_arena(self.scout_arena),
                   })
                 }
                 INameDeclarationP::ConstructingMemberNameDeclaration(name_p) => {
-                  IVarDeclarationNameS::ConstructingMemberName(
-                    self.scout_arena.intern_str(name_p.str().as_str()),
-                  )
+                  IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS {
+                    imprecise_name: self.scout_arena.intern_constructing_member_imprecise_name(
+                      self.scout_arena.intern_str(name_p.str().as_str()),
+                    ),
+                    lid: pattern_lidb.child().consume_in_arena(self.scout_arena),
+                  })
                 }
-                _ => IVarDeclarationNameS::DesugaredParamName(param_range.begin.clone()),
+                _ => IVarDeclarationNameS::DesugaredParamName(DesugaredParamNameDeclarationS {
+                  imprecise_name: self
+                    .scout_arena
+                    .intern_desugared_param_name(param_range.begin.clone()),
+                  lid: pattern_lidb.child().consume_in_arena(self.scout_arena),
+                }),
               },
-              None => IVarDeclarationNameS::DesugaredParamName(param_range.begin.clone()),
+              None => IVarDeclarationNameS::DesugaredParamName(DesugaredParamNameDeclarationS {
+                imprecise_name: self
+                  .scout_arena
+                  .intern_desugared_param_name(param_range.begin.clone()),
+                lid: pattern_lidb.child().consume_in_arena(self.scout_arena),
+              }),
             };
 
             // Per @PFVSZ, the param's type splits into its outer ref wraps (&/heap/etc)
@@ -572,15 +610,11 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             VariableDeclarations { vars: Vec::new() }
           }
           IFunctionParent::ParentFunction { .. } => {
-            let closure_param_pos = Self::eval_pos(file_coordinate, function.range.begin());
-            let closure_param_name = match self.scout_arena.intern_name(INameValS::VarName(
-              IVarDeclarationNameValS::ClosureParamName(ClosureParamNameS {
-                code_location: closure_param_pos,
-              }),
-            )) {
-              INameS::VarName(r) => (*r).clone(),
-              _ => panic!("POSTPARSER_INTERN_VAR_NAME_EXPECTED_VAR_NAME"),
-            };
+            let closure_param_name =
+              IVarDeclarationNameS::ClosureParamName(ClosureParamNameDeclarationS {
+                imprecise_name: self.scout_arena.intern_closure_param_imprecise_name(),
+                lid: closure_param_lid.expect("closure param lid minted for parent-function"),
+              });
             VariableDeclarations { vars: vec![VariableDeclarationS { name: closure_param_name }] }
           }
         };
@@ -615,7 +649,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             range: ret_range_s.clone(),
             rune: ret_rune.clone(),
             parts: self.scout_arena.alloc_slice_copy(&[self.scout_arena.intern_imprecise_name(
-              IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void }),
+              IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.void }),
             )]),
           }));
           Some(ret_rune)
@@ -779,6 +813,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             }));
           let closure_param_s = self.create_closure_param(
             function.range,
+            closure_param_lid.expect("closure param lid minted for parent-function"),
             function_declaration_name_for_env.clone(),
             &mut lidb,
             &mut rules,
@@ -934,6 +969,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
   fn create_closure_param(
     &self,
     range: RangeL,
+    closure_param_lid: LocationInDenizen<'s>,
     func_name: IFunctionDeclarationNameS<'s>,
     lidb: &mut LocationInDenizenBuilder,
     rule_builder: &mut Vec<IRulexSR<'s>>,
@@ -944,12 +980,10 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     let closure_param_pos = PostParser::eval_pos(parent_stack_frame.file, range.begin());
     let closure_param_range = RangeS::new(closure_param_pos.clone(), closure_param_pos.clone());
     let closure_param_name =
-      match self.scout_arena.intern_name(INameValS::VarName(IVarDeclarationNameValS::ClosureParamName(
-        ClosureParamNameS { code_location: closure_param_range.begin.clone() },
-      ))) {
-        INameS::VarName(r) => (*r).clone(),
-        _ => panic!("POSTPARSER_INTERN_VAR_NAME_EXPECTED_VAR_NAME"),
-      };
+      IVarDeclarationNameS::ClosureParamName(ClosureParamNameDeclarationS {
+        imprecise_name: self.scout_arena.intern_closure_param_imprecise_name(),
+        lid: closure_param_lid,
+      });
     let IFunctionDeclarationNameS::LambdaDeclarationName(lambda_name) = func_name else {
       panic!("POSTPARSER_SCOUT_CREATE_CLOSURE_PARAM_NON_LAMBDA_NAME");
     };
@@ -1012,7 +1046,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       .into_iter()
       .map(|magic_param_name| {
         let code_location = match &magic_param_name {
-          IVarDeclarationNameS::MagicParamName(c) => c.clone(),
+          IVarDeclarationNameS::MagicParamName(c) => c.imprecise_name.code_location,
           _ => panic!("POSTPARSER_CREATE_MAGIC_PARAMS_EXPECTED_MAGIC_PARAM_NAME"),
         };
         let magic_param_range = RangeS::new(code_location.clone(), code_location.clone());
@@ -1043,12 +1077,14 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
   pub(crate) fn scout_lambda(
     &self,
     parent_stack_frame: StackFrame<'s>,
+    lambda_lid: LocationInDenizen<'s>,
     function: &FunctionP<'p>,
   ) -> Result<(&'s FunctionS<'s>, VariableUses<'s>), ICompileErrorS<'s>> {
     let file_coordinate = parent_stack_frame.file;
     self.scout_function(
       file_coordinate,
       function,
+      lambda_lid.path.to_vec(),
       IFunctionParent::ParentFunction { parent_stack_frame },
     )
   }
@@ -1089,15 +1125,9 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       .uses
       .iter()
       .filter_map(|use_| match &use_.name {
-        IVarDeclarationNameS::MagicParamName(code_location) => Some(
-          match self
-            .scout_arena
-            .intern_name(INameValS::VarName(IVarDeclarationNameValS::MagicParamName(code_location.clone())))
-          {
-            INameS::VarName(r) => (*r).clone(),
-            _ => panic!("POSTPARSER_INTERN_MAGIC_PARAM_EXPECTED_VAR_NAME"),
-          },
-        ),
+        IVarDeclarationNameS::MagicParamName(n) => {
+          Some(IVarDeclarationNameS::MagicParamName(*n))
+        }
         _ => None,
       })
       .collect();
@@ -1154,7 +1184,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
   ) -> Result<&'s FunctionS<'s>, ICompileErrorS<'s>> {
     let file = parent_interface.citizen_env.file();
     let (function_s, variable_uses) =
-      self.scout_function(file, function_p, IFunctionParent::ParentCitizen(parent_interface))?;
+      self.scout_function(file, function_p, Vec::new(), IFunctionParent::ParentCitizen(parent_interface))?;
     assert!(variable_uses.uses.is_empty());
     Ok(function_s)
   }

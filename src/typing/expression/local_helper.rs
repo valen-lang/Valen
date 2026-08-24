@@ -122,7 +122,7 @@ where
     let var_id = self.translate_var_name_step(var_name);
 
     let imprecise = var_name.imprecise_name(self.scout_arena);
-    if nenv.get_variable(imprecise, self.typing_interner, self.scout_arena).is_some() {
+    if nenv.get_variable(imprecise, self.typing_interner).is_some() {
       panic!("There's already a variable named {:?}", var_id);
     }
 

@@ -314,7 +314,7 @@ where
     members: &[&'t StructMemberT<'s, 't>],
   ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>>
   {
-    self.make_closure_understruct_core(
+    self.make_closure_understruct_layer(
       containing_function_env,
       coutputs,
       parent_ranges,

@@ -4,14 +4,13 @@ use crate::postparsing::ast::{ExternS, ICitizenAttributeS, IStructMemberS, Locat
 use crate::postparsing::ast::{FunctionS, InterfaceS, StructS};
 use crate::postparsing::names::FunctionNameS;
 use crate::postparsing::names::IFunctionDeclarationNameS;
-use crate::postparsing::names::IFunctionDeclarationNameValS;
 use crate::postparsing::names::INameS;
 use crate::postparsing::names::INameValS;
 use crate::postparsing::names::IStructDeclarationNameS;
 use crate::postparsing::names::RuneNameS;
-use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
+use crate::postparsing::names::{CodeNameS, CodeNameValS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
 use crate::typing::ast::ast::PrototypeT;
-use crate::typing::ast::ast::{ExternT, ICitizenAttributeT};
+use crate::typing::ast::ast::{ExternT, ICitizenAttributeT, LocationInFunctionEnvironmentT};
 use crate::typing::ast::citizens::{InterfaceDefinitionT, StructDefinitionT, StructMemberT};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -317,38 +316,26 @@ where
     coutputs: &mut CompilerOutputs<'s, 't>,
     member: IStructMemberS<'s>,
   ) -> StructMemberT<'s, 't> {
-    let type_rune_s = (*member.type_rune()).rune;
-    let type_templata = match env.lookup_nearest_with_imprecise_name(
-      self
-        .scout_arena
-        .intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: type_rune_s })),
-      {
-        let mut s = HashSet::default();
-        s.insert(ILookupContext::TemplataLookupContext);
-        s
-      },
-      self.typing_interner,
-    ) {
-      Some(t) => t,
-      None => {
-        panic!("Unimplemented: make_struct_member type not found");
-        // vassertOne(...)
-      }
-    };
+    // Look up the type for this member's rune
+    let tyype = env
+      .lookup_nearest_with_imprecise_name(
+        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS {
+          rune: (*member.type_rune()).rune,
+        })),
+        once(ILookupContext::TemplataLookupContext).collect(),
+        self.typing_interner,
+      )
+      .expect("make_struct_member: type not found")
+      .expect_kind();
+
     match member {
       IStructMemberS::NormalStructMember(n) => {
-        let coord = match type_templata {
-          ITemplataT::Kind(c) => c.kind,
-          _ => {
-            panic!("Unimplemented: make_struct_member non-coord type for NormalStructMemberS");
-            // val CoordTemplataT(coord) = typeTemplata  // pattern-destructure that vfails otherwise
-          }
-        };
         StructMemberT {
-          name: IVarNameT::Member(
-            self.typing_interner.intern_member_name(MemberNameT { name: n.name }),
-          ),
-          tyype: coord,
+          name: IVarNameT::Member(self.typing_interner.intern_member_name(MemberNameT {
+            imprecise_name: self.scout_arena.intern_code_name(n.name),
+            life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, n.lid),
+          })),
+          tyype,
         }
       }
       IStructMemberS::VariadicStructMember(_) => {
@@ -369,6 +356,11 @@ where
     members: &[&'t StructMemberT<'s, 't>],
   ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>>
   {
+    // VCOORD: make a life builder for stuff like this, this is fragile.
+    let closure_life =
+        LocationInFunctionEnvironmentT::from_lid(self.typing_interner, call_location)
+        .add(self.typing_interner, 0);
+
     // VCOORD:
     // In the distant future, we'll want to opt into shared closures with a simpler syntax.
     let sharedness = SharednessT::Single;
@@ -420,17 +412,13 @@ where
       }),
     );
 
-    let drop_name_s = self.scout_arena.intern_name(INameValS::FunctionDeclaration(
-      IFunctionDeclarationNameValS::FunctionName(FunctionNameS {
-        name: self.keywords.drop,
+    let drop_function_decl_name_s = self.scout_arena.alloc_function_declaration_name(
+      IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+        imprecise_name: self.scout_arena.intern_code_name(self.keywords.drop),
         code_location: function_a.range.begin,
+        lid: LocationInDenizen { path: &[] },
       }),
-    ));
-    let drop_function_decl_name_s = match drop_name_s {
-      INameS::FunctionDeclaration(f) => f,
-      _ => panic!("unexpected"),
-    };
-
+    );
     let call_func_template_id =
       understruct_templated_id.add_step(self.typing_interner, call_func_name_t);
     coutputs.register_postparsed_function(call_func_template_id, function_a);
@@ -463,7 +451,9 @@ where
           )),
         ),
         (
-          INameT::Self_(self.typing_interner.intern_self_name(SelfNameT {})),
+          INameT::Self_(self.typing_interner.intern_self_name(SelfNameT {
+            life: closure_life.add(self.typing_interner, 0),
+          })),
           IEnvEntryT::Templata(ITemplataT::Kind(
             self
               .typing_interner

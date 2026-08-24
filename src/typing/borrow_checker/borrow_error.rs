@@ -80,8 +80,8 @@ impl<'s, 't> BorrowErrorKind<'s, 't> {
 /// The source name of a local, when it has one, for diagnostics.
 fn var_name<'s, 't>(name: &IVarNameT<'s, 't>) -> &'s str {
   match name {
-    IVarNameT::Member(code_var) => code_var.name.0,
-    IVarNameT::Local(code_var) => code_var.name.0,
+    IVarNameT::Member(code_var) => code_var.imprecise_name.name.0,
+    IVarNameT::Local(code_var) => code_var.imprecise_name.name.0,
     _ => "a local",
   }
 }

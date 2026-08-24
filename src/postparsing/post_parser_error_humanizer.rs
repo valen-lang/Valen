@@ -82,7 +82,7 @@ where
 
 fn humanize_var_name<'s>(var_name: IVarDeclarationNameS<'s>) -> String {
   match var_name {
-    IVarDeclarationNameS::CodeVarName(n) => n.name.as_str().to_string(),
+    IVarDeclarationNameS::CodeVarName(n) => n.imprecise_name.name.as_str().to_string(),
     IVarDeclarationNameS::ClosureParamName(_) => "(closure)".to_string(),
     _ => panic!("Unimplemented humanize_var_name branch for IVarDeclarationNameS"),
   }
@@ -90,7 +90,7 @@ fn humanize_var_name<'s>(var_name: IVarDeclarationNameS<'s>) -> String {
 
 fn humanize_function_declaration_name<'s>(name: IFunctionDeclarationNameS<'s>) -> String {
   match name {
-    IFunctionDeclarationNameS::FunctionName(n) => n.name.as_str().to_string(),
+    IFunctionDeclarationNameS::FunctionName(n) => n.imprecise_name.name.as_str().to_string(),
     IFunctionDeclarationNameS::LambdaDeclarationName(_) => {
       panic!("implement: humanize_function_declaration_name LambdaDeclarationName");
     }
@@ -100,12 +100,6 @@ fn humanize_function_declaration_name<'s>(name: IFunctionDeclarationNameS<'s>) -
     IFunctionDeclarationNameS::ConstructorName(_) => {
       panic!("implement: humanize_function_declaration_name ConstructorName");
       // "constructor<" + humanizeName(inner.tlcd) + ">"
-    }
-    IFunctionDeclarationNameS::ImmConcreteDestructorName(_) => {
-      panic!("implement: humanize_function_declaration_name ImmConcreteDestructorName");
-    }
-    IFunctionDeclarationNameS::ImmInterfaceDestructorName(_) => {
-      panic!("implement: humanize_function_declaration_name ImmInterfaceDestructorName");
     }
   }
 }

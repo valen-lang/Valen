@@ -1,5 +1,5 @@
 use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::names::CodeNameS;
+use crate::postparsing::names::{CodeNameS, CodeNameValS};
 use crate::postparsing::names::IImpreciseNameValS;
 use crate::typing::ast::expressions::{DiscardTE, ExpressionTE, FunctionCallTE};
 use crate::typing::compiler::Compiler;
@@ -26,7 +26,7 @@ where
   ) -> Result<StampFunctionSuccess<'s, 't>, ICompileErrorT<'s, 't>> {
     let name = self
       .scout_arena
-      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.drop }));
+      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.drop }));
     let args = &[type_2];
     // ZLOOK: those three empty slices are the explicit template args, so dropping a generic
     // citizen needs T deduced from the argument — and that deduction is dead everywhere, not

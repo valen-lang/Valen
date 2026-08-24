@@ -83,7 +83,7 @@ where
         })? {
           Err(
             e @ FindFunctionFailure {
-              name: IImpreciseNameS::CodeName(CodeNameS { name: as_name }),
+              name: IImpreciseNameS::CodeName(CodeNameS { name: as_name, .. }),
               ..
             },
           ) if *as_name == self.keywords.r#as => {
@@ -258,7 +258,7 @@ where
 
     let env_ref = IInDenizenEnvironmentT::Node(env);
     let function_name =
-      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: self.keywords.underscores_call,
       }));
     let extra_envs_to_look_in = &[];

@@ -45,6 +45,7 @@ pub struct InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where 's: 't, 's: 'i,
 {
   pub typing_pass_compilation: TypingPassCompilation<'s, 'ctx, 't, 'p>,
+  scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
   global_options: GlobalOptions,
   // The instantiating arena's interner, built from the externally-owned 'i Bump
@@ -97,6 +98,7 @@ where
 
     InstantiatedCompilation {
       typing_pass_compilation,
+      scout_arena,
       keywords,
       global_options,
       instantiating_interner,
@@ -151,7 +153,7 @@ where
     self.typing_pass_compilation.expect_compiler_outputs();
     let monouts =
       instantiator::translate(
-        &self.global_options, &self.instantiating_interner, &self.typing_pass_compilation.typing_interner, self.keywords, self.typing_pass_compilation.cached_compiler_outputs());
+        &self.global_options, &self.instantiating_interner, &self.typing_pass_compilation.typing_interner, self.scout_arena, self.keywords, self.typing_pass_compilation.cached_compiler_outputs());
     self.monouts_cache = Some(monouts);
     self.monouts_cache.as_ref().unwrap()
   }

@@ -5,12 +5,12 @@ use crate::postparsing::ast::{AbstractBodyS, IBodyS, ParameterS};
 use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
-use crate::postparsing::names::CodeNameS;
+use crate::postparsing::names::{CodeNameS, CodeNameValS};
 use crate::postparsing::names::CodeVarNameS;
 use crate::postparsing::names::IImpreciseNameValS;
 use crate::postparsing::names::TopLevelCitizenDeclarationNameS;
 use crate::postparsing::names::{
-  FunctionNameS, IFunctionDeclarationNameS, IFunctionDeclarationNameValS, INameValS, IRuneValS,
+  FunctionNameS, IFunctionDeclarationNameS, INameValS, IRuneValS,
   IVarDeclarationNameS, MacroSelfKindRuneS, MacroSelfKindTemplateRuneS, MacroVoidKindRuneS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
@@ -51,7 +51,7 @@ where
       range: range(-1672147),
       rune: use_(-64002, void_kind_rune_s),
       parts: self.scout_arena.alloc_slice_copy(&[self.scout_arena.intern_imprecise_name(
-        IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void }),
+        IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.void }),
       )]),
     }));
     let interface_name_range = interface_a.name.range;
@@ -91,8 +91,9 @@ where
     };
 
     let name_s = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
-      name: self.keywords.drop,
+      imprecise_name: self.scout_arena.intern_code_name(self.keywords.drop),
       code_location: interface_a.name.range.begin,
+      lid: LocationInDenizen { path: &[] },
     });
     let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
     let drop_function_a = self.scout_arena.alloc(FunctionS::new(
@@ -105,7 +106,7 @@ where
         range(-1340),
         Some(AbstractSP { range: range(-64002), is_internal_method: true }),
         false,
-        IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: self.keywords.thiss, lid: LocationInDenizen { path: &[] } }),
+        IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: self.scout_arena.intern_code_name(self.keywords.thiss), lid: LocationInDenizen { path: &[1] } }),
         ITypeST::Rune(self.scout_arena.alloc(RuneUsageST { rune: use_(-64002, self_kind_rune_s) })),
         use_(-64002, self_kind_rune_s),
         use_(-64002, self_kind_rune_s),

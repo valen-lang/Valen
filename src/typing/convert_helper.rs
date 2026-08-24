@@ -1,7 +1,7 @@
 use crate::utils::range::RangeS;
 
 use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::names::{CodeNameS, IImpreciseNameValS};
+use crate::postparsing::names::{CodeNameS, CodeNameValS, IImpreciseNameValS};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::ast::expressions::UpcastTE;
 use crate::typing::ast::expressions::*;
@@ -267,7 +267,7 @@ target:
     // Vale source (hence .expect). "Name not in scope" comes back as the inner
     // Err(fff with rejected=[]), handled in the Err(fff) arm below.
     let function_name =
-      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: self.keywords.implicit_clone,
       }));
     let explicit_template_arg_rules_s = &[];

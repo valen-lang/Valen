@@ -331,17 +331,16 @@ where
   pub fn get_variable(
     &self,
     name: IImpreciseNameS<'s>,
-    scout_arena: &ScoutArena<'s>,
   ) -> Option<IVariableT<'s, 't>> {
-    match self.declared_locals.iter().find(|v| v.name().imprecise_name(scout_arena) == Some(name)) {
+    match self.declared_locals.iter().find(|v| v.name().imprecise_name() == Some(name)) {
       Some(v) => Some(*v),
       None => match self.parent_node_env {
-        Some(p) => p.get_variable(name, scout_arena),
+        Some(p) => p.get_variable(name),
         None => self
           .parent_function_env
           .closured_locals
           .iter()
-          .find(|v| v.name().imprecise_name(scout_arena) == Some(name))
+          .find(|v| v.name().imprecise_name() == Some(name))
           .copied(),
       },
     }
@@ -683,9 +682,8 @@ where
     &self,
     name: IImpreciseNameS<'s>,
     interner: &TypingInterner<'s, 't>,
-    scout_arena: &ScoutArena<'s>,
   ) -> Option<IVariableT<'s, 't>> {
-    self.snapshot(interner).get_variable(name, scout_arena)
+    self.snapshot(interner).get_variable(name)
   }
 
   pub fn get_all_locals(&self) -> Vec<&'t LocalVariable<'s, 't>> {

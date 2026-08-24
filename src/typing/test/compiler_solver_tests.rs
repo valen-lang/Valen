@@ -5,12 +5,14 @@ use crate::collect_where_tnode;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
+use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::postparsing::names::IFunctionDeclarationNameS;
+use crate::postparsing::names::INameS;
 use crate::postparsing::ast::StructS;
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::names::DenizenDefaultRegionRuneS;
 use crate::postparsing::names::FunctionNameS;
-use crate::postparsing::names::IFunctionDeclarationNameValS;
 use crate::postparsing::names::INameValS;
 use crate::postparsing::names::ImplicitRuneValS;
 use crate::postparsing::names::{CodeNameS, IImpreciseNameS};
@@ -139,7 +141,7 @@ fn test_lacking_drop_function() {
     ICompileErrorT::CouldntFindFunctionToCallT {
       fff:
         FindFunctionFailure {
-          name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("drop") }), ..
+          name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("drop"), .. }), ..
         },
       ..
     } => {}
@@ -456,10 +458,11 @@ fn humanize_errors() {
     init_steps: &[],
     local_name: INameT::Function(main_func_name),
   });
-  let denizen_name_s = scout_arena.intern_name(INameValS::FunctionDeclaration(
-    IFunctionDeclarationNameValS::FunctionName(FunctionNameS {
-      name: scout_arena.intern_str("main"),
+  let denizen_name_s = INameS::FunctionDeclaration(scout_arena.alloc_function_declaration_name(
+    IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+      imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("main")),
       code_location: tz_code_loc,
+      lid: LocationInDenizen { path: &[] },
     }),
   ));
   let denizen_default_region_rune_s = DenizenDefaultRegionRuneS { denizen_name: denizen_name_s };

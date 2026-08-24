@@ -12,6 +12,7 @@ use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::peel_all_references;
 use crate::typing::types::types::*;
+use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use std::hash::Hash;
@@ -147,6 +148,17 @@ impl<'t> LocationInFunctionEnvironmentT<'t> {
     let mut new_path: Vec<i32> = self.path.to_vec();
     new_path.push(sub_location);
     LocationInFunctionEnvironmentT { path: interner.alloc_slice_from_vec(new_path) }
+  }
+
+  /// The single seam that turns a postparse LID into a typing LIFE: it copies the LID's path
+  /// from the scout arena into the typing arena. A declaration's LIFE *is* its LID (no `0`
+  /// appended), which stays collision-free with typing-conjured LIFEs because those always
+  /// contain a `0` and LIDs never do.
+  pub fn from_lid<'s>(
+    interner: &TypingInterner<'s, 't>,
+    lid: LocationInDenizen<'s>,
+  ) -> LocationInFunctionEnvironmentT<'t> {
+    LocationInFunctionEnvironmentT { path: interner.alloc_slice_from_vec(lid.path.to_vec()) }
   }
 
   fn to_string(&self) -> String {

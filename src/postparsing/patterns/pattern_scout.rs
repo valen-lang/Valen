@@ -1,7 +1,11 @@
 use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, PatternPP};
 use crate::postparsing::ast::LocationInDenizenBuilder;
-use crate::postparsing::names::{CodeVarNameS, IVarDeclarationNameS};
+use crate::postparsing::names::{
+  CodeNameS, CodeVarNameS, ConstructingMemberImpreciseNameS, ConstructingMemberNameDeclarationS,
+  IVarDeclarationNameS, IterableNameDeclarationS, IterableNameS, IterationOptionNameDeclarationS,
+  IterationOptionNameS, IteratorNameDeclarationS, IteratorNameS,
+};
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser, StackFrame};
 use crate::postparsing::rules::rules::IRulexSR;
@@ -83,25 +87,41 @@ pub(crate) fn translate_pattern<'s, 'p>(
         INameDeclarationP::IgnoredLocalNameDeclaration(_) => None,
         INameDeclarationP::LocalNameDeclaration(name_p) => Some(CaptureS {
           name: IVarDeclarationNameS::CodeVarName(CodeVarNameS {
-            name: scout_arena.intern_str(name_p.str().as_str()),
+            imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str(name_p.str().as_str())),
             lid: lidb.child().consume_in_arena(scout_arena),
           }),
           mutate,
         }),
         INameDeclarationP::ConstructingMemberNameDeclaration(name_p) => Some(CaptureS {
-          name: IVarDeclarationNameS::ConstructingMemberName(scout_arena.intern_str(name_p.str().as_str())),
+          name: IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS {
+            imprecise_name: scout_arena
+              .intern_constructing_member_imprecise_name(scout_arena.intern_str(name_p.str().as_str())),
+            lid: lidb.child().consume_in_arena(scout_arena),
+          }),
           mutate,
         }),
         INameDeclarationP::IterableNameDeclaration(range) => Some(CaptureS {
-          name: IVarDeclarationNameS::IterableName(PostParser::eval_range(stack_frame.file, *range)),
+          name: IVarDeclarationNameS::IterableName(IterableNameDeclarationS {
+            imprecise_name: scout_arena
+              .intern_iterable_name(PostParser::eval_range(stack_frame.file, *range)),
+            lid: lidb.child().consume_in_arena(scout_arena),
+          }),
           mutate,
         }),
         INameDeclarationP::IteratorNameDeclaration(range) => Some(CaptureS {
-          name: IVarDeclarationNameS::IteratorName(PostParser::eval_range(stack_frame.file, *range)),
+          name: IVarDeclarationNameS::IteratorName(IteratorNameDeclarationS {
+            imprecise_name: scout_arena
+              .intern_iterator_name(PostParser::eval_range(stack_frame.file, *range)),
+            lid: lidb.child().consume_in_arena(scout_arena),
+          }),
           mutate,
         }),
         INameDeclarationP::IterationOptionNameDeclaration(range) => Some(CaptureS {
-          name: IVarDeclarationNameS::IterationOptionName(PostParser::eval_range(stack_frame.file, *range)),
+          name: IVarDeclarationNameS::IterationOptionName(IterationOptionNameDeclarationS {
+            imprecise_name: scout_arena
+              .intern_iteration_option_name(PostParser::eval_range(stack_frame.file, *range)),
+            lid: lidb.child().consume_in_arena(scout_arena),
+          }),
           mutate,
         }),
       }

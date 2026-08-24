@@ -865,7 +865,8 @@ where
       visit_imprecise_name(pred, out, &x.super_interface_imprecise_name)
     }
     IImpreciseNameS::RuneName(x) => visit_rune(pred, out, &x.rune),
-    IImpreciseNameS::IterableName(_)
+    IImpreciseNameS::ConstructingMemberImpreciseName(_)
+    | IImpreciseNameS::IterableName(_)
     | IImpreciseNameS::IteratorName(_)
     | IImpreciseNameS::IterationOptionName(_)
     | IImpreciseNameS::LambdaImpreciseName(_)

@@ -6,10 +6,12 @@ use crate::postparsing::ast::{GeneratedBodyS, IBodyS, IStructMemberS, ParameterS
 use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
+use crate::postparsing::names::CodeNameS;
+use crate::scout_arena::ScoutArena;
 use crate::postparsing::names::CodeVarNameS;
 use crate::postparsing::names::IFunctionDeclarationNameS;
 use crate::postparsing::names::{
-  ConstructorNameS, ICitizenDeclarationNameS, IFunctionDeclarationNameValS, INameValS, IRuneValS,
+  ConstructorNameS, ICitizenDeclarationNameS, IImpreciseNameS, INameS, INameValS, IRuneValS,
   IStructDeclarationNameS, IVarDeclarationNameS, ReturnRuneS, StructNameRuneS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
@@ -33,12 +35,12 @@ use crate::utils::range::RangeS;
 // downstream (e.g. §2A's expected-value-type-template scan) sees a constructor param exactly as it would
 // a hand-written one. Pure: reads only the member's fields and calls the sealed ParameterS::new.
 // VCOORD: inline?
-fn parameter_from_normal_member<'s>(member: &NormalStructMemberS<'s>) -> ParameterS<'s> {
+fn parameter_from_normal_member<'s>(scout_arena: &ScoutArena<'s>, member: &NormalStructMemberS<'s>, lid: LocationInDenizen<'s>) -> ParameterS<'s> {
   ParameterS::new(
     member.range,
     None,
     false,
-    IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: member.name, lid: LocationInDenizen { path: &[] } }),
+    IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: scout_arena.intern_code_name(member.name), lid }),
     member.tyype,
     member.type_rune,
     member.value_type_rune,
@@ -106,12 +108,19 @@ where
       args: generic_param_runes_slice,
     }));
 
+    // Each param is a declaration in the constructor denizen (root LID `[]`), so it gets its own
+    // child LID `[1]`, `[2]`, ... — LIDs start at 1 and are never 0. Without a distinct LID every
+    // param would collapse to the same life and collide (see typing-design.md).
     let params: Vec<ParameterS<'s>> = struct_a
       .members
       .iter()
-      .flat_map(|m| match m {
+      .enumerate()
+      .flat_map(|(index, m)| match m {
         IStructMemberS::NormalStructMember(member) => {
-          vec![parameter_from_normal_member(member)]
+          let lid = LocationInDenizen {
+            path: self.scout_arena.alloc_slice_copy(&[(index + 1) as i32]),
+          };
+          vec![parameter_from_normal_member(self.scout_arena, member, lid)]
         }
         IStructMemberS::VariadicStructMember(_) => vec![],
       })
@@ -119,11 +128,23 @@ where
 
     let params_slice = self.scout_arena.alloc_slice_from_vec(params);
     let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
+    // A constructor's imprecise name is the citizen's spelling (a `MyStruct(...)` call resolves as
+    // `CodeName{"MyStruct"}`); its lid is the synthesized denizen root seed. Built directly. A
+    // function declaration name is identity, not interned (@WVSBIZ).
+    let constructor_imprecise_name = match struct_imprecise_name {
+      IImpreciseNameS::CodeName(cn) => cn,
+      _ => panic!("struct constructor macro: expected a CodeName struct imprecise name"),
+    };
+    let constructor_name_s = IFunctionDeclarationNameS::ConstructorName(self.scout_arena.alloc(
+      ConstructorNameS {
+        tlcd: struct_name_as_citizen,
+        imprecise_name: constructor_imprecise_name,
+        lid: LocationInDenizen { path: &[] },
+      },
+    ));
     let function_a = self.scout_arena.alloc(FunctionS::new(
       struct_a.range,
-      IFunctionDeclarationNameS::ConstructorName(
-        &*self.scout_arena.alloc(ConstructorNameS { tlcd: struct_name_as_citizen }),
-      ),
+      constructor_name_s,
       &[],
       struct_a.generic_params,
       TemplateTemplataType {
@@ -142,11 +163,9 @@ where
         generator_id: self.keywords.struct_constructor_generator,
       })),
     ));
-    let function_name_s = self.scout_arena.intern_name(INameValS::FunctionDeclaration(
-      IFunctionDeclarationNameValS::ConstructorName(ConstructorNameS {
-        tlcd: struct_name_as_citizen,
-      }),
-    ));
+    let function_name_s = INameS::FunctionDeclaration(
+      self.scout_arena.alloc_function_declaration_name(constructor_name_s),
+    );
     let translated_local_name = self.translate_name_step(function_name_s);
     let result_template_id_ref = self.typing_interner.intern_id(IdValT {
       package_coord: struct_name.package_coord,

@@ -102,13 +102,13 @@ pub enum INameI<'s, 'i> {
     TypingIgnoredParam(&'i TypingIgnoredParamNameI),
     TypingPassPatternDestructuree(&'i TypingPassPatternDestructureeNameI<'i>),
     UnnamedLocal(&'i UnnamedLocalNameI<'s>),
-    ClosureParam(&'i ClosureParamNameI<'s>),
+    ClosureParam(&'i ClosureParamNameI<'i>),
     ConstructingMember(&'i ConstructingMemberNameI<'s>),
     WhileCondResult(&'i WhileCondResultNameI<'s>),
-    Iterable(&'i IterableNameI<'s>),
-    Iterator(&'i IteratorNameI<'s>),
-    IterationOption(&'i IterationOptionNameI<'s>),
-    MagicParam(&'i MagicParamNameI<'s>),
+    Iterable(&'i IterableNameI<'i>),
+    Iterator(&'i IteratorNameI<'i>),
+    IterationOption(&'i IterationOptionNameI<'i>),
+    MagicParam(&'i MagicParamNameI<'i>),
     Member(&'i MemberNameI<'s>),
     Local(&'i LocalNameI<'s, 'i>),
     AnonymousSubstructMember(&'i AnonymousSubstructMemberNameI),
@@ -1203,13 +1203,13 @@ pub enum IVarNameI<'s, 'i> {
     TypingIgnoredParam(&'i TypingIgnoredParamNameI),
     TypingPassPatternDestructuree(&'i TypingPassPatternDestructureeNameI<'i>),
     UnnamedLocal(&'i UnnamedLocalNameI<'s>),
-    ClosureParam(&'i ClosureParamNameI<'s>),
+    ClosureParam(&'i ClosureParamNameI<'i>),
     ConstructingMember(&'i ConstructingMemberNameI<'s>),
     WhileCondResult(&'i WhileCondResultNameI<'s>),
-    Iterable(&'i IterableNameI<'s>),
-    Iterator(&'i IteratorNameI<'s>),
-    IterationOption(&'i IterationOptionNameI<'s>),
-    MagicParam(&'i MagicParamNameI<'s>),
+    Iterable(&'i IterableNameI<'i>),
+    Iterator(&'i IteratorNameI<'i>),
+    IterationOption(&'i IterationOptionNameI<'i>),
+    MagicParam(&'i MagicParamNameI<'i>),
     Member(&'i MemberNameI<'s>),
     Local(&'i LocalNameI<'s, 'i>),
     AnonymousSubstructMember(&'i AnonymousSubstructMemberNameI),
@@ -1326,8 +1326,8 @@ pub struct UnnamedLocalNameI<'s> {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ClosureParamNameI<'s> {
-    pub code_location: CodeLocationS<'s>,
+pub struct ClosureParamNameI<'i> {
+    pub life: LocationInFunctionEnvironmentI<'i>,
 }
 
 
@@ -1350,32 +1350,32 @@ pub struct WhileCondResultNameI<'s> {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct IterableNameI<'s> {
-    pub range: RangeS<'s>,
+pub struct IterableNameI<'i> {
+    pub life: LocationInFunctionEnvironmentI<'i>,
 }
 
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct IteratorNameI<'s> {
-    pub range: RangeS<'s>,
+pub struct IteratorNameI<'i> {
+    pub life: LocationInFunctionEnvironmentI<'i>,
 }
 
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct IterationOptionNameI<'s> {
-    pub range: RangeS<'s>,
+pub struct IterationOptionNameI<'i> {
+    pub life: LocationInFunctionEnvironmentI<'i>,
 }
 
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct MagicParamNameI<'s> {
-    pub code_location_2: CodeLocationS<'s>,
+pub struct MagicParamNameI<'i> {
+    pub life: LocationInFunctionEnvironmentI<'i>,
 }
 
 

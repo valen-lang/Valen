@@ -276,10 +276,10 @@ where
       // parameter to its actual local and check that local's name — which is what unstackify records.
       let param_imprecise = params_2[0]
         .name
-        .imprecise_name(self.scout_arena)
+        .imprecise_name()
         .expect("destructee param has no imprecise name");
       let destructee_name = env
-        .get_variable(param_imprecise, self.typing_interner, self.scout_arena)
+        .get_variable(param_imprecise, self.typing_interner)
         .expect("destructee param not bound as a local")
         .name();
       if !env.unstackified_locals.contains(&destructee_name) {

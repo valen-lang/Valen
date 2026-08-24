@@ -1,4 +1,5 @@
 use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::names::IImpreciseNameS;
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::ast::*;
 use crate::typing::hinputs_t::*;
@@ -88,10 +89,10 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 
   pub fn get_member_and_index(
     &self,
-    needle_name: &IVarNameT<'s, 't>,
+    needle: IImpreciseNameS<'s>,
   ) -> Option<(&StructMemberT<'s, 't>, usize)> {
     for (index, member) in self.members.iter().enumerate() {
-      if &member.name == needle_name {
+      if member.name.imprecise_name() == Some(needle) {
         return Some((member, index));
       }
     }

@@ -4,8 +4,9 @@ use crate::collect_only_tnode;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
+use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::{
-  CodeNameS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameValS,
+  CodeNameS, CodeNameValS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameValS,
 };
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
@@ -15,6 +16,7 @@ use crate::typing::ast::expressions::{
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::function_environment_t::LocalVariable;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::names::names::StructNameT;
 use crate::typing::names::names::{
   MemberNameT, FunctionNameValT, FunctionTemplateNameT, INameT, IStructTemplateNameT, IVarNameT, LocalNameT,
@@ -71,7 +73,7 @@ exported func main() {a = 3; set a = 4; }
       NodeRefT::Mutate(MutateTE {
           destination_expr: ExpressionTE::LocalLookup(LocalLookupTE {
               local_variable: LocalVariable {
-                  name: IVarNameT::Local(LocalNameT { name: StrI("a"), .. }),
+                  name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }),
                   ..
               },
               ..
@@ -458,7 +460,7 @@ exported func main() int {
 At test:0.vale:7:3:
   if true {
 Internal error: Must move same variables from inside branches!
-From then branch: {Local(LocalNameT { name: "s", lid: LocationInDenizen { path: [3, 1, 1, 1, 1, 1, 3, 1] } })}
+From then branch: {Local(LocalNameT { imprecise_name: CodeNameS { name: "s" }, life: LocationInFunctionEnvironmentT { path: [3, 1, 1, 1, 1, 1, 3, 1] } })}
 From else branch: {}
 "##,
   );
@@ -588,7 +590,7 @@ fn humanize_errors() {
     &line_containing,
     ICompileErrorT::CouldntFindTypeT {
       range: tz_slice,
-      name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: scout_arena.intern_str("Spaceship")
       }))
     }
@@ -605,7 +607,7 @@ fn humanize_errors() {
     ICompileErrorT::CouldntFindFunctionToCallT {
       range: tz_slice,
       fff: FindFunctionFailure {
-        name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
           name: scout_arena.intern_str("")
         })),
         args: &[],
@@ -635,7 +637,7 @@ fn humanize_errors() {
     &line_containing,
     ICompileErrorT::CouldntFindIdentifierToLoadT {
       range: tz_slice,
-      name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: scout_arena.intern_str("spaceship")
       }))
     }
@@ -663,8 +665,9 @@ fn humanize_errors() {
     ICompileErrorT::BodyResultDoesntMatch {
       range: tz_slice,
       function_name: IFunctionDeclarationNameS::FunctionName(FunctionNameS {
-        name: scout_arena.intern_str("myFunc"),
+        imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("myFunc")),
         code_location: tz_code_loc,
+        lid: LocationInDenizen { path: &[] },
       }),
       expected_return_type: firefly_coord,
       result_type: serenity_coord,
@@ -717,7 +720,7 @@ fn humanize_errors() {
   )
   .is_empty());
   let hp_var_name: &MemberNameT =
-    typing_bump.alloc(MemberNameT { name: scout_arena.intern_str("hp") });
+    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("hp")), life: LocationInFunctionEnvironmentT { path: &[] } });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,
@@ -745,7 +748,7 @@ fn humanize_errors() {
   )
   .is_empty());
   let firefly_var_name: &MemberNameT =
-    typing_bump.alloc(MemberNameT { name: scout_arena.intern_str("firefly") });
+    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("firefly")), life: LocationInFunctionEnvironmentT { path: &[] } });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,

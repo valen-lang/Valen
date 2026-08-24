@@ -6,6 +6,7 @@ use crate::builtins::builtins::{
 };
 use crate::code_source::{CodeSource, Source};
 use crate::collect_only_tnode;
+use crate::postparsing::ast::LocationInDenizen;
 use crate::collect_where_tnode;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
@@ -13,7 +14,7 @@ use crate::parse_arena::ParseArena;
 use crate::parsing::tests::utils::expect_1;
 use crate::postparsing::names::IRuneS;
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
+  CodeNameS, CodeNameValS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
   IImpreciseNameValS, INameS, IRuneValS, TopLevelStructDeclarationNameS,
 };
 use crate::scout_arena::ScoutArena;
@@ -22,6 +23,7 @@ use crate::tests::tests::load_expected;
 use crate::tests::tests::new_test_package_source;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
 use crate::typing::ast::ast::FunctionHeaderT;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::ast::ast::{KindExportT, SignatureValT};
@@ -249,7 +251,7 @@ fn taking_an_argument_and_returning_it() {
       NodeRefT::LocalLookup(l) => Some(l)
   );
   match lookup.local_variable.name {
-    IVarNameT::Local(c) => assert!(c.name.as_str() == "a"),
+    IVarNameT::Local(c) => assert!(c.imprecise_name.name.as_str() == "a"),
     _ => panic!("Expected LocalNameT"),
   }
   match lookup.local_variable.tyype {
@@ -324,7 +326,7 @@ fn tests_adding_two_numbers() {
   match &func_call.args[0] {
     ExpressionTE::LocalLookup(LocalLookupTE {
       local_variable: LocalVariable {
-        name: IVarNameT::Local(LocalNameT { name: StrI("a"), .. }),
+        name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }),
         ..
       },
       ..
@@ -334,7 +336,7 @@ fn tests_adding_two_numbers() {
   match &func_call.args[1] {
     ExpressionTE::LocalLookup(LocalLookupTE {
       local_variable: LocalVariable {
-        name: IVarNameT::Local(LocalNameT { name: StrI("b"), .. }),
+        name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("b"), .. }, .. }),
         ..
       },
       ..
@@ -969,7 +971,7 @@ exported func main() void {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::LetNormal(ln @ LetNormalTE {
           variable: LocalVariable {
-              name: IVarNameT::Local(LocalNameT { name: StrI("b"), .. }),
+              name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("b"), .. }, .. }),
               ..
           },
           ..
@@ -1209,7 +1211,7 @@ fn simple_struct() {
           weakable: false,
           sharedness: SharednessT::Single,
           members: [StructMemberT {
-            name: IVarNameT::Member(MemberNameT { name: StrI("a"), .. }),
+            name: IVarNameT::Member(MemberNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }),
             tyype: KindT::Int(IntT { bits: 32 }),
           }],
           is_closure: false,
@@ -1230,7 +1232,7 @@ fn simple_struct() {
               ..
           },
           params: [ParameterT {
-              name: IVarNameT::Member(MemberNameT { name: StrI("a"), .. }),
+              name: IVarNameT::Member(MemberNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }),
               virtuality: None,
               tyype: KindT::Int(IntT { bits: 32 }),
               ..
@@ -1542,7 +1544,7 @@ fn reads_a_struct_member() {
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
       NodeRefT::MemberLookup(MemberLookupTE {
-          member_name: IVarNameT::Member(MemberNameT { name: StrI("a") }),
+          member_name: IVarNameT::Member(MemberNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }),
           result: BorrowRefT { inner: KindT::Int(IntT { bits: 32 }), .. },
           ..
       }) => Some(())
@@ -1697,7 +1699,7 @@ fn reports_mismatched_return_type_when_expecting_void() {
     } => {
       match function_name {
         IFunctionDeclarationNameS::FunctionName(fn_name) => {
-          assert_eq!(fn_name.name.as_str(), "main")
+          assert_eq!(fn_name.imprecise_name.name.as_str(), "main")
         }
         other => panic!("expected FunctionName: {:?}", other),
       }
@@ -1941,7 +1943,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
       attributes: &[],
       params:
         [ParameterT {
-          name: IVarNameT::Member(MemberNameT { name: StrI("value"), .. }),
+          name: IVarNameT::Member(MemberNameT { imprecise_name: CodeNameS { name: StrI("value"), .. }, .. }),
           virtuality: None,
           tyype:
             KindT::KindPlaceholder(KindPlaceholderT {
@@ -2044,7 +2046,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::LetNormal(LetNormalTE {
           variable: LocalVariable {
-              name: IVarNameT::Local(LocalNameT { name: StrI("x"), .. }),
+              name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("x"), .. }, .. }),
               tyype: KindT::Interface(InterfaceTT {
                   id: IdT {
                       local_name: INameT::Interface(InterfaceNameT {
@@ -2386,7 +2388,7 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
       NodeRefT::MemberLookup(MemberLookupTE {
-          member_name: IVarNameT::Member(MemberNameT { name: StrI("x") }),
+          member_name: IVarNameT::Member(MemberNameT { imprecise_name: CodeNameS { name: StrI("x"), .. }, .. }),
           result: BorrowRefT { inner: KindT::Int(IntT { bits: 32 }), .. },
           ..
       }) => Some(())
@@ -2524,7 +2526,7 @@ func main() () {
       NodeRefT::FunctionDefinition(main),
       NodeRefT::LetNormal(LetNormalTE {
           variable: LocalVariable {
-              name: IVarNameT::Local(LocalNameT { name: StrI("x"), .. }),
+              name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("x"), .. }, .. }),
               tyype: KindT::Struct(StructTT {
                   id: IdT {
                       local_name: INameT::Struct(StructNameT {
@@ -4323,7 +4325,7 @@ fn reports_when_mutating_after_moving() {
   let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
   match &err {
     ICompileErrorT::CantUseUnstackifiedLocal {
-      local_id: IVarNameT::Local(LocalNameT { name: StrI("newWeapon"), .. }),
+      local_id: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("newWeapon"), .. }, .. }),
       ..
     } => {}
     _other => panic!("expected CantUseUnstackifiedLocal"),
@@ -4408,7 +4410,7 @@ fn reports_when_reading_after_moving() {
   let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
   match &err {
     ICompileErrorT::CantUseUnstackifiedLocal {
-      local_id: IVarNameT::Local(LocalNameT { name: StrI("newWeapon"), .. }),
+      local_id: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("newWeapon"), .. }, .. }),
       ..
     } => {}
     _other => panic!("expected CantUseUnstackifiedLocal"),
@@ -4454,7 +4456,7 @@ fn reports_when_moving_from_inside_a_while() {
   let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
   match &err {
     ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
-      local_id: IVarNameT::Local(LocalNameT { name: StrI("m"), .. }),
+      local_id: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("m"), .. }, .. }),
       ..
     } => {}
     _other => panic!("expected CantUnstackifyOutsideLocalFromInsideWhile"),
@@ -4511,7 +4513,7 @@ fn reports_when_moving_from_inside_a_while_that_never_falls_through() {
   let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
   match &err {
     ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
-      local_id: IVarNameT::Local(LocalNameT { name: StrI("m"), .. }),
+      local_id: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("m"), .. }, .. }),
       ..
     } => {}
     _other => panic!("expected CantUnstackifyOutsideLocalFromInsideWhile"),
@@ -4731,7 +4733,7 @@ fn humanize_errors() {
     &line_containing,
     ICompileErrorT::CouldntFindTypeT {
       range: tz_slice,
-      name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: scout_arena.intern_str("Spaceship")
       }))
     }
@@ -4748,7 +4750,7 @@ fn humanize_errors() {
     ICompileErrorT::CouldntFindFunctionToCallT {
       range: tz_slice,
       fff: FindFunctionFailure {
-        name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
           name: scout_arena.intern_str("someFunc")
         })),
         args: &[],
@@ -4768,7 +4770,7 @@ fn humanize_errors() {
     ICompileErrorT::CouldntFindFunctionToCallT {
       range: tz_slice,
       fff: FindFunctionFailure {
-        name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
           name: scout_arena.intern_str("")
         })),
         args: &[],
@@ -4798,7 +4800,7 @@ fn humanize_errors() {
     &line_containing,
     ICompileErrorT::CouldntFindIdentifierToLoadT {
       range: tz_slice,
-      name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: scout_arena.intern_str("spaceship")
       }))
     }
@@ -4826,8 +4828,9 @@ fn humanize_errors() {
     ICompileErrorT::BodyResultDoesntMatch {
       range: tz_slice,
       function_name: IFunctionDeclarationNameS::FunctionName(FunctionNameS {
-        name: scout_arena.intern_str("myFunc"),
+        imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("myFunc")),
         code_location: tz_code_loc,
+        lid: LocationInDenizen { path: &[] },
       }),
       expected_return_type: firefly_coord,
       result_type: serenity_coord,
@@ -4880,7 +4883,7 @@ fn humanize_errors() {
   )
   .is_empty());
   let hp_var_name: &MemberNameT =
-    typing_bump.alloc(MemberNameT { name: scout_arena.intern_str("hp") });
+    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("hp")), life: LocationInFunctionEnvironmentT { path: &[] } });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,
@@ -4893,7 +4896,7 @@ fn humanize_errors() {
   )
   .is_empty());
   let firefly_var_name: &MemberNameT =
-    typing_bump.alloc(MemberNameT { name: scout_arena.intern_str("firefly") });
+    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("firefly")), life: LocationInFunctionEnvironmentT { path: &[] } });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,

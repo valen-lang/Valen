@@ -11,11 +11,12 @@ use crate::postparsing::names::ImplSubCitizenImpreciseNameValS;
 use crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS;
 use crate::postparsing::names::{
   AnonymousSubstructTemplateImpreciseNameValS, ArbitraryNameS, ClosureParamImpreciseNameS,
-  CodeNameS, IImpreciseNameS, IImpreciseNameValS, LambdaImpreciseNameS,
+  ClosureParamImpreciseNameValS, CodeNameS, CodeNameValS, IImpreciseNameS, IImpreciseNameValS, LambdaImpreciseNameS,
   LambdaStructImpreciseNameValS, PlaceholderImpreciseNameS, PrototypeNameS, RuneNameValS,
-  SelfNameS,
+  SelfNameS, LambdaImpreciseNameValS, ArbitraryNameValS, PlaceholderImpreciseNameValS,
+  PrototypeNameValS, SelfNameValS,
 };
-use crate::scout_arena::ScoutArena;
+use crate::scout_arena::{ScoutArena, SELF_IMPRECISE_NAME};
 use crate::typing::env::function_environment_t::lookup_with_imprecise_name_inner;
 use crate::typing::env::function_environment_t::{
   BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
@@ -544,27 +545,27 @@ pub fn get_imprecise_name<'s, 't>(
   name_t: INameT<'s, 't>,
 ) -> Option<IImpreciseNameS<'s>> {
   match name_t {
-    INameT::FunctionTemplate(f) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: f.human_name }))),
-    INameT::Primitive(p) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: p.human_name }))),
-    INameT::StructTemplate(s) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: s.human_name }))),
-    INameT::InterfaceTemplate(i) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: i.human_namee }))),
+    INameT::FunctionTemplate(f) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: f.human_name }))),
+    INameT::Primitive(p) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: p.human_name }))),
+    INameT::StructTemplate(s) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: s.human_name }))),
+    INameT::InterfaceTemplate(i) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: i.human_namee }))),
     INameT::Rune(r) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: r.rune }))),
     INameT::LambdaCitizen(lc) => get_imprecise_name(scout_arena, INameT::LambdaCitizenTemplate(lc.template)),
     INameT::LambdaCitizenTemplate(_loc) => Some(scout_arena.intern_imprecise_name(
         IImpreciseNameValS::LambdaStructImpreciseName(LambdaStructImpreciseNameValS {
-            lambda_name: scout_arena.intern_imprecise_name(IImpreciseNameValS::LambdaImpreciseName(LambdaImpreciseNameS {})),
+            lambda_name: scout_arena.intern_imprecise_name(IImpreciseNameValS::LambdaImpreciseName(LambdaImpreciseNameValS {})),
         }))),
-    INameT::ClosureParam(_cp) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::ClosureParamImpreciseName(ClosureParamImpreciseNameS {}))),
-    INameT::Local(n) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: n.name }))),
-    INameT::Self_(_) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::SelfName(SelfNameS {}))),
-    INameT::Arbitrary(_) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::ArbitraryName(ArbitraryNameS {}))),
+    INameT::ClosureParam(_cp) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::ClosureParamImpreciseName(ClosureParamImpreciseNameValS {}))),
+    INameT::Local(n) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: n.imprecise_name.name }))),
+    INameT::Self_(_) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::SelfName(SelfNameValS {}))),
+    INameT::Arbitrary(_) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::ArbitraryName(ArbitraryNameValS {}))),
     INameT::ReachablePrototype(_) => None,
     INameT::FunctionBound(fb) => get_imprecise_name(scout_arena, INameT::FunctionBoundTemplate(fb.template)),
-    INameT::FunctionBoundTemplate(fbt) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: fbt.human_name }))),
+    INameT::FunctionBoundTemplate(fbt) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: fbt.human_name }))),
     INameT::PredictedFunction(pf) => get_imprecise_name(scout_arena, INameT::PredictedFunctionTemplate(pf.template)),
-    INameT::PredictedFunctionTemplate(pft) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: pft.human_name }))),
+    INameT::PredictedFunctionTemplate(pft) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: pft.human_name }))),
     INameT::LambdaCallFunction(_) => None,
-    INameT::KindPlaceholder(kp) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::PlaceholderImpreciseName(PlaceholderImpreciseNameS { index: kp.template.index }))),
+    INameT::KindPlaceholder(kp) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::PlaceholderImpreciseName(PlaceholderImpreciseNameValS { index: kp.template.index }))),
     INameT::Struct(s) => get_imprecise_name(scout_arena, s.template.into()),
     INameT::Interface(i) => get_imprecise_name(scout_arena, INameT::InterfaceTemplate(i.template)),
     INameT::Function(f) => get_imprecise_name(scout_arena, INameT::FunctionTemplate(f.template)),
@@ -580,12 +581,12 @@ pub fn get_imprecise_name<'s, 't>(
     INameT::AnonymousSubstructConstructorTemplate(asct) => {
         match asct.substruct {
             ICitizenTemplateNameT::StructTemplate(st) => {
-                Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: st.human_name })))
+                Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: st.human_name })))
             }
             ICitizenTemplateNameT::AnonymousSubstructTemplate(astn) => {
                 match astn.interface {
                     IInterfaceTemplateNameT::InterfaceTemplate(it) => {
-                        Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: it.human_namee })))
+                        Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: it.human_namee })))
                     }
                 }
             }
@@ -615,21 +616,22 @@ pub fn get_imprecise_name<'s, 't>(
 }
 
 impl<'s, 't> IVarNameT<'s, 't> {
-  pub fn imprecise_name(self, scout_arena: &ScoutArena<'s>) -> Option<IImpreciseNameS<'s>> {
+  /// The imprecise (spelling) name a use-site resolves this variable by, if it has one. Every
+  /// variant that has one already stores it, so this returns the stored reference without
+  /// interning (hence no arena). The result is not canonicalized: compare it by value (`==`),
+  /// never by `ptr_eq`.
+  pub fn imprecise_name(self) -> Option<IImpreciseNameS<'s>> {
     match self {
-      IVarNameT::Local(n) => Some(
-        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: n.name })),
-      ),
+      IVarNameT::Local(n) => Some(IImpreciseNameS::CodeName(n.imprecise_name)),
       // A member name derives to the same imprecise `CodeName` (its spelling) as a local does.
-      IVarNameT::Member(n) => Some(
-        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: n.name })),
-      ),
-      IVarNameT::ClosureParam(_) => Some(scout_arena.intern_imprecise_name(
-        IImpreciseNameValS::ClosureParamImpreciseName(ClosureParamImpreciseNameS {}),
-      )),
-      IVarNameT::Self_(_) => {
-        Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::SelfName(SelfNameS {})))
+      IVarNameT::Member(n) => Some(IImpreciseNameS::CodeName(n.imprecise_name)),
+      IVarNameT::ClosureParam(n) => Some(IImpreciseNameS::ClosureParamImpreciseName(n.imprecise_name)),
+      IVarNameT::ConstructingMember(n) => {
+        Some(IImpreciseNameS::ConstructingMemberImpreciseName(n.imprecise_name))
       }
+      IVarNameT::Self_(_) => Some(IImpreciseNameS::SelfName(&SELF_IMPRECISE_NAME)),
+      // The rest are compiler-synthesized (block/function-result and temporary vars) or life-only
+      // (loop vars, magic params) — no source spelling to resolve by.
       _ => None,
     }
   }
@@ -720,7 +722,7 @@ where
             .imprecise_to_entries
             .entry(
               scout_arena
-                .intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameS {})),
+                .intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameValS {})),
             )
             .or_insert_with(Vec::new)
             .push(*entry);
@@ -919,7 +921,7 @@ where
             }
             entries.push((
               scout_arena
-                .intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameS {})),
+                .intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameValS {})),
               *value,
             ));
             entries.into_iter().collect::<Vec<_>>()

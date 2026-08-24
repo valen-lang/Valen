@@ -672,7 +672,7 @@ where
                         let ranges = once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         let function_name = self.scout_arena.intern_imprecise_name(
-                            IImpreciseNameValS::CodeName(CodeNameS { name: resolve.name }));
+                            IImpreciseNameValS::CodeName(CodeNameValS { name: resolve.name }));
                         let explicit_template_arg_rules_s = &[];
                         let positional_explicit_template_arg_runes_s = &[];
                         let receiving_rune_to_explicit_template_arg_rune = &[];

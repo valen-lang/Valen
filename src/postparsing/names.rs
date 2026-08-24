@@ -1,8 +1,9 @@
 use crate::interner::StrI;
 use crate::postparsing::ast::{LocationInDenizen, LocationInDenizenVal};
-use crate::scout_arena::ScoutArena;
+use crate::scout_arena::{ScoutArena, ScoutInterned};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
+use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ptr::eq;
@@ -73,7 +74,8 @@ impl<'s> INameS<'s> {
 /// Per @DSAUIMZ, if a variant gains a slice field, add a 'tmp lifetime and use a transient ValS struct.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum INameValS<'s> {
-  FunctionDeclaration(IFunctionDeclarationNameValS<'s>),
+  // FunctionDeclaration is NOT here: function declaration names are identity (not interned),
+  // built directly and wrapped in `INameS::FunctionDeclaration` (like `INameS::VarName`).
   ImplDeclaration(ImplDeclarationNameS<'s>),
   AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameValS<'s>),
   ExportAsName(ExportAsNameS<'s>),
@@ -86,8 +88,7 @@ pub enum INameValS<'s> {
   RuntimeSizedArrayDeclarationName(RuntimeSizedArrayDeclarationNameS),
   StaticSizedArrayDeclarationName(StaticSizedArrayDeclarationNameS),
   GlobalFunctionFamilyName(GlobalFunctionFamilyNameS<'s>),
-  ArbitraryName(ArbitraryNameS),
-  VarName(IVarDeclarationNameValS<'s>),
+  ArbitraryName(ArbitraryNameValS),
 }
 
 /// Shallow: inner already canonical.
@@ -108,6 +109,7 @@ pub struct AnonymousSubstructTemplateNameValS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IImpreciseNameS<'s> {
   CodeName(&'s CodeNameS<'s>),
+  ConstructingMemberImpreciseName(&'s ConstructingMemberImpreciseNameS<'s>),
   IterableName(&'s IterableNameS<'s>),
   IteratorName(&'s IteratorNameS<'s>),
   IterationOptionName(&'s IterationOptionNameS<'s>),
@@ -137,6 +139,7 @@ impl<'s> IImpreciseNameS<'s> {
   pub fn canonical_ptr(&self) -> *const () {
     match self {
       IImpreciseNameS::CodeName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::ConstructingMemberImpreciseName(r) => *r as *const _ as *const (),
       IImpreciseNameS::IterableName(r) => *r as *const _ as *const (),
       IImpreciseNameS::IteratorName(r) => *r as *const _ as *const (),
       IImpreciseNameS::IterationOptionName(r) => *r as *const _ as *const (),
@@ -216,15 +219,16 @@ pub struct RuneNameValS<'s> {
 /// Per @DSAUIMZ, if a variant gains a slice field, add a 'tmp lifetime and use a transient ValS struct.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IImpreciseNameValS<'s> {
-  CodeName(CodeNameS<'s>),
-  IterableName(IterableNameS<'s>),
-  IteratorName(IteratorNameS<'s>),
-  IterationOptionName(IterationOptionNameS<'s>),
-  LambdaImpreciseName(LambdaImpreciseNameS),
-  PlaceholderImpreciseName(PlaceholderImpreciseNameS),
+  CodeName(CodeNameValS<'s>),
+  ConstructingMemberImpreciseName(ConstructingMemberImpreciseNameValS<'s>),
+  IterableName(IterableNameValS<'s>),
+  IteratorName(IteratorNameValS<'s>),
+  IterationOptionName(IterationOptionNameValS<'s>),
+  LambdaImpreciseName(LambdaImpreciseNameValS),
+  PlaceholderImpreciseName(PlaceholderImpreciseNameValS),
   LambdaStructImpreciseName(LambdaStructImpreciseNameValS<'s>),
-  ClosureParamImpreciseName(ClosureParamImpreciseNameS),
-  PrototypeName(PrototypeNameS),
+  ClosureParamImpreciseName(ClosureParamImpreciseNameValS),
+  PrototypeName(PrototypeNameValS),
   AnonymousSubstructTemplateImpreciseName(AnonymousSubstructTemplateImpreciseNameValS<'s>),
   AnonymousSubstructConstructorTemplateImpreciseName(
     AnonymousSubstructConstructorTemplateImpreciseNameValS<'s>,
@@ -232,13 +236,13 @@ pub enum IImpreciseNameValS<'s> {
   ImplImpreciseName(ImplImpreciseNameValS<'s>),
   ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS<'s>),
   ImplSuperInterfaceImpreciseName(ImplSuperInterfaceImpreciseNameValS<'s>),
-  SelfName(SelfNameS),
+  SelfName(SelfNameValS),
   RuneName(RuneNameValS<'s>),
-  ArbitraryName(ArbitraryNameS),
-  MagicParamName(MagicParamNameS<'s>),
-  WhileCondResultName(WhileCondResultNameS<'s>),
-  AnonymousSubstructMemberName(AnonymousSubstructMemberNameS),
-  DesugaredParamName(DesugaredParamNameS<'s>),
+  ArbitraryName(ArbitraryNameValS),
+  MagicParamName(MagicParamNameValS<'s>),
+  WhileCondResultName(WhileCondResultNameValS<'s>),
+  AnonymousSubstructMemberName(AnonymousSubstructMemberNameValS),
+  DesugaredParamName(DesugaredParamNameValS<'s>),
 }
 
 /// Value-type (see @TFITCX). Identity-bearing — each names one declaration — so never interned
@@ -246,99 +250,67 @@ pub enum IImpreciseNameValS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IVarDeclarationNameS<'s> {
   CodeVarName(CodeVarNameS<'s>),
-  ConstructingMemberName(StrI<'s>),
-  ClosureParamName(&'s ClosureParamNameS<'s>),
-  MagicParamName(CodeLocationS<'s>),
-  IterableName(RangeS<'s>),
-  IteratorName(RangeS<'s>),
-  IterationOptionName(RangeS<'s>),
-  WhileCondResultName(RangeS<'s>),
-  SelfName,
-  AnonymousSubstructMemberName(i32),
+  ConstructingMemberName(ConstructingMemberNameDeclarationS<'s>),
+  ClosureParamName(ClosureParamNameDeclarationS<'s>),
+  MagicParamName(MagicParamNameDeclarationS<'s>),
+  IterableName(IterableNameDeclarationS<'s>),
+  IteratorName(IteratorNameDeclarationS<'s>),
+  IterationOptionName(IterationOptionNameDeclarationS<'s>),
+  WhileCondResultName(WhileCondResultNameDeclarationS<'s>),
+  SelfName(SelfNameDeclarationS<'s>),
+  AnonymousSubstructMemberName(AnonymousSubstructMemberNameDeclarationS<'s>),
   /// Synthetic ABI-slot identifier for a function parameter that has no user-written name
   /// (an anonymous destructure like `Pair[a, b]`, or an ignored `_ Pair`). Named params
   /// keep their real name instead.
-  DesugaredParamName(CodeLocationS<'s>),
+  DesugaredParamName(DesugaredParamNameDeclarationS<'s>),
 }
 
 impl<'s> IVarDeclarationNameS<'s> {
   /// The imprecise (source) name a use-site uses to resolve this variable by its source
   /// spelling. Total: every declaration-name variant maps to a corresponding imprecise
   /// variant, so this never fails.
-  pub fn imprecise_name(self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
+  /// The declaration's imprecise (source) name. A declaration stores its imprecise name as an
+  /// already-interned `&'s` ref (typing-design "Names"), so this just wraps that canonical ref in the
+  /// matching `IImpreciseNameS` variant — no re-interning needed.
+  pub fn imprecise_name(self, _scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
     match self {
-      IVarDeclarationNameS::CodeVarName(n) => {
-        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: n.name }))
+      IVarDeclarationNameS::CodeVarName(n) => IImpreciseNameS::CodeName(n.imprecise_name),
+      IVarDeclarationNameS::ConstructingMemberName(n) => {
+        IImpreciseNameS::ConstructingMemberImpreciseName(n.imprecise_name)
       }
-      IVarDeclarationNameS::ConstructingMemberName(name) => {
-        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name }))
+      IVarDeclarationNameS::ClosureParamName(n) => {
+        IImpreciseNameS::ClosureParamImpreciseName(n.imprecise_name)
       }
-      IVarDeclarationNameS::ClosureParamName(_) => scout_arena.intern_imprecise_name(
-        IImpreciseNameValS::ClosureParamImpreciseName(ClosureParamImpreciseNameS {}),
-      ),
-      IVarDeclarationNameS::MagicParamName(code_location) => scout_arena
-        .intern_imprecise_name(IImpreciseNameValS::MagicParamName(MagicParamNameS {
-          code_location,
-        })),
-      IVarDeclarationNameS::IterableName(range) => scout_arena
-        .intern_imprecise_name(IImpreciseNameValS::IterableName(IterableNameS { range })),
-      IVarDeclarationNameS::IteratorName(range) => scout_arena
-        .intern_imprecise_name(IImpreciseNameValS::IteratorName(IteratorNameS { range })),
-      IVarDeclarationNameS::IterationOptionName(range) => scout_arena.intern_imprecise_name(
-        IImpreciseNameValS::IterationOptionName(IterationOptionNameS { range }),
-      ),
-      IVarDeclarationNameS::WhileCondResultName(range) => scout_arena.intern_imprecise_name(
-        IImpreciseNameValS::WhileCondResultName(WhileCondResultNameS { range }),
-      ),
-      IVarDeclarationNameS::SelfName => {
-        scout_arena.intern_imprecise_name(IImpreciseNameValS::SelfName(SelfNameS {}))
+      IVarDeclarationNameS::MagicParamName(n) => IImpreciseNameS::MagicParamName(n.imprecise_name),
+      IVarDeclarationNameS::IterableName(n) => IImpreciseNameS::IterableName(n.imprecise_name),
+      IVarDeclarationNameS::IteratorName(n) => IImpreciseNameS::IteratorName(n.imprecise_name),
+      IVarDeclarationNameS::IterationOptionName(n) => {
+        IImpreciseNameS::IterationOptionName(n.imprecise_name)
       }
-      IVarDeclarationNameS::AnonymousSubstructMemberName(index) => scout_arena
-        .intern_imprecise_name(IImpreciseNameValS::AnonymousSubstructMemberName(
-          AnonymousSubstructMemberNameS { index },
-        )),
-      IVarDeclarationNameS::DesugaredParamName(code_location) => scout_arena
-        .intern_imprecise_name(IImpreciseNameValS::DesugaredParamName(DesugaredParamNameS {
-          code_location,
-        })),
+      IVarDeclarationNameS::WhileCondResultName(n) => {
+        IImpreciseNameS::WhileCondResultName(n.imprecise_name)
+      }
+      IVarDeclarationNameS::SelfName(n) => IImpreciseNameS::SelfName(n.imprecise_name),
+      IVarDeclarationNameS::AnonymousSubstructMemberName(n) => {
+        IImpreciseNameS::AnonymousSubstructMemberName(n.imprecise_name)
+      }
+      IVarDeclarationNameS::DesugaredParamName(n) => {
+        IImpreciseNameS::DesugaredParamName(n.imprecise_name)
+      }
     }
   }
 }
 
-/// Value form for interner lookups.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IVarDeclarationNameValS<'s> {
-  ConstructingMemberName(StrI<'s>),
-  ClosureParamName(ClosureParamNameS<'s>),
-  MagicParamName(CodeLocationS<'s>),
-  IterableName(RangeS<'s>),
-  IteratorName(RangeS<'s>),
-  IterationOptionName(RangeS<'s>),
-  WhileCondResultName(RangeS<'s>),
-  SelfName,
-  AnonymousSubstructMemberName(i32),
-  DesugaredParamName(CodeLocationS<'s>),
-}
-
+/// Identity-bearing (each names one declaration — carries a `lid`), so **not interned**, mirroring
+/// `IVarDeclarationNameS` (@WVSBIZ). Built directly and wrapped in `INameS::FunctionDeclaration`
+/// (like `INameS::VarName` wraps `IVarDeclarationNameS`). Each variant embeds its interned imprecise
+/// name; `imprecise_name()` hands back the matching `IFunctionImpreciseNameS`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IFunctionDeclarationNameS<'s> {
   FunctionName(FunctionNameS<'s>),
   LambdaDeclarationName(LambdaDeclarationNameS<'s>),
   ForwarderFunctionDeclarationName(&'s ForwarderFunctionDeclarationNameS<'s>),
   ConstructorName(&'s ConstructorNameS<'s>),
-  ImmConcreteDestructorName(&'s ImmConcreteDestructorNameS<'s>),
-  ImmInterfaceDestructorName(&'s ImmInterfaceDestructorNameS<'s>),
-}
-
-/// Value form for interner lookups. Shallow variant holds canonical IFunctionDeclarationNameS.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IFunctionDeclarationNameValS<'s> {
-  FunctionName(FunctionNameS<'s>),
-  LambdaDeclarationName(LambdaDeclarationNameS<'s>),
-  ForwarderFunctionDeclarationName(ForwarderFunctionDeclarationNameValS<'s>),
-  ConstructorName(ConstructorNameS<'s>),
-  ImmConcreteDestructorName(ImmConcreteDestructorNameS<'s>),
-  ImmInterfaceDestructorName(ImmInterfaceDestructorNameS<'s>),
 }
 
 /// Shallow: inner already canonical.
@@ -367,36 +339,65 @@ impl<'s> IFunctionDeclarationNameS<'s> {
           n.interface_name.range.begin.file.package_coord
         }
       },
-      IFunctionDeclarationNameS::ImmConcreteDestructorName(r) => &r.package_coordinate,
-      IFunctionDeclarationNameS::ImmInterfaceDestructorName(r) => &r.package_coordinate,
     }
   }
 
-  /// Convert to value form for interning. Clones through refs.
-  pub fn to_val(&self) -> IFunctionDeclarationNameValS<'s> {
+  /// The imprecise (spelling/lookup) name this declaration carries, wrapped in the matching
+  /// `IFunctionImpreciseNameS` variant — mirrors `IVarDeclarationNameS::imprecise_name`.
+  pub fn imprecise_name(self) -> IFunctionImpreciseNameS<'s> {
     match self {
       IFunctionDeclarationNameS::FunctionName(x) => {
-        IFunctionDeclarationNameValS::FunctionName(x.clone())
+        IFunctionImpreciseNameS::FunctionName(x.imprecise_name)
       }
       IFunctionDeclarationNameS::LambdaDeclarationName(x) => {
-        IFunctionDeclarationNameValS::LambdaDeclarationName(x.clone())
+        IFunctionImpreciseNameS::LambdaDeclarationName(x.imprecise_name)
       }
       IFunctionDeclarationNameS::ForwarderFunctionDeclarationName(r) => {
-        IFunctionDeclarationNameValS::ForwarderFunctionDeclarationName(
-          ForwarderFunctionDeclarationNameValS { inner: r.inner.clone(), index: r.index },
-        )
+        IFunctionImpreciseNameS::ForwarderFunctionDeclarationName(r.imprecise_name)
       }
       IFunctionDeclarationNameS::ConstructorName(r) => {
-        IFunctionDeclarationNameValS::ConstructorName((*r).clone())
-      }
-      IFunctionDeclarationNameS::ImmConcreteDestructorName(r) => {
-        IFunctionDeclarationNameValS::ImmConcreteDestructorName((*r).clone())
-      }
-      IFunctionDeclarationNameS::ImmInterfaceDestructorName(r) => {
-        IFunctionDeclarationNameValS::ImmInterfaceDestructorName((*r).clone())
+        IFunctionImpreciseNameS::ConstructorName(r.imprecise_name)
       }
     }
   }
+}
+
+/// The imprecise (spelling/lookup) name of a function declaration — the counterpart to
+/// `IFunctionDeclarationNameS`, mirroring how `IImpreciseNameS` is the imprecise side of the
+/// variable declaration names. A Copy tagged-pointer enum whose payloads are interned (@SICZ).
+/// The two lookup-relevant variants reduce to a shared `CodeNameS` spelling (so env resolution
+/// stays on `IImpreciseNameS::CodeName`); the lambda reuses the empty marker (never looked up by
+/// name); only the forwarder needs a bespoke payload (it wraps its inner's imprecise name).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum IFunctionImpreciseNameS<'s> {
+  FunctionName(&'s CodeNameS<'s>),
+  ConstructorName(&'s CodeNameS<'s>),
+  LambdaDeclarationName(&'s LambdaImpreciseNameS),
+  ForwarderFunctionDeclarationName(&'s ForwarderFunctionImpreciseNameS<'s>),
+}
+
+/// Value/key form for interning `IFunctionImpreciseNameS` payloads.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum IFunctionImpreciseNameValS<'s> {
+  FunctionName(CodeNameValS<'s>),
+  ConstructorName(CodeNameValS<'s>),
+  LambdaDeclarationName(LambdaImpreciseNameValS),
+  ForwarderFunctionDeclarationName(ForwarderFunctionImpreciseNameValS<'s>),
+}
+
+/// A forwarder's imprecise name wraps its inner function's imprecise name (see the closure/forwarder
+/// model). Interned (@SICZ) — carries the witness.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ForwarderFunctionImpreciseNameS<'s> {
+  pub inner: IFunctionImpreciseNameS<'s>,
+  pub index: i32,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `ForwarderFunctionImpreciseNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ForwarderFunctionImpreciseNameValS<'s> {
+  pub inner: IFunctionImpreciseNameS<'s>,
+  pub index: i32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -502,7 +503,7 @@ impl<'s> IStructDeclarationNameS<'s> {
   pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
     match self {
       IStructDeclarationNameS::TopLevelStructDeclarationName(n) => {
-        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: n.name }))
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: n.name }))
       }
       IStructDeclarationNameS::AnonymousSubstructTemplateName(n) => {
         let interface_imprecise_name = n.interface_name.get_imprecise_name(scout_arena);
@@ -518,34 +519,50 @@ impl<'s> IStructDeclarationNameS<'s> {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LambdaDeclarationNameS<'s> {
+  pub imprecise_name: &'s LambdaImpreciseNameS,
   pub code_location: CodeLocationS<'s>,
+  pub lid: LocationInDenizen<'s>,
 }
 
 impl<'s> LambdaDeclarationNameS<'s> {
   pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
     scout_arena
-      .intern_imprecise_name(IImpreciseNameValS::LambdaImpreciseName(LambdaImpreciseNameS {}))
+      .intern_imprecise_name(IImpreciseNameValS::LambdaImpreciseName(LambdaImpreciseNameValS {}))
   }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LambdaImpreciseNameS {}
+pub struct LambdaImpreciseNameS {
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `LambdaImpreciseNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LambdaImpreciseNameValS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PlaceholderImpreciseNameS {
+  pub index: i32,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `PlaceholderImpreciseNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct PlaceholderImpreciseNameValS {
   pub index: i32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctionNameS<'s> {
-  pub name: StrI<'s>,
+  pub imprecise_name: &'s CodeNameS<'s>,
   pub code_location: CodeLocationS<'s>,
+  pub lid: LocationInDenizen<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ForwarderFunctionDeclarationNameS<'s> {
   pub inner: IFunctionDeclarationNameS<'s>,
   pub index: i32,
+  pub imprecise_name: &'s ForwarderFunctionImpreciseNameS<'s>,
+  pub lid: LocationInDenizen<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -583,10 +600,10 @@ impl<'s> TopLevelCitizenDeclarationNameS<'s> {
   pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
     match self {
       TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => {
-        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: x.name }))
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: x.name }))
       }
       TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(x) => {
-        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: x.name }))
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: x.name }))
       }
     }
   }
@@ -611,7 +628,7 @@ pub struct TopLevelInterfaceDeclarationNameS<'s> {
 
 impl<'s> TopLevelInterfaceDeclarationNameS<'s> {
   pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
-    scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.name }))
+    scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.name }))
   }
 }
 
@@ -644,6 +661,7 @@ impl<'s> LambdaStructDeclarationNameS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LambdaStructImpreciseNameS<'s> {
   pub lambda_name: IImpreciseNameS<'s>,
+  pub _must_intern: ScoutInterned,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -672,18 +690,45 @@ pub struct ClosureParamNameS<'s> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ClosureParamImpreciseNameS {}
+pub struct ClosureParamImpreciseNameS {
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `ClosureParamImpreciseNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ClosureParamImpreciseNameValS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct PrototypeNameS {}
+pub struct PrototypeNameS {
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `PrototypeNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct PrototypeNameValS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MagicParamNameS<'s> {
   pub code_location: CodeLocationS<'s>,
+  /// Stable identity (see LIFE/LID design). Shared with the declaration's `lid`; the
+  /// already-arena-allocated slice means this needs no `'tmp` deferral (see @DSAUIMZ), unlike
+  /// a builder-borrowed lid — the imprecise name holds the canonical lid directly.
+  pub lid: LocationInDenizen<'s>,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `MagicParamNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct MagicParamNameValS<'s> {
+  pub code_location: CodeLocationS<'s>,
+  pub lid: LocationInDenizen<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DesugaredParamNameS<'s> {
+  pub code_location: CodeLocationS<'s>,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `DesugaredParamNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DesugaredParamNameValS<'s> {
   pub code_location: CodeLocationS<'s>,
 }
 
@@ -695,22 +740,30 @@ pub struct AnonymousSubstructTemplateNameS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateImpreciseNameS<'s> {
   pub interface_imprecise_name: IImpreciseNameS<'s>,
+  pub _must_intern: ScoutInterned,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructConstructorTemplateImpreciseNameS<'s> {
   pub interface_imprecise_name: IImpreciseNameS<'s>,
+  pub _must_intern: ScoutInterned,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructMemberNameS {
+  pub index: i32,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `AnonymousSubstructMemberNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AnonymousSubstructMemberNameValS {
   pub index: i32,
 }
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeVarNameS<'s> {
-  pub name: StrI<'s>,
+  pub imprecise_name: &'s CodeNameS<'s>,
   /// Disambiguates same-named locals across scopes, so structural equality is identity
   /// equality — which is why a declaration name is never interned (see @WVSBIZ).
   pub lid: LocationInDenizen<'s>,
@@ -724,26 +777,116 @@ pub struct ConstructingMemberNameS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IterableNameS<'s> {
   pub range: RangeS<'s>,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `IterableNameS` (the Val side of the dual-enum).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IterableNameValS<'s> {
+  pub range: RangeS<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IteratorNameS<'s> {
+  pub range: RangeS<'s>,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `IteratorNameS` (the Val side of the dual-enum).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IteratorNameValS<'s> {
   pub range: RangeS<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IterationOptionNameS<'s> {
   pub range: RangeS<'s>,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `IterationOptionNameS` (the Val side of the dual-enum).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IterationOptionNameValS<'s> {
+  pub range: RangeS<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct WhileCondResultNameS<'s> {
   pub range: RangeS<'s>,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `WhileCondResultNameS` (the Val side of the dual-enum).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct WhileCondResultNameValS<'s> {
+  pub range: RangeS<'s>,
+}
+
+// Declaration-name payloads: each embeds its corresponding `*ImpreciseNameS` (the use-site
+// name a source spelling resolves through) plus the declaration's `lid` (its unique identity,
+// see @WVSBIZ). Built directly, never interned; the embedded imprecise name is a plain value
+// here and only gets interned when `imprecise_name()` hands out the canonical form.
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ConstructingMemberNameDeclarationS<'s> {
+  pub imprecise_name: &'s ConstructingMemberImpreciseNameS<'s>,
+  pub lid: LocationInDenizen<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ClosureParamNameDeclarationS<'s> {
+  pub imprecise_name: &'s ClosureParamImpreciseNameS,
+  pub lid: LocationInDenizen<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct MagicParamNameDeclarationS<'s> {
+  pub imprecise_name: &'s MagicParamNameS<'s>,
+  pub lid: LocationInDenizen<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IterableNameDeclarationS<'s> {
+  pub imprecise_name: &'s IterableNameS<'s>,
+  pub lid: LocationInDenizen<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IteratorNameDeclarationS<'s> {
+  pub imprecise_name: &'s IteratorNameS<'s>,
+  pub lid: LocationInDenizen<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IterationOptionNameDeclarationS<'s> {
+  pub imprecise_name: &'s IterationOptionNameS<'s>,
+  pub lid: LocationInDenizen<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct WhileCondResultNameDeclarationS<'s> {
+  pub imprecise_name: &'s WhileCondResultNameS<'s>,
+  pub lid: LocationInDenizen<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct SelfNameDeclarationS<'s> {
+  pub imprecise_name: &'s SelfNameS,
+  pub lid: LocationInDenizen<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AnonymousSubstructMemberNameDeclarationS<'s> {
+  pub imprecise_name: &'s AnonymousSubstructMemberNameS,
+  pub lid: LocationInDenizen<'s>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DesugaredParamNameDeclarationS<'s> {
+  pub imprecise_name: &'s DesugaredParamNameS<'s>,
+  pub lid: LocationInDenizen<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RuneNameS<'s> {
   pub rune: IRuneS<'s>,
+  pub _must_intern: ScoutInterned,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -1311,8 +1454,40 @@ pub struct MacroSelfKindRuneS {}
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MacroSelfKindTemplateRuneS {}
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+/// Interned imprecise name (sealed, @SICZ): obtainable only via `ScoutArena::intern_code_name` /
+/// `intern_imprecise_name`. The `_must_intern` witness makes the canonical `&'s CodeNameS`
+/// unforgeable. The freely-constructible lookup key is `CodeNameValS`.
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct CodeNameS<'s> {
+  pub name: StrI<'s>,
+  pub _must_intern: ScoutInterned,
+}
+
+// Hide the `_must_intern` witness (see @SICZ) from Debug: it's an internal sealing token
+// with no information, and it otherwise leaks into every humanized name and error snapshot.
+impl<'s> Debug for CodeNameS<'s> {
+  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    f.debug_struct("CodeNameS").field("name", &self.name).finish()
+  }
+}
+
+// VCOORD: rename CodeNameValS to CodeNameKeyS or some other name to say its the interning key
+/// Freely-constructible lookup key for `CodeNameS` (the Val side of the dual-enum).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct CodeNameValS<'s> {
+  pub name: StrI<'s>,
+}
+
+/// Imprecise (use-site) name for a `self.x` constructing-member reference. Distinct from
+/// `CodeName` so a member access doesn't collide with a same-spelled local read.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ConstructingMemberImpreciseNameS<'s> {
+  pub name: StrI<'s>,
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `ConstructingMemberImpreciseNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ConstructingMemberImpreciseNameValS<'s> {
   pub name: StrI<'s>,
 }
 
@@ -1434,10 +1609,20 @@ pub struct FunctorReturnRuneNameS {}
 
 // Vale has no notion of Self, it's just a convenient name for a first parameter.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct SelfNameS {}
+pub struct SelfNameS {
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `SelfNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct SelfNameValS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ArbitraryNameS {}
+pub struct ArbitraryNameS {
+  pub _must_intern: ScoutInterned,
+}
+/// Freely-constructible lookup key for `ArbitraryNameS`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ArbitraryNameValS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DispatcherRuneFromImplS<'s> {
@@ -1453,28 +1638,23 @@ pub struct CaseRuneFromImplS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ConstructorNameS<'s> {
   pub tlcd: ICitizenDeclarationNameS<'s>,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImmConcreteDestructorNameS<'s> {
-  pub package_coordinate: PackageCoordinate<'s>,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImmInterfaceDestructorNameS<'s> {
-  pub package_coordinate: PackageCoordinate<'s>,
+  pub imprecise_name: &'s CodeNameS<'s>,
+  pub lid: LocationInDenizen<'s>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplImpreciseNameS<'s> {
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
   pub super_interface_imprecise_name: IImpreciseNameS<'s>,
+  pub _must_intern: ScoutInterned,
 }
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSubCitizenImpreciseNameS<'s> {
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
+  pub _must_intern: ScoutInterned,
 }
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSuperInterfaceImpreciseNameS<'s> {
   pub super_interface_imprecise_name: IImpreciseNameS<'s>,
+  pub _must_intern: ScoutInterned,
 }

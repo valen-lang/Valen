@@ -400,27 +400,27 @@ where
       V::TypingPassTemporaryVar(p) => {
         (V::TypingPassTemporaryVar(p), T::TypingPassTemporaryVar(self.bump.alloc(p)))
       }
-      V::TypingPassPatternMember(p) => {
-        (V::TypingPassPatternMember(p), T::TypingPassPatternMember(self.bump.alloc(p)))
-      }
-      V::TypingPassPatternDestructuree(p) => {
-        (V::TypingPassPatternDestructuree(p), T::TypingPassPatternDestructuree(self.bump.alloc(p)))
-      }
-      V::UnnamedLocal(p) => (V::UnnamedLocal(p), T::UnnamedLocal(self.bump.alloc(p))),
+      // V::TypingPassPatternMember(p) => {
+      //   (V::TypingPassPatternMember(p), T::TypingPassPatternMember(self.bump.alloc(p)))
+      // }
+      // V::TypingPassPatternDestructuree(p) => {
+      //   (V::TypingPassPatternDestructuree(p), T::TypingPassPatternDestructuree(self.bump.alloc(p)))
+      // }
+      // V::UnnamedLocal(p) => (V::UnnamedLocal(p), T::UnnamedLocal(self.bump.alloc(p))),
       V::ClosureParam(p) => (V::ClosureParam(p), T::ClosureParam(self.bump.alloc(p))),
       V::ConstructingMember(p) => {
         (V::ConstructingMember(p), T::ConstructingMember(self.bump.alloc(p)))
       }
-      V::WhileCondResult(p) => (V::WhileCondResult(p), T::WhileCondResult(self.bump.alloc(p))),
+      // V::WhileCondResult(p) => (V::WhileCondResult(p), T::WhileCondResult(self.bump.alloc(p))),
       V::Iterable(p) => (V::Iterable(p), T::Iterable(self.bump.alloc(p))),
       V::Iterator(p) => (V::Iterator(p), T::Iterator(self.bump.alloc(p))),
       V::IterationOption(p) => (V::IterationOption(p), T::IterationOption(self.bump.alloc(p))),
       V::MagicParam(p) => (V::MagicParam(p), T::MagicParam(self.bump.alloc(p))),
       V::Member(p) => (V::Member(p), T::Member(self.bump.alloc(p))),
       V::Local(p) => (V::Local(p), T::Local(self.bump.alloc(p))),
-      V::AnonymousSubstructMember(p) => {
-        (V::AnonymousSubstructMember(p), T::AnonymousSubstructMember(self.bump.alloc(p)))
-      }
+      // V::AnonymousSubstructMember(p) => {
+      //   (V::AnonymousSubstructMember(p), T::AnonymousSubstructMember(self.bump.alloc(p)))
+      // }
       V::Primitive(p) => (V::Primitive(p), T::Primitive(self.bump.alloc(p))),
       V::PackageTopLevel(p) => (V::PackageTopLevel(p), T::PackageTopLevel(self.bump.alloc(p))),
       V::Project(p) => (V::Project(p), T::Project(self.bump.alloc(p))),
@@ -746,7 +746,7 @@ where
     TypingPassBlockResultVar,
     TypingPassBlockResultVarNameT
   );
-  impl_intern_name_wrapper_simple_none!(
+  impl_intern_name_wrapper_simple_t_only!(
     intern_typing_pass_function_result_var_name,
     TypingPassFunctionResultVar,
     TypingPassFunctionResultVarNameT
@@ -756,51 +756,51 @@ where
     TypingPassTemporaryVar,
     TypingPassTemporaryVarNameT
   );
-  impl_intern_name_wrapper_simple_t_only!(
-    intern_typing_pass_pattern_member_name,
-    TypingPassPatternMember,
-    TypingPassPatternMemberNameT
-  );
-  impl_intern_name_wrapper_simple_t_only!(
-    intern_typing_pass_pattern_destructuree_name,
-    TypingPassPatternDestructuree,
-    TypingPassPatternDestructureeNameT
-  );
-  impl_intern_name_wrapper_simple_s_only!(
-    intern_unnamed_local_name,
-    UnnamedLocal,
-    UnnamedLocalNameT
-  );
-  impl_intern_name_wrapper_simple_s_only!(
+  // impl_intern_name_wrapper_simple_t_only!(
+  //   intern_typing_pass_pattern_member_name,
+  //   TypingPassPatternMember,
+  //   TypingPassPatternMemberNameT
+  // );
+  // impl_intern_name_wrapper_simple_t_only!(
+  //   intern_typing_pass_pattern_destructuree_name,
+  //   TypingPassPatternDestructuree,
+  //   TypingPassPatternDestructureeNameT
+  // );
+  // impl_intern_name_wrapper_simple_s_only!(
+  //   intern_unnamed_local_name,
+  //   UnnamedLocal,
+  //   UnnamedLocalNameT
+  // );
+  impl_intern_name_wrapper_simple!(
     intern_closure_param_name,
     ClosureParam,
     ClosureParamNameT
   );
-  impl_intern_name_wrapper_simple_s_only!(
+  impl_intern_name_wrapper_simple!(
     intern_constructing_member_name,
     ConstructingMember,
     ConstructingMemberNameT
   );
-  impl_intern_name_wrapper_simple_s_only!(
-    intern_while_cond_result_name,
-    WhileCondResult,
-    WhileCondResultNameT
-  );
-  impl_intern_name_wrapper_simple_s_only!(intern_iterable_name, Iterable, IterableNameT);
-  impl_intern_name_wrapper_simple_s_only!(intern_iterator_name, Iterator, IteratorNameT);
-  impl_intern_name_wrapper_simple_s_only!(
+  // impl_intern_name_wrapper_simple_s_only!(
+  //   intern_while_cond_result_name,
+  //   WhileCondResult,
+  //   WhileCondResultNameT
+  // );
+  impl_intern_name_wrapper_simple_t_only!(intern_iterable_name, Iterable, IterableNameT);
+  impl_intern_name_wrapper_simple_t_only!(intern_iterator_name, Iterator, IteratorNameT);
+  impl_intern_name_wrapper_simple_t_only!(
     intern_iteration_option_name,
     IterationOption,
     IterationOptionNameT
   );
-  impl_intern_name_wrapper_simple_s_only!(intern_magic_param_name, MagicParam, MagicParamNameT);
-  impl_intern_name_wrapper_simple_s_only!(intern_member_name, Member, MemberNameT);
-  impl_intern_name_wrapper_simple_s_only!(intern_local_name, Local, LocalNameT);
-  impl_intern_name_wrapper_simple_none!(
-    intern_anonymous_substruct_member_name,
-    AnonymousSubstructMember,
-    AnonymousSubstructMemberNameT
-  );
+  impl_intern_name_wrapper_simple_t_only!(intern_magic_param_name, MagicParam, MagicParamNameT);
+  impl_intern_name_wrapper_simple!(intern_member_name, Member, MemberNameT);
+  impl_intern_name_wrapper_simple!(intern_local_name, Local, LocalNameT);
+  // impl_intern_name_wrapper_simple_none!(
+  //   intern_anonymous_substruct_member_name,
+  //   AnonymousSubstructMember,
+  //   AnonymousSubstructMemberNameT
+  // );
   impl_intern_name_wrapper_simple_s_only!(intern_primitive_name, Primitive, PrimitiveNameT);
   impl_intern_name_wrapper_simple_none!(
     intern_package_top_level_name,
@@ -851,7 +851,7 @@ where
     ConstructorTemplate,
     ConstructorTemplateNameT
   );
-  impl_intern_name_wrapper_simple_none!(intern_self_name, Self_, SelfNameT);
+  impl_intern_name_wrapper_simple_t_only!(intern_self_name, Self_, SelfNameT);
   impl_intern_name_wrapper_simple_none!(intern_arbitrary_name, Arbitrary, ArbitraryNameT);
   impl_intern_name_wrapper_simple_s_only!(
     intern_lambda_citizen_template_name,

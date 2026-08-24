@@ -17,10 +17,12 @@ use crate::postparsing::expressions::{
   TupleSE, VoidSE,
 };
 use crate::postparsing::loop_post_parser::{scout_each, scout_while};
+use crate::postparsing::names::CodeNameValS;
 use crate::postparsing::names::ImplicitRuneValS;
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, IRuneS,
-  IRuneValS, IVarDeclarationNameS,
+  CodeNameS, CodeRuneS, ConstructingMemberImpreciseNameValS, IFunctionDeclarationNameS,
+  IImpreciseNameS, IImpreciseNameValS, IRuneS, IRuneValS, IVarDeclarationNameS,
+  MagicParamNameDeclarationS, MagicParamNameS,
 };
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::post_parser::translate_imprecise_name;
@@ -188,7 +190,9 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       .vars
       .iter()
       .filter_map(|declared| match &declared.name {
-        IVarDeclarationNameS::ConstructingMemberName(member_name) => Some(*member_name),
+        IVarDeclarationNameS::ConstructingMemberName(member_name) => {
+          Some(member_name.imprecise_name.name)
+        }
         _ => None,
       })
       .collect();
@@ -214,7 +218,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         let function_name = match &stack_frame_before_constructing.parent_env.name {
           IFunctionDeclarationNameS::FunctionName(function_name_s) => {
             // Re-intern into 'p arena for synthetic parser node (see @PPSPASTNZ)
-            self.parse_arena.intern_str(function_name_s.name.as_str())
+            self.parse_arena.intern_str(function_name_s.imprecise_name.name.as_str())
           }
           _ => panic!("POSTPARSER_NEW_BLOCK_EXPECTED_FUNCTION_NAME"),
         };
@@ -358,7 +362,11 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       )),
 
       IExpressionPE::Lambda(lambda) => {
-        let (function_s, child_uses) = self.scout_lambda(stack_frame.clone(), &lambda.function)?;
+        // Mint the lambda's own unique LID within the enclosing function (one child per lambda,
+        // whether or not it captures), so the lambda's declarations nest under it.
+        let lambda_lid = lidb.child().consume_in_arena(self.scout_arena);
+        let (function_s, child_uses) =
+          self.scout_lambda(stack_frame.clone(), lambda_lid, &lambda.function)?;
         Ok((
           stack_frame.clone(),
           IScoutResult::NormalResult(NormalResultS {
@@ -473,10 +481,14 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
 
       IExpressionPE::MagicParamLookup(magic_param_lookup) => {
         let range_s = PostParser::eval_range(&file_coordinate, magic_param_lookup.range);
-        let name = IVarDeclarationNameS::MagicParamName(PostParser::eval_pos(
-          &file_coordinate,
-          magic_param_lookup.range.begin(),
-        ));
+        let magic_lid = lidb.child().consume_in_arena(self.scout_arena);
+        let name = IVarDeclarationNameS::MagicParamName(MagicParamNameDeclarationS {
+          imprecise_name: self.scout_arena.intern_magic_param_name(
+            PostParser::eval_pos(&file_coordinate, magic_param_lookup.range.begin()),
+            magic_lid,
+          ),
+          lid: magic_lid,
+        });
         Ok((
           stack_frame.clone(),
           IScoutResult::LocalLookupResult(LocalLookupResultS {
@@ -605,7 +617,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
               container_maybe_template_args,
             );
             let load_part_name =
-              self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+              self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
                 name: container_name,
               }));
             let load_part = self.scout_arena.alloc(LoadPartSE {
@@ -673,7 +685,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
 
       IExpressionPE::BinaryCall(binary_call) => {
         let part_name =
-          self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+          self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
             name: self.scout_arena.intern_str(binary_call.function_name.str().as_str()),
           }));
         let load_part =
@@ -777,7 +789,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             )?;
             // We don't support more than 2 parts yet
             let container_load_part_name =
-              self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+              self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
                 name: container_name,
               }));
             let container_part = self.scout_arena.alloc(LoadPartSE {
@@ -1254,17 +1266,25 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
           }) if lookup_name.str() == self.keywords.self_
             && stack_frame
               .find_variable(&self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(
-                CodeNameS { name: self.keywords.self_ },
+                CodeNameValS { name: self.keywords.self_ },
               )))
               .is_none() =>
           {
+            // A `self.x` read references the constructing member the Let-pattern already declared;
+            // resolve it by its imprecise name rather than minting a second declaration.
+            let member_imprecise = self.scout_arena.intern_imprecise_name(
+              IImpreciseNameValS::ConstructingMemberImpreciseName(ConstructingMemberImpreciseNameValS {
+                name: self.scout_arena.intern_str(dot.member.str().as_str()),
+              }),
+            );
+            let name = stack_frame.find_variable(&member_imprecise).unwrap_or_else(|| {
+              panic!("POSTPARSER_CONSTRUCTING_MEMBER_READ_BEFORE_DECLARATION")
+            });
             return Ok((
               stack_frame.clone(),
               IScoutResult::LocalLookupResult(LocalLookupResultS {
                 range: PostParser::eval_range(&file_coordinate, lookup_name.range()),
-                name: IVarDeclarationNameS::ConstructingMemberName(
-                  self.scout_arena.intern_str(dot.member.str().as_str()),
-                ),
+                name,
               }),
               VariableUses::<'s>::empty(),
               VariableUses::<'s>::empty(),
@@ -1300,7 +1320,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
 
       IExpressionPE::Not(not) => {
         let not_name =
-          self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+          self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
             name: self.keywords.not,
           }));
         let load_part =
@@ -1479,7 +1499,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         let added_expr = parts_se.iter().fold(starting_expr, |prev_expr, part_se| {
           let add_call_range = RangeS::new(prev_expr.range().end, part_se.range().begin);
           let plus_name =
-            self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+            self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
               name: self.keywords.plus,
             }));
           let load_part =
@@ -1541,7 +1561,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       }
       IExpressionPE::Range(range_pe) => {
         let range_name =
-          self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+          self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
             name: self.keywords.range,
           }));
         let load_part =

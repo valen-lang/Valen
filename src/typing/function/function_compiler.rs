@@ -331,7 +331,7 @@ where
   ) -> &'t StructMemberT<'s, 't> {
     let translated_name = self.translate_var_name_step(name);
     let name_imprecise = name.imprecise_name(self.scout_arena);
-    let captured = match env.get_variable(name_imprecise, self.scout_arena).unwrap() {
+    let captured = match env.get_variable(name_imprecise).unwrap() {
       IVariableT::Local(local) => local.tyype,
       IVariableT::Capture(capture_var) => capture_var.kind,
     };

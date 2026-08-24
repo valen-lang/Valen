@@ -8,11 +8,10 @@ where
   match id.local_name {
     INameT::LambdaCallFunction(_) => Some("__call".to_string()),
     INameT::Let(_) => None,
-    INameT::UnnamedLocal(_) => None,
     INameT::FunctionBound(n) => Some(n.template.human_name.as_str().to_string()),
     INameT::ClosureParam(_) => None,
     INameT::MagicParam(_) => None,
-    INameT::Member(n) => Some(n.name.as_str().to_string()),
+    INameT::Member(n) => Some(n.imprecise_name.name.as_str().to_string()),
     INameT::Function(n) => Some(n.template.human_name.as_str().to_string()),
     INameT::LambdaCitizen(_) => None,
     INameT::Struct(n) => match n.template {

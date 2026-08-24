@@ -2,7 +2,8 @@
 // Has string/coord interning (like ParseArena) plus name/rune/imprecise-name interning.
 
 use crate::interner::{InternedSlice, StrI};
-use crate::postparsing::ast::LocationInDenizenVal;
+use crate::postparsing::ast::{LocationInDenizen, LocationInDenizenVal};
+use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::AnonymousSubstructImplDeclarationNameS;
 use crate::postparsing::names::AnonymousSubstructTemplateNameS;
 use crate::postparsing::names::IImpreciseNameValS::*;
@@ -10,9 +11,18 @@ use crate::postparsing::names::RuneValQuery;
 use crate::postparsing::names::{
   AnonymousSubstructConstructorTemplateImpreciseNameS, AnonymousSubstructMethodInheritedRuneS,
   AnonymousSubstructTemplateImpreciseNameS, CallPureMergeRegionRuneS, CallPureMergeRegionRuneValS,
-  CallRegionRuneS, CallRegionRuneValS, CaseRuneFromImplS, DispatcherRuneFromImplS,
-  IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IImpreciseNameS, IImpreciseNameValS,
-  INameS, INameValS, IRuneS, IRuneValS, IVarDeclarationNameS, IVarDeclarationNameValS, ImplImpreciseNameS,
+  AnonymousSubstructMemberNameS, CallRegionRuneS, CallRegionRuneValS, CaseRuneFromImplS,
+  ClosureParamImpreciseNameS, ClosureParamImpreciseNameValS, CodeNameS, CodeNameValS,
+  ConstructingMemberImpreciseNameS, ConstructingMemberImpreciseNameValS, DesugaredParamNameS,
+  DesugaredParamNameValS, MagicParamNameValS,
+  AnonymousSubstructMemberNameValS, LambdaImpreciseNameS, LambdaImpreciseNameValS,
+  PlaceholderImpreciseNameS, PrototypeNameS, ArbitraryNameS, IFunctionImpreciseNameS,
+  IFunctionImpreciseNameValS, ForwarderFunctionImpreciseNameS,
+  DispatcherRuneFromImplS, IFunctionDeclarationNameS, IImpreciseNameS,
+  IImpreciseNameValS, INameS, INameValS, IRuneS, IRuneValS, IVarDeclarationNameS,
+  IterableNameS, IterationOptionNameS, IteratorNameS, MagicParamNameS, SelfNameS, SelfNameValS,
+  IterableNameValS, IterationOptionNameValS, IteratorNameValS, WhileCondResultNameValS,
+  WhileCondResultNameS, ImplImpreciseNameS,
   ImplSubCitizenImpreciseNameS, ImplSuperInterfaceImpreciseNameS, ImplicitCoercionTemplateRuneS,
   ImplicitRegionRuneS, ImplicitRuneS, ImplicitRuneValS, LambdaStructImpreciseNameS,
   LetImplicitRuneS, LetImplicitRuneValS, LocalDefaultRegionRuneS, LocalDefaultRegionRuneValS,
@@ -52,6 +62,21 @@ impl<'s> Hash for FileCoordLookupKey<'s> {
   }
 }
 
+/// Construction-witness token for postparse interned payloads (mirrors typing's `MustIntern`, see
+/// @SICZ). The inner unit field is private to this module, so only `scout_arena.rs` — specifically
+/// the `alloc_*_canonical` helpers — can write `ScoutInterned(())`. A sealed payload carries a
+/// `pub _must_intern: ScoutInterned` field; because the constructor is unnameable elsewhere, the only
+/// way to obtain the payload is via an `intern_*` method (E0423 otherwise). This makes "interned" a
+/// compiler-enforced category rather than a convention.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ScoutInterned(());
+
+/// The `self` imprecise name is an empty marker, so a single blessed value serves every variable's
+/// `imprecise_name()` without allocating. It lives here (not at the use site) because `SelfNameS` is
+/// sealed (@SICZ) — only this module can name `ScoutInterned(())`. Non-canonical by design: compare
+/// it by value (`==`), never `ptr_eq`, like every other result of `IVarNameT::imprecise_name()`.
+pub static SELF_IMPRECISE_NAME: SelfNameS = SelfNameS { _must_intern: ScoutInterned(()) };
+
 pub struct ScoutArena<'s> {
   bump: &'s Bump,
   inner: RefCell<ScoutArenaInner<'s>>,
@@ -62,6 +87,8 @@ struct ScoutArenaInner<'s> {
   package_coord_to_ref: HashMap<PackageCoordinate<'s>, &'s PackageCoordinate<'s>>,
   file_coord_to_ref: HashMap<FileCoordLookupKey<'s>, &'s FileCoordinate<'s>>,
   imprecise_name_val_to_ref: HashMap<IImpreciseNameValS<'s>, IImpreciseNameS<'s>>,
+  function_imprecise_name_val_to_ref:
+    HashMap<IFunctionImpreciseNameValS<'s>, IFunctionImpreciseNameS<'s>>,
   name_val_to_ref: HashMap<INameValS<'s>, INameS<'s>>,
   // Per @DSAUIMZ, uses hashbrown for heterogeneous lookup (IRuneValS<'s, 'tmp> against IRuneValS<'s, 's> keys).
   rune_val_to_ref: hashbrown::HashMap<IRuneValS<'s, 's>, IRuneS<'s>>,
@@ -76,12 +103,14 @@ impl<'s> ScoutArena<'s> {
         package_coord_to_ref: HashMap::default(),
         file_coord_to_ref: HashMap::default(),
         imprecise_name_val_to_ref: HashMap::default(),
+        function_imprecise_name_val_to_ref: HashMap::default(),
         name_val_to_ref: HashMap::default(),
         rune_val_to_ref: hashbrown::HashMap::default(),
       }),
     }
   }
 
+  // VCOORD: people can use this to forge things that were supposed to be interned
   pub fn alloc<T>(&self, val: T) -> &'s mut T {
     self.bump.alloc(val)
   }
@@ -172,31 +201,174 @@ impl<'s> ScoutArena<'s> {
     canonical
   }
 
+  // Interned-ref helpers: return the canonical `&'s <payload>` for the imprecise-name variants a
+  // declaration name embeds. Declarations hold their imprecise name by interned ref, always
+  // (typing-design "Names"), so these are the only sanctioned way to fill those fields.
+
+  pub fn intern_code_name(&self, name: StrI<'s>) -> &'s CodeNameS<'s> {
+    match self.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name })) {
+      IImpreciseNameS::CodeName(r) => r,
+      _ => unreachable!("intern_imprecise_name(CodeName) yields CodeName"),
+    }
+  }
+
+  pub fn intern_lambda_imprecise_name(&self) -> &'s LambdaImpreciseNameS {
+    match self.intern_imprecise_name(IImpreciseNameValS::LambdaImpreciseName(
+      LambdaImpreciseNameValS {},
+    )) {
+      IImpreciseNameS::LambdaImpreciseName(r) => r,
+      _ => unreachable!("intern_imprecise_name(LambdaImpreciseName) yields it"),
+    }
+  }
+
+  pub fn intern_closure_param_imprecise_name(&self) -> &'s ClosureParamImpreciseNameS {
+    match self.intern_imprecise_name(IImpreciseNameValS::ClosureParamImpreciseName(
+      ClosureParamImpreciseNameValS {},
+    )) {
+      IImpreciseNameS::ClosureParamImpreciseName(r) => r,
+      _ => unreachable!("intern_imprecise_name(ClosureParamImpreciseName) yields it"),
+    }
+  }
+
+  pub fn intern_constructing_member_imprecise_name(
+    &self,
+    name: StrI<'s>,
+  ) -> &'s ConstructingMemberImpreciseNameS<'s> {
+    match self.intern_imprecise_name(IImpreciseNameValS::ConstructingMemberImpreciseName(
+      ConstructingMemberImpreciseNameValS { name },
+    )) {
+      IImpreciseNameS::ConstructingMemberImpreciseName(r) => r,
+      _ => unreachable!("intern_imprecise_name(ConstructingMemberImpreciseName) yields it"),
+    }
+  }
+
+  pub fn intern_magic_param_name(
+    &self,
+    code_location: CodeLocationS<'s>,
+    lid: LocationInDenizen<'s>,
+  ) -> &'s MagicParamNameS<'s> {
+    match self.intern_imprecise_name(IImpreciseNameValS::MagicParamName(MagicParamNameValS {
+      code_location,
+      lid,
+    })) {
+      IImpreciseNameS::MagicParamName(r) => r,
+      _ => unreachable!("intern_imprecise_name(MagicParamName) yields it"),
+    }
+  }
+
+  pub fn intern_iterable_name(&self, range: RangeS<'s>) -> &'s IterableNameS<'s> {
+    match self.intern_imprecise_name(IImpreciseNameValS::IterableName(IterableNameValS { range })) {
+      IImpreciseNameS::IterableName(r) => r,
+      _ => unreachable!("intern_imprecise_name(IterableName) yields it"),
+    }
+  }
+
+  pub fn intern_iterator_name(&self, range: RangeS<'s>) -> &'s IteratorNameS<'s> {
+    match self.intern_imprecise_name(IImpreciseNameValS::IteratorName(IteratorNameValS { range })) {
+      IImpreciseNameS::IteratorName(r) => r,
+      _ => unreachable!("intern_imprecise_name(IteratorName) yields it"),
+    }
+  }
+
+  pub fn intern_iteration_option_name(&self, range: RangeS<'s>) -> &'s IterationOptionNameS<'s> {
+    match self
+      .intern_imprecise_name(IImpreciseNameValS::IterationOptionName(IterationOptionNameValS { range }))
+    {
+      IImpreciseNameS::IterationOptionName(r) => r,
+      _ => unreachable!("intern_imprecise_name(IterationOptionName) yields it"),
+    }
+  }
+
+  pub fn intern_while_cond_result_name(&self, range: RangeS<'s>) -> &'s WhileCondResultNameS<'s> {
+    match self
+      .intern_imprecise_name(IImpreciseNameValS::WhileCondResultName(WhileCondResultNameValS { range }))
+    {
+      IImpreciseNameS::WhileCondResultName(r) => r,
+      _ => unreachable!("intern_imprecise_name(WhileCondResultName) yields it"),
+    }
+  }
+
+  pub fn intern_self_imprecise_name(&self) -> &'s SelfNameS {
+    match self.intern_imprecise_name(IImpreciseNameValS::SelfName(SelfNameValS {})) {
+      IImpreciseNameS::SelfName(r) => r,
+      _ => unreachable!("intern_imprecise_name(SelfName) yields it"),
+    }
+  }
+
+  pub fn intern_anonymous_substruct_member_name(
+    &self,
+    index: i32,
+  ) -> &'s AnonymousSubstructMemberNameS {
+    match self.intern_imprecise_name(IImpreciseNameValS::AnonymousSubstructMemberName(
+      AnonymousSubstructMemberNameValS { index },
+    )) {
+      IImpreciseNameS::AnonymousSubstructMemberName(r) => r,
+      _ => unreachable!("intern_imprecise_name(AnonymousSubstructMemberName) yields it"),
+    }
+  }
+
+  pub fn intern_desugared_param_name(
+    &self,
+    code_location: CodeLocationS<'s>,
+  ) -> &'s DesugaredParamNameS<'s> {
+    match self.intern_imprecise_name(IImpreciseNameValS::DesugaredParamName(DesugaredParamNameValS {
+      code_location,
+    })) {
+      IImpreciseNameS::DesugaredParamName(r) => r,
+      _ => unreachable!("intern_imprecise_name(DesugaredParamName) yields it"),
+    }
+  }
+
   fn alloc_imprecise_name_canonical(&self, val: IImpreciseNameValS<'s>) -> IImpreciseNameS<'s> {
     match val {
-      CodeName(p) => IImpreciseNameS::CodeName(self.bump.alloc(p)),
-      IterableName(p) => IImpreciseNameS::IterableName(self.bump.alloc(p)),
-      IteratorName(p) => IImpreciseNameS::IteratorName(self.bump.alloc(p)),
-      IterationOptionName(p) => IImpreciseNameS::IterationOptionName(self.bump.alloc(p)),
-      LambdaImpreciseName(p) => IImpreciseNameS::LambdaImpreciseName(self.bump.alloc(p)),
-      PlaceholderImpreciseName(p) => IImpreciseNameS::PlaceholderImpreciseName(self.bump.alloc(p)),
+      CodeName(p) => IImpreciseNameS::CodeName(
+        self.bump.alloc(CodeNameS { name: p.name, _must_intern: ScoutInterned(()) }),
+      ),
+      ConstructingMemberImpreciseName(p) => IImpreciseNameS::ConstructingMemberImpreciseName(
+        self.bump.alloc(ConstructingMemberImpreciseNameS {
+          name: p.name,
+          _must_intern: ScoutInterned(()),
+        }),
+      ),
+      IterableName(p) => IImpreciseNameS::IterableName(
+        self.bump.alloc(IterableNameS { range: p.range, _must_intern: ScoutInterned(()) }),
+      ),
+      IteratorName(p) => IImpreciseNameS::IteratorName(
+        self.bump.alloc(IteratorNameS { range: p.range, _must_intern: ScoutInterned(()) }),
+      ),
+      IterationOptionName(p) => IImpreciseNameS::IterationOptionName(
+        self.bump.alloc(IterationOptionNameS { range: p.range, _must_intern: ScoutInterned(()) }),
+      ),
+      LambdaImpreciseName(_p) => IImpreciseNameS::LambdaImpreciseName(
+        self.bump.alloc(LambdaImpreciseNameS { _must_intern: ScoutInterned(()) }),
+      ),
+      PlaceholderImpreciseName(p) => IImpreciseNameS::PlaceholderImpreciseName(
+        self.bump.alloc(PlaceholderImpreciseNameS { index: p.index, _must_intern: ScoutInterned(()) }),
+      ),
       LambdaStructImpreciseName(v) => {
-        let payload = LambdaStructImpreciseNameS { lambda_name: v.lambda_name };
+        let payload = LambdaStructImpreciseNameS {
+          lambda_name: v.lambda_name,
+          _must_intern: ScoutInterned(()),
+        };
         IImpreciseNameS::LambdaStructImpreciseName(self.bump.alloc(payload))
       }
-      ClosureParamImpreciseName(p) => {
-        IImpreciseNameS::ClosureParamImpreciseName(self.bump.alloc(p))
-      }
-      PrototypeName(p) => IImpreciseNameS::PrototypeName(self.bump.alloc(p)),
+      ClosureParamImpreciseName(_p) => IImpreciseNameS::ClosureParamImpreciseName(
+        self.bump.alloc(ClosureParamImpreciseNameS { _must_intern: ScoutInterned(()) }),
+      ),
+      PrototypeName(_p) => IImpreciseNameS::PrototypeName(
+        self.bump.alloc(PrototypeNameS { _must_intern: ScoutInterned(()) }),
+      ),
       AnonymousSubstructTemplateImpreciseName(v) => {
         let payload = AnonymousSubstructTemplateImpreciseNameS {
           interface_imprecise_name: v.interface_imprecise_name,
+          _must_intern: ScoutInterned(()),
         };
         IImpreciseNameS::AnonymousSubstructTemplateImpreciseName(self.bump.alloc(payload))
       }
       AnonymousSubstructConstructorTemplateImpreciseName(v) => {
         let payload = AnonymousSubstructConstructorTemplateImpreciseNameS {
           interface_imprecise_name: v.interface_imprecise_name,
+          _must_intern: ScoutInterned(()),
         };
         IImpreciseNameS::AnonymousSubstructConstructorTemplateImpreciseName(
           self.bump.alloc(payload),
@@ -206,32 +378,51 @@ impl<'s> ScoutArena<'s> {
         let payload = ImplImpreciseNameS {
           sub_citizen_imprecise_name: v.sub_citizen_imprecise_name,
           super_interface_imprecise_name: v.super_interface_imprecise_name,
+          _must_intern: ScoutInterned(()),
         };
         IImpreciseNameS::ImplImpreciseName(self.bump.alloc(payload))
       }
       ImplSubCitizenImpreciseName(v) => {
-        let payload =
-          ImplSubCitizenImpreciseNameS { sub_citizen_imprecise_name: v.sub_citizen_imprecise_name };
+        let payload = ImplSubCitizenImpreciseNameS {
+          sub_citizen_imprecise_name: v.sub_citizen_imprecise_name,
+          _must_intern: ScoutInterned(()),
+        };
         IImpreciseNameS::ImplSubCitizenImpreciseName(self.bump.alloc(payload))
       }
       ImplSuperInterfaceImpreciseName(v) => {
         let payload = ImplSuperInterfaceImpreciseNameS {
           super_interface_imprecise_name: v.super_interface_imprecise_name,
+          _must_intern: ScoutInterned(()),
         };
         IImpreciseNameS::ImplSuperInterfaceImpreciseName(self.bump.alloc(payload))
       }
-      SelfName(p) => IImpreciseNameS::SelfName(self.bump.alloc(p)),
+      SelfName(_p) => IImpreciseNameS::SelfName(
+        self.bump.alloc(SelfNameS { _must_intern: ScoutInterned(()) }),
+      ),
       RuneName(v) => {
-        let payload = RuneNameS { rune: v.rune };
+        let payload = RuneNameS { rune: v.rune, _must_intern: ScoutInterned(()) };
         IImpreciseNameS::RuneName(self.bump.alloc(payload))
       }
-      ArbitraryName(p) => IImpreciseNameS::ArbitraryName(self.bump.alloc(p)),
-      MagicParamName(p) => IImpreciseNameS::MagicParamName(self.bump.alloc(p)),
-      WhileCondResultName(p) => IImpreciseNameS::WhileCondResultName(self.bump.alloc(p)),
+      ArbitraryName(_p) => IImpreciseNameS::ArbitraryName(
+        self.bump.alloc(ArbitraryNameS { _must_intern: ScoutInterned(()) }),
+      ),
+      MagicParamName(p) => IImpreciseNameS::MagicParamName(self.bump.alloc(MagicParamNameS {
+        code_location: p.code_location,
+        lid: p.lid,
+        _must_intern: ScoutInterned(()),
+      })),
+      WhileCondResultName(p) => IImpreciseNameS::WhileCondResultName(
+        self.bump.alloc(WhileCondResultNameS { range: p.range, _must_intern: ScoutInterned(()) }),
+      ),
       AnonymousSubstructMemberName(p) => {
-        IImpreciseNameS::AnonymousSubstructMemberName(self.bump.alloc(p))
+        IImpreciseNameS::AnonymousSubstructMemberName(self.bump.alloc(
+          AnonymousSubstructMemberNameS { index: p.index, _must_intern: ScoutInterned(()) },
+        ))
       }
-      DesugaredParamName(p) => IImpreciseNameS::DesugaredParamName(self.bump.alloc(p)),
+      DesugaredParamName(p) => IImpreciseNameS::DesugaredParamName(self.bump.alloc(DesugaredParamNameS {
+        code_location: p.code_location,
+        _must_intern: ScoutInterned(()),
+      })),
     }
   }
 
@@ -257,6 +448,51 @@ impl<'s> ScoutArena<'s> {
     }
   }
 
+  pub fn intern_function_imprecise_name(
+    &self,
+    val: IFunctionImpreciseNameValS<'s>,
+  ) -> IFunctionImpreciseNameS<'s> {
+    {
+      let inner = self.inner.borrow();
+      if let Some(existing) = inner.function_imprecise_name_val_to_ref.get(&val) {
+        return existing.clone();
+      }
+    }
+    let canonical = self.alloc_function_imprecise_name_canonical(val.clone());
+    let mut inner = self.inner.borrow_mut();
+    inner.function_imprecise_name_val_to_ref.insert(val, canonical.clone());
+    canonical
+  }
+
+  /// The forwarder payload is a shallow already-canonical-children case (its `inner` is an
+  /// already-canonical `IFunctionImpreciseNameS`), so no `'tmp` machinery is needed. The other
+  /// variants reduce to the shared imprecise-name interner (`CodeNameS`/`LambdaImpreciseNameS`).
+  fn alloc_function_imprecise_name_canonical(
+    &self,
+    val: IFunctionImpreciseNameValS<'s>,
+  ) -> IFunctionImpreciseNameS<'s> {
+    match val {
+      IFunctionImpreciseNameValS::FunctionName(CodeNameValS { name }) => {
+        IFunctionImpreciseNameS::FunctionName(self.intern_code_name(name))
+      }
+      IFunctionImpreciseNameValS::ConstructorName(CodeNameValS { name }) => {
+        IFunctionImpreciseNameS::ConstructorName(self.intern_code_name(name))
+      }
+      IFunctionImpreciseNameValS::LambdaDeclarationName(_) => {
+        IFunctionImpreciseNameS::LambdaDeclarationName(self.intern_lambda_imprecise_name())
+      }
+      IFunctionImpreciseNameValS::ForwarderFunctionDeclarationName(v) => {
+        IFunctionImpreciseNameS::ForwarderFunctionDeclarationName(self.bump.alloc(
+          ForwarderFunctionImpreciseNameS {
+            inner: v.inner,
+            index: v.index,
+            _must_intern: ScoutInterned(()),
+          },
+        ))
+      }
+    }
+  }
+
   pub fn intern_name(&self, val: INameValS<'s>) -> INameS<'s> {
     {
       let inner = self.inner.borrow();
@@ -275,10 +511,6 @@ impl<'s> ScoutArena<'s> {
       AnonymousSubstructImplDeclarationNameValS, AnonymousSubstructTemplateNameValS,
     };
     match val {
-      INameValS::FunctionDeclaration(v) => {
-        let inner = self.alloc_function_declaration_name_canonical(v);
-        INameS::FunctionDeclaration(self.bump.alloc(inner))
-      }
       INameValS::ImplDeclaration(p) => INameS::ImplDeclaration(self.bump.alloc(p)),
       INameValS::AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameValS {
         interface,
@@ -302,7 +534,7 @@ impl<'s> ScoutArena<'s> {
         INameS::AnonymousSubstructTemplateName(self.bump.alloc(payload))
       }
       INameValS::RuneName(v) => {
-        let payload = RuneNameS { rune: v.rune };
+        let payload = RuneNameS { rune: v.rune, _must_intern: ScoutInterned(()) };
         INameS::RuneName(self.bump.alloc(payload))
       }
       INameValS::RuntimeSizedArrayDeclarationName(p) => {
@@ -314,55 +546,21 @@ impl<'s> ScoutArena<'s> {
       INameValS::GlobalFunctionFamilyName(p) => {
         INameS::GlobalFunctionFamilyName(self.bump.alloc(p))
       }
-      INameValS::ArbitraryName(p) => INameS::ArbitraryName(self.bump.alloc(p)),
-      INameValS::VarName(v) => {
-        let inner = self.alloc_var_name_canonical(v);
-        INameS::VarName(self.bump.alloc(inner))
-      }
+      INameValS::ArbitraryName(_p) => INameS::ArbitraryName(
+        self.bump.alloc(ArbitraryNameS { _must_intern: ScoutInterned(()) }),
+      ),
     }
   }
 
-  fn alloc_function_declaration_name_canonical(
+  /// Function declaration names are identity (not interned, @WVSBIZ): arena-alloc directly, no
+  /// dedup. Callers wrap the result in `INameS::FunctionDeclaration` where a denizen name is needed.
+  pub fn alloc_function_declaration_name(
     &self,
-    val: IFunctionDeclarationNameValS<'s>,
-  ) -> IFunctionDeclarationNameS<'s> {
-    match val {
-      IFunctionDeclarationNameValS::FunctionName(p) => IFunctionDeclarationNameS::FunctionName(p),
-      IFunctionDeclarationNameValS::LambdaDeclarationName(p) => {
-        IFunctionDeclarationNameS::LambdaDeclarationName(p)
-      }
-      IFunctionDeclarationNameValS::ForwarderFunctionDeclarationName(
-        ForwarderFunctionDeclarationNameValS { inner, index },
-      ) => {
-        let payload = ForwarderFunctionDeclarationNameS { inner: inner.clone(), index };
-        IFunctionDeclarationNameS::ForwarderFunctionDeclarationName(self.bump.alloc(payload))
-      }
-      IFunctionDeclarationNameValS::ConstructorName(p) => {
-        IFunctionDeclarationNameS::ConstructorName(self.bump.alloc(p))
-      }
-      IFunctionDeclarationNameValS::ImmConcreteDestructorName(p) => {
-        IFunctionDeclarationNameS::ImmConcreteDestructorName(self.bump.alloc(p))
-      }
-      IFunctionDeclarationNameValS::ImmInterfaceDestructorName(p) => {
-        IFunctionDeclarationNameS::ImmInterfaceDestructorName(self.bump.alloc(p))
-      }
-    }
+    val: IFunctionDeclarationNameS<'s>,
+  ) -> &'s IFunctionDeclarationNameS<'s> {
+    self.bump.alloc(val)
   }
 
-  fn alloc_var_name_canonical(&self, val: IVarDeclarationNameValS<'s>) -> IVarDeclarationNameS<'s> {
-    match val {
-      IVarDeclarationNameValS::ConstructingMemberName(n) => IVarDeclarationNameS::ConstructingMemberName(n),
-      IVarDeclarationNameValS::ClosureParamName(p) => IVarDeclarationNameS::ClosureParamName(self.bump.alloc(p)),
-      IVarDeclarationNameValS::MagicParamName(p) => IVarDeclarationNameS::MagicParamName(p),
-      IVarDeclarationNameValS::IterableName(p) => IVarDeclarationNameS::IterableName(p),
-      IVarDeclarationNameValS::IteratorName(p) => IVarDeclarationNameS::IteratorName(p),
-      IVarDeclarationNameValS::IterationOptionName(p) => IVarDeclarationNameS::IterationOptionName(p),
-      IVarDeclarationNameValS::WhileCondResultName(p) => IVarDeclarationNameS::WhileCondResultName(p),
-      IVarDeclarationNameValS::SelfName => IVarDeclarationNameS::SelfName,
-      IVarDeclarationNameValS::AnonymousSubstructMemberName(i) => IVarDeclarationNameS::AnonymousSubstructMemberName(i),
-      IVarDeclarationNameValS::DesugaredParamName(p) => IVarDeclarationNameS::DesugaredParamName(p),
-    }
-  }
 
   // --- Rune interning ---
 

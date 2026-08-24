@@ -23,7 +23,8 @@ use crate::postparsing::expressions::{
   LocalLoadSE, LocalS, OutsideLoadSE, OverloadSetSE, OwnershippedSE, ReturnSE,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, CodeVarNameS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS,
+  CodeNameS, CodeRuneS, CodeVarNameS, ConstructingMemberImpreciseNameS,
+  ConstructingMemberNameDeclarationS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS,
   IVarDeclarationNameS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
@@ -259,7 +260,7 @@ fn interface() {
   let imoo = program.lookup_interface("IMoo");
   let blork = expect_1(&imoo.internal_methods);
   let function_name = cast!(&blork.name, IFunctionDeclarationNameS::FunctionName);
-  assert_eq!(function_name.name.as_str(), "blork");
+  assert_eq!(function_name.imprecise_name.name.as_str(), "blork");
 }
 
 #[test]
@@ -278,7 +279,7 @@ fn generic_interface() {
   let imoo = program.lookup_interface("IMoo");
   let blork = expect_1(imoo.internal_methods);
   let blork_name = cast!(&blork.name, IFunctionDeclarationNameS::FunctionName);
-  assert_eq!(blork_name.name.as_str(), "blork");
+  assert_eq!(blork_name.imprecise_name.name.as_str(), "blork");
 
   let t_ = scout_arena.intern_str("T");
   let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: t_ }));
@@ -461,7 +462,7 @@ fn function_with_magic_lambda_and_regular_lambda() {
   match second_lambda.function.params {
     [_, ParameterS {
       pre_checked: false,
-      name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("a"), .. }),
+      name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }),
       full_type_rune: RuneUsage { rune: IRuneS::ImplicitRune(_), .. },
       ..
     }] => {}
@@ -470,6 +471,56 @@ fn function_with_magic_lambda_and_regular_lambda() {
       other
     ),
   }
+}
+
+// Each lambda gets its own unique LID within the enclosing top-level function, so two sibling
+// lambdas' declarations never share a LID (today they both restart at empty and collide).
+#[test]
+fn sibling_lambdas_get_distinct_lids() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "func main() {
+      (a) => { a };
+      (b) => { b };
+    }",
+  );
+  let main = program.lookup_function("main");
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
+  let block = &code_body.body.block;
+
+  let things = cast!(&block.expr, IExpressionSE::Consecutor).exprs;
+  let thing_nodes = things.iter().map(|thing| NodeRefS::Expression(*thing)).collect::<Vec<_>>();
+  let lambdas = collect_where_snodes!(
+    &thing_nodes,
+    NodeRefS::Expression(IExpressionSE::Function(function)) => Some(function)
+  );
+  let (first_lambda, second_lambda) = expect_2(&lambdas);
+  let a_lid = match first_lambda.function.params {
+    [_, ParameterS {
+      name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("a"), .. }, lid }),
+      ..
+    }] => lid.path,
+    other => panic!("expected first lambda param `a`, got {:?}", other),
+  };
+  let b_lid = match second_lambda.function.params {
+    [_, ParameterS {
+      name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("b"), .. }, lid }),
+      ..
+    }] => lid.path,
+    other => panic!("expected second lambda param `b`, got {:?}", other),
+  };
+
+  assert_ne!(
+    a_lid, b_lid,
+    "sibling lambdas' params share a LID — each lambda's LID space isn't nested within main"
+  );
 }
 
 #[test]
@@ -494,7 +545,7 @@ fn constructing_members() {
 
   match &block.locals[..] {
     [LocalS {
-      var_name: IVarDeclarationNameS::ConstructingMemberName(StrI("x")),
+      var_name: IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name: ConstructingMemberImpreciseNameS { name: StrI("x"), .. }, .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -502,7 +553,7 @@ fn constructing_members() {
       child_moved: IVariableUseCertainty::NotUsed,
       child_mutated: IVariableUseCertainty::NotUsed,
     }, LocalS {
-      var_name: IVarDeclarationNameS::ConstructingMemberName(StrI("y")),
+      var_name: IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name: ConstructingMemberImpreciseNameS { name: StrI("y"), .. }, .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -527,7 +578,7 @@ fn constructing_members() {
           AtomSP {
             name:
               Some(CaptureS {
-                name: IVarDeclarationNameS::ConstructingMemberName(StrI("x")),
+                name: IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name: ConstructingMemberImpreciseNameS { name: StrI("x"), .. }, .. }),
                 mutate: false,
               }),
             destructure: None,
@@ -547,7 +598,7 @@ fn constructing_members() {
           AtomSP {
             name:
               Some(CaptureS {
-                name: IVarDeclarationNameS::ConstructingMemberName(StrI("y")),
+                name: IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name: ConstructingMemberImpreciseNameS { name: StrI("y"), .. }, .. }),
                 mutate: false,
               }),
             destructure: None,
@@ -567,7 +618,7 @@ fn constructing_members() {
           IExpressionSE::OverloadSet(OverloadSetSE {
             lookup: OutsideLoadSE {
               parts: [LoadPartSE {
-                name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("MyStruct") }),
+                name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("MyStruct"), .. }),
                 ..
               }],
               ..
@@ -575,10 +626,12 @@ fn constructing_members() {
           }),
         arg_exprs: [
           IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("x"), .. }),            ..
+            name: IImpreciseNameS::ConstructingMemberImpreciseName(ConstructingMemberImpreciseNameS { name: StrI("x"), .. }),
+            ..
           }),
           IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("y"), .. }),            ..
+            name: IImpreciseNameS::ConstructingMemberImpreciseName(ConstructingMemberImpreciseNameS { name: StrI("y"), .. }),
+            ..
           }),
         ],
         ..
@@ -762,7 +815,7 @@ fn constructing_members_borrowing_another_member() {
 
   match &*block.locals {
     [LocalS {
-      var_name: IVarDeclarationNameS::ConstructingMemberName(StrI("x")),
+      var_name: IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name: ConstructingMemberImpreciseNameS { name: StrI("x"), .. }, .. }),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -770,7 +823,7 @@ fn constructing_members_borrowing_another_member() {
       child_moved: IVariableUseCertainty::NotUsed,
       child_mutated: IVariableUseCertainty::NotUsed,
     }, LocalS {
-      var_name: IVarDeclarationNameS::ConstructingMemberName(StrI("y")),
+      var_name: IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name: ConstructingMemberImpreciseNameS { name: StrI("y"), .. }, .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::Used,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -786,7 +839,7 @@ fn constructing_members_borrowing_another_member() {
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
         name: Some(CaptureS {
-          name: IVarDeclarationNameS::ConstructingMemberName(StrI("x")),
+          name: IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name: ConstructingMemberImpreciseNameS { name: StrI("x"), .. }, .. }),
           mutate: false,
         }),
         destructure: None,
@@ -801,14 +854,15 @@ fn constructing_members_borrowing_another_member() {
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
         name: Some(CaptureS {
-          name: IVarDeclarationNameS::ConstructingMemberName(StrI("y")),
+          name: IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name: ConstructingMemberImpreciseNameS { name: StrI("y"), .. }, .. }),
           mutate: false,
         }),
         destructure: None,
         ..
       },
       expr: IExpressionSE::LocalLoad(LocalLoadSE {
-        name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("x"), .. }),        ..
+        name: IImpreciseNameS::ConstructingMemberImpreciseName(ConstructingMemberImpreciseNameS { name: StrI("x"), .. }),
+        ..
       }),
       ..
     })) => Some(())
@@ -819,7 +873,7 @@ fn constructing_members_borrowing_another_member() {
       callable_expr: IExpressionSE::OverloadSet(OverloadSetSE {
         lookup: OutsideLoadSE {
           parts: [LoadPartSE {
-            name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("MyStruct") }),
+            name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("MyStruct"), .. }),
             ..
           }],
           ..
@@ -827,10 +881,12 @@ fn constructing_members_borrowing_another_member() {
       }),
       arg_exprs: [
         IExpressionSE::LocalLoad(LocalLoadSE {
-          name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("x"), .. }),          ..
+          name: IImpreciseNameS::ConstructingMemberImpreciseName(ConstructingMemberImpreciseNameS { name: StrI("x"), .. }),
+          ..
         }),
         IExpressionSE::LocalLoad(LocalLoadSE {
-          name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("y"), .. }),          ..
+          name: IImpreciseNameS::ConstructingMemberImpreciseName(ConstructingMemberImpreciseNameS { name: StrI("y"), .. }),
+          ..
         }),
       ],
       ..
@@ -897,7 +953,7 @@ fn foreach() {
   collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Local(LocalS {
-      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("i"), .. }),
+      var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("i"), .. }, .. }),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -948,6 +1004,7 @@ fn foreach() {
                 parts: [LoadPartSE {
                   name: IImpreciseNameS::CodeName(CodeNameS {
                     name: StrI("begin"),
+                    ..
                   }),
                   ..
                 }],
@@ -989,6 +1046,7 @@ fn foreach() {
                 parts: [LoadPartSE {
                   name: IImpreciseNameS::CodeName(CodeNameS {
                     name: StrI("next"),
+                    ..
                   }),
                   ..
                 }],
@@ -1014,6 +1072,7 @@ fn foreach() {
             parts: [LoadPartSE {
               name: IImpreciseNameS::CodeName(CodeNameS {
                 name: StrI("isEmpty"),
+                ..
               }),
               ..
             }],
@@ -1038,7 +1097,7 @@ fn foreach() {
       pattern: AtomSP {
         name:
           Some(CaptureS {
-            name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("i"), .. }),
+            name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("i"), .. }, .. }),
             mutate: false,
           }),
         kind_rune: None,
@@ -1053,6 +1112,7 @@ fn foreach() {
                 parts: [LoadPartSE {
                   name: IImpreciseNameS::CodeName(CodeNameS {
                     name: StrI("get"),
+                    ..
                   }),
                   ..
                 }],
@@ -1171,7 +1231,7 @@ exported func main() {
   );
   match &err {
     ICompileErrorS::VariableNameAlreadyExists(VariableNameAlreadyExists {
-      name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }),
+      name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("x"), .. }, .. }),
       ..
     }) => {}
     _ => panic!("expected VariableNameAlreadyExists(_, CodeVarName(\"x\")), got {:?}", err),
@@ -1328,7 +1388,7 @@ fn test_named_param_keeps_its_name_at_postparse() {
     compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x int) int { return x; }");
   let foo = program.lookup_function("foo");
   match foo.params {
-    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }), .. }] => {}
+    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("x"), .. }, .. }), .. }] => {}
     other => panic!("expected one param named x, got {:?}", other),
   }
 }
@@ -1969,7 +2029,7 @@ fn test_bare_param_keeps_name_and_gets_no_body_let() {
   let foo = program.lookup_function("foo");
   // The bare param keeps its real name; no synthetic DesugaredParamName.
   match foo.params {
-    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }), .. }] => {}
+    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("x"), .. }, .. }), .. }] => {}
     other => panic!("expected one param named x, got {:?}", other),
   }
   // A bare param produces no body-head let, so the empty body is left untouched: its head
@@ -2003,10 +2063,10 @@ fn test_destructure_param_desugars_to_let_with_destructure() {
               destructure:
                 Some(
                   [AtomSP {
-                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("a"), .. }), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }), .. }),
                     ..
                   }, AtomSP {
-                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("b"), .. }), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("b"), .. }, .. }), .. }),
                     ..
                   }],
                 ),
@@ -2035,7 +2095,7 @@ fn test_named_destructure_param_keeps_name_and_gets_let() {
     compile(&scout_arena, &keywords, &parse_arena, "exported func foo(p Pair[a, b]) void { }");
   let foo = program.lookup_function("foo");
   match foo.params {
-    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("p"), .. }), .. }] => {}
+    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("p"), .. }, .. }), .. }] => {}
     other => panic!("expected one param named p, got {:?}", other),
   }
   match expect_code_body_expr(&foo.body) {
@@ -2048,10 +2108,10 @@ fn test_named_destructure_param_keeps_name_and_gets_let() {
               destructure:
                 Some(
                   [AtomSP {
-                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("a"), .. }), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }), .. }),
                     ..
                   }, AtomSP {
-                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("b"), .. }), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("b"), .. }, .. }), .. }),
                     ..
                   }],
                 ),
@@ -2091,17 +2151,17 @@ fn test_nested_destructure_preserved() {
               destructure:
                 Some(
                   [AtomSP {
-                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("a"), .. }), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }), .. }),
                     ..
                   }, AtomSP {
                     name: None,
                     destructure:
                       Some(
                         [AtomSP {
-                          name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("b"), .. }), .. }),
+                          name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("b"), .. }, .. }), .. }),
                           ..
                         }, AtomSP {
-                          name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("c"), .. }), .. }),
+                          name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("c"), .. }, .. }), .. }),
                           ..
                         }],
                       ),
@@ -2140,7 +2200,7 @@ fn test_destructure_ignore() {
               destructure:
                 Some(
                   [AtomSP { name: None, .. }, AtomSP {
-                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("b"), .. }), .. }),
+                    name: Some(CaptureS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("b"), .. }, .. }), .. }),
                     ..
                   }],
                 ),
@@ -2206,7 +2266,7 @@ fn test_extern_bare_param_ok() {
   let program = compile(&scout_arena, &keywords, &parse_arena, "extern func foo(x int);");
   let foo = program.lookup_function("foo");
   match foo.params {
-    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("x"), .. }), .. }] => {}
+    [ParameterS { name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name: CodeNameS { name: StrI("x"), .. }, .. }), .. }] => {}
     other => panic!("expected one param named x, got {:?}", other),
   }
   match &foo.body {

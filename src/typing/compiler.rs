@@ -1368,7 +1368,7 @@ where
                   }
                 };
                 let export_name = match function_a.name {
-                  IFunctionDeclarationNameS::FunctionName(fn_name_s) => fn_name_s.name,
+                  IFunctionDeclarationNameS::FunctionName(fn_name_s) => fn_name_s.imprecise_name.name,
                   other => panic!("vwat: {:?}", other),
                 };
                 coutputs.add_function_export(

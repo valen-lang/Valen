@@ -17,7 +17,9 @@ use crate::typing::types::types::*;
 use crate::typing::hinputs_t::*;
 use crate::typing::compiler::Compiler;
 use crate::utils::vassert::vassert_one;
-use crate::postparsing::names::IRuneS;
+use crate::postparsing::names::{IImpreciseNameS, IRuneS};
+use crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name;
+use crate::scout_arena::ScoutArena;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::keywords::Keywords;
 use crate::compile_options::GlobalOptions;
@@ -174,6 +176,7 @@ use std::marker::PhantomData;
 use std::mem::discriminant;
 use std::mem::transmute;
 use crate::instantiating::ast::types::SharednessI;
+use crate::instantiating::instantiated_humanizer::humanize_name;
 use crate::typing::types::types::KindT;
 use crate::typing::types::types::SharednessT;
 
@@ -260,10 +263,10 @@ impl<'s, 't, 'i> InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
 }
 
 
-pub fn translate<'s, 'ctx, 't, 'i>(opts: &'ctx GlobalOptions, interner: &'ctx InstantiatingInterner<'s, 'i>, typing_interner: &'ctx TypingInterner<'s, 't>, keywords: &'ctx Keywords<'s>, hinputs: &'ctx HinputsT<'s, 't>) -> HinputsI<'s, 'i>
+pub fn translate<'s, 'ctx, 't, 'i>(opts: &'ctx GlobalOptions, interner: &'ctx InstantiatingInterner<'s, 'i>, typing_interner: &'ctx TypingInterner<'s, 't>, scout_arena: &'ctx ScoutArena<'s>, keywords: &'ctx Keywords<'s>, hinputs: &'ctx HinputsT<'s, 't>) -> HinputsI<'s, 'i>
 where 's: 't, 's: 'i {
     let mut monouts = InstantiatedOutputsI::new();
-    let instantiator = InstantiatorI { opts, interner, typing_interner, keywords, hinputs };
+    let instantiator = InstantiatorI { opts, interner, typing_interner, scout_arena, keywords, hinputs };
     instantiator.translate_method(&mut monouts)
 }
 
@@ -273,6 +276,7 @@ pub struct InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub opts: &'ctx GlobalOptions,
     pub interner: &'ctx InstantiatingInterner<'s, 'i>,
     pub typing_interner: &'ctx TypingInterner<'s, 't>,
+    pub scout_arena: &'ctx ScoutArena<'s>,
     pub keywords: &'ctx Keywords<'s>,
     pub hinputs: &'ctx HinputsT<'s, 't>,
 }
@@ -905,7 +909,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_struct_member(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, perspective_region_t: &RegionT, member: &StructMemberT<'s, 't>) -> (KindIT<'s, 'i>, StructMemberI<'s, 'i>) {
         let StructMemberT { name, tyype } = member;
         let kind = self.translate_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, tyype);
-        let name = Self::translate_var_name(self.interner, name);
+        let name = self.translate_var_name(name);
         (kind, StructMemberI { name, tyype: kind })
     }
 
@@ -1230,7 +1234,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_local_variable(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, perspective_region_t: &RegionT, variable: &LocalVariable<'s, 't>) -> (KindIT<'s, 'i>, &'i LocalVariableI<'s, 'i>) {
         let LocalVariable { name: id, tyype } = variable;
         let kind = self.translate_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, tyype);
-        let var_name = Self::translate_var_name(self.interner, id);
+        let var_name = self.translate_var_name(id);
         let local = self.interner.alloc(LocalVariableI { name: var_name, tyype: kind });
         (kind, local)
     }
@@ -1261,7 +1265,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     KindIT::BorrowRefIT(borrow) => borrow,
                     other => panic!("MemberLookup struct_expr must produce a borrow, got {:?}", other),
                 };
-                let member_name = Self::translate_var_name(self.interner, &member_name_t);
+                let member_name = self.translate_var_name(&member_name_t);
                 // Resolve the member's index by name from the struct definition (typing owns member
                 // order, which instantiation preserves) so downstream codegen never re-derives it.
                 let struct_id_t = match peel_all_references(struct_expr_t.result()) {
@@ -2114,7 +2118,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let ParameterT { name, virtuality, tyype, .. } = param_t;
         let type_it =
             self.translate_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, tyype);
-        let name = Self::translate_var_name(self.interner, name);
+        let name = self.translate_var_name(name);
         ParameterI {
             name,
             virtuality: virtuality.map(|v| match v { AbstractT => AbstractI }),
@@ -2148,35 +2152,35 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 
 
-    pub fn translate_var_name(interner: &InstantiatingInterner<'s, 'i>, name: &IVarNameT<'s, 't>) -> IVarNameI<'s, 'i> {
+    pub fn translate_var_name(&self, name: &IVarNameT<'s, 't>) -> IVarNameI<'s, 'i> {
         match name {
-            IVarNameT::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.alloc(TypingPassFunctionResultVarNameI)),
-            IVarNameT::Member(x) => IVarNameI::Member(interner.alloc(MemberNameI { name: x.name })),
-            IVarNameT::Local(x) => IVarNameI::Local(interner.alloc(LocalNameI {
-                name: x.name,
-                life: LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(x.lid.path.to_vec()) },
+            IVarNameT::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(self.interner.alloc(TypingPassFunctionResultVarNameI)),
+            IVarNameT::Member(x) => IVarNameI::Member(self.interner.alloc(MemberNameI {
+                name: self.scout_arena.intern_str(&humanize_imprecise_name(IImpreciseNameS::CodeName(x.imprecise_name))),
             })),
-            IVarNameT::ClosureParam(ClosureParamNameT { code_location, .. }) => IVarNameI::ClosureParam(interner.alloc(ClosureParamNameI { code_location: *code_location })),
+            IVarNameT::Local(x) => IVarNameI::Local(self.interner.alloc(LocalNameI {
+                name: self.scout_arena.intern_str(&humanize_imprecise_name(IImpreciseNameS::CodeName(x.imprecise_name))),
+                life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(x.life.path.to_vec()) },
+            })),
+            IVarNameT::ClosureParam(ClosureParamNameT { life: LocationInFunctionEnvironmentT { path, .. }, .. }) => IVarNameI::ClosureParam(self.interner.alloc(ClosureParamNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
             IVarNameT::TypingPassBlockResultVar(TypingPassBlockResultVarNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => {
-                IVarNameI::TypingPassBlockResultVar(interner.alloc(TypingPassBlockResultVarNameI {
-                                        life: LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(path.to_vec()) },
+                IVarNameI::TypingPassBlockResultVar(self.interner.alloc(TypingPassBlockResultVarNameI {
+                                        life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) },
                 }))
             }
             IVarNameT::TypingPassTemporaryVar(TypingPassTemporaryVarNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => {
-                IVarNameI::TypingPassTemporaryVar(interner.alloc(TypingPassTemporaryVarNameI {
-                                        life: LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(path.to_vec()) },
+                IVarNameI::TypingPassTemporaryVar(self.interner.alloc(TypingPassTemporaryVarNameI {
+                                        life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) },
                 }))
             }
-            IVarNameT::ConstructingMember(x) => IVarNameI::ConstructingMember(interner.alloc(ConstructingMemberNameI { name: x.name })),
-            IVarNameT::Iterable(IterableNameT { range, .. }) => IVarNameI::Iterable(interner.alloc(IterableNameI { range: *range })),
-            IVarNameT::Iterator(IteratorNameT { range, .. }) => IVarNameI::Iterator(interner.alloc(IteratorNameI { range: *range })),
-            IVarNameT::IterationOption(IterationOptionNameT { range, .. }) => IVarNameI::IterationOption(interner.alloc(IterationOptionNameI { range: *range })),
-            IVarNameT::MagicParam(MagicParamNameT { code_location2, .. }) => IVarNameI::MagicParam(interner.alloc(MagicParamNameI { code_location_2: *code_location2 })),
-            IVarNameT::Self_(_) => IVarNameI::Self_(interner.alloc(SelfNameI)),
-            _ => {
-                panic!("Unimplemented: translate_var_name other");
-                // case other => vimpl(other)
-            }
+            IVarNameT::ConstructingMember(x) => IVarNameI::ConstructingMember(self.interner.alloc(ConstructingMemberNameI {
+                name: self.scout_arena.intern_str(&humanize_imprecise_name(IImpreciseNameS::ConstructingMemberImpreciseName(x.imprecise_name))),
+            })),
+            IVarNameT::Iterable(IterableNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::Iterable(self.interner.alloc(IterableNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::Iterator(IteratorNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::Iterator(self.interner.alloc(IteratorNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::IterationOption(IterationOptionNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::IterationOption(self.interner.alloc(IterationOptionNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::MagicParam(MagicParamNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::MagicParam(self.interner.alloc(MagicParamNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::Self_(_) => IVarNameI::Self_(self.interner.alloc(SelfNameI)),
         }
     }
 

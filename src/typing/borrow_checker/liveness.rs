@@ -75,7 +75,7 @@ pub fn check_use_after_churn<'s, 'ctx, 't>(
     if let (IVarDeclarationNameS::CodeVarName(param_name), Some(group)) =
       (&param.name, param_group_name(param))
     {
-      param_groups.insert(param_name.name, group);
+      param_groups.insert(param_name.imprecise_name.name, group);
     }
   }
   let mut liveness = Liveness {
@@ -224,7 +224,7 @@ impl<'s, 'ctx, 't, 'a> Liveness<'s, 'ctx, 't, 'a> {
   /// The caller-side group a root local belongs to (see `RootGroup`).
   fn root_group(&self, root: IVarNameT<'s, 't>) -> RootGroup<'s, 't> {
     if let IVarNameT::Local(local) = root {
-      if let Some(group) = self.param_groups.get(&local.name) {
+      if let Some(group) = self.param_groups.get(&local.imprecise_name.name) {
         return RootGroup::ParamRune(*group);
       }
     }

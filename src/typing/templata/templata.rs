@@ -93,6 +93,14 @@ impl<'s, 't> ITemplataT<'s, 't>
 where
   's: 't,
 {
+  /// Asserts this is a `Kind` templata and returns its `KindT`.
+  pub fn expect_kind(self) -> KindT<'s, 't> {
+    match self {
+      ITemplataT::Kind(k) => k.kind,
+      other => panic!("vfail: expected a Kind templata, got {:?}", other),
+    }
+  }
+
   pub fn tyype(&self, scout_arena: &ScoutArena<'s>) -> ITemplataType<'s> {
     match self {
       ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),

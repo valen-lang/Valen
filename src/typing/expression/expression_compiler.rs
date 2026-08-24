@@ -109,7 +109,7 @@ where
     region: RegionT,
     name_imprecise: IImpreciseNameS<'s>,
   ) -> Result<Option<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
-    match nenv.get_variable(name_imprecise, self.typing_interner, self.scout_arena) {
+    match nenv.get_variable(name_imprecise, self.typing_interner) {
       Some(IVariableT::Local(rlv)) => {
         if nenv.unstackifieds().contains(&rlv.name) {
           return Err(ICompileErrorT::CantUseUnstackifiedLocal {
@@ -214,7 +214,7 @@ where
     load_range: RangeS<'s>,
     name_imprecise: IImpreciseNameS<'s>,
   ) -> Option<ExpressionTE<'s, 't>> {
-    match nenv.get_variable(name_imprecise, self.typing_interner, self.scout_arena) {
+    match nenv.get_variable(name_imprecise, self.typing_interner) {
       Some(IVariableT::Local(rlv)) => Some(ExpressionTE::LocalLookup(
         self.typing_interner.alloc(LocalLookupTE::new(self.typing_interner, load_range, rlv)),
       )),
@@ -458,7 +458,7 @@ where
 
         let result_var_name = self
           .typing_interner
-          .intern_typing_pass_function_result_var_name(TypingPassFunctionResultVarNameT {});
+          .intern_typing_pass_function_result_var_name(TypingPassFunctionResultVarNameT { life });
         let result_var_id = IVarNameT::TypingPassFunctionResultVar(result_var_name);
         let result_variable: &'t LocalVariable<'s, 't> = self
           .typing_interner
@@ -1028,8 +1028,8 @@ where
         }
       }
       IExpressionSE::Dot(dot) => {
-        let member_name: IVarNameT<'s, 't> = IVarNameT::Member(
-          self.typing_interner.intern_member_name(MemberNameT { name: dot.member }),
+        let needle = self.scout_arena.intern_imprecise_name(
+          IImpreciseNameValS::CodeName(CodeNameValS { name: dot.member }),
         );
         let (unborrowed_container_expr_2, returns_from_container_expr, pending_from_container) = self.evaluate_expression(
           coutputs,
@@ -1053,7 +1053,7 @@ where
           KindT::Struct(struct_tt) => {
             let struct_def = coutputs.lookup_struct(struct_tt.id, self);
             let (struct_member, _member_index) = struct_def
-              .get_member_and_index(&member_name)
+              .get_member_and_index(needle)
               .unwrap_or_else(|| panic!("CouldntFindMemberT"));
             let unsubstituted_member_type = struct_member.tyype;
             let instantiation_bounds = coutputs
@@ -1070,13 +1070,13 @@ where
                 },
               )
               .substitute_for_kind(coutputs, unsubstituted_member_type);
-            assert!(struct_def.members.iter().any(|m| m.name == member_name));
+            assert!(struct_def.members.iter().any(|m| m.name.imprecise_name() == Some(needle)));
             ExpressionTE::MemberLookup(self.typing_interner.alloc(
               MemberLookupTE::new(
                 self.typing_interner,
                 dot.range,
                 container_expr_2,
-                member_name,
+                struct_member.name,
                 member_type,
               ),
             ))
@@ -1563,7 +1563,7 @@ where
         // let call_env = IInDenizenEnvironmentT::Node(call_env_node);
         // let make_list_callable = self.new_global_function_group_expression(
         //     call_env, coutputs, RegionT::Default,
-        //     self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.list })));
+        //     self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.list })));
         // let range_with_parent_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
         //     &once(m.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
         // let rune_parent_env_lookup_rule = IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
@@ -1615,7 +1615,7 @@ where
         //
         //     let add_callable = self.new_global_function_group_expression(
         //         call_env, coutputs, RegionT::Default,
-        //         self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.add })));
+        //         self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.add })));
         //     let local_lookup_te = ExpressionTE::LocalLookup(self.typing_interner.alloc(
         //         LocalLookupTE::new(self.typing_interner, m.range, LocalVariable::Reference(list_local))));
         //     let borrow_load = self.borrow_soft_load(coutputs, local_lookup_te);
@@ -2057,7 +2057,7 @@ where
       }
       IExpressionSE::Unlet(unlet_se) => {
         let name_imprecise = unlet_se.name;
-        let local = match nenv.get_variable(name_imprecise, self.typing_interner, self.scout_arena) {
+        let local = match nenv.get_variable(name_imprecise, self.typing_interner) {
           Some(IVariableT::Local(rlv)) => rlv,
           Some(IVariableT::Capture(_)) => {
             panic!("implement: Unlet — AddressibleClosure (not a local)");
@@ -2198,7 +2198,7 @@ where
             );
             let arbitrary_imprecise = self
               .scout_arena
-              .intern_imprecise_name(IImpreciseNameValS::ArbitraryName(ArbitraryNameS {}));
+              .intern_imprecise_name(IImpreciseNameValS::ArbitraryName(ArbitraryNameValS {}));
             let tiny_env_snapshot = tiny_env.snapshot(self.typing_interner);
             let expr = self.new_global_function_group_expression(
               IInDenizenEnvironmentT::Node(tiny_env_snapshot),
@@ -2320,7 +2320,7 @@ where
   > {
     let opt_name = self
       .scout_arena
-      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.opt }));
+      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.opt }));
     let interface_templata = match IEnvironmentT::from(nenv).lookup_nearest_with_imprecise_name(
       opt_name,
       [ILookupContext::TemplataLookupContext].into_iter().collect(),
@@ -2348,7 +2348,7 @@ where
 
     let some_name = self
       .scout_arena
-      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.some }));
+      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.some }));
     let some_constructor_templata = match IEnvironmentT::from(nenv)
       .lookup_nearest_with_imprecise_name(
         some_name,
@@ -2377,7 +2377,7 @@ where
 
     let none_name = self
       .scout_arena
-      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.none }));
+      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.none }));
     let none_constructor_templata = match IEnvironmentT::from(nenv)
       .lookup_nearest_with_imprecise_name(
         none_name,
@@ -2445,7 +2445,7 @@ where
     ICompileErrorT<'s, 't>,
   > {
     let result_name =
-      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: self.keywords.result,
       }));
     let interface_templata = match IEnvironmentT::from(nenv).lookup_nearest_with_imprecise_name(
@@ -2480,7 +2480,7 @@ where
 
     let ok_name = self
       .scout_arena
-      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.ok }));
+      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.ok }));
     let ok_constructor_templata = match IEnvironmentT::from(nenv)
       .lookup_nearest_with_imprecise_name(
         ok_name,
@@ -2529,7 +2529,7 @@ where
 
     let err_name = self
       .scout_arena
-      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.err }));
+      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.err }));
     let err_constructor_templata = match IEnvironmentT::from(nenv)
       .lookup_nearest_with_imprecise_name(
         err_name,

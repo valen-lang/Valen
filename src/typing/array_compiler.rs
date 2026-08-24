@@ -292,7 +292,7 @@ where
     }
     let array_imprecise_name = self
       .scout_arena
-      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.array }));
+      .intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.array }));
     let calling_env1 = IInDenizenEnvironmentT::Node(extended_env);
     let receiving_rune_to_explicit_template_arg_rune = &[];
     let extra_envs_to_look_in = &[];

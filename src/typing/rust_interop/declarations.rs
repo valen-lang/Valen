@@ -25,13 +25,14 @@ use crate::parsing::ast::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::ast::{
   ExternBodyS, ExternS, FunctionS, GenericParameterS, IBodyS, ICitizenAttributeS,
   IFunctionAttributeS, IGenericParameterTypeS, InterfaceS, KindGenericParameterTypeS, MacroCallS,
-  LocationInDenizenBuilder, ParameterS, SealedS, StructS,
+  LocationInDenizen, LocationInDenizenBuilder, ParameterS, SealedS, StructS,
 };
 use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
-  ArgumentRuneS, CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
+  ArgumentRuneS, CodeNameS, CodeNameValS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS,
+  IImpreciseNameS,
   CodeVarNameS, IImpreciseNameValS, IRuneValS, IStructDeclarationNameS, IVarDeclarationNameS,
   ReturnRuneS,
   TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
@@ -174,7 +175,8 @@ where
       None,
       false,
       IVarDeclarationNameS::CodeVarName(CodeVarNameS {
-        name: scout_arena.intern_str(&format!("p{}", index)),
+        imprecise_name: scout_arena
+          .intern_code_name(scout_arena.intern_str(&format!("p{}", index))),
         lid: lidb.child().consume_in_arena(scout_arena),
       }),
       // The param's syntactic type is "whatever `full_type_rune` resolves to" — a bare rune, exactly
@@ -214,7 +216,11 @@ where
 
   Some(scout_arena.alloc(FunctionS::new(
     range,
-    IFunctionDeclarationNameS::FunctionName(FunctionNameS { name: human_name, code_location: loc }),
+    IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+      imprecise_name: scout_arena.intern_code_name(human_name),
+      code_location: loc,
+      lid: LocationInDenizen { path: &[] },
+    }),
     // The same attribute `function_scout` attaches for a source-level `extern func`. It is
     // what `translate_function_attributes` turns into `IFunctionAttributeT::Extern`, and
     // downstream what marks the denizen as foreign.
@@ -285,7 +291,7 @@ where
         // which lives in the builtins store under a bare name. Qualifying it would
         // un-resolve it; only a citizen carries a package path.
         parts: scout_arena.alloc_slice_copy(&[
-          scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name }))
+          scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name }))
         ]),
       }));
       Some(own_rune)
@@ -543,7 +549,7 @@ fn package_path<'s>(
   let mut parts: Vec<IImpreciseNameS<'s>> = Vec::new();
   let mut push = |segment: StrI<'s>| {
     parts.push(
-      scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: segment })),
+      scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: segment })),
     );
   };
   push(package.module);

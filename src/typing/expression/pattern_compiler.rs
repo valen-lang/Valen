@@ -213,7 +213,7 @@ where
           once(pattern.range).chain(parent_ranges.iter().copied()).collect();
         let local_t = if capture_s.mutate {
           let capture_imprecise = capture_s.name.imprecise_name(self.scout_arena);
-          let local_t = match nenv.get_variable(capture_imprecise, self.typing_interner, self.scout_arena) {
+          let local_t = match nenv.get_variable(capture_imprecise, self.typing_interner) {
             Some(IVariableT::Local(rlv)) => rlv,
             _ => panic!("expected ReferenceLocalVariableT in declared_locals"),
           };

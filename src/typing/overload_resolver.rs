@@ -973,7 +973,7 @@ where
     context_region: RegionT,
   ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
     let func_name =
-      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: self.keywords.underscores_call,
       }));
     let param_filters = vec![callable_te.result(), KindT::Int(IntT { bits: 32 })];
@@ -1023,7 +1023,7 @@ where
     context_region: RegionT,
   ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
     let func_name =
-      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: self.keywords.underscores_call,
       }));
     let param_filters = vec![callable_te.result(), element_type];

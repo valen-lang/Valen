@@ -10,6 +10,7 @@ use crate::parsing::ast::{
 };
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
+use crate::postparsing::names::CodeNameValS;
 use crate::postparsing::names::IRuneValS::{CodeRune, ImplicitRune};
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, IRuneS, IVarDeclarationNameS,
@@ -221,7 +222,7 @@ fn translate_template_position_templex<'s, 'p>(
       .all_declared_runes()
       .contains(&scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })));
     if !is_rune_from_env {
-      let name = scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: name_str }));
+      let name = scout_arena.intern_imprecise_name(CodeName(CodeNameValS { name: name_str }));
       let range_s = PostParser::eval_range(file, name_or_rune.range());
       let mut child_lidb = lidb.child();
       return add_lookup_rule(
@@ -285,7 +286,7 @@ pub fn translate_templex_into_type_st<'s, 'p>(
       } else {
         ITypeST::Name(scout_arena.alloc(NameST {
           range: range_s,
-          name: scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: name_str })),
+          name: scout_arena.intern_imprecise_name(CodeName(CodeNameValS { name: name_str })),
         }))
       }
     }
@@ -551,7 +552,7 @@ pub fn translate_type_st_into_rune<'s>(
     }
 
     ITypeST::Tuple(tuple) => {
-      let tuple_name = scout_arena.intern_imprecise_name(CodeName(CodeNameS {
+      let tuple_name = scout_arena.intern_imprecise_name(CodeName(CodeNameValS {
         name: keywords.tuple_human_name[tuple.elements.len()],
       }));
       if tuple.elements.is_empty() {
@@ -623,7 +624,7 @@ pub fn translate_type_st_into_rune<'s>(
         range: range_s,
         rune: template_rune_s.clone(),
         parts: scout_arena.alloc_slice_copy(&[
-          scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: keywords.array }))
+          scout_arena.intern_imprecise_name(CodeName(CodeNameValS { name: keywords.array }))
         ]),
       }));
       let element_rune_s = translate_type_st_into_rune(
@@ -832,7 +833,7 @@ fn translate_group_p_into_group_s<'s, 'p>(
         })))
       } else {
         scout_arena.alloc(GroupS::Local(scout_arena.intern_imprecise_name(
-          CodeName(CodeNameS { name: group_name_str }),
+          CodeName(CodeNameValS { name: group_name_str }),
         )))
       }
     }
@@ -1065,7 +1066,7 @@ pub fn translate_templex<'s, 'p>(
         } else {
           // e.g. "int", or a citizen like "Moo". Per @TNLTZACZ, a bare type-name is a zero-arg
           // application: the name's Lookup, then a Call([]) whose result is the rune we return.
-          let name = scout_arena.intern_imprecise_name(CodeName(CodeNameS {
+          let name = scout_arena.intern_imprecise_name(CodeName(CodeNameValS {
             name: scout_arena.intern_str(name_or_rune.str().as_str()),
           }));
           let range_s = PostParser::eval_range(file, name_or_rune.range());
@@ -1283,7 +1284,7 @@ pub fn translate_templex<'s, 'p>(
           range: range_s.clone(),
           rune: template_rune_s.clone(),
           parts: scout_arena.alloc_slice_copy(&[
-            scout_arena.intern_imprecise_name(CodeName(CodeNameS { name: keywords.array }))
+            scout_arena.intern_imprecise_name(CodeName(CodeNameValS { name: keywords.array }))
           ]),
         }));
         let mut child_lidb = lidb.child();
@@ -1307,7 +1308,7 @@ pub fn translate_templex<'s, 'p>(
 
       ITemplexPT::Tuple(tuple) => {
         let range_s = PostParser::eval_range(file, tuple.range);
-        let tuple_name = scout_arena.intern_imprecise_name(CodeName(CodeNameS {
+        let tuple_name = scout_arena.intern_imprecise_name(CodeName(CodeNameValS {
           name: keywords.tuple_human_name[tuple.elements.len()],
         }));
         if tuple.elements.is_empty() {

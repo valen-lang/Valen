@@ -44,7 +44,8 @@ use crate::postparsing::names::{
   IStructDeclarationNameS, IVarDeclarationNameS, ImplDeclarationNameS, TopLevelInterfaceDeclarationNameS,
   TopLevelStructDeclarationNameS,
 };
-use crate::postparsing::names::{IterableNameS, IterationOptionNameS, IteratorNameS};
+use crate::postparsing::names::{IterableNameValS, IterationOptionNameValS, IteratorNameValS};
+use crate::postparsing::names::CodeNameValS;
 use crate::postparsing::rules::rule_scout::{translate_rulexes, translate_type};
 use crate::postparsing::rules::rules::ILiteralSL;
 use crate::postparsing::rules::rules::{EqualsSR, IRulexSR, RuneUsage};
@@ -338,23 +339,23 @@ pub(crate) fn translate_imprecise_name<'s, 'p>(
   match name {
     // Re-intern string from 'p into 's
     IImpreciseNameP::LookupName(n) => {
-      scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
         name: scout_arena.intern_str(n.str().as_str()),
       }))
     }
     IImpreciseNameP::IterableName(range) => {
-      scout_arena.intern_imprecise_name(IImpreciseNameValS::IterableName(IterableNameS {
+      scout_arena.intern_imprecise_name(IImpreciseNameValS::IterableName(IterableNameValS {
         range: PostParser::eval_range(file, *range),
       }))
     }
     IImpreciseNameP::IteratorName(range) => {
-      scout_arena.intern_imprecise_name(IImpreciseNameValS::IteratorName(IteratorNameS {
+      scout_arena.intern_imprecise_name(IImpreciseNameValS::IteratorName(IteratorNameValS {
         range: PostParser::eval_range(file, *range),
       }))
     }
     IImpreciseNameP::IterationOptionName(range) => {
       scout_arena.intern_imprecise_name(IImpreciseNameValS::IterationOptionName(
-        IterationOptionNameS { range: PostParser::eval_range(file, *range) },
+        IterationOptionNameValS { range: PostParser::eval_range(file, *range) },
       ))
     }
   }
@@ -553,7 +554,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelFunction(function_p) = denizen {
         let (function_s, function_uses) =
-          self.scout_function(file_coordinate, function_p, IFunctionParent::FunctionNoParent)?;
+          self.scout_function(file_coordinate, function_p, Vec::new(), IFunctionParent::FunctionNoParent)?;
         assert!(function_uses.uses.is_empty());
         if let IBodyS::CodeBody(code_body_s) = &function_s.body {
           assert!(
@@ -770,7 +771,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         let ITemplexPT::NameOrRune(name) = call.template else {
           panic!("POSTPARSER_SCOUT_IMPL_IMPOSSIBLE_CALL_TEMPLATE_SHAPE");
         };
-        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
           name: self.scout_arena.intern_str(name.name.str().as_str()),
         }))
       }
@@ -781,7 +782,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
           }),
         )) =>
       {
-        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
           name: self.scout_arena.intern_str(name.name.str().as_str()),
         }))
       }
@@ -812,7 +813,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         let ITemplexPT::NameOrRune(name) = call.template else {
           panic!("POSTPARSER_SCOUT_IMPL_IMPOSSIBLE_CALL_TEMPLATE_SHAPE");
         };
-        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
           name: self.scout_arena.intern_str(name.name.str().as_str()),
         }))
       }
@@ -823,7 +824,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
           }),
         )) =>
       {
-        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
           name: self.scout_arena.intern_str(name.name.str().as_str()),
         }))
       }
@@ -1077,9 +1078,11 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
           member_rule_builder.extend(outer_ref_rules_vec.iter().copied());
           let value_type_rules = self.scout_arena.alloc_slice_from_vec(value_rules_vec);
           let type_outer_ref_rules = self.scout_arena.alloc_slice_from_vec(outer_ref_rules_vec);
+          let member_lid = lidb.child().consume_in_arena(self.scout_arena);
           vec![IStructMemberS::NormalStructMember(NormalStructMemberS {
             range: Self::eval_range(file, member.range),
             name: self.scout_arena.intern_str(member.name.str().as_str()),
+            lid: member_lid,
             type_rune: member_full_rune,
             tyype: member_tree,
             value_type_rune: member_value_rune,
