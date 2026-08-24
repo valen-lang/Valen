@@ -33,13 +33,23 @@ the `VCOORD` sites in `Backend/src`); resolve each onto `Sharedness` (see constr
 through it. A `StructKind`/SSA translates to its inner value, a reference wrap to a pointer
 (`Unsafe::translateType`); construction assembles the value with `insertvalue` (no wrapper), destructure
 loads the whole struct and `extractvalue`s each field, and `&x` is `LetAndLend` (store into a local, lend
-its pointer). See `Backend/backend-design.md` S5–S7 for the design (wrapper structs are RAM-only).
-`mutswaplocals` and the mut/single struct path (`structmutparamexport`) compile end-to-end.
+its pointer). See `Backend/backend-design.md` S5–S8 for the design (wrapper structs are RAM-only).
+`mutswaplocals` and `structmutparamexport` pass end-to-end.
 
-**Next: the generated C-ABI headers for structs.** `structmutparamexport` now fails at clang, not codegen —
-the export/extern C headers name the struct two ways (`vtest_Spaceship` in the signature vs
-`vtest_SpaceshipRef` typedef) and emit it as an opaque `{ uint64_t }` instead of its real fields (the
-`getExportName`/C-header path, `Backend/src/vale.cpp`).
+**The C-ABI boundary is S8 pass-through** (`Backend/backend-design.md` S8): a value crosses as its own
+representation, never an i64-packed handle. A mut struct crosses as an opaque `char[N]`, a borrow as a real
+pointer, a shared object as a pointer to an opaque handle. `hostBoundaryType`/`returnNeedsOutParam`/
+`translateExternReturnType`/`buildBoundarySignature` (`Backend/src/function/boundary.cpp`) are the single
+source of the boundary LLVM type, and pointer-ness comes from the onion wrap, not a struct-size heuristic. The
+old encrypt/decrypt packing layer is deleted; `FfiHandleStructs` survives only as `getExternalType`'s
+handle-type source until the shared/interface/array families migrate off it.
+
+**Next: SSA value codegen.** `ssamutparamexport` (array built from values `[#](...)`, not a lambda) reaches
+`KindStructs::makeWrapperPtrWithoutChecking` (`Backend/src/region/common/defaultlayout/structs.cpp`), which
+asserts a wrapper-struct pointer that an inline SSA isn't, the same inline-value mismatch already fixed for
+structs. The other extern/export families are blocked upstream of the backend: `structmutreturnexport` needs
+the shared/`str` family (its `Thing` has a `str` member), and `interfacemutparamexport` panics in the
+instantiator (`instantiating/ast/types.rs`).
 
 ## ValueKind — a type-level "wrap-free kind" (orthogonal to the onion migration)
 
@@ -49,8 +59,8 @@ returns `ValueKind*`, and a `= delete`d `peel_all_references(ValueKind*)` overlo
 compile error. Every audited value-kind inspector now demands the witness: the control-block cluster,
 the naming/export/weakability group (`GlobalState::getKindName`/`getKindWeakability`, region
 `getExportName`/`getExternalType`/`getKindWeakability`, Package `getKindExportName`/`getKindHumanName`/
-`getKindExternName`), the `function.cpp` C-ABI trio (`translatesToCVoid`/`typeNeedsPointerParameter`/
-`translateExternReturnType`), `translateWeakReference`, `fillWeakableControlBlock`, `intRangeLoopReverse`, and
+`getKindExternName`), `translatesToCVoid` (the other C-ABI boundary-type helpers moved to `boundary.cpp` and take the full `Kind*`,
+since pointer-ness is wrap-driven), `translateWeakReference`, `fillWeakableControlBlock`, `intRangeLoopReverse`, and
 the rcimm `valeKind` prototype cluster.
 The dead never-read `Kind*` params the audit found are deleted (`getInterfaceMethodVirtualParamAnyType`,
 `getWeakRefHeaderStruct`/`getWeakVoidRefStruct`, `getIsAliveFromWeakFatPtr`, the `reference`/`kindM` on the
@@ -116,3 +126,11 @@ reading typing's edge blueprint (`super_family_root_headers`), not a C++-codegen
   via `CopyPrim` (not `Deref`); an owned construct is a bare kind with zero wraps; a virtual call site is
   a plain `FunctionCall` to the abstract fn while the `InterfaceFunctionCall` lives once in the generated
   dispatcher.
+- Two block evaluations must never share a `life`: the block-result temp is named from `life`, so a shared
+  `life` collides the name and double-unstackifies (the two `drop_since` calls in
+  `evaluate_block_statements_block` each need their own `life` sublocation).
+- The instantiator must collect array definitions into `HinputsI` (like structs), or the backend never
+  registers their region; deleting the hammer dropped this collect-and-emit step even though the def content
+  already lives in the self-describing `StaticSizedArrayIT`.
+- Don't assume the named surface feature is the blocker: the array tests looked closure-blocked, but
+  array-from-values hit the same closure-independent `drop_since` bug.

@@ -64,14 +64,16 @@ where
     let drop_ranges: Vec<RangeS<'s>> =
       once(drop_range).chain(parent_ranges.iter().copied()).collect();
 
-    // Do any temporary locals' pending drops
+    // Do any temporary locals' pending drops.
+    // Each drop_since resultifies the block value into a temp named from its life,
+    // so the two calls must use distinct lives or their result temps collide.
     let undestructed_root_expression =
         self.drop_since(
           coutputs,
           nenv,
           &drop_ranges,
           call_location,
-          life,
+          life.add(self.typing_interner, 1),
           region,
           undestructed_root_expression_with_pending_temps,
           pending_drops_from_exprs.take_vars()
@@ -84,7 +86,7 @@ where
           nenv,
           &drop_ranges,
           call_location,
-          life,
+          life.add(self.typing_interner, 2),
           region,
           undestructed_root_expression,
           nenv.snapshot(self.typing_interner).get_live_variables_introduced_since(starting_nenv)

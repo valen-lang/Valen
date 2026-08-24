@@ -1024,26 +1024,6 @@ LLVMTypeRef RCImm::getInterfaceMethodVirtualParamAnyType() {
   return LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0);
 }
 
-// VCOORD: do we still encrypt/decrypt?
-Ref RCImm::refFromHostHandle(
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    Kind* sourceRefMT,
-    LLVMValueRef sourceRefLE) {
-  return regularRefFromHostHandle(
-      globalState, functionState, builder, &kindStructs, sourceRefMT, sourceRefLE);
-}
-
-// VCOORD: do we still encrypt?
-LLVMValueRef RCImm::refToHostHandle(
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    Kind* sourceRefMT,
-    Ref sourceRef) {
-  return regularRefToHostHandle(
-      globalState, functionState, builder, sourceRefMT, sourceRef);
-}
-
 void RCImm::initializeElementInSSA(
     FunctionState* functionState,
     LLVMBuilderRef builder,

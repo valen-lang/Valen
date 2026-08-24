@@ -461,21 +461,6 @@ Ref regularDowncast(
     std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
     std::function<Ref(LLVMBuilderRef)> buildElse);
 
-Ref regularRefFromHostHandle(
-    GlobalState* globalState,
-    FunctionState *functionState,
-    LLVMBuilderRef builder,
-    KindStructs* kindStructs,
-    Kind *sourceRefMT,
-    LLVMValueRef sourceRefLE);
-
-LLVMValueRef regularRefToHostHandle(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    Kind* sourceRefMT,
-    Ref sourceRef);
-
 std::string generateConcreteHandleStructDefC(Package* currentPackage, const std::string& name);
 std::string generateInterfaceHandleStructDefC(Package* currentPackage, const std::string& name);
 

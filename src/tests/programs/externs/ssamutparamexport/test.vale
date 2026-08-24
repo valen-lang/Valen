@@ -7,6 +7,6 @@ exported func getMutIntArrayLen(arr &StaticArray<5, int>) int { __copy_prim(len(
 exported func getMutIntArrayElem(arr &StaticArray<5, int>, i int) int { __copy_prim(arr[__copy_prim(i)]) }
 
 exported func main() int {
-  a = [#5]({_});
+  a = [#](0, 1, 2, 3, 4);
   return sumBytes(&a);
 }

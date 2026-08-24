@@ -169,6 +169,33 @@ impl<'cache> Lowerer<'cache> {
             let id = self.lower_interface_def(it);
             pb.add_interface(&humanize_id(&code_map, &it.instantiated_interface.id, None), id);
         }
+        // Arrays always live in the mut/single (unsafe) region, never shared. An array
+        // kind is self-describing, so we build its definition straight from the IT.
+        for a in monouts.static_sized_arrays.iter().copied() {
+            if a.name.package_coord as *const _ as usize != pkg_key {
+                continue;
+            }
+            let def = self.cache.new_static_sized_array_def(
+                self.lower_id_to_name(&a.name),
+                self.lower_static_array_kind(a),
+                a.size() as i32,
+                self.region_for(SharednessI::Single),
+                self.lower_kind(a.element_type()),
+            );
+            pb.add_static_sized_array(&humanize_id(&code_map, &a.name, None), def);
+        }
+        for a in monouts.runtime_sized_arrays.iter().copied() {
+            if a.name.package_coord as *const _ as usize != pkg_key {
+                continue;
+            }
+            let def = self.cache.new_runtime_sized_array_def(
+                self.lower_id_to_name(&a.name),
+                self.lower_kind(KindIT::RuntimeSizedArrayIT(a)),
+                self.region_for(SharednessI::Single),
+                self.lower_kind(a.element_type()),
+            );
+            pb.add_runtime_sized_array(&humanize_id(&code_map, &a.name, None), def);
+        }
 
         for e in monouts.function_exports.iter() {
             if e.export_id.package_coord as *const _ as usize != pkg_key {

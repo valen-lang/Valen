@@ -203,6 +203,8 @@ impl<'s, 't, 'i> DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> where 's: 't, 
 pub struct InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
     pub functions: IndexMap<IdI<'s, 'i>, &'i FunctionDefinitionI<'s, 'i>>,
     pub structs: IndexMap<IdI<'s, 'i>, &'i StructDefinitionI<'s, 'i>>,
+    pub static_sized_arrays: IndexMap<IdI<'s, 'i>, &'i StaticSizedArrayIT<'s, 'i>>,
+    pub runtime_sized_arrays: IndexMap<IdI<'s, 'i>, &'i RuntimeSizedArrayIT<'s, 'i>>,
     pub interfaces_without_methods: IndexMap<IdI<'s, 'i>, &'i InterfaceDefinitionI<'s, 'i>>,
     pub struct_to_sharedness: IndexMap<IdI<'s, 'i>, SharednessI>,
     pub struct_to_bounds: IndexMap<IdI<'s, 'i>, DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>,
@@ -233,6 +235,8 @@ impl<'s, 't, 'i> InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
     InstantiatedOutputsI {
       functions: IndexMap::default(),
       structs: IndexMap::default(),
+      static_sized_arrays: IndexMap::default(),
+      runtime_sized_arrays: IndexMap::default(),
       interfaces_without_methods: IndexMap::default(),
       struct_to_sharedness: IndexMap::default(),
       struct_to_bounds: IndexMap::default(),
@@ -529,6 +533,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             HinputsI {
                 interfaces: self.interner.alloc_slice_from_vec(interfaces),
                 structs: self.interner.alloc_slice_from_vec(monouts.structs.values().copied().collect()),
+                static_sized_arrays: self.interner.alloc_slice_from_vec(monouts.static_sized_arrays.values().copied().collect()),
+                runtime_sized_arrays: self.interner.alloc_slice_from_vec(monouts.runtime_sized_arrays.values().copied().collect()),
                 functions: self.interner.alloc_slice_from_vec(monouts.functions.values().copied().collect()),
                 interface_to_edge_blueprints: interface_edge_blueprints,
                 interface_to_sub_citizen_to_edge,
@@ -2030,7 +2036,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             init_steps: self.interner.alloc_slice_from_vec(translated_init_steps),
             local_name: local_name_i,
         };
-        StaticSizedArrayIT { name: id_i }
+        let ssa_it = StaticSizedArrayIT { name: id_i };
+        // Collect the distinct array kind so the backend can declare its region.
+        monouts.static_sized_arrays.entry(id_i).or_insert_with(|| self.interner.alloc(ssa_it));
+        ssa_it
     }
 
 
@@ -2059,7 +2068,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             init_steps: self.interner.alloc_slice_from_vec(translated_init_steps),
             local_name: local_name_i,
         };
-        RuntimeSizedArrayIT { name: id_i }
+        let rsa_it = RuntimeSizedArrayIT { name: id_i };
+        // Collect the distinct array kind so the backend can declare its region.
+        monouts.runtime_sized_arrays.entry(id_i).or_insert_with(|| self.interner.alloc(rsa_it));
+        rsa_it
     }
 
 

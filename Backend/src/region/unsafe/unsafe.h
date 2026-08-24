@@ -431,18 +431,6 @@ public:
 
   LLVMTypeRef getExternalType(ValueKind* refMT) override;
 
-  Ref refFromHostHandle(
-      FunctionState* functionState,
-      LLVMBuilderRef builder,
-      Kind* sourceRefMT,
-      LLVMValueRef sourceRefLE) override;
-
-  LLVMValueRef refToHostHandle(
-      FunctionState* functionState,
-      LLVMBuilderRef builder,
-      Kind* sourceRefMT,
-      Ref sourceRef) override;
-
   LLVMTypeRef getInterfaceMethodVirtualParamAnyType() override;
 
   void defineStaticSizedArrayExtraFunctions(StaticSizedArrayDefinitionT* ssaDef) override {}

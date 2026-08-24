@@ -1,7 +1,7 @@
 // VISTODO: rename Hinputs everywhere
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::postparsing::names::IRuneS;
-use crate::instantiating::ast::types::StructIT;
+use crate::instantiating::ast::types::{StructIT, StaticSizedArrayIT, RuntimeSizedArrayIT};
 use crate::instantiating::ast::names::IdI;
 use crate::instantiating::ast::names::{IStructTemplateNameI, IInterfaceTemplateNameI, IImplTemplateNameI, IFunctionTemplateNameI};
 use crate::instantiating::ast::ast::{
@@ -29,6 +29,11 @@ pub struct InstantiationBoundArgumentsI<'s, 'i> where 's: 'i {
 pub struct HinputsI<'s, 'i> where 's: 'i {
     pub interfaces: &'i [InterfaceDefinitionI<'s, 'i>],
     pub structs: &'i [&'i StructDefinitionI<'s, 'i>],
+    // The distinct array kinds used in the program. An array kind is self-describing
+    // (element type, and size for SSA, live in its id), so the backend derives each
+    // array's definition from these to declare its region.
+    pub static_sized_arrays: &'i [&'i StaticSizedArrayIT<'s, 'i>],
+    pub runtime_sized_arrays: &'i [&'i RuntimeSizedArrayIT<'s, 'i>],
     pub functions: &'i [&'i FunctionDefinitionI<'s, 'i>],
     pub interface_to_edge_blueprints:
         ArenaIndexMap<'i, IdI<'s, 'i>, InterfaceEdgeBlueprintI<'s, 'i>>,

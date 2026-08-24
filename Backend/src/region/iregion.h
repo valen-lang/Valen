@@ -392,19 +392,6 @@ public:
       LiveRef structRef,
       InBoundsLE indexRef) = 0;
 
-  // Converts a host handle back into a reference to an object in this region.
-  virtual Ref refFromHostHandle(
-      FunctionState* functionState,
-      LLVMBuilderRef builder,
-      Kind* sourceRefMT,
-      LLVMValueRef sourceRefLE) = 0;
-
-  // Converts a reference to an object in this region into a host handle.
-  virtual LLVMValueRef refToHostHandle(
-      FunctionState* functionState,
-      LLVMBuilderRef builder,
-      Kind* sourceRefMT,
-      Ref sourceRef) = 0;
 
   virtual LLVMValueRef getStringBytesPtr(
       FunctionState* functionState,
