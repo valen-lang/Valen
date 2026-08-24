@@ -21,7 +21,7 @@ ValeFuncPtrLE declareFunction(
 
   auto valeFunctionNameL = functionM->prototype->name->name;
   if (valeFunctionNameL == "main") {
-    // Otherwise we conflict with the main that we create for setting up things like replaying
+    // Otherwise we conflict with the main that we create for entry setup.
     valeFunctionNameL = ":main";
   }
   auto valeFunctionL =
@@ -126,9 +126,8 @@ void exportFunction(GlobalState* globalState, Package* package, const std::strin
     auto cParamIndex = logicalParamIndex + (usingReturnOutParam ? 1 : 0);
 
     auto valeParamRefMT = prototypeM->params[logicalParamIndex];
-    // Under the opaque-handle FFI, share refs cross as universal refs — no
-    // linearization, no separate host-side kind. hostParamMT === valeParamRefMT.
-    auto hostParamMT = valeParamRefMT;
+    // Under the opaque-handle FFI, share refs cross as universal refs, so the
+    // host param type is just the vale param type.
     // Doesn't include the pointifying, this is just the pointee. It's what we'll have after the
     // below if-statement.
     auto valeParamKind = peel_all_references(valeParamRefMT);
@@ -145,7 +144,7 @@ void exportFunction(GlobalState* globalState, Package* package, const std::strin
 
     auto valeRef =
         receiveHostObjectIntoVale(
-            globalState, &functionState, builder, hostParamMT, valeParamRefMT, hostArgRefLE);
+            globalState, &functionState, builder, valeParamRefMT, hostArgRefLE);
 
     argsToActualFunction.push_back(valeRef);
 

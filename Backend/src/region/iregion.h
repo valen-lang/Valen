@@ -392,15 +392,15 @@ public:
       LiveRef structRef,
       InBoundsLE indexRef) = 0;
 
-  // Receives and decrypts a reference to an object in this region.
-  virtual Ref receiveAndDecryptFamiliarReference(
+  // Converts a host handle back into a reference to an object in this region.
+  virtual Ref refFromHostHandle(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* sourceRefMT,
       LLVMValueRef sourceRefLE) = 0;
 
-  // Encrypts and sends a reference to an object in this region.
-  virtual LLVMValueRef encryptAndSendFamiliarReference(
+  // Converts a reference to an object in this region into a host handle.
+  virtual LLVMValueRef refToHostHandle(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* sourceRefMT,

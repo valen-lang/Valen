@@ -461,7 +461,7 @@ Ref regularDowncast(
     std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
     std::function<Ref(LLVMBuilderRef)> buildElse);
 
-Ref regularReceiveAndDecryptFamiliarReference(
+Ref regularRefFromHostHandle(
     GlobalState* globalState,
     FunctionState *functionState,
     LLVMBuilderRef builder,
@@ -469,11 +469,10 @@ Ref regularReceiveAndDecryptFamiliarReference(
     Kind *sourceRefMT,
     LLVMValueRef sourceRefLE);
 
-LLVMValueRef regularEncryptAndSendFamiliarReference(
+LLVMValueRef regularRefToHostHandle(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    KindStructs* kindStructs,
     Kind* sourceRefMT,
     Ref sourceRef);
 

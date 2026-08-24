@@ -737,13 +737,13 @@ LLVMTypeRef Unsafe::getExternalType(ValueKind* kind) {
   }
 }
 
-Ref Unsafe::receiveAndDecryptFamiliarReference(
+Ref Unsafe::refFromHostHandle(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Kind* sourceRefMT,
     LLVMValueRef sourceRefLE) {
   assert(dynamic_cast<ShareRef*>(sourceRefMT) == nullptr);
-  return regularReceiveAndDecryptFamiliarReference(
+  return regularRefFromHostHandle(
       globalState, functionState, builder, &kindStructs, sourceRefMT, sourceRefLE);
 }
 
@@ -751,15 +751,14 @@ LLVMTypeRef Unsafe::getInterfaceMethodVirtualParamAnyType() {
   return LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0);
 }
 
-LLVMValueRef Unsafe::encryptAndSendFamiliarReference(
+LLVMValueRef Unsafe::refToHostHandle(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Kind* sourceRefMT,
     Ref sourceRef) {
   assert(dynamic_cast<ShareRef*>(sourceRefMT) == nullptr);
-  assert(dynamic_cast<ShareRef*>(sourceRefMT) == nullptr);
-  return regularEncryptAndSendFamiliarReference(
-      globalState, functionState, builder, &kindStructs, sourceRefMT, sourceRef);
+  return regularRefToHostHandle(
+      globalState, functionState, builder, sourceRefMT, sourceRef);
 }
 
 void Unsafe::pushRuntimeSizedArrayNoBoundsCheck(

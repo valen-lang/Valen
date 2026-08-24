@@ -98,8 +98,6 @@ set(BACKEND_LIB_SRCS
 		src/fileio.cpp
 		src/utils/definefunction.cpp
 		src/utils/definefunction.h
-		src/utils/flags.cpp
-		src/utils/flags.h
 		src/utils/llvm.cpp
 		src/utils/llvm.h
 		src/utils/structlt.h

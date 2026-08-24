@@ -5,8 +5,6 @@
 #include <string>
 #include <stdint.h>
 #include <stddef.h>
-#include <unordered_map>
-#include <unordered_set>
 
 #include "backend_options_ffi.h"
 
@@ -36,8 +34,6 @@ struct ValeOptions {
     bool includeBoundsChecks = true;
     bool useAtomicRc = false;
     bool printMemOverhead = false;
-    bool enableReplaying = false;
-    std::unordered_map<std::string, std::unordered_set<std::string>> projectNameToReplayWhitelistedExterns;
 };
 
 // Copy fields out of the FFI POD into a ValeOptions. Returns 1 on success,

@@ -944,24 +944,12 @@ void RCImm::checkValidReference(
 // exactly what its ref layer needs and matching the LLVM handle structs that
 // cross the ABI boundary (see ffihandlestructs.h): concrete kinds get 8 bytes,
 // interface kinds get 16.
-// Per @HTSLVBDTCZ, this is where per-kind C distinctness comes from: each kind's
-// export name becomes its own typedef, even though all concretes (and all
-// interfaces) share one LLVM type internally.
-static std::string emitConcreteHandleTypedefC(const std::string& name) {
-  return
-      std::string() + "typedef struct " + name + " { uint64_t _reserved; } " + name + ";\n";
-}
-static std::string emitInterfaceHandleTypedefC(const std::string& name) {
-  return
-      std::string() + "typedef struct " + name + " { uint64_t _reserved0; uint64_t _reserved1; } " + name + ";\n";
-}
-
 std::string RCImm::generateStructDefsC(
     Package* currentPackage,
 
     StructDefinition* structDefM) {
   auto name = currentPackage->getKindExportName(structDefM->kind, true);
-  return emitConcreteHandleTypedefC(name);
+  return generateConcreteHandleStructDefC(currentPackage, name);
 }
 
 std::string RCImm::generateInterfaceDefsC(
@@ -979,7 +967,7 @@ std::string RCImm::generateInterfaceDefsC(
         << currentPackage->getKindExportName(edge->structName, false) << " " << i << "\n";
     }
   }
-  s << emitInterfaceHandleTypedefC(name);
+  s << generateInterfaceHandleStructDefC(currentPackage, name);
   return s.str();
 }
 
@@ -1037,7 +1025,7 @@ LLVMTypeRef RCImm::getInterfaceMethodVirtualParamAnyType() {
 }
 
 // VCOORD: do we still encrypt/decrypt?
-Ref RCImm::receiveAndDecryptFamiliarReference(
+Ref RCImm::refFromHostHandle(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Kind* sourceRefMT,
@@ -1071,33 +1059,13 @@ Ref RCImm::receiveAndDecryptFamiliarReference(
 }
 
 // VCOORD: do we still encrypt?
-LLVMValueRef RCImm::encryptAndSendFamiliarReference(
+LLVMValueRef RCImm::refToHostHandle(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Kind* sourceRefMT,
     Ref sourceRef) {
-  // Per @FRMACZ, the boundary does no reference counting: pack the pointer
-  // without touching the RC. Mirrors regularEncrypt minus the leading dealias.
-  auto sourceValueType = peel_all_references(sourceRefMT);
-  if (dynamic_cast<StructKind*>(sourceValueType) ||
-      dynamic_cast<StaticSizedArrayT*>(sourceValueType) ||
-      dynamic_cast<RuntimeSizedArrayT*>(sourceValueType) ||
-      dynamic_cast<Str*>(sourceValueType)) {
-    auto sourceRefLE =
-        checkValidReference(FL(), functionState, builder, false, sourceRefMT, sourceRef);
-    auto objPtrI64LE = LLVMBuildPtrToInt(builder, sourceRefLE, LLVMInt64TypeInContext(globalState->context), "objPtrInt");
-    return globalState->getFfiHandleStructs()->implodeForRegularConcrete(
-        globalState, functionState, builder, objPtrI64LE);
-  } else if (dynamic_cast<InterfaceKind*>(sourceValueType)) {
-    checkValidReference(FL(), functionState, builder, false, sourceRefMT, sourceRef);
-    LLVMValueRef itablePtrLE = nullptr, objPtrLE = nullptr;
-    std::tie(itablePtrLE, objPtrLE) = explodeInterfaceRef(functionState, builder, sourceRefMT, sourceRef);
-    auto objPtrI64LE = LLVMBuildPtrToInt(builder, objPtrLE, LLVMInt64TypeInContext(globalState->context), "objPtrInt");
-    auto itablePtrI64LE = LLVMBuildPtrToInt(builder, itablePtrLE, LLVMInt64TypeInContext(globalState->context), "itablePtrInt");
-    return globalState->getFfiHandleStructs()->implodeForRegularInterface(
-        globalState, functionState, builder, itablePtrI64LE, objPtrI64LE);
-  }
-  { assert(false); throw 1337; }
+  return regularRefToHostHandle(
+      globalState, functionState, builder, sourceRefMT, sourceRef);
 }
 
 void RCImm::initializeElementInSSA(

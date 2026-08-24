@@ -34,15 +34,6 @@ int loadFromFfi(ValeOptions *opt, const BackendCompileOptionsFFI *ffi) {
   opt->includeBoundsChecks = ffi->include_bounds_checks != 0;
   opt->useAtomicRc = ffi->use_atomic_rc != 0;
   opt->printMemOverhead = ffi->print_mem_overhead != 0;
-  opt->enableReplaying = ffi->enable_replaying != 0;
-
-  for (size_t i = 0; i < ffi->replay_whitelist_count; i++) {
-    assert(ffi->replay_whitelist_modules[i] != nullptr);
-    assert(ffi->replay_whitelist_functions[i] != nullptr);
-    std::string moduleName = ffi->replay_whitelist_modules[i];
-    std::string functionName = ffi->replay_whitelist_functions[i];
-    opt->projectNameToReplayWhitelistedExterns[moduleName].insert(functionName);
-  }
 
   return 1;
 }

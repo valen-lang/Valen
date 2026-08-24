@@ -431,13 +431,13 @@ public:
 
   LLVMTypeRef getExternalType(ValueKind* refMT) override;
 
-  Ref receiveAndDecryptFamiliarReference(
+  Ref refFromHostHandle(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* sourceRefMT,
       LLVMValueRef sourceRefLE) override;
 
-  LLVMValueRef encryptAndSendFamiliarReference(
+  LLVMValueRef refToHostHandle(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* sourceRefMT,

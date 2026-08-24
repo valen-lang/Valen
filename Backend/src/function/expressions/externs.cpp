@@ -96,11 +96,10 @@ Ref buildCallOrSideCall(
   buildFlare(FL(), globalState, functionState, builder);
 
   auto valeReturnRefMT = prototype->returnType;
-  auto hostReturnMT = valeReturnRefMT;
 
   auto valeReturnRef =
       receiveHostObjectIntoVale(
-          globalState, functionState, builder, hostReturnMT, valeReturnRefMT, hostReturnLE);
+          globalState, functionState, builder, valeReturnRefMT, hostReturnLE);
 
   // dont we have to free here too
 

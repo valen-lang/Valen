@@ -8,7 +8,6 @@ Ref receiveHostObjectIntoVale(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Kind* hostRefMT,
     Kind* valeRefMT,
     LLVMValueRef hostRefLE);
 

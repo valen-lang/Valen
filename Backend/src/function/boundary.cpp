@@ -7,22 +7,21 @@ Ref receiveHostObjectIntoVale(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    Kind* hostRefMT,
     Kind* valeRefMT,
     LLVMValueRef hostRefLE) {
-  // Per @FRMACZ, this conversion does no reference counting — share refs arrive
-  // as right-sized handle structs (8B concrete / 16B interface) which we decrypt
+  // Per @FRMACZ, this conversion does no reference counting: share refs arrive
+  // as right-sized handle structs (8B concrete / 16B interface) which we convert
   // back into Vale refs, and the ref simply moves in. Primitives pass through
-  // unwrapped. (Under the opaque-handle FFI, hostRefMT === valeRefMT.)
+  // unwrapped.
   bool isPrimitive =
-      dynamic_cast<Int*>(hostRefMT) || dynamic_cast<Bool*>(hostRefMT) ||
-      dynamic_cast<Float*>(hostRefMT) || dynamic_cast<Void*>(hostRefMT);
+      dynamic_cast<Int*>(valeRefMT) || dynamic_cast<Bool*>(valeRefMT) ||
+      dynamic_cast<Float*>(valeRefMT) || dynamic_cast<Void*>(valeRefMT);
   auto valeRefValueType = peel_all_references(valeRefMT);
   if (isPrimitive) {
-    if (dynamic_cast<Void*>(hostRefMT)) {
+    if (dynamic_cast<Void*>(valeRefMT)) {
       return toRef(globalState->getRegion(valeRefValueType), valeRefMT, makeVoid(globalState));
     }
-    if (dynamic_cast<Bool*>(hostRefMT)) {
+    if (dynamic_cast<Bool*>(valeRefMT)) {
       auto asI1LE =
           LLVMBuildTrunc(builder, hostRefLE, LLVMInt1TypeInContext(globalState->context), "boolAsI1");
       return toRef(globalState->getRegion(valeRefValueType), valeRefMT, asI1LE);
@@ -31,9 +30,9 @@ Ref receiveHostObjectIntoVale(
   } else {
     // The incoming handle must be exactly the region's external type for this
     // kind (concrete 8B or interface 16B).
-    assert(LLVMTypeOf(hostRefLE) == globalState->getRegion(valeRefValueType)->getExternalType(peel_all_references(hostRefMT)));
+    assert(LLVMTypeOf(hostRefLE) == globalState->getRegion(valeRefValueType)->getExternalType(valeRefValueType));
     return globalState->getRegion(valeRefValueType)
-        ->receiveAndDecryptFamiliarReference(functionState, builder, hostRefMT, hostRefLE);
+        ->refFromHostHandle(functionState, builder, valeRefMT, hostRefLE);
   }
 }
 
@@ -45,7 +44,7 @@ LLVMValueRef sendValeObjectIntoHost(
     Ref valeRef) {
   // Under the opaque-handle FFI, share refs (struct/interface/RSA/SSA/Str)
   // cross as right-sized handle structs (8B concrete / 16B interface) via
-  // encrypt/send. Primitives are passed through unwrapped — their LE value IS
+  // refToHostHandle. Primitives are passed through unwrapped: their LE value is
   // the C-ABI value.
   bool isPrimitive =
       dynamic_cast<Int*>(valeRefMT) || dynamic_cast<Bool*>(valeRefMT) ||
@@ -60,9 +59,9 @@ LLVMValueRef sendValeObjectIntoHost(
     }
     return valeArgLE;
   }
-  auto encryptedValeRefLE =
+  auto hostHandleLE =
       globalState->getRegion(valeRefValueType)
-          ->encryptAndSendFamiliarReference(functionState, builder, valeRefMT, valeRef);
-  assert(LLVMTypeOf(encryptedValeRefLE) == globalState->getRegion(valeRefValueType)->getExternalType(valeRefValueType));
-  return encryptedValeRefLE;
+          ->refToHostHandle(functionState, builder, valeRefMT, valeRef);
+  assert(LLVMTypeOf(hostHandleLE) == globalState->getRegion(valeRefValueType)->getExternalType(valeRefValueType));
+  return hostHandleLE;
 }

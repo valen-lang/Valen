@@ -26,8 +26,6 @@ pub fn build_backend_options(
   opt_level: &str,
   llvm_ir: bool,
   asm: bool,
-  enable_replaying: bool,
-  replay_whitelist_extern: &str,
   pic: bool,
   print_mem_overhead: bool,
   use_atomic_rc: bool,
@@ -40,7 +38,6 @@ pub fn build_backend_options(
   opts.census = census;
   opts.print_llvmir = llvm_ir;
   opts.print_asm = asm;
-  opts.enable_replaying = enable_replaying;
   opts.pic = pic;
   opts.print_mem_overhead = print_mem_overhead;
   opts.use_atomic_rc = use_atomic_rc;
@@ -62,13 +59,6 @@ pub fn build_backend_options(
     "O3" => BACKEND_OPT_LEVEL_O3,
     other => panic!("Unknown opt_level: {}", other),
   };
-
-  if !replay_whitelist_extern.is_empty() {
-    let (module, function) = replay_whitelist_extern
-      .split_once('.')
-      .expect("replay_whitelist_extern must be in the form module.function");
-    opts.replay_whitelist.push((module.to_string(), function.to_string()));
-  }
 
   opts
 }

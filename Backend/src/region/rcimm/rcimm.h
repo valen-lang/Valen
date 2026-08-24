@@ -382,13 +382,13 @@ public:
   LLVMTypeRef getExternalType(
       ValueKind* refMT) override;
 
-  Ref receiveAndDecryptFamiliarReference(
+  Ref refFromHostHandle(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* sourceRefMT,
       LLVMValueRef sourceRefLE) override;
 
-  LLVMValueRef encryptAndSendFamiliarReference(
+  LLVMValueRef refToHostHandle(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* sourceRefMT,
@@ -543,16 +543,6 @@ private:
       Ref objectRef);
 
 private:
-  //  // Does the entire serialization process: measuring the length, allocating a buffer, and
-//  // serializing into it.
-//  Ref topLevelFree(
-//      FunctionState* functionState,
-//      LLVMBuilderRef builder,
-//      Ref regionInstanceRef,
-//      Ref sourceRegionInstanceRef,
-//      ValueKind* valeKind,
-//      Ref ref);
-
   GlobalState* globalState = nullptr;
 
   KindStructs kindStructs;

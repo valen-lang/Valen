@@ -46,10 +46,6 @@ pub struct BuildArgs {
   #[arg(long)]
   gen_size: Option<String>,
 
-  /// Whitelist of extern names that may be replayed.
-  #[arg(long, default_value = "")]
-  replay_whitelist_extern: String,
-
   // --- boolean knobs ---
   #[arg(long, default_value_t = false)]
   benchmark: bool,
@@ -77,9 +73,6 @@ pub struct BuildArgs {
 
   #[arg(long, default_value_t = true)]
   sanity_check: bool,
-
-  #[arg(long, default_value_t = false)]
-  enable_replaying: bool,
 
   /// Skip linking the standard library.
   #[arg(long, default_value_t = false)]
@@ -242,8 +235,6 @@ pub fn build_stuff(compiler_dir: &Path, args: BuildArgs) {
     &args.opt_level,
     args.llvm_ir,
     args.asm,
-    args.enable_replaying,
-    &args.replay_whitelist_extern,
     args.pic,
     args.print_mem_overhead,
     args.use_atomic_rc,

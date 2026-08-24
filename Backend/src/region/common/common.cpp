@@ -1376,7 +1376,7 @@ Ref normalLocalLoad(GlobalState* globalState, FunctionState* functionState, LLVM
   return sourceRef;
 }
 
-Ref regularReceiveAndDecryptFamiliarReference(
+Ref regularRefFromHostHandle(
     GlobalState* globalState,
     FunctionState *functionState,
     LLVMBuilderRef builder,
@@ -1440,19 +1440,15 @@ Ref regularReceiveAndDecryptFamiliarReference(
   { assert(false); throw 1337; }
 }
 
-LLVMValueRef regularEncryptAndSendFamiliarReference(
+LLVMValueRef regularRefToHostHandle(
     GlobalState* globalState,
     FunctionState* functionState,
     LLVMBuilderRef builder,
-    KindStructs* kindStructs,
     Kind* sourceRefMT,
     Ref sourceRef) {
-
+  // Per @FRMACZ, the boundary does no reference counting: pack the pointer
+  // without touching the RC.
   auto sourceValueType = peel_all_references(sourceRefMT);
-
-  // Dealias when sending to the outside world, see DEPAR.
-  globalState->getRegion(sourceValueType)
-      ->dealias(FL(), functionState, builder, sourceRefMT, sourceRef);
 
   if (dynamic_cast<StructKind*>(sourceValueType) ||
       dynamic_cast<StaticSizedArrayT*>(sourceValueType) ||
@@ -1487,16 +1483,18 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
 }
 
 
-// Per @HTSLVBDTCZ, these emit the per-kind C typedefs (name+"Ref") that give
-// each mut class its own distinct C type, over the shared LLVM handle type.
+// Per @HTSLVBDTCZ, these emit the per-kind C typedefs that give each class its
+// own distinct C type, even though all concretes (and all interfaces) share one
+// LLVM handle type internally. The typedef name is the kind's export name
+// verbatim. Both regions (RCImm and Unsafe) emit through these.
 std::string generateConcreteHandleStructDefC(Package* currentPackage, const std::string& name) {
-  // Mut concrete handle: 8-byte { i64 obj }. See ffihandlestructs.h.
-  return std::string() + "typedef struct " + name + "Ref { uint64_t unused0; } " + name + "Ref;\n";
+  // Concrete handle: 8-byte { i64 obj }. See ffihandlestructs.h.
+  return std::string() + "typedef struct " + name + " { uint64_t _reserved; } " + name + ";\n";
 }
 
 std::string generateInterfaceHandleStructDefC(Package* currentPackage, const std::string& name) {
-  // Mut interface handle: 16-byte { i64 obj, i64 typeinfo }. See ffihandlestructs.h.
-  return std::string() + "typedef struct " + name + "Ref { uint64_t unused0; uint64_t unused1; } " + name + "Ref;\n";
+  // Interface handle: 16-byte { i64 obj, i64 typeinfo }. See ffihandlestructs.h.
+  return std::string() + "typedef struct " + name + " { uint64_t _reserved0; uint64_t _reserved1; } " + name + ";\n";
 }
 
 

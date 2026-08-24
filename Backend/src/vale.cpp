@@ -353,7 +353,7 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
           0, globalState->addressNumberer->makeHasher<PackageCoordinate*>());
 
   // VCOORD: Every `sharedness == Sharedness::SHARED` gate in this exported-header block is backwards under the new FFI model.
-  // Share is by-pointer now; OwnInline+exported is the new linear-region case. See vcoord-handoff.md §Replay/FFI mission.
+  // Share is by-pointer now.
   for (auto[packageCoord, package] : program->packages) {
     for (auto[exportName, kind] : package->exportNameToKind) {
       auto& resultC = packageCoordToHeaderNameToC[packageCoord].emplace(exportName, std::stringstream()).first->second;
@@ -476,10 +476,9 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
   builtinExportsCode << "#include <stdlib.h>" << std::endl;
   builtinExportsCode << "#include <string.h>" << std::endl;
   builtinExportsCode << "typedef int32_t ValeInt;" << std::endl;
-  // ValeStr and its allocators (ValeStrNew/ValeStrFrom) were the old
-  // linear-region wire type. Under the opaque-handle FFI, str crosses as an
-  // opaque handle and there is no C-visible string layout, so they're no longer
-  // emitted. Kept in sync with the checked-in Backend/builtins/ValeBuiltins.h.
+  // str crosses the opaque-handle FFI as an opaque handle, so there is no
+  // C-visible string layout to emit here. Kept in sync with the checked-in
+  // Backend/builtins/ValeBuiltins.h.
   builtinExportsCode << "#endif" << std::endl;
 
   std::string builtinsFilePath = makeIncludeDirectory(globalState) + "/ValeBuiltins.h";
@@ -798,9 +797,9 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   }
 
   // This is here before any defines because:
-  // 1. It has to be before we define any extra functions for structs etc because the linear
-  //    region's extra functions need to know all the substructs for interfaces so it can number
-  //    them, which is used in supporting its interface calling.
+  // 1. It has to be before we define any extra functions for structs etc because those
+  //    extra functions need to know all the substructs for interfaces so it can number
+  //    them, which is used in supporting interface calling.
   // 2. Everything else is declared here too and it seems consistent
   for (auto[packageCoord, package] : program.packages) {
     for (auto p : package->structs) {
@@ -1041,7 +1040,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       for (auto e : structM->edges) {
 
-        // VCOORD: gate backwards — Share→pointer (no linear); OwnInline+exported→linear.
         if (structM->sharedness == Sharedness::SHARED) {
           globalState->rcImm->defineEdge(e);
         } else {

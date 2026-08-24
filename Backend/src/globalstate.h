@@ -91,9 +91,7 @@ public:
   // so we won't have to do this.
   std::unordered_map<Kind*, RegionId*, AddressHasher<Kind*>> regionIdByKind;
 
-  // These contain the extra interface methods that Backend adds to particular interfaces.
-  // For example, for every immutable, Backend needs to add a serialize() method that
-  // adds it to an outgoing linear buffer.
+  // These contain the extra methods that Backend adds to particular interfaces.
   std::unordered_map<Prototype*, ValeFuncPtrLE, AddressHasher<Prototype*>> extraFunctions;
 
   // Backend-owned registry of the auto-generated FFI accessor exports

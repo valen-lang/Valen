@@ -30,10 +30,6 @@ struct BackendCompileOptionsFFIRaw {
     include_bounds_checks: u8,
     use_atomic_rc: u8,
     print_mem_overhead: u8,
-    enable_replaying: u8,
-    replay_whitelist_count: usize,
-    replay_whitelist_modules: *const *const c_char,
-    replay_whitelist_functions: *const *const c_char,
 }
 
 extern "C" {
@@ -63,9 +59,6 @@ pub struct BackendCompileOptions {
     pub include_bounds_checks: bool,
     pub use_atomic_rc: bool,
     pub print_mem_overhead: bool,
-    pub enable_replaying: bool,
-    /// (module, extern) pairs allowed to run during a replay.
-    pub replay_whitelist: Vec<(String, String)>,
 }
 
 impl Default for BackendCompileOptions {
@@ -84,8 +77,6 @@ impl Default for BackendCompileOptions {
             include_bounds_checks: true,
             use_atomic_rc: false,
             print_mem_overhead: false,
-            enable_replaying: false,
-            replay_whitelist: Vec::new(),
         }
     }
 }
@@ -101,15 +92,6 @@ pub fn backend_compile_program_safe(
     let triple_c = CString::new(opts.triple.as_str()).expect("triple contains NUL");
     let cpu_c = CString::new(opts.cpu.as_str()).expect("cpu contains NUL");
 
-    let module_cs: Vec<CString> = opts.replay_whitelist.iter()
-        .map(|(m, _)| CString::new(m.as_str()).expect("whitelist module contains NUL"))
-        .collect();
-    let function_cs: Vec<CString> = opts.replay_whitelist.iter()
-        .map(|(_, f)| CString::new(f.as_str()).expect("whitelist function contains NUL"))
-        .collect();
-    let module_ptrs: Vec<*const c_char> = module_cs.iter().map(|c| c.as_ptr()).collect();
-    let function_ptrs: Vec<*const c_char> = function_cs.iter().map(|c| c.as_ptr()).collect();
-
     let raw = BackendCompileOptionsFFIRaw {
         output_dir: output_dir_c.as_ptr(),
         triple: triple_c.as_ptr(),
@@ -124,10 +106,6 @@ pub fn backend_compile_program_safe(
         include_bounds_checks: opts.include_bounds_checks as u8,
         use_atomic_rc: opts.use_atomic_rc as u8,
         print_mem_overhead: opts.print_mem_overhead as u8,
-        enable_replaying: opts.enable_replaying as u8,
-        replay_whitelist_count: opts.replay_whitelist.len(),
-        replay_whitelist_modules: if module_ptrs.is_empty() { std::ptr::null() } else { module_ptrs.as_ptr() },
-        replay_whitelist_functions: if function_ptrs.is_empty() { std::ptr::null() } else { function_ptrs.as_ptr() },
     };
 
     unsafe {

@@ -36,13 +36,6 @@ typedef struct BackendCompileOptionsFFI {
   uint8_t include_bounds_checks;
   uint8_t use_atomic_rc;
   uint8_t print_mem_overhead;
-  uint8_t enable_replaying;
-
-  // Replay-whitelist entries as two parallel arrays of length
-  // `replay_whitelist_count`. Each pair is (module_name, extern_name).
-  size_t replay_whitelist_count;
-  const char* const* replay_whitelist_modules;
-  const char* const* replay_whitelist_functions;
 } BackendCompileOptionsFFI;
 
 #ifdef __cplusplus
