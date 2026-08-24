@@ -52,14 +52,7 @@ Ref buildCallOrSideCall(
     auto hostArgRefLE =
         sendValeObjectIntoHost(
             globalState, functionState, builder, valeArgRefMT, valeArg);
-    auto valeArgKind = peel_all_references(valeArgRefMT);
-    if (typeNeedsPointerParameter(globalState, valeArgKind)) {
-      auto hostArgRefLT = globalState->getRegion(valeArgKind)->getExternalType(valeArgKind);
-      assert(LLVMGetTypeKind(hostArgRefLT) != LLVMPointerTypeKind);
-      hostArgsLE.push_back(makeBackendLocal(functionState, builder, hostArgRefLT, "ptrParamLocal", hostArgRefLE));
-    } else {
-      hostArgsLE.push_back(hostArgRefLE);
-    }
+    hostArgsLE.push_back(hostArgRefLE);
   }
 
   auto externFuncIter = globalState->externFunctions.find(prototype->name->name);
@@ -73,7 +66,7 @@ Ref buildCallOrSideCall(
   auto hostReturnRefLT = globalState->getRegion(returnKind)->getExternalType(returnKind);
 
   LLVMValueRef hostReturnLE = nullptr;
-  if (typeNeedsPointerParameter(globalState, returnKind)) {
+  if (returnNeedsOutParam(globalState, prototype->returnType)) {
     auto localPtrLE =
         makeBackendLocal(functionState, builder, hostReturnRefLT, "retOutParam", LLVMGetUndef(hostReturnRefLT));
     buildFlare(FL(), globalState, functionState, builder, "Return ptr! ", ptrToIntLE(globalState, builder, localPtrLE));

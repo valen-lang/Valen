@@ -33,68 +33,12 @@ ValeFuncPtrLE declareFunction(
   return valeFunctionL;
 }
 
-bool translatesToCVoid(GlobalState* globalState, ValueKind* returnMT) {
-  if (returnMT == globalState->metalCache->neverType) {
-    return true;
-  } else if (returnMT == globalState->metalCache->voidType) {
-    return true;
-  } else {
-    return false;
-  }
-}
-bool typeNeedsPointerParameter(GlobalState* globalState, ValueKind* returnMT) {
-  if (translatesToCVoid(globalState, returnMT)) {
-    return false;
-  }
-  auto logicalReturnTypeL = globalState->getRegion(returnMT)->getExternalType(returnMT);
-  if (LLVMGetTypeKind(logicalReturnTypeL) == LLVMStructTypeKind) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-LLVMTypeRef translateExternReturnType(GlobalState* globalState, ValueKind* returnMT) {
-  if (returnMT == globalState->metalCache->neverType) {
-    return LLVMVoidTypeInContext(globalState->context);
-  } else if (returnMT == globalState->metalCache->voidType) {
-    return LLVMVoidTypeInContext(globalState->context);
-  } else {
-    auto logicalReturnTypeL = globalState->getRegion(returnMT)->getExternalType(returnMT);
-    if (LLVMGetTypeKind(logicalReturnTypeL) == LLVMStructTypeKind) {
-      // We'll have an out-parameter for it instead.
-      return LLVMVoidTypeInContext(globalState->context);
-    } else {
-      return logicalReturnTypeL;
-    }
-  }
-}
-
 void exportFunction(GlobalState* globalState, Package* package, const std::string& exportName, Prototype* prototypeM) {
-  auto returnKind = peel_all_references(prototypeM->returnType);
-  LLVMTypeRef exportReturnLT = translateExternReturnType(globalState, returnKind);
-
-  bool usingReturnOutParam = typeNeedsPointerParameter(globalState, returnKind);
-  std::vector<LLVMTypeRef> exportParamTypesL;
-  if (usingReturnOutParam) {
-    auto exportParamLT =
-        globalState->getRegion(returnKind)->getExternalType(returnKind);
-    exportParamTypesL.push_back(LLVMPointerType(exportParamLT, 0));
-  }
-  // We may have added an out-parameter above for the return.
-  // Now add the actual parameters.
-  for (auto valeParamRefMT : prototypeM->params) {
-    auto valeParamKind = peel_all_references(valeParamRefMT);
-    auto hostParamRefLT = globalState->getRegion(valeParamKind)->getExternalType(valeParamKind);
-    if (typeNeedsPointerParameter(globalState, valeParamKind)) {
-      exportParamTypesL.push_back(LLVMPointerType(hostParamRefLT, 0));
-    } else {
-      exportParamTypesL.push_back(hostParamRefLT);
-    }
-  }
-
+  auto sig = buildBoundarySignature(globalState, prototypeM);
+  bool usingReturnOutParam = sig.usesReturnOutParam;
+  LLVMTypeRef exportReturnLT = sig.returnLT;
   LLVMTypeRef exportFunctionTypeL =
-      LLVMFunctionType(exportReturnLT, exportParamTypesL.data(), exportParamTypesL.size(), 0);
+      LLVMFunctionType(sig.returnLT, sig.paramTypesL.data(), sig.paramTypesL.size(), 0);
 
   auto fullExportName = package->packageCoordinate->projectName + "_" + exportName;
   auto abiExportName = std::string("vale_abi_") + fullExportName;
@@ -126,25 +70,13 @@ void exportFunction(GlobalState* globalState, Package* package, const std::strin
     auto cParamIndex = logicalParamIndex + (usingReturnOutParam ? 1 : 0);
 
     auto valeParamRefMT = prototypeM->params[logicalParamIndex];
-    // Under the opaque-handle FFI, share refs cross as universal refs, so the
-    // host param type is just the vale param type.
-    // Doesn't include the pointifying, this is just the pointee. It's what we'll have after the
-    // below if-statement.
-    auto valeParamKind = peel_all_references(valeParamRefMT);
-    auto hostParamRefLT = globalState->getRegion(valeParamKind)->getExternalType(valeParamKind);
 
     // TODO: find a way to not rely on LLVMGetParam directly
     auto cArgLE = LLVMGetParam(exportFunctionL, cParamIndex);
-    LLVMValueRef hostArgRefLE = nullptr;
-    if (typeNeedsPointerParameter(globalState, valeParamKind)) {
-      hostArgRefLE = LLVMBuildLoad2(builder, hostParamRefLT, cArgLE, "arg");
-    } else {
-      hostArgRefLE = cArgLE;
-    }
 
     auto valeRef =
         receiveHostObjectIntoVale(
-            globalState, &functionState, builder, valeParamRefMT, hostArgRefLE);
+            globalState, &functionState, builder, valeParamRefMT, cArgLE);
 
     argsToActualFunction.push_back(valeRef);
 
@@ -187,35 +119,13 @@ RawFuncPtrLE declareExternFunction(
     GlobalState* globalState,
     Package* package,
     Prototype* prototypeM) {
-  auto returnKind = peel_all_references(prototypeM->returnType);
-  LLVMTypeRef externReturnLT = translateExternReturnType(globalState, returnKind);
-
-  bool usingReturnOutParam = typeNeedsPointerParameter(globalState, returnKind);
-  std::vector<LLVMTypeRef> externParamTypesL;
-  if (usingReturnOutParam) {
-    externParamTypesL.push_back(
-        LLVMPointerType(
-            globalState->getRegion(returnKind)->getExternalType(returnKind),
-            0));
-  }
-  // We may have added an out-parameter above for the return.
-  // Now add the actual parameters.
-  for (auto valeParamRefMT : prototypeM->params) {
-    auto valeParamKind = peel_all_references(valeParamRefMT);
-    auto hostParamRefLT = globalState->getRegion(valeParamKind)->getExternalType(valeParamKind);
-    if (typeNeedsPointerParameter(globalState, valeParamKind)) {
-      externParamTypesL.push_back(LLVMPointerType(hostParamRefLT, 0));
-    } else {
-      externParamTypesL.push_back(hostParamRefLT);
-    }
-  }
-
+  auto sig = buildBoundarySignature(globalState, prototypeM);
 
   auto userFuncNameL = package->getFunctionExternName(prototypeM);
   auto abiFuncNameL = std::string("vale_abi_") + userFuncNameL;
 
   RawFuncPtrLE functionL =
-      addRawFunction(globalState->mod, abiFuncNameL.c_str(), externReturnLT, externParamTypesL);
+      addRawFunction(globalState->mod, abiFuncNameL.c_str(), sig.returnLT, sig.paramTypesL);
 
   assert(globalState->externFunctions.count(prototypeM->name->name) == 0);
   globalState->externFunctions.emplace(prototypeM->name->name, functionL);

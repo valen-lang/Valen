@@ -1383,7 +1383,8 @@ Ref regularRefFromHostHandle(
     KindStructs* kindStructs,
     Kind *sourceRefMT,
     LLVMValueRef sourceRefLE) {
-  auto int64LT = LLVMInt64TypeInContext(globalState->context);
+  // Per @FRMACZ, the boundary does no reference counting: unpack the handle's
+  // packed pointer without touching the RC.
   auto sourceValueType = peel_all_references(sourceRefMT);
 
   if (dynamic_cast<StructKind*>(sourceValueType) ||
@@ -1402,11 +1403,6 @@ Ref regularRefFromHostHandle(
     auto ref = toRef(globalState->getRegion(sourceValueType), sourceRefMT, objPtrLE);
     globalState->getRegion(sourceValueType)
         ->checkValidReference(FL(), functionState, builder, true, sourceRefMT, ref);
-
-    // Alias when receiving from the outside world, see DEPAR.
-    globalState->getRegion(sourceValueType)
-        ->alias(FL(), functionState, builder, sourceRefMT, ref);
-
     return ref;
   } else if (auto interfaceMT = dynamic_cast<InterfaceKind*>(sourceValueType)) {
     assert(LLVMTypeOf(sourceRefLE) == globalState->getFfiHandleStructs()->getInterfaceHandleStructLT());
@@ -1428,11 +1424,6 @@ Ref regularRefFromHostHandle(
     auto ref = toRef(globalState->getRegion(sourceValueType), sourceRefMT, interfaceFatPtrLE);
     globalState->getRegion(sourceValueType)
         ->checkValidReference(FL(), functionState, builder, true, sourceRefMT, ref);
-
-    // Alias when receiving from the outside world, see DEPAR.
-    globalState->getRegion(sourceValueType)
-        ->alias(FL(), functionState, builder, sourceRefMT, ref);
-
     return ref;
   } else {
     { assert(false); throw 1337; }

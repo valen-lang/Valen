@@ -25,6 +25,7 @@
 #include "metal/instructions.h"
 
 #include "function/function.h"
+#include "function/boundary.h"
 #include "error.h"
 #include "translatetype.h"
 #include "externs.h"
@@ -222,7 +223,7 @@ std::string generateFunctionC(
       package->packageCoordinate->projectName + "_" + outsideName;
   std::string abiFuncName = std::string("vale_abi_") + userFuncName;
 
-  bool abiUsingRetOutParam = typeNeedsPointerParameter(globalState, returnKind);
+  bool abiUsingRetOutParam = returnNeedsOutParam(globalState, prototype->returnType);
 
   std::stringstream s;
   switch (lineMode) {
@@ -299,21 +300,18 @@ std::string generateFunctionC(
     auto paramKind = peel_all_references(prototype->params[i]);
     auto paramTypeExportName =
         globalState->getRegion(paramKind)->getExportName(package, paramKind, true);
-    auto abiUsesPointer = typeNeedsPointerParameter(globalState, paramKind);
+    // VCOORD: this wouldnt handle double pointers... but do we even have double pointers?
+    bool paramIsPointer = !isValueType(prototype->params[i]);
     switch (lineMode) {
       case CFuncLineMode::EXTERN_INTERMEDIATE_PROTOTYPE:
       case CFuncLineMode::EXPORT_USER_PROTOTYPE:
-        s << paramTypeExportName << (abiUsesPointer ? "*" : "") << " param" << i;
-        break;
       case CFuncLineMode::EXTERN_USER_PROTOTYPE:
       case CFuncLineMode::EXPORT_INTERMEDIATE_PROTOTYPE:
-        s << paramTypeExportName << " param" << i;
+        s << paramTypeExportName << (paramIsPointer ? "*" : "") << " param" << i;
         break;
       case CFuncLineMode::EXTERN_INTERMEDIATE_BODY:
-        s << (abiUsesPointer ? "*" : "") << " param" << i;
-        break;
       case CFuncLineMode::EXPORT_INTERMEDIATE_BODY:
-        s << (abiUsesPointer ? "&" : "") << " param" << i;
+        s << " param" << i;
         break;
     }
     addedAnyParam = true;

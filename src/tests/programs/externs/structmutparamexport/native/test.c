@@ -5,6 +5,6 @@
 #include "vtest/spaceshipGetA.h"
 #include "vtest/spaceshipGetB.h"
 
-extern ValeInt vtest_sumSpaceshipFields(vtest_SpaceshipRef s) {
+extern ValeInt vtest_sumSpaceshipFields(vtest_Spaceship* s) {
   return vtest_spaceshipGetA(s) + vtest_spaceshipGetB(s);
 }

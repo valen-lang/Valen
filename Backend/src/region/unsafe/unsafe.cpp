@@ -706,7 +706,12 @@ std::string Unsafe::generateStaticSizedArrayDefsC(
 std::string Unsafe::generateStructDefsC(
     Package* currentPackage, StructDefinition* structDefM) {
   assert(structDefM->sharedness == Sharedness::SINGLE);
-  return generateConcreteHandleStructDefC(currentPackage, currentPackage->getKindExportName(structDefM->kind, true));
+  // A single struct crosses by value as an opaque byte blob sized correctly.
+  auto name = currentPackage->getKindExportName(structDefM->kind, true);
+  auto innerStructLT = kindStructs.getStructInnerStruct(structDefM->kind);
+  auto sizeBytes = LLVMABISizeOfType(globalState->dataLayout, innerStructLT);
+  return std::string() + "typedef struct " + name + " { char _reserved[" +
+      std::to_string(sizeBytes) + "]; } " + name + ";\n";
 }
 
 std::string Unsafe::generateInterfaceDefsC(

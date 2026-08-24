@@ -1030,32 +1030,8 @@ Ref RCImm::refFromHostHandle(
     LLVMBuilderRef builder,
     Kind* sourceRefMT,
     LLVMValueRef sourceRefLE) {
-  // Per @FRMACZ, the boundary does no reference counting: the handle is a packed
-  // pointer, unpack it without touching the RC. C-side alias/dealias is explicit
-  // via the auto-gen'd helpers. Mirrors regularReceive minus the trailing alias.
-  auto ffiHandleStructs = globalState->getFfiHandleStructs();
-  auto sourceValueType = peel_all_references(sourceRefMT);
-  if (dynamic_cast<StructKind*>(sourceValueType) ||
-      dynamic_cast<StaticSizedArrayT*>(sourceValueType) ||
-      dynamic_cast<RuntimeSizedArrayT*>(sourceValueType) ||
-      dynamic_cast<Str*>(sourceValueType)) {
-    auto refLT = translateType(sourceRefMT);
-    auto membersLE = ffiHandleStructs->explodeForRegularConcrete(globalState, functionState, builder, sourceRefLE);
-    auto objPtrLE = LLVMBuildIntToPtr(builder, membersLE.objPtrI64LE, refLT, "refA");
-    return toRef(this, sourceRefMT, objPtrLE);
-  } else if (auto interfaceMT = dynamic_cast<InterfaceKind*>(sourceValueType)) {
-    auto itablePtrLT = LLVMPointerType(kindStructs.getInterfaceTableStruct(interfaceMT), 0);
-    auto objPtrLT = LLVMPointerType(kindStructs.getControlBlock(interfaceMT)->getStruct(), 0);
-    auto membersLE = ffiHandleStructs->explodeForRegularInterface(globalState, functionState, builder, sourceRefLE);
-    auto itablePtrLE = LLVMBuildIntToPtr(builder, membersLE.typeInfoPtrI64LE, itablePtrLT, "refC");
-    auto objPtrLE = LLVMBuildIntToPtr(builder, membersLE.objPtrI64LE, objPtrLT, "refB");
-    auto interfaceFatPtrRawLE =
-        makeInterfaceRefStruct(globalState, functionState, builder, &kindStructs, interfaceMT, objPtrLE, itablePtrLE);
-    auto interfaceFatPtrLE =
-        kindStructs.makeInterfaceFatPtr(FL(), functionState, builder, sourceRefMT, interfaceFatPtrRawLE);
-    return toRef(this, sourceRefMT, interfaceFatPtrLE);
-  }
-  { assert(false); throw 1337; }
+  return regularRefFromHostHandle(
+      globalState, functionState, builder, &kindStructs, sourceRefMT, sourceRefLE);
 }
 
 // VCOORD: do we still encrypt?
