@@ -793,7 +793,7 @@ where
     IterationOption,
     IterationOptionNameT
   );
-  impl_intern_name_wrapper_simple_t_only!(intern_magic_param_name, MagicParam, MagicParamNameT);
+  impl_intern_name_wrapper_simple!(intern_magic_param_name, MagicParam, MagicParamNameT);
   impl_intern_name_wrapper_simple!(intern_member_name, Member, MemberNameT);
   impl_intern_name_wrapper_simple!(intern_local_name, Local, LocalNameT);
   // impl_intern_name_wrapper_simple_none!(

@@ -2255,7 +2255,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             IVarNameT::Iterable(IterableNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::Iterable(self.interner.alloc(IterableNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
             IVarNameT::Iterator(IteratorNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::Iterator(self.interner.alloc(IteratorNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
             IVarNameT::IterationOption(IterationOptionNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::IterationOption(self.interner.alloc(IterationOptionNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
-            IVarNameT::MagicParam(MagicParamNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::MagicParam(self.interner.alloc(MagicParamNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::MagicParam(MagicParamNameT { life: LocationInFunctionEnvironmentT { path, .. }, .. }) => IVarNameI::MagicParam(self.interner.alloc(MagicParamNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
             IVarNameT::Self_(_) => IVarNameI::Self_(self.interner.alloc(SelfNameI)),
         }
     }

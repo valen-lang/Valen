@@ -20,7 +20,7 @@ use crate::postparsing::names::{
   IFunctionImpreciseNameValS, ForwarderFunctionImpreciseNameS,
   DispatcherRuneFromImplS, IFunctionDeclarationNameS, IImpreciseNameS,
   IImpreciseNameValS, INameS, INameValS, IRuneS, IRuneValS, IVarDeclarationNameS,
-  IterableNameS, IterationOptionNameS, IteratorNameS, MagicParamNameS, SelfNameS, SelfNameValS,
+  IterableNameS, IterationOptionNameS, IteratorNameS, MagicParamImpreciseNameS, SelfNameS, SelfNameValS,
   IterableNameValS, IterationOptionNameValS, IteratorNameValS, WhileCondResultNameValS,
   WhileCondResultNameS, ImplImpreciseNameS,
   ImplSubCitizenImpreciseNameS, ImplSuperInterfaceImpreciseNameS, ImplicitCoercionTemplateRuneS,
@@ -246,7 +246,7 @@ impl<'s> ScoutArena<'s> {
     &self,
     code_location: CodeLocationS<'s>,
     lid: LocationInDenizen<'s>,
-  ) -> &'s MagicParamNameS<'s> {
+  ) -> &'s MagicParamImpreciseNameS<'s> {
     match self.intern_imprecise_name(IImpreciseNameValS::MagicParamName(MagicParamNameValS {
       code_location,
       lid,
@@ -406,7 +406,7 @@ impl<'s> ScoutArena<'s> {
       ArbitraryName(_p) => IImpreciseNameS::ArbitraryName(
         self.bump.alloc(ArbitraryNameS { _must_intern: ScoutInterned(()) }),
       ),
-      MagicParamName(p) => IImpreciseNameS::MagicParamName(self.bump.alloc(MagicParamNameS {
+      MagicParamName(p) => IImpreciseNameS::MagicParamName(self.bump.alloc(MagicParamImpreciseNameS {
         code_location: p.code_location,
         lid: p.lid,
         _must_intern: ScoutInterned(()),

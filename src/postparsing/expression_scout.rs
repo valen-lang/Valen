@@ -22,7 +22,7 @@ use crate::postparsing::names::ImplicitRuneValS;
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, ConstructingMemberImpreciseNameValS, IFunctionDeclarationNameS,
   IImpreciseNameS, IImpreciseNameValS, IRuneS, IRuneValS, IVarDeclarationNameS,
-  MagicParamNameDeclarationS, MagicParamNameS,
+  MagicParamNameDeclarationS, MagicParamImpreciseNameS,
 };
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::post_parser::translate_imprecise_name;

@@ -106,32 +106,52 @@ where
     // Check preconditions
     self.check_closure_concerns_handled(declaring_env);
 
-    // VCOORD: A user param's type-binding rules live per-param rather than in header_rules, so both the
-    // solve and rune-typing must fold them in or the param runes are never bound (@PFVSZ). The
-    // sites at :407, :556 and :720 do; this one does not, so it is wrong for any function with a
-    // source-written parameter. Fold `params.flat_map(value_type_rules ++ type_outer_ref_rules)`
-    // in the way they do.
-    unimplemented!("header_rules alone: fold in the per-param type-binding rules, see @PFVSZ");
-    let call_site_rules = self.assemble_call_site_rules(function.header_rules);
+    let all_rules: Vec<IRulexSR<'s>> = function
+      .header_rules
+      .iter()
+      .copied()
+      .chain(function.params.iter().flat_map(|p| {
+        p.value_type_rules.iter().copied().chain(p.type_outer_ref_rules.iter().copied())
+      }))
+      .collect();
+    let mut call_site_rules: Vec<IRulexSR<'s>> =
+      all_rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect();
 
+    let call_range_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(call_range);
     // VTBRX: thread coutputs/calling_env/call_range_t/call_location/context_region into this call (seam signature change, Edit 2).
-    let initial_sends = self.old_assemble_initial_sends_from_args(
+    let initial_sends = self.assemble_initial_sends_from_args(
       call_range[0],
       function,
       &args.iter().map(|a| Some(*a)).collect::<Vec<_>>(),
+      coutputs,
+      original_calling_env,
+      call_range_t,
+      call_location,
+      context_region,
     );
-    let initial_knowns = self.assemble_known_templatas(function, already_specified_template_args);
+    let mut initial_knowns = self.assemble_known_templatas(function, already_specified_template_args);
 
-    let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> = self.derive_rune_to_type(
+    let mut rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> = self.derive_rune_to_type(
       coutputs,
       original_calling_env,
       call_range.to_vec(),
       function.generic_params,
-      function.header_rules,
+      &all_rules,
       IndexMap::default(),
     );
 
-    let call_range_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(call_range);
+    // Feed each argument type into its param's value_type_rune: the send becomes an Equals rule plus
+    // an InitialKnown, and its sender rune gets a Kind type. Without this the arg types never reach
+    // the solve, and any param-bearing call comes back SolveIncomplete.
+    for s in initial_sends {
+      initial_knowns.push(InitialKnown { rune: s.sender_rune, templata: s.send_templata });
+      call_site_rules.push(IRulexSR::Equals(EqualsSR {
+        range: s.sender_rune.range,
+        left: s.sender_rune,
+        right: s.receiver_rune,
+      }));
+      rune_to_type.insert(s.sender_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
+    }
 
     // We could probably just solveForResolving (see DBDAR) but seems more future-proof to solveForDefining.
     let CompleteDefineSolve { conclusions: inferences, rune_to_bound: instantiation_bound_params } =
@@ -253,26 +273,52 @@ where
     // sites at :407, :556 and :720 do; this one does not, so it is wrong for any function with a
     // source-written parameter. Fold `params.flat_map(value_type_rules ++ type_outer_ref_rules)`
     // in the way they do.
-    let call_site_rules = self.assemble_call_site_rules(function.header_rules);
+    let all_rules: Vec<IRulexSR<'s>> = function
+      .header_rules
+      .iter()
+      .copied()
+      .chain(function.params.iter().flat_map(|p| {
+        p.value_type_rules.iter().copied().chain(p.type_outer_ref_rules.iter().copied())
+      }))
+      .collect();
+    let mut call_site_rules: Vec<IRulexSR<'s>> =
+      all_rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect();
 
+    let call_range_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(call_range);
     // VTBRX: thread coutputs/calling_env/call_range_t/call_location/context_region into this call (seam signature change, Edit 2).
-    let initial_sends = self.old_assemble_initial_sends_from_args(
+    let initial_sends = self.assemble_initial_sends_from_args(
       call_range[0],
       function,
       &args.iter().map(|a| Some(*a)).collect::<Vec<_>>(),
+      coutputs,
+      original_calling_env,
+      call_range_t,
+      call_location,
+      context_region,
     );
-    let initial_knowns = self.assemble_known_templatas(function, explicit_template_args);
+    let mut initial_knowns = self.assemble_known_templatas(function, explicit_template_args);
 
-    let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> = self.derive_rune_to_type(
+    let mut rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> = self.derive_rune_to_type(
       coutputs,
       original_calling_env,
       call_range.to_vec(),
       function.generic_params,
-      function.header_rules,
+      &all_rules,
       IndexMap::default(),
     );
 
-    let call_range_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(call_range);
+    // Feed each argument type into its param's value_type_rune: the send becomes an Equals rule plus
+    // an InitialKnown, and its sender rune gets a Kind type. Without this the arg types never reach
+    // the solve, and any param-bearing call comes back SolveIncomplete.
+    for s in initial_sends {
+      initial_knowns.push(InitialKnown { rune: s.sender_rune, templata: s.send_templata });
+      call_site_rules.push(IRulexSR::Equals(EqualsSR {
+        range: s.sender_rune.range,
+        left: s.sender_rune,
+        right: s.receiver_rune,
+      }));
+      rune_to_type.insert(s.sender_rune.rune, ITemplataType::KindTemplataType(KindTemplataType {}));
+    }
 
     // We could probably just solveForResolving (see DBDAR) but seems more future-proof to solveForDefining.
     let CompleteDefineSolve { conclusions: inferences, rune_to_bound: instantiation_bound_params } =

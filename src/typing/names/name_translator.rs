@@ -278,9 +278,9 @@ where
           self.typing_interner.intern_closure_param_name(ClosureParamNameT { imprecise_name, life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
         )
       }
-      IVarDeclarationNameS::MagicParamName(MagicParamNameDeclarationS { lid, .. }) => {
+      IVarDeclarationNameS::MagicParamName(MagicParamNameDeclarationS { imprecise_name, lid }) => {
         IVarNameT::MagicParam(
-          self.typing_interner.intern_magic_param_name(MagicParamNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
+          self.typing_interner.intern_magic_param_name(MagicParamNameT { imprecise_name, life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
         )
       }
       IVarDeclarationNameS::SelfName(SelfNameDeclarationS { lid, .. }) => {

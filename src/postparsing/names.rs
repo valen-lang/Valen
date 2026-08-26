@@ -128,7 +128,7 @@ pub enum IImpreciseNameS<'s> {
   SelfName(&'s SelfNameS),
   RuneName(&'s RuneNameS<'s>),
   ArbitraryName(&'s ArbitraryNameS),
-  MagicParamName(&'s MagicParamNameS<'s>),
+  MagicParamName(&'s MagicParamImpreciseNameS<'s>),
   WhileCondResultName(&'s WhileCondResultNameS<'s>),
   AnonymousSubstructMemberName(&'s AnonymousSubstructMemberNameS),
   DesugaredParamName(&'s DesugaredParamNameS<'s>),
@@ -706,7 +706,7 @@ pub struct PrototypeNameS {
 pub struct PrototypeNameValS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct MagicParamNameS<'s> {
+pub struct MagicParamImpreciseNameS<'s> {
   pub code_location: CodeLocationS<'s>,
   /// Stable identity (see LIFE/LID design). Shared with the declaration's `lid`; the
   /// already-arena-allocated slice means this needs no `'tmp` deferral (see @DSAUIMZ), unlike
@@ -837,7 +837,7 @@ pub struct ClosureParamNameDeclarationS<'s> {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MagicParamNameDeclarationS<'s> {
-  pub imprecise_name: &'s MagicParamNameS<'s>,
+  pub imprecise_name: &'s MagicParamImpreciseNameS<'s>,
   pub lid: LocationInDenizen<'s>,
 }
 

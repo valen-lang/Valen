@@ -630,8 +630,8 @@ impl<'s, 't> IVarNameT<'s, 't> {
         Some(IImpreciseNameS::ConstructingMemberImpreciseName(n.imprecise_name))
       }
       IVarNameT::Self_(_) => Some(IImpreciseNameS::SelfName(&SELF_IMPRECISE_NAME)),
+      IVarNameT::MagicParam(n) => Some(IImpreciseNameS::MagicParamName(n.imprecise_name)),
       // The rest are compiler-synthesized (block/function-result and temporary vars) or life-only
-      // (loop vars, magic params) — no source spelling to resolve by.
       _ => None,
     }
   }

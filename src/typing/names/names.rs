@@ -1,6 +1,6 @@
 use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::names::{ClosureParamImpreciseNameS, CodeNameS, ConstructingMemberImpreciseNameS, IImpreciseNameS};
+use crate::postparsing::names::{ClosureParamImpreciseNameS, CodeNameS, ConstructingMemberImpreciseNameS, IImpreciseNameS, MagicParamImpreciseNameS};
 use crate::postparsing::names::IRuneS;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::templata::templata::{expect_integer, expect_kind_templata, ITemplataT};
@@ -177,7 +177,7 @@ pub enum INameT<'s, 't> {
   Iterable(&'t IterableNameT<'t>),
   Iterator(&'t IteratorNameT<'t>),
   IterationOption(&'t IterationOptionNameT<'t>),
-  MagicParam(&'t MagicParamNameT<'t>),
+  MagicParam(&'t MagicParamNameT<'s, 't>),
   Member(&'t MemberNameT<'s, 't>),
   Local(&'t LocalNameT<'s, 't>),
   Primitive(&'t PrimitiveNameT<'s>),
@@ -1174,7 +1174,7 @@ pub enum IVarNameT<'s, 't> {
   Iterable(&'t IterableNameT<'t>),
   Iterator(&'t IteratorNameT<'t>),
   IterationOption(&'t IterationOptionNameT<'t>),
-  MagicParam(&'t MagicParamNameT<'t>),
+  MagicParam(&'t MagicParamNameT<'s, 't>),
   Member(&'t MemberNameT<'s, 't>),
   Local(&'t LocalNameT<'s, 't>),
   // AnonymousSubstructMember(&'t AnonymousSubstructMemberNameT),
@@ -1257,7 +1257,8 @@ pub struct IterationOptionNameT<'t> {
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct MagicParamNameT<'t> {
+pub struct MagicParamNameT<'s, 't> {
+  pub imprecise_name: &'s MagicParamImpreciseNameS<'s>,
   pub life: LocationInFunctionEnvironmentT<'t>
 }
 
@@ -1698,8 +1699,8 @@ impl<'s, 't> From<&'t IterationOptionNameT<'t>> for INameT<'s, 't> {
     INameT::IterationOption(x)
   }
 }
-impl<'s, 't> From<&'t MagicParamNameT<'t>> for INameT<'s, 't> {
-  fn from(x: &'t MagicParamNameT<'t>) -> Self {
+impl<'s, 't> From<&'t MagicParamNameT<'s, 't>> for INameT<'s, 't> {
+  fn from(x: &'t MagicParamNameT<'s, 't>) -> Self {
     INameT::MagicParam(x)
   }
 }
@@ -2523,8 +2524,8 @@ impl<'s, 't> From<&'t IterationOptionNameT<'t>> for IVarNameT<'s, 't> {
     IVarNameT::IterationOption(x)
   }
 }
-impl<'s, 't> From<&'t MagicParamNameT<'t>> for IVarNameT<'s, 't> {
-  fn from(x: &'t MagicParamNameT<'t>) -> Self {
+impl<'s, 't> From<&'t MagicParamNameT<'s, 't>> for IVarNameT<'s, 't> {
+  fn from(x: &'t MagicParamNameT<'s, 't>) -> Self {
     IVarNameT::MagicParam(x)
   }
 }
@@ -3719,7 +3720,7 @@ where
   Iterable(IterableNameT<'t>),
   Iterator(IteratorNameT<'t>),
   IterationOption(IterationOptionNameT<'t>),
-  MagicParam(MagicParamNameT<'t>),
+  MagicParam(MagicParamNameT<'s, 't>),
   Member(MemberNameT<'s, 't>),
   Local(LocalNameT<'s, 't>),
   Primitive(PrimitiveNameT<'s>),

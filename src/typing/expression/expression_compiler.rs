@@ -592,7 +592,7 @@ where
                 nenv,
                 &range_with_parent,
                 outer_call_location,
-                life,
+                life.add(self.typing_interner, (consecutor_se.exprs.len() + index) as i32),
                 region,
                 undropped_expr_te_with_pending_drops,
                 pending_temp_drops.take_vars()
