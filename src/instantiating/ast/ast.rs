@@ -54,6 +54,13 @@ pub struct FunctionExternI<'s, 'i> where 's: 'i {
     // citizen step (e.g. Vec<i32>::capacity rather than Vec::capacity<i32>), which is
     // what the Backend's rustifySimpleId expects per @SMLRZ.
     pub num_inherited_generic_parameters: i32,
+    // The real callee symbol this extern ultimately calls — always present, never composed by the
+    // backend. For a C extern it is the user's declared symbol (`FunctionExternT.extern_name`); for a
+    // Rust-interop leaf it is rustc's own mangled name (`tcx.symbol_name`), overwritten onto this field
+    // by the provider after the leaf resolves (at creation it holds the Valen name as a placeholder).
+    // The backend binds this verbatim for a Rust leaf, and composes the `vale_abi_` shim name from it
+    // for a C extern.
+    pub link_name: &'i str,
 }
 
 

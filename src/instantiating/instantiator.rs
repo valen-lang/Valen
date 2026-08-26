@@ -17,6 +17,8 @@ use crate::typing::types::types::*;
 use crate::typing::hinputs_t::*;
 use crate::typing::compiler::Compiler;
 use crate::utils::vassert::vassert_one;
+#[cfg(feature = "rust_interop")]
+use crate::typing::rust_interop::reserved::is_rust_backed;
 use crate::postparsing::names::{IImpreciseNameS, IRuneS};
 use crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name;
 use crate::scout_arena::ScoutArena;
@@ -226,6 +228,13 @@ pub struct InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
     pub new_functions: Vec<(PrototypeT<'s, 't>, PrototypeI<'s, 'i>, InstantiationBoundArgumentsI<'s, 'i>, Option<DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>)>,
     pub kind_externs: Vec<KindExternI<'s, 'i>>,
     pub function_externs: Vec<FunctionExternI<'s, 'i>>,
+    // Under rust_interop, a Rust callee is a leaf: instead of enqueuing a body to translate
+    // (it has none), translate_prototype records its substituted prototype here. Keyed by
+    // instantiated id so a callee reached from two Vale bodies is recorded once. The
+    // per_instance_mir provider reads these to build the ReifyFnPointer request-list it hands
+    // rustc's collector. See instantiating/instantiating-rust-interop-design.md.
+    #[cfg(feature = "rust_interop")]
+    pub rust_instantiation_requests: IndexMap<IdI<'s, 'i>, &'i PrototypeI<'s, 'i>>,
 }
 
 
@@ -254,6 +263,8 @@ impl<'s, 't, 'i> InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
       new_functions: Vec::new(),
       kind_externs: Vec::new(),
       function_externs: Vec::new(),
+      #[cfg(feature = "rust_interop")]
+      rust_instantiation_requests: IndexMap::default(),
     }
   }
 
@@ -271,7 +282,7 @@ pub fn translate<'s, 'ctx, 't, 'i>(opts: &'ctx GlobalOptions, interner: &'ctx In
 where 's: 't, 's: 'i {
     let mut monouts = InstantiatedOutputsI::new();
     let instantiator = InstantiatorI { opts, interner, typing_interner, scout_arena, keywords, hinputs };
-    instantiator.translate_method(&mut monouts)
+    instantiator.translate_program(&mut monouts)
 }
 
 
@@ -288,7 +299,7 @@ pub struct InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
 
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_method(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>) -> HinputsI<'s, 'i> {
+    pub fn translate_program(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>) -> HinputsI<'s, 'i> {
         let HinputsT {
             interfaces: _interfaces_t,
             structs: _structs_t,
@@ -343,49 +354,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
         let function_exports: Vec<FunctionExportI<'s, 'i>> =
             function_exports_t.iter().map(|&function_export_t| {
-                let FunctionExportT { range, prototype: prototype_t, export_id: export_placeholdered_id_t, exported_name } = function_export_t;
-                let perspective_region_t = RegionT::Default;
-                let export_id = self.translate_id(
-                    export_placeholdered_id_t,
-                    |export_name_t: &INameT<'s, 't>| -> INameI<'s, 'i> {
-                        match export_name_t {
-                            INameT::Export(ExportNameT { template: ExportTemplateNameT { code_loc, .. }, .. }) => {
-                                INameI::Export(self.interner.alloc(ExportNameI {
-                                    template: ExportTemplateNameI { code_loc: *code_loc },
-                                }))
-                            }
-                            _ => {
-                                panic!("Unimplemented: translate_method function_exports translateId closure");
-                                // case other => vimpl(other)
-                            }
-                        }
-                    });
-                let substitutions = self.assemble_placeholder_map(export_placeholdered_id_t, &export_id);
-
-                let denizen_bound_to_denizen_caller_supplied_thing = DenizenBoundToDenizenCallerBoundArgI {
-                    func_id_to_bound_arg_prototype: IndexMap::default(),
-                    bound_param_impl_id_to_bound_arg_impl_id: IndexMap::default(),
-                };
-                let prototype =
-                    self.translate_prototype(
-                        monouts,
-                        export_placeholdered_id_t,
-                        &denizen_bound_to_denizen_caller_supplied_thing,
-                        &substitutions,
-                        &perspective_region_t,
-                        &prototype_t);
-
-                FunctionExportI {
-                    range: *range,
-                    prototype: self.interner.alloc(PrototypeI { id: prototype.id, return_type: prototype.return_type }),
-                    export_id,
-                    exported_name: *exported_name,
-                }
+                self.instantiate_exported_function(monouts, function_export_t)
             }).collect();
 
         let non_generic_func_externs: Vec<FunctionExternI<'s, 'i>> =
             function_externs_t.iter().flat_map(|&function_extern_t| -> Option<FunctionExternI<'s, 'i>> {
-                let FunctionExternT { range: _range, extern_placeholdered_id: extern_placeholdered_id_t, prototype: prototype_t, extern_name: _externed_name, generic_parameter_inheritance: maybe_inheritance } = function_extern_t;
+                let FunctionExternT { range: _range, extern_placeholdered_id: extern_placeholdered_id_t, prototype: prototype_t, extern_name: externed_name, generic_parameter_inheritance: maybe_inheritance } = function_extern_t;
                 let is_generic = !IInstantiationNameT::try_from(prototype_t.id.local_name).unwrap().template_args().is_empty();
                 if is_generic {
                     // We don't handle generic externs yet, that comes later when we see what instantiations are actually needed.
@@ -427,42 +401,31 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     Some(FunctionExternI {
                         prototype: self.interner.alloc(PrototypeI { id: prototype.id, return_type: prototype.return_type }),
                         num_inherited_generic_parameters: maybe_inheritance.as_ref().map(|i| i.num_inherited_generic_parameters).unwrap_or(0),
+                        // A C extern's real callee symbol is its declared extern name (from typing).
+                        link_name: externed_name.0,
                     })
                 }
             }).collect();
 
-        while {
-            // We make structs and interfaces eagerly as we come across them
-            // if (monouts.newStructs.nonEmpty) {
-            //   val newStructName = monouts.newStructs.dequeue()
-            //   DenizentranslateStructDefinition(opts, interner, keywords, hinputs, monouts, newStructName)
-            //   true
-            // } else if (monouts.newInterfaces.nonEmpty) {
-            //   val (newInterfaceName, calleeRuneToSuppliedPrototype) = monouts.newInterfaces.dequeue()
-            //   DenizentranslateInterfaceDefinition(
-            //     opts, interner, keywords, hinputs, monouts, newInterfaceName, calleeRuneToSuppliedPrototype)
-            //   true
-            // } else
-            if !monouts.new_functions.is_empty() {
-                let (new_func_id_t, new_func_id, instantiation_bound_args, maybe_denizen_bound_to_denizen_caller_supplied_thing) =
-                    monouts.new_functions.remove(0);
-                self.translate_function_callsite(
-                    monouts, &new_func_id_t, &new_func_id, &instantiation_bound_args,
-                    maybe_denizen_bound_to_denizen_caller_supplied_thing.as_ref());
-                true
-            } else if !monouts.new_impls.is_empty() {
-                let (impl_id_t, impl_id, instantiation_bounds_for_unsubstituted_impl) = monouts.new_impls.remove(0);
-                self.translate_impl_callsite(monouts, &impl_id_t, &impl_id, instantiation_bounds_for_unsubstituted_impl);
-                true
-            } else if !monouts.new_abstract_funcs.is_empty() {
-                let (abstract_func_t, abstract_func, virtual_index, interface_id, instantiation_bound_args) = monouts.new_abstract_funcs.remove(0);
-                self.translate_abstract_func(monouts, &interface_id, &abstract_func_t, &abstract_func, virtual_index, instantiation_bound_args);
-                true
-            } else {
-                false
-            }
-        } {}
+        self.drain_instantiation_queue(monouts);
 
+        self.assemble_hinputs(monouts, kind_exports, function_exports, non_generic_func_externs)
+    }
+
+    // Assemble the finalized `HinputsI` from a fully-drained accumulator: reorder each interface's
+    // methods into blueprint slot order, build the edge blueprints / interfaces / edges, and package
+    // everything the backend lowers. Extracted from `translate_program` so the rust_interop driven
+    // path (single instantiation) can finalize its own driven `monouts` with the demand-collected
+    // exports/externs, instead of re-instantiating the whole program.
+    // VCOORD: investigate why we're taking these other arguments in, and why they arent part of
+    // the instantiator.
+    pub(crate) fn assemble_hinputs(
+        &self,
+        monouts: &mut InstantiatedOutputsI<'s, 't, 'i>,
+        kind_exports: Vec<KindExportI<'s, 'i>>,
+        function_exports: Vec<FunctionExportI<'s, 'i>>,
+        extra_function_externs: Vec<FunctionExternI<'s, 'i>>,
+    ) -> HinputsI<'s, 'i> {
         // Reorder each interface's methods into typing's blueprint slot order, so the blueprint,
         // internal_methods and edges below all emit in the order the call sites' index_in_edge uses.
         for (_interface, abstract_funcs) in monouts.interface_to_abstract_func_to_virtual_index.iter_mut() {
@@ -546,9 +509,91 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     }),
                     self.interner.bump()),
                 function_externs: self.interner.alloc_slice_from_vec(
-                    non_generic_func_externs.into_iter().chain(monouts.function_externs.iter().copied()).collect()),
+                    extra_function_externs.into_iter().chain(monouts.function_externs.iter().copied()).collect()),
             };
         result_hinputs
+    }
+
+    // Instantiate one exported function: translate its export id and enqueue its body onto the
+    // instantiation queue (via translate_prototype), returning the FunctionExportI for HinputsI.
+    // Extracted from translate_program so per_instance_mir (rust_interop) can seed the queue with a
+    // single export before draining, rather than seeding every export at once.
+    pub(crate) fn instantiate_exported_function(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, function_export_t: &FunctionExportT<'s, 't>) -> FunctionExportI<'s, 'i> {
+        let FunctionExportT { range, prototype: prototype_t, export_id: export_placeholdered_id_t, exported_name } = function_export_t;
+        let perspective_region_t = RegionT::Default;
+        let export_id = self.translate_id(
+            export_placeholdered_id_t,
+            |export_name_t: &INameT<'s, 't>| -> INameI<'s, 'i> {
+                match export_name_t {
+                    INameT::Export(ExportNameT { template: ExportTemplateNameT { code_loc, .. }, .. }) => {
+                        INameI::Export(self.interner.alloc(ExportNameI {
+                            template: ExportTemplateNameI { code_loc: *code_loc },
+                        }))
+                    }
+                    _ => {
+                        panic!("Unimplemented: translate_method function_exports translateId closure");
+                        // case other => vimpl(other)
+                    }
+                }
+            });
+        let substitutions = self.assemble_placeholder_map(export_placeholdered_id_t, &export_id);
+
+        let denizen_bound_to_denizen_caller_supplied_thing = DenizenBoundToDenizenCallerBoundArgI {
+            func_id_to_bound_arg_prototype: IndexMap::default(),
+            bound_param_impl_id_to_bound_arg_impl_id: IndexMap::default(),
+        };
+        let prototype =
+            self.translate_prototype(
+                monouts,
+                export_placeholdered_id_t,
+                &denizen_bound_to_denizen_caller_supplied_thing,
+                &substitutions,
+                &perspective_region_t,
+                &prototype_t);
+
+        FunctionExportI {
+            range: *range,
+            prototype: self.interner.alloc(PrototypeI { id: prototype.id, return_type: prototype.return_type }),
+            export_id,
+            exported_name: *exported_name,
+        }
+    }
+
+    // Drain the instantiation worklist to a fixed point: while any of new_functions / new_impls /
+    // new_abstract_funcs is non-empty, translate the next one (which may enqueue more). Extracted from
+    // translate_program so per_instance_mir (rust_interop) can drain after seeding a single export.
+    pub(crate) fn drain_instantiation_queue(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>) {
+        while {
+            // We make structs and interfaces eagerly as we come across them
+            // if (monouts.newStructs.nonEmpty) {
+            //   val newStructName = monouts.newStructs.dequeue()
+            //   DenizentranslateStructDefinition(opts, interner, keywords, hinputs, monouts, newStructName)
+            //   true
+            // } else if (monouts.newInterfaces.nonEmpty) {
+            //   val (newInterfaceName, calleeRuneToSuppliedPrototype) = monouts.newInterfaces.dequeue()
+            //   DenizentranslateInterfaceDefinition(
+            //     opts, interner, keywords, hinputs, monouts, newInterfaceName, calleeRuneToSuppliedPrototype)
+            //   true
+            // } else
+            if !monouts.new_functions.is_empty() {
+                let (new_func_id_t, new_func_id, instantiation_bound_args, maybe_denizen_bound_to_denizen_caller_supplied_thing) =
+                    monouts.new_functions.remove(0);
+                self.translate_function_callsite(
+                    monouts, &new_func_id_t, &new_func_id, &instantiation_bound_args,
+                    maybe_denizen_bound_to_denizen_caller_supplied_thing.as_ref());
+                true
+            } else if !monouts.new_impls.is_empty() {
+                let (impl_id_t, impl_id, instantiation_bounds_for_unsubstituted_impl) = monouts.new_impls.remove(0);
+                self.translate_impl_callsite(monouts, &impl_id_t, &impl_id, instantiation_bounds_for_unsubstituted_impl);
+                true
+            } else if !monouts.new_abstract_funcs.is_empty() {
+                let (abstract_func_t, abstract_func, virtual_index, interface_id, instantiation_bound_args) = monouts.new_abstract_funcs.remove(0);
+                self.translate_abstract_func(monouts, &interface_id, &abstract_func_t, &abstract_func, virtual_index, instantiation_bound_args);
+                true
+            } else {
+                false
+            }
+        } {}
     }
 
     pub fn translate_id(
@@ -1612,25 +1657,45 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let prototype = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype2);
                 let args_ce: Vec<ExpressionIE<'s, 'i>> = args.iter().map(|arg_te| self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te).1).collect();
                 let result_ce = ExpressionIE::ExternFunctionCall(self.interner.bump().alloc(ExternFunctionCallIE { prototype2: prototype, args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()), result: result_it }));
-                match prototype2.id.local_name {
-                    INameT::ExternFunction(ExternFunctionNameT { human_name, template_args, .. }) if !template_args.is_empty() => {
-                        let num_inherited = self.hinputs.function_externs.iter().find(|fe| {
-                            fe.prototype.id.package_coord == prototype2.id.package_coord
-                                && fe.prototype.id.init_steps == prototype2.id.init_steps
-                                && match fe.prototype.id.local_name {
-                                    INameT::ExternFunction(ExternFunctionNameT { human_name: hn, .. }) => hn == human_name,
-                                    _ => false,
-                                }
-                        })
-                        .and_then(|fe| fe.generic_parameter_inheritance.as_ref().map(|i| i.num_inherited_generic_parameters))
-                        .unwrap_or(0);
-                        monouts.function_externs.push(FunctionExternI {
-                            prototype: self.interner.alloc(PrototypeI { id: prototype.id, return_type: prototype.return_type }),
-                            num_inherited_generic_parameters: num_inherited,
-                        });
-                    }
-                    _ => {}
+                // Old code that handled generics:
+                // match prototype2.id.local_name {
+                //     INameT::ExternFunction(ExternFunctionNameT { human_name, template_args, .. }) if !template_args.is_empty() => {
+                //         let num_inherited = self.hinputs.function_externs.iter().find(|fe| {
+                //             fe.prototype.id.package_coord == prototype2.id.package_coord
+                //                 && fe.prototype.id.init_steps == prototype2.id.init_steps
+                //                 && match fe.prototype.id.local_name {
+                //                     INameT::ExternFunction(ExternFunctionNameT { human_name: hn, .. }) => hn == human_name,
+                //                     _ => false,
+                //                 }
+                //         })
+                //         .and_then(|fe| fe.generic_parameter_inheritance.as_ref().map(|i| i.num_inherited_generic_parameters))
+                //         .unwrap_or(0);
+                //         monouts.function_externs.push(FunctionExternI {
+                //             prototype: self.interner.alloc(PrototypeI { id: prototype.id, return_type: prototype.return_type }),
+                //             num_inherited_generic_parameters: num_inherited,
+                //         });
+                //    }
+                //    _ => {}
+                // }
+
+                // Under rust_interop, a Rust-backed extern is a leaf rustc must reify + codegen. The
+                // extern call is the real boundary to Rust — the wrapper around it is ordinary Vale
+                // that instantiates normally — so the request is recorded here rather than by
+                // intercepting the wrapper prototype in translate_prototype. per_instance_mir drains
+                // these and hands them to rustc's collector as ReifyFnPointer casts.
+                #[cfg(feature = "rust_interop")]
+                if is_rust_backed(&prototype2.id) {
+                    // Record the request at the real Rust boundary. The FunctionExternI itself is
+                    // materialized by the provider (per_instance_mir), which is where the leaf's real
+                    // (rustc-mangled) symbol becomes known — a Rust extern is defined at resolution, not
+                    // at the call site, so nothing here invents a placeholder name.
+                    monouts.rust_instantiation_requests
+                        .entry(prototype.id)
+                        .or_insert_with(|| self.interner.alloc(prototype));
                 }
+                // No extern registration here — a Rust extern (the only kind that can be generic, since
+                // C has no generics) is materialized by the provider from the request recorded above,
+                // where its real symbol is known.
                 result_ce
             }
             ExpressionTE::FunctionCall(fc) => {

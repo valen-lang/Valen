@@ -26,8 +26,14 @@ constexpr int LGT_ENTRY_MEMBER_INDEX_FOR_NEXT_FREE = 1;
 
 class GlobalState {
 public:
-  GlobalState(AddressNumberer* addressNumberer);
+  GlobalState(
+      ValeOptions* opt, LLVMContextRef context, LLVMModuleRef mod,
+      LLVMTargetMachineRef machine, LLVMTargetDataRef dataLayout);
 
+  ~GlobalState();
+
+  // VCOORD: just hold a unique_ptr
+  AddressNumberer ownedAddressNumberer;
   AddressNumberer* addressNumberer;
 
   LLVMTargetMachineRef machine = nullptr;
@@ -79,7 +85,6 @@ public:
 
 //  LLVMValueRef coroutineEntryFunc = nullptr;
 
-  LLVMBuilderRef stringConstantBuilder = nullptr;
   std::unordered_map<std::string, LLVMValueRef> stringConstants;
 
   std::unordered_map<Edge*, LLVMValueRef, AddressHasher<Edge*>> interfaceTablePtrs;
@@ -228,7 +233,10 @@ public:
   Name* structNewName = nullptr;
   Name* ssaNewName = nullptr;
 
+  // VCOORD: just hold a unique_ptr
+  std::unique_ptr<RCImm> rcImmOwned;
   RCImm* rcImm = nullptr;
+  std::unique_ptr<IRegion> mutRegionOwned;
   IRegion* mutRegion = nullptr;
   std::unordered_map<RegionId*, IRegion*, AddressHasher<RegionId*>> regions;
 

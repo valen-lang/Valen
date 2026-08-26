@@ -10,7 +10,10 @@ if (MSVC)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:4194304")
 endif (MSVC)
 
-find_package(LLVM 16 REQUIRED CONFIG)
+# No version pin: build.rs points LLVM_DIR at the Vale rustc fork's shared libLLVM
+# (currently 21.1.8-rust-dev, whose `-rust-dev` version suffix defeats a numeric
+# `find_package(LLVM <N>)` match anyway). The toolchain controls the version.
+find_package(LLVM REQUIRED CONFIG)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(
 	${LLVM_INCLUDE_DIRS}
@@ -45,6 +48,7 @@ llvm_map_components_to_libnames(llvm_libs ${LLVM_LINK_COMPONENTS})
 set(BACKEND_LIB_SRCS
 		src/vale.cpp
 		src/ffi.cpp
+		src/rust_interop/rust_interop.cpp
 		src/globalstate.cpp
 		src/metal/ast.cpp
 		src/metal/metal_cache_ffi.cpp

@@ -1,31 +1,28 @@
-# Pins the Rust toolchain for the Cargo projects in this repo (FrontendRust).
-# rustup picks this up automatically when running cargo/rustc from any
-# subdirectory.
+# Pins the Rust toolchain for the Cargo projects in this repo.
+# rustup picks this up automatically when running cargo/rustc from any subdirectory.
 #
-# Why pin:
-# - FrontendRust uses nightly-only features (allocator-api2, etc.) that move across
-#   nightlies. Pinning gives reproducible builds across machines and CI.
+# We pin the Vale rustc *fork* (github.com/Verdagon/rust, branch `per-instance-mir`), built
+# locally and linked as the `rustc-fork` rustup toolchain:
 #
-# To bump: pick a nightly, verify FrontendRust still builds + tests pass, then
-# change `channel` here.
+#     git clone https://github.com/Verdagon/rust ~/rust
+#     cd ~/rust && git checkout per-instance-mir && ./x build   # builds stage2 (~hours)
+#     rustup toolchain link rustc-fork ~/rust/build/host/stage2
+#     ln -sf ~/rust/build/aarch64-apple-darwin/stage0/bin/cargo \
+#            ~/rust/build/host/stage2/bin/cargo                 # give it a cargo (no fallback)
+#
+# Why the fork rather than an upstream nightly:
+# - The `rust_interop` feature links rustc internals via `#![feature(rustc_private)]`, and the
+#   fork carries the interop patches (the `per_instance_mir` query + `fill_extra_modules`) that
+#   upstream lacks. Building interop against it needs no `rustup component add rustc-dev` — the
+#   fork's stage2 sysroot already ships the rustc_private libs and rust-src.
+# - The standalone (non-interop) build compiles on the fork identically; the patches are inert
+#   without a plugin installing the providers, so there is ONE rustc version for both binaries.
+#
+# Distribution (getting the fork onto CI / other machines cheaply) is not solved yet — for now
+# every checkout builds + links it as above.
+#
+# No `components` line: a linked toolchain can't `rustup component add`, and the fork's stage2
+# sysroot already provides rustc / cargo / rustdoc / rust-src. rust-analyzer is not bundled;
+# add it into the fork sysroot if Guardian's rust-analyzer-backed shields are re-enabled.
 [toolchain]
-channel = "nightly-2025-12-09"
-# Components required by the pipeline:
-#   - rust-src: needed for `-Zbuild-std`-style flags some downstream Cargo projects use.
-#   - rust-docs-json: needed if any consumer prefers pre-built rustdoc JSON over
-#     invoking `cargo rustdoc` itself.
-#   - rust-analyzer: Guardian's opencode-backed shields spawn rust-analyzer for
-#     context-defs lookups when validating Rust edits. Without it in the pinned
-#     toolchain, rustup looks for rust-analyzer in nightly-2025-12-09 (which lacks
-#     it by default), prints "Unknown binary", and the LSP client hangs until
-#     opencode's 45 s initialize timeout fires — making every Edit on a Rust
-#     file fail-closed.
-#
-# NOT listed here on purpose: `rustc-dev`, which the `rust_interop` cargo feature needs
-# (it links rustc's internals via `#![feature(rustc_private)]`). Listing it would make
-# rustup fetch several hundred MB for everyone on every branch and in every CI job, for a
-# feature that is off by default and that nobody else builds. Interop developers install it
-# themselves:
-#
-#     rustup component add rustc-dev --toolchain nightly-2025-12-09
-components = ["rust-src", "rust-docs-json", "rust-analyzer"]
+channel = "rustc-fork"

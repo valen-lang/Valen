@@ -33,7 +33,9 @@ use crate::typing::rust_interop::{
 };
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::test::rust_interop::harness::{
-  compile_check_fixture, run_case, run_case_in_package, run_case_instantiated, try_run_case,
+  compile_check_fixture, run_case, run_case_in_package, run_case_instantiated,
+  run_case_rustc_driven, run_case_rustc_driven_and_run, run_case_rustc_driven_emitting,
+  run_case_rustc_driven_full, try_run_case,
   CaseOutcome,
 };
 use crate::typing::test::traverse::NodeRefT;
@@ -420,12 +422,9 @@ fn a_struct_wrapping_a_hashmap_is_used_through_methods() {
 /// The simplest shape first — a call to a Rust free function — so a failure here isolates "the
 /// instantiator cannot handle a synthesized extern at all" from anything the domino case adds.
 /// `translate` panics if the typechecked program cannot be monomorphized, so reaching the assert means
-/// it survived.
-// Ignored: the instantiator cannot yet translate a call to a Rust extern (it looks up a
-// `FunctionDefinitionT` the extern has no body for — `translate_function_callsite`). That is the
-// instantiator↔rustc-collector handshake work; the backend/LLVM half is exp-3's. Un-ignore when the
-// foreign-call path lands.
-#[ignore = "instantiator has no foreign-call path for Rust externs yet; see rust-interop-handoff"]
+/// it survived. The queue filter (`translate_prototype`, `is_rust_backed`) diverts the Rust callee out
+/// of the body-translation path and records it as an instantiation request, so the drain never asks
+/// `translate_function_callsite` for a body the extern doesn't have.
 #[test]
 fn a_rust_free_function_call_reaches_the_instantiator() {
   let outcome = run_case_instantiated(&CALLS_A_RUST_FREE_FUNCTION, callees_in_main);
@@ -437,7 +436,6 @@ fn a_rust_free_function_call_reaches_the_instantiator() {
 /// The domino case pushed past typing into the instantiator — opaque struct wrapping a `HashMap`,
 /// `&mut self`/`&self` methods, and a borrow return (`&Glyph`) bound to a local. Proves those
 /// synthesized denizens monomorphize, not merely typecheck.
-#[ignore = "instantiator has no foreign-call path for Rust externs yet; see rust-interop-handoff"]
 #[test]
 fn the_hashmap_wrapping_struct_reaches_the_instantiator() {
   let outcome =
@@ -445,6 +443,260 @@ fn the_hashmap_wrapping_struct_reaches_the_instantiator() {
   outcome.check(&A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS);
   let summary = outcome.expect_instantiated();
   assert!(summary.functions > 0, "nothing monomorphized: {summary:?}");
+}
+
+/// Milestone M (free-function case): rustc's mono collector drives *our monomorphizer* end to end.
+/// Compiling the stub to completion with the `per_instance_mir` override fires our provider on the
+/// `__vale_main` root; the provider seeds that export, drains the instantiator, collects the Rust
+/// functions `main` transitively calls, resolves each to a rustc `DefId`, and hands rustc a
+/// `ReifyFnPointer` body naming them (which is what queues them for codegen). Reaching here proves
+/// the whole loop: rustc drives us, the drive finds the Rust leaf `add_two_numbers`, and it resolves
+/// back to a real rustc item (the firing records `<path> => <resolved def path>`).
+#[test]
+fn rustc_collector_drives_our_monomorphizer() {
+  let firings = run_case_rustc_driven(&CALLS_A_RUST_FREE_FUNCTION);
+  assert!(
+    firings.iter().any(|f| f.contains("__vale_main")),
+    "per_instance_mir never fired on __vale_main; firings: {firings:?}"
+  );
+  assert!(
+    firings.iter().any(|f| f.contains("add_two_numbers[] =>")),
+    "the drive did not collect + resolve a Rust request for add_two_numbers; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a Rust request failed to resolve to a DefId; firings: {firings:?}"
+  );
+}
+
+/// Milestone M, generic callee: the same driven loop, but `main` calls a *generic* Rust function
+/// `id<int>(9)`. The request now carries a type argument, so the provider must convert the Vale
+/// templata `int` to the rustc `Ty` `i32` and build the callee's `GenericArgs` before reifying
+/// `id::<i32>`. Proves the templata → rustc-`Ty` bridge for a primitive type argument.
+#[test]
+fn rustc_collector_drives_a_generic_rust_callee() {
+  let firings = run_case_rustc_driven(&INSTANTIATES_A_GENERIC_AT_ONE_PARAMETER);
+  assert!(
+    firings.iter().any(|f| f.contains("mycrate.id[i32] =>")),
+    "id<int> did not convert its type arg to i32 and resolve; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "the generic id<int> request failed to resolve; firings: {firings:?}"
+  );
+}
+
+/// Milestone M, generic callee at a Rust type: `main` calls `id<Counter>(make_counter())`, so the
+/// generic function's type argument is itself an imported Rust type rather than a primitive. The
+/// provider must lower the Vale `Counter` kind to the rustc `Adt` type and build `id::<Counter>`'s
+/// args. Proves the templata → rustc-`Ty` bridge for a Rust-backed (non-generic) type argument.
+#[test]
+fn rustc_collector_drives_a_generic_at_a_rust_type() {
+  let firings = run_case_rustc_driven(&INSTANTIATES_A_GENERIC_AT_A_RUST_TYPE);
+  assert!(
+    firings.iter().any(|f| f.contains("mycrate.id[") && f.contains("Counter")),
+    "id<Counter> did not convert its Rust-type arg and resolve; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a Rust request failed to resolve; firings: {firings:?}"
+  );
+}
+
+/// Milestone M, scope-end drop: `s = make_shade(); return 4;` binds an imported enum to a local and
+/// never consumes it, so it takes a synthesized scope-end drop. An imported type has no Rust `Drop`
+/// to resolve to, so the provider maps the drop to a generic `__vale_drop<T>` shim (arch §15.7).
+#[test]
+fn rustc_collector_drives_a_scope_end_drop() {
+  let firings = run_case_rustc_driven(&AN_IMPORTED_ENUM_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP);
+  assert!(
+    firings.iter().any(|f| f.contains("drop => __vale_drop") && f.contains("(drop shim)")),
+    "the scope-end drop did not map to the __vale_drop shim; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a Rust request failed to resolve; firings: {firings:?}"
+  );
+}
+
+/// Milestone M, generic associated function: `b = Boxed<int>.new()`. `Boxed<T, Fixed>::new` is a
+/// generic assoc fn whose impl pins the second type param to `Fixed`, so the callee's args must be
+/// reconstructed from the owner's type args plus the impl-pinned param. The bound-and-dropped local
+/// also drops the generic `Boxed<int, Fixed>`.
+#[test]
+fn rustc_collector_drives_a_generic_assoc_function() {
+  let firings = run_case_rustc_driven(&A_GENERIC_ASSOC_RESULT_BOUND_TO_A_LOCAL_GETS_A_SCOPE_END_DROP);
+  assert!(
+    firings.iter().any(|f| f.contains("new =>") && f.contains("(assoc)")),
+    "Boxed<int>::new did not resolve as a generic assoc fn; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a generic assoc fn request failed to resolve; firings: {firings:?}"
+  );
+}
+
+/// Milestone M, real `std` `Vec`: `v = Vec.new<int>()`. `Vec::new` is in `impl<T> Vec<T, Global>`,
+/// and `Global` is a *default* type param, so the dropped `Vec<int, Global>` carries an arg Vale never
+/// names — the provider must fill the defaulted allocator param when it cannot from the Vale args.
+#[test]
+fn rustc_collector_drives_real_vec_new() {
+  let firings = run_case_rustc_driven(&IMPORTS_REAL_VEC_AND_CONSTRUCTS_IT);
+  assert!(
+    firings.iter().any(|f| f.contains("vec.new =>") && f.contains("(assoc)")),
+    "Vec::new did not resolve as a generic assoc fn; firings: {firings:?}"
+  );
+  assert!(
+    firings.iter().any(|f| f.contains("__vale_drop")),
+    "the Vec<int, Global> drop did not map to the shim; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a real-Vec request failed to resolve; firings: {firings:?}"
+  );
+}
+
+/// Milestone M, the composed domino case: opaque struct wrapping a `HashMap`, driven through
+/// `Domino.new()` / `Glyph.new()` (associated functions), `&mut self` add, `&self` borrow-return get,
+/// a field accessor, and scope-end drops. The end-to-end target of the driven path.
+#[test]
+fn rustc_collector_drives_the_domino_case() {
+  let run = run_case_rustc_driven_full(&A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS);
+  let firings = &run.firings;
+  // Every callee shape composed in one program resolves: associated functions, methods (incl.
+  // `&mut self`/`&self`), a field accessor, and the scope-end drop shim.
+  assert!(
+    firings.iter().any(|f| f.contains("(assoc)"))
+      && firings.iter().any(|f| f.contains("(method)"))
+      && firings.iter().any(|f| f.contains("(drop shim)")),
+    "the domino case did not exercise assoc/method/drop resolution; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a Rust request in the domino case failed to resolve; firings: {firings:?}"
+  );
+  // rustc drove all the way through codegen without erroring on any reified leaf. This is the
+  // stronger "the frontend half is real" signal: every `(DefId, GenericArgs)` we handed back was
+  // valid enough for rustc to monomorphize and codegen. (It does not run the program — the real
+  // Vale bodies await the backend's `fill_extra_modules`.)
+  assert_eq!(
+    run.rustc_exit, 0,
+    "rustc did not complete codegen on the domino case (exit {}); firings: {firings:?}",
+    run.rustc_exit
+  );
+}
+
+/// Stage 1 (`#2a`) of the run-a-program path: the `fill_extra_modules` codegen hook fires. Installing
+/// `set_fill_extra_modules_hook(consumer_fill_modules)` in the driven `config()` means that once rustc
+/// reaches codegen (`Compilation::Continue`), it calls our handler on the same armed `DriverState`.
+/// This proves the pipe from rustc's codegen into Vale — the seam the real emission (Stage 2) rides.
+#[test]
+fn rustc_codegen_fires_our_fill_extra_modules_hook() {
+  let firings = run_case_rustc_driven(&CALLS_A_RUST_FREE_FUNCTION);
+  assert!(
+    firings.iter().any(|f| f.contains("consumer_fill_modules fired")),
+    "the fill_extra_modules hook never fired at codegen time; firings: {firings:?}"
+  );
+}
+
+/// Stage 2 (`#2b`) of the run-a-program path: the hook actually lowers the Vale program and emits its
+/// bodies into rustc's borrowed module. The handler builds a finalized `HinputsI` via the ordinary
+/// `translate_program`, lowers it through the existing `populate_metal_cache`, takes rustc's lent
+/// `(context, module)` from the `ExtraModuleAllocator`, and calls `backend_compile_program_into` — the
+/// first real exercise of the borrowed C++ backend path (its `LLVMVerifyModule` runs on the Vale IR in
+/// rustc's module). rc 0 = emitted and verified. Still a lib crate — not linked or run (Stage 3).
+#[test]
+fn rustc_codegen_emits_vale_bodies_into_borrowed_module() {
+  let run = run_case_rustc_driven_emitting(&CALLS_A_RUST_FREE_FUNCTION);
+  assert!(
+    run.firings.iter().any(|f| f.contains("consumer_fill_modules emitted rc=0")),
+    "the backend did not emit + verify Vale IR into rustc's borrowed module; firings: {:?}",
+    run.firings
+  );
+  assert_eq!(
+    run.rustc_exit, 0,
+    "rustc did not complete codegen after the borrowed emit (exit {}); firings: {:?}",
+    run.rustc_exit, run.firings
+  );
+}
+
+/// Stage 3 (tier 2): the whole round trip. Drive rustc to a linked bin, emit the Vale bodies into it,
+/// run the executable, and assert it exits with what `main` returns. `seven()` (`return seven();`) is
+/// the simplest real Rust call — zero args, scalar `i32`, so Rust ABI == C ABI. This is the first case
+/// that observes a *value*, not just that emission verified.
+#[test]
+fn rustc_driven_bin_links_and_returns_seven() {
+  let run = run_case_rustc_driven_and_run(&CALLS_A_ZERO_ARG_RUST_FUNCTION);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Stage 3, the final goal: a real **two-argument** Rust free function. `add_two_numbers(20, 22)`
+/// passes two scalar `i32`s across the boundary to rustc's own `add_two_numbers`, linked and run,
+/// asserting the process exits 42. This is the canonical driven case (the Stage-1/2 tests emit it),
+/// now taken all the way to a running binary — a Vale program calling real Rust, end to end.
+#[test]
+fn rustc_driven_bin_links_and_returns_from_add_two_numbers() {
+  let run = run_case_rustc_driven_and_run(&CALLS_A_RUST_FREE_FUNCTION);
+  assert_eq!(
+    run.process_exit,
+    Some(42),
+    "the driven bin did not exit 42 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Milestone M, borrow-receiver method: `c = make_counter(); return c.peek();`. `peek(&self)` takes a
+/// borrow receiver, so the request's first parameter is a borrow-wrapped `Counter` rather than a bare
+/// one; the provider must peel the reference to find the owning type. `c` also takes a scope-end drop.
+#[test]
+fn rustc_collector_drives_a_borrow_receiver_method() {
+  let firings = run_case_rustc_driven(&CALLS_A_BORROW_SELF_METHOD_ON_A_LOCAL);
+  assert!(
+    firings.iter().any(|f| f.contains("peek =>") && f.contains("(method)")),
+    "peek(&self) did not resolve through its borrow receiver; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a Rust request failed to resolve; firings: {firings:?}"
+  );
+}
+
+/// Milestone M, method callee: `main` calls a Rust method `(make_counter()).get()`. A method is not
+/// a crate-qualified free function — `get` lives in `Counter`'s inherent impl — so the provider must
+/// resolve it through the receiver type rather than a module path. By-value `get` consumes its
+/// receiver, so there is no scope-end drop; this isolates method resolution from drop synthesis.
+#[test]
+fn rustc_collector_drives_a_method_callee() {
+  let firings = run_case_rustc_driven(&CALLS_A_METHOD_ON_A_RUST_TYPE);
+  assert!(
+    firings.iter().any(|f| f.contains("get =>") && f.contains("(method)")),
+    "the method call get() did not resolve through the receiver type; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a Rust request failed to resolve; firings: {firings:?}"
+  );
+}
+
+/// Milestone M, multi-parameter generic: `main` calls `pick<int, bool>(...)`, so the callee has two
+/// type args and the provider must fill them in declaration order (`A = i32`, `B = bool`). `pick` is
+/// the ordering canary — a swap would produce `[bool, i32]` and fail here.
+#[test]
+fn rustc_collector_drives_a_multi_param_generic() {
+  let firings = run_case_rustc_driven(&READS_A_GENERIC_SIGNATURE_STRUCTURALLY);
+  assert!(
+    firings.iter().any(|f| f.contains("mycrate.pick[i32, bool] =>")),
+    "pick<int, bool> did not convert both type args in order; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a Rust request failed to resolve; firings: {firings:?}"
+  );
 }
 
 /// A two-parameter generic value from an associated function, bound to a local and dropped at scope

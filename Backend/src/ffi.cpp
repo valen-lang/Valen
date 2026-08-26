@@ -11,7 +11,7 @@ class MetalCache;
 class Program;
 
 // Defined in vale.cpp; declared here to avoid pulling in its giant header set.
-int32_t runBackendCompile(
+int32_t compileStandalone(
     MetalCache* metalCache, Program* program,
     const BackendCompileOptionsFFI* ffi_opts);
 
@@ -27,7 +27,7 @@ extern "C" __attribute__((visibility("default")))
 int32_t backend_compile_program(
     MetalCacheHandle* cacheH, ProgramHandle* programH,
     const BackendCompileOptionsFFI* ffi_opts) {
-  return runBackendCompile(
+  return compileStandalone(
       metal_cache_ffi_inner(cacheH),
       reinterpret_cast<Program*>(programH),
       ffi_opts);

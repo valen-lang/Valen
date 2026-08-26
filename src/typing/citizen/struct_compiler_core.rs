@@ -16,7 +16,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::compiler_outputs::DeferredActionT;
-use crate::typing::env::environment::{CitizenEnvironmentT, IInDenizenEnvironmentT};
+use crate::typing::env::environment::{CitizenEnvironmentT, GlobalEnvironmentT, IInDenizenEnvironmentT};
 use crate::typing::env::environment::{IEnvironmentT, ILookupContext, TemplatasStoreBuilder};
 use crate::typing::env::function_environment_t::NodeEnvironmentT;
 use crate::typing::env::i_env_entry::{FunctionEnvEntry, IEnvEntryT};
@@ -144,13 +144,8 @@ where
             }
           }
           let deferred_name = outer_env.id().add_step(self.typing_interner, *name);
-          let function_a = self.get_or_create_postparsed_function(coutputs, id);
-          coutputs.defer_evaluating_function(DeferredActionT::EvaluateFunction {
-            name: deferred_name,
-            calling_env: outer_env,
-            origin: function_a,
-            template_args: &[],
-          });
+          coutputs.defer_evaluating_function(
+            DeferredActionT::EvaluateFunction { function_id: deferred_name });
         }
         _ => panic!("vcurious: unexpected entry in outer_env.templatas"),
       }
@@ -203,6 +198,7 @@ where
 
   pub fn compile_interface_core(
     &self,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     outer_env: IInDenizenEnvironmentT<'s, 't>,
     interface_runes_env: &'t CitizenEnvironmentT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
@@ -260,9 +256,10 @@ where
         let outer_env_ienv = IEnvironmentT::from(outer_env);
         let header = self.evaluate_generic_function_from_non_call_for_header(
           coutputs,
+          global_env,
           parent_ranges,
           call_location,
-          FunctionTemplataT { outer_env: outer_env_ienv, function_template_id: id },
+          id,
         )?;
         let virtual_index = header
           .get_virtual_index()
@@ -349,6 +346,7 @@ where
     &self,
     containing_function_env: &'t NodeEnvironmentT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     name: IFunctionDeclarationNameS<'s>,
@@ -545,9 +543,10 @@ where
     };
     self.evaluate_generic_function_from_non_call(
       coutputs,
+      global_env,
       parent_ranges,
       call_location,
-      drop_function_templata,
+      drop_function_templata.function_template_id,
     )?;
 
     Ok((closured_vars_struct_ref, sharedness, function_templata))

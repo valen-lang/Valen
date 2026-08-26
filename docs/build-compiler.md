@@ -94,3 +94,57 @@ If working on the Vale compiler, it's best to:
  * Build LLVM from scratch, in debug mode.
  * Use CLion.
     * [Build with a profile](https://www.jetbrains.com/help/clion/cmake-profile.html#CMakeProfileSwitcher), with an environment variable `LLVM_DIR=(llvm build dir)`. [Verify in the CMake log](https://stackoverflow.com/a/34772936/1424454) looking for "Using LLVMConfig.make in (llvm build dir)".
+
+
+## Rust Interop
+
+The `rust_interop` cargo feature makes a Vale program typecheck against real Rust items read from a
+live rustc `TyCtxt` — `import rust.alloc.vec.Vec;` and the like. It is **off by default**; a normal
+build (the sections above) is the standalone compiler and never touches rustc.
+
+Everything here is **tier-1 typechecking only — nothing runs.** A program that imports `Vec` compiles
+against live rustc but does not execute: the C++ backend is deliberately not linked in an interop
+build (two libLLVMs in one process is UB), so codegen and execution are out of scope for this feature.
+
+### Toolchain: the Vale rustc fork
+
+Interop links rustc's internals (`#![feature(rustc_private)]`) and needs the fork's `per_instance_mir`
+patch, so it builds against the Vale rustc fork rather than an upstream nightly. `rust-toolchain.toml`
+pins it as the `rustc-fork` toolchain; build and link it once:
+
+```sh
+git clone https://github.com/Verdagon/rust ~/rust
+cd ~/rust && git checkout per-instance-mir && ./x build   # builds stage2 (~hours)
+rustup toolchain link rustc-fork ~/rust/build/host/stage2
+ln -sf ~/rust/build/aarch64-apple-darwin/stage0/bin/cargo \
+       ~/rust/build/host/stage2/bin/cargo                 # give the toolchain its own cargo
+```
+
+The fork's stage2 sysroot already ships the `rustc_private` libraries and `rust-src`, so there is
+**no** `rustup component add rustc-dev` step. Once linked, plain `cargo`/`rustc` in this repo use the
+fork automatically (via `rust-toolchain.toml`), and a standalone build compiles on it identically —
+the patches are inert without a plugin, so one rustc version serves both binaries.
+
+### Build and test
+
+From the repo root:
+
+```sh
+cargo build --features rust_interop
+cargo test --lib --features rust_interop
+```
+
+The interop tests host rustc in-process (`run_compiler`) and assert against the typed AST, so they
+live in the lib's own test target — run them with `--lib`, not as integration tests.
+
+### Notes
+
+ * **Backend-driving tests are excluded under the feature.** The suites that call the C++ backend
+   (`end_to_end_tests`, the `backend_ffi` FFI tests) are `#[cfg(all(test, not(feature = "rust_interop")))]`,
+   because the backend isn't linked in an interop build; they run in the normal (non-interop)
+   `cargo nextest` gates instead.
+ * **`cargo clean` after moving the repo directory.** Fixture paths are baked in at compile time via
+   `env!("CARGO_MANIFEST_DIR")`; a stale artifact from a previous location makes every fixture-loading
+   test fail with file-not-found. Rebuild clean after any move or rename.
+ * Interop runs only where the fork toolchain is built and linked, so it is not part of standard CI
+   yet — run it by hand.

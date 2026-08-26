@@ -8,7 +8,7 @@ use crate::typing::ast::citizens::StructMemberT;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
-use crate::typing::env::environment::ILookupContext;
+use crate::typing::env::environment::{make_top_level_environment, GlobalEnvironmentT, ILookupContext};
 use crate::typing::env::environment::{IEnvironmentT, IInDenizenEnvironmentT};
 use crate::typing::env::function_environment_t::NodeEnvironmentT;
 use crate::typing::env::function_environment_t::{CapturedVariableT, IVariableT, LocalVariable};
@@ -94,13 +94,25 @@ where
   pub fn evaluate_generic_function_from_non_call(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    function_templata: FunctionTemplataT<'s, 't>,
+    function_id: &'t IdT<'s, 't>,
   ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
-    let env = function_templata.outer_env;
+    let env: IEnvironmentT<'s,'t> = match &function_id.init_non_package_id(self.typing_interner) {
+      Some(containing_type_id) => {
+        // method/assoc-fn → citizen outer env
+        coutputs.get_outer_env_for_type(*containing_type_id).into()
+      },
+      None => {
+        // free fn → calculate the package env
+        let parent_id = function_id.init_id(self.typing_interner);
+        IEnvironmentT::Package(
+          make_top_level_environment(global_env, parent_id, self.typing_interner))
+      },
+    };
     let function =
-      self.get_or_create_postparsed_function(coutputs, function_templata.function_template_id);
+      self.get_or_create_postparsed_function(coutputs, function_id);
     if function.is_light() {
       let mut new_ranges: Vec<RangeS<'s>> = Vec::with_capacity(1 + parent_ranges.len());
       new_ranges.push(function.range);
@@ -292,6 +304,7 @@ where
   pub fn evaluate_closure_struct(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     containing_node_env: &'t NodeEnvironmentT<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
@@ -314,6 +327,7 @@ where
     let (struct_tt, _, _function_templata) = self.make_closure_understruct(
       containing_node_env,
       coutputs,
+      global_env,
       call_range,
       call_location,
       name,

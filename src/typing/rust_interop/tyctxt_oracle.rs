@@ -114,7 +114,7 @@ fn package_coord_for<'s>(
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-enum ItemKind {
+pub(crate) enum ItemKind {
   Function,
   Type,
   /// A Rust enum — imported as an opaque sealed interface. Like `Type` it owns inherent methods and a
@@ -169,7 +169,10 @@ pub struct TyCtxtOracle<'tcx, 's> {
 ///
 /// **Intermediate segments must be modules** — the `DefKind::Mod` filter stops a struct named `vec`
 /// from swallowing the `vec` in `std::vec::Vec`, the same `DefKind` filter the final item needs.
-fn resolve_crate_qualified_path<'tcx>(tcx: TyCtxt<'tcx>, path: &str) -> Option<(DefId, ItemKind)> {
+pub(crate) fn resolve_crate_qualified_path<'tcx>(
+  tcx: TyCtxt<'tcx>,
+  path: &str,
+) -> Option<(DefId, ItemKind)> {
   let segments: Vec<&str> = path.split('.').collect();
   // Need at least `crate.item`: the first segment is the crate, the last is the item.
   let (crate_name, rest) = segments.split_first()?;

@@ -619,8 +619,7 @@ where
   }
 
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
-    panic!("Unimplemented: global_env");
-    // nodeEnvironment.globalEnv
+    self.parent_function_env.global_env
   }
 
   pub fn declared_locals(&self) -> &[IVariableT<'s, 't>] {

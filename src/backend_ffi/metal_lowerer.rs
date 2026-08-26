@@ -213,8 +213,10 @@ impl<'cache> Lowerer<'cache> {
             if e.prototype.id.package_coord as *const _ as usize != pkg_key {
                 continue;
             }
-            // The extern's wire name is its mangled id; codegen maps it to the native symbol.
-            pb.add_extern_function(&humanize_id(&code_map, &e.prototype.id, None), self.lower_prototype(e.prototype));
+            // link_name is the real callee symbol: rustc's mangled name for a Rust-interop leaf (the
+            // backend binds it verbatim, single-symbol arch §5.2), or the declared extern name for a
+            // C extern (the backend composes the vale_abi_ shim name from it).
+            pb.add_extern_function(e.link_name, self.lower_prototype(e.prototype));
         }
         for (struct_it, _extern) in monouts.kind_externs.iter() {
             if struct_it.id.package_coord as *const _ as usize != pkg_key {

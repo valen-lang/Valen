@@ -13,7 +13,7 @@ We'll have a plan document.
  * While we're working on it, it will be committed to docs/plans, ending with "-plan", no number. Example: docs/plans/generics-solving-plan.md.
  * It will be committed to docs/historical when it's done.
  * This doesn't replace the handoff document. But the handoff document shouldnt contain anything that would be better in here.
- * To check what the human changed, use **verbatim** the command `diff -U2 <(sed -n '1,/^## Strategic Directions Proposals/p' /tmp/plan-phased-calls-0.md) <(sed -n '1,/^## Strategic Directions Proposals/p' docs/plans/plan-phased-calls.md) || true; cp docs/plans/plan-phased-calls.md /tmp/plan-phased-calls-1.md`, updating the 0 and 1 as you go. If the human says only "read", they might mean this.
+ * To check what the human changed, use **verbatim** the command `diff -U2 <(sed -n '1,/^## Strategic Directions Proposals/p' /tmp/plan-phased-calls-0.md) <(sed -n '1,/^## Strategic Directions Proposals/p' docs/plans/plan-phased-calls.md) || true; cp docs/plans/plan-phased-calls.md /tmp/plan-phased-calls-1.md`, updating the 0 and 1 as you go. If the human says only "read" or "diff", they might mean this.
 
 Sections:
 

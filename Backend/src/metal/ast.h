@@ -232,10 +232,13 @@ public:
     assert(iter != kindToExternName.end());
     return packageCoordinate->projectName + "_" + iter->second;
   }
+  // The extern's real callee symbol, verbatim: the human C name for a C extern, or rustc's mangled
+  // name for a Rust-interop leaf. This is not the the Valen-generated shim that calls out to C.
+  // See @BDCABIBZ.
   std::string getFunctionExternName(Prototype* kind) const {
     auto iter = functionToExternName.find(kind);
     assert(iter != functionToExternName.end());
-    return packageCoordinate->projectName + "_" + iter->second;
+    return iter->second;
   }
 //  bool isExported(Name* name) {
 //    auto exportedNameI = fullNameToExportName.find(name);

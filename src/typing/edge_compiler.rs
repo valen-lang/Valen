@@ -745,8 +745,8 @@ where
     override_function_param_types[abstract_index as usize] = overriding_param_coord;
 
     let extra_envs: Vec<IInDenizenEnvironmentT<'s, 't>> = vec![
-      coutputs.get_outer_env_for_type(&[range, impl_a.range], interface_template_id),
-      coutputs.get_outer_env_for_type(&[range, impl_a.range], sub_citizen_template_id),
+      coutputs.get_outer_env_for_type(interface_template_id),
+      coutputs.get_outer_env_for_type(sub_citizen_template_id),
     ];
     let calling_env = IInDenizenEnvironmentT::from(dispatcher_case_env);
     let call_range = &[range, impl_a.range];

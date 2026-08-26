@@ -9,24 +9,8 @@
 #include <region/common/migration.h>
 #include <utils/counters.h>
 
-std::tuple<RawFuncPtrLE, LLVMBuilderRef> makeStringSetupFunction(GlobalState* globalState) {
-  auto voidLT = LLVMVoidTypeInContext(globalState->context);
-
-  auto functionL = addRawFunction(globalState->mod, "__Vale_SetupStrings", voidLT, {});
-
-  auto stringsBuilder = LLVMCreateBuilderInContext(globalState->context);
-  LLVMBasicBlockRef blockL = LLVMAppendBasicBlockInContext(globalState->context, functionL.ptrLE, "stringsBlock");
-  LLVMPositionBuilderAtEnd(stringsBuilder, blockL);
-  auto ret = LLVMBuildRetVoid(stringsBuilder);
-  LLVMPositionBuilderBefore(stringsBuilder, ret);
-
-  return {functionL, stringsBuilder};
-}
-
-
 Prototype* makeValeMainFunction(
     GlobalState* globalState,
-    RawFuncPtrLE stringSetupFunctionL,
     Prototype* mainSetupFuncProto,
     Prototype* userMainFunctionPrototype,
     Prototype* mainCleanupFunctionPrototype) {
@@ -44,26 +28,12 @@ Prototype* makeValeMainFunction(
       globalState->metalCache->getPrototype(valeMainName, globalState->metalCache->i64Type, {});
   declareAndDefineExtraFunction(
       globalState, valeMainProto, valeMainName->name,
-      [globalState, stringSetupFunctionL, mainSetupFuncProto, int64LT, userMainFunctionPrototype, mainCleanupFunctionPrototype](
+      [globalState, mainSetupFuncProto, int64LT, userMainFunctionPrototype, mainCleanupFunctionPrototype](
           FunctionState *functionState, LLVMBuilderRef entryBuilder) {
         buildFlare(FL(), globalState, functionState, entryBuilder);
 
-        stringSetupFunctionL.call(entryBuilder, {}, "");
         globalState->lookupFunction(mainSetupFuncProto)
             .call(entryBuilder, {}, "");
-
-//        LLVMBuildStore(
-//            entryBuilder,
-//            LLVMBuildUDiv(
-//                entryBuilder,
-//                LLVMBuildPointerCast(
-//                    entryBuilder,
-//                    globalState->writeOnlyGlobalLE,
-//                    LLVMInt64TypeInContext(globalState->context),
-//                    "ptrAsIntToWriteOnlyGlobal"),
-//                constI64LE(globalState, 8),
-//                "ram64IndexToWriteOnlyGlobal"),
-//            globalState->ram64IndexToWriteOnlyGlobal);
 
         buildFlare(FL(), globalState, functionState, entryBuilder);
         if (globalState->opt->census) {
@@ -101,7 +71,6 @@ Prototype* makeValeMainFunction(
 
           buildPrintToStderr(globalState, entryBuilder, "\n");
         }
-
 
         if (globalState->opt->census) {
           buildFlare(FL(), globalState, functionState, entryBuilder);
@@ -148,7 +117,9 @@ Prototype* makeValeMainFunction(
 
 LLVMValueRef makeEntryFunction(
     GlobalState* globalState,
-    Prototype* valeMainPrototype) {
+    Prototype* valeMainPrototype,
+    const std::string& entryName,
+    bool emitLibcShim) {
   auto voidLT = LLVMVoidTypeInContext(globalState->context);
   auto int1LT = LLVMInt1TypeInContext(globalState->context);
   auto int8LT = LLVMInt8TypeInContext(globalState->context);
@@ -158,35 +129,44 @@ LLVMValueRef makeEntryFunction(
   auto voidPtrLT = LLVMPointerType(int8LT, 0);
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
 
-  // This is the actual entry point for the binary. Uses the standard C
-  // signature `int main(int argc, char** argv)` so wasi-libc's _start
-  // shim (which expects exactly that) can find and call it. argc gets
-  // sign-extended to i64 before being stored into Vale's i64-typed
-  // numMainArgsLE global, and the Vale main's i64 return is truncated
-  // to i32 on the way out (POSIX exit codes only use the low byte).
-  auto entryParamsLT = std::vector<LLVMTypeRef>{ int32LT, LLVMPointerType(LLVMPointerType(int8LT, 0), 0) };
-  LLVMTypeRef functionTypeL = LLVMFunctionType(int32LT, entryParamsLT.data(), entryParamsLT.size(), 0);
-  LLVMValueRef entryFunctionL = LLVMAddFunction(globalState->mod, "main", functionTypeL);
+  // Standalone/owned mode (emitLibcShim) makes `entryName` the actual libc entry:
+  // `int main(int argc, char** argv)`, so wasi-libc's _start shim (which expects exactly
+  // that) can find and call it; argc gets sign-extended to i64 and stored into Vale's
+  // arg globals, and the Vale main's i64 return is truncated to i32 (POSIX exit codes use
+  // the low byte). Borrowed/rustc mode emits a plain `int <entryName>()` (e.g.
+  // `__vale_main`) — rustc's own `main` already ran libc startup and owns argc/argv, so
+  // no params, no wasi alias, no arg reads.
+  LLVMTypeRef functionTypeL;
+  if (emitLibcShim) {
+    auto entryParamsLT = std::vector<LLVMTypeRef>{ int32LT, LLVMPointerType(LLVMPointerType(int8LT, 0), 0) };
+    functionTypeL = LLVMFunctionType(int32LT, entryParamsLT.data(), entryParamsLT.size(), 0);
+  } else {
+    functionTypeL = LLVMFunctionType(int32LT, nullptr, 0, 0);
+  }
+  LLVMValueRef entryFunctionL = LLVMAddFunction(globalState->mod, entryName.c_str(), functionTypeL);
 
   LLVMSetDLLStorageClass(entryFunctionL, LLVMDLLExportStorageClass);
   LLVMSetFunctionCallConv(entryFunctionL, LLVMCCallConv );
-  // wasi-libc's `_start` -> `__main_void` -> `__main_argc_argv` (weak
-  // undef). It does NOT call `main` directly. Expose our `main` under
-  // both names so the wasi crt resolves to it. On native targets the
-  // alias is harmless (the C runtime calls `main`).
-  LLVMAddAlias2(
-      globalState->mod, functionTypeL, 0, entryFunctionL, "__main_argc_argv");
+  if (emitLibcShim) {
+    // wasi-libc's `_start` -> `__main_void` -> `__main_argc_argv` (weak undef). It does
+    // NOT call `main` directly. Expose our `main` under both names so the wasi crt
+    // resolves to it. On native targets the alias is harmless (the C runtime calls `main`).
+    LLVMAddAlias2(
+        globalState->mod, functionTypeL, 0, entryFunctionL, "__main_argc_argv");
+  }
   LLVMBuilderRef entryBuilder = LLVMCreateBuilderInContext(globalState->context);
   LLVMBasicBlockRef blockL =
       LLVMAppendBasicBlockInContext(globalState->context, entryFunctionL, "thebestblock");
   LLVMPositionBuilderAtEnd(entryBuilder, blockL);
 
 
-  auto numMainArgsI32LE = LLVMGetParam(entryFunctionL, 0);
-  auto numMainArgsLE = LLVMBuildSExt(entryBuilder, numMainArgsI32LE, int64LT, "argcI64");
-  auto mainArgsLE = LLVMGetParam(entryFunctionL, 1);
-  LLVMBuildStore(entryBuilder, numMainArgsLE, globalState->numMainArgsLE);
-  LLVMBuildStore(entryBuilder, mainArgsLE, globalState->mainArgsLE);
+  if (emitLibcShim) {
+    auto numMainArgsI32LE = LLVMGetParam(entryFunctionL, 0);
+    auto numMainArgsLE = LLVMBuildSExt(entryBuilder, numMainArgsI32LE, int64LT, "argcI64");
+    auto mainArgsLE = LLVMGetParam(entryFunctionL, 1);
+    LLVMBuildStore(entryBuilder, numMainArgsLE, globalState->numMainArgsLE);
+    LLVMBuildStore(entryBuilder, mainArgsLE, globalState->mainArgsLE);
+  }
 
   auto calleeUserFunction = globalState->lookupFunction(valeMainPrototype);
   auto calleeUserFunctionReturnMT = valeMainPrototype->returnType;

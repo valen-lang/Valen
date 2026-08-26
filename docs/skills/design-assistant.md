@@ -12,7 +12,8 @@ We'll have a design document.
 
  * This doc is intended to be a living doc, serving as the source of truth for a codebase.
  * This doesn't replace the handoff document. But the handoff document shouldnt contain anything that would be better in here.
- * To check what the human changed, use **verbatim** the command `diff -U2 <(sed -n '1,/^## Design Proposals/p' /tmp/plan-phased-calls-0.md) <(sed -n '1,/^## Design Proposals/p' docs/plans/plan-phased-calls.md) || true; cp docs/plans/plan-phased-calls.md /tmp/plan-phased-calls-1.md`, updating the 0 and 1 as you go. If the human says only "read", they might mean this.
+ * To check what the human changed, use **verbatim** the command `diff -U2 <(sed -n '1,/^## Design Proposals/p' /tmp/plan-phased-calls-0.md) <(sed -n '1,/^## Design Proposals/p' docs/plans/plan-phased-calls.md) || true; cp docs/plans/plan-phased-calls.md /tmp/plan-phased-calls-1.md`, updating the 0 and 1 as you go. If the human says only "read" or "diff", they might mean this.
+ * The first thing you should do is run the above command to establish a version 0 baseline.
 
 Sections:
 

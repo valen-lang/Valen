@@ -512,15 +512,19 @@ where
   pub fn evaluate_generic_function_from_non_call_for_header(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    function_templata: FunctionTemplataT<'s, 't>,
+    // VCOORD: the non-call path now takes just the function id, and looks up the env for it further
+    // in. consider doing that same thing for call path
+    function_id: &'t IdT<'s, 't>,
   ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.evaluate_generic_function_from_non_call(
       coutputs,
+      global_env,
       parent_ranges,
       call_location,
-      function_templata,
+      function_id,
     )
   }
 
@@ -584,6 +588,12 @@ where
     #[cfg(feature = "rust_interop")]
     {
       if let Some(f) = create_postparsed_function(self, coutputs, template_id) {
+        // rust_interop only produces the FunctionS; core commits it. Register so re-entrant
+        // lookups memoize, then queue it for the deferred-compile drain (near end of typing) so
+        // `make_extern_function` runs on it — its wrapper + `function_extern`, exactly as a user
+        // `extern func` gets via the top-level loop. The drain derives its outer env from the id.
+        coutputs.register_postparsed_function(template_id, f);
+        coutputs.defer_evaluating_function(DeferredActionT::EvaluateFunction { function_id: template_id });
         return f;
       }
     }
@@ -1138,6 +1148,7 @@ where
             };
             let unchecked_conclusions = self.compile_interface(
               &mut coutputs,
+              global_env,
               &[],
               LocationInDenizen { path: &[] },
               templata,
@@ -1268,6 +1279,13 @@ where
       // when their postparseds are requested.
       // VRI: consider some other thing to loop over?
       // VRI: consider making vale lazy in some way too.
+      // VRI: the problem here is that we're not actually *compiling* the rust-generated function
+      // ever, we're only calling it. symptom: since it's not compiled, the rust sig is never added
+      // to the externs list in the coutput. i think the right call here is to:
+      //  * add it to the deferreds when we lazily make postparseds for it
+      //  * later on, unify the two things that make a function compiled. in other words, we should
+      //    make the below just add it to the deferred queue. then there will be only one place
+      //    indirectly calling evaluate_generic_function_from_non_call.
       #[cfg(feature = "rust_interop")]
       {
         if is_rust_backed(package_id) {
@@ -1289,9 +1307,10 @@ where
             let templata = FunctionTemplataT { outer_env: package_env_t, function_template_id: id };
             let _header = self.evaluate_generic_function_from_non_call(
               &mut coutputs,
+              global_env,
               &[],
               LocationInDenizen { path: &[] },
-              templata,
+              *id,
             )?;
             let function_a = self.get_or_create_postparsed_function(&mut coutputs, id);
             let maybe_export = function_a.attributes.iter().find_map(|a| match a {
@@ -1513,22 +1532,19 @@ where
         // val nextDeferredEvaluatingFunction = coutputs.peekNextDeferredFunctionCompile().get
         let next_deferred = coutputs.peek_next_deferred_function_compile().unwrap();
         match next_deferred {
-          DeferredActionT::EvaluateFunction { name, calling_env, origin, template_args: _ } => {
-            let name_val = *name;
-            let calling_env = *calling_env;
-            let _origin: &'s FunctionS<'s> = origin;
+          DeferredActionT::EvaluateFunction { function_id } => {
+            let name_val: &'t IdT<'s, 't> = function_id;
 
-            let outer_env: IEnvironmentT<'s, 't> = IEnvironmentT::from(calling_env);
-            let templata = FunctionTemplataT { outer_env, function_template_id: name };
             self.evaluate_generic_function_from_non_call_for_header(
               &mut coutputs,
+              global_env,
               &[],
               LocationInDenizen { path: &[] },
-              templata,
+              function_id,
             )?;
 
             // coutputs.markDeferredFunctionCompiled(nextDeferredEvaluatingFunction.name)
-            coutputs.mark_deferred_function_compiled(name_val);
+            coutputs.mark_deferred_function_compiled(&name_val);
           }
           _ => panic!("vcurious: unexpected deferred action variant in function-compile loop"),
         }
@@ -1864,6 +1880,12 @@ where
               .attributes
               .iter()
               .any(|a| matches!(a, ICitizenAttributeT::Extern(_))),
+            // VCOORD: test for this case please
+            KindT::Interface(i) => coutputs
+                .lookup_interface(i.id, self)
+                .attributes
+                .iter()
+                .any(|a| matches!(a, ICitizenAttributeT::Extern(_))),
             KindT::KindPlaceholder(_) => true,
             _ => false,
           };

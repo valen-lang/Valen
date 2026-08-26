@@ -1,12 +1,22 @@
 
+#include <llvm-c/Target.h>
+
 #include "function/expressions/shared/shared.h"
 #include "function/expressions/expressions.h"
 #include "globalstate.h"
 #include "translatetype.h"
 #include "region/rcimm/rcimm.h"
 
-GlobalState::GlobalState(AddressNumberer* addressNumberer_) :
-    addressNumberer(addressNumberer_),
+GlobalState::GlobalState(
+    ValeOptions* opt_, LLVMContextRef context_, LLVMModuleRef mod_,
+    LLVMTargetMachineRef machine_, LLVMTargetDataRef dataLayout_) :
+    addressNumberer(&ownedAddressNumberer),
+    machine(machine_),
+    context(context_),
+    mod(mod_),
+    opt(opt_),
+    dataLayout(dataLayout_),
+    ptrSize(LLVMPointerSize(dataLayout_) << 3u),
     interfaceTablePtrs(0, addressNumberer->makeHasher<Edge*>()),
     interfaceExtraMethods(0, addressNumberer->makeHasher<InterfaceKind*>()),
     overridesBySubstructByInterface(0, addressNumberer->makeHasher<InterfaceKind*>()),
@@ -15,6 +25,10 @@ GlobalState::GlobalState(AddressNumberer* addressNumberer_) :
     regions(0, addressNumberer->makeHasher<RegionId*>()),
     regionIdByKind(0, addressNumberer->makeHasher<Kind*>())
 {}
+
+// Out-of-line so the region types held by GlobalState's `unique_ptr` members only need to
+// be complete here (where they are), not in every TU that destroys a GlobalState.
+GlobalState::~GlobalState() = default;
 
 std::vector<LLVMTypeRef> GlobalState::getInterfaceFunctionTypesNonPointer(InterfaceKind* kind) {
   std::vector<LLVMTypeRef> interfaceFunctionsLT;
@@ -153,15 +167,13 @@ LLVMValueRef GlobalState::getInterfaceTablePtr(Edge* edge) {
 LLVMValueRef GlobalState::getOrMakeStringConstant(const std::string& str) {
   auto iter = stringConstants.find(str);
   if (iter == stringConstants.end()) {
-
-    iter =
-        stringConstants.emplace(
-                str,
-                LLVMBuildGlobalStringPtr(
-                    stringConstantBuilder,
-                    str.c_str(),
-                    (std::string("conststr") + std::to_string(stringConstants.size())).c_str()))
-            .first;
+    auto name = std::string("conststr") + std::to_string(stringConstants.size());
+    auto bytes = LLVMConstStringInContext2(context, str.c_str(), str.size(), /*DontNullTerminate=*/0);
+    auto global = LLVMAddGlobal(mod, LLVMTypeOf(bytes), name.c_str());
+    LLVMSetInitializer(global, bytes);
+    LLVMSetGlobalConstant(global, true);
+    LLVMSetLinkage(global, LLVMPrivateLinkage);
+    iter = stringConstants.emplace(str, global).first;
   }
   return iter->second;
 }

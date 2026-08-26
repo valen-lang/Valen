@@ -210,7 +210,9 @@ where
 /// caller's vfail is the interim behavior.
 pub fn create_postparsed_function<'s, 'ctx, 't>(
   compiler: &Compiler<'s, 'ctx, 't>,
-  coutputs: &mut CompilerOutputs<'s, 't>,
+  // Read-only handle: rust_interop is a pure producer of the postparsed `FunctionS`; core
+  // (`get_or_create_postparsed_function`) owns registering it and queuing its deferred compile.
+  _coutputs: &CompilerOutputs<'s, 't>,
   template_id: &'t IdT<'s, 't>,
 ) -> Option<&'s FunctionS<'s>>
 where
@@ -277,7 +279,6 @@ where
 
   let function_s =
     synthesize_extern_function(compiler, template_id.package_coord, human_name, &sig)?;
-  coutputs.register_postparsed_function(template_id, function_s);
   Some(function_s)
 }
 

@@ -296,17 +296,19 @@ where
   pub fn compile_interface(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
   ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
-    self.compile_interface_layer(coutputs, parent_ranges, call_location, interface_templata)
+    self.compile_interface_layer(coutputs, global_env, parent_ranges, call_location, interface_templata)
   }
 
   pub fn make_closure_understruct(
     &self,
     containing_function_env: &'t NodeEnvironmentT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     name: IFunctionDeclarationNameS<'s>,
@@ -317,6 +319,7 @@ where
     self.make_closure_understruct_layer(
       containing_function_env,
       coutputs,
+      global_env,
       parent_ranges,
       call_location,
       name,

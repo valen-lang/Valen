@@ -33,10 +33,7 @@ where
   pub fn generic_param_types(&self, scout_arena: &ScoutArena<'s>) -> Vec<ITemplataType<'s>> {
     match self {
       CitizenDefinitionT::Struct(s) => s.generic_param_types(scout_arena),
-      CitizenDefinitionT::Interface(i) => {
-        panic!("Unimplemented: generic_param_types Interface");
-        // i.genericParamTypes
-      }
+      CitizenDefinitionT::Interface(i) => i.generic_param_types(scout_arena),
     }
   }
 
@@ -125,9 +122,13 @@ impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     // RegionT(DefaultRegionT)
   }
 
-  fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
-    panic!("Unimplemented: generic_param_types");
-    // instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
+  fn generic_param_types(&self, scout_arena: &ScoutArena<'s>) -> Vec<ITemplataType<'s>> {
+    IInterfaceNameT::try_from(self.instantiated_interface.id.local_name)
+        .unwrap()
+        .template_args()
+        .iter()
+        .map(|t| t.tyype(scout_arena))
+        .collect()
   }
 
   fn instantiated_citizen(&self) -> ICitizenTT<'s, 't> {

@@ -121,8 +121,14 @@ RawFuncPtrLE declareExternFunction(
     Prototype* prototypeM) {
   auto sig = buildBoundarySignature(globalState, prototypeM);
 
-  auto userFuncNameL = package->getFunctionExternName(prototypeM);
-  auto abiFuncNameL = std::string("vale_abi_") + userFuncNameL;
+  std::string abiFuncNameL;
+  if (package->packageCoordinate->projectName == "rust") {
+    abiFuncNameL = package->getFunctionExternName(prototypeM);
+  } else {
+    // This is the name of the Valen-generated shim that calls the actual extern C function.
+    // We should remove this one day (see @BDCABIBZ)
+    abiFuncNameL = std::string("vale_abi_") + package->packageCoordinate->projectName + "_" + package->getFunctionExternName(prototypeM);
+  }
 
   RawFuncPtrLE functionL =
       addRawFunction(globalState->mod, abiFuncNameL.c_str(), sig.returnLT, sig.paramTypesL);

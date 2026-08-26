@@ -2,7 +2,7 @@
 
 ## The "Core"
 
-The "core" is the typing pass. AI is not allowed to edit it.
+Typing pass is part of the "core", and AI is not allowed to edit the core compiler.
 
 Exceptions (AI is allowed to edit these parts of the typing pass):
 * `rust_interop` directories.

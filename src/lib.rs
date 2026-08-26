@@ -21,6 +21,19 @@ extern crate rustc_middle;
 extern crate rustc_session;
 #[cfg(feature = "rust_interop")]
 extern crate rustc_span;
+// The collector-driven instantiation path (per_instance_mir): rustc drives our monomorphizer, so we
+// link the mono collector and codegen crates it runs through, plus rustc_index/rustc_abi for building
+// the synthetic MIR body we hand back. Sysroot-provided by the fork; no Cargo deps.
+#[cfg(feature = "rust_interop")]
+extern crate rustc_codegen_ssa;
+#[cfg(feature = "rust_interop")]
+extern crate rustc_codegen_llvm;
+#[cfg(feature = "rust_interop")]
+extern crate rustc_monomorphize;
+#[cfg(feature = "rust_interop")]
+extern crate rustc_index;
+#[cfg(feature = "rust_interop")]
+extern crate rustc_abi;
 
 // VCOORD: Onion typing arc: parser + postparsing linked; typing and downstream
 // stay unlinked pending their own slices. higher_typing was retired outright.

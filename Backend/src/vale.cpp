@@ -31,9 +31,6 @@
 #include "externs.h"
 
 #include <cstring>
-#include <llvm-c/Transforms/Scalar.h>
-#include <llvm-c/Transforms/Utils.h>
-#include <llvm-c/Transforms/IPO.h>
 
 #include "region/unsafe/unsafe.h"
 #include "function/expressions/shared/string.h"
@@ -72,16 +69,16 @@ std::string genFreeName(int bytes) {
   return std::string("__genMalloc") + std::to_string(bytes) + std::string("B");
 }
 
-std::tuple<RawFuncPtrLE, LLVMBuilderRef> makeStringSetupFunction(GlobalState* globalState);
 Prototype* makeValeMainFunction(
     GlobalState* globalState,
-    RawFuncPtrLE stringSetupFunctionL,
     Prototype* mainSetupFuncProto,
     Prototype* userMainFunctionPrototype,
     Prototype* mainCleanupFunctionPrototype);
 LLVMValueRef makeEntryFunction(
     GlobalState* globalState,
-    Prototype* valeMainPrototype);
+    Prototype* valeMainPrototype,
+    const std::string& entryName,
+    bool emitLibcShim);
 //LLVMValueRef makeCoroutineEntryFunc(GlobalState* globalState);
 
 ValeFuncPtrLE declareFunction(
@@ -104,8 +101,12 @@ void makeExternOrExportFunction(
     Prototype *prototype,
     bool isExport);
 
-void optimize(GlobalState *globalState);
-void compileValeCode(GlobalState* globalState, MetalCache* metalCache, Program* program);
+void optimize(LLVMModuleRef mod, ValeOptimizationLevel optLevel);
+// Compiles the program's Vale code into the module. If the program exports a `main`, also
+// assembles the Vale entry (region setup/cleanup + the __Vale_Main wrapper) and returns its
+// prototype for the caller to emit an entry symbol from; returns nullptr in library mode
+// (no `main` export), where the caller emits no entry.
+Prototype* compileValeCode(GlobalState* globalState, MetalCache* metalCache, Program* program);
 
 void initInternalExterns(GlobalState* globalState) {
 //  auto voidLT = LLVMVoidTypeInContext(globalState->context);
@@ -335,7 +336,7 @@ std::string generateFunctionC(
   return s.str();
 }
 
-void generateExports(GlobalState* globalState, Prototype* mainM) {
+void generateExports(GlobalState* globalState) {
   auto program = globalState->program;
   auto packageCoordToHeaderNameToC =
       std::unordered_map<
@@ -592,10 +593,10 @@ std::string makeModuleAbiDirectory(const GlobalState *globalState, PackageCoordi
   return moduleIncludeDirectory;
 }
 
-void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Program* programPtr) {
+Prototype* compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Program* programPtr) {
   auto& metalCache = *metalCachePtr;
   auto& program = *programPtr;
-  globalState->metalCache = metalCachePtr;
+  globalState->metalCache = metalCachePtr; // VCOORD: supply this into constructor
 
   auto voidLT = LLVMVoidTypeInContext(globalState->context);
   auto int8LT = LLVMInt8TypeInContext(globalState->context);
@@ -603,7 +604,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   auto int32LT = LLVMInt32TypeInContext(globalState->context);
   auto int32PtrLT = LLVMPointerType(int32LT, 0);
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
-
+  // VCOORD: supply this into constructor
   globalState->ffiHandleStructs =
       std::make_unique<FfiHandleStructs>(globalState->context);
 
@@ -625,12 +626,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
     }
 //  }
 
-  RawFuncPtrLE stringSetupFunctionL;
-  LLVMBuilderRef stringConstantBuilder = nullptr;
-  std::tie(stringSetupFunctionL, stringConstantBuilder) = makeStringSetupFunction(globalState);
-  globalState->stringConstantBuilder = stringConstantBuilder;
-
-
   globalState->program = programPtr;
 
   globalState->freeName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_free");
@@ -651,7 +646,6 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   Externs externs(globalState->mod, globalState->context, globalState->ptrSize);
   globalState->externs = &externs;
 
-//  globalState->stringConstantBuilder = entryBuilder;
 
   globalState->numMainArgsLE =
       LLVMAddGlobal(globalState->mod, LLVMInt64TypeInContext(globalState->context), "__main_num_args");
@@ -695,26 +689,15 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
 
   initInternalExterns(globalState);
 
-  RCImm rcImm(globalState);
-  globalState->rcImm = &rcImm;
+  globalState->rcImmOwned = std::make_unique<RCImm>(globalState);
+  globalState->rcImm = globalState->rcImmOwned.get();
   globalState->regions.emplace(globalState->rcImm->getRegionId(), globalState->rcImm);
 
-  globalState->mutRegion = new Unsafe(globalState);
+  globalState->mutRegionOwned = std::make_unique<Unsafe>(globalState);
+  globalState->mutRegion = globalState->mutRegionOwned.get();
   globalState->regions.emplace(globalState->mutRegion->getRegionId(), globalState->mutRegion);
 
   assert(LLVMTypeOf(globalState->neverLE) == globalState->getRegion(globalState->metalCache->neverType)->translateType(globalState->metalCache->neverType));
-
-  auto mainSetupFuncName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__Vale_mainSetup");
-  auto mainSetupFuncProto =
-      globalState->metalCache->getPrototype(mainSetupFuncName, globalState->metalCache->i64Type, {});
-  declareAndDefineExtraFunction(
-      globalState, mainSetupFuncProto, mainSetupFuncName->name,
-      [globalState](FunctionState* functionState, LLVMBuilderRef builder) {
-        for (auto i : globalState->regions) {
-          i.second->mainSetup(functionState, builder);
-        }
-        LLVMBuildRet(builder, constI64LE(globalState, 0));
-      });
 
   for (auto packageCoordAndPackage : program.packages) {
     auto[packageCoord, package] = packageCoordAndPackage;
@@ -1047,7 +1030,32 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
     }
   }
 
+  // If the program exports a `main`, assemble the Vale entry: region setup/cleanup and the
+  // __Vale_Main wrapper. No `main` = library mode — emit only the exported functions and
+  // return nullptr, and the caller emits no entry symbol either.
+  Prototype* mainM = nullptr;
+  for (auto[packageCoord, package] : programPtr->packages) {
+    for (auto[exportName, prototype] : package->exportNameToFunction) {
+      if (exportName == "main") {
+        mainM = prototype;
+      }
+    }
+  }
+  if (mainM == nullptr) {
+    return nullptr;
+  }
 
+  auto mainSetupFuncName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__Vale_mainSetup");
+  auto mainSetupFuncProto =
+      globalState->metalCache->getPrototype(mainSetupFuncName, globalState->metalCache->i64Type, {});
+  declareAndDefineExtraFunction(
+      globalState, mainSetupFuncProto, mainSetupFuncName->name,
+      [globalState](FunctionState* functionState, LLVMBuilderRef builder) {
+        for (auto i : globalState->regions) {
+          i.second->mainSetup(functionState, builder);
+        }
+        LLVMBuildRet(builder, constI64LE(globalState, 0));
+      });
 
   auto mainCleanupFuncName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__Vale_mainCleanup");
   auto mainCleanupFuncProto =
@@ -1061,32 +1069,8 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
         LLVMBuildRet(builder, constI64LE(globalState, 0));
       });
 
-//  globalState->coroutineEntryFunc = makeCoroutineEntryFunc(globalState);
-
-  Prototype* mainM = nullptr;
-  for (auto[packageCoord, package] : program.packages) {
-    for (auto[exportName, prototype] : package->exportNameToFunction) {
-      bool isExportedMain = exportName == "main";
-      if (isExportedMain) {
-        mainM = prototype;
-      }
-    }
-  }
-  if (mainM == nullptr) {
-    std::cerr << "Couldn't find main function! (Did you forget to export it?)" << std::endl;
-    exit(1);
-  }
-  auto valeMainPrototype =
-      makeValeMainFunction(
-          globalState, stringSetupFunctionL, mainSetupFuncProto, mainM, mainCleanupFuncProto);
-  auto entryFuncL = makeEntryFunction(globalState, valeMainPrototype);
-
-  generateExports(globalState, mainM);
-}
-
-void createModule(MetalCache* metalCache, Program* program, GlobalState *globalState) {
-  globalState->mod = LLVMModuleCreateWithNameInContext("build", globalState->context);
-  compileValeCode(globalState, metalCache, program);
+  return makeValeMainFunction(
+      globalState, mainSetupFuncProto, mainM, mainCleanupFuncProto);
 }
 
 // Use provided options (triple, etc.) to creation a machine
@@ -1208,66 +1192,9 @@ void generateOutput(
 //  LLVMDisposeMemoryBuffer(buffer);
 //}
 
-// Generate IR nodes into LLVM IR using LLVM
-void generateModule(MetalCache* metalCache, Program* program, GlobalState* globalState) {
-  createModule(metalCache, program, globalState);
-
-  char *err;
-
-  // Serialize the LLVM IR, if requested
-  if (globalState->opt->print_llvmir) {
-    auto outputFilePath = fileMakePath(globalState->opt->outputDir.c_str(), "build", "ll");
-    std::cout << "Printing file " << outputFilePath << std::endl;
-    if (LLVMPrintModuleToFile(globalState->mod, outputFilePath.c_str(), &err) != 0) {
-      std::cerr << "Could not emit pre-ir file: " << err << std::endl;
-      LLVMDisposeMessage(err);
-    }
-  }
-
-  if (globalState->opt->verify) {
-    char *error = NULL;
-    LLVMVerifyModule(globalState->mod, LLVMReturnStatusAction, &error);
-    if (error) {
-      if (*error)
-        errorExit(ExitCode::VerifyFailed, "Module verification failed:\n", error);
-      LLVMDisposeMessage(error);
-    }
-  }
-
-  if (globalState->opt->optLevel != ValeOptimizationLevel::O0) {
-    if (globalState->opt->flares) {
-      std::cout << "Warning: Running release optimizations with flares enabled!" << std::endl;
-    }
-    std::cout << "Running release optimizations..." << std::endl;
-    optimize(globalState);
-    optimize(globalState);
-  }
-
-  if (globalState->opt->print_llvmir) {
-    auto outputFilePath = fileMakePath(globalState->opt->outputDir.c_str(), "build", "opt.ll");
-    std::cout << "Printing file " << outputFilePath << std::endl;
-    if (LLVMPrintModuleToFile(globalState->mod, outputFilePath.c_str(), &err) != 0) {
-      std::cerr << "Could not emit ir file: " << err << std::endl;
-      LLVMDisposeMessage(err);
-    }
-  }
-
-  if (globalState->machine) {
-    auto objpath =
-        fileMakePath(globalState->opt->outputDir.c_str(), "build", objext);
-    auto asmpath =
-        fileMakePath(globalState->opt->outputDir.c_str(), "build", asmext);
-    generateOutput(
-        objpath.c_str(), globalState->opt->print_asm ? asmpath : "",
-        globalState->mod, globalState->opt->triple.c_str(), globalState->machine);
-  }
-
-  LLVMDisposeModule(globalState->mod);
-}
-
-void optimize(GlobalState *globalState) {
+void optimize(LLVMModuleRef mod, ValeOptimizationLevel optLevel) {
   llvm::OptimizationLevel opt_level = llvm::OptimizationLevel::O0;
-  switch (globalState->opt->optLevel) {
+  switch (optLevel) {
     case ValeOptimizationLevel::O0:
       opt_level = llvm::OptimizationLevel::O0;
       break;
@@ -1313,7 +1240,7 @@ void optimize(GlobalState *globalState) {
 //    FPM.addPass(llvm::InlinerPass());
 //    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
-  if (globalState->opt->optLevel == ValeOptimizationLevel::O2i) {
+  if (optLevel == ValeOptimizationLevel::O2i) {
     llvm::CGSCCPassManager CGPM;
     CGPM.addPass(llvm::InlinerPass());
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
@@ -1328,35 +1255,38 @@ void optimize(GlobalState *globalState) {
 
 
   // Optimize the IR!
-  MPM.run(*llvm::unwrap(globalState->mod), MAM);
+  MPM.run(*llvm::unwrap(mod), MAM);
 }
 
-// Setup LLVM generation, ensuring we know intended target
-void setup(GlobalState *globalState, ValeOptions *opt) {
-  globalState->opt = opt;
-
-  // LLVM inlining bugs prevent use of LLVMContextCreate();
-  globalState->context = LLVMContextCreate();
-
-  LLVMTargetMachineRef machine = createMachine(opt);
-  if (!machine)
-    exit((int)(ExitCode::BadOpts));
-
-  // Obtain data layout info, particularly pointer sizes
-  globalState->machine = machine;
-  globalState->dataLayout = LLVMCreateTargetDataLayout(machine);
-  globalState->ptrSize = LLVMPointerSize(globalState->dataLayout) << 3u;
-
+// Print the LLVM IR (if requested) and verify the module. Shared tail of both the
+// standalone and borrowed compile paths, run once a module's Vale IR is fully emitted.
+void finalizeCompile(GlobalState* globalState) {
+  char *err;
+  // Serialize the LLVM IR, if requested
+  if (globalState->opt->print_llvmir) {
+    auto outputFilePath = fileMakePath(globalState->opt->outputDir.c_str(), "build", "ll");
+    std::cout << "Printing file " << outputFilePath << std::endl;
+    if (LLVMPrintModuleToFile(globalState->mod, outputFilePath.c_str(), &err) != 0) {
+      std::cerr << "Could not emit pre-ir file: " << err << std::endl;
+      LLVMDisposeMessage(err);
+    }
+  }
+  if (globalState->opt->verify) {
+    char *error = NULL;
+    LLVMVerifyModule(globalState->mod, LLVMReturnStatusAction, &error);
+    if (error) {
+      if (*error)
+        errorExit(ExitCode::VerifyFailed, "Module verification failed:\n", error);
+      LLVMDisposeMessage(error);
+    }
+  }
 }
 
-void closeGlobalState(GlobalState *globalState) {
-  LLVMDisposeTargetMachine(globalState->machine);
-}
-
-// Full per-compile pipeline: copy the FFI options into ValeOptions, set up
-// GlobalState, run codegen against the caller-populated MetalCache/Program,
-// dispose. The FFI entry in ffi.cpp is a one-line `extern "C"` wrapper.
-int32_t runBackendCompile(
+// Full standalone (valec) pipeline: copy the FFI options into ValeOptions, create the
+// owned LLVM handles, emit all of the program's Vale IR (including the libc `main` entry),
+// then optimize, emit the object, and dispose. The FFI entry in ffi.cpp is a one-line
+// `extern "C"` wrapper.
+int32_t compileStandalone(
     MetalCache* metalCache, Program* program,
     const BackendCompileOptionsFFI* ffi_opts) {
   ValeOptions valeOptions;
@@ -1364,11 +1294,57 @@ int32_t runBackendCompile(
   if (ok <= 0) {
     return ok == 0 ? 0 : (int32_t)ExitCode::BadOpts;
   }
+  ValeOptions *opt = &valeOptions;
+  // LLVM inlining bugs prevent use of LLVMContextCreate();
+  LLVMContextRef context = LLVMContextCreate();
+  LLVMTargetMachineRef machine = createMachine(opt);
+  if (!machine)
+    exit((int)(ExitCode::BadOpts));
+  LLVMModuleRef mod = LLVMModuleCreateWithNameInContext("build", context);
 
-  AddressNumberer addressNumberer;
-  GlobalState globalState(&addressNumberer);
-  setup(&globalState, &valeOptions);
-  generateModule(metalCache, program, &globalState);
-  closeGlobalState(&globalState);
+  LLVMTargetDataRef dataLayout = LLVMCreateTargetDataLayout(machine);
+  GlobalState globalState(opt, context, mod, machine, dataLayout);
+  // Standalone valec: a `main` export makes this a binary — emit the libc `main` entry;
+  // no `main` is a library, so no entry (compileValeCode returns nullptr).
+  Prototype* valeMainPrototype = compileValeCode(&globalState, metalCache, program);
+  if (valeMainPrototype != nullptr) {
+    makeEntryFunction(&globalState, valeMainPrototype, "main", /*emitLibcShim=*/true);
+  }
+
+  // Exports must be generated after the entry/main assembly above — the export
+  // accessors depend on it (this matched the original order; running it earlier
+  // segfaulted the emitted programs).
+  generateExports(&globalState);
+
+  finalizeCompile(&globalState);
+
+  if (opt->optLevel != ValeOptimizationLevel::O0) {
+    if (opt->flares) {
+      std::cout << "Warning: Running release optimizations with flares enabled!" << std::endl;
+    }
+    std::cout << "Running release optimizations..." << std::endl;
+    optimize(mod, opt->optLevel);
+  }
+  if (opt->print_llvmir) {
+    char *err = nullptr;
+    auto outputFilePath = fileMakePath(opt->outputDir.c_str(), "build", "opt.ll");
+    std::cout << "Printing file " << outputFilePath << std::endl;
+    if (LLVMPrintModuleToFile(mod, outputFilePath.c_str(), &err) != 0) {
+      std::cerr << "Could not emit ir file: " << err << std::endl;
+      LLVMDisposeMessage(err);
+    }
+  }
+  if (machine) {
+    auto objpath =
+        fileMakePath(opt->outputDir.c_str(), "build", objext);
+    auto asmpath =
+        fileMakePath(opt->outputDir.c_str(), "build", asmext);
+    generateOutput(
+      objpath.c_str(), opt->print_asm ? asmpath : "",
+      mod, opt->triple.c_str(), machine);
+  }
+
+  LLVMDisposeModule(mod);
+  LLVMDisposeTargetMachine(machine);
   return 0;
 }

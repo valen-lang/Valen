@@ -649,13 +649,13 @@ where
         };
         match type_whose_env_to_search {
           KindT::Struct(sr) => {
-            vec![coutputs.get_outer_env_for_type(range, self.get_struct_template(sr.id))]
+            vec![coutputs.get_outer_env_for_type(self.get_struct_template(sr.id))]
           }
           KindT::Interface(ir) => {
-            vec![coutputs.get_outer_env_for_type(range, self.get_interface_template(ir.id))]
+            vec![coutputs.get_outer_env_for_type(self.get_interface_template(ir.id))]
           }
           KindT::KindPlaceholder(kp) => {
-            vec![coutputs.get_outer_env_for_type(range, self.get_placeholder_template(kp.id))]
+            vec![coutputs.get_outer_env_for_type(self.get_placeholder_template(kp.id))]
           }
           _ => Vec::new(),
         }
@@ -700,7 +700,7 @@ where
                 let template_id = self.get_interface_template(super_id.id);
                 if !seen.contains(&template_id) {
                   seen.insert(template_id);
-                  collected.push(coutputs.get_outer_env_for_type(range, template_id));
+                  collected.push(coutputs.get_outer_env_for_type(template_id));
                 }
               }
               _ => {}

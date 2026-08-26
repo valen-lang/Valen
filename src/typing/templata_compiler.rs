@@ -1508,7 +1508,7 @@ where
     }
     match kind {
       KindT::Struct(s) => coutputs.lookup_struct(s.id, self).sharedness == SharednessT::Shared,
-      KindT::Interface(i) => coutputs.lookup_interface(*i, self).sharedness == SharednessT::Shared,
+      KindT::Interface(i) => coutputs.lookup_interface(i.id, self).sharedness == SharednessT::Shared,
       _ => false,
     }
   }

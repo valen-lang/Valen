@@ -412,7 +412,7 @@ where
       CitizenDefinitionT::Struct(s) => s.weakable,
       CitizenDefinitionT::Interface(i) => i.weakable,
     };
-    let super_interface_weakable = coutputs.lookup_interface(*super_interface, self).weakable;
+    let super_interface_weakable = coutputs.lookup_interface(super_interface.id, self).weakable;
     if sub_citizen_weakable != super_interface_weakable {
       return Err(ICompileErrorT::WeakableImplingMismatch {
         range: self.typing_interner.alloc_slice_copy(&[impl_a.range]),
@@ -599,7 +599,7 @@ where
       ),
     }];
     let _child_env =
-      coutputs.get_outer_env_for_type(parent_ranges, self.get_citizen_template(child.id()));
+      coutputs.get_outer_env_for_type(self.get_citizen_template(child.id()));
     let conclusions = match self.resolve_impl(
       coutputs,
       parent_ranges,
@@ -633,7 +633,7 @@ where
   ) -> Vec<ISuperKindTT<'s, 't>> {
     let sub_kind_id = sub_kind.id();
     let sub_kind_template_name = self.get_sub_kind_template(sub_kind_id);
-    let sub_kind_env = coutputs.get_outer_env_for_type(parent_ranges, sub_kind_template_name);
+    let sub_kind_env = coutputs.get_outer_env_for_type(sub_kind_template_name);
     let sub_kind_imprecise_name = match get_imprecise_name(self.scout_arena, sub_kind_id.local_name)
     {
       None => return vec![],
@@ -733,9 +733,9 @@ where
     );
 
     let sub_kind_env =
-      coutputs.get_outer_env_for_type(parent_ranges, self.get_sub_kind_template(sub_kind_tt.id()));
+      coutputs.get_outer_env_for_type(self.get_sub_kind_template(sub_kind_tt.id()));
     let super_kind_env = coutputs
-      .get_outer_env_for_type(parent_ranges, self.get_super_kind_template(super_kind_tt.id()));
+      .get_outer_env_for_type(self.get_super_kind_template(super_kind_tt.id()));
 
     let lookup_filter = [ILookupContext::TemplataLookupContext].into_iter().collect::<HashSet<_>>();
     let mut matching: Vec<ITemplataT<'s, 't>> = Vec::new();

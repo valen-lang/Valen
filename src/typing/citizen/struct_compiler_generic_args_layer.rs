@@ -473,7 +473,7 @@ where
     };
     let struct_template_id = declaring_env.id().add_step(self.typing_interner, local_name);
     // We declare the struct's outer environment in the precompile stage instead of here because of MDATOEF.
-    let outer_env = coutputs.get_outer_env_for_type(parent_ranges, *struct_template_id);
+    let outer_env = coutputs.get_outer_env_for_type(*struct_template_id);
     let all_rules_s: Vec<IRulexSR<'s>> =
       struct_a.header_rules.iter().copied().chain(struct_a.member_rules.iter().copied()).collect();
     let definition_rules: Vec<IRulexSR<'s>> =
@@ -615,6 +615,7 @@ where
   pub fn compile_interface_layer(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
@@ -627,7 +628,7 @@ where
     };
     let interface_template_id = declaring_env.id().add_step(self.typing_interner, local_name);
     // We declare the interface's outer environment in the precompile stage instead of here because of MDATOEF.
-    let outer_env = coutputs.get_outer_env_for_type(parent_ranges, *interface_template_id);
+    let outer_env = coutputs.get_outer_env_for_type(*interface_template_id);
     let definition_rules: Vec<IRulexSR<'s>> =
       interface_a.rules.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
     let mut all_ranges: Vec<RangeS<'s>> = vec![interface_a.range];
@@ -738,6 +739,7 @@ where
     let inner_env_ref = IInDenizenEnvironmentT::Citizen(inner_env);
     coutputs.declare_type_inner_env(interface_template_id, inner_env_ref);
     self.compile_interface_core(
+      global_env,
       outer_env,
       inner_env,
       coutputs,
@@ -752,6 +754,7 @@ where
     &self,
     containing_function_env: &'t NodeEnvironmentT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     name: IFunctionDeclarationNameS<'s>,
@@ -762,6 +765,7 @@ where
     self.make_closure_understruct_core(
       containing_function_env,
       coutputs,
+      global_env,
       parent_ranges,
       call_location,
       name,

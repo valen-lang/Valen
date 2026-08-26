@@ -1,43 +1,34 @@
 // Builds the C++ backend as a static library and emits link directives so the
 // FrontendRust crate can call into it via FFI.
 //
-// Requires LLVM 16. The build prefers `$LLVM_DIR` / `$LLVM_CONFIG`; falls back
-// to the Homebrew arm64 prefix on macOS.
+// Requires LLVM 21, dynamically linked against the Vale rustc fork's shared
+// libLLVM (so valec and valec-rs share one libLLVM; two static libLLVMs in one
+// process is duplicate-symbol UB — arch §3.6/§5.7). The build prefers
+// `$LLVM_CONFIG`; otherwise it derives the fork's llvm-config from the active
+// toolchain's sysroot (`<sysroot>/../llvm/bin/llvm-config`).
 
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
-  // Interop builds skip the C++ backend entirely.
+  // The C++ backend links against the Vale rustc fork's shared libLLVM 21. An interop
+  // build ALSO loads rustc's own libLLVM through rustc_driver's dylibs — but both now
+  // resolve to the *same* shared libLLVM, so there is no dual-LLVM duplicate-symbol UB
+  // (that was the LLVM-16-static hazard this gate used to guard; arch §3.6/§5.7). So
+  // the backend is built and linked in interop builds too; interop additionally needs
+  // the rustc-private rpath.
   //
-  // This script statically links ~20 LLVM 16 component libraries into every artifact.
-  // An interop build also loads rustc's own libLLVM (~21) through rustc_driver's dylibs,
-  // and two LLVMs in one process is duplicate-symbol UB — LLVM keeps process-global
-  // state (pass registries, command-line option registration). See
-  // docs/convos/rust_interop/vale-rust-interop-architecture.md §3.6 / §5.7.
-  //
-  // TEMPORARY, and specifically NOT the backend becoming optional: Vale's C++ Backend
-  // owns every byte of Vale-emitted LLVM IR (arch §1.7) and is required in both
-  // binaries. This gate expires when the backend is ported from LLVM 16 to rustc's
-  // pinned LLVM (~21) and switched to dynamic linking, which §3.6 mandates and which is
-  // what makes one shared libLLVM possible. Until then an interop build can typecheck
-  // but cannot reach codegen.
-  //
-  // Read from the cargo feature rather than a cfg because a build script cannot see
-  // RUSTFLAGS. Absent the feature this is unset and the backend builds exactly as before.
-  // Both branches below disable the C++ backend, and disabling it is what makes the `backend_ffi`
-  // C symbols unresolved — so both must tell the linker to tolerate that (`emit_allow_unresolved_
-  // backend_symbols`). The interop branch additionally bakes in the rustc-private rpath it needs.
+  // Feature flags are read from env (`CARGO_FEATURE_*`) rather than cfg because a build
+  // script cannot see RUSTFLAGS.
   println!("cargo:rerun-if-env-changed=CARGO_FEATURE_RUST_INTEROP");
+  println!("cargo:rerun-if-env-changed=CARGO_FEATURE_NO_BACKEND");
   if env::var_os("CARGO_FEATURE_RUST_INTEROP").is_some() {
     emit_rustc_private_rpath();
-    emit_allow_unresolved_backend_symbols();
-    return;
   }
 
-  // Frontend/VM test builds (the `no_backend` feature) skip the C++ backend entirely.
-  println!("cargo:rerun-if-env-changed=CARGO_FEATURE_NO_BACKEND");
+  // The `no_backend` feature (Frontend/VM test builds) still skips the C++ backend, so its
+  // `backend_ffi` C symbols are left unresolved — tell the linker to tolerate that.
   if env::var_os("CARGO_FEATURE_NO_BACKEND").is_some() {
     emit_allow_unresolved_backend_symbols();
     return;
@@ -61,15 +52,20 @@ fn main() {
   println!("cargo:rustc-link-search=native={}", build_dir.display());
   println!("cargo:rustc-link-lib=static=backend_lib");
 
-  // LLVM static libs.
+  // LLVM shared lib. The fork builds one libLLVM dylib (LLVM_LINK_LLVM_DYLIB=ON),
+  // so `--link-shared` collapses the whole component list to a single
+  // `-lLLVM-<ver>`. Dynamic linking is mandatory: it lets valec and valec-rs share
+  // one libLLVM (arch §3.6/§5.7).
   let llvm_libdir = run(&llvm_config, &["--libdir"]);
   println!("cargo:rustc-link-search=native={}", llvm_libdir);
+  // rpath so the shared libLLVM resolves at runtime without DYLD_* being set.
+  println!("cargo:rustc-link-arg=-Wl,-rpath,{}", llvm_libdir);
 
   let llvm_libs = run(
     &llvm_config,
     &[
       "--libs",
-      "--link-static",
+      "--link-shared",
       "core",
       "support",
       "irreader",
@@ -93,12 +89,13 @@ fn main() {
   );
   for lib in llvm_libs.split_whitespace() {
     if let Some(name) = lib.strip_prefix("-l") {
-      println!("cargo:rustc-link-lib=static={}", name);
+      println!("cargo:rustc-link-lib=dylib={}", name);
     }
   }
 
-  // System libs LLVM itself needs.
-  let system_libs = run(&llvm_config, &["--system-libs", "--link-static"]);
+  // System libs LLVM itself needs (empty for a self-contained shared libLLVM, but
+  // keep the query for portability across LLVM build configurations).
+  let system_libs = run(&llvm_config, &["--system-libs", "--link-shared"]);
   for lib in system_libs.split_whitespace() {
     if let Some(name) = lib.strip_prefix("-l") {
       println!("cargo:rustc-link-lib=dylib={}", name);
@@ -188,9 +185,19 @@ fn locate_llvm_config() -> PathBuf {
   if let Ok(path) = env::var("LLVM_CONFIG") {
     return PathBuf::from(path);
   }
-  let homebrew = PathBuf::from("/opt/homebrew/opt/llvm@16/bin/llvm-config");
-  if homebrew.exists() {
-    return homebrew;
+  // The Vale rustc fork builds its shared libLLVM as a sibling of the stage2
+  // sysroot: sysroot is `.../<target>/stage2`, and llvm-config lives at
+  // `.../<target>/llvm/bin/llvm-config`. Derive it from the active toolchain so
+  // no machine-specific path is baked in and it tracks whatever fork is pinned.
+  let rustc = env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
+  if let Ok(out) = Command::new(&rustc).args(["--print", "sysroot"]).output() {
+    if out.status.success() {
+      let sysroot = String::from_utf8_lossy(&out.stdout).trim().to_string();
+      let cand = PathBuf::from(&sysroot).join("..").join("llvm").join("bin").join("llvm-config");
+      if cand.exists() {
+        return cand;
+      }
+    }
   }
   PathBuf::from("llvm-config")
 }

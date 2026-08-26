@@ -700,7 +700,7 @@ where
                   };
                   let struct_template_id = self.resolve_struct_template(coutputs, struct_templata);
                   let look_in_env =
-                    coutputs.get_outer_env_for_type(&range_list, *struct_template_id);
+                    coutputs.get_outer_env_for_type(*struct_template_id);
                   let part_rune_to_template_arg: Vec<(RuneUsage<'s>, RuneUsage<'s>)> = coutputs
                     .get_postparsed_struct(struct_templata.struct_template_id)
                     .generic_params
@@ -821,6 +821,7 @@ where
         );
         let call_expr_2 = self.evaluate_closure(
           coutputs,
+          nenv.global_env(),
           nenv,
           range_list,
           outer_call_location,
@@ -2593,7 +2594,7 @@ where
         }
       }
       KindT::Interface(ir) => {
-        let interface_def = coutputs.lookup_interface(*ir, self);
+        let interface_def = coutputs.lookup_interface(ir.id, self);
         if !interface_def.weakable {
           return Err(ICompileErrorT::TookWeakRefOfNonWeakableError { range: parent_ranges });
         }
@@ -2612,6 +2613,7 @@ where
   pub fn evaluate_closure(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    global_env: &'t GlobalEnvironmentT<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
@@ -2624,6 +2626,7 @@ where
     let snapshot_env = nenv.snapshot(self.typing_interner);
     let closure_struct_tt = self.evaluate_closure_struct(
       coutputs,
+      global_env,
       snapshot_env,
       parent_ranges,
       call_location,

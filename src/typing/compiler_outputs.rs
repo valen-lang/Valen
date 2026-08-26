@@ -23,6 +23,7 @@ use crate::utils::fx::{HashMap, HashSet};
 use crate::utils::range::RangeS;
 
 /// Temporary state (see @TFITCX)
+#[derive(Clone)]
 pub enum DeferredActionT<'s, 't>
 where
   's: 't,
@@ -41,10 +42,7 @@ where
   },
 
   EvaluateFunction {
-    name: &'t IdT<'s, 't>,
-    calling_env: IInDenizenEnvironmentT<'s, 't>,
-    origin: &'s FunctionS<'s>,
-    template_args: &'t [ITemplataT<'s, 't>],
+    function_id: &'t IdT<'s, 't>,
   },
 }
 /// Temporary state (see @TFITCX)
@@ -167,14 +165,14 @@ where
     self.deferred_function_body_compiles.shift_remove(prototype_t);
   }
 
-  pub fn peek_next_deferred_function_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
-    self.deferred_function_compiles.values().next()
+  pub fn peek_next_deferred_function_compile(&self) -> Option<DeferredActionT<'s, 't>> {
+    self.deferred_function_compiles.values().next().map(|x| x.clone())
   }
 
   pub fn mark_deferred_function_compiled(&mut self, name: &'t IdT<'s, 't>) {
     // vassert(name == vassertSome(deferredFunctionCompiles.headOption)._1)
     let first_key = *self.deferred_function_compiles.keys().next().unwrap();
-    assert!(*name == first_key);
+    assert_eq!(*name, first_key);
     // finishedDeferredFunctionCompiles += name
     self.finished_deferred_function_compiles.insert(*name);
     // deferredFunctionCompiles -= name
@@ -507,9 +505,10 @@ where
     self.deferred_function_body_compiles.insert(*prototype, devf);
   }
 
+  // VCOORD: we should call this compiling rather than evaluating
   pub fn defer_evaluating_function(&mut self, devf: DeferredActionT<'s, 't>) {
     let name = match &devf {
-      DeferredActionT::EvaluateFunction { name, .. } => *name,
+      DeferredActionT::EvaluateFunction { function_id: name, .. } => *name,
       _ => panic!("Expected EvaluateFunction"),
     };
     self.deferred_function_compiles.insert(*name, devf);
@@ -548,10 +547,10 @@ where
 
   pub fn lookup_interface(
     &self,
-    interface_tt: InterfaceTT<'s, 't>,
+    id: IdT<'s, 't>,
     compiler: &Compiler<'s, '_, 't>,
   ) -> &'t InterfaceDefinitionT<'s, 't> {
-    let template_id = compiler.get_interface_template(interface_tt.id);
+    let template_id = compiler.get_interface_template(id);
     self.lookup_interface_by_template_name(template_id)
   }
 
@@ -596,7 +595,7 @@ where
     match citizen_tt {
       ICitizenTT::Struct(s) => CitizenDefinitionT::Struct(self.lookup_struct(s.id, compiler)),
       ICitizenTT::Interface(i) => {
-        CitizenDefinitionT::Interface(self.lookup_interface(*i, compiler))
+        CitizenDefinitionT::Interface(self.lookup_interface(i.id, compiler))
       }
     }
   }
@@ -626,7 +625,6 @@ where
 
   pub fn get_outer_env_for_type(
     &self,
-    range: &[RangeS<'s>],
     name: IdT<'s, 't>,
   ) -> IInDenizenEnvironmentT<'s, 't> {
     match self.type_name_to_outer_env.get(&name) {
