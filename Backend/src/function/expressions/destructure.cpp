@@ -83,10 +83,11 @@ Ref translateDestroySSAIntoLocals(
   auto structLiveRef =
       globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->checkRefLive(FL(),
                                                                      functionState, builder, destroySSAIntoLocalsM->staticSizedArray, structRef);
-  globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->checkValidReference(FL(),
-                                                                        functionState, builder, true, destroySSAIntoLocalsM->staticSizedArray, structRef);
-
-  buildFlare(FL(), globalState, functionState, builder);
+  // The array arrives as its whole value in a register (a SINGLE array is its inner value now, not a
+  // pointer), so move each element straight out with extractvalue into the destination local.
+  auto arrayRefLE =
+      globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->checkValidReference(FL(),
+          functionState, builder, true, destroySSAIntoLocalsM->staticSizedArray, structRef);
 
   auto ssaKind = destroySSAIntoLocalsM->staticSizedArray;
   assert(ssaKind);
@@ -94,18 +95,12 @@ Ref translateDestroySSAIntoLocals(
   auto ssaM = globalState->program->getStaticSizedArray(ssaKind);
 
   for (int i = 0; i < ssaM->size; i++) {
-    buildFlare(FL(), globalState, functionState, builder);
-    // We know it's in bounds because we used size as a bound for the loop.
-    auto inBoundsIndexLE = InBoundsLE{constI64LE(globalState, i)};
-    auto memberLoadResult =
-        globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->loadElementFromSSA(
-            functionState, builder, destroySSAIntoLocalsM->staticSizedArray, ssaKind, structLiveRef, inBoundsIndexLE);
+    auto elementType = ssaM->elementType;
     auto memberLE =
-        globalState->getRegion(destroySSAIntoLocalsM->staticSizedArray)->upgradeLoadResultToRefWithTargetOwnership(
-            functionState, builder, ssaM->elementType, ssaM->elementType, memberLoadResult);
+        toRef(globalState->getRegion(elementType), elementType,
+            LLVMBuildExtractValue(builder, arrayRefLE, i, ""));
     makeHammerLocal(
         globalState, functionState, blockState, builder, destroySSAIntoLocalsM->destinationLocals[i], memberLE);
-    buildFlare(FL(), globalState, functionState, builder);
   }
   buildFlare(FL(), globalState, functionState, builder);
 

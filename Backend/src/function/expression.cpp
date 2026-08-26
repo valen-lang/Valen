@@ -397,9 +397,17 @@ Ref translateExpressionInner(
         globalState->getRegion(arrayType)
             ->checkRefLive(FL(), functionState, builder, arrayType, arrayRef);
 
+    // Spill the array to a temp so we can do a runtime loop over its elements.
+    // I expect the optimizer to know when unrolling this is advantageous.
+    auto arraySpillPtrLE = LLVMBuildAlloca(builder, LLVMTypeOf(arrayLiveRef.refLE), "ssaDropTemp");
+    LLVMBuildStore(builder, arrayLiveRef.refLE, arraySpillPtrLE);
+    auto arraySpilledLiveRef =
+        globalState->getRegion(arrayType)->wrapToLiveRef(
+            FL(), functionState, builder, globalState->metalCache->getBorrowRef(arrayKind), arraySpillPtrLE);
+
     intRangeLoopReverse(
         globalState, functionState, builder, globalState->metalCache->i32Type, sizeLE,
-        [globalState, functionState, elementType, consumerType, consumerValueType, consumerMethod, arrayType, arrayKind, consumerRef, arrayLiveRef](
+        [globalState, functionState, elementType, consumerType, consumerValueType, consumerMethod, arrayType, arrayKind, consumerRef, arraySpilledLiveRef](
             LLVMValueRef indexLE, LLVMBuilderRef bodyBuilder) {
           // We know it's in bounds because we used size as a bound for the loop.
           auto inBoundsIndexLE = InBoundsLE{indexLE};
@@ -411,9 +419,15 @@ Ref translateExpressionInner(
           auto elementLoadResult =
               globalState->getRegion(arrayType)->loadElementFromSSA(
                   functionState, bodyBuilder, arrayType, arrayKind,
-                  arrayLiveRef,
+                  arraySpilledLiveRef,
                   inBoundsIndexLE);
-          auto elementRef = elementLoadResult.move();
+          // loadElementFromSSA yields a *borrow* of the element; load the value out to hand to the
+          // consumer, which takes the element by value.
+          auto elementBorrowRef = elementLoadResult.move();
+          auto elementBorrowType = globalState->metalCache->getBorrowRef(elementType);
+          auto elementRef =
+              globalState->getRegion(elementBorrowType)
+                  ->load(functionState, bodyBuilder, elementBorrowType, elementBorrowRef);
 
           globalState->getRegion(elementType)
               ->checkValidReference(
@@ -619,10 +633,12 @@ Ref translateExpressionInner(
             ->loadElementFromSSA(
                 functionState, builder, arrayType, arrayKind, arrayLiveRef,
                 indexInBoundsLE);
+    // loadElementFromSSA yields a *borrow* of the element (like loadMember), so its source ownership
+    // is a borrow of elementType, not elementType itself.
     auto resultRef =
         globalState->getRegion(resultValueType)
             ->upgradeLoadResultToRefWithTargetOwnership(
-                functionState, builder, elementType, resultType, loadResult);
+                functionState, builder, globalState->metalCache->getBorrowRef(elementType), resultType, loadResult);
     globalState->getRegion(resultValueType)
         ->checkValidReference(FL(), functionState, builder, false, resultType, resultRef);
     globalState->getRegion(elementValueType)

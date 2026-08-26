@@ -48,19 +48,22 @@ RegionId* Unsafe::getRegionId() {
   return globalState->metalCache->mutRegionId;
 }
 
-LiveRef Unsafe::constructStaticSizedArray(
+Ref Unsafe::constructStaticSizedArray(
     FunctionState *functionState,
     LLVMBuilderRef builder,
     Kind *referenceM,
-    StaticSizedArrayT *kindM) {
-  auto ssaDef = globalState->program->getStaticSizedArray(kindM);
-  auto structLT =
-      kindStructs.getStaticSizedArrayWrapperStruct(ssaDef->kind);
-  auto newStructLE =
-      kindStructs.makeWrapperPtr(
-          FL(), functionState, builder, referenceM,
-          mallocKnownSize(globalState, functionState, builder, structLT));
-  return toLiveRef(newStructLE);
+    StaticSizedArrayT *kindM,
+    const std::vector<Ref>& elementRefs) {
+  auto elementType = globalState->program->getStaticSizedArray(kindM)->elementType;
+  auto innerArrayLT = kindStructs.getStaticSizedArrayInnerStruct(kindM);
+  LLVMValueRef arrValueLE = LLVMGetUndef(innerArrayLT);
+  for (int i = 0; i < elementRefs.size(); i++) {
+    auto elemLE =
+        globalState->getRegion(elementType)
+            ->checkValidReference(FL(), functionState, builder, false, elementType, elementRefs[i]);
+    arrValueLE = LLVMBuildInsertValue(builder, arrValueLE, elemLE, i, "");
+  }
+  return toRef(globalState->getRegion(referenceM), referenceM, arrValueLE);
 }
 
 Ref Unsafe::mallocStr(
@@ -564,8 +567,17 @@ LoadResult Unsafe::loadElementFromSSA(
     LiveRef arrayRef,
     InBoundsLE indexInBoundsLE) {
   auto ssaDef = globalState->program->getStaticSizedArray(ssaMT);
-  return regularloadElementFromSSA(
-      globalState, functionState, builder, ssaRefMT, ssaDef->elementType, arrayRef, indexInBoundsLE, &kindStructs);
+  auto elementType = ssaDef->elementType;
+  // A SINGLE array borrow is a pointer to its (control-block-free) inner [N x elem]; GEP to element i
+  // and yield a *borrow* of its storage (the element pointer), like loadMember. No load here — the
+  // caller Derefs to read the value.
+  assert(LLVMGetTypeKind(LLVMTypeOf(arrayRef.refLE)) == LLVMPointerTypeKind);
+  auto elementLT = globalState->getRegion(elementType)->translateType(elementType);
+  LLVMValueRef indices[2] = { constI32LE(globalState, 0), indexInBoundsLE.refLE };
+  auto elementPtrLE =
+      LLVMBuildInBoundsGEP2(builder, LLVMArrayType(elementLT, 0), arrayRef.refLE, indices, 2, "ssaElemPtr");
+  auto elementBorrowType = globalState->metalCache->getBorrowRef(elementType);
+  return LoadResult{toRef(globalState->getRegion(elementBorrowType), elementBorrowType, elementPtrLE)};
 }
 
 LoadResult Unsafe::loadElementFromRSA(

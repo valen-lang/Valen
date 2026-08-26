@@ -26,22 +26,10 @@ Ref translateNewArrayFromValues(
             FL(), functionState, builder, false, ssaDefM->elementType, elementLE);
   }
 
-  auto staticSizedArrayMT = newArrayFromValues->arrayType;
-
-  // If we get here, arrayLT is a pointer to our counted struct.
-  auto resultRef =
-      globalState->getRegion(newArrayFromValues->result)->constructStaticSizedArray(
-          functionState,
-          builder,
-          newArrayFromValues->result,
-          newArrayFromValues->arrayType);
-  fillStaticSizedArray(
-      globalState,
+  return globalState->getRegion(newArrayFromValues->result)->constructStaticSizedArray(
       functionState,
       builder,
       newArrayFromValues->result,
-      staticSizedArrayMT,
-      resultRef,
+      newArrayFromValues->arrayType,
       elementsLE);
-  return toRef(globalState, newArrayFromValues->result, resultRef);
 }

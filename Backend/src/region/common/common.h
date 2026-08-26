@@ -248,16 +248,6 @@ Ref resilientDowncast(
     InterfaceKind *sourceInterfaceKind);
 ControlBlock makeMutNonWeakableControlBlock(GlobalState* globalState, RegionId* regionId);
 ControlBlock makeMutWeakableControlBlock(GlobalState* globalState, RegionId* regionId);
-void fillStaticSizedArray(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    Kind* ssaRefMT,
-    StaticSizedArrayT* ssaMT,
-    LiveRef ssaRef,
-    const std::vector<Ref>& elementRefs);
-
-
 void regularCheckValidReference(
     AreaAndFileAndLine checkerAFL,
     GlobalState* globalState,

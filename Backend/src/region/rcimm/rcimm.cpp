@@ -533,11 +533,12 @@ WrapperPtrLE RCImm::lockWeakRef(
   exit(1);
 }
 
-LiveRef RCImm::constructStaticSizedArray(
+Ref RCImm::constructStaticSizedArray(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     Kind* referenceM,
-    StaticSizedArrayT* kindM) {
+    StaticSizedArrayT* kindM,
+    const std::vector<Ref>& elementRefs) {
   { assert(false); throw 1337; }
 //   auto resultRef =
 //       ::constructStaticSizedArray(
@@ -1669,24 +1670,17 @@ void RCImm::defineConcreteSsaNewFunction(StaticSizedArrayDefinitionT* ssaDef) {
       (FunctionState* functionState, LLVMBuilderRef builder) -> void {
         auto arrRefMT = prototype->returnType;
 
-        auto arrLiveRef =
-            constructStaticSizedArray(functionState, builder, arrRefMT, ssaDef->kind);
-
         auto elementRefMT = ssaDef->elementType;
+        std::vector<Ref> elementRefs;
         for (int i = 0; i < ssaDef->size; i++) {
-          auto elementRef =
+          elementRefs.push_back(
               toRef(globalState->getRegion(elementRefMT), elementRefMT,
-                    functionState->getParam(UserArgIndex{i}));
-          auto indexInBoundsLE = InBoundsLE{constI32LE(globalState, i)};
-          initializeElementInSSA(
-              functionState, builder, arrRefMT, ssaDef->kind,
-              arrLiveRef, indexInBoundsLE, elementRef);
+                    functionState->getParam(UserArgIndex{i})));
         }
 
-        // constructStaticSizedArray starts the array at RC=1 (see SRCAO). The
-        // element params flow directly into the array via initializeElement
-        // without re-aliasing, mirroring the struct case.
-        auto arrRef = toRef(globalState, arrRefMT, arrLiveRef);
+        // The element params flow directly into the array, mirroring the struct case.
+        auto arrRef =
+            constructStaticSizedArray(functionState, builder, arrRefMT, ssaDef->kind, elementRefs);
         auto arrLE = checkValidReference(FL(), functionState, builder, false, arrRefMT, arrRef);
         LLVMBuildRet(builder, arrLE);
       });

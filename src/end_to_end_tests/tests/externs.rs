@@ -16,7 +16,7 @@ fn run(dir_rel: &str, expected: i32) {
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn structmutparamdeepexport() { run("programs/externs/structmutparamdeepexport", 42); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn rsamutparamexport()        { run("programs/externs/rsamutparamexport", 10); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn rsamutreturnexport()       { run("programs/externs/rsamutreturnexport", 42); }
-#[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn ssamutparamexport()        { run("programs/externs/ssamutparamexport", 10); }
+#[test] fn ssamutparamexport()        { run("programs/externs/ssamutparamexport", 10); }
 #[test] #[ignore = "deferred: borrow-shape backend arc (vcoord Phase 2 / *int_ptr)"] fn ssamutreturnexport()       { run("programs/externs/ssamutreturnexport", 42); }
 
 // --- Shared FFI ---

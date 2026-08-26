@@ -119,11 +119,12 @@ public:
       std::function<Ref(LLVMBuilderRef, Ref)> buildThen,
       std::function<Ref(LLVMBuilderRef)> buildElse) = 0;
 
-  virtual LiveRef constructStaticSizedArray(
+  virtual Ref constructStaticSizedArray(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* referenceM,
-      StaticSizedArrayT* kindM) = 0;
+      StaticSizedArrayT* kindM,
+      const std::vector<Ref>& elementRefs) = 0;
 
   virtual LiveRef checkRefLive(
       AreaAndFileAndLine checkerAFL,

@@ -16,50 +16,9 @@ Ref translateStaticArrayFromCallable(
     BlockState* blockState,
     LLVMBuilderRef builder,
     StaticArrayFromCallable* staticArrayFromCallable) {
-
-  auto generatorExpr = staticArrayFromCallable->generator;
-  auto staticSizedArrayMT = staticArrayFromCallable->arrayType;
-
-  auto ssaDefMT = globalState->program->getStaticSizedArray(staticSizedArrayMT);
-  auto elementType = ssaDefMT->elementType;
-  // The generator is the receiver (param 0) of the per-element generator method.
-  auto generatorType = staticArrayFromCallable->generatorMethod->params[0];
-  auto generatorValueType = peel_all_references(generatorType);
-  auto resultValueType = peel_all_references(staticArrayFromCallable->result);
-  auto sizeRef = globalState->constI32(ssaDefMT->size);
-
-  auto generatorRef = translateExpression(globalState, functionState, blockState, builder, generatorExpr);
-  globalState->getRegion(generatorValueType)
-      ->checkValidReference(FL(), functionState, builder, true, generatorType, generatorRef);
-
-  // arrayLT is a pointer to our counted struct.
-  auto ssaLiveRef =
-      globalState->getRegion(resultValueType)->constructStaticSizedArray(
-          functionState,
-          builder,
-          staticArrayFromCallable->result,
-          staticSizedArrayMT);
-  auto ssaRef = toRef(globalState, staticArrayFromCallable->result, ssaLiveRef);
-
-  buildFlare(FL(), globalState, functionState, builder);
-  fillStaticSizedArrayFromCallable(
-      globalState,
-      functionState,
-      builder,
-      staticArrayFromCallable->result,
-      staticSizedArrayMT,
-      elementType,
-      generatorType,
-      staticArrayFromCallable->generatorMethod,
-      generatorRef,
-      sizeRef,
-      ssaLiveRef);
-  buildFlare(FL(), globalState, functionState, builder);
-
-  globalState->getRegion(resultValueType)
-      ->checkValidReference(FL(), functionState, builder, true, staticArrayFromCallable->result, ssaRef);
-
-  globalState->getRegion(generatorValueType)->dealias(AFL("ConstructRSA"), functionState, builder, generatorType, generatorRef);
-
-  return ssaRef;
+  // Not yet migrated to the inline (values-based) constructStaticSizedArray. A static array built
+  // from a callable runs the generator per element; constructStaticSizedArray now takes the element
+  // values up front, so this path must unroll the generator over the (statically-known) size into an
+  // element vector. It's closure-blocked and its tests are deferred, so it's left unimplemented.
+  { assert(false); throw 1337; }
 }

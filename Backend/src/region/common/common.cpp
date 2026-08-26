@@ -280,33 +280,19 @@ void innerDeallocate(
     Kind* refMT,
     LiveRef ref) {
   buildFlare(FL(), globalState, functionState, builder);
-  // VCOORD: clean this
-  // Inline (SINGLE) placement only applies to single-owner structs; everything else the free
-  // path reaches here — shared structs, strings, arrays — is a heap object, deallocated yonder.
+  // VCOORD: clean thisw
+  // Single-owned things dont need to be deallocated.
   if (auto structKindM = dynamic_cast<StructKind *>(peel_all_references(refMT))) {
     if (globalState->program->getStruct(structKindM)->sharedness == Sharedness::SINGLE) {
       // Do nothing, it's inline!
       return;
     }
   }
-  innerDeallocateYonder(from, globalState, functionState, kindStrutsSource, builder, refMT, ref);
-}
-
-void fillStaticSizedArray(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    Kind* ssaRefMT,
-    StaticSizedArrayT* ssaMT,
-    LiveRef ssaRef,
-    const std::vector<Ref>& elementRefs) {
-
-  for (int i = 0; i < elementRefs.size(); i++) {
-    // Making an InBoundsLE because the bound of the containing loop is the size of the array.
-    auto indexInBoundsLE = InBoundsLE{constI64LE(globalState, i)};
-    globalState->getRegion(ssaRefMT)->initializeElementInSSA(
-        functionState, builder, ssaRefMT, ssaMT, ssaRef, indexInBoundsLE, elementRefs[i]);
+  // Single-owned things dont need to be deallocated, and SSAs are always single.
+  if (dynamic_cast<StaticSizedArrayT *>(peel_all_references(refMT))) {
+    return;
   }
+  innerDeallocateYonder(from, globalState, functionState, kindStrutsSource, builder, refMT, ref);
 }
 
 void fillRuntimeSizedArray(

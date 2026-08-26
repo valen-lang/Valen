@@ -219,11 +219,12 @@ public:
 
   // Returns a LLVMValueRef for a ref to the string object.
   // The caller should then use getStringBytesPtr to then fill the string's contents.
-  LiveRef constructStaticSizedArray(
+  Ref constructStaticSizedArray(
       FunctionState* functionState,
       LLVMBuilderRef builder,
       Kind* referenceM,
-      StaticSizedArrayT* kindM) override;
+      StaticSizedArrayT* kindM,
+      const std::vector<Ref>& elementRefs) override;
 
   // should expose a dereference thing instead
 //  LLVMValueRef getStaticSizedArrayElementsPtr(
