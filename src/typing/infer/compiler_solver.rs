@@ -21,6 +21,7 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::infer_compiler::InferEnv;
+use crate::typing::rule_runes::rune_usages;
 use crate::typing::names::names::*;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::templata::templata::expect_integer;
@@ -145,99 +146,7 @@ where
   's: 't,
 {
   pub fn get_runes(&self, rule: IRulexSR<'s>) -> Vec<IRuneS<'s>> {
-    let result: Vec<IRuneS<'s>> = rule.rune_usages().iter().map(|ru| ru.rune).collect();
-    if self.opts.global_options.sanity_check {
-      // val sanityChecked: Vector[RuneUsage] =
-      //   rule match {
-      let sanity_checked: Vec<RuneUsage<'s>> = match rule {
-        //     case LookupSR(range, rune, literal) => Vector(rune)
-        IRulexSR::Lookup(r) => vec![r.rune],
-        //     case RuneParentEnvLookupSR(range, rune) => Vector(rune)
-        IRulexSR::RuneParentEnvLookup(r) => vec![r.rune],
-        //     case EqualsSR(range, left, right) => Vector(left, right)
-        IRulexSR::Equals(r) => vec![r.left, r.right],
-        //     case DefinitionCoordIsaSR(range, result, sub, suuper) => Vector(result, sub, suuper)
-        // IRulexSR::DefinitionCoordIsa(r) => vec![r.result_rune, r.sub_rune, r.super_rune],
-        //     case CallSiteCoordIsaSR(range, result, sub, suuper) => result.toVector ++ Vector(sub, suuper)
-        // IRulexSR::CallSiteCoordIsa(r) => {
-        // let mut v: Vec<RuneUsage<'s>> = r.result_rune.into_iter().collect();
-        // v.push(r.sub_rune);
-        // v.push(r.super_rune);
-        // v
-        // }
-        //     case KindComponentsSR(range, resultRune, mutabilityRune) => Vector(resultRune, mutabilityRune)
-        // IRulexSR::KindComponents(r) => vec![r.kind_rune],
-        //     case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => Vector(resultRune, ownershipRune, kindRune)
-        // IRulexSR::CoordComponents(r) => vec![r.result_rune, r.ownership_rune, r.kind_rune],
-        //     case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => Vector(resultRune, paramsRune, returnRune)
-        // IRulexSR::PrototypeComponents(r) => vec![r.result_rune, r.params_rune, r.return_rune],
-        //     case DefinitionFuncSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
-        IRulexSR::DefinitionFunc(r) => vec![r.result_rune, r.params_list_rune, r.return_rune],
-        //     case CallSiteFuncSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
-        IRulexSR::CallSiteFunc(r) => vec![r.prototype_rune, r.params_list_rune, r.return_rune],
-        //     case ResolveSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
-        IRulexSR::Resolve(r) => vec![r.result_rune, r.params_list_rune, r.return_rune],
-        //     case OneOfSR(range, rune, literals) => Vector(rune)
-        // IRulexSR::OneOf(r) => vec![r.rune],
-        //     case IsConcreteSR(range, rune) => Vector(rune)
-        // IRulexSR::IsConcrete(r) => vec![r.rune],
-        //     case IsInterfaceSR(range, rune) => Vector(rune)
-        // IRulexSR::IsInterface(r) => vec![r.rune],
-        //     case IsStructSR(range, rune) => Vector(rune)
-        // IRulexSR::IsStruct(r) => vec![r.rune],
-        //     case CoerceToCoordSR(range, coordRune, kindRune) => Vector(coordRune, kindRune)
-        // IRulexSR::CoerceToCoord(r) => vec![r.coord_rune, r.kind_rune],
-        //     case LiteralSR(range, rune, literal) => Vector(rune)
-        IRulexSR::Literal(r) => vec![r.rune],
-        //     case AugmentSR(range, resultRune, ownership, innerRune) => Vector(resultRune, innerRune)
-        // IRulexSR::Augment(r) => vec![r.result_rune, r.inner_rune],
-        //     case CallSR(range, resultRune, templateRune, args) => Vector(resultRune, templateRune) ++ args
-        IRulexSR::Call(r) => {
-          let mut v = vec![r.result_rune, r.template_rune];
-          v.extend_from_slice(r.args);
-          v
-        }
-        //     case KindListSR(range, resultRune, members) => Vector(resultRune) ++ members
-        // IRulexSR::Pack(r) => {
-        // let mut v = vec![r.result_rune];
-        // v.extend_from_slice(r.members);
-        // v
-        // }
-        //     case CoordSendSR(range, senderRune, receiverRune) => Vector(senderRune, receiverRune)
-        // IRulexSR::CoordSend(r) => vec![r.sender_rune, r.receiver_rune],
-        //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(resultRune, coordListRune)
-        // IRulexSR::RefListCompoundMutability(r) => vec![r.result_rune, r.coord_list_rune],
-        //     case other => vimpl(other)
-        IRulexSR::BorrowRef(r) => {
-          let mut runes = vec![r.result_rune, r.inner_rune];
-          match r.region {
-            RegionSR::Unspecified => {}
-            RegionSR::Held => {}
-            RegionSR::Rune(ru) => runes.push(ru.clone()),
-          }
-          runes
-        }
-        IRulexSR::WeakRef(r) => vec![r.result_rune, r.inner_rune],
-        IRulexSR::OwnRef(r) => vec![r.result_rune, r.inner_rune],
-        IRulexSR::KindList(r) => {
-          let mut things = Vec::new();
-          things.push(r.result_rune);
-          things.extend_from_slice(r.members);
-          things
-        }
-        // This whole sanity_checked block is a debug-mode hand-duplicate of
-        // rune_usages(); it could be deleted outright, leaving rune_usages() the single
-        // source of truth.
-        other => panic!("get_runes sanity check: unhandled rule {:?}", other),
-      };
-      //   vassert(result sameElements sanityChecked.map(_.rune))
-      let sanity_runes: Vec<IRuneS<'s>> = sanity_checked.iter().map(|ru| ru.rune).collect();
-      assert!(
-        result.iter().zip(sanity_runes.iter()).all(|(a, b)| a == b)
-          && result.len() == sanity_runes.len()
-      );
-    }
-    result
+    rune_usages(&rule).iter().map(|ru| ru.rune).collect()
   }
 }
 
@@ -334,7 +243,7 @@ where
     initially_known_rune_to_templata: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
   ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
     for rule in &rules {
-      for rune_usage in rule.rune_usages() {
+      for rune_usage in rune_usages(rule) {
         assert!(
           rune_to_type.contains_key(&rune_usage.rune),
           "rune {} is used by a rule but has no type: {:?}",

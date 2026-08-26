@@ -42,6 +42,7 @@ pub mod expression;
 pub mod function;
 pub mod infer;
 pub mod macros;
+pub mod rule_runes;
 pub mod rune_typing;
 
 // The query services the typing pass can consult. Always compiled: it is what keeps the

@@ -32,7 +32,6 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn simple_lambda() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

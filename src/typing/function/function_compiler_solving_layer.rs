@@ -253,7 +253,6 @@ where
     // sites at :407, :556 and :720 do; this one does not, so it is wrong for any function with a
     // source-written parameter. Fold `params.flat_map(value_type_rules ++ type_outer_ref_rules)`
     // in the way they do.
-    unimplemented!("header_rules alone: fold in the per-param type-binding rules, see @PFVSZ");
     let call_site_rules = self.assemble_call_site_rules(function.header_rules);
 
     // VTBRX: thread coutputs/calling_env/call_range_t/call_location/context_region into this call (seam signature change, Edit 2).

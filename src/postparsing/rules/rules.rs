@@ -62,43 +62,6 @@ impl<'s> IRulexSR<'s> {
       IRulexSR::OwnRef(x) => &x.range,
     }
   }
-
-  pub fn rune_usages<'r>(&'r self) -> Vec<RuneUsage<'s>> {
-    match self {
-      IRulexSR::Equals(x) => vec![x.left.clone(), x.right.clone()],
-      IRulexSR::Literal(x) => vec![x.rune.clone()],
-      IRulexSR::Lookup(x) => vec![x.rune.clone()],
-      IRulexSR::Call(x) => {
-        let mut usages = vec![x.result_rune.clone(), x.template_rune.clone()];
-        usages.extend(x.args.iter().cloned());
-        usages
-      }
-      IRulexSR::RuneParentEnvLookup(x) => vec![x.rune.clone()],
-      IRulexSR::KindList(x) => {
-        let mut usages = vec![x.result_rune.clone()];
-        usages.extend(x.members.iter().cloned());
-        usages
-      }
-      IRulexSR::CallSiteFunc(x) => {
-        vec![x.prototype_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()]
-      }
-      IRulexSR::DefinitionFunc(x) => {
-        vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()]
-      }
-      IRulexSR::Resolve(x) => {
-        vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()]
-      }
-      IRulexSR::BorrowRef(x) => {
-        let mut usages = vec![x.result_rune.clone(), x.inner_rune.clone()];
-        if let RegionSR::Rune(region_rune) = &x.region {
-          usages.push(region_rune.clone());
-        }
-        usages
-      }
-      IRulexSR::WeakRef(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
-      IRulexSR::OwnRef(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
-    }
-  }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

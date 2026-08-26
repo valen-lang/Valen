@@ -13,6 +13,7 @@ use crate::solver::{
   make_solver_state, FailedSolve, ISolverError, RuleError, SimpleSolverState, SolveIncomplete,
 };
 use crate::typing::compiler_outputs::CompilerOutputs;
+use crate::typing::rule_runes::rune_usages;
 use crate::typing::templata::templata::ITemplataT;
 use crate::utils::fx::HashMap;
 use crate::utils::fx::HashSet;
@@ -230,7 +231,7 @@ impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
 }
 
 fn get_rune_typing_runes<'s>(rule: &IRulexSR<'s>) -> Vec<IRuneS<'s>> {
-  rule.rune_usages().iter().map(|ru| ru.rune.clone()).collect()
+  rune_usages(rule).iter().map(|ru| ru.rune.clone()).collect()
 }
 
 fn get_rune_typing_puzzles<'s>(rule: &IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
@@ -613,19 +614,13 @@ fn solve_rule<'s, 't, E: IRuneTypeSolverEnv<'s, 't>>(
         IndexSet::default(),
       )
     }
-    IRulexSR::BorrowRef(BorrowRefSR { result_rune, inner_rune, region, .. }) => {
-      let mut conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = [
+    IRulexSR::BorrowRef(BorrowRefSR { result_rune, inner_rune, .. }) => {
+      let conclusions: IndexMap<IRuneS<'s>, ITemplataType<'s>> = [
         (result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
         (inner_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
       ]
       .into_iter()
       .collect();
-      if let RegionSR::Rune(region_rune) = region {
-        conclusions.insert(
-          region_rune.rune.clone(),
-          ITemplataType::RegionTemplataType(RegionTemplataType {}),
-        );
-      }
       // V: i removed this because its not really a templata so it cant be a conclusion, sound right?
       // conclusions.insert(region.rune.clone(), ITemplataType::RegionTemplataType(RegionTemplataType {}));
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(
@@ -881,7 +876,7 @@ where
   let mut all_runes_set: crate::utils::fx::IndexSet<IRuneS<'s>> =
     crate::utils::fx::IndexSet::default();
   for rule in rules_s {
-    for rune_usage in rule.rune_usages() {
+    for rune_usage in rune_usages(rule) {
       all_runes_set.insert(rune_usage.rune.clone());
     }
   }

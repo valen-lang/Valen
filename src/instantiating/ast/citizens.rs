@@ -22,7 +22,6 @@ pub struct StructDefinitionI<'s, 'i> {
     pub weakable: bool,
     pub sharedness: SharednessI,
     pub members: &'i [StructMemberI<'s, 'i>],
-    pub is_closure: bool,
     pub rune_to_function_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
     pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
 }

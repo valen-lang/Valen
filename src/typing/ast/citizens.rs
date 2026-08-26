@@ -65,7 +65,6 @@ pub struct StructDefinitionT<'s, 't> {
   pub weakable: bool,
   pub sharedness: SharednessT,
   pub members: &'t [StructMemberT<'s, 't>],
-  pub is_closure: bool,
   pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 

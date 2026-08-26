@@ -419,16 +419,6 @@ where
     result
   }
 
-  pub fn struct_is_closure(
-    &self,
-    _state: &mut CompilerOutputs<'s, 't>,
-    _struct_tt: StructTT<'s, 't>,
-  ) -> bool {
-    panic!("Unimplemented: struct_is_closure");
-    // val structDef = state.lookupStruct(structTT.id)
-    // structDef.isClosure
-  }
-
   pub fn predict_function(
     &self,
     envs: InferEnv<'s, 't>,

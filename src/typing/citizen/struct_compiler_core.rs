@@ -171,7 +171,6 @@ where
       weakable: struct_a.weakable,
       sharedness,
       members: members_slice,
-      is_closure: false,
       instantiation_bound_params,
     });
 
@@ -517,7 +516,6 @@ where
           })
           .collect::<Vec<_>>(),
       ),
-      is_closure: true,
       instantiation_bound_params: self.typing_interner.alloc(InstantiationBoundArgumentsT {
         rune_to_bound_prototype: self.typing_interner.alloc_index_map(),
         rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map(),

@@ -1138,7 +1138,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
 
     pub fn translate_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _new_id_t: &IdT<'s, 't>, _new_id: &IdI<'s, 'i>, _struct_def_t: &StructDefinitionT<'s, 't>) {
-        let StructDefinitionT { template_name: _, instantiated_citizen: _, attributes, weakable, sharedness, members, is_closure, instantiation_bound_params: _ } = _struct_def_t;
+        let StructDefinitionT { template_name: _, instantiated_citizen: _, attributes, weakable, sharedness, members, instantiation_bound_params: _ } = _struct_def_t;
         let perspective_region_t = RegionT::Default;
         let sharedness_i = Self::translate_mutability(sharedness);
         if _monouts.struct_to_sharedness.contains_key(_new_id) {
@@ -1156,7 +1156,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             weakable: *weakable,
             sharedness: sharedness_i,
             members: self.interner.bump().alloc_slice_fill_iter(members_i.into_iter()),
-            is_closure: *is_closure,
             rune_to_function_bound: ArenaIndexMap::new_in(self.interner.bump()),
             rune_to_impl_bound: ArenaIndexMap::new_in(self.interner.bump()),
         };

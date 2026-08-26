@@ -302,7 +302,6 @@ pub struct ExternT<'s> {
   pub package_coord: PackageCoordinate<'s>,
 }
 
-impl<'s> ExternT<'s> {}
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct FunctionHeaderT<'s, 't> {

@@ -1214,7 +1214,6 @@ fn simple_struct() {
             name: IVarNameT::Member(MemberNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }),
             tyype: KindT::Int(IntT { bits: 32 }),
           }],
-          is_closure: false,
           ..
         }
       )
@@ -1381,7 +1380,6 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
       unapply_simple_name(&d.template_name).as_deref() == Some("MyStruct")
         && !d.weakable
         && matches!(d.sharedness, SharednessT::Single)
-        && !d.is_closure
     })
     .collect();
   let struct_def = expect_1(&structs_matching);
@@ -1450,7 +1448,6 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
       unapply_simple_name(&d.template_name).as_deref() == Some("MyStruct")
         && !d.weakable
         && matches!(d.sharedness, SharednessT::Single)
-        && !d.is_closure
     })
     .collect();
   let struct_def = expect_1(&structs_matching);

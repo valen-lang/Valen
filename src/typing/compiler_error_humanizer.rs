@@ -16,6 +16,7 @@ use crate::solver::solver_error_humanizer::humanize_failed_solve as solver_human
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
+use crate::typing::rule_runes::rune_usages;
 use crate::typing::citizen::struct_compiler::*;
 use crate::typing::compilation::TypingPassOptions;
 use crate::typing::compiler_error_reporter::*;
@@ -654,8 +655,8 @@ fn humanize_rejection_reason<'s, 't>(
         |tyype: ITemplataType<'s>| humanize_templata_type(&tyype),
         humanize_rule_error_fn,
         |rule: &IRulexSR<'s>| *rule.range(),
-        |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| (u.rune, u.range)).collect(),
-        |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| u.rune).collect(),
+        |rule: &IRulexSR<'s>| rune_usages(rule).iter().map(|u| (u.rune, u.range)).collect(),
+        |rule: &IRulexSR<'s>| rune_usages(rule).iter().map(|u| u.rune).collect(),
         humanize_rule,
         &reason.failed_solve,
       )
@@ -951,8 +952,8 @@ pub fn humanize_candidate_and_failed_solve<'s, 't>(
       )
     },
     |rule: &IRulexSR<'s>| *rule.range(),
-    |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| (u.rune, u.range)).collect(),
-    |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| u.rune).collect(),
+    |rule: &IRulexSR<'s>| rune_usages(rule).iter().map(|u| (u.rune, u.range)).collect(),
+    |rule: &IRulexSR<'s>| rune_usages(rule).iter().map(|u| u.rune).collect(),
     |rule: &IRulexSR<'s>| humanize_rule(rule),
     result,
   );

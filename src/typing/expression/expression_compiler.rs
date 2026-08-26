@@ -135,28 +135,31 @@ where
         Ok(Some(lookup_te_decayed))
       }
       Some(IVariableT::Capture(rcv)) => {
-        let closured_vars_struct_ref = *rcv.closured_vars_struct_type;
-        let closured_vars_struct_template_id =
-          self.get_struct_template(closured_vars_struct_ref.id);
-        let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
-          INameT::LambdaCitizenTemplate(n) => n,
-          _ => panic!(
-            "evaluate_addressible_lookup ReferenceClosure: expected LambdaCitizenTemplateNameT"
-          ),
+        // A captured variable lives in the closure struct, reached through the closure `self` param.
+        // Borrow `self` (LocalLookup -> `&Closure`), then member-access the capture (MemberLookup ->
+        // `&<member kind>`). The member is itself a borrow, so this is a genuine `&&`, decayed back
+        // to a single borrow the same way the local-load path above does.
+        let closure_param_imprecise = IImpreciseNameS::ClosureParamImpreciseName(
+          self.scout_arena.intern_closure_param_imprecise_name(),
+        );
+        let self_local = match nenv.get_variable(closure_param_imprecise, self.typing_interner) {
+          Some(IVariableT::Local(local)) => local,
+          _ => panic!("closure self param not found while reading capture {:?}", rcv.name),
         };
-        // VCOORD: this might need to go away
-        // ZHERE: implement closure-var mention (a member-lookup into the closure struct); currently unwired.
-        panic!("unimplemented!");
-        // let closured_vars_struct_ref_coord = KindT::new(ownership, RegionT::Default, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)));
-        // let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
-        // assert!(closured_vars_struct_def.members.iter().any(|m| m.name == rcv.name));
-        // let borrow_expr = self.borrow_soft_load(coutputs, ExpressionTE::LocalLookup(self.typing_interner.alloc(
-        //     LocalLookupTE::new(self.typing_interner, ranges[0], LocalVariable::Reference(LocalVariable {
-        //         name: IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location})),
-        //         tyype: closured_vars_struct_ref_coord,
-        //     })))));
-        // Ok(Some(ExpressionTE::MemberLookup(self.typing_interner.alloc(
-        //     MemberLookupTE::new(self.typing_interner, ranges[0], borrow_expr, rcv.name, rcv.coord)))))
+        let self_lookup = ExpressionTE::LocalLookup(
+          self.typing_interner.alloc(LocalLookupTE::new(self.typing_interner, ranges[0], self_local)),
+        );
+        let member_lookup = ExpressionTE::MemberLookup(self.typing_interner.alloc(
+          MemberLookupTE::new(self.typing_interner, ranges[0], self_lookup, rcv.name, rcv.kind),
+        ));
+        // VCOORD: do we really want to decay this like this here? i think so, but unsure.
+        let member_lookup_decayed = match member_lookup.result() {
+          KindT::BorrowRef(BorrowRefT { inner: KindT::BorrowRef(_) }) => ExpressionTE::Deref(
+            self.typing_interner.alloc(DerefTE::new(self.typing_interner, ranges[0], member_lookup)),
+          ),
+          _ => member_lookup,
+        };
+        Ok(Some(member_lookup_decayed))
       }
       None => {
         let lookup_filter: HashSet<ILookupContext> =
@@ -275,6 +278,7 @@ where
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
     region: RegionT,
     closure_struct_ref: StructTT<'s, 't>,
   ) -> ExpressionTE<'s, 't> {
@@ -291,19 +295,22 @@ where
       .iter()
       .map(|member| {
         let StructMemberT { name: member_name, tyype, .. } = member;
-        // let lookup = self.evaluate_addressible_lookup(coutputs, nenv, range, region, *member_name)
-        //     .unwrap_or_else(|_| panic!("evaluate_addressible_lookup error"))
-        //     .unwrap_or_else(|| panic!("Couldn't find {:?}", member_name));
-        // let coord = substituter.substitute_for_coord(coutputs, *tyype);
-        // assert_eq!(coord, lookup.result());
-        // // Closures never contain owned objects.
-        // // If we're capturing an own, then on the inside of the closure
-        // // it's a borrow or a weak. See "Captured own is borrow" test for more.
-        // assert!(is_ref(coord));
-        // panic!("unimplemented");
-        // // let borrow_loaded = self.borrow_soft_load(coutputs, lookup);
-        // // borrow_loaded
-        panic!("unimplemented!");
+        let member_imprecise = member_name
+            .imprecise_name()
+            .unwrap_or_else(|| panic!("closure member has no imprecise name: {:?}", member_name));
+        let lookup = self
+            .evaluate_lookup_for_load(coutputs, nenv, range, call_location, region, member_imprecise)
+            .unwrap_or_else(|_| panic!("evaluate_lookup_for_load error"))
+            .unwrap_or_else(|| panic!("Couldn't find {:?}", member_name));
+        let coord = substituter.substitute_for_kind(coutputs, *tyype);
+        assert_eq!(coord, lookup.result());
+        // Closures never contain owned objects.
+        // If we're capturing an own, then on the inside of the closure
+        // it's a borrow or a weak. See "Captured own is borrow" test for more.
+        assert!(is_ref(coord));
+        // A lookup already yields a borrow of the outer variable (LocalLookup/MemberLookup
+        // result is a BorrowRef), so it is directly the borrow we store in the closure member.
+        lookup
       })
       .collect();
     let struct_ref = self.typing_interner.alloc(closure_struct_ref);
@@ -2642,6 +2649,7 @@ where
       coutputs,
       nenv,
       &range_list,
+      call_location,
       region,
       closure_struct_tt,
     );

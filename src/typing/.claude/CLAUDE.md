@@ -10,3 +10,5 @@ Exceptions (AI is allowed to edit these parts of the typing pass):
 * `macros`
 
 AI can edit these if the user explicitly authorizes specific edits by saying "fire core edits".
+
+AI can add read-only print statements for debugging purposes only, if the user explicitly authorizes by saying "fire core prints".

@@ -10,6 +10,7 @@ use crate::solver::solver::*;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
+use crate::typing::rule_runes::rune_usages;
 use crate::typing::citizen::struct_compiler::*;
 use crate::typing::citizen::struct_compiler::{IResolveOutcome, ResolveFailure, ResolveSuccess};
 use crate::typing::compiler::Compiler;
@@ -170,7 +171,7 @@ where
     let call_site_rules =
       self.assemble_predict_rules(interface_a.generic_params, template_args.len() as i32);
     let call_site_rule_runes: Vec<IRuneS<'s>> =
-      call_site_rules.iter().flat_map(|r| r.rune_usages().into_iter().map(|ru| ru.rune)).collect();
+      call_site_rules.iter().flat_map(|r| rune_usages(r).into_iter().map(|ru| ru.rune)).collect();
     let runes_for_prediction: HashSet<IRuneS<'s>> = interface_a
       .generic_params
       .iter()
@@ -280,7 +281,7 @@ where
     let call_site_rules =
       self.assemble_predict_rules(struct_a.generic_params, template_args.len() as i32);
     let call_site_rule_runes: Vec<IRuneS<'s>> =
-      call_site_rules.iter().flat_map(|r| r.rune_usages().into_iter().map(|ru| ru.rune)).collect();
+      call_site_rules.iter().flat_map(|r| rune_usages(r).into_iter().map(|ru| ru.rune)).collect();
     let runes_for_prediction: HashSet<IRuneS<'s>> = struct_a
       .generic_params
       .iter()
