@@ -43,6 +43,12 @@ Ref buildCallOrSideCall(
   const ExternAbi* abi = lookupExternAbi(globalState, prototype);
   bool hasAbi = abi != nullptr;
 
+  // buildBoundarySignature is the single source of the declared LLVM parameter/return types (it is also
+  // what declareExternFunction declares the extern from). The marshaling below builds each argument to
+  // the type sig.paramTypesL declares, and reads sig.usesReturnOutParam for the return, so the call site
+  // is driven from the same signature the declaration is, not kept in sync by hand.
+  auto sig = buildBoundarySignature(globalState, prototype);
+
   auto hostArgsLE = std::vector<LLVMValueRef>{};
   hostArgsLE.reserve(valeArgRefs.size() + 1);
 
@@ -57,17 +63,22 @@ Ref buildCallOrSideCall(
         continue;
       }
       auto argValueKind = peel_all_references(valeArgRefMT);
-      if (c.kind == CoercionKind::DirectInt && dynamic_cast<StructKind*>(argValueKind)) {
-        // rustc passes this small struct in a register as an integer. Reinterpret the Vale struct
-        // value's bytes as that integer: store it into a slot, load the slot as iN.
+      if ((c.kind == CoercionKind::DirectInt || c.kind == CoercionKind::Cast)
+          && dynamic_cast<StructKind*>(argValueKind)) {
+        // rustc passes this small struct in a single register integer (DirectInt for a scalar-repr
+        // struct, Cast for a memory-repr one). Reinterpret the Vale struct's bytes as that integer, whose
+        // type buildBoundarySignature already declared for this parameter. The slot is that integer type,
+        // so its alloca carries the integer's alignment, which the struct's natural alignment could
+        // underprovide.
         auto valeArgLE =
             globalState->getRegion(argValueKind)
                 ->checkValidReference(FL(), functionState, builder, true, valeArgRefMT, valeArg);
-        auto slot = makeBackendLocal(functionState, builder, LLVMTypeOf(valeArgLE), "argCoerceSlot", valeArgLE);
-        auto iN = LLVMIntTypeInContext(globalState->context, c.directIntBits);
-        auto asIN = LLVMBuildLoad2(
-            builder, iN, LLVMBuildBitCast(builder, slot, LLVMPointerType(iN, 0), "argCoercePtr"), "argAsInt");
-        hostArgsLE.push_back(asIN);
+        auto iN = sig.paramTypesL[hostArgsLE.size() + (sig.usesReturnOutParam ? 1u : 0u)];
+        auto slot = makeBackendLocal(functionState, builder, iN, "argCoerceSlot", LLVMGetUndef(iN));
+        LLVMBuildStore(
+            builder, valeArgLE,
+            LLVMBuildBitCast(builder, slot, LLVMPointerType(LLVMTypeOf(valeArgLE), 0), "argCoercePtr"));
+        hostArgsLE.push_back(LLVMBuildLoad2(builder, iN, slot, "argAsInt"));
         continue;
       }
       if (c.kind == CoercionKind::DirectPtr) {
@@ -113,13 +124,11 @@ Ref buildCallOrSideCall(
 
   auto returnKind = peel_all_references(prototype->returnType);
 
-  // The return crosses via sret when the descriptor says Indirect (a large struct). A C extern has no
-  // descriptor and uses the structural rule instead. An interop sret slot is the Vale value type itself
-  // (sized by the struct-layout map), so the load already yields translateType(returnKind); a C extern
-  // uses the `{i64}` handle type instead.
-  bool retIndirect = hasAbi
-      ? abi->ret.kind == CoercionKind::Indirect
-      : returnNeedsOutParam(globalState, prototype->returnType);
+  // Whether the return crosses via an sret out-pointer comes straight from the signature, so the call
+  // site and declareExternFunction agree by construction. An interop sret slot is the Vale value type
+  // itself (sized by the struct-layout map), so the load already yields translateType(returnKind); a C
+  // extern uses the `{i64}` handle type instead.
+  bool retIndirect = sig.usesReturnOutParam;
   auto slotLT = hasAbi
       ? globalState->getRegion(returnKind)->translateType(returnKind)
       : globalState->getRegion(returnKind)->getExternalType(returnKind);
@@ -155,17 +164,18 @@ Ref buildCallOrSideCall(
 
   auto valeReturnRefMT = prototype->returnType;
 
-  if (hasAbi && abi->ret.kind == CoercionKind::DirectInt
+  if (hasAbi
+      && (abi->ret.kind == CoercionKind::DirectInt || abi->ret.kind == CoercionKind::Cast)
       && dynamic_cast<StructKind*>(returnKind)) {
-    // rustc returned this small struct in a register as an integer. Reinterpret its bytes back into
-    // the Vale struct value, then hand that to the normal receive (a plain toRef, whose type now
-    // matches translateType(returnKind)).
+    // rustc returned this small struct in a single register integer (DirectInt for a scalar-repr struct,
+    // Cast for a memory-repr one). hostReturnLE is that iN; reinterpret its bytes back into the Vale
+    // struct through an integer-typed slot, whose alloca carries the integer's alignment (which the
+    // struct's natural alignment could underprovide). Its type now matches translateType(returnKind).
     auto valeStructLT = globalState->getRegion(returnKind)->translateType(returnKind);
-    auto slot = makeBackendLocal(functionState, builder, valeStructLT, "retCoerceSlot", LLVMGetUndef(valeStructLT));
-    LLVMBuildStore(
-        builder, hostReturnLE,
-        LLVMBuildBitCast(builder, slot, LLVMPointerType(LLVMTypeOf(hostReturnLE), 0), "retCoercePtr"));
-    hostReturnLE = LLVMBuildLoad2(builder, valeStructLT, slot, "retStruct");
+    auto slot = makeBackendLocal(functionState, builder, LLVMTypeOf(hostReturnLE), "retCoerceSlot", hostReturnLE);
+    hostReturnLE = LLVMBuildLoad2(
+        builder, valeStructLT,
+        LLVMBuildBitCast(builder, slot, LLVMPointerType(valeStructLT, 0), "retCoercePtr"), "retStruct");
   }
 
   auto valeReturnRef =

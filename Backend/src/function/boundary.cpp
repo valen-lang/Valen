@@ -82,7 +82,6 @@ const ExternAbi* lookupExternAbi(GlobalState* globalState, Prototype* prototypeM
   return iter == externAbis.end() ? nullptr : &iter->second;
 }
 
-// VCOORD: revisit this
 BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* prototypeM) {
   if (const ExternAbi* abi = lookupExternAbi(globalState, prototypeM)) {
     // Descriptor-driven (interop): build the signature from the per-arg/return coercions so it matches
@@ -99,7 +98,9 @@ BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* pr
     for (const Coercion& c : abi->args) {
       switch (c.kind) {
         case CoercionKind::Ignore: break;  // zero-sized: not passed at all
+        // DirectInt and Cast both cross as a single integer of directIntBits bits.
         case CoercionKind::DirectInt:
+        case CoercionKind::Cast:
           paramTypesL.push_back(LLVMIntTypeInContext(globalState->context, c.directIntBits)); break;
         // Per @EACBIPZ, an Indirect arg (like a DirectPtr borrow) is a plain pointer, no byval.
         case CoercionKind::DirectPtr:
@@ -110,7 +111,9 @@ BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* pr
     switch (abi->ret.kind) {
       case CoercionKind::Ignore:
       case CoercionKind::Indirect: returnLT = voidLT; break;  // Indirect returns through the out-pointer
+      // DirectInt and Cast both return as a single integer of directIntBits bits.
       case CoercionKind::DirectInt:
+      case CoercionKind::Cast:
         returnLT = LLVMIntTypeInContext(globalState->context, abi->ret.directIntBits); break;
       case CoercionKind::DirectPtr: returnLT = ptrLT; break;
       default: { assert(false); throw 1337; }

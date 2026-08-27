@@ -456,3 +456,31 @@ pub fn add_and_return(mut d: Domino, loc: i32) -> Domino {
     d.glyphs.insert(loc, Glyph::new(loc));
     d
 }
+
+/// An 8-byte struct. Three fields keep it a plain Memory-repr aggregate (not `ScalarPair`), so on
+/// aarch64 rustc classifies it by value as `PassMode::Cast` with a single i64 unit: it crosses as a bare
+/// `i64`. This is `PieceId`'s shape.
+#[repr(C)]
+pub struct Small8 {
+    a: i32,
+    b: i16,
+    c: i16,
+}
+
+impl Small8 {
+    /// A `&self` accessor, so a test can observe a `Cast`-returned `Small8` without passing it by value.
+    pub fn small_a(&self) -> i32 {
+        self.a
+    }
+}
+
+/// Returns a `Small8` BY VALUE: a `Cast` return that crosses as a single `i64` on aarch64.
+pub fn make_small(a: i32, b: i32, c: i32) -> Small8 {
+    Small8 { a, b: b as i16, c: c as i16 }
+}
+
+/// Takes a `Small8` BY VALUE (a `Cast` argument crossing as an `i64`) alongside a scalar, the mirror of
+/// `make_small` and the shape of `pack_id`. The scalar arg exercises the Cast-arg-plus-scalar interaction.
+pub fn small_plus(s: Small8, bonus: i32) -> i32 {
+    s.a + bonus
+}

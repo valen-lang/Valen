@@ -520,10 +520,13 @@ enum class CoercionKind {
   DirectPtr,  // as a pointer: a borrow (&self, &mut self) or a *mut T
   Indirect,   // through memory by pointer, per @EACBIPZ: a large struct like the 48-byte Domino, as an
               // sret out-parameter for a return or a pointer to a caller-made copy for an argument
+  Cast,       // a small struct rustc casts to one integer of `directIntBits` bits: its bytes cross as
+              // that integer, e.g. an 8-byte struct as an i64. Distinct from DirectInt in that the
+              // struct is a memory-class aggregate, and the integer needs its own alignment on reassembly.
 };
 struct Coercion {
   CoercionKind kind;
-  uint32_t directIntBits;  // width when kind == DirectInt; ignored otherwise
+  uint32_t directIntBits;  // width when kind == DirectInt or Cast; ignored otherwise
 };
 // One extern function's ABI: how its return and each argument cross.
 struct ExternAbi {

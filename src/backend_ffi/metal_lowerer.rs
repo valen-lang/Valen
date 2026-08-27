@@ -37,12 +37,15 @@ pub struct StructLayout {
 }
 
 /// How one argument or return value crosses an extern boundary. Mirrors the C++ `CoercionKind`
-/// (Ignore / DirectInt / DirectPtr / Indirect).
+/// (Ignore / DirectInt / DirectPtr / Indirect / Cast).
 pub enum Coercion {
     Ignore,
     DirectInt(u32),
     DirectPtr,
     Indirect,
+    /// A small struct that rustc `Cast`s to a single integer of this many bits: it crosses as that
+    /// integer (the struct's bytes reinterpreted), e.g. an 8-byte struct as an `i64`.
+    Cast(u32),
 }
 
 impl Coercion {
@@ -52,6 +55,7 @@ impl Coercion {
             Coercion::DirectInt(bits) => CoercionFFI { kind: 1, bits: *bits },
             Coercion::DirectPtr => CoercionFFI { kind: 2, bits: 0 },
             Coercion::Indirect => CoercionFFI { kind: 3, bits: 0 },
+            Coercion::Cast(bits) => CoercionFFI { kind: 4, bits: *bits },
         }
     }
 }

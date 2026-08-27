@@ -1362,6 +1362,41 @@ exported func main() int {
   expect: Expect::Returns(7),
 };
 
+/// A Rust function returns an 8-byte struct BY VALUE: rustc `PassMode::Cast` crossing as a single `i64`
+/// (count 1). Vale reassembles the `Small8` from the `i64` and reads field `a` (=6) through a borrow.
+/// This is `PieceId`'s shape (`unpack_id`).
+pub const SMALL8_CAST_RETURN: Case = Case {
+  fixture: "fixtures",
+  name: "small8-cast-return",
+  vale: r#"
+import rust.mycrate.Small8;
+import rust.mycrate.make_small;
+exported func main() int {
+  s = make_small(6, 1, 2);
+  return s.small_a();
+}
+"#,
+  expect: Expect::Returns(6),
+};
+
+/// A Vale program passes an 8-byte struct BY VALUE into a Rust function: rustc `PassMode::Cast` crossing
+/// as a single `i64`, alongside a scalar arg. `small_plus(^s, 4)` returns `s.a + 4` = 10. This is the
+/// Cast argument direction (`pack_id`'s shape).
+pub const SMALL8_CAST_ARG: Case = Case {
+  fixture: "fixtures",
+  name: "small8-cast-arg",
+  vale: r#"
+import rust.mycrate.Small8;
+import rust.mycrate.make_small;
+import rust.mycrate.small_plus;
+exported func main() int {
+  s = make_small(6, 1, 2);
+  return small_plus(^s, 4);
+}
+"#,
+  expect: Expect::Returns(10),
+};
+
 /// The surviving hazard of hosting rustc inside `cargo test --lib`, pinned as a regression test.
 /// `fixtures_broken_rust/` does not parse, so this drives a rustc **fatal** error through an
 /// in-process `run_compiler`. Measured cost: this one case, not the run.

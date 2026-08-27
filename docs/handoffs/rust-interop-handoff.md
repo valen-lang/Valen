@@ -15,7 +15,31 @@ ABI" for how the four modes are handled, including large structs passed by value
 `Pair`/`Cast` register-split args are the one shape still unimplemented (see "Next"). Design
 sources of truth: `docs/architecture/vale-rust-interop-architecture.md`,
 `src/instantiating/instantiating-rust-interop-design.md`, the backend's `Backend/backend-design.md` (the C-ABI /
-shim-removal direction), and the roadmap `docs/plans/rust-interop-plan.md`.
+shim-removal direction), the roadmap `docs/plans/rust-interop-plan.md`, and the intended-design authority
+`docs/architecture/rust-interop-design.md` (whose target names the tree does not yet carry; see the next
+section).
+
+## Design doc vs as-built (naming and unbuilt pieces)
+
+`docs/architecture/rust-interop-design.md` states the intended design; the tree diverges from its target
+names and lacks two of its pieces. Tracked here so neither doc has to carry the gap.
+
+- **Callbacks struct.** The design's `ValenRustInteropCallbacks` is two structs today: `ValeCallbacks`
+  (typing-only driver, returns `Compilation::Stop`, `src/typing/rust_interop/driver/main.rs`) and
+  `DrivenCallbacks` (drives codegen, returns `Compilation::Continue`,
+  `src/typing/test/rust_interop/harness.rs`). Both implement only `config` and `after_expansion`.
+- **Interop state.** The design's `RUSTC_VALENC_INTEROP_STATE` is the thread-local `DRIVER_STATE` (a
+  `Cell<*const ()>`) pointing at the `DriverState` struct, both in `src/instantiating/rust_interop/mod.rs`.
+- **`after_analysis` is unbuilt.** No callbacks struct implements it and there is no `.vale-cache`; the
+  design reserves it as the cache-write point (@CMWAR).
+- **No `ValeCodegenBackend`.** The architecture's wrapper over `LlvmCodegenBackend` (arch §5.4 / App. C.1)
+  does not exist. Its intended job is **marker-gated activation**: `provide`/`init` install the query
+  overrides and Vale runtime init only for crates carrying `__VALE_STUBS_MARKER`, delegating all codegen
+  (`codegen_crate`/`join_codegen`/`link`) to the inner backend — it never emits Vale IR itself; the
+  `fill_extra_modules` hook does. The tree instead installs overrides unconditionally via
+  `config.override_queries` and injects bodies via `set_fill_extra_modules_hook(consumer_fill_modules)` on
+  the stock backend (`harness.rs`), with no marker gating — fine for a single-crate driven test, but the
+  pass-through gating is exactly what the real cargo build (many pure-Rust crates) will need.
 
 ## State (regenerate, don't trust stale)
 

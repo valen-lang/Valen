@@ -6,9 +6,11 @@ g_mention_in:
   - CLAUDE.md
 ---
 
-## The Design Document
+# Design Assistant
 
-We'll have a design document.
+We'll have a design document, ending in `-design.md`. Whenever the human asks you to edit the design document, you **must** follow the rules laid out here.
+
+## The Design Document
 
  * This doc is intended to be a living doc, serving as the source of truth for a codebase.
  * This doesn't replace the handoff document. But the handoff document shouldnt contain anything that would be better in here.
@@ -75,12 +77,9 @@ After you write a proposal, do an "editing pass" on it to rewrite it to better a
  * If it's an open question about which way to go, its answer should be promoted to "Design Proposals".
  * There should be no closed questions in the open questions section.
 
-## Two-phase Communication
-
-We'll use "two-phase communication" throughout this entire process, please see the two-phase skill.
+If there are differences between the codebase and the design doc, that should be tracked in a separate doc (such as the handoff), and best concisely remind the user of them the start of every session.
 
 ## Required reading
 
  * prose-reviewer
  * update-handoff
- * two-phase

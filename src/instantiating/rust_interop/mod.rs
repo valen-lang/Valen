@@ -24,7 +24,7 @@ use rustc_middle::mir::{
 };
 use rustc_middle::middle::deduced_param_attrs::DeducedParamAttrs;
 use rustc_middle::mir::mono::{CodegenUnit, MonoItemPartitions};
-use rustc_abi::{BackendRepr, Primitive};
+use rustc_abi::{BackendRepr, Primitive, RegKind};
 use rustc_middle::ty::adjustment::PointerCoercion;
 use rustc_middle::ty::{self, Instance, Ty, TyCtxt};
 use rustc_middle::util::Providers;
@@ -774,6 +774,20 @@ fn compute_extern_abi<'tcx>(tcx: TyCtxt<'tcx>, instance: Instance<'tcx>) -> Opti
           }
         }
         Coercion::DirectInt(arg.layout.size.bits() as u32)
+      }
+      // A small struct rustc `Cast`s to registers. We handle the single-integer case only: no leading
+      // prefix registers, and one integer unit covering the whole value (count 1) — an 8-byte struct
+      // crossing as a bare `i64` (PieceId). Multi-piece (`[2 x i64]`), float, or prefixed casts are
+      // deferred, like Pair/HFA.
+      PassMode::Cast { cast, pad_i32: false } => {
+        if cast.prefix.iter().any(|p| p.is_some())
+          || cast.rest_offset.is_some()
+          || cast.rest.unit.kind != RegKind::Integer
+          || cast.rest.total != cast.rest.unit.size
+        {
+          panic!("unsupported Cast {cast:?} for interop extern (only a single integer unit is handled)");
+        }
+        Coercion::Cast(cast.rest.unit.size.bits() as u32)
       }
       other => panic!("unsupported PassMode {other:?} for interop extern (Pair/Cast and on-stack byval not yet handled)"),
     }

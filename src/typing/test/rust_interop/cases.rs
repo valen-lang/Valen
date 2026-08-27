@@ -698,6 +698,34 @@ fn rustc_driven_bin_domino_byval_arg_with_sret_returns_seven() {
   );
 }
 
+/// A Rust function returns an 8-byte struct by value — rustc `PassMode::Cast` crossing as a single
+/// `i64` (count 1). Vale reassembles the `Small8` from the `i64` and reads field `a` (=6). PieceId's
+/// return shape.
+#[test]
+fn rustc_driven_bin_small8_cast_return_returns_six() {
+  let run = run_case_rustc_driven_and_run(&SMALL8_CAST_RETURN);
+  assert_eq!(
+    run.process_exit,
+    Some(6),
+    "the driven small8 cast-return bin did not exit 6 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// A Vale program passes an 8-byte struct by value into a Rust function — rustc `PassMode::Cast` as a
+/// single `i64`, alongside a scalar arg. `small_plus(^s, 4)` returns `s.a + 4` = 10. The Cast argument
+/// direction (`pack_id`'s shape).
+#[test]
+fn rustc_driven_bin_small8_cast_arg_returns_ten() {
+  let run = run_case_rustc_driven_and_run(&SMALL8_CAST_ARG);
+  assert_eq!(
+    run.process_exit,
+    Some(10),
+    "the driven small8 cast-arg bin did not exit 10 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
 /// Regression guard for the driven harness's diagnostics, not an interop feature. When a driven Vale
 /// program fails to typecheck, the harness must surface that. Before it did, a failed typecheck left
 /// `hinputs` None, which read downstream as an empty `__vale_main -> []` firing log plus an undefined
