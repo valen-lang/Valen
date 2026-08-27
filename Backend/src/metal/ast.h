@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -38,6 +39,32 @@ class Function;
 class Prototype;
 class Name;
 
+// An imported extern struct's layout (e.g. from rustc's tcx.layout_of), carried on the metal
+// Package so Unsafe::defineStruct can size the opaque struct as [size/align x i{align*8}].
+// General source-agnostic metadata; the interop provider fills it today.
+struct OpaqueStructLayout {
+  uint64_t sizeBytes;
+  uint64_t alignBytes;
+};
+// How one argument or return value crosses an extern boundary. Source-agnostic: filled from
+// rustc's FnAbi for interop, or a standalone C-ABI classifier later. buildCallOrSideCall marshals
+// per this.
+enum class CoercionKind {
+  Ignore,     // not passed at all: a unit `()` return, like the drop shim's
+  DirectInt,  // in a register as an integer of `directIntBits` bits: a small struct, e.g. Counter -> i32
+  DirectPtr,  // as a pointer: a borrow (&self, &mut self) or a *mut T
+  Indirect,   // through a hidden sret out-parameter: a large struct return, e.g. the 48-byte Domino
+};
+struct Coercion {
+  CoercionKind kind;
+  uint32_t directIntBits;  // width when kind == DirectInt; ignored otherwise
+};
+// One extern function's ABI: how its return and each argument cross.
+struct ExternAbi {
+  Coercion ret;
+  std::vector<Coercion> args;
+};
+
 class Package {
 public:
   PackageCoordinate* packageCoordinate;
@@ -54,6 +81,15 @@ public:
   std::unordered_map<std::string, Kind*> exportNameToKind;
   std::unordered_map<std::string, Prototype*> externNameToFunction;
   std::unordered_map<std::string, Kind*> externNameToKind;
+  // VCOORD: see if we can key not by name
+  // Imported extern-struct layouts, keyed by the struct's fullName->name (like structs / externNameToKind).
+  // General source-agnostic metadata, empty unless a producer (the interop provider) filled it;
+  // Unsafe::defineStruct reads it to size an opaque struct instead of building from members.
+  std::unordered_map<std::string, OpaqueStructLayout> structLayouts;
+  // VCOORD: see if we can key not by name
+  // Per-extern ABI descriptors, keyed by the extern symbol (like externNameToFunction). Empty for
+  // descriptor-less C externs; buildCallOrSideCall reads it to coerce each crossing.
+  std::unordered_map<std::string, ExternAbi> externAbis;
   // These are inverses of the above maps
   std::unordered_map<Prototype*, std::string, AddressHasher<Prototype*>> functionToExportName;
   std::unordered_map<Kind*, std::string, AddressHasher<Kind*>> kindToExportName;
@@ -72,7 +108,9 @@ public:
     std::unordered_map<std::string, Prototype*> exportNameToFunction_,
     std::unordered_map<std::string, Kind*> exportNameToKind_,
     std::unordered_map<std::string, Prototype*> externNameToFunction_,
-    std::unordered_map<std::string, Kind*> externNameToKind_) :
+    std::unordered_map<std::string, Kind*> externNameToKind_,
+    std::unordered_map<std::string, OpaqueStructLayout> structLayouts_,
+    std::unordered_map<std::string, ExternAbi> externAbis_) :
       packageCoordinate(packageCoordinate_),
       interfaces(std::move(interfaces_)),
       structs(std::move(structs_)),
@@ -84,6 +122,8 @@ public:
       exportNameToKind(std::move(exportNameToKind_)),
       externNameToFunction(std::move(externNameToFunction_)),
       externNameToKind(std::move(externNameToKind_)),
+      structLayouts(std::move(structLayouts_)),
+      externAbis(std::move(externAbis_)),
       functionToExportName(0, addressNumberer->makeHasher<Prototype*>()),
       kindToExportName(0, addressNumberer->makeHasher<Kind*>()),
       functionToExternName(0, addressNumberer->makeHasher<Prototype*>()),

@@ -523,6 +523,8 @@ struct PackageBuilder {
   std::unordered_map<std::string, Kind*> exportNameToKind;
   std::unordered_map<std::string, Prototype*> externNameToFunction;
   std::unordered_map<std::string, Kind*> externNameToKind;
+  std::unordered_map<std::string, OpaqueStructLayout> structLayouts;
+  std::unordered_map<std::string, ExternAbi> externAbis;
 };
 
 extern "C" VIS PackageBuilderHandle* metal_package_builder_new(
@@ -591,6 +593,25 @@ extern "C" VIS void metal_package_builder_add_extern_kind(
     PackageBuilderHandle* h, const char* p, size_t n, KindHandle* v) {
   PB(h)->externNameToKind[str(p, n)] = knd(v);
 }
+// One imported extern struct's layout, keyed by its humanized name (matching add_struct/add_extern_kind).
+extern "C" VIS void metal_package_builder_add_struct_layout(
+    PackageBuilderHandle* h, const char* p, size_t n, uint64_t size, uint64_t align) {
+  PB(h)->structLayouts[str(p, n)] = OpaqueStructLayout{size, align};
+}
+// One extern function's ABI: the return coercion plus an ordered array of per-argument coercions,
+// keyed by the extern symbol (matching add_extern_function). The arg coercions are a genuine
+// positional list, so they cross as an array; the symbol->abi map itself crosses per-entry.
+extern "C" VIS void metal_package_builder_add_extern_abi(
+    PackageBuilderHandle* h, const char* p, size_t n,
+    CoercionFFI ret, const CoercionFFI* args, size_t args_len) {
+  ExternAbi abi;
+  abi.ret = Coercion{static_cast<CoercionKind>(ret.kind), ret.bits};
+  abi.args.reserve(args_len);
+  for (size_t i = 0; i < args_len; i++) {
+    abi.args.push_back(Coercion{static_cast<CoercionKind>(args[i].kind), args[i].bits});
+  }
+  PB(h)->externAbis[str(p, n)] = std::move(abi);
+}
 
 extern "C" VIS PackageHandle* metal_package_builder_finish(PackageBuilderHandle* h) {
   auto* b = PB(h);
@@ -605,7 +626,9 @@ extern "C" VIS PackageHandle* metal_package_builder_finish(PackageBuilderHandle*
       std::move(b->exportNameToFunction),
       std::move(b->exportNameToKind),
       std::move(b->externNameToFunction),
-      std::move(b->externNameToKind));
+      std::move(b->externNameToKind),
+      std::move(b->structLayouts),
+      std::move(b->externAbis));
   delete b;
   return reinterpret_cast<PackageHandle*>(pkg);
 }

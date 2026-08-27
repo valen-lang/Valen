@@ -34,6 +34,10 @@ extern crate rustc_monomorphize;
 extern crate rustc_index;
 #[cfg(feature = "rust_interop")]
 extern crate rustc_abi;
+// rustc_target::callconv::{FnAbi, PassMode}: the per-argument/return calling convention we read to
+// build each Rust leaf's extern ABI descriptor.
+#[cfg(feature = "rust_interop")]
+extern crate rustc_target;
 
 // VCOORD: Onion typing arc: parser + postparsing linked; typing and downstream
 // stay unlinked pending their own slices. higher_typing was retired outright.

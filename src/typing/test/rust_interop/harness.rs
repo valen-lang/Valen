@@ -27,6 +27,7 @@
 // `Compilation::Stop`, so a fixture that type-errors is invisible here. Tier 2 would catch that
 // rot; tier 1 structurally cannot.
 
+use std::collections::HashMap;
 use std::env::var;
 use std::fs::read_dir;
 use tempfile::TempDir;
@@ -40,6 +41,7 @@ use rustc_middle::ty::TyCtxt;
 
 use std::sync::Arc;
 
+use crate::backend_ffi::metal_lowerer::ExternAbi;
 use crate::code_source::{CodeSource, Source};
 use crate::compile_options::GlobalOptions;
 use crate::instantiating::instantiating_interner::InstantiatingInterner;
@@ -683,6 +685,7 @@ fn drive_rustc(case: &Case, emit_backend: bool, crate_type: &str, run_exe: bool)
   let function_exports_slot: RefCell<Vec<FunctionExportI>> = RefCell::new(Vec::new());
   let entry_symbol_slot: RefCell<Option<String>> = RefCell::new(None);
   let firings_slot: RefCell<Vec<String>> = RefCell::new(Vec::new());
+  let extern_abis_slot: RefCell<HashMap<String, ExternAbi>> = RefCell::new(HashMap::new());
   let state = DriverState {
     opts: &global_options,
     interner: &instantiating_interner,
@@ -694,6 +697,7 @@ fn drive_rustc(case: &Case, emit_backend: bool, crate_type: &str, run_exe: bool)
     function_exports: &function_exports_slot,
     entry_symbol: &entry_symbol_slot,
     firings: &firings_slot,
+    extern_abis: &extern_abis_slot,
     emit_backend,
   };
   let state_ptr = &state as *const DriverState as *const ();

@@ -650,6 +650,54 @@ fn rustc_driven_bin_links_and_returns_from_add_two_numbers() {
   );
 }
 
+/// The goal (tier 2): the full domino case, `d = Domino.new(); d.add_glyph(Glyph.new(7)); d_ref =
+/// d.get_glyph(7); return d_ref.location();`, linked and run, returns 7. It protects every ABI mode at
+/// once, each sourced from rustc (`tcx.layout_of` for sizes, `tcx.fn_abi_of_instance` for conventions):
+/// - `Indirect`: the 48-byte `Domino` returned via `sret`, with the aarch64 `sret` attribute.
+/// - `DirectPtr`: the `&mut self`/`&self` receivers and the `&Glyph` return, as pointers.
+/// - `DirectInt`: `Glyph` and `i32` in registers.
+/// - `Ignore`: the scope-end `drop_in_place` of `d`, its owned value spilled to a pointer.
+#[test]
+fn rustc_driven_bin_domino_returns_seven() {
+  let run = run_case_rustc_driven_and_run(&A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven domino bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Ladder rung 1 (tier 2): the first case that runs a non-scalar aggregate across the boundary,
+/// `(make_counter()).get()`, which returns and consumes `Counter{i32}` by value, returns 7. Two things
+/// must hold: the struct-layout map sizes `translateType(Counter)` to a real `[1 x i32]`, and the
+/// extern-abi map crosses `Counter` as `DirectInt(32)`, reinterpreting the value and its register integer.
+#[test]
+fn rustc_driven_bin_method_returns_seven() {
+  let run = run_case_rustc_driven_and_run(&CALLS_A_METHOD_ON_A_RUST_TYPE);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Ladder rung 2 (tier 2): `c = make_counter(); return c.peek();` → 7, linked and run. Adds two ABI
+/// modes over rung 1: the `&self` borrow receiver crosses as a real pointer (`DirectPtr`, a pointer-
+/// scalar layout, not reinterpreted as an integer), and the scope-end drop of `c` has a unit return
+/// (`Ignore`). Sizing of `Counter` is shared with rung 1.
+#[test]
+fn rustc_driven_bin_borrow_self_method_returns_seven() {
+  let run = run_case_rustc_driven_and_run(&CALLS_A_BORROW_SELF_METHOD_ON_A_LOCAL);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
 /// Milestone M, borrow-receiver method: `c = make_counter(); return c.peek();`. `peek(&self)` takes a
 /// borrow receiver, so the request's first parameter is a borrow-wrapped `Counter` rather than a bare
 /// one; the provider must peel the reference to find the owning type. `c` also takes a scope-end drop.

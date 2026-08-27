@@ -13,8 +13,8 @@
 use std::collections::HashMap;
 
 use crate::backend_ffi::metal_cache::{
-    Edge, Expression, Function, InterfaceDef, InterfaceMethod, Kind, Local, MetalCache, Mutability,
-    Name, PackageCoord, Program, Prototype, StructDef, StructMember, Weakability,
+    CoercionFFI, Edge, Expression, Function, InterfaceDef, InterfaceMethod, Kind, Local, MetalCache,
+    Mutability, Name, PackageCoord, Program, Prototype, StructDef, StructMember, Weakability,
 };
 use crate::instantiating::ast::ast::{FunctionDefinitionI, PrototypeI};
 use crate::instantiating::ast::citizens::{InterfaceDefinitionI, StructDefinitionI};
@@ -28,10 +28,48 @@ use crate::instantiating::instantiated_humanizer::humanize_id;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::CodeLocationS;
 
-/// Walk a `HinputsI` and populate the `MetalCache`, returning a fully constructed `Program`.
+/// One imported extern struct's layout, keyed in the map (see `populate_metal_cache`) by the
+/// struct's humanized name. General source-agnostic metadata: the interop provider fills it from
+/// rustc's `tcx.layout_of`, and standalone passes an empty map.
+pub struct StructLayout {
+    pub size: u64,
+    pub align: u64,
+}
+
+/// How one argument or return value crosses an extern boundary. Mirrors the C++ `CoercionKind`
+/// (Ignore / DirectInt / DirectPtr / Indirect).
+pub enum Coercion {
+    Ignore,
+    DirectInt(u32),
+    DirectPtr,
+    Indirect,
+}
+
+impl Coercion {
+    fn to_ffi(&self) -> CoercionFFI {
+        match self {
+            Coercion::Ignore => CoercionFFI { kind: 0, bits: 0 },
+            Coercion::DirectInt(bits) => CoercionFFI { kind: 1, bits: *bits },
+            Coercion::DirectPtr => CoercionFFI { kind: 2, bits: 0 },
+            Coercion::Indirect => CoercionFFI { kind: 3, bits: 0 },
+        }
+    }
+}
+
+/// One extern function's ABI, keyed in the map by the extern's humanized prototype name.
+pub struct ExternAbi {
+    pub ret: Coercion,
+    pub args: Vec<Coercion>,
+}
+
+/// Walk a `HinputsI` and populate the `MetalCache`, returning a fully constructed `Program`. The
+/// two maps carry general extern metadata onto the metal `Package` (see S14): `struct_layouts` keyed
+/// by humanized struct name, `extern_abis` by humanized prototype name. Both are empty for standalone.
 pub fn populate_metal_cache<'cache, 's, 'i>(
     cache: &'cache MetalCache,
     monouts: &HinputsI<'s, 'i>,
+    struct_layouts: &HashMap<String, StructLayout>,
+    extern_abis: &HashMap<String, ExternAbi>,
 ) -> Program<'cache>
 where
     's: 'i,
@@ -59,7 +97,7 @@ where
     let pb = cache.new_program_builder();
     for pc in package_coords {
         let coord = lowerer.lower_package_coord(pc);
-        let package = lowerer.lower_package(monouts, pc, coord);
+        let package = lowerer.lower_package(monouts, pc, coord, struct_layouts, extern_abis);
         pb.add_package(coord, package);
     }
     pb.finish()
@@ -144,6 +182,8 @@ impl<'cache> Lowerer<'cache> {
         monouts: &HinputsI<'s, 'i>,
         pc: &'s PackageCoordinate<'s>,
         coord: PackageCoord<'cache>,
+        struct_layouts: &HashMap<String, StructLayout>,
+        extern_abis: &HashMap<String, ExternAbi>,
     ) -> crate::backend_ffi::metal_cache::Package<'cache> {
         let pkg_key = pc as *const _ as usize;
         let pb = self.cache.new_package_builder(coord);
@@ -217,12 +257,27 @@ impl<'cache> Lowerer<'cache> {
             // backend binds it verbatim, single-symbol arch §5.2), or the declared extern name for a
             // C extern (the backend composes the vale_abi_ shim name from it).
             pb.add_extern_function(e.link_name, self.lower_prototype(e.prototype));
+            // If a producer computed this extern's ABI (interop, from rustc's FnAbi), record it on the
+            // package keyed by the prototype's humanized name. That is the same key the prototype gets, and
+            // the key buildCallOrSideCall / GlobalState.externFunctions look up by. Absent for C externs.
+            let extern_key = humanize_id(&code_map, &e.prototype.id, None);
+            if let Some(abi) = extern_abis.get(&extern_key) {
+                let ret = abi.ret.to_ffi();
+                let args: Vec<CoercionFFI> = abi.args.iter().map(|c| c.to_ffi()).collect();
+                pb.add_extern_abi(&extern_key, ret, &args);
+            }
         }
         for (struct_it, _extern) in monouts.kind_externs.iter() {
             if struct_it.id.package_coord as *const _ as usize != pkg_key {
                 continue;
             }
-            pb.add_extern_kind(&humanize_id(&code_map, &struct_it.id, None), self.lower_struct_kind(**struct_it));
+            let name = humanize_id(&code_map, &struct_it.id, None);
+            pb.add_extern_kind(&name, self.lower_struct_kind(**struct_it));
+            // If a producer sized this imported struct (interop, from rustc's layout_of), record it on
+            // the package keyed by the same humanized name. Absent leaves the backend to size from members.
+            if let Some(layout) = struct_layouts.get(&name) {
+                pb.add_struct_layout(&name, layout.size, layout.align);
+            }
         }
 
         pb.finish()

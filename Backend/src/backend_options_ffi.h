@@ -38,6 +38,32 @@ typedef struct BackendCompileOptionsFFI {
   uint8_t print_mem_overhead;
 } BackendCompileOptionsFFI;
 
+// Compile mode selector for BackendInputsFFI.mode.
+#define BACKEND_MODE_STANDALONE 0
+#define BACKEND_MODE_INTEROP    1
+
+// Interop-only inputs, read by the backend only when
+// BackendInputsFFI.mode == BACKEND_MODE_INTEROP: rustc's borrowed LLVMContext +
+// Module, and the rustc-mangled symbol to emit the entry under ("" or null → the
+// literal __vale_main).
+typedef struct InteropInputsFFI {
+  void* context;
+  void* module;
+  const char* entry_symbol;
+} InteropInputsFFI;
+
+// The single unified backend entry payload. `mode` selects which fields are read:
+// standalone reads only cache/program/options; interop additionally reads `interop`.
+// Field order and types must stay in sync with the Rust mirror BackendInputsFFIRaw
+// in src/backend_ffi/backend_inputs.rs.
+typedef struct BackendInputsFFI {
+  void* cache;                     // MetalCacheHandle*
+  void* program;                   // ProgramHandle*
+  BackendCompileOptionsFFI options;
+  int32_t mode;                    // BACKEND_MODE_*
+  InteropInputsFFI interop;        // read only when mode == BACKEND_MODE_INTEROP
+} BackendInputsFFI;
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

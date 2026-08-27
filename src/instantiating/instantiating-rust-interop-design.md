@@ -57,6 +57,79 @@ Notes:
 
 ## Design Proposals
 
+S14 (refines S9–S13, the map-crossing mechanism): The layout and ABI maps are **general extern-metadata
+on the core metal `Package`** (`Backend/src/metal/ast.h`). `structLayouts` is keyed by the humanized
+struct name (like `structs`/`externNameToKind`); `externAbis` is keyed by the humanized *prototype* name
+(the key `GlobalState.externFunctions` and `buildCallOrSideCall` use, **not** the extern symbol, which is
+what `externNameToFunction` keys by). They are not rust-specific; only the *producer* is. That is what
+keeps interop out of core: the metal maps are general and **source-agnostic** (S13), filled by the interop
+provider now and a standalone C-ABI classifier later, and the core reads them without knowing rustc exists.
+The `Coercion` / `ExternAbi` / `OpaqueStructLayout` types live in the metal layer (`metal/ast.h`).
+
+They cross the FFI the way the whole metal AST already does: the builder FFI, one `add(key, value)` call
+per entry into a C++-owned `std::unordered_map` (`metal_package_builder_add_struct_layout` /
+`_add_extern_abi`, beside `add_extern_function`), never a flat `#[repr(C)]` array. So the maps ride the
+`Program` handle already inside `BackendInputs`; they are **not** separate `InteropInputs` fields or
+forwarded parameters (this is what refines S9/S11/S12). `populate_metal_cache`, handed the provider's
+computed maps, calls the builders in its extern-kind / extern-function loops; standalone passes empty
+maps. Consumers read off the program, not `GlobalState`: `Unsafe::defineStruct` looks up
+`program->getPackage(…)->structLayouts`, and `buildCallOrSideCall` reads `…->externAbis` (relocating S13's
+channel from `GlobalState` to `Package`). The producer is unchanged from S8/S9: `rust_interop` computes the
+maps from `tcx.layout_of` / `tcx.fn_abi_of_instance` at the end of instantiation, and only that computation
+touches rustc.
+
+S13: The extern-ABI map (`Package.externAbis`, relocated there by S14) is the single, **source-agnostic**
+ABI-descriptor channel. Every extern
+function's boundary is driven by a per-extern descriptor (per-argument and return coercions), consumed
+uniformly by `buildCallOrSideCall` and the rest of the boundary regardless of where it came from —
+mechanism (consume) is separated from policy (classify). Interop populates it from rustc's
+`fn_abi_of_instance`; standalone valec will later populate it from its own per-target C-ABI classifier
+(the Zig/Odin/C3-style S9/S10 shim-removal work), computed elsewhere and delivered through this same
+map. The current `hasAbi` fallback — the structural sret rule plus the `{i64}` handle type for
+descriptor-less C externs — is temporary scaffolding: once every extern carries a descriptor, `hasAbi`
+is always true, that fallback is dead, and the descriptor-less path is deleted.
+
+S12 (refines S11, as built for Part A): All data handed to the backend is one `BackendInputs`
+(`src/backend_ffi/backend_inputs.rs`), a **two-variant enum by mode** (`Standalone(StandaloneInputs)` |
+`Interop(InteropInputs)`) for symmetry; the `Interop` variant nests the rust-specific data (rustc's
+borrowed context + module and the entry symbol). (The type-to-size and ABI maps do **not** ride
+`InteropInputs`; per S14 they ride the `Program` handle via the metal builder FFI.)
+The C++ backend exposes **one** compile entry — `backend_compile`, taking the flattened
+`BackendInputsFFI` (interop fields nested in `InteropInputsFFI`) — and both modes (`compileStandalone`,
+`compileIntoModuleFromRustc`) are `static` internals of `vale.cpp`, reached only through it.
+`rust_interop` and the standalone driver call the single Rust `compile(BackendInputs)`, never the
+backend directly. Open gap: as built, callers build the metal cache and pass `cache`/`program` in
+`BackendInputs`; the intent that the entry itself *creates* the metal cache from the program is not
+yet realized.
+
+S11 (refined by S14): `rust_interop` never calls the backend directly. It hands its data to a core-owned
+emit function (in `src/backend_ffi/`, the existing instantiator-to-backend bridge) that declares every
+forwarded datum as an explicit parameter and performs the metal-cache build and backend call. Core owns
+the instantiator-to-backend boundary, so `rust_interop` cannot pass the backend any data that core has
+not declared and approved. This is nice because no subsystem can smuggle data across a boundary core
+does not control. (Per S14 the two maps are not forwarded parameters; they are built into the metal
+cache through the core-owned builder FFI, which the same no-smuggling argument covers.)
+
+S10 (mechanism refined by S14): The rust-specific layout and calling-convention *logic* is the rustc
+queries that compute the maps. That logic stays in `rust_interop`, out of the core compiler, and the core
+instantiator's types (`StructDefinitionI`, `FunctionExternI`) carry no layout or ABI fields. What the
+producer builds, though, is **general** metal metadata, not a `rust_interop`-owned side-map: it lives on
+the core metal `Package` (S14), because it is source-agnostic (S13) and the core reads it without knowing
+rustc exists. S14 puts the maps on the metal AST because they are general enough to belong there, and
+crossing them the metal AST's own way is cleaner than a bespoke channel.
+
+S8: The typing pass stays layout-free. An imported struct's size and align, and each Rust leaf's
+per-argument and return calling convention, are read from rustc at instantiation time
+(`tcx.layout_of` and `tcx.fn_abi_of_instance` in the provider). The typing pass never specifies them.
+
+S9: Vale's C++ backend holds no `tcx`, unlike Harmonious, whose Rust codegen queries rustc directly
+at emit time. So `rust_interop` code, at the end of instantiation, loops over the imported structs and
+Rust leaves and asks rustc, building two maps: imported-struct to layout (from `tcx.layout_of`), and
+Rust-leaf to a per-argument and return ABI descriptor (from `tcx.fn_abi_of_instance`). These maps
+thread to the backend (via the metal builder FFI, per S14), which sizes each opaque struct as
+`[N x i8]` and coerces each call per its descriptor (Direct to a scalar, Indirect to an sret pointer,
+Ignore to void).
+
 S6/S7 (the `Mutex<InstantiatorState>` + ouroboros state) are **superseded** by the as-built mechanism
 in Details: the state lives in the driver's stack frame with real lifetimes, reached through a scoped
 thread-local raw pointer, so no `'static`-holding struct (and thus no ouroboros, no leak) is needed.

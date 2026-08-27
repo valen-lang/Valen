@@ -36,23 +36,63 @@ Ref buildCallOrSideCall(
     LLVMBuilderRef builder,
     Prototype* prototype,
     const std::vector<Ref>& valeArgRefs) {
+  // An interop extern carries an ABI descriptor (from rustc's FnAbi) saying how each argument and the
+  // return crosses (the CoercionKind per arg/return, see metal/ast.h). A C extern has none; it takes the
+  // descriptor-less path in each branch below.
+  // VCOORD: this is temporary until we get much better C interop that does coerce to C ABI.
+  const ExternAbi* abi = lookupExternAbi(globalState, prototype);
+  bool hasAbi = abi != nullptr;
+
   auto hostArgsLE = std::vector<LLVMValueRef>{};
   hostArgsLE.reserve(valeArgRefs.size() + 1);
 
   for (int i = 0; i < valeArgRefs.size(); i++) {
     auto valeArgRefMT = prototype->params[i];
-
     auto valeArg = valeArgRefs[i];
+
+    if (hasAbi) {
+      const Coercion& c = abi->args[i];
+      if (c.kind == CoercionKind::Ignore) {
+        // A zero-sized argument doesn't cross at all.
+        continue;
+      }
+      auto argValueKind = peel_all_references(valeArgRefMT);
+      if (c.kind == CoercionKind::DirectInt && dynamic_cast<StructKind*>(argValueKind)) {
+        // rustc passes this small struct in a register as an integer. Reinterpret the Vale struct
+        // value's bytes as that integer: store it into a slot, load the slot as iN.
+        auto valeArgLE =
+            globalState->getRegion(argValueKind)
+                ->checkValidReference(FL(), functionState, builder, true, valeArgRefMT, valeArg);
+        auto slot = makeBackendLocal(functionState, builder, LLVMTypeOf(valeArgLE), "argCoerceSlot", valeArgLE);
+        auto iN = LLVMIntTypeInContext(globalState->context, c.directIntBits);
+        auto asIN = LLVMBuildLoad2(
+            builder, iN, LLVMBuildBitCast(builder, slot, LLVMPointerType(iN, 0), "argCoercePtr"), "argAsInt");
+        hostArgsLE.push_back(asIN);
+        continue;
+      }
+      if (c.kind == CoercionKind::DirectPtr) {
+        // The host wants a pointer. A borrow already crosses as one, so its sent value is a pointer.
+        // A consuming owned value (a drop's `*mut T`, where Vale holds the value inline) is not, so
+        // spill it to a slot and pass the slot's address. `drop_in_place` runs on it in place; Vale
+        // keeps ownership of the stack slot.
+        auto sentLE = sendValeObjectIntoHost(globalState, functionState, builder, valeArgRefMT, valeArg);
+        if (LLVMGetTypeKind(LLVMTypeOf(sentLE)) != LLVMPointerTypeKind) {
+          sentLE = makeBackendLocal(functionState, builder, LLVMTypeOf(sentLE), "ptrCoerceSlot", sentLE);
+        }
+        hostArgsLE.push_back(sentLE);
+        continue;
+      }
+      // A scalar DirectInt already is its integer. Fall through.
+    }
+
     // Per @FRMACZ, the boundary does no RC. A share arg is *moved* into C by
     // normal Vale operations: the arg expression already produced an owned +1
     // (aliased if the value is used again, moved if it's a last use) exactly as
     // it would for a normal call, and that owned +1 crosses to C here. C owns
     // the arg and discharges it explicitly. Adding an alias here would be a
     // second +1 with no counterpart in the normal-call path — a leak.
-    auto hostArgRefLE =
-        sendValeObjectIntoHost(
-            globalState, functionState, builder, valeArgRefMT, valeArg);
-    hostArgsLE.push_back(hostArgRefLE);
+    hostArgsLE.push_back(
+        sendValeObjectIntoHost(globalState, functionState, builder, valeArgRefMT, valeArg));
   }
 
   auto externFuncIter = globalState->externFunctions.find(prototype->name->name);
@@ -63,18 +103,35 @@ Ref buildCallOrSideCall(
   buildFlare(FL(), globalState, functionState, builder, "Calling extern function ", prototype->name->name);
 
   auto returnKind = peel_all_references(prototype->returnType);
-  auto hostReturnRefLT = globalState->getRegion(returnKind)->getExternalType(returnKind);
+
+  // The return crosses via sret when the descriptor says Indirect (a large struct). A C extern has no
+  // descriptor and uses the structural rule instead. An interop sret slot is the Vale value type itself
+  // (sized by the struct-layout map), so the load already yields translateType(returnKind); a C extern
+  // uses the `{i64}` handle type instead.
+  bool retIndirect = hasAbi
+      ? abi->ret.kind == CoercionKind::Indirect
+      : returnNeedsOutParam(globalState, prototype->returnType);
+  auto slotLT = hasAbi
+      ? globalState->getRegion(returnKind)->translateType(returnKind)
+      : globalState->getRegion(returnKind)->getExternalType(returnKind);
 
   LLVMValueRef hostReturnLE = nullptr;
-  if (returnNeedsOutParam(globalState, prototype->returnType)) {
+  if (retIndirect) {
     auto localPtrLE =
-        makeBackendLocal(functionState, builder, hostReturnRefLT, "retOutParam", LLVMGetUndef(hostReturnRefLT));
+        makeBackendLocal(functionState, builder, slotLT, "retOutParam", LLVMGetUndef(slotLT));
     buildFlare(FL(), globalState, functionState, builder, "Return ptr! ", ptrToIntLE(globalState, builder, localPtrLE));
     hostArgsLE.insert(hostArgsLE.begin(), localPtrLE);
 
     auto resultLE = buildMaybeNeverCall(globalState, builder, externFuncL, hostArgsLE);
+    if (hasAbi) {
+      // Match the declared `sret` attribute at the call site so the out-pointer is lowered into the
+      // platform's hidden result register (x8 on aarch64), not an ordinary arg register.
+      unsigned sretKind = LLVMGetEnumAttributeKindForName("sret", 4);
+      auto sretAttr = LLVMCreateTypeAttribute(globalState->context, sretKind, slotLT);
+      LLVMAddCallSiteAttribute(resultLE, 1u, sretAttr);
+    }
     assert(LLVMTypeOf(resultLE) == LLVMVoidTypeInContext(globalState->context));
-    hostReturnLE = LLVMBuildLoad2(builder, hostReturnRefLT, localPtrLE, "hostReturn");
+    hostReturnLE = LLVMBuildLoad2(builder, slotLT, localPtrLE, "hostReturn");
     buildFlare(FL(), globalState, functionState, builder, "Loaded the return! ",
         LLVMABISizeOfType(globalState->dataLayout, LLVMTypeOf(hostReturnLE)));
   } else {
@@ -85,10 +142,22 @@ Ref buildCallOrSideCall(
   buildFlare(FL(), globalState, functionState, builder, "Done calling function ", prototype->name->name);
   buildFlare(FL(), globalState, functionState, builder, "Resuming function ", functionState->containingFuncName);
 
-
   buildFlare(FL(), globalState, functionState, builder);
 
   auto valeReturnRefMT = prototype->returnType;
+
+  if (hasAbi && abi->ret.kind == CoercionKind::DirectInt
+      && dynamic_cast<StructKind*>(returnKind)) {
+    // rustc returned this small struct in a register as an integer. Reinterpret its bytes back into
+    // the Vale struct value, then hand that to the normal receive (a plain toRef, whose type now
+    // matches translateType(returnKind)).
+    auto valeStructLT = globalState->getRegion(returnKind)->translateType(returnKind);
+    auto slot = makeBackendLocal(functionState, builder, valeStructLT, "retCoerceSlot", LLVMGetUndef(valeStructLT));
+    LLVMBuildStore(
+        builder, hostReturnLE,
+        LLVMBuildBitCast(builder, slot, LLVMPointerType(LLVMTypeOf(hostReturnLE), 0), "retCoercePtr"));
+    hostReturnLE = LLVMBuildLoad2(builder, valeStructLT, slot, "retStruct");
+  }
 
   auto valeReturnRef =
       receiveHostObjectIntoVale(

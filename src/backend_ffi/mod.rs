@@ -1,10 +1,17 @@
 // FFI bridge to the C++ Backend (statically linked via build.rs).
 
+pub mod backend_inputs;
 pub mod metal_cache;
 pub mod metal_lowerer;
 
 use std::ffi::{c_void, CString};
 use std::os::raw::c_char;
+use std::ptr;
+
+use self::backend_inputs::{
+    BackendInputs, BackendInputsFFIRaw, BackendMode, InteropInputsFFIRaw, BACKEND_MODE_INTEROP,
+    BACKEND_MODE_STANDALONE,
+};
 
 // Optimization level, matches BACKEND_OPT_LEVEL_* in Backend/src/backend_options_ffi.h.
 pub const BACKEND_OPT_LEVEL_O0: i32 = 0;
@@ -16,7 +23,7 @@ pub const BACKEND_OPT_LEVEL_O3: i32 = 4;
 /// C-repr mirror of BackendCompileOptionsFFI in
 /// Backend/src/backend_options_ffi.h. Field order and types must match.
 #[repr(C)]
-struct BackendCompileOptionsFFIRaw {
+pub(crate) struct BackendCompileOptionsFFIRaw {
     output_dir: *const c_char,
     triple: *const c_char,
     cpu: *const c_char,
@@ -33,30 +40,11 @@ struct BackendCompileOptionsFFIRaw {
 }
 
 extern "C" {
-    // AST-driven entry. Caller has populated MetalCache+Program via the
-    // metal_cache_ffi.h builders (driven by MetalLowerer against a ProgramH).
-    // ffi_opts carries non-input options; inputs come from the Program.
-    fn backend_compile_program(
-        cache: *mut metal_cache::MetalCacheHandleRaw,
-        program: *mut std::ffi::c_void,
-        ffi_opts: *const BackendCompileOptionsFFIRaw,
-    ) -> i32;
-
-    // Borrowed-mode entry: rustc lends its LLVMContext + Module as raw pointers (from its
-    // `ModuleLlvm` via `llcx_raw_mut()` / `llmod_raw()`) — not the TargetMachine, by Sky's
-    // design; the module already carries rustc's data layout. Vale emits its IR into that
-    // module. rustc owns optimization and object emission afterward, so nothing is disposed
-    // here. Used by the `fill_extra_modules` hook on the interop path.
-    fn backend_compile_program_into(
-        cache: *mut metal_cache::MetalCacheHandleRaw,
-        program: *mut c_void,
-        ffi_opts: *const BackendCompileOptionsFFIRaw,
-        context: *mut c_void,
-        mod_: *mut c_void,
-        // The rustc-mangled symbol to emit the `__vale_main` entry under (single-symbol, arch §5.2), or
-        // null to use the literal `__vale_main`. Null for a library (no entry).
-        entry_symbol: *const c_char,
-    ) -> i32;
+    // The single Rust-facing backend compile entry. Takes one BackendInputsFFI and, inside
+    // the backend, dispatches to the standalone or borrowed-mode compile by `mode`. Caller
+    // retains ownership of cache/program (and, in interop mode, the borrowed context/module);
+    // nothing is freed here.
+    fn backend_compile(inputs: *const BackendInputsFFIRaw) -> i32;
 }
 
 /// Rust-owned build of the FFI options. `output_dir` is required; all
@@ -97,63 +85,18 @@ impl Default for BackendCompileOptions {
     }
 }
 
-/// Safe wrapper around the C++ backend entry. Marshals the options into a
-/// C-POD struct with caller-owned strings and calls across the FFI.
-pub fn backend_compile_program_safe(
-    cache: &metal_cache::MetalCache,
-    program: &metal_cache::Program<'_>,
-    opts: &BackendCompileOptions,
-) -> i32 {
-    let output_dir_c = CString::new(opts.output_dir.as_str()).expect("output_dir contains NUL");
-    let triple_c = CString::new(opts.triple.as_str()).expect("triple contains NUL");
-    let cpu_c = CString::new(opts.cpu.as_str()).expect("cpu contains NUL");
-
-    let raw = BackendCompileOptionsFFIRaw {
-        output_dir: output_dir_c.as_ptr(),
-        triple: triple_c.as_ptr(),
-        cpu: cpu_c.as_ptr(),
-        opt_level: opts.opt_level,
-        pic: opts.pic as u8,
-        verify: opts.verify as u8,
-        print_asm: opts.print_asm as u8,
-        print_llvmir: opts.print_llvmir as u8,
-        census: opts.census as u8,
-        flares: opts.flares as u8,
-        include_bounds_checks: opts.include_bounds_checks as u8,
-        use_atomic_rc: opts.use_atomic_rc as u8,
-        print_mem_overhead: opts.print_mem_overhead as u8,
-    };
-
-    unsafe {
-        backend_compile_program(cache.raw(), program.raw(), &raw)
-    }
-}
-
-/// Borrowed-mode safe wrapper: emit Vale's IR into rustc's lent `(context, module)` — the
-/// `fill_extra_modules` hook path. Same options marshaling as `backend_compile_program_safe`, plus
-/// the two borrowed LLVM handles (obtained from rustc's `ModuleLlvm` via `llcx_raw_mut()` /
-/// `llmod_raw()`). rustc owns optimization, object emission, and disposal, so nothing is disposed
-/// here; the C++ side sources the data layout from the module.
+/// Compile a program through the backend's single entry (`backend_compile`). Marshals
+/// `BackendInputs` into the C-POD payload with caller-owned strings and dispatches by mode.
 ///
-/// # Safety
-/// `context` and `module` must be live LLVM handles rustc lent for the duration of the hook call,
-/// and must not be disposed here — rustc disposes them after the hook returns.
-pub unsafe fn backend_compile_program_into_safe(
-    cache: &metal_cache::MetalCache,
-    program: &metal_cache::Program<'_>,
-    opts: &BackendCompileOptions,
-    context: *mut c_void,
-    module: *mut c_void,
-    entry_symbol: Option<&str>,
-) -> i32 {
-    // Empty string = no explicit entry symbol; the backend then uses the literal `__vale_main`.
-    let entry_symbol_c =
-        CString::new(entry_symbol.unwrap_or("")).expect("entry_symbol contains NUL");
+/// In interop mode, `inputs.mode`'s `context`/`module` must be live LLVM handles rustc lent
+/// for the duration of this call (see `InteropInputs`); they are not disposed here.
+pub fn compile(inputs: BackendInputs) -> i32 {
+    let opts = &inputs.options;
     let output_dir_c = CString::new(opts.output_dir.as_str()).expect("output_dir contains NUL");
     let triple_c = CString::new(opts.triple.as_str()).expect("triple contains NUL");
     let cpu_c = CString::new(opts.cpu.as_str()).expect("cpu contains NUL");
 
-    let raw = BackendCompileOptionsFFIRaw {
+    let options = BackendCompileOptionsFFIRaw {
         output_dir: output_dir_c.as_ptr(),
         triple: triple_c.as_ptr(),
         cpu: cpu_c.as_ptr(),
@@ -169,5 +112,33 @@ pub unsafe fn backend_compile_program_into_safe(
         print_mem_overhead: opts.print_mem_overhead as u8,
     };
 
-    backend_compile_program_into(cache.raw(), program.raw(), &raw, context, module, entry_symbol_c.as_ptr())
+    // Per-mode fields. The entry-symbol CString must outlive the FFI call, so bind it here
+    // for both arms (standalone ignores it).
+    let (mode, context, module, entry_symbol_c) = match &inputs.mode {
+        BackendMode::Standalone(_) => (
+            BACKEND_MODE_STANDALONE,
+            ptr::null_mut(),
+            ptr::null_mut(),
+            CString::new("").expect("empty string is NUL-free"),
+        ),
+        BackendMode::Interop(interop) => (
+            BACKEND_MODE_INTEROP,
+            interop.context,
+            interop.module,
+            CString::new(interop.entry_symbol.unwrap_or("")).expect("entry_symbol contains NUL"),
+        ),
+    };
+
+    let raw = BackendInputsFFIRaw {
+        cache: inputs.cache.raw() as *mut c_void,
+        program: inputs.program.raw(),
+        options,
+        mode,
+        interop: InteropInputsFFIRaw {
+            context,
+            module,
+            entry_symbol: entry_symbol_c.as_ptr(),
+        },
+    };
+    unsafe { backend_compile(&raw) }
 }

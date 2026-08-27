@@ -47,8 +47,7 @@ llvm_map_components_to_libnames(llvm_libs ${LLVM_LINK_COMPONENTS})
 # both link against it.
 set(BACKEND_LIB_SRCS
 		src/vale.cpp
-		src/ffi.cpp
-		src/rust_interop/rust_interop.cpp
+        src/rust_interop/rust_interop.cpp
 		src/globalstate.cpp
 		src/metal/ast.cpp
 		src/metal/metal_cache_ffi.cpp

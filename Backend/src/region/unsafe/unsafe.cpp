@@ -316,10 +316,33 @@ void Unsafe::declareStruct(
 void Unsafe::defineStruct(
     StructDefinition* structM) {
   std::vector<LLVMTypeRef> innerStructMemberTypesL;
-  for (int i = 0; i < structM->members.size(); i++) {
-    innerStructMemberTypesL.push_back(
-        globalState->getRegion(structM->members[i]->type)
-            ->translateType(structM->members[i]->type));
+  // A producer may have recorded a size for this struct on its package (an imported extern struct,
+  // sized from e.g. rustc's layout_of). Only real imported packages carry layouts; builtin structs
+  // (the __vale package may not even be in the program) fall through to the normal member path.
+  // VCOORD: enforce that something should either have members or have an opaque layout, not both/neither
+  const OpaqueStructLayout* layout = nullptr;
+  auto pkgIter = globalState->program->packages.find(structM->kind->fullName->packageCoord);
+  if (pkgIter != globalState->program->packages.end()) {
+    auto& structLayouts = pkgIter->second->structLayouts;
+    auto layoutIter = structLayouts.find(structM->kind->fullName->name);
+    if (layoutIter != structLayouts.end()) {
+      layout = &layoutIter->second;
+    }
+  }
+  if (layout != nullptr) {
+    // Its members are opaque (none crossed), so size it as one aligned blob from the producer's
+    // layout. [size/align x i{align*8}] carries both the right size and alignment.
+    uint64_t sizeBytes = layout->sizeBytes;
+    uint64_t alignBytes = layout->alignBytes;
+    assert(alignBytes > 0 && sizeBytes % alignBytes == 0);
+    auto elementLT = LLVMIntTypeInContext(globalState->context, (unsigned)(alignBytes * 8));
+    innerStructMemberTypesL.push_back(LLVMArrayType(elementLT, (unsigned)(sizeBytes / alignBytes)));
+  } else {
+    for (int i = 0; i < structM->members.size(); i++) {
+      innerStructMemberTypesL.push_back(
+          globalState->getRegion(structM->members[i]->type)
+              ->translateType(structM->members[i]->type));
+    }
   }
   kindStructs.defineStruct(structM->kind, innerStructMemberTypesL);
 }

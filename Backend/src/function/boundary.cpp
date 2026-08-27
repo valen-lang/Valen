@@ -69,7 +69,54 @@ LLVMTypeRef translateExternReturnType(GlobalState* globalState, Kind* returnRefM
   return hostBoundaryType(globalState, returnRefMT);
 }
 
+// VCOORD: revisit this
+const ExternAbi* lookupExternAbi(GlobalState* globalState, Prototype* prototypeM) {
+  // Only externs whose package is in the program and carries a descriptor have one; a builtin extern
+  // (e.g. __vbi_*) whose package isn't in the program falls through to the descriptor-less path.
+  auto pkgIter = globalState->program->packages.find(prototypeM->name->packageCoord);
+  if (pkgIter == globalState->program->packages.end()) {
+    return nullptr;
+  }
+  auto& externAbis = pkgIter->second->externAbis;
+  auto iter = externAbis.find(prototypeM->name->name);
+  return iter == externAbis.end() ? nullptr : &iter->second;
+}
+
+// VCOORD: revisit this
 BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* prototypeM) {
+  if (const ExternAbi* abi = lookupExternAbi(globalState, prototypeM)) {
+    // Descriptor-driven (interop): build the signature from the per-arg/return coercions so it matches
+    // exactly what buildCallOrSideCall marshals. A pointer is opaque under LLVM 21, so any ptr type serves.
+    auto voidLT = LLVMVoidTypeInContext(globalState->context);
+    auto ptrLT = LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0);
+    bool usesReturnOutParam = abi->ret.kind == CoercionKind::Indirect;
+    std::vector<LLVMTypeRef> paramTypesL;
+    if (usesReturnOutParam) {
+      paramTypesL.push_back(ptrLT);  // hidden sret out-pointer, first parameter
+    }
+    assert(abi->args.size() == prototypeM->params.size());
+    for (const Coercion& c : abi->args) {
+      switch (c.kind) {
+        case CoercionKind::Ignore: break;  // zero-sized: not passed at all
+        case CoercionKind::DirectInt:
+          paramTypesL.push_back(LLVMIntTypeInContext(globalState->context, c.directIntBits)); break;
+        case CoercionKind::DirectPtr:
+        case CoercionKind::Indirect: paramTypesL.push_back(ptrLT); break;
+      }
+    }
+    LLVMTypeRef returnLT;
+    switch (abi->ret.kind) {
+      case CoercionKind::Ignore:
+      case CoercionKind::Indirect: returnLT = voidLT; break;  // Indirect returns through the out-pointer
+      case CoercionKind::DirectInt:
+        returnLT = LLVMIntTypeInContext(globalState->context, abi->ret.directIntBits); break;
+      case CoercionKind::DirectPtr: returnLT = ptrLT; break;
+      default: { assert(false); throw 1337; }
+    }
+    return BoundarySignature{returnLT, std::move(paramTypesL), usesReturnOutParam};
+  }
+
+  // Descriptor-less (C extern): the structural path, where every by-value aggregate return uses sret.
   bool usesReturnOutParam = returnNeedsOutParam(globalState, prototypeM->returnType);
   std::vector<LLVMTypeRef> paramTypesL;
   if (usesReturnOutParam) {

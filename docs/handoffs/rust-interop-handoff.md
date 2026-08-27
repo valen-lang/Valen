@@ -3,12 +3,18 @@
 The `rust_interop` feature (`src/typing/rust_interop/`, behind `--features rust_interop`) makes a Vale
 program typecheck against real Rust items read from a live rustc `TyCtxt`, and — through the instantiator
 inversion below — lets rustc's monomorphization collector drive Vale's instantiator all the way into the
-C++ backend: the `fill_extra_modules` hook fires at codegen and emits the whole Vale program's IR into a
-rustc-lent module, which rustc verifies. What does **not** run yet is a linked executable — the last tier
-(a `bin` stub, the partition filter, and a Tier-2 link-and-run harness) is unbuilt; see "Running a
-program". The design sources of truth are `docs/architecture/vale-rust-interop-architecture.md` and, for
-the instantiator's role, `src/instantiating/rust-interop-design.md`; the forward work is
-`docs/plans/rust-interop-plan.md`.
+C++ backend, which emits the program's IR into a rustc-lent module at codegen. A Vale binary calling real
+Rust functions now **links and runs**: single-symbol emission binds Vale's bodies (entry and each leaf)
+under rustc's own mangled names, a partition filter strips rustc's `unreachable!()` placeholders, and a
+Tier-2 harness runs the linked executable and asserts its exit code (`seven()` → 7,
+`add_two_numbers(20, 22)` → 42). **The full `domino` test now links and runs → 7**
+(`rustc_driven_bin_domino_returns_seven`): a Vale program constructs a Rust struct wrapping a `HashMap`,
+calls `&mut self`/`&self` methods on it, gets a `&Glyph` back, and returns through it. The whole
+aggregate ABI is sourced from rustc (`tcx.layout_of` + `tcx.fn_abi_of_instance`). See "The path to the
+domino test" for how the four ABI modes are handled. Design
+sources of truth: `docs/architecture/vale-rust-interop-architecture.md`,
+`src/instantiating/instantiating-rust-interop-design.md`, the backend's `Backend/backend-design.md` (the C-ABI /
+shim-removal direction), and the roadmap `docs/plans/rust-interop-plan.md`.
 
 ## State (regenerate, don't trust stale)
 
@@ -69,24 +75,29 @@ and every disk-reading test fails.
 ## The instantiator inversion (rustc drives us)
 
 Under `rust_interop`, instantiation is driven by rustc's mono collector, not by `translate_program`.
-The design of record is `src/instantiating/rust-interop-design.md`; the as-built shape:
+The design of record is `src/instantiating/instantiating-rust-interop-design.md`; the as-built shape:
 
 - **Recording Rust leaves.** A Rust callee reaches the backend as a synthesized `extern`: the typing
-  pass wraps every Rust import in an extern function whose body is a single `ExternFunctionCall`. The
-  instantiator records the *real* Rust boundary — the `ExternFunctionCall` node (in `translate_ref_expr`,
-  `instantiator.rs`) whose `prototype2` is `is_rust_backed` — inserting its instantiated `PrototypeI`
-  into `monouts.rust_instantiation_requests`. The wrapper around it is ordinary Vale that instantiates
-  normally. (An earlier over-broad filter in `translate_prototype` intercepted the wrapper prototype
-  itself; it was replaced by this node-level recording so the wrapper compiles.) Two `pub(crate)` seams
-  (`instantiate_exported_function`, `drain_instantiation_queue`) were extracted from `translate_program`
-  (behavior-preserving) so a driver can run one export.
+  pass wraps every Rust import in an extern function whose body is a single `ExternFunctionCall`. At the
+  `ExternFunctionCall` node (in `translate_ref_expr`, `instantiator.rs`) whose `prototype2` is
+  `is_rust_backed`, the instantiator *only records the request* — inserting the instantiated `PrototypeI`
+  into `monouts.rust_instantiation_requests`. It does **not** build the leaf's `FunctionExternI` there;
+  the provider does, once it resolves the leaf and its real symbol is known (see below). The wrapper is
+  ordinary Vale that instantiates normally. Three `pub(crate)` seams were extracted from
+  `translate_program` (behavior-preserving): `instantiate_exported_function` and
+  `drain_instantiation_queue` let a driver run one export, and `assemble_hinputs` finalizes an
+  already-drained accumulator into a `HinputsI` (so the driven `monouts` becomes what the backend lowers
+  — see "Running a program", no re-instantiation).
 - **The provider.** `src/instantiating/rust_interop/` holds the `per_instance_mir` query provider,
   installed via `override_queries` from a `Compilation::Continue` driver. rustc's collector calls it
   for each Vale stub item (a `#[vale::emit_consumer_body]` fn in a `__VALE_STUBS_MARKER` crate); it
   seeds that export, drains the instantiator, resolves each collected request to a rustc
   `(DefId, GenericArgs)`, and returns a synthetic MIR body — a `ReifyFnPointer` cast per Rust leaf
-  (which is what queues them) plus `Unreachable`. The real Vale body is a separate backend concern
-  (single-symbol swap, arch §5.2).
+  (which is what queues them) plus `Unreachable`. For each resolved leaf it also computes
+  `tcx.symbol_name` and **materializes** the leaf's `FunctionExternI` (with that mangled symbol as its
+  `link_name`) into `monouts` — the provider is the single definition point for a Rust extern, since its
+  real symbol is knowable only here. The Vale body itself is emitted by the backend under the same
+  mangled name (single-symbol, arch §5.2).
 - **Request resolution** (`resolve_request`): free function by crate-qualified path
   (`resolve_crate_qualified_path`); method through its receiver type's `inherent_impls` (peeling ref
   wrappers for `&self`/`&mut self`); associated function through the owner named in the id's init path;
@@ -98,13 +109,17 @@ The design of record is `src/instantiating/rust-interop-design.md`; the as-built
   synchronous join (the `std::thread::scope` guarantee). No `'static`, no ouroboros, no leak.
 
 Verified by the `rustc_collector_drives_*` tests (`src/typing/test/rust_interop/cases.rs`), driven by
-`run_case_rustc_driven[_full]` in `harness.rs` — green (the composed `domino` case additionally asserts
-rustc exits 0 through codegen).
+`run_case_rustc_driven[_full]` in `harness.rs` — green (the composed `domino` case, via
+`run_case_rustc_driven_full`, drives rustc's collector + codegen but does **not** emit the Vale backend;
+see the Lessons trap).
 
 ## Running a program
 
-Target: a Vale binary `func main() int { return add_two_numbers(3, 4) }`, linked and run, asserting exit
-7. Everything up to emission is built and green; the link-and-run tier is not.
+A Vale binary calling real Rust functions links and runs. Two Tier-2 tests assert it —
+`rustc_driven_bin_links_and_returns_seven` (`seven()` → exit 7) and
+`rustc_driven_bin_links_and_returns_from_add_two_numbers` (`add_two_numbers(20, 22)` → exit 42), in
+`src/typing/test/rust_interop/cases.rs`, driven by `run_case_rustc_driven_and_run` in `harness.rs`
+(`drive_rustc` with `crate_type="bin"`, then runs the produced executable and checks its exit code).
 
 - **Compiling a called Rust function.** A *called* Rust function starts as only a postparsed declaration
   (`create_postparsed_function`); nothing would run `make_extern_function` on it, so it had no compiled
@@ -119,23 +134,82 @@ Target: a Vale binary `func main() int { return add_two_numbers(3, 4) }`, linked
   env via `get_outer_env_for_type`; a free function's → the package env via `make_top_level_environment`),
   so `EvaluateFunction` carries only the id. `create_postparsed_function` takes `&CompilerOutputs`
   (read-only): rust_interop only *produces* the `FunctionS`; core owns registering and deferring it.
-- **The `fill_extra_modules` hook (emission).** `DrivenCallbacks::config` installs
-  `set_fill_extra_modules_hook(consumer_fill_modules)` (`src/instantiating/rust_interop/`). At codegen the
-  handler reads the armed `DriverState`; when its `emit_backend` flag is set it lowers the whole program
-  via the ordinary `translate_program` → `populate_metal_cache` and calls `backend_compile_program_into`
-  with rustc's lent `(context, module)` (safe wrapper `backend_compile_program_into_safe`,
-  `src/backend_ffi/`). `rustc_codegen_fires_our_fill_extra_modules_hook` asserts it fires;
-  `rustc_codegen_emits_vale_bodies_into_borrowed_module` asserts the C++ backend emits **and rustc
-  verifies** Vale IR into rustc's module (backend rc 0, rustc exits 0). Both green. Still a `lib` crate —
-  verified, not linked or run.
-- **What's left for the literal assert-7 (Stage 3, unbuilt).**
-  - A `--crate-type=bin` stub whose `fn main` forwards `__vale_main`'s exit code
-    (`std::process::exit(unsafe { __vale_main() })`). The backend already emits `__vale_main` (external,
-    no libc shim) when a Vale `main` export exists.
-  - The `collect_and_partition_mono_items` partition filter + `deduced_param_attrs` overrides, so rustc
-    emits no competing `__vale_main` placeholder to collide with the backend's real body.
-  - A Tier-2 harness that drives rustc to a **linked executable** (today's harness stops at codegen), runs
-    it, and asserts the process exits 7. `Expect::Returns(N)` (`corpus.rs`) already carries N for tier 2.
+- **One demand-driven instantiation (no re-instantiation).** The program is instantiated once, driven by
+  rustc's collector. `collect_new_rust_requests` (`src/instantiating/rust_interop/`) seeds an export via
+  `instantiate_exported_function` and drains, accumulating into the persistent `DriverState.monouts`; the
+  `fill_extra_modules` hook (`consumer_fill_modules`, installed by `DrivenCallbacks::config`) then
+  finalizes *that* driven accumulator via `assemble_hinputs` → `populate_metal_cache` and calls the
+  backend's single entry through `compile(BackendInputs)` (`src/backend_ffi/`). `BackendInputs` is a
+  two-variant enum by mode (`Standalone` | `Interop`); the `Interop` variant carries rustc's lent
+  `(context, module)` and the entry symbol. The imported-struct layouts and per-extern ABI descriptors
+  ride the metal `Program` instead of `BackendInputs` (S14; see "The path to the domino test"). There is
+  no second `translate_program` pass — the driven `monouts` is exactly what the backend lowers.
+- **Single-symbol naming.** The entry and each Rust leaf are emitted under rustc's own mangled name
+  (`tcx.symbol_name`). The one extern-name map is `FunctionExternI.link_name` — the real callee symbol
+  (rustc's mangling for a Rust leaf, `extern_name` for a C extern); `declareExternFunction` binds it
+  verbatim for the `rust` package and composes the `vale_abi_` shim otherwise. The entry's mangled symbol
+  is threaded through `BackendInputs` into `makeEntryFunction`. Two query overrides in
+  `vale_override_queries` make exactly one definition survive at link: `collect_and_partition_mono_items`
+  strips the `#[vale::emit_consumer_body]` stub bodies from rustc's codegen, and `deduced_param_attrs`
+  returns `&[]` for them (arch §5.2/§5.3/§22.4).
+- **The bin stub.** `fixtures/stub.rs` carries a real `fn main() { exit(__vale_main()) }`; under
+  single-symbol its `__vale_main()` call resolves to the mangled symbol the backend emits Vale's entry
+  under (rustc's placeholder removed by the partition filter), so it links to Vale's body and forwards
+  the exit code. `rustc_codegen_emits_vale_bodies_into_borrowed_module` still asserts the earlier
+  lib-crate emit path (backend rc 0, rustc exits 0).
+
+## The path to the domino test
+
+The goal: `A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS` (`corpus.rs`, `domino-glyphs`) — `d =
+Domino.new(); d.add_glyph(Glyph.new(7)); d_ref = d.get_glyph(7); return d_ref.location();` → 7, *linked
+and run*. The `seven()`/`add_two_numbers` binaries run because they are all scalar `i32` (Rust ABI == C
+ABI); domino needs real aggregate ABI, which is being built by asking rustc (`layout_of` + `fn_abi_of_instance`)
+rather than hand-rolling a classifier. The design of record is `instantiating-rust-interop-design.md`
+(proposals S8–S14); status:
+
+- **Backend boundary unified (S12): done, committed** (the `TEMP CHECKPOINT` at HEAD).
+  `compile(BackendInputs)` (`src/backend_ffi/`) → one C++ `backend_compile` (`vale.cpp`);
+  `compileStandalone` and `compileIntoModuleFromRustc` are `static` internals of `vale.cpp`.
+  `BackendInputs` is a two-variant enum by mode; the `Interop` variant carries only rustc's lent
+  `(context, module)` and the entry symbol.
+
+- **Opaque-struct sizing and ABI coercion: built (S8–S14), the full domino runs → 7** (the goal:
+  `rustc_driven_bin_domino_returns_seven`; the ladder rungs `rustc_driven_bin_method_returns_seven` (Counter,
+  by-value aggregate) and `rustc_driven_bin_borrow_self_method_returns_seven` (borrow + drop) also green;
+  native 823/823 and interop suites green). Two general, source-agnostic maps ride the core metal `Package`
+  (`Backend/src/metal/ast.h`): `structLayouts` keyed by the humanized struct name (beside
+  `externNameToKind`), `externAbis` keyed by the humanized prototype name (beside `externNameToFunction`,
+  which is also the key `GlobalState.externFunctions` uses, **not** the extern symbol). They cross via the
+  builder FFI (`metal_package_builder_add_struct_layout` / `_add_extern_abi`, one `add(key,value)` per
+  entry into a C++ `unordered_map`), never a flat array; standalone passes empty maps. The pieces:
+    - **Producer** (`rust_interop/mod.rs`, AI-editable): `compute_struct_layouts` (`tcx.layout_of`) and
+      `compute_extern_abi` (`tcx.fn_abi_of_instance`, in the `collect_new_rust_requests` resolve loop where
+      each leaf's `Instance` exists, accumulated on `DriverState.extern_abis`). `populate_metal_cache`
+      (`metal_lowerer.rs`) is handed both maps and calls the builders in its extern-kind / extern-function
+      loops.
+    - **Consumers** (core): `Unsafe::defineStruct` (`unsafe.cpp`) looks up
+      `program->packages[coord]->structLayouts` (a non-aborting `.find`, since builtin structs' packages
+      may not be in the program) and builds `[size/align x i{align*8}]`; `buildCallOrSideCall`
+      (`externs.cpp`) and `buildBoundarySignature` (`boundary.cpp`) both consult `lookupExternAbi`
+      (boundary.cpp, also non-aborting) so the declared signature and the call agree. `getExternalType`'s
+      `{i64}` handle and structural `returnNeedsOutParam` survive only as the descriptor-less C-extern
+      fallback (S13).
+  **`PassMode` coverage:** `compute_extern_abi` maps `Direct` on a pointer-scalar layout
+  (`arg.layout.backend_repr` is `BackendRepr::Scalar` with a `Primitive::Pointer`) → `DirectPtr`, other
+  `Direct` → `DirectInt(size.bits())`, `Indirect` → sret, `Ignore` → not passed. `Pair`/`Cast`
+  (float/mixed-register structs) still `panic!`; domino needs none, and a leaf that hits one adds its own arm.
+
+  Two boundary subtleties the domino run forced, both in the consumers:
+    - **`sret` needs the LLVM `sret` attribute.** An `Indirect` return passes the out-pointer in the
+      platform's hidden result register (x8 on aarch64), which LLVM emits only when the first param carries
+      the `sret` type attribute. `declareExternFunction` (`function.cpp`) adds it to the declaration and
+      `buildCallOrSideCall` (`externs.cpp`) to the call site, both gated on `lookupExternAbi` (interop only;
+      the C-extern shim handles its own ABI). Without it, rustc's callee reads a garbage sret address and
+      the 48-byte write corrupts the stack, a *crash* that surfaces in the harness as `process_exit=Some(-1)`
+      (`.code()` is `None` for a signal death).
+    - **A `DirectPtr` owned value must spill.** A borrow is already a pointer, but a *consuming* drop's
+      `*mut T` receives an owned inline value; `buildCallOrSideCall`'s `DirectPtr` arm spills it to a slot
+      and passes the address (`drop_in_place` runs on it; Vale keeps the stack slot).
 
 ## The C++ backend under interop
 
@@ -151,19 +225,23 @@ is what the old backend-disable early-return in `build.rs` guarded against (that
 `no_backend` feature still skips the backend). The LLVM 16 → 21 source port was mechanical (see the
 Lessons entry).
 
-The **borrowed-mode entry** lives in `Backend/src/rust_interop/` (`backend_compile_program_into` →
-`compileIntoModuleFromRustc`) — the one AI-editable corner of the otherwise-core `Backend/`. It takes
-rustc's lent `LLVMContext` + `LLVMModule` as opaque `void*` (from `ModuleLlvm::llcx_raw_mut()` /
-`llmod_raw()` on the fork — **not** the TargetMachine, which the fork never exposes), emits Vale IR into
-that module, and returns. rustc owns optimization, object emission, and disposal, so this path does
+The single backend entry `backend_compile` (`vale.cpp`) dispatches by mode to two `static` internals of
+`vale.cpp`: `compileStandalone` (owns context/machine/module + object emission) and the **borrowed-mode**
+`compileIntoModuleFromRustc`. `Backend/src/rust_interop/rust_interop.cpp` — once the borrowed-mode entry,
+now an empty placeholder kept for future interop-specific C++ — is the one AI-editable corner of the
+otherwise-core `Backend/`. The borrowed mode takes rustc's lent `LLVMContext` + `LLVMModule` as opaque
+`void*` (from `ModuleLlvm::llcx_raw_mut()` / `llmod_raw()` on the fork — **not** the TargetMachine, which
+the fork never exposes), emits Vale IR into that module, and returns. rustc owns optimization, object emission, and disposal, so this path does
 **not** optimize, `generateOutput`, dispose the handles, or call `generateExports`. `GlobalState`
 sources its data layout from the module (`LLVMGetModuleDataLayout`), which rustc pre-set. Shared with
 the standalone path: `compileValeCode` emits the Vale functions and, when the program exports a `main`,
 the region setup/cleanup + `__Vale_Main` wrapper, returning its prototype (or `nullptr` for a library
 with no `main`); the caller then emits an entry via one parameterized `makeEntryFunction(name,
-emitLibcShim)` — standalone emits libc `main` (with the argc/argv + wasi shim), interop emits
-`__vale_main` (external, no shim; rustc's libstd owns `main`). The `fill_extra_modules` hook calls
-`compileIntoModuleFromRustc` (see "Running a program").
+emitLibcShim)` — standalone emits libc `main` (with the argc/argv + wasi shim), interop emits the entry
+under the rustc-mangled `__vale_main` symbol the driver threads in through the FFI (external, no shim;
+rustc's libstd owns `main`, and the stub's `fn main` links to this body). `compileIntoModuleFromRustc`
+takes that entry symbol (via `BackendInputs.Interop`); the `fill_extra_modules` hook reaches it through
+`compile(BackendInputs)` → `backend_compile` (see "Running a program").
 
 ## The interop-specific core touch-points (design + code)
 
@@ -176,18 +254,21 @@ Three edits in the core typing pass exist solely for interop. Each mirrors exist
 - the `is_rust_backed` skip in `compile_interface_core` (`struct_compiler_core.rs`) — keeps Rust methods
   out of the interface vtable, twin of the one in `compile_struct_core`.
 
-The instantiator has one more, also `#[cfg]`-guarded: recording a Rust leaf at the `ExternFunctionCall`
-node in `translate_ref_expr` (`src/instantiating/instantiator.rs`), plus the two `pub(crate)` seams it
-exposes. See the inversion section. The lazy-postparse defer in `get_or_create_postparsed_function`
-(`compiler.rs`) is `#[cfg]`-guarded too.
+The instantiator has one more, also `#[cfg]`-guarded: recording a Rust leaf's request at the
+`ExternFunctionCall` node in `translate_ref_expr` (`src/instantiating/instantiator.rs`), plus the three
+`pub(crate)` seams it exposes (`instantiate_exported_function`, `drain_instantiation_queue`,
+`assemble_hinputs`). See the inversion section. The lazy-postparse defer in
+`get_or_create_postparsed_function` (`compiler.rs`) is `#[cfg]`-guarded too.
 
 A few core changes this work required are **not** interop-gated, because they complete previously-stubbed
-*general* paths and stand on their own (the default suite guards them): `InterfaceDefinitionT::
+*general* paths or serve both modes (the default suite guards them): `InterfaceDefinitionT::
 generic_param_types` (was `unimplemented!`; needed once an enum's drop is compiled), the extern-signature
 check permitting extern **Interfaces** so an imported Rust enum is allowed in an extern's signature (see
-the Lessons entry), and the deferred-compile drain deriving each function's outer env from its id in
-`evaluate_generic_function_from_non_call` rather than from a threaded `FunctionTemplataT.outer_env` (which
-now serves only the from-call/lambda paths).
+the Lessons entry), the deferred-compile drain deriving each function's outer env from its id in
+`evaluate_generic_function_from_non_call`, and the single-symbol backend naming: `FunctionExternI` now
+carries one `link_name` (the real callee symbol), `declareExternFunction` (`Backend/src/function/`) binds
+it verbatim vs. composing the `vale_abi_` shim by a `packageCoordinate->projectName == "rust"` check, and
+`makeEntryFunction` takes the entry symbol.
 
 The AI-editable interop code is any `rust_interop/` directory: `src/typing/rust_interop/`,
 `src/instantiating/rust_interop/`, and `Backend/src/rust_interop/`. Everything else in `src/typing/`,
@@ -252,10 +333,12 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   `libmycrate.rlib` into the same place concurrently and corrupt each other (`failed to map object file` /
   `No such file`) — timing-dependent, clean only under `--test-threads=1`. This is the filesystem twin of
   "per-driven-run state must not be a global"; `env::temp_dir()` is the shared system root, not unique.
-- The borrowed backend emit does **not** consume the driven `monouts` accumulator. `translate_program`
-  re-instantiates the whole program from `hinputs` into a finalized `HinputsI` (pure Vale bodies), which
-  is exactly what `populate_metal_cache` wants. The rustc-driven `monouts` (an `InstantiatedOutputsI`,
-  never a finalized `HinputsI`) exists only to resolve/reify the Rust leaves for rustc's collector.
+- The program is instantiated **once**. The borrowed emit finalizes the *driven* `monouts` via the
+  `assemble_hinputs` seam (extracted from `translate_program`'s tail) — it does not re-run
+  `translate_program`. A Rust extern is created at its definition point: the eager loop for a C extern
+  (from `hinputs.function_externs`, `extern_name` in hand), the provider for a Rust leaf (its mangled
+  symbol is knowable only after resolution). Do not reintroduce a second whole-program pass, and do not
+  push a placeholder `FunctionExternI` at the call site to overwrite later.
 - The provider reaches the instantiator state through a **scoped thread-local pointer, not a `'static`**.
   `run_compiler` joins its spawned thread synchronously, so the state can live in the driver's stack
   frame (real lifetimes) and the callbacks can `unsafe impl Send` — the `std::thread::scope` guarantee.
@@ -289,7 +372,38 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   requires an `outputDir`, and emits **no** LLVM into the module. The interop/borrowed path must not
   call it — interop exports go through single-symbol (Vale bodies under rustc-mangled names), not C
   headers. `compileValeCode` (not `generateExports`) is what emits the actual Vale function bodies.
+- The backend's extern name is the *real callee symbol* — `FunctionExternI.link_name`, one metal map:
+  rustc's mangled name for a Rust leaf (from `tcx.symbol_name`), the user's `extern_name` for a C extern.
+  The `vale_abi_<project>_` shim and `getFunctionExternName`'s `projectName_` composition exist only for
+  the standalone C-extern path (the backend can't lower the C ABI itself yet — the S9/S10 removal target
+  in `Backend/backend-design.md`); `declareExternFunction` picks between them by
+  `packageCoordinate->projectName == "rust"`. `FunctionExternI.num_inherited_generic_parameters` is
+  written but read nowhere in `src/` — probably dead since the onion rework; check before wiring to it.
 - The fork's `ModuleLlvm` exposes only the borrowed `LLVMContext` + `LLVMModule` (`llcx_raw_mut()` /
   `llmod_raw()`), **never** the TargetMachine — by design. So borrowed-mode codegen sources its data
   layout from the module (`LLVMGetModuleDataLayout`; rustc pre-set it, do not re-set it) and MUST NOT
   dispose any lent handle — rustc owns their lifecycle and disposes them after the hook returns.
+- `run_case_rustc_driven_full` passes `emit_backend=false` (`harness.rs`): it drives rustc's collector
+  and rustc's own codegen of the stub crate, but does **not** emit the Vale backend. So "domino drives
+  through codegen, rc 0" says nothing about Vale IR emission, struct sizing, or ABI — none of
+  `compileValeCode`/`defineStruct`/the boundary runs. Verify emission at `run_case_rustc_driven_and_run`
+  (or `_emitting`), never at `_full`.
+- The sret out-parameter path already exists in `buildCallOrSideCall` + `returnNeedsOutParam`
+  (`boundary.cpp`) and is reused for `Indirect`. The ABI descriptor's job is the Direct-vs-Indirect
+  *choice* — a small struct crosses in a register (`DirectInt`), not sret — plus the right slot type;
+  do not rebuild the sret machinery, and do not keep the structural "every struct return uses sret" rule
+  for interop externs. Reusing the path is **not** sufficient on its own, though: a direct rustc call
+  (no clang shim) also needs the LLVM `sret` type attribute on the out-pointer param (declaration + call
+  site), or the pointer lands in the wrong register and rustc's callee scribbles over the stack. See the
+  domino-ABI notes in "The path to the domino test".
+- Data crossing Rust→C++ goes through the metal **builder FFI**: one `add(key, value)` call per entry
+  into a C++-owned `std::unordered_map`, the way `metal_package_builder_add_extern_function` and the whole
+  metal AST already cross, not a flat `#[repr(C)]` array smuggled through `InteropInputs`. The interop
+  layout/ABI maps ride the metal `Program` for this reason (S14); a first build that used a flat
+  `struct_layouts` array plus `GlobalState` side-maps was torn out. A genuinely positional list (one
+  function's ordered arg coercions) may cross as an array; only *maps* must cross per-entry.
+- Trap (tooling): an lldb breakpoint with an `-o "expr …" -o "continue"` command crashes lldb on the
+  interop test binary — the breakpoint fires but the `expr` aborts, eating the output, which reads as
+  "never hit." Inspect backend state by running to the natural abort and printing via `-k "frame select N"`
+  / `-k "expr …"`, and pass rustc's signals (`process handle SIGUSR1 -s false -n false`, same for `SIGUSR2`).
+  Do not conclude a function is uncalled from a silent breakpoint-command run.

@@ -44,6 +44,14 @@ typedef struct RuntimeSizedArrayDefHandle RuntimeSizedArrayDefHandle;
 typedef struct PackageBuilderHandle  PackageBuilderHandle;
 typedef struct ProgramBuilderHandle  ProgramBuilderHandle;
 
+// How one argument or return value crosses an extern boundary; mirrors CoercionKind/Coercion in
+// metal/ast.h. `kind` is the CoercionKind ordinal; `bits` is the integer width for DirectInt
+// (ignored otherwise). Passed to metal_package_builder_add_extern_abi.
+typedef struct CoercionFFI {
+  uint32_t kind;
+  uint32_t bits;
+} CoercionFFI;
+
 // --- Lifecycle ---
 
 MetalCacheHandle* metal_cache_new(void);
@@ -289,6 +297,11 @@ void metal_package_builder_add_extern_function(
     PackageBuilderHandle*, const char* name_ptr, size_t name_len, PrototypeHandle*);
 void metal_package_builder_add_extern_kind(
     PackageBuilderHandle*, const char* name_ptr, size_t name_len, KindHandle*);
+void metal_package_builder_add_struct_layout(
+    PackageBuilderHandle*, const char* name_ptr, size_t name_len, uint64_t size, uint64_t align);
+void metal_package_builder_add_extern_abi(
+    PackageBuilderHandle*, const char* symbol_ptr, size_t symbol_len,
+    CoercionFFI ret, const CoercionFFI* args, size_t args_len);
 
 PackageHandle* metal_package_builder_finish(PackageBuilderHandle*);
 

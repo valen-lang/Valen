@@ -24,19 +24,27 @@ use rustc_middle::mir::{
 };
 use rustc_middle::middle::deduced_param_attrs::DeducedParamAttrs;
 use rustc_middle::mir::mono::{CodegenUnit, MonoItemPartitions};
+use rustc_abi::{BackendRepr, Primitive};
 use rustc_middle::ty::adjustment::PointerCoercion;
 use rustc_middle::ty::{self, Instance, Ty, TyCtxt};
 use rustc_middle::util::Providers;
+use rustc_target::callconv::PassMode;
 use rustc_span::def_id::{DefId, LocalDefId};
 use rustc_span::Symbol;
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ptr::null;
 use std::sync::OnceLock;
 
 use crate::backend_ffi::metal_cache::MetalCache;
 use crate::backend_ffi::metal_lowerer::populate_metal_cache;
-use crate::backend_ffi::{backend_compile_program_into_safe, BackendCompileOptions};
+use crate::backend_ffi::backend_inputs::{BackendInputs, BackendMode, InteropInputs};
+use crate::backend_ffi::metal_lowerer::{Coercion, ExternAbi, StructLayout};
+use crate::backend_ffi::{compile, BackendCompileOptions};
+use crate::instantiating::instantiated_humanizer::humanize_id;
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::utils::range::CodeLocationS;
 use crate::compile_options::GlobalOptions;
 use crate::interner::StrI;
 use crate::instantiating::ast::ast::PrototypeI;
@@ -81,6 +89,10 @@ pub struct DriverState<'s, 'ctx, 't, 'i> {
   /// Per-run log of what the provider did, keyed by nothing — one line per Vale item it fired on.
   /// Lives here (per driven run) rather than in a global so parallel driven tests never race.
   pub firings: &'ctx RefCell<Vec<String>>,
+  /// Each Rust leaf's boundary ABI (from `tcx.fn_abi_of_instance`), keyed by the extern's humanized
+  /// prototype name. That is the same key the metal prototype gets, so the backend's `buildCallOrSideCall`
+  /// finds it. Accumulated as leaves resolve in `collect_new_rust_requests`; read at emit.
+  pub extern_abis: &'ctx RefCell<HashMap<String, ExternAbi>>,
   /// Whether the `fill_extra_modules` hook should actually lower + emit the Vale bodies into rustc's
   /// borrowed module (Stage 2+), or just record that it fired (Stage 1 / the Milestone-M driven tests
   /// that assert only on resolution, not emission). Off keeps those tests off the backend path.
@@ -134,9 +146,11 @@ impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
       .map(|(_id, proto)| (*proto, resolve_request(tcx, proto)))
       .collect();
 
+    let code_map = |loc: CodeLocationS| format!("{:?}", loc);
     for (proto, req) in &new_reqs {
       if let Some((def_id, args)) = req.dep {
-        let symbol = tcx.symbol_name(ty::Instance::new_raw(def_id, args)).name;
+        let instance = ty::Instance::new_raw(def_id, args);
+        let symbol = tcx.symbol_name(instance).name;
         let symbol_i: &str = self.interner.bump().alloc_str(symbol);
         // The extern is born here, complete, with rustc's real symbol — the one place it is known. This
         // is the sole registration point for Rust externs (the instantiator only records the request).
@@ -145,6 +159,11 @@ impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
           num_inherited_generic_parameters: 0,
           link_name: symbol_i,
         });
+        // Compute the leaf's boundary ABI from rustc's FnAbi and stash it keyed by the same humanized
+        // prototype name the metal lowerer uses, so the backend's buildCallOrSideCall finds it.
+        if let Some(abi) = compute_extern_abi(tcx, instance) {
+          self.extern_abis.borrow_mut().insert(humanize_id(&code_map, &proto.id, None), abi);
+        }
       }
     }
 
@@ -602,7 +621,7 @@ fn lang_per_instance_mir<'tcx>(
 /// records that it fired (Stage 1 / the Milestone-M driven tests that assert on resolution, not
 /// emission).
 pub fn consumer_fill_modules<'tcx>(
-  _tcx: TyCtxt<'tcx>,
+  tcx: TyCtxt<'tcx>,
   allocator: &ExtraModuleAllocator<ModuleLlvm>,
 ) {
   let state_ptr = DRIVER_STATE.with(|c| c.get());
@@ -621,7 +640,7 @@ pub fn consumer_fill_modules<'tcx>(
     return;
   }
 
-  let rc = emit_vale_into_borrowed_module(state, allocator);
+  let rc = emit_vale_into_borrowed_module(state, tcx, allocator);
   state.firings.borrow_mut().push(format!("consumer_fill_modules emitted rc={rc}"));
   // A nonzero rc means the C++ backend rejected its own emission (e.g. LLVMVerifyModule failed on the
   // Vale IR in rustc's module). Fail loudly rather than let rustc link a silently-broken module.
@@ -634,8 +653,9 @@ pub fn consumer_fill_modules<'tcx>(
 /// The Vale bodies come purely from `hinputs` (the typing output) via the ordinary `translate_program`
 /// — the same finalized `HinputsI` owned-mode produces. rustc's `per_instance_mir` drive is a separate
 /// concern (it makes rustc reify/codegen the *Rust* leaves); it does not feed the Vale bodies here.
-fn emit_vale_into_borrowed_module(
+fn emit_vale_into_borrowed_module<'tcx>(
   state: &DriverState,
+  tcx: TyCtxt<'tcx>,
   allocator: &ExtraModuleAllocator<ModuleLlvm>,
 ) -> i32 {
   let hinputs_ref = state.hinputs.borrow();
@@ -661,8 +681,13 @@ fn emit_vale_into_borrowed_module(
   let hinputs_i =
     instantiator.assemble_hinputs(&mut *monouts, Vec::new(), function_exports, Vec::new());
 
+  // Ask rustc (tcx.layout_of / tcx.fn_abi_of_instance) for the size of each imported struct and the ABI
+  // of each extern leaf, so the backend sizes opaque structs and coerces extern calls. Keyed by the same
+  // humanized names the metal lowerer gives its struct kinds / prototypes (see populate_metal_cache).
+  let struct_layouts = compute_struct_layouts(tcx, &hinputs_i);
+  let extern_abis = state.extern_abis.borrow();
   let cache = MetalCache::new();
-  let program = populate_metal_cache(&cache, &hinputs_i);
+  let program = populate_metal_cache(&cache, &hinputs_i, &struct_layouts, &extern_abis);
 
   // Ask rustc for one fresh module (a fresh LLVMContext + LLVMModule) and take its raw handles. Only
   // one CGU for now; the realloc caveat (fill before requesting the next) is moot with a single call.
@@ -678,11 +703,83 @@ fn emit_vale_into_borrowed_module(
 
   let opts = BackendCompileOptions::default();
   let entry_symbol = state.entry_symbol.borrow();
-  // SAFETY: `llcx`/`llmod` are rustc's live borrowed handles for this call; the C++ side emits into
+  // `llcx`/`llmod` are rustc's live borrowed handles for this call; the C++ side emits into
   // the module and disposes nothing (rustc owns their lifecycle and disposes them after the hook).
-  unsafe {
-    backend_compile_program_into_safe(&cache, &program, &opts, llcx, llmod, entry_symbol.as_deref())
+  compile(BackendInputs {
+    cache: &cache,
+    program: &program,
+    options: opts,
+    mode: BackendMode::Interop(InteropInputs {
+      context: llcx,
+      module: llmod,
+      entry_symbol: entry_symbol.as_deref(),
+    }),
+  })
+}
+
+/// Ask rustc (`tcx.layout_of`) for the size/align of each imported Rust struct the program uses, keyed
+/// by the humanized name of the struct's instantiated id. That name is identical to the one the metal
+/// lowerer gives the struct kind, so `Unsafe::defineStruct` finds the layout by `structKind->fullName->name`. A struct
+/// that doesn't resolve to a rustc type (Vale's own, or a still-generic one) is skipped, leaving the
+/// backend to size it from its members as usual.
+fn compute_struct_layouts<'s, 'i, 'tcx>(
+  tcx: TyCtxt<'tcx>,
+  hinputs: &HinputsI<'s, 'i>,
+) -> HashMap<String, StructLayout> {
+  let typing_env = ty::TypingEnv::fully_monomorphized();
+  let code_map = |loc: CodeLocationS| format!("{:?}", loc);
+  let mut out = HashMap::new();
+  for s in hinputs.structs.iter() {
+    let id = &s.instantiated_citizen.id;
+    let ty = match citizen_to_rustc_ty(tcx, id) {
+      Some(t) => t,
+      None => continue, // not a Rust-backed struct
+    };
+    let layout = match tcx.layout_of(typing_env.as_query_input(ty)) {
+      Ok(l) => l,
+      Err(_) => continue,
+    };
+    out.insert(
+      humanize_id(&code_map, id, None),
+      StructLayout { size: layout.size.bytes(), align: layout.align.abi.bytes() },
+    );
   }
+  out
+}
+
+/// Ask rustc (`tcx.fn_abi_of_instance`) how a Rust leaf's return and each argument cross the boundary,
+/// mapping each `PassMode` to a `Coercion` the backend obeys. `None` if rustc can't compute the ABI. A
+/// `Pair`/`Cast` (a struct split across two registers, or a float/mixed-register class) `panic!`s;
+/// nothing in domino hits one.
+fn compute_extern_abi<'tcx>(tcx: TyCtxt<'tcx>, instance: Instance<'tcx>) -> Option<ExternAbi> {
+  let typing_env = ty::TypingEnv::fully_monomorphized();
+  let fn_abi = tcx
+    .fn_abi_of_instance(typing_env.as_query_input((instance, ty::List::empty())))
+    .ok()?;
+  let coercion_of = |arg: &rustc_target::callconv::ArgAbi<'tcx, Ty<'tcx>>| -> Coercion {
+    match &arg.mode {
+      // A unit return `()`, e.g. the `__vale_drop` shim's return.
+      PassMode::Ignore => Coercion::Ignore,
+      // An aggregate too large for a register, returned through an out-pointer: the 48-byte `Domino`
+      // that `Domino::new()` returns.
+      PassMode::Indirect { .. } => Coercion::Indirect,
+      // A value small enough for a register.
+      PassMode::Direct(_) => {
+        // A reference (`&self`, `&mut self`, `*mut T`) is a pointer-scalar and crosses as a real pointer.
+        // A small integer-classed aggregate (`Counter`, `Glyph`) crosses as its register integer.
+        if let BackendRepr::Scalar(scalar) = arg.layout.backend_repr {
+          if matches!(scalar.primitive(), Primitive::Pointer(_)) {
+            return Coercion::DirectPtr;
+          }
+        }
+        Coercion::DirectInt(arg.layout.size.bits() as u32)
+      }
+      other => panic!("unsupported PassMode {other:?} for interop extern (Pair/Cast not yet handled)"),
+    }
+  };
+  let ret = coercion_of(&fn_abi.ret);
+  let args = fn_abi.args.iter().map(|a| coercion_of(a)).collect();
+  Some(ExternAbi { ret, args })
 }
 
 /// Build the synthetic MIR body rustc gets for a Vale item: one `ReifyFnPointer` cast per Rust leaf

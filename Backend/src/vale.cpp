@@ -1286,7 +1286,7 @@ void finalizeCompile(GlobalState* globalState) {
 // owned LLVM handles, emit all of the program's Vale IR (including the libc `main` entry),
 // then optimize, emit the object, and dispose. The FFI entry in ffi.cpp is a one-line
 // `extern "C"` wrapper.
-int32_t compileStandalone(
+static int32_t compileStandalone(
     MetalCache* metalCache, Program* program,
     const BackendCompileOptionsFFI* ffi_opts) {
   ValeOptions valeOptions;
@@ -1347,4 +1347,76 @@ int32_t compileStandalone(
   LLVMDisposeModule(mod);
   LLVMDisposeTargetMachine(machine);
   return 0;
+}
+
+// Unwrap the opaque cache handle (defined in metal_cache_ffi.cpp).
+typedef struct MetalCacheHandle MetalCacheHandle;
+extern "C" MetalCache* metal_cache_ffi_inner(MetalCacheHandle*);
+
+// Borrowed-mode compile: rustc lends only its LLVMContext + Module (as opaque handles),
+// Vale emits its IR into that module, and control returns to rustc. rustc owns optimization
+// and object emission (they run after this) so unlike compileStandalone we do NOT
+// optimize, generateOutput, or dispose any of the borrowed handles. We also skip the
+// libc `main` entry and main setup/cleanup: rustc's libstd provides `main` (arch 5.6).
+// With no machine, GlobalState reads its data layout off the (rustc-preset) module.
+static int32_t compileIntoModuleFromRustc(
+    MetalCache* metalCache, Program* program,
+    const BackendCompileOptionsFFI* ffi_opts,
+    void* context, void* mod, const char* entrySymbol) {
+  ValeOptions valeOptions;
+  int ok = loadFromFfi(&valeOptions, ffi_opts);
+  if (ok <= 0) {
+    return ok == 0 ? 0 : (int32_t)ExitCode::BadOpts;
+  }
+  auto modRef = reinterpret_cast<LLVMModuleRef>(mod);
+  // rustc already set the module's data layout from the target; read it off as-is (no
+  // machine to derive it from, and re-deriving could drift from rustc's).
+  LLVMTargetDataRef dataLayout = LLVMGetModuleDataLayout(modRef);
+  GlobalState globalState(
+      &valeOptions,
+      reinterpret_cast<LLVMContextRef>(context),
+      modRef,
+      /*machine=*/nullptr,
+      dataLayout);
+  // A `main` export makes this a Vale binary — emit `__vale_main` for the stub's Rust
+  // `fn main` to call (rustc's libstd owns the real libc `main`, so no libc shim). No
+  // `main` is a Vale library: exported functions only, no entry.
+  Prototype* valeMainPrototype = compileValeCode(&globalState, metalCache, program);
+  if (valeMainPrototype != nullptr) {
+    // Single-symbol (arch §5.2): emit the entry under rustc's mangled __vale_main symbol when the
+    // driver supplied one, so the stub's `fn main` (which calls the Rust name __vale_main) links to
+    // Vale's real body rather than rustc's unreachable!() placeholder (removed by the partition
+    // filter). Empty = the literal __vale_main (standalone, or no explicit symbol).
+    std::string entryName =
+        (entrySymbol != nullptr && entrySymbol[0] != '\0') ? std::string(entrySymbol) : "__vale_main";
+    makeEntryFunction(&globalState, valeMainPrototype, entryName, /*emitLibcShim=*/false);
+  }
+  // generateExports (the C-ABI export headers/sources) is deliberately NOT called here: it
+  // is the standalone-valec C-FFI boundary, it requires an outputDir and writes files to
+  // disk, and interop exports go through single-symbol instead (Vale bodies emitted under
+  // rustc-mangled names). So the interop path emits IR into the module only.
+  finalizeCompile(&globalState);
+  return 0;
+}
+
+// The single unified backend entry: takes one BackendInputsFFI and dispatches by
+// `mode`. Whether that means the standalone build (own context/machine/module,
+// object emission) or the borrowed-mode emit into rustc's lent module is a backend
+// implementation detail hidden behind this one entry. Caller retains ownership of
+// cache/program (and, in interop mode, the borrowed context/module); nothing is
+// freed here.
+extern "C" __attribute__((visibility("default")))
+int32_t backend_compile(const BackendInputsFFI* in) {
+  MetalCache* cache = metal_cache_ffi_inner(reinterpret_cast<MetalCacheHandle*>(in->cache));
+  Program* program = reinterpret_cast<Program*>(in->program);
+  switch (in->mode) {
+    case BACKEND_MODE_STANDALONE:
+      return compileStandalone(cache, program, &in->options);
+    case BACKEND_MODE_INTEROP:
+      return compileIntoModuleFromRustc(
+          cache, program, &in->options,
+          in->interop.context, in->interop.module, in->interop.entry_symbol);
+    default:
+      return -1;
+  }
 }

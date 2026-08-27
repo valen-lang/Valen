@@ -69,6 +69,15 @@ pub enum Mutability { Immutable = 0, Mutable = 1 }
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Weakability { Weakable = 0, NonWeakable = 1 }
 
+/// C-repr mirror of CoercionFFI in metal/ast.h's FFI header. `kind` is the CoercionKind ordinal
+/// (Ignore=0, DirectInt=1, DirectPtr=2, Indirect=3); `bits` is the DirectInt width, else 0.
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct CoercionFFI {
+    pub kind: u32,
+    pub bits: u32,
+}
+
 extern "C" {
     fn metal_cache_new() -> *mut MetalCacheHandleRaw;
     fn metal_cache_free(_: *mut MetalCacheHandleRaw);
@@ -289,6 +298,10 @@ extern "C" {
     fn metal_package_builder_add_export_kind(_: *mut c_void, name_ptr: *const c_char, name_len: usize, v: *mut c_void);
     fn metal_package_builder_add_extern_function(_: *mut c_void, name_ptr: *const c_char, name_len: usize, v: *mut c_void);
     fn metal_package_builder_add_extern_kind(_: *mut c_void, name_ptr: *const c_char, name_len: usize, v: *mut c_void);
+    fn metal_package_builder_add_struct_layout(_: *mut c_void, name_ptr: *const c_char, name_len: usize, size: u64, align: u64);
+    fn metal_package_builder_add_extern_abi(
+        _: *mut c_void, symbol_ptr: *const c_char, symbol_len: usize,
+        ret: CoercionFFI, args: *const CoercionFFI, args_len: usize);
     fn metal_package_builder_finish(_: *mut c_void) -> *mut c_void;
 
     fn metal_program_builder_new(_: *mut MetalCacheHandleRaw) -> *mut c_void;
@@ -840,6 +853,19 @@ impl<'cache> PackageBuilder<'cache> {
     }
     pub fn add_extern_kind(&self, name: &str, v: Kind<'cache>) {
         unsafe { metal_package_builder_add_extern_kind(self.raw, name.as_ptr() as *const c_char, name.len(), v.0.as_ptr()) }
+    }
+    /// Record an imported extern struct's layout, keyed by its humanized name (same key as `add_struct`).
+    pub fn add_struct_layout(&self, name: &str, size: u64, align: u64) {
+        unsafe { metal_package_builder_add_struct_layout(self.raw, name.as_ptr() as *const c_char, name.len(), size, align) }
+    }
+    /// Record an extern function's ABI under `symbol`. `args` is the ordered per-argument coercion
+    /// list; it is only read during this call.
+    pub fn add_extern_abi(&self, symbol: &str, ret: CoercionFFI, args: &[CoercionFFI]) {
+        unsafe {
+            metal_package_builder_add_extern_abi(
+                self.raw, symbol.as_ptr() as *const c_char, symbol.len(),
+                ret, args.as_ptr(), args.len())
+        }
     }
 
     pub fn finish(self) -> Package<'cache> {

@@ -1,5 +1,6 @@
 // Main entry point for the Vale compiler
 
+use crate::backend_ffi::backend_inputs::{BackendInputs, BackendMode, StandaloneInputs};
 use crate::compile_options::GlobalOptions;
 use crate::utils::source_code_utils;
 use crate::interner::StrI;
@@ -518,8 +519,11 @@ where
     .collect();
 
   // MetalLowerer: I-AST (HinputsI) → MetalCache via FFI, replacing readjson.cpp.
+  // Standalone has no producer for the extern layout/ABI maps, so they cross empty (the backend
+  // then sizes structs from members and takes the descriptor-less C-extern boundary path).
   let cache = crate::backend_ffi::metal_cache::MetalCache::new();
-  let program = crate::backend_ffi::metal_lowerer::populate_metal_cache(&cache, monouts);
+  let program = crate::backend_ffi::metal_lowerer::populate_metal_cache(
+    &cache, monouts, &std::collections::HashMap::new(), &std::collections::HashMap::new());
 
   // Inject --triple into the backend options when ClangConfig requests a
   // cross-target, so LLVM emits the correct data layout (e.g. 32-bit
@@ -530,7 +534,12 @@ where
     backend_opts.triple = triple.clone();
   }
 
-  let rc = crate::backend_ffi::backend_compile_program_safe(&cache, &program, &backend_opts);
+  let rc = crate::backend_ffi::compile(BackendInputs {
+    cache: &cache,
+    program: &program,
+    options: backend_opts,
+    mode: BackendMode::Standalone(StandaloneInputs {}),
+  });
   if rc != 0 {
     return Ok(BuiltProgram {
       rc,
