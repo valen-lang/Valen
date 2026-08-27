@@ -946,7 +946,17 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     (ITemplataT::Kind(kt), kind_templata_i) => {
                         match kt.kind {
                             KindT::KindPlaceholder(kp) => vec![(kp.id, *kind_templata_i)],
-                            _ => panic!("assemble_placeholder_map_inner: KindTemplataT non-placeholder arm"),
+                            // This could be e.g. *i32 and *!i32, in other words the template arg is already populated. This can
+                            // happen if we're processing a lambda's name.
+                            // placeholderedName *doesn't* contain a placeholder like one might normally expect:
+                            //   test/main.lam:0:34.__call{lam:0:34, *i32}<__call$0>    (doesn't have this)
+                            // Instead placeholderedName might be:
+                            //   test/main.lam:0:34.__call{lam:0:34, *i32}<*i32>
+                            // ...because the typing phase already filled it in.
+                            // Theoretically the typing phase could have stripped that out before now, maybe. Don't know.
+                            // Either way, it is there.
+                            // Just ignore it, we don't need a mapping for it.
+                            _ => vec![],
                         }
                     }
                     (ITemplataT::Placeholder(pt), templata_i) => vec![(pt.id, *templata_i)],

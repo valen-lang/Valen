@@ -5,7 +5,6 @@ fn p(rel: &str) -> std::path::PathBuf {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn ssamutfromcallable()        { assert_compile_and_run(&p("programs/arrays/ssamutfromcallable.vale"), 42); }
 #[test]
 fn ssamutfromvalues()          { assert_compile_and_run(&p("programs/arrays/ssamutfromvalues.vale"), 42); }
