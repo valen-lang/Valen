@@ -541,7 +541,6 @@ Number of params doesn't match! Supplied 4 but function takes 3
 // `__call(&closure)` and takes its return type as E.
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -579,7 +578,6 @@ exported func main() int {
 // generic. The CompilerOutputs.signatureToFunction cache terminates recursion.
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn brrz_nested_bound_return_inference_through_a_lambda_body() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -618,7 +616,6 @@ exported func main() int {
 // under the relaxed puzzle.
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn brrz_two_bound_return_inferences_in_the_same_call() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

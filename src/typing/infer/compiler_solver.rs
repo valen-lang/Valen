@@ -585,6 +585,36 @@ where
                         let explicit_template_arg_rules_s = &[];
                         let positional_explicit_template_arg_runes_s = &[];
                         let receiving_rune_to_explicit_template_arg_rune = &[];
+
+                        // VCOORD: add arcana for this, currently it just lives in plan-phased-calls.md
+                        // and move this to the new phased calls plan.
+                        //
+                        // FuncBoundStep (docs/plans/plan-phased-calls.md §5.5-§5.8): to satisfy this
+                        // bound, look in the environment of each rune substitution value, taken whole.
+                        // For `where func(&G)E` the rune is G; we search the env of the type G
+                        // resolved to (e.g. the closure struct, where its `__call` is declared),
+                        // rather than deriving an env from the `&G` param coord. Keying on the coord
+                        // would peel/collapse references and break the borrow-blanket determinism
+                        // (see @ENECCLZ, decision 3). Matching still uses `param_coords`, exact.
+                        let mut bound_runes: Vec<IRuneS<'s>> = Vec::new();
+                        for param_type in resolve.params_types.iter() {
+                            param_type.collect_rune_mentions(&mut bound_runes);
+                        }
+                        let mut rune_value_envs: Vec<IInDenizenEnvironmentT<'s, 't>> = Vec::new();
+                        for rune in bound_runes {
+                            if let Some(ITemplataT::Kind(kt)) = solver_state.get_conclusion(&rune) {
+                                match kt.kind {
+                                    KindT::Struct(sr) => rune_value_envs.push(
+                                        state.get_outer_env_for_type(self.get_struct_template(sr.id))),
+                                    KindT::Interface(ir) => rune_value_envs.push(
+                                        state.get_outer_env_for_type(self.get_interface_template(ir.id))),
+                                    KindT::KindPlaceholder(kp) => rune_value_envs.push(
+                                        state.get_outer_env_for_type(self.get_placeholder_template(kp.id))),
+                                    _ => {}
+                                }
+                            }
+                        }
+                        // /VCOORD
                         let potential_banner = self.find_function(
                             env.original_calling_env,
                             state,
@@ -596,7 +626,7 @@ where
                             receiving_rune_to_explicit_template_arg_rune,
                             env.context_region,
                             param_coords,
-                            &[],
+                            &rune_value_envs,
                             true,
                             false).expect("CompileErrorExceptionT propagation");
                         match potential_banner {

@@ -798,8 +798,18 @@ pub fn humanize_rule_error<'s, 't>(
     ITypingPassSolverError::CantCheckPlaceholder { .. } => {
       panic!("implement: humanize_rule_error CantCheckPlaceholder")
     }
-    ITypingPassSolverError::CouldntFindFunction { .. } => {
-      panic!("implement: humanize_rule_error CouldntFindFunction")
+    ITypingPassSolverError::CouldntFindFunction { range, fff } => {
+      humanize_find_function_failure(
+        scout_arena,
+        typing_interner,
+        true,
+        code_map,
+        lines_between,
+        line_range_containing,
+        line_containing,
+        range.to_vec(),
+        &fff,
+      )
     }
     ITypingPassSolverError::CouldntResolveKind { .. } => {
       panic!("implement: humanize_rule_error CouldntResolveKind")

@@ -173,7 +173,6 @@ exported func main() int {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn tests_panic_return_type() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -1119,7 +1118,6 @@ fn test_templates() {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn test_taking_a_callable_param() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -2934,7 +2932,6 @@ fn tests_a_templated_linked_list() {
 // VCOORD: enable this. Blocked on closures: forEach(&list, { print(__copy_prim(_)); }) passes a
 // closure whose templated-light-banner resolution hits the @PFVSZ per-param-fold stub
 // (function_compiler_solving_layer.rs:230). Re-enable when the lambda/closure cluster lands.
-#[ignore]
 fn tests_a_foreach_for_a_linked_list() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -6312,7 +6309,6 @@ fn downcast_with_as() {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn closure_using_parent_function_s_bound() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

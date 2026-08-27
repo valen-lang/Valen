@@ -85,7 +85,6 @@ fn function_has_correct_name() {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn lambda_has_correct_name() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

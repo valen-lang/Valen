@@ -5,5 +5,4 @@ fn p(rel: &str) -> std::path::PathBuf {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
 fn while_loop() { assert_compile_and_run(&p("programs/while/while.vale"), 42); }

@@ -367,7 +367,6 @@ fn test_specializing_interface() {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn use_bound_from_struct() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -412,7 +411,6 @@ exported func main() {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn basic_interface_forwarder() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -461,7 +459,6 @@ exported func main() int {
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn generic_interface_forwarder() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

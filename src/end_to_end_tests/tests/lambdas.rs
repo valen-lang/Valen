@@ -5,7 +5,6 @@ fn p(rel: &str) -> std::path::PathBuf {
 }
 
 #[test]
-#[ignore] // ZCOORD: re-enable with onion
 fn lambda()    { assert_compile_and_run(&p("programs/lambdas/lambda.vale"), 42); }
 #[test]
 #[ignore = "deferred at experimental-2 squash baseline"]
