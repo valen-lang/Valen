@@ -208,7 +208,6 @@ exported struct MyStruct { a int; }
 // VCOORD: enable when we have closures. Loads list.vale, which imports v.builtins.migrate and calls
 // migrate(...); the migrate builtin is currently disabled (it uses closures), so lexing can't find it.
 #[test]
-#[ignore]
 fn typing_pass_array_type_convertible() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

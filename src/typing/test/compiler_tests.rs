@@ -3680,7 +3680,6 @@ Couldn't find anything with the name 'NoSuchType'
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn reports_when_ssa_callable_returns_wrong_element_type() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -3777,7 +3776,6 @@ Couldn't find anything with the name 'NoSuchType'
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn array_map_with_single_lambda_types_cleanly() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -3816,36 +3814,46 @@ func main() int {
     &code_source,
   );
   let coutputs = compile.expect_compiler_outputs();
-  // Spirit: __call must resolve with a Borrow first param (not Own), which is
-  // what lets it satisfy Array's `func(&G, int)E` bound when G = Lam.
-  let call = coutputs.lookup_function_by_str("__call");
-  match call.header.params[0].tyype {
-    KindT::BorrowRef(BorrowRefT {
-      inner:
-        KindT::Struct(StructTT {
-          id:
-            IdT {
-              local_name:
-                INameT::Struct(StructNameT {
-                  template:
-                    IStructTemplateNameT::StructTemplate(StructTemplateNameT {
-                      human_name: StrI("Lam"),
-                      ..
-                    }),
+  // Spirit: the closure's `__call` must resolve with a Borrow first param (not
+  // Own), which is what lets it satisfy Array's `func(&G, int)E` bound when
+  // G = Lam. Match that exact shape: a `__call` whose first param is `&Lam`.
+  collect_only_tnode!(
+      NodeRefT::Hinputs(coutputs),
+      NodeRefT::FunctionHeader(FunctionHeaderT {
+          id: IdT {
+              local_name: INameT::Function(FunctionNameT {
+                  template: FunctionTemplateNameT { human_name: StrI("__call"), .. },
                   ..
-                }),
+              }),
               ..
-            },
+          },
+          params: [
+              ParameterT {
+                  tyype: KindT::BorrowRef(BorrowRefT {
+                      inner: KindT::Struct(StructTT {
+                          id: IdT {
+                              local_name: INameT::Struct(StructNameT {
+                                  template: IStructTemplateNameT::StructTemplate(
+                                      StructTemplateNameT { human_name: StrI("Lam"), .. }
+                                  ),
+                                  ..
+                              }),
+                              ..
+                          },
+                          ..
+                      }),
+                  }),
+                  ..
+              },
+              ..
+          ],
           ..
-        }),
-      ..
-    }) => {}
-    other => panic!("expected __call's first param to be BorrowRef(Lam), got {:?}", other),
-  }
+      }) => Some(())
+  );
 }
 
 #[test]
-#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
+#[ignore = "runtime-array-from-callable delegates to find_function on the Array library function (array_compiler.rs:299), so a wrong-element generator fails as generic CouldntFindFunctionToCallT (:322) before the dedicated element-type check (:337, itself a bare panic). Un-ignore once the runtime path compares the generator's return type to the element type directly, like the static path (:150)."]
 fn reports_when_rsa_callable_returns_wrong_element_type() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -3863,7 +3871,11 @@ fn reports_when_rsa_callable_returns_wrong_element_type() {
     "  return 7;\n",
     "}\n",
   );
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    builtin_source_for_arrays(&parse_arena, &parser_keywords),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -5502,7 +5514,6 @@ fn generates_free_function_for_imm_struct() {
 
 // VCOORD: re-enable share things after onion
 #[test]
-#[ignore]
 fn reports_when_exported_ssa_depends_on_non_exported_element() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -5530,15 +5541,14 @@ fn reports_when_exported_ssa_depends_on_non_exported_element() {
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
     r#"At test:0.vale:1:1:
-export [#5]Raza as RazaArray;
-Exported kind StaticSizedArray(IdT { package_coord: PackageCoordinate { module: "", packages: [] }, init_steps: [], local_name: StaticSizedArray(StaticSizedArrayNameT { template: StaticSizedArrayTemplateNameT, size: Integer(5), arr: RawArrayNameT { element_type: CoordT { ownership: Share, region: RegionT { region: Default }, kind: Struct(StructTT { id: IdT { package_coord: PackageCoordinate { module: "test", packages: [] }, init_steps: [], local_name: Struct(StructNameT { template: StructTemplate(StructTemplateNameT { human_name: "Raza" }), template_args: [], _must_intern: MustIntern(()) }), _must_intern: MustIntern(()) }, _must_intern: MustIntern(()) }), _sealed: () }, self_region: RegionT { region: Default } } }), _must_intern: MustIntern(()) }) depends on kind Raza that wasn't exported from package test
+export StaticArray<5, Raza> as RazaArray;
+Exported kind StaticArray<5, Raza> depends on kind Raza that wasn't exported from package test
 "#,
   );
 }
 
 // VCOORD: re-enable share things after onion
 #[test]
-#[ignore]
 fn reports_when_exported_rsa_depends_on_non_exported_element() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -5567,14 +5577,13 @@ fn reports_when_exported_rsa_depends_on_non_exported_element() {
     &humanize_compile_error(&mut compile, err),
     r#"At test:0.vale:1:1:
 export []Raza as RazaArray;
-Exported kind Array<@Raza> depends on kind Raza that wasn't exported from package test
+Exported kind Array<Raza> depends on kind Raza that wasn't exported from package test
 "#,
   );
 }
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn test_make_array() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -5590,7 +5599,7 @@ import v.builtins.arrays.*;
 import v.builtins.drop.*;
 
 exported func main() int {
-  a = MakeArray<int>(11, {_});
+  a = MakeArray<int>(11, {__copy_prim(_)});
   return len(&a);
 }
 "#;

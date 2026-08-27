@@ -10,8 +10,7 @@ use crate::utils::fx::HashMap;
 pub const ENTRIES: &[(&str, &str, &str)] = &[
   ("arith", "arith.vale", include_str!("resources/arith.vale")),
   ("logic", "logic.vale", include_str!("resources/logic.vale")),
-  // VCOORD: re-enable closures
-  // ("migrate",                        "migrate.vale",                        include_str!("resources/migrate.vale")),
+  ("migrate",                        "migrate.vale",                        include_str!("resources/migrate.vale")),
   ("str", "str.vale", include_str!("resources/str.vale")),
   ("drop", "drop.vale", include_str!("resources/drop.vale")),
   ("clone", "clone.vale", include_str!("resources/clone.vale")),

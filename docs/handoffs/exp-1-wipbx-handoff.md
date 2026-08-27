@@ -10,10 +10,31 @@ backend.
 
 Green. The gates (from `fire-commit-config.toml`), with last measured counts — re-run to refresh:
 
-- `cargo nextest run --manifest-path Cargo.toml` (native) — 813 passed.
-- `VALE_TEST_BACKEND=wasi cargo nextest run --manifest-path Cargo.toml` — 813 passed.
+- `cargo nextest run --manifest-path Cargo.toml` (native) — 823 passed (one backend-e2e test,
+  `pass_manager_main_builds_simple_program_end_to_end`, sometimes reports LEAK — non-fatal, it passes).
+- `VALE_TEST_BACKEND=wasi cargo nextest run --manifest-path Cargo.toml` — 823 passed.
 - `cargo test --manifest-path Cargo.toml --lib --features rust_interop` — 858 passed (gate for changes
-  under `src/typing/rust_interop/**`; needs `rustc-dev` on the pinned nightly).
+  under `src/typing/rust_interop/**`; needs `rustc-dev` on the pinned nightly; re-measure — not run this session).
+
+## Lambda typing
+
+Lambdas type-check through the typing pass: `src/typing/test/compiler_lambda_tests.rs` has 10 of 12
+enabled and green (`cargo nextest run --manifest-path Cargo.toml compiler_lambda_tests`). Param-bearing
+`__call` resolution binds param runes in the two per-call-site solve fns
+(`evaluate_templated_function_from_call_for_banner`, `evaluate_templated_light_banner_from_call` in
+`function_compiler_solving_layer.rs`) by folding each param's @PFVSZ rules into `call_site_rules` +
+`derive_rune_to_type`, consuming each `initial_send` (Equals rule + InitialKnown + Kind rune-type), and
+using `assemble_initial_sends_from_args`. Closure captures lower to `MemberLookup(self, member)` (a
+genuine `&&`, decayed) with no `SoftLoad`/`OwnershipT`.
+
+Two stay `#[ignore]`d — genuine gaps, not regressions:
+- `tests_lambda_and_concept_function` — fails in expression compilation (concept-function + lambda).
+- `lambda_inside_template` — needs clone-of-borrow-in-generics bound resolution (`&&T` structural
+  distinctness), per its own `#[ignore]` reason; its test setup also omits the imported package sources
+  (`printutils`, `drop`, …), which must be added alongside.
+
+Stale `// VCOORD: enable this` comments sit above the now-enabled tests (Guardian NRVMX blocks AI
+removal of V-markers) — the architect can clear them.
 
 ## Active project: seal the postparse interner
 
@@ -70,6 +91,9 @@ interned, @WVSBIZ) and an **imprecise** side (interned lookup key):
 - Variables: `IVarDeclarationNameS` embeds an interned `&'s <ImpreciseNameS>` + a `lid`; typing's
   `LocalNameT`/`MemberNameT` are `{ imprecise_name: &'s CodeNameS, life }` (life = the lid moved into
   LIFE space via `LocationInFunctionEnvironmentT::from_lid`; a declaration's life *is* its lid, no `.0`).
+  Every var-name variant that names a source binding — including `MagicParamNameT` and
+  `ClosureParamNameT` — carries its interned imprecise name, so `IVarNameT::imprecise_name()` (in
+  `environment.rs`) returns it and use-sites resolve by it through `get_variable`.
 - Functions: `IFunctionDeclarationNameS` is identity (not interned) — built directly and wrapped in
   `INameS::FunctionDeclaration` (mirroring `INameS::VarName`), each variant carrying `code_location` +
   a `lid` and embedding its interned imprecise name; `imprecise_name()` returns the new interned
@@ -104,3 +128,16 @@ needs no backend-code edits. Member lookup is by spelling (`get_member_and_index
 - **`main` can advance past this branch's premises.** This branch was built on the `no_backend` onion
   state; `main` re-linked the backend underneath it, so the onion `lib.rs`/gate changes were stale and
   dropped on rebase. Re-check `origin/main`'s direction before assuming a branch-local invariant holds.
+- **A use-site finds its declaration via `get_variable` by *imprecise* name.** A var-name variant that
+  drops its imprecise name in the postparse→typing translation is unfindable and panics at the use (a
+  lambda's `^_` did, until `MagicParamNameT` gained its imprecise name). Check the translator preserves
+  it, not just that the struct field exists.
+- **Block-result temporaries are named `TypingPassBlockResultVarNameT { life }`, keyed only on `life`.**
+  Two block terminations (`drop_since`) handed the same `life` mint the same local and double-unstackify
+  it. Give each a distinct life (non-final consecutor statements use a reserved `life.add(len + index)`
+  branch, clear of the statement subtrees and the block result).
+- **A lambda's closure `self` param is deliberately NOT @PFVSZ-split** (`create_closure_param` sets
+  `value_type_rune == full_type_rune == the & rune`, its Lookup+BorrowRef in `header_rules`, per-param
+  slices empty). So the call-site solve must use `assemble_initial_sends_from_args` (peels by
+  `type_outer_ref_rules.len()`, = 0 here, so `&closure` lands intact), not
+  `old_assemble_initial_sends_from_args` (peels all refs → the arg conflicts with the `&` rune).

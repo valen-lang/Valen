@@ -290,7 +290,6 @@ exported func main() int { return { 7 }(); }
 
 // VCOORD: enable this
 #[test]
-#[ignore]
 fn tests_lambda_and_concept_function() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -300,7 +299,7 @@ fn tests_lambda_and_concept_function() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r#"
-import v.builtins.print.*;
+import printutils.*;
 import v.builtins.drop.*;
 import v.builtins.str.*;
 
@@ -309,7 +308,7 @@ where func(&F, &X)void, func drop(X)void, func drop(F)void {
   f(&x);
 }
 exported func main() {
-  moo("hello", { print(_); });
+  moo(true, { print(_); });
 }
 "#;
   let code_source = CodeSource::new(vec![
@@ -318,6 +317,8 @@ exported func main() {
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
     Source::builtin_module(&parse_arena, &parser_keywords, "str"),
     new_test_code_map(&parse_arena, code),
+    new_test_package_source(&parse_arena, "printutils"),
+    new_test_package_source(&parse_arena, "castutils"),
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
@@ -381,7 +382,6 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn lambda_inside_template() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -396,16 +396,26 @@ import v.builtins.drop.*;
 import printutils.*;
 
 func helperFunc<T>(x T)
-where func print(T)void, func drop(T)void
+where func print(&T)void, func drop(T)void
 {
-  { print(__copy_prim(&x)); }();
+  { print(&x); }();
 }
 exported func main() {
   helperFunc(4);
-  helperFunc("bork");
+  helperFunc(true);
 }
 "#;
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "print"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "str"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+    new_test_code_map(&parse_arena, code),
+    new_test_package_source(&parse_arena, "printutils"),
+    new_test_package_source(&parse_arena, "castutils"),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,

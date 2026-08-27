@@ -1104,7 +1104,18 @@ fn humanize_kind<'s, 't>(
         )
         + ">"
     }
-    KindT::StaticSizedArray(ssa) => format!("StaticSizedArray({:?})", ssa.name),
+    KindT::StaticSizedArray(ssa) => {
+      "StaticArray<".to_string()
+        + &humanize_templata(scout_arena, typing_interner, code_map, ssa.size())
+        + ", "
+        + &humanize_templata(
+          scout_arena,
+          typing_interner,
+          code_map,
+          ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: ssa.element_type() })),
+        )
+        + ">"
+    }
     KindT::BorrowRef(b) => {
       format!("&{}", humanize_kind(scout_arena, typing_interner, code_map, b.inner))
     }

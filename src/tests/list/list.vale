@@ -10,7 +10,7 @@ func List<E>() List<E> {
   return List<E>(
     Array<E>(
       0,
-      &(i) => { __pretend<E>() }));
+      (i) => { __pretend<E>() }));
 }
 func drop<E>(self List<E>)
 where func drop(E)void {
@@ -61,7 +61,7 @@ func remove<E>(list &List<E>, removeAtIndex int) E {
   i = list.len() - 1;
   while (i >= removeAtIndex) {
     // TSUGAR:     (set temp = Some(set list.array[i] = (set temp = None<E>()).get())).expect_none();
-    (set temp = Some(set list.array[__copy_prim(&i)] = (^set temp = None<E>()).get())).expect_none();
+    (set temp = Some(set list.array[__copy_prim(&i)] = (set temp = None<E>()).get())).expect_none();
     set i = i - 1;
   }
 
