@@ -78,17 +78,6 @@ channel from `GlobalState` to `Package`). The producer is unchanged from S8/S9: 
 maps from `tcx.layout_of` / `tcx.fn_abi_of_instance` at the end of instantiation, and only that computation
 touches rustc.
 
-S13: The extern-ABI map (`Package.externAbis`, relocated there by S14) is the single, **source-agnostic**
-ABI-descriptor channel. Every extern
-function's boundary is driven by a per-extern descriptor (per-argument and return coercions), consumed
-uniformly by `buildCallOrSideCall` and the rest of the boundary regardless of where it came from —
-mechanism (consume) is separated from policy (classify). Interop populates it from rustc's
-`fn_abi_of_instance`; standalone valec will later populate it from its own per-target C-ABI classifier
-(the Zig/Odin/C3-style S9/S10 shim-removal work), computed elsewhere and delivered through this same
-map. The current `hasAbi` fallback — the structural sret rule plus the `{i64}` handle type for
-descriptor-less C externs — is temporary scaffolding: once every extern carries a descriptor, `hasAbi`
-is always true, that fallback is dead, and the descriptor-less path is deleted.
-
 S12 (refines S11, as built for Part A): All data handed to the backend is one `BackendInputs`
 (`src/backend_ffi/backend_inputs.rs`), a **two-variant enum by mode** (`Standalone(StandaloneInputs)` |
 `Interop(InteropInputs)`) for symmetry; the `Interop` variant nests the rust-specific data (rustc's

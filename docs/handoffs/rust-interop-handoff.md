@@ -10,8 +10,9 @@ Tier-2 harness runs the linked executable and asserts its exit code (`seven()` �
 `add_two_numbers(20, 22)` → 42). **The full `domino` test now links and runs → 7**
 (`rustc_driven_bin_domino_returns_seven`): a Vale program constructs a Rust struct wrapping a `HashMap`,
 calls `&mut self`/`&self` methods on it, gets a `&Glyph` back, and returns through it. The whole
-aggregate ABI is sourced from rustc (`tcx.layout_of` + `tcx.fn_abi_of_instance`). See "The path to the
-domino test" for how the four ABI modes are handled. Design
+aggregate ABI is sourced from rustc (`tcx.layout_of` + `tcx.fn_abi_of_instance`). See "The aggregate
+ABI" for how the four modes are handled, including large structs passed by value as arguments;
+`Pair`/`Cast` register-split args are the one shape still unimplemented (see "Next"). Design
 sources of truth: `docs/architecture/vale-rust-interop-architecture.md`,
 `src/instantiating/instantiating-rust-interop-design.md`, the backend's `Backend/backend-design.md` (the C-ABI /
 shim-removal direction), and the roadmap `docs/plans/rust-interop-plan.md`.
@@ -142,7 +143,7 @@ A Vale binary calling real Rust functions links and runs. Two Tier-2 tests asser
   backend's single entry through `compile(BackendInputs)` (`src/backend_ffi/`). `BackendInputs` is a
   two-variant enum by mode (`Standalone` | `Interop`); the `Interop` variant carries rustc's lent
   `(context, module)` and the entry symbol. The imported-struct layouts and per-extern ABI descriptors
-  ride the metal `Program` instead of `BackendInputs` (S14; see "The path to the domino test"). There is
+  ride the metal `Program` instead of `BackendInputs` (S14; see "The aggregate ABI"). There is
   no second `translate_program` pass — the driven `monouts` is exactly what the backend lowers.
 - **Single-symbol naming.** The entry and each Rust leaf are emitted under rustc's own mangled name
   (`tcx.symbol_name`). The one extern-name map is `FunctionExternI.link_name` — the real callee symbol
@@ -158,16 +159,16 @@ A Vale binary calling real Rust functions links and runs. Two Tier-2 tests asser
   the exit code. `rustc_codegen_emits_vale_bodies_into_borrowed_module` still asserts the earlier
   lib-crate emit path (backend rc 0, rustc exits 0).
 
-## The path to the domino test
+## The aggregate ABI
 
-The goal: `A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS` (`corpus.rs`, `domino-glyphs`) — `d =
-Domino.new(); d.add_glyph(Glyph.new(7)); d_ref = d.get_glyph(7); return d_ref.location();` → 7, *linked
-and run*. The `seven()`/`add_two_numbers` binaries run because they are all scalar `i32` (Rust ABI == C
-ABI); domino needs real aggregate ABI, which is being built by asking rustc (`layout_of` + `fn_abi_of_instance`)
-rather than hand-rolling a classifier. The design of record is `instantiating-rust-interop-design.md`
-(proposals S8–S14); status:
+The domino test (`A_STRUCT_WRAPPING_A_HASHMAP_IS_USED_THROUGH_METHODS`, `corpus.rs`, `domino-glyphs`)
+links and runs → 7: `d = Domino.new(); d.add_glyph(Glyph.new(7)); d_ref = d.get_glyph(7); return
+d_ref.location();`. The scalar `seven()`/`add_two_numbers` binaries need no aggregate ABI (Rust ABI == C
+ABI); domino's struct sizes and calling conventions are read from rustc (`layout_of` +
+`fn_abi_of_instance`) rather than a hand-rolled classifier. Design of record:
+`instantiating-rust-interop-design.md` (proposals S8–S14). How it works:
 
-- **Backend boundary unified (S12): done, committed** (the `TEMP CHECKPOINT` at HEAD).
+- **Backend boundary unified (S12).**
   `compile(BackendInputs)` (`src/backend_ffi/`) → one C++ `backend_compile` (`vale.cpp`);
   `compileStandalone` and `compileIntoModuleFromRustc` are `static` internals of `vale.cpp`.
   `BackendInputs` is a two-variant enum by mode; the `Interop` variant carries only rustc's lent
@@ -176,7 +177,8 @@ rather than hand-rolling a classifier. The design of record is `instantiating-ru
 - **Opaque-struct sizing and ABI coercion: built (S8–S14), the full domino runs → 7** (the goal:
   `rustc_driven_bin_domino_returns_seven`; the ladder rungs `rustc_driven_bin_method_returns_seven` (Counter,
   by-value aggregate) and `rustc_driven_bin_borrow_self_method_returns_seven` (borrow + drop) also green;
-  native 823/823 and interop suites green). Two general, source-agnostic maps ride the core metal `Package`
+  native + interop suites green via `cargo nextest run`, with and without `VALE_TEST_BACKEND=wasi`).
+  Two general, source-agnostic maps ride the core metal `Package`
   (`Backend/src/metal/ast.h`): `structLayouts` keyed by the humanized struct name (beside
   `externNameToKind`), `externAbis` keyed by the humanized prototype name (beside `externNameToFunction`,
   which is also the key `GlobalState.externFunctions` uses, **not** the extern symbol). They cross via the
@@ -193,11 +195,13 @@ rather than hand-rolling a classifier. The design of record is `instantiating-ru
       (`externs.cpp`) and `buildBoundarySignature` (`boundary.cpp`) both consult `lookupExternAbi`
       (boundary.cpp, also non-aborting) so the declared signature and the call agree. `getExternalType`'s
       `{i64}` handle and structural `returnNeedsOutParam` survive only as the descriptor-less C-extern
-      fallback (S13).
+      fallback (see backend-design.md's "ABI Boundaries").
   **`PassMode` coverage:** `compute_extern_abi` maps `Direct` on a pointer-scalar layout
   (`arg.layout.backend_repr` is `BackendRepr::Scalar` with a `Primitive::Pointer`) → `DirectPtr`, other
-  `Direct` → `DirectInt(size.bits())`, `Indirect` → sret, `Ignore` → not passed. `Pair`/`Cast`
-  (float/mixed-register structs) still `panic!`; domino needs none, and a leaf that hits one adds its own arm.
+  `Direct` → `DirectInt(size.bits())`, `Indirect { on_stack: false }` → an indirect pointer to a
+  caller-owned copy (an sret out-pointer for a return, a pointer to a spilled copy for a by-value
+  argument; @EACBIPZ), `Ignore` → not passed. `Pair`/`Cast` (float/mixed-register structs) and on-stack
+  byval (`Indirect { on_stack: true }`) still `panic!`; a leaf that hits one adds its own arm.
 
   Two boundary subtleties the domino run forced, both in the consumers:
     - **`sret` needs the LLVM `sret` attribute.** An `Indirect` return passes the out-pointer in the
@@ -210,6 +214,15 @@ rather than hand-rolling a classifier. The design of record is `instantiating-ru
     - **A `DirectPtr` owned value must spill.** A borrow is already a pointer, but a *consuming* drop's
       `*mut T` receives an owned inline value; `buildCallOrSideCall`'s `DirectPtr` arm spills it to a slot
       and passes the address (`drop_in_place` runs on it; Vale keeps the stack slot).
+
+## Next: Pair/Cast register-split args
+
+A medium struct (~9–16 bytes, e.g. NobiliaV's 16-byte `TileSpec`) is passed split across two registers
+(rustc `PassMode::Pair`, sometimes `Cast`), which `compute_extern_abi` `panic!`s on. It is a distinct arm
+from the indirect-pointer crossing (@EACBIPZ): a new `Coercion` variant carrying the two register pieces,
+`compute_extern_abi` mapping `Pair`/`Cast`, `buildBoundarySignature` declaring the pair, and
+`buildCallOrSideCall` extracting and inserting the two halves. Deferred until NobiliaV confirms they need
+it; they may adjust their facade to indirect-crossing structs instead.
 
 ## The C++ backend under interop
 
@@ -395,7 +408,16 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   for interop externs. Reusing the path is **not** sufficient on its own, though: a direct rustc call
   (no clang shim) also needs the LLVM `sret` type attribute on the out-pointer param (declaration + call
   site), or the pointer lands in the wrong register and rustc's callee scribbles over the stack. See the
-  domino-ABI notes in "The path to the domino test".
+  domino-ABI notes in "The aggregate ABI".
+- A large struct crosses an interop extern as an **argument** the same way it does as a return: an
+  indirect pointer to a caller-owned copy (rustc `Indirect { on_stack: false }`), never LLVM `byval`
+  (@EACBIPZ). The `byval` attribute coincidentally survives a lone argument but corrupts the call once a
+  second argument follows, so a one-argument test cannot prove the argument ABI — use a second argument,
+  ideally behind an sret return.
+- A driven case that fails to typecheck panics with the diagnostic (`drive_rustc` in `harness.rs`). Do
+  not read a bare undefined `__vale_main` / empty `__vale_main -> []` firing log as an ABI or
+  instantiation bug: a `None` hinputs from a swallowed typing error produced exactly that shape before
+  the harness surfaced it.
 - Data crossing Rust→C++ goes through the metal **builder FFI**: one `add(key, value)` call per entry
   into a C++-owned `std::unordered_map`, the way `metal_package_builder_add_extern_function` and the whole
   metal AST already cross, not a flat `#[repr(C)]` array smuggled through `InteropInputs`. The interop

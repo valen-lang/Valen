@@ -501,6 +501,10 @@ struct DrivenCallbacks<'ctx, 's, 't, 'p> {
   typing_interner: &'ctx TypingInterner<'s, 't>,
   global_options: GlobalOptions,
   hinputs_slot: &'ctx RefCell<Option<HinputsT<'s, 't>>>,
+  // Set when the Vale program fails to typecheck. drive_rustc reads it after run_compiler and panics
+  // on the test thread, so a broken driven program surfaces its diagnostic instead of looking like an
+  // empty `__vale_main -> []` firing log with an undefined `__vale_main` at link.
+  typing_error_slot: &'ctx RefCell<Option<String>>,
   state_ptr: *const (),
 }
 
@@ -575,8 +579,11 @@ impl<'ctx, 's, 't, 'p> Callbacks for DrivenCallbacks<'ctx, 's, 't, 'p> {
       &options,
       Oracles::with_rust(&logging),
     );
-    if let Ok(hinputs) = compiler.evaluate(&code_map, astrouts) {
-      *self.hinputs_slot.borrow_mut() = Some(hinputs);
+    match compiler.evaluate(&code_map, astrouts) {
+      Ok(hinputs) => *self.hinputs_slot.borrow_mut() = Some(hinputs),
+      // Capture the failure rather than swallowing it. A None hinputs would otherwise flow silently
+      // into empty leaf collection and no body emission, so drive_rustc surfaces this after the run.
+      Err(err) => *self.typing_error_slot.borrow_mut() = Some(format!("{err:?}")),
     }
 
     // Arm the scoped pointer on this (the rustc) thread, where the provider will read it during
@@ -681,6 +688,7 @@ fn drive_rustc(case: &Case, emit_backend: bool, crate_type: &str, run_exe: bool)
   };
 
   let hinputs_slot: RefCell<Option<HinputsT>> = RefCell::new(None);
+  let typing_error_slot: RefCell<Option<String>> = RefCell::new(None);
   let monouts_slot: RefCell<InstantiatedOutputsI> = RefCell::new(InstantiatedOutputsI::new());
   let function_exports_slot: RefCell<Vec<FunctionExportI>> = RefCell::new(Vec::new());
   let entry_symbol_slot: RefCell<Option<String>> = RefCell::new(None);
@@ -712,11 +720,18 @@ fn drive_rustc(case: &Case, emit_backend: bool, crate_type: &str, run_exe: bool)
     typing_interner: &typing_interner,
     global_options: global_options.clone(),
     hinputs_slot: &hinputs_slot,
+    typing_error_slot: &typing_error_slot,
     state_ptr,
   };
   let rustc_exit = rustc_driver::catch_with_exit_code(|| {
     rustc_driver::run_compiler(&rustc_args, &mut callbacks);
   });
+  // Surface a Vale typing failure on the test thread. Without this, a broken driven program leaves
+  // hinputs None and reads downstream as an empty `__vale_main -> []` firing log plus an undefined
+  // `__vale_main` at link, masking the real cause.
+  if let Some(err) = typing_error_slot.into_inner() {
+    panic!("driven case '{}' failed to typecheck, so no Vale body was emitted:\n{err}", case.name);
+  }
   // Run the produced executable while out_dir_tmp is still alive (it self-deletes on drop). A bin
   // build lands its executable at <out_dir>/<crate-name>; only run when rustc actually linked one.
   let process_exit = if run_exe && rustc_exit == 0 {

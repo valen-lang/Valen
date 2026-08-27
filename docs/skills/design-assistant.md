@@ -32,9 +32,15 @@ Sections:
  * As we go, I'll "ratify", in other words, move things to the top section.
  * We won't consider it "part of the plan" until it's ratified.
  * Continue the S1/S2/S3/etc naming scheme.
- * Every item in this section should be short, effective, and to the point.
  * Every time the user says something, if it's not already specified by the Design, it should be added to the top of the Design Proposals, in roughly the same amount of words as the user used.
+
+After you write a proposal, do an "editing pass" on it to rewrite it to better adhere to prose-reviewer and the below rules:
+
+ * Every item in this section should be short, effective, and to the point.
  * This section should **only** contain the desired state as a consistent specific point in time. It should **not** contain details for how we'll get there. If necessary, those can go into Details.
+ * Aggressively modify or delete any outdated proposals. This section should **not** contain outdated proposals. Every proposal should be kept up to date. No "refined by other proposals" or "supersedes" or "superseded by" markers.
+ * Every proposal should be stated simply and clearly. No fluff, no redundancy.
+ * Only one sentence of motivation or context is allowed.
 
 **"Details" section:**
 

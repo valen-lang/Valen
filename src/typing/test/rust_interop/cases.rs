@@ -668,6 +668,54 @@ fn rustc_driven_bin_domino_returns_seven() {
   );
 }
 
+/// Passes a large struct BY VALUE into a Rust free function: `domino_size(d)` moves a 48-byte `Domino`,
+/// which rustc classifies `PassMode::Indirect`, so it must cross as LLVM `byval` (a pointer to a
+/// caller-owned copy, ownership moved to the callee). One glyph is inserted before the move, so it
+/// returns 1. This is the argument mirror of the sret return the domino case already exercises.
+#[test]
+fn rustc_driven_bin_domino_byval_arg_returns_one() {
+  let run = run_case_rustc_driven_and_run(&DOMINO_BY_VALUE_ARG);
+  assert_eq!(
+    run.process_exit,
+    Some(1),
+    "the driven byval-arg bin did not exit 1 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Pins the byval attribute index when the byval argument sits BEHIND an sret return.
+/// `add_and_return(^d, 7)` moves a `Domino` in by value and returns a `Domino` by value (sret), so the
+/// byval argument is physical parameter 1 (the sret out-pointer is 0); a byval attribute placed by
+/// logical argument index would land on the sret pointer. Returns 7.
+#[test]
+fn rustc_driven_bin_domino_byval_arg_with_sret_returns_seven() {
+  let run = run_case_rustc_driven_and_run(&DOMINO_BYVAL_ARG_WITH_SRET_RETURN);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven byval-arg-with-sret bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Regression guard for the driven harness's diagnostics, not an interop feature. When a driven Vale
+/// program fails to typecheck, the harness must surface that. Before it did, a failed typecheck left
+/// `hinputs` None, which read downstream as an empty `__vale_main -> []` firing log plus an undefined
+/// `__vale_main` at link, so a broken program looked like a mysterious ABI or instantiation failure.
+/// The harness now panics with the typing diagnostic instead. `expect` is inert on the driven path,
+/// which asserts through this panic.
+#[test]
+#[should_panic(expected = "failed to typecheck")]
+fn driven_harness_surfaces_a_typing_failure() {
+  let broken = Case {
+    fixture: "fixtures",
+    name: "driven-typecheck-failure",
+    vale: "exported func main() int { return true; }",
+    expect: Expect::FailsToCompile("main returns a bool where an int is required"),
+  };
+  run_case_rustc_driven_and_run(&broken);
+}
+
 /// Ladder rung 1 (tier 2): the first case that runs a non-scalar aggregate across the boundary,
 /// `(make_counter()).get()`, which returns and consumes `Counter{i32}` by value, returns 7. Two things
 /// must hold: the struct-layout map sizes `translateType(Counter)` to a real `[1 x i32]`, and the

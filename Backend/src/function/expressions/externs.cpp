@@ -82,6 +82,15 @@ Ref buildCallOrSideCall(
         hostArgsLE.push_back(sentLE);
         continue;
       }
+      if (c.kind == CoercionKind::Indirect) {
+        // Per @EACBIPZ, a large struct crosses as an indirect pointer, not byval: spill the moved owned
+        // value to a slot (like the fall-through move below) and pass the slot's address, with no `byval`
+        // attribute.
+        auto sentLE = sendValeObjectIntoHost(globalState, functionState, builder, valeArgRefMT, valeArg);
+        auto slot = makeBackendLocal(functionState, builder, LLVMTypeOf(sentLE), "indirectArgSlot", sentLE);
+        hostArgsLE.push_back(slot);
+        continue;
+      }
       // A scalar DirectInt already is its integer. Fall through.
     }
 

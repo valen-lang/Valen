@@ -438,3 +438,21 @@ impl Domino {
         self.glyphs.get(&key).unwrap()
     }
 }
+
+/// Consumes a `Domino` **by value** as an argument. `Domino` is a 48-byte memory-class struct, so
+/// rustc classifies this parameter `PassMode::Indirect`: the LLVM `byval` case, where the caller passes
+/// a pointer to its own copy and the callee takes ownership and drops it. Vale must move `d` into this
+/// call (suppressing its scope-end drop) and mark the pointer `byval`. This is the argument mirror of
+/// the sret return that `Domino::new` already exercises.
+pub fn domino_size(d: Domino) -> i32 {
+    d.glyphs.len() as i32
+}
+
+/// Takes a `Domino` BY VALUE (a byval `Indirect` argument) alongside a scalar, and returns a `Domino`
+/// BY VALUE (an sret `Indirect` return). The byval argument therefore sits *behind* the sret out-pointer
+/// at the call, so it pins the physical-index shift: a byval attribute placed by logical index alone
+/// would land on the sret pointer instead.
+pub fn add_and_return(mut d: Domino, loc: i32) -> Domino {
+    d.glyphs.insert(loc, Glyph::new(loc));
+    d
+}

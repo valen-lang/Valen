@@ -3,7 +3,7 @@
 **Machine facts live in the `fire-commit-config.toml` files, not here.** The host's is at
 `fire-commit-config.toml` and each external carries its own at `<external>/fire-commit-config.toml`;
 they declare the branch model, sweeps, test commands, and external list, and `commit-preflight`
-reads them. This doc holds only the prose and judgment the `.toml` can't encode.
+reads them. **You must run commit-preflight** as part of this process. This `fire-commit-config.md` doc holds only the prose and judgment the `.toml` can't encode. 
 
 **Policy:** commit everything dirty in Luz and Guardian, even if it looks unrelated to this session.
 This is only safe because anything *not* meant to be committed lives in each repo's gitignored `tmp/`

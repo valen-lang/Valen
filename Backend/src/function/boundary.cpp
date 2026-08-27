@@ -92,7 +92,8 @@ BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* pr
     bool usesReturnOutParam = abi->ret.kind == CoercionKind::Indirect;
     std::vector<LLVMTypeRef> paramTypesL;
     if (usesReturnOutParam) {
-      paramTypesL.push_back(ptrLT);  // hidden sret out-pointer, first parameter
+      // Per @EACBIPZ, an Indirect return crosses through this hidden sret out-pointer.
+      paramTypesL.push_back(ptrLT);  // first parameter
     }
     assert(abi->args.size() == prototypeM->params.size());
     for (const Coercion& c : abi->args) {
@@ -100,6 +101,7 @@ BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* pr
         case CoercionKind::Ignore: break;  // zero-sized: not passed at all
         case CoercionKind::DirectInt:
           paramTypesL.push_back(LLVMIntTypeInContext(globalState->context, c.directIntBits)); break;
+        // Per @EACBIPZ, an Indirect arg (like a DirectPtr borrow) is a plain pointer, no byval.
         case CoercionKind::DirectPtr:
         case CoercionKind::Indirect: paramTypesL.push_back(ptrLT); break;
       }

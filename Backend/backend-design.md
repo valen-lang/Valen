@@ -77,7 +77,14 @@ This catches certain mistakes, like the backend mixing up two subexpressions. Fo
  * `checkValidReference(lookup.array_type, arrayExpr)` checks if `lookup.array_type` (which is `&[3]bool`) matches `arrayExpr.type` (which is `int`), which it doesn't so it PANICS (which is good).
 So, this helps us keep various expressions straight.
 
-### C ABI Boundary (@BDCABIBZ)
+### ABI Boundaries
+
+In `Package` we have a `std::unordered_map<std::string, ExternAbi> externAbis;` which has, for each function name, how we should send/receive its arguments/return. By value, by pointer, etc.
+
+Currently only Rust uses it, but C will one day too. At that point the current `hasAbi` checks will go away.
+
+
+#### C ABI Boundary (@BDCABIBZ)
 
 Currently, if some Valen code declares an `extern func cFunc(s CStruct1) CStruct2`, Valen can't actually call it directly, because Valen doesn't yet understand the C ABI on the various OSs.
 

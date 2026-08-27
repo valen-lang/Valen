@@ -1321,6 +1321,47 @@ exported func main() int {
   expect: Expect::Returns(7),
 };
 
+/// A large struct crosses the boundary BY VALUE as an argument: `domino_size(d)` moves a 48-byte
+/// `Domino` into a Rust free function. rustc classifies the parameter `PassMode::Indirect`, so it must
+/// cross as LLVM `byval` (a pointer to a caller-owned copy, ownership moved to the callee). This is the
+/// argument mirror of the sret return; one glyph is inserted before the move, so `domino_size` returns 1.
+pub const DOMINO_BY_VALUE_ARG: Case = Case {
+  fixture: "fixtures",
+  name: "domino-byval-arg",
+  vale: r#"
+import rust.mycrate.Domino;
+import rust.mycrate.Glyph;
+import rust.mycrate.domino_size;
+exported func main() int {
+  d = Domino.new();
+  d.add_glyph(Glyph.new(7));
+  return domino_size(^d);
+}
+"#,
+  expect: Expect::Returns(1),
+};
+
+/// A byval argument BEHIND an sret return: `add_and_return(^d, 7)` moves a 48-byte `Domino` in by value
+/// (`Indirect`) and returns a `Domino` by value (`Indirect`/sret). The sret out-pointer occupies the
+/// first physical parameter, so the byval `Domino` is the second; a byval attribute placed by logical
+/// argument index would land on the sret pointer. The returned domino has a glyph at key 7 (location 7).
+pub const DOMINO_BYVAL_ARG_WITH_SRET_RETURN: Case = Case {
+  fixture: "fixtures",
+  name: "domino-byval-arg-sret-return",
+  vale: r#"
+import rust.mycrate.Domino;
+import rust.mycrate.Glyph;
+import rust.mycrate.add_and_return;
+exported func main() int {
+  d = Domino.new();
+  d2 = add_and_return(^d, 7);
+  d_ref = d2.get_glyph(7);
+  return d_ref.location();
+}
+"#,
+  expect: Expect::Returns(7),
+};
+
 /// The surviving hazard of hosting rustc inside `cargo test --lib`, pinned as a regression test.
 /// `fixtures_broken_rust/` does not parse, so this drives a rustc **fatal** error through an
 /// in-process `run_compiler`. Measured cost: this one case, not the run.

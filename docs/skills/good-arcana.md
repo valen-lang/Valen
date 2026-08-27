@@ -22,12 +22,18 @@ If any piece of information is an arcana (cross-cutting concern):
    * **Focus on *why*, not *what*.** The arcana's job is to explain the strategic reason the code behaves this way — the design invariant, the trade-off, the concern that drives this behavior. It's fine to anchor the reader with a function or type name, but don't narrate tactical implementation: specific call chains, control-flow sequences, "which branch runs when," step-by-step mechanics. Readers come to the arcana for the *why*; they can read the code for the *what*. Tactical narration also dates fast — which is the stronger form of the no-line-numbers rule below.
    * Do NOT reference file/line numbers (e.g. `function_compiler.rs:194`). Code moves around constantly and line-anchored references go stale fast. Refer to code by concepts, function names, type names, or module/file names only — readers can find the current location by searching for those. The `@ID` markers added to code sites in step 5 are the reverse pointer; the arcana doc doesn't need to point back at specific lines.
 
-4. **Find all relevant code sites.** Search the codebase for every place this arcana manifests: struct fields, code blocks, function signatures, comments. Use Grep, Glob, and Read. Be thorough — missing a site defeats the purpose.
+4. **Do a prose-reviewer editing pass** over what you wrote, and rewrite the **entire thing**. Be sure to load the prose-reviewer skill first. A good writer never goes with their first draft. Pay special attention to what it says about examples; if something is subtle or complex enough to need arcana, then it almost certainly needs an example.
 
-5. **Add `@ID` references.** At each relevant site, add a comment referencing the arcana. The reference must always appear in a sentence:
+5. **Find all relevant code sites.** Search the codebase for every place this arcana manifests: struct fields, code blocks, function signatures, comments. Use Grep, Glob, and Read. Be thorough — missing a site defeats the purpose.
+
+6. **Add `@ID` references.** At each relevant site, add a comment referencing the arcana. The reference must always appear in a sentence:
    - `// Per @PPSPASTNZ, synthesize a constructor call as parser AST.`
    - `// Needed because postparser creates parser nodes (see @PPSPASTNZ)`
 
    Never write a bare `@ID` without a sentence. The sentence gives local context; the `@ID` tells readers where to find the full explanation. Add references in code as comments, and add references to other documentation and other arcana where relevant.
 
    **Keep code-comment references concise.** Preferably one sentence. Ideally one line. The arcana doc is the place for the full explanation — the comment just needs to tell the reader "this is an instance of `@ID`, go read it" plus whatever local context is genuinely needed to understand what *this* site is doing. If you find yourself writing a three-line comment explaining the arcana again, cut it — readers can follow the `@ID` to the doc.
+
+## Required Reading
+
+ * prose-reviewer

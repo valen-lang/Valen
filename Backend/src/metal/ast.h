@@ -38,32 +38,10 @@ class Edge;
 class Function;
 class Prototype;
 class Name;
-
-// An imported extern struct's layout (e.g. from rustc's tcx.layout_of), carried on the metal
-// Package so Unsafe::defineStruct can size the opaque struct as [size/align x i{align*8}].
-// General source-agnostic metadata; the interop provider fills it today.
-struct OpaqueStructLayout {
-  uint64_t sizeBytes;
-  uint64_t alignBytes;
-};
-// How one argument or return value crosses an extern boundary. Source-agnostic: filled from
-// rustc's FnAbi for interop, or a standalone C-ABI classifier later. buildCallOrSideCall marshals
-// per this.
-enum class CoercionKind {
-  Ignore,     // not passed at all: a unit `()` return, like the drop shim's
-  DirectInt,  // in a register as an integer of `directIntBits` bits: a small struct, e.g. Counter -> i32
-  DirectPtr,  // as a pointer: a borrow (&self, &mut self) or a *mut T
-  Indirect,   // through a hidden sret out-parameter: a large struct return, e.g. the 48-byte Domino
-};
-struct Coercion {
-  CoercionKind kind;
-  uint32_t directIntBits;  // width when kind == DirectInt; ignored otherwise
-};
-// One extern function's ABI: how its return and each argument cross.
-struct ExternAbi {
-  Coercion ret;
-  std::vector<Coercion> args;
-};
+struct OpaqueStructLayout;
+enum class CoercionKind;
+struct Coercion;
+struct ExternAbi;
 
 class Package {
 public:
@@ -527,6 +505,30 @@ public:
       id(std::move(id_)),
       name(std::move(name_)),
       type(type_) {}
+};
+
+// An imported extern struct's layout (e.g. from rustc's tcx.layout_of).
+struct OpaqueStructLayout {
+  uint64_t sizeBytes;
+  uint64_t alignBytes;
+};
+// How one argument or return value crosses an extern boundary. Used for Rust interop, will
+// eventually be used for C interop as well (instead of the current shim approach).
+enum class CoercionKind {
+  Ignore,     // not passed at all: a unit `()` return, like the drop shim's
+  DirectInt,  // in a register as an integer of `directIntBits` bits: a small struct, e.g. Counter -> i32
+  DirectPtr,  // as a pointer: a borrow (&self, &mut self) or a *mut T
+  Indirect,   // through memory by pointer, per @EACBIPZ: a large struct like the 48-byte Domino, as an
+              // sret out-parameter for a return or a pointer to a caller-made copy for an argument
+};
+struct Coercion {
+  CoercionKind kind;
+  uint32_t directIntBits;  // width when kind == DirectInt; ignored otherwise
+};
+// One extern function's ABI: how its return and each argument cross.
+struct ExternAbi {
+  Coercion ret;
+  std::vector<Coercion> args;
 };
 
 namespace std {

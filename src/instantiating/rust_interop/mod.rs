@@ -760,9 +760,10 @@ fn compute_extern_abi<'tcx>(tcx: TyCtxt<'tcx>, instance: Instance<'tcx>) -> Opti
     match &arg.mode {
       // A unit return `()`, e.g. the `__vale_drop` shim's return.
       PassMode::Ignore => Coercion::Ignore,
-      // An aggregate too large for a register, returned through an out-pointer: the 48-byte `Domino`
-      // that `Domino::new()` returns.
-      PassMode::Indirect { .. } => Coercion::Indirect,
+      // Per @EACBIPZ, a large aggregate crosses as an indirect pointer to a caller-made copy, not byval.
+      // Only on_stack: false (AArch64 AAPCS) is handled here; on_stack: true (x86 byval) is unsupported,
+      // like Pair/Cast.
+      PassMode::Indirect { on_stack: false, .. } => Coercion::Indirect,
       // A value small enough for a register.
       PassMode::Direct(_) => {
         // A reference (`&self`, `&mut self`, `*mut T`) is a pointer-scalar and crosses as a real pointer.
@@ -774,7 +775,7 @@ fn compute_extern_abi<'tcx>(tcx: TyCtxt<'tcx>, instance: Instance<'tcx>) -> Opti
         }
         Coercion::DirectInt(arg.layout.size.bits() as u32)
       }
-      other => panic!("unsupported PassMode {other:?} for interop extern (Pair/Cast not yet handled)"),
+      other => panic!("unsupported PassMode {other:?} for interop extern (Pair/Cast and on-stack byval not yet handled)"),
     }
   };
   let ret = coercion_of(&fn_abi.ret);

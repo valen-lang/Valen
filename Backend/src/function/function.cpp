@@ -134,10 +134,11 @@ RawFuncPtrLE declareExternFunction(
       addRawFunction(globalState->mod, abiFuncNameL.c_str(), sig.returnLT, sig.paramTypesL);
 
   // VCOORD: integrate this better, perhaps in addRawFunction?
-  // An interop extern with an indirect (sret) return passes its out-pointer in the platform's hidden
-  // result register (x8 on aarch64), which LLVM emits only when the first parameter carries the `sret`
-  // type attribute. Without it the pointer goes in the first ordinary arg register and rustc's callee
-  // reads a garbage sret address. (The C-extern shim path handles its own ABI, so it is excluded.)
+  // Per @EACBIPZ, an interop extern with an indirect (sret) return passes its out-pointer in the
+  // platform's hidden result register (x8 on aarch64), which LLVM emits only when the first parameter
+  // carries the `sret` type attribute. Without it the pointer goes in the first ordinary arg register
+  // and rustc's callee reads a garbage sret address. (The C-extern shim path handles its own ABI, so it
+  // is excluded.)
   if (sig.usesReturnOutParam && lookupExternAbi(globalState, prototypeM) != nullptr) {
     auto returnKind = peel_all_references(prototypeM->returnType);
     auto pointeeLT = globalState->getRegion(returnKind)->translateType(returnKind);
