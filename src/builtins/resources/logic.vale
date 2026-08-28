@@ -11,3 +11,9 @@ func ==(left bool, right bool) bool { return __vbi_eqBoolBool(left, right); }
 // VCOORD: retire when Phase 2 lands (bare-use→Borrow makes the & overload unnecessary).
 func ==(left &bool, right &bool) bool { return __vbi_eqBoolBool(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_eqBoolBool(left bool, right bool) bool;
+
+// VCOORD: consider moving this back to stdlib
+func !=<T>(a &T, b &T) bool
+where func ==(&T, &T)bool {
+  not (a == b)
+}

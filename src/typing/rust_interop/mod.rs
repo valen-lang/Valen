@@ -9,10 +9,12 @@
 
 pub mod corpus;
 pub mod declarations;
+pub mod drive;
 pub mod importer;
 pub mod logging_oracle;
 pub mod oracle;
 pub mod reserved;
+pub mod stub_gen;
 pub mod tyctxt_oracle;
 
 pub use corpus::{Case, Expect};

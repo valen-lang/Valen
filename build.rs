@@ -149,6 +149,21 @@ fn emit_rustc_private_rpath() {
   };
   let lib_dir = PathBuf::from(&sysroot).join("lib");
   println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_dir.display());
+
+  // The rustc_private dylibs (librustc_driver-<hash>.dylib et al.) live in the *target* libdir, not
+  // <sysroot>/lib (which carries a different-hash copy of librustc_driver), so bake that too or dyld
+  // cannot resolve `@rpath/librustc_driver-<hash>.dylib` at startup — the very DYLD_LIBRARY_PATH this
+  // rpath is meant to eliminate. `target-libdir` is already the lib dir, so it needs no `/lib` suffix.
+  match Command::new(&rustc).args(["--print", "target-libdir"]).output() {
+    Ok(o) if o.status.success() => {
+      let target_libdir = String::from_utf8_lossy(&o.stdout).trim().to_string();
+      println!("cargo:rustc-link-arg=-Wl,-rpath,{}", target_libdir);
+    }
+    _ => println!(
+      "cargo:warning=could not determine rustc target-libdir; rustc_private artifacts may need \
+                    DYLD_LIBRARY_PATH set to <sysroot>/lib/rustlib/<target>/lib"
+    ),
+  }
   println!("cargo:rerun-if-env-changed=RUSTC");
 }
 

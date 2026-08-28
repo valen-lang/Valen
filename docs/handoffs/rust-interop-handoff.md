@@ -11,10 +11,13 @@ Tier-2 harness runs the linked executable and asserts its exit code (`seven()` �
 (`rustc_driven_bin_domino_returns_seven`): a Vale program constructs a Rust struct wrapping a `HashMap`,
 calls `&mut self`/`&self` methods on it, gets a `&Glyph` back, and returns through it. The whole
 aggregate ABI is sourced from rustc (`tcx.layout_of` + `tcx.fn_abi_of_instance`). See "The aggregate
-ABI" for how the four modes are handled, including large structs passed by value as arguments;
-`Pair`/`Cast` register-split args are the one shape still unimplemented (see "Next"). Design
+ABI" for how the coercion modes are handled: a large struct crosses by value as an indirect pointer, a
+small (≤8-byte) struct as a single register integer (`Cast`). Multi-register-split shapes (`Pair`, wider
+`Cast`, float-HFA) are deferred with no NobiliaV consumer. See "The interim `valec-rs drive` bridge" for
+compiling and running a Vale program against already-built Rust rlibs.
+Design
 sources of truth: `docs/architecture/vale-rust-interop-architecture.md`,
-`src/instantiating/instantiating-rust-interop-design.md`, the backend's `Backend/backend-design.md` (the C-ABI /
+`src/instantiating/docs/architecture/instantiating-rust-interop-design.md`, the backend's `Backend/backend-design.md` (the C-ABI /
 shim-removal direction), the roadmap `docs/plans/rust-interop-plan.md`, and the intended-design authority
 `docs/architecture/rust-interop-design.md` (whose target names the tree does not yet carry; see the next
 section).
@@ -40,6 +43,12 @@ names and lacks two of its pieces. Tracked here so neither doc has to carry the 
   `config.override_queries` and injects bodies via `set_fill_extra_modules_hook(consumer_fill_modules)` on
   the stock backend (`harness.rs`), with no marker gating — fine for a single-crate driven test, but the
   pass-through gating is exactly what the real cargo build (many pure-Rust crates) will need.
+- **Entry symbol capture.** The design shows a general capture — `record_export_symbol(export_name, symbol)`
+  run for every exported function in `per_instance_mir`. The tree instead special-cases only the entry:
+  `if stub_name == "__vale_main" { *state.entry_symbol.borrow_mut() = Some(tcx.symbol_name(instance)…) }`
+  into a single `DriverState.entry_symbol` slot (`src/instantiating/rust_interop/mod.rs`), because the
+  entry is the only inbound Rust→Valen crossing today. The general form — every export emitted under its
+  rustc-mangled name, the inbound mirror of `FunctionExternI.link_name` — is unbuilt.
 
 ## State (regenerate, don't trust stale)
 
@@ -100,7 +109,7 @@ and every disk-reading test fails.
 ## The instantiator inversion (rustc drives us)
 
 Under `rust_interop`, instantiation is driven by rustc's mono collector, not by `translate_program`.
-The design of record is `src/instantiating/instantiating-rust-interop-design.md`; the as-built shape:
+The design of record is `src/instantiating/docs/architecture/instantiating-rust-interop-design.md`; the as-built shape:
 
 - **Recording Rust leaves.** A Rust callee reaches the backend as a synthesized `extern`: the typing
   pass wraps every Rust import in an extern function whose body is a single `ExternFunctionCall`. At the
@@ -224,8 +233,14 @@ ABI); domino's struct sizes and calling conventions are read from rustc (`layout
   (`arg.layout.backend_repr` is `BackendRepr::Scalar` with a `Primitive::Pointer`) → `DirectPtr`, other
   `Direct` → `DirectInt(size.bits())`, `Indirect { on_stack: false }` → an indirect pointer to a
   caller-owned copy (an sret out-pointer for a return, a pointer to a spilled copy for a by-value
-  argument; @EACBIPZ), `Ignore` → not passed. `Pair`/`Cast` (float/mixed-register structs) and on-stack
-  byval (`Indirect { on_stack: true }`) still `panic!`; a leaf that hits one adds its own arm.
+  argument; @EACBIPZ), a `Cast` with a single integer unit (an ≤8-byte struct crossing as a bare `iN`,
+  e.g. `PieceId`'s 8-byte return → `i64`) → `Coercion::Cast(bits)`, `Ignore` → not passed. `DirectInt`
+  and `Cast` share one backend mechanism (a struct reinterpreted through an integer-aligned slot): one
+  arg branch and one return branch in `buildCallOrSideCall`, which takes its declared param types and the
+  sret flag from `buildBoundarySignature` (the same signature `declareExternFunction` declares from), so
+  the call site cannot drift from the declaration. Multi-piece `Cast` (`[N x i64]`), `Pair` (`ScalarPair`
+  types), float-HFA, and on-stack byval (`Indirect { on_stack: true }`) still `panic!`; a leaf that hits
+  one adds its own arm.
 
   Two boundary subtleties the domino run forced, both in the consumers:
     - **`sret` needs the LLVM `sret` attribute.** An `Indirect` return passes the out-pointer in the
@@ -239,14 +254,38 @@ ABI); domino's struct sizes and calling conventions are read from rustc (`layout
       `*mut T` receives an owned inline value; `buildCallOrSideCall`'s `DirectPtr` arm spills it to a slot
       and passes the address (`drop_in_place` runs on it; Vale keeps the stack slot).
 
-## Next: Pair/Cast register-split args
+## The interim `valec-rs drive` bridge
 
-A medium struct (~9–16 bytes, e.g. NobiliaV's 16-byte `TileSpec`) is passed split across two registers
-(rustc `PassMode::Pair`, sometimes `Cast`), which `compute_extern_abi` `panic!`s on. It is a distinct arm
-from the indirect-pointer crossing (@EACBIPZ): a new `Coercion` variant carrying the two register pieces,
-`compute_extern_abi` mapping `Pair`/`Cast`, `buildBoundarySignature` declaring the pair, and
-`buildCallOrSideCall` extracting and inserting the two halves. Deferred until NobiliaV confirms they need
-it; they may adjust their facade to indirect-crossing structs instead.
+A Vale program is compiled, linked, and run against **already-built** Rust rlibs by `valec-rs drive
+prog.vale --extern <name>[=rlib] -L dependency=<dir>` — the interim manual bridge that unblocked NobiliaV
+ahead of the permanent generated-Cargo-workspace + `RUSTC_WORKSPACE_WRAPPER` pipeline (arch §18/§20, mirror
+`/Volumes/V/Harmonious/toylangc/src/build.rs`, still the destination). Confirmed end-to-end by NobiliaV: a
+windowed driver (real window + wgpu device up), a headless `add_tile`→render→pick, and a full operator-driven
+loop all run through it. The pieces are all AI-editable, in `src/typing/rust_interop/`:
+
+- **`drive_and_link`** (`drive.rs`) — the dark-box (@DBAPIZ): scout → generate the stub → assemble the rustc
+  argv → `run_compiler` with the query overrides installed → run the produced bin, forwarding its exit code.
+  Reads no env (the sysroot is an input; `default_sysroot`/`run_drive` above it read env). The permanent
+  pipeline reuses this (it forwards the same `--extern`/`-L` flags, from cargo instead of a human); only the
+  manual front-end retires. It duplicates the `#[cfg(test)] drive_rustc` harness template — migrating the
+  harness onto `drive_and_link` (and its fixtures onto `generate_stub_source`) is a follow-on.
+- **`generate_stub_source`** (`stub_gen.rs`) — the real `vale-stub-gen` seed (arch §6.4, @RTMEIZ): from the
+  **scouted** `ProgramS` (a `ScoutCompilation` run needs no rustc), emit one `pub use` per `import rust.X.Y`,
+  a `#[vale::emit_consumer_body]` root per exported func, and the marker + `__vale_drop` shim. It errors on an
+  exported Vale struct/trait — the `HinputsT`-driven emission the permanent form adds. Replaces the
+  hand-written `fixtures/stub.rs` for the driven path.
+- **The CLI** (`driver/main.rs`) — a thin clap `drive` subcommand over `run_drive`/`DriveArgs`. A bare
+  `--extern <name>` (no `=rlib`) auto-resolves the hashed `lib<name>-<hash>.rlib` from the `-L dependency`
+  dirs. One `--extern` suffices for a facade crate: `import rust.nobiliav.PieceId` resolves *through* a
+  `pub use` to the canonical crate, whose mangled symbol links from `-L dependency=<deps>` alone.
+- **Builtins compiled in** — `drive_and_link` adds `Source::builtins` + `PackageCoordinate::builtin` to the
+  compilation (as `pass_manager.rs:422-428` does), so Valen operators resolve and their `__vbi_*` intrinsics
+  lower through the interop backend. The **stdlib is not** included (a follow-on if a drive program ever needs
+  stdlib collections/etc.).
+
+The register-split ABI arms (`Pair`, multi-piece `Cast`, float-HFA) stay deferred with a *confirmed* absence
+of NobiliaV consumer: their `TileSpec` (16 bytes) is `Indirect` (already handled), and `PieceId` (8 bytes)
+is the single-integer `Cast` that is now done.
 
 ## The C++ backend under interop
 
@@ -438,6 +477,10 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   (@EACBIPZ). The `byval` attribute coincidentally survives a lone argument but corrupts the call once a
   second argument follows, so a one-argument test cannot prove the argument ABI — use a second argument,
   ideally behind an sret return.
+- A 16-byte 4×i32 struct is `PassMode::Indirect` on aarch64, **not** `Cast`/`Pair` — only structs ≤8 bytes
+  cross as `Cast` (a single integer). Read the actual `PassMode` from `fn_abi_of_instance` (a temporary
+  print in `compute_extern_abi`) before designing an ABI arm; a source-reading of the aarch64 classify
+  code and a downstream user's guess both put a 16-byte struct in the wrong mode.
 - A driven case that fails to typecheck panics with the diagnostic (`drive_rustc` in `harness.rs`). Do
   not read a bare undefined `__vale_main` / empty `__vale_main -> []` firing log as an ABI or
   instantiation bug: a `None` hinputs from a swallowed typing error produced exactly that shape before
@@ -453,3 +496,17 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   "never hit." Inspect backend state by running to the natural abort and printing via `-k "frame select N"`
   / `-k "expr …"`, and pass rustc's signals (`process handle SIGUSR1 -s false -n false`, same for `SIGUSR2`).
   Do not conclude a function is uncalled from a silent breakpoint-command run.
+- Valen operators (`==`, `+`, `>=`, …) are **library functions** (`src/builtins/resources/arith.vale`),
+  not typing-pass builtins — a compilation that omits the builtins package has no `==` and fails with
+  `CouldntFindFunctionToCallT name "=="`. `drive_and_link` adds `Source::builtins` +
+  `PackageCoordinate::builtin` (as `pass_manager.rs` does) so operators resolve; a bare user-file-only
+  compilation (the original harness/`drive` shape) cannot use them.
+- `!=` is the generic `!=<T>` (`not(a == b)`), and it now lives in the **builtins** `logic.vale` (moved
+  out of the stdlib), beside `not`, which its body calls. Do **not** put it in `arith.vale`: `arith` is
+  loaded without `logic` in many builtin bundles (`builtin_source_for_arith = ["arith","implicit_clone"]`),
+  so `not` is out of scope there and `arith.vale` itself stops compiling — it broke ~33 standalone tests.
+- The `valec-rs` artifact's baked rpath must cover **both** `<sysroot>/lib` **and** `rustc --print
+  target-libdir`: the `rustc_private` dylibs (`librustc_driver-<hash>.dylib`) live in the target libdir,
+  while `<sysroot>/lib` holds only a *different-hash* copy. `build.rs`'s `emit_rustc_private_rpath` bakes
+  both; without the target-libdir rpath the standalone binary dies in dyld before `main` (tests hide this
+  because cargo/nextest sets the library path at run time).

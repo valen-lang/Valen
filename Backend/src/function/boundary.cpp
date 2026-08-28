@@ -82,6 +82,7 @@ const ExternAbi* lookupExternAbi(GlobalState* globalState, Prototype* prototypeM
   return iter == externAbis.end() ? nullptr : &iter->second;
 }
 
+// VCOORD: revisit this
 BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* prototypeM) {
   if (const ExternAbi* abi = lookupExternAbi(globalState, prototypeM)) {
     // Descriptor-driven (interop): build the signature from the per-arg/return coercions so it matches

@@ -7,4 +7,5 @@
 // update every time the `RustOracle` trait changes. Arch §26b.3.
 
 mod cases;
+mod drive_tests;
 mod harness;

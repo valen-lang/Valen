@@ -428,7 +428,10 @@ fn sysroot() -> String {
 ///
 /// `-L out_dir` so a fixture's crates may depend on each other; `dep_crates`' sorted order is what
 /// makes that well-defined, since a crate can only name one already built.
-fn build_dep_rlib(crate_name: &str, source: &Path, out_dir: &Path) {
+///
+/// `pub(super)` so the `drive_tests` sibling (the `valec-rs drive` bridge's tests) can build a
+/// std-only rlib the same canonical way, rather than re-rolling the rustc invocation.
+pub(super) fn build_dep_rlib(crate_name: &str, source: &Path, out_dir: &Path) {
   let status = Command::new(var("RUSTC").unwrap_or_else(|_| "rustc".to_string()))
     .arg(source)
     .args(["--crate-type=lib", "--edition=2021"])
