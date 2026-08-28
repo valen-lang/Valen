@@ -1,11 +1,11 @@
-// vale-stub-gen (the seed): emit a Rust stub crate's source from a scouted Vale program.
+// vale-stub-gen (the seed): emit a Rust stub crate's source from a parsed Vale program.
 //
 // This is the real, permanent mechanism (arch §6.4, @RTMEIZ §26.9), not a throwaway — the eventual
 // per-project cargo-workspace pipeline calls this same generator. Today the only stubs are hand-written
 // fixtures (`fixtures/stub.rs`, which calls itself "the stand-in for the eventual vale-stub-gen
 // output"); this replaces that hand-writing for the driven path.
 //
-// It is driven by the program's *scouted* structure (not a text scan, not `HinputsT`): the load-bearing
+// It is driven by the program's *parsed* structure (not a text scan, not `HinputsT`): the load-bearing
 // stub content for a consumer program — one `pub use` per `import rust.X.Y` (@RTMEIZ), the marker, and a
 // `#[vale::emit_consumer_body]` root per exported func — all lives in the parsed AST, so it is derivable
 // before rustc. The permanent form extends this to also walk `HinputsT` for *exported* Vale
@@ -17,8 +17,7 @@ use crate::code_source::{CodeSource, Source};
 use crate::compile_options::GlobalOptions;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
-use crate::postparsing::ast::{IFunctionAttributeS, ProgramS};
-use crate::postparsing::names::IFunctionDeclarationNameS;
+use crate::parsing::ast::ast::{FileP, IAttributeP, IDenizenP, ImportP};
 use crate::postparsing::ScoutCompilation;
 use crate::scout_arena::ScoutArena;
 use crate::typing::rust_interop::RUST_MODULE;
@@ -46,50 +45,61 @@ impl std::fmt::Display for StubGenError {
   }
 }
 
-/// Generate the stub crate source for one scouted Vale program.
+/// Generate the stub crate source for one parsed Vale program (`FileP`).
 ///
-/// Emits, in the order the hand-written `fixtures/stub.rs` uses: the `register_tool(vale)` header, an
-/// `extern crate` per distinct imported crate, `use std::process::exit;` (only when a `main` is
-/// exported), one `pub use` per `import rust.X.Y` (@RTMEIZ), the `__VALE_STUBS_MARKER`, a
-/// `#[vale::emit_consumer_body]` root per exported func, the `fn main` bin shim (when `main` is
-/// exported), and the generic `__vale_drop<T>` shim.
-pub fn generate_stub_source(program: &ProgramS) -> Result<String, StubGenError> {
+/// Reads the load-bearing shape straight off the parse tree — the `rust.X.Y` imports and the exported
+/// func names — since neither needs name resolution or typing (the permanent form adds the `HinputsT`-
+/// driven exported *declarations* on top). Emits, in the order the hand-written `fixtures/stub.rs` uses:
+/// the `register_tool(vale)` header, an `extern crate` per distinct imported crate, `use
+/// std::process::exit;` (only when a `main` is exported), one `pub use` per `import rust.X.Y` (@RTMEIZ),
+/// the `__VALE_STUBS_MARKER`, a `#[vale::emit_consumer_body]` root per exported func, the `fn main` bin
+/// shim (when `main` is exported), and the generic `__vale_drop<T>` shim.
+pub fn generate_stub_source(file: &FileP) -> Result<String, StubGenError> {
   let mut extern_crates: Vec<String> = Vec::new();
   let mut pub_uses: Vec<String> = Vec::new();
-  for import in program.imports {
-    if import.module_name.0 != RUST_MODULE {
-      continue;
-    }
-    let crate_name = match import.package_names.first() {
-      Some(name) => name.0,
-      None => return Err(StubGenError::ImportMissingCrate(render_import(import))),
-    };
-    if !extern_crates.iter().any(|existing| existing == crate_name) {
-      extern_crates.push(crate_name.to_string());
-    }
-    // The Rust path is crate :: (middle module segments) :: item. `package_names` is [crate, ..mods],
-    // and `importee_name` is the item; joining them all with `::` yields exactly that.
-    let mut segments: Vec<&str> = import.package_names.iter().map(|s| s.0).collect();
-    segments.push(import.importee_name.0);
-    pub_uses.push(segments.join("::"));
-  }
-
   let mut exported_fn_names: Vec<String> = Vec::new();
   let mut has_main = false;
-  for func in program.implemented_functions {
-    let is_exported =
-      func.attributes.iter().any(|attr| matches!(attr, IFunctionAttributeS::Export(_)));
-    if !is_exported {
-      continue;
+  for denizen in file.denizens {
+    match denizen {
+      IDenizenP::TopLevelImport(import) => {
+        if import.module_name.as_str() != RUST_MODULE {
+          continue;
+        }
+        let crate_name = match import.package_steps.first() {
+          Some(name) => name.as_str(),
+          None => return Err(StubGenError::ImportMissingCrate(render_import(import))),
+        };
+        if !extern_crates.iter().any(|existing| existing == crate_name) {
+          extern_crates.push(crate_name.to_string());
+        }
+        // The Rust path is crate :: (middle module segments) :: item. `package_steps` is [crate, ..mods],
+        // and `importee_name` is the item; joining them all with `::` yields exactly that.
+        let mut segments: Vec<&str> = import.package_steps.iter().map(|s| s.as_str()).collect();
+        segments.push(import.importee_name.as_str());
+        pub_uses.push(segments.join("::"));
+      }
+      IDenizenP::TopLevelFunction(func) => {
+        let is_exported = func
+          .header
+          .attributes
+          .iter()
+          .any(|attr| matches!(attr, IAttributeP::ExportAttribute(_)));
+        if !is_exported {
+          continue;
+        }
+        // A top-level function always parses with a name; an anonymous one (a lambda) is never a
+        // top-level denizen, so `None` here is the shape the seed cannot emit a root for.
+        let name = match &func.header.name {
+          Some(name) => name.as_str(),
+          None => return Err(StubGenError::UnsupportedExportedName("<anonymous>".to_string())),
+        };
+        if name == "main" {
+          has_main = true;
+        }
+        exported_fn_names.push(name.to_string());
+      }
+      _ => {}
     }
-    let name = match &func.name {
-      IFunctionDeclarationNameS::FunctionName(n) => n.imprecise_name.name.0,
-      other => return Err(StubGenError::UnsupportedExportedName(format!("{other:?}"))),
-    };
-    if name == "main" {
-      has_main = true;
-    }
-    exported_fn_names.push(name.to_string());
   }
 
   let mut out = String::new();
@@ -119,8 +129,8 @@ pub fn generate_stub_source(program: &ProgramS) -> Result<String, StubGenError> 
   Ok(out)
 }
 
-/// Scout `vale_source` and generate its stub crate source. The scout needs no rustc — it runs on the
-/// Vale text alone — so the stub exists before the rustc invocation that compiles it. Errors on a scout
+/// Parse `vale_source` and generate its stub crate source. The parser needs no rustc — it runs on the
+/// Vale text alone — so the stub exists before the rustc invocation that compiles it. Errors on a parse
 /// failure or a shape the seed can't express. Interim: exactly one Vale file.
 pub fn generate_stub_source_from_vale(vale_source: &str) -> Result<String, String> {
   let parse_bump = Bump::new();
@@ -152,18 +162,18 @@ pub fn generate_stub_source_from_vale(vale_source: &str) -> Result<String, Strin
     &code_source,
     global_options,
   );
-  let scoutput =
-    scout.get_scoutput().map_err(|e| format!("scouting the Vale program failed: {e:?}"))?;
-  let programs: Vec<&ProgramS> = scoutput.file_coord_to_contents.values().collect();
-  match programs.as_slice() {
-    [program] => generate_stub_source(program).map_err(|e| e.to_string()),
-    other => Err(format!("expected exactly one Vale file to scout, found {}", other.len())),
+  let parseds =
+    scout.get_parseds().map_err(|e| format!("parsing the Vale program failed: {e:?}"))?;
+  let files: Vec<&FileP> = parseds.file_coord_to_contents.values().map(|(file, _)| file).collect();
+  match files.as_slice() {
+    [file] => generate_stub_source(file).map_err(|e| e.to_string()),
+    other => Err(format!("expected exactly one Vale file to parse, found {}", other.len())),
   }
 }
 
-fn render_import(import: &crate::postparsing::ast::ImportS) -> String {
-  let mut segments: Vec<&str> = vec![import.module_name.0];
-  segments.extend(import.package_names.iter().map(|s| s.0));
-  segments.push(import.importee_name.0);
+fn render_import(import: &ImportP) -> String {
+  let mut segments: Vec<&str> = vec![import.module_name.as_str()];
+  segments.extend(import.package_steps.iter().map(|s| s.as_str()));
+  segments.push(import.importee_name.as_str());
   segments.join(".")
 }

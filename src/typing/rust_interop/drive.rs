@@ -1,23 +1,20 @@
-// The interim `valec-rs drive` bridge's engine: drive a Valen program to a linked, runnable binary
-// against caller-supplied, already-built rlibs (which Pearl produces with `cargo +rustc-fork build`).
+// The `valenc-rs` wrapper's engine: compile a Valen crate against caller-supplied rlibs by driving rustc
+// with Vale's typing pass + instantiator + backend inside its callbacks.
 //
-// `drive_and_link` is the dark-box API (@DBAPIZ): structured inputs in, a structured `DriveResult` out,
-// and it reads NO environment — the sysroot is passed in, gathered by `main()` above it. It is the
-// permanent piece: the real cargo-workspace pipeline forwards the same `--extern`/`-L dependency` flags,
-// just from cargo instead of a human, so only the manual front-end (the `drive` CLI + hand-run cargo)
-// retires. The body mirrors the `#[cfg(test)]` `drive_rustc` harness template; the two should later be
+// `run_wrapper` is the dark-box API (@DBAPIZ): cargo hands it the per-crate rustc argv, and its crate-root
+// extension decides whether to drive Valen (a `.valen`) or pass through to plain rustc (any other root).
+// `run_driven_rustc` is the shared driven-compile core; it reads no environment (the sysroot rides the
+// argv). The body mirrors the `#[cfg(test)]` `drive_rustc` harness template; the two should later be
 // unified onto this function (a noted follow-on), which is why the scoped-borrow reasoning is repeated.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
 use std::process;
 use std::sync::Arc;
 
 use bumpalo::Bump;
-use clap::Parser;
 use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::interface::Compiler as RustcCompiler;
 use rustc_middle::ty::TyCtxt;
@@ -44,39 +41,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::typing::TypingPassOptions;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate};
 
-/// One `--extern <name>[=<rlib>]`. `rlib: None` means the bare form — resolve the hashed
-/// `lib<name>-<hash>.rlib` from the `-L dependency` dirs (added in a later slice).
-pub struct ExternArg {
-  pub name: String,
-  pub rlib: Option<PathBuf>,
-}
-
-/// Everything `drive_and_link` needs, gathered by `main()` above the dark-box boundary (@DBAPIZ). No
-/// field is read from the environment inside the function — `sysroot` in particular is an input.
-pub struct DriveInputs {
-  /// The Valen program text.
-  pub vale_source: String,
-  /// The directly-imported crates (`import rust.<name>...`), each an `--extern`.
-  pub externs: Vec<ExternArg>,
-  /// Cargo's `target/debug/deps/` dirs, each a `-L dependency=<dir>`; rustc resolves the transitive
-  /// graph from here.
-  pub dependency_dirs: Vec<PathBuf>,
-  /// The rustc sysroot (`rustc --print sysroot`), gathered by the caller.
-  pub sysroot: String,
-  /// Scratch dir for the generated stub and rustc's `--out-dir` (and where the bin lands).
-  pub out_dir: PathBuf,
-}
-
-/// The outcome of a drive: rustc's exit code (0 = drove through codegen), the produced binary's exit
-/// code (`None` if rustc never linked one), and the provider's per-item firing log.
-pub struct DriveResult {
-  pub rustc_exit: i32,
-  pub process_exit: Option<i32>,
-  pub firings: Vec<String>,
-}
-
 /// The rustc sysroot, from `rustc --print sysroot` (honoring `$RUSTC`). An env read, so it lives here
-/// for `main()`/tests to call *above* `drive_and_link` — never from inside the dark box.
+/// for `main()`/tests to call *above* the dark box — never from inside `run_wrapper`/`run_driven_rustc`.
 pub fn default_sysroot() -> String {
   let rustc = env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
   let out = process::Command::new(rustc)
@@ -86,133 +52,67 @@ pub fn default_sysroot() -> String {
   String::from_utf8(out.stdout).expect("sysroot was not utf8").trim().to_string()
 }
 
-/// `valec-rs drive` arguments. Parsed by clap in `main()`, then handed to `run_drive` — the dark-box
-/// boundary (@DBAPIZ), so `main()` does only argv parsing above it, and tests drive through here.
-#[derive(Parser, Debug)]
-pub struct DriveArgs {
-  /// The Valen program to compile, link, and run.
-  pub program: PathBuf,
-  /// A directly-imported crate: `--extern <name>` (bare — resolved from the -L dirs by crate name) or
-  /// `--extern <name>=<rlib>`. Repeatable, one per crate the program `import rust.<name>...`s.
-  #[arg(long = "extern", value_name = "NAME[=RLIB]")]
-  pub externs: Vec<String>,
-  /// A library search path, `-L [KIND=]<dir>` (e.g. cargo's `-L dependency=target/debug/deps`).
-  /// Repeatable; rustc resolves the transitive graph from here.
-  #[arg(short = 'L', value_name = "[KIND=]DIR")]
-  pub library_paths: Vec<String>,
-  /// Scratch dir for the generated stub and the produced binary (default: a fresh temp dir).
-  #[arg(long = "out-dir", value_name = "DIR")]
-  pub out_dir: Option<PathBuf>,
+/// Everything `run_wrapper` needs, gathered by `main()` above the dark-box boundary (@DBAPIZ).
+pub struct WrapperInputs {
+  /// The rustc argv for `run_compiler`: argv[0] (the program name) kept, the rustc-path argv[1] cargo
+  /// passes already stripped by `main()`, then cargo's flags and the crate-root input positional. For a
+  /// `.valen` root the wrapper substitutes the generated stub `.rs` for that positional.
+  pub rustc_args: Vec<String>,
 }
 
-/// Run the `drive` subcommand from parsed args: read the program, resolve inputs, drive it, print any
-/// firings/errors, and return the produced binary's exit code (or 1 on a setup/typing error). `main()`
-/// calls `std::process::exit` with the returned code.
-pub fn run_drive(args: &DriveArgs) -> i32 {
-  let vale_source = match fs::read_to_string(&args.program) {
-    Ok(source) => source,
-    Err(e) => {
-      eprintln!("valec-rs: could not read {}: {e}", args.program.display());
-      return 1;
+/// The outcome of a wrapper invocation: rustc's exit code, whether the crate was a Valen crate (so the
+/// Valen engine drove it) or a pure-Rust passthrough, and the provider's firing log (empty for a
+/// passthrough).
+pub struct WrapperResult {
+  pub rustc_exit: i32,
+  pub drove_valen: bool,
+  pub firings: Vec<String>,
+}
+
+/// Empty callbacks: the pure-Rust passthrough installs no query overrides and no fill_extra_modules
+/// hook, so a non-Valen crate compiles byte-identically to vanilla rustc (@PRCCBIVRZ).
+struct NoopCallbacks;
+impl Callbacks for NoopCallbacks {}
+
+/// The `valenc-rs` wrapper's dark box (@DBAPIZ): cargo invokes `valenc-rs <rustc> <args…>` once per
+/// crate, and `main()` strips the rustc path and hands the rest here. The crate-root file extension
+/// decides the path (design §34): a `.valen` root drives the Valen engine (generate the pass-1 stub,
+/// install the overrides, run rustc); any other root (a pure-Rust dependency) passes straight through
+/// to rustc with no Valen machinery.
+pub fn run_wrapper(inputs: &WrapperInputs) -> Result<WrapperResult, String> {
+  let valen_input = inputs.rustc_args.iter().position(|arg| arg.ends_with(".valen"));
+  match valen_input {
+    Some(idx) => {
+      let valen_path = &inputs.rustc_args[idx];
+      let vale_source = fs::read_to_string(valen_path)
+        .map_err(|e| format!("could not read the Valen crate root {valen_path}: {e}"))?;
+      // Generate the pass-1 stub (imports → `use`, the marker, `__vale_<export>` roots) and point rustc
+      // at it instead of the `.valen`, which rustc cannot parse; every other flag cargo supplied stays.
+      let stub_src = generate_stub_source_from_vale(&vale_source)?;
+      let stub_path = format!("{valen_path}.rs");
+      fs::write(&stub_path, stub_src)
+        .map_err(|e| format!("could not write the generated stub to {stub_path}: {e}"))?;
+      let mut rustc_args = inputs.rustc_args.clone();
+      rustc_args[idx] = stub_path;
+      let (rustc_exit, firings) = run_driven_rustc(&rustc_args, &vale_source)?;
+      Ok(WrapperResult { rustc_exit, drove_valen: true, firings })
     }
-  };
-  let externs = args.externs.iter().map(|spec| parse_extern(spec)).collect();
-  let dependency_dirs = args.library_paths.iter().map(|spec| parse_library_path(spec)).collect();
-  let out_dir = match &args.out_dir {
-    Some(dir) => dir.clone(),
-    None => default_out_dir(),
-  };
-  if let Err(e) = fs::create_dir_all(&out_dir) {
-    eprintln!("valec-rs: could not create out dir {}: {e}", out_dir.display());
-    return 1;
-  }
-  let inputs = DriveInputs {
-    vale_source,
-    externs,
-    dependency_dirs,
-    sysroot: default_sysroot(),
-    out_dir,
-  };
-  match drive_and_link(&inputs) {
-    Ok(result) => {
-      for firing in &result.firings {
-        eprintln!("{firing}");
-      }
-      match result.process_exit {
-        Some(code) => code,
-        None => {
-          eprintln!(
-            "valec-rs: rustc did not produce a runnable binary (rustc exit {})",
-            result.rustc_exit
-          );
-          if result.rustc_exit == 0 {
-            1
-          } else {
-            result.rustc_exit
-          }
-        }
-      }
-    }
-    Err(e) => {
-      eprintln!("valec-rs: {e}");
-      1
+    None => {
+      let mut callbacks = NoopCallbacks;
+      let rustc_exit = rustc_driver::catch_with_exit_code(|| {
+        rustc_driver::run_compiler(&inputs.rustc_args, &mut callbacks);
+      });
+      Ok(WrapperResult { rustc_exit, drove_valen: false, firings: Vec::new() })
     }
   }
 }
 
-/// Parse one `--extern` value: `name=rlib` (explicit path) or a bare `name` (resolved from -L dirs).
-fn parse_extern(spec: &str) -> ExternArg {
-  match spec.split_once('=') {
-    Some((name, rlib)) => ExternArg { name: name.to_string(), rlib: Some(PathBuf::from(rlib)) },
-    None => ExternArg { name: spec.to_string(), rlib: None },
-  }
-}
-
-/// Parse one `-L` value. rustc's form is `[KIND=]PATH`; the bridge uses these only as dependency dirs,
-/// so a leading `KIND=` (e.g. `dependency=`) is dropped and the path kept.
-fn parse_library_path(spec: &str) -> PathBuf {
-  match spec.split_once('=') {
-    Some((_kind, path)) => PathBuf::from(path),
-    None => PathBuf::from(spec),
-  }
-}
-
-/// A default scratch dir under the system temp dir, unique to this process.
-fn default_out_dir() -> PathBuf {
-  env::temp_dir().join(format!("valec-rs-drive-{}", process::id()))
-}
-
-/// Generate a stub from `inputs.vale_source`, compile it to a `--crate-type=bin` against the supplied
-/// rlibs with Vale's query overrides installed, run the produced binary, and report its exit code.
-pub fn drive_and_link(inputs: &DriveInputs) -> Result<DriveResult, String> {
-  let stub_src = generate_stub_source_from_vale(&inputs.vale_source)?;
-  let stub_path = inputs.out_dir.join("stub.rs");
-  fs::write(&stub_path, stub_src)
-    .map_err(|e| format!("could not write the generated stub to {}: {e}", stub_path.display()))?;
-
-  let mut rustc_args: Vec<String> = vec![
-    "valec-rs".to_string(),
-    stub_path.display().to_string(),
-    "--crate-type=bin".to_string(),
-    "--crate-name=stub".to_string(),
-    "--edition=2021".to_string(),
-    format!("--sysroot={}", inputs.sysroot),
-    format!("-L{}", inputs.out_dir.display()),
-    format!("--out-dir={}", inputs.out_dir.display()),
-    // Root every local item so the collector walks the (otherwise-uncalled) `__vale_*` stub fns.
-    "-Clink-dead-code".to_string(),
-  ];
-  for ext in &inputs.externs {
-    let rlib = match &ext.rlib {
-      Some(path) => path.clone(),
-      None => resolve_rlib_from_deps(&ext.name, &inputs.dependency_dirs)?,
-    };
-    rustc_args.push(format!("--extern={}={}", ext.name, rlib.display()));
-  }
-  for dir in &inputs.dependency_dirs {
-    rustc_args.push(format!("-Ldependency={}", dir.display()));
-  }
-
+/// Set up the instantiator state and drive rustc over `rustc_args` (which must point at a generated stub
+/// `.rs`), with Vale's query overrides + the fill_extra_modules hook installed and `vale_source` typed
+/// in `after_expansion`. Returns rustc's exit code and the provider's firing log. It runs no produced
+/// binary — the caller decides that — and reads no environment (@DBAPIZ). Called by `run_wrapper` once
+/// it has substituted the generated stub for the `.valen` crate root.
+fn run_driven_rustc(rustc_args: &[String], vale_source: &str) -> Result<(i32, Vec<String>), String> {
   // The instantiator state, all in this frame so it outlives run_compiler (and thus every provider
   // call): four arenas, their interners, the Vale source, and the hinputs/monouts slots.
   let parse_bump = Bump::new();
@@ -228,10 +128,7 @@ pub fn drive_and_link(inputs: &DriveInputs) -> Result<DriveResult, String> {
 
   let package_coord = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
   let mut files = FileCoordinateMap::<String>::new();
-  files.put(
-    parse_arena.intern_file_coordinate(package_coord, "0.vale"),
-    inputs.vale_source.clone(),
-  );
+  files.put(parse_arena.intern_file_coordinate(package_coord, "0.vale"), vale_source.to_string());
   // Compile the compiler builtins (arith/logic/… — where Valen's `==`/`+`/etc. are defined as library
   // functions) alongside the user program, exactly as standalone valec does (pass_manager.rs), so int
   // operators resolve. The builtin package coord is added to the typing scout in `after_expansion`.
@@ -285,62 +182,16 @@ pub fn drive_and_link(inputs: &DriveInputs) -> Result<DriveResult, String> {
     state_ptr,
   };
   let rustc_exit = rustc_driver::catch_with_exit_code(|| {
-    rustc_driver::run_compiler(&rustc_args, &mut callbacks);
+    rustc_driver::run_compiler(rustc_args, &mut callbacks);
   });
   if let Some(err) = typing_error_slot.into_inner() {
     return Err(format!("the Vale program failed to typecheck, so no body was emitted:\n{err}"));
   }
-  let process_exit = if rustc_exit == 0 {
-    let exe = inputs.out_dir.join("stub");
-    let output = process::Command::new(&exe)
-      .output()
-      .map_err(|e| format!("could not run the driven bin at {}: {e}", exe.display()))?;
-    Some(output.status.code().unwrap_or(-1))
-  } else {
-    None
-  };
-  Ok(DriveResult { rustc_exit, process_exit, firings: firings_slot.into_inner() })
-}
-
-/// Resolve a bare `--extern <name>` to its rlib by scanning the `-L dependency` dirs for the crate's
-/// artifact. Cargo names rlibs `lib<name>-<hash>.rlib` (content-hashed) in `target/debug/deps/`, so a
-/// literal path would mean hunting the hash each time; this finds it by crate name. Also accepts an
-/// un-hashed `lib<name>.rlib`. Exactly one match is required — none or several is a clear error.
-fn resolve_rlib_from_deps(name: &str, dependency_dirs: &[PathBuf]) -> Result<PathBuf, String> {
-  let hashed_prefix = format!("lib{name}-");
-  let exact = format!("lib{name}.rlib");
-  let mut matches: Vec<PathBuf> = Vec::new();
-  for dir in dependency_dirs {
-    let Ok(entries) = fs::read_dir(dir) else {
-      continue;
-    };
-    for entry in entries.flatten() {
-      let path = entry.path();
-      let Some(file_name) = path.file_name().and_then(|f| f.to_str()) else {
-        continue;
-      };
-      let is_hashed = file_name.starts_with(&hashed_prefix) && file_name.ends_with(".rlib");
-      if is_hashed || file_name == exact {
-        matches.push(path);
-      }
-    }
-  }
-  match matches.as_slice() {
-    [one] => Ok(one.clone()),
-    [] => Err(format!(
-      "--extern {name}: found no lib{name}[-<hash>].rlib in any -L dependency dir (looked in {} dir(s))",
-      dependency_dirs.len()
-    )),
-    many => Err(format!(
-      "--extern {name}: ambiguous — {} candidate rlibs in the -L dependency dirs: {}",
-      many.len(),
-      many.iter().map(|p| p.display().to_string()).collect::<Vec<_>>().join(", ")
-    )),
-  }
+  Ok((rustc_exit, firings_slot.into_inner()))
 }
 
 /// Callbacks for the driven path — the non-test twin of the harness's `DrivenCallbacks`. The
-/// arenas/interners and the owned `HinputsT` live in `drive_and_link`'s frame; this only holds borrows,
+/// arenas/interners and the owned `HinputsT` live in `run_driven_rustc`'s frame; this only holds borrows,
 /// runs the Vale typing pass in `after_expansion` (writing the owned `HinputsT` into the caller's slot),
 /// and arms the scoped pointer so the `per_instance_mir` provider drives the instantiator during codegen.
 struct DrivenCallbacks<'ctx, 's, 't, 'p> {

@@ -9,3 +9,4 @@
 mod cases;
 mod drive_tests;
 mod harness;
+mod orchestrator_tests;

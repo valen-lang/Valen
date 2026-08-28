@@ -13,6 +13,7 @@ pub mod drive;
 pub mod importer;
 pub mod logging_oracle;
 pub mod oracle;
+pub mod orchestrator;
 pub mod reserved;
 pub mod stub_gen;
 pub mod tyctxt_oracle;

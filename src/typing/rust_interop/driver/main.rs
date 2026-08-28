@@ -1,43 +1,39 @@
-// valec-rs — the rustc-hosted Vale driver.
+// valenc-rs — the rustc-hosted Valen wrapper.
 //
-// rustc cannot be called as a library that hands back a `TyCtxt`: the type exists only inside
-// `rustc_driver::run_compiler`'s callback. So the control flow inverts — rustc hosts, and Vale's
-// typing pass runs inside `Callbacks::after_expansion`. That machinery now lives in the library
-// (`typing::rust_interop::drive`); this binary is the thin CLI over it (@DBAPIZ): it parses argv and
-// calls `run_drive`, nothing more.
+// cargo invokes it as `RUSTC_WORKSPACE_WRAPPER`, i.e. `valenc-rs <rustc-path> <rustc-args…>`, once per
+// crate. rustc cannot be called as a library that hands back a `TyCtxt` — that type exists only inside
+// `run_compiler`'s callback — so control inverts: rustc hosts, and Valen's passes run inside the
+// callbacks. All that machinery lives in the library (`typing::rust_interop::drive`); this binary is the
+// thin shell over its dark box (@DBAPIZ): it strips the rustc path cargo passes, ensures a `--sysroot`,
+// and calls `run_wrapper`, which dispatches on the crate-root extension (`.valen` drives Valen, anything
+// else passes through to plain rustc).
 //
-// `#![feature(rustc_private)]` is still required even though this file names no rustc type: it links the
+// `#![feature(rustc_private)]` is required even though this file names no rustc type: it links the
 // interop-enabled library, which pulls in rustc's private crates, and a crate linking those must opt in.
-//
-// The `drive` subcommand is the interim bridge that unblocks NobiliaV early — compile and run a Valen
-// program against already-built rlibs (which Pearl produces with `cargo +rustc-fork build`), forwarding
-// caller-supplied `--extern`/`-L dependency` flags. The permanent cargo-workspace pipeline (arch §18/§20)
-// supersedes the manual front-end; `drive_and_link` and the `vale-stub-gen` seed it calls survive it.
 
 #![feature(rustc_private)]
 
 use std::process::exit;
 
-use clap::{Parser, Subcommand};
-
-use frontend_rust::typing::rust_interop::drive::{run_drive, DriveArgs};
-
-#[derive(Parser)]
-#[command(name = "valec-rs", about = "The rustc-hosted Vale driver.", long_about = None)]
-struct Cli {
-  #[command(subcommand)]
-  command: Command,
-}
-
-#[derive(Subcommand)]
-enum Command {
-  /// Compile and run a Valen program against already-built Rust rlibs (the interim bridge).
-  Drive(DriveArgs),
-}
+use frontend_rust::typing::rust_interop::drive::{default_sysroot, run_wrapper, WrapperInputs};
 
 fn main() {
-  let cli = Cli::parse();
-  match cli.command {
-    Command::Drive(args) => exit(run_drive(&args)),
+  let argv: Vec<String> = std::env::args().collect();
+  // cargo invokes `valenc-rs <rustc> <args…>`; drop argv[1] (the rustc path — we use our own linked-in
+  // rustc) so what remains is the argv `run_compiler` expects: argv[0] (program name) + the crate flags.
+  let mut rustc_args: Vec<String> = Vec::with_capacity(argv.len().saturating_sub(1));
+  rustc_args.push(argv.first().cloned().unwrap_or_else(|| "valenc-rs".to_string()));
+  rustc_args.extend(argv.into_iter().skip(2));
+  // Our linked-in rustc needs the fork sysroot; cargo does not always pass one, so inject it if absent.
+  // This env read lives above the dark box (@DBAPIZ), never inside `run_wrapper`.
+  if !rustc_args.iter().any(|a| a == "--sysroot" || a.starts_with("--sysroot=")) {
+    rustc_args.push(format!("--sysroot={}", default_sysroot()));
+  }
+  match run_wrapper(&WrapperInputs { rustc_args }) {
+    Ok(result) => exit(result.rustc_exit),
+    Err(e) => {
+      eprintln!("valenc-rs: {e}");
+      exit(1);
+    }
   }
 }

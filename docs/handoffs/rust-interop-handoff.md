@@ -1,5 +1,9 @@
 # Rust Interop — handoff
 
+**Every session on this work must first deep-read `docs/architecture/rust-interop-design.md`** (`deep-read`,
+following its Required reading) — it is the primary design authority; this handoff records what is true of the
+code now, that doc records the intended design.
+
 The `rust_interop` feature (`src/typing/rust_interop/`, behind `--features rust_interop`) makes a Vale
 program typecheck against real Rust items read from a live rustc `TyCtxt`, and — through the instantiator
 inversion below — lets rustc's monomorphization collector drive Vale's instantiator all the way into the
@@ -13,8 +17,8 @@ calls `&mut self`/`&self` methods on it, gets a `&Glyph` back, and returns throu
 aggregate ABI is sourced from rustc (`tcx.layout_of` + `tcx.fn_abi_of_instance`). See "The aggregate
 ABI" for how the coercion modes are handled: a large struct crosses by value as an indirect pointer, a
 small (≤8-byte) struct as a single register integer (`Cast`). Multi-register-split shapes (`Pair`, wider
-`Cast`, float-HFA) are deferred with no NobiliaV consumer. See "The interim `valec-rs drive` bridge" for
-compiling and running a Vale program against already-built Rust rlibs.
+`Cast`, float-HFA) are deferred with no NobiliaV consumer. See "The `valen build` pipeline" for compiling
+and running a Vale program against real Rust crates.
 Design
 sources of truth: `docs/architecture/vale-rust-interop-architecture.md`,
 `src/instantiating/docs/architecture/instantiating-rust-interop-design.md`, the backend's `Backend/backend-design.md` (the C-ABI /
@@ -254,38 +258,88 @@ ABI); domino's struct sizes and calling conventions are read from rustc (`layout
       `*mut T` receives an owned inline value; `buildCallOrSideCall`'s `DirectPtr` arm spills it to a slot
       and passes the address (`drop_in_place` runs on it; Vale keeps the stack slot).
 
-## The interim `valec-rs drive` bridge
+## The `valen build` pipeline
 
-A Vale program is compiled, linked, and run against **already-built** Rust rlibs by `valec-rs drive
-prog.vale --extern <name>[=rlib] -L dependency=<dir>` — the interim manual bridge that unblocked NobiliaV
-ahead of the permanent generated-Cargo-workspace + `RUSTC_WORKSPACE_WRAPPER` pipeline (arch §18/§20, mirror
-`/Volumes/V/Harmonious/toylangc/src/build.rs`, still the destination). Confirmed end-to-end by NobiliaV: a
-windowed driver (real window + wgpu device up), a headless `add_tile`→render→pick, and a full operator-driven
-loop all run through it. The pieces are all AI-editable, in `src/typing/rust_interop/`:
+`valen build [--manifest-path <Valen.toml>]` compiles a Valen crate against real Rust dependencies: it
+generates a Cargo workspace and runs `RUSTC_WORKSPACE_WRAPPER=valenc-rs cargo build`, so cargo invokes
+`valenc-rs` once per crate — a `.valen` crate drives Valen, a pure-Rust dependency passes through to plain
+rustc. A binary `.valen` importing a rust path-dep builds and runs → exit 7 (a manual e2e; see the Lessons
+entry on why the cargo→7 proof is manual, not a suite test). Design of record:
+`docs/architecture/rust-interop-design.md` (three programs — `valenc` pure-Valen, `valenc-rs` the wrapper,
+`valen` the orchestrator); reference implementation `/Volumes/V/Harmonious/toylangc/`. All the code is
+AI-editable, in `src/typing/rust_interop/`:
 
-- **`drive_and_link`** (`drive.rs`) — the dark-box (@DBAPIZ): scout → generate the stub → assemble the rustc
-  argv → `run_compiler` with the query overrides installed → run the produced bin, forwarding its exit code.
-  Reads no env (the sysroot is an input; `default_sysroot`/`run_drive` above it read env). The permanent
-  pipeline reuses this (it forwards the same `--extern`/`-L` flags, from cargo instead of a human); only the
-  manual front-end retires. It duplicates the `#[cfg(test)] drive_rustc` harness template — migrating the
-  harness onto `drive_and_link` (and its fixtures onto `generate_stub_source`) is a follow-on.
-- **`generate_stub_source`** (`stub_gen.rs`) — the real `vale-stub-gen` seed (arch §6.4, @RTMEIZ): from the
-  **scouted** `ProgramS` (a `ScoutCompilation` run needs no rustc), emit one `pub use` per `import rust.X.Y`,
-  a `#[vale::emit_consumer_body]` root per exported func, and the marker + `__vale_drop` shim. It errors on an
-  exported Vale struct/trait — the `HinputsT`-driven emission the permanent form adds. Replaces the
-  hand-written `fixtures/stub.rs` for the driven path.
-- **The CLI** (`driver/main.rs`) — a thin clap `drive` subcommand over `run_drive`/`DriveArgs`. A bare
-  `--extern <name>` (no `=rlib`) auto-resolves the hashed `lib<name>-<hash>.rlib` from the `-L dependency`
-  dirs. One `--extern` suffices for a facade crate: `import rust.nobiliav.PieceId` resolves *through* a
-  `pub use` to the canonical crate, whose mangled symbol links from `-L dependency=<deps>` alone.
-- **Builtins compiled in** — `drive_and_link` adds `Source::builtins` + `PackageCoordinate::builtin` to the
-  compilation (as `pass_manager.rs:422-428` does), so Valen operators resolve and their `__vbi_*` intrinsics
-  lower through the interop backend. The **stdlib is not** included (a follow-on if a drive program ever needs
-  stdlib collections/etc.).
+- **`run_wrapper`** (`drive.rs`) — the `valenc-rs` dark box (@DBAPIZ). It dispatches on the crate-root file
+  extension: a `.valen` root is read, its pass-1 stub generated and **substituted for the `.valen` in cargo's
+  argv** (rustc cannot parse `.valen`), then driven; any other root passes through via `NoopCallbacks` (zero
+  overrides installed → byte-identical to vanilla rustc, @PRCCBIVRZ). The `valenc-rs` bin (`driver/main.rs`)
+  is the thin `main()` over it — it strips cargo's rustc-path argv[1] and injects a `--sysroot` if absent.
+- **`run_driven_rustc`** (`drive.rs`) — the shared driven-compile engine: builds the arenas/`DriverState`/
+  `DrivenCallbacks` in one frame, installs the query overrides + `set_fill_extra_modules_hook`, and runs
+  rustc over the (stub) argv. It compiles the builtins in (`Source::builtins` + `PackageCoordinate::builtin`,
+  as `pass_manager.rs` does) so Valen operators resolve and their `__vbi_*` intrinsics lower. It duplicates
+  the `#[cfg(test)] drive_rustc` harness template — unifying them is a near-term todo (below).
+- **`generate_stub_source`** (`stub_gen.rs`) — the `vale-stub-gen` seed (arch §6.4, @RTMEIZ), **parse-driven**:
+  from the parse tree (`FileP.denizens`, via `ScoutCompilation::get_parseds()`, no scout/rustc) it emits one
+  `pub use` per `import rust.X.Y`, a `#[vale::emit_consumer_body]` `__vale_<export>` root per exported func,
+  the marker, and the `__vale_drop` shim. It errors on an exported Vale struct/trait — the pass-2,
+  `HinputsT`-driven exported-declaration emission the library form adds. This is the pass-1 `lib.rs`/crate root
+  in the design's two-lib-file split: the pass-1 file is parse-driven, only the pass-2 exported decls are
+  typing-driven — do not read design §30 as making the crate root typing-driven.
+- **`generate_workspace` / `run_build`** (`orchestrator.rs`) — the `valen` orchestrator. `generate_workspace`
+  is pure (parsed `Manifest` → the cargo file set, no cargo/fs). `run_build` reads the `Valen.toml`
+  (`toml`+`serde`), writes the workspace, copies the project `src/`, and spawns `cargo build` with
+  `RUSTC_WORKSPACE_WRAPPER=valenc-rs`. The `valen` bin (`valen/main.rs`) is the thin `main()` over it.
+  Interim shape: a single flat cargo package (not the design's multi-project workspace), cargo's `[[bin]]
+  path` points straight at the `.valen`, and rust-dep paths render verbatim; `valen-dependencies` and the
+  multi-project layout are the library/permanent form.
 
 The register-split ABI arms (`Pair`, multi-piece `Cast`, float-HFA) stay deferred with a *confirmed* absence
 of NobiliaV consumer: their `TileSpec` (16 bytes) is `Indirect` (already handled), and `PieceId` (8 bytes)
 is the single-integer `Cast` that is now done.
+
+## Next
+
+The `valen build` pipeline works for the binary + rust-dependency case (above). The detailed plan is
+`~/.claude/plans/logical-skipping-muffin.md` (machine-local); reference implementation
+`/Volumes/V/Harmonious/toylangc/` (`src/build.rs` orchestrator + `src/main.rs` wrapper dispatch). Remaining:
+
+**Short-term (very soon):**
+1. **Unify the `#[cfg(test)] drive_rustc` harness onto `run_driven_rustc`.** `harness.rs`'s `drive_rustc`
+   duplicates the engine; the whole interop corpus (900+ tests) runs through it, so this is a real cleanup but
+   a risky one — do it deliberately with the corpus watched.
+2. **Pull the stdlib into the interop compilation.** Today only the compiler builtins are compiled in
+   (`run_driven_rustc`), so a Valen program can use operators but not stdlib collections (`Option`, `Vec`,
+   `str`, …). A feature, not a cleanup: needs the stdlib's per-import tree-shaking and native-impl
+   interop-compat (mirror `pass_manager.rs`'s stdlib handling).
+
+**Then:** **Phase 3 libraries** — a Valen library exports types/funcs consumed by another crate: the pass-2
+typing-driven `lib.rs` (exported declarations from `HinputsT`), two rustc passes, and per-export symbol
+capture generalized beyond `__vale_main`. The **`vale`→`valen` rename** (internal symbols — `__vale_main`,
+`__VALE_STUBS_MARKER`, `is_vale_codegen_target`, the argv[0] literals — still spell `vale`; the two bins are
+already `valenc-rs`/`valen`) is a mechanical tree-wide sweep. The **real-graph e2e** — Pearl running `valen
+build` on the actual nobiliav (winit/wgpu/glam) — is the true "it works for NobiliaV" proof; the in-tree e2e
+proved the mechanism on a one-dep fixture.
+
+Durable facts:
+- **Almost entirely AI-editable.** The whole rustc-integration lives in `rust_interop/` dirs (including the
+  orchestrator). The only in-repo core is *reads* of `HinputsT` (`src/typing/hinputs_t.rs`) and the export AST
+  (`FunctionExportT`/`KindExportT` in `src/typing/ast/ast.rs`, `FunctionExportI` in
+  `src/instantiating/ast/ast.rs`), and the root `Cargo.toml` (the `toml`/`serde` deps + the `valenc-rs`/`valen`
+  bins) — which Guardian's AFEOX shield blocks regardless of "fire core edits", so a human must disable
+  Guardian for a `.toml` edit.
+- **Pure-Rust byte-identity (@PRCCBIVRZ) is dispatch-gated, and built.** `run_wrapper` routes a non-`.valen`
+  crate to `NoopCallbacks` + `run_compiler` with no overrides installed, structurally identical to vanilla
+  rustc. The design's `ValenCodegenBackend` (§63-105) is the design-conformant alternative; **the fork needs
+  nothing new for it** — `make_codegen_backend` is a *stock* `pub` field on `rustc_interface::Config` (honored
+  in `run_compiler`), the `CodegenBackend` trait and `LlvmCodegenBackend::new()` are public, so a delegating
+  wrapper is buildable as-is. The fork's only interop patches are the `per_instance_mir` query and the
+  `fill_extra_modules` global hook.
+- **Two-pass needs no on-disk cache.** `HinputsT` is arena-bound and unserializable (no derives), but its
+  arenas live in the driver frame independent of the `tcx`, so one `HinputsT` survives two `run_compiler`
+  calls in one frame. Defer the design's `.vale-cache`/`after_analysis` serialization until cross-invocation
+  reuse is actually needed. Also generalize per-export symbol capture: today only `__vale_main` is recorded
+  (`src/instantiating/rust_interop/mod.rs`); the design wants it per export.
 
 ## The C++ backend under interop
 
@@ -498,15 +552,26 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   Do not conclude a function is uncalled from a silent breakpoint-command run.
 - Valen operators (`==`, `+`, `>=`, …) are **library functions** (`src/builtins/resources/arith.vale`),
   not typing-pass builtins — a compilation that omits the builtins package has no `==` and fails with
-  `CouldntFindFunctionToCallT name "=="`. `drive_and_link` adds `Source::builtins` +
+  `CouldntFindFunctionToCallT name "=="`. `run_driven_rustc` adds `Source::builtins` +
   `PackageCoordinate::builtin` (as `pass_manager.rs` does) so operators resolve; a bare user-file-only
-  compilation (the original harness/`drive` shape) cannot use them.
+  compilation (the plain harness shape) cannot use them.
 - `!=` is the generic `!=<T>` (`not(a == b)`), and it now lives in the **builtins** `logic.vale` (moved
   out of the stdlib), beside `not`, which its body calls. Do **not** put it in `arith.vale`: `arith` is
   loaded without `logic` in many builtin bundles (`builtin_source_for_arith = ["arith","implicit_clone"]`),
   so `not` is out of scope there and `arith.vale` itself stops compiling — it broke ~33 standalone tests.
-- The `valec-rs` artifact's baked rpath must cover **both** `<sysroot>/lib` **and** `rustc --print
+- The `valenc-rs`/`valen` artifacts' baked rpath must cover **both** `<sysroot>/lib` **and** `rustc --print
   target-libdir`: the `rustc_private` dylibs (`librustc_driver-<hash>.dylib`) live in the target libdir,
   while `<sysroot>/lib` holds only a *different-hash* copy. `build.rs`'s `emit_rustc_private_rpath` bakes
   both; without the target-libdir rpath the standalone binary dies in dyld before `main` (tests hide this
-  because cargo/nextest sets the library path at run time).
+  because cargo/nextest sets the library path at run time). So `run_build` sets **no** `DYLD_LIBRARY_PATH`
+  when it spawns `valenc-rs` — the baked rpath resolves the dylib, and pointing dyld at `<sysroot>/lib`
+  would load the wrong-hash `librustc_driver`.
+- The automated `valen build → exit-code` e2e is **impractical in the `--lib` suite**: it must spawn the
+  real `valenc-rs` binary, which `cargo test --lib` does not build, and building it in-test either shares the
+  outer target dir (lock risk) or a fresh one (a multi-minute full rebuild); a `tests/` integration test +
+  `CARGO_BIN_EXE_valenc-rs` forces building the `valec` bin, which cannot link the interop lib. So the cargo→7
+  proof is a manual e2e; the suite tests `generate_workspace` (pure) + `run_build`'s staging.
+- The design's "stub generation is typing-driven, not parse-driven" (§30) is about the **pass-2 library
+  `lib.rs`** (exported declarations, which need typed facts). The **pass-1 crate root** — imports→`use` +
+  `__vale_main` + marker, what `generate_stub_source` emits — is parse-driven and correct that way; do not
+  "fix" it to run off `HinputsT`.

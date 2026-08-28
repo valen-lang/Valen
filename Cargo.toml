@@ -36,6 +36,9 @@ hashbrown = "0.16"
 rustc-hash = "2"
 paste = "1"
 clap = { version = "4", features = ["derive"] }
+# `valen build` orchestrator: parse `Valen.toml`, generate the Cargo workspace it runs cargo over.
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
 
 [dev-dependencies]
 tempfile = "3"
@@ -48,15 +51,21 @@ path = "src/lib.rs"
 name = "valec"
 path = "src/bin/valec/main.rs"
 
-# The rustc-hosted driver. `required-features` keeps it out of a plain `cargo build`
-# entirely — it links rustc's internals, so it only exists in the interop configuration.
-#
-# Its source deliberately lives under `typing/rust_interop/` rather than the conventional
-# `src/bin/`, so that every line of interop code sits in one directory. It is a separate
-# crate root, not a module of the lib — `rust_interop/mod.rs` does not declare it.
+# valenc-rs — the rustc-hosted Valen wrapper cargo invokes as RUSTC_WORKSPACE_WRAPPER.
+# `required-features` keeps it out of a plain `cargo build`: it links rustc's internals, so it only
+# exists in the interop configuration. Its source lives under `typing/rust_interop/` (a separate crate
+# root, not a module of the lib — `rust_interop/mod.rs` does not declare it) so all interop code sits in
+# one place.
 [[bin]]
-name = "valec-rs"
+name = "valenc-rs"
 path = "src/typing/rust_interop/driver/main.rs"
+required-features = ["rust_interop"]
+
+# valen — the cargo-like orchestrator. `valen build` generates a Cargo workspace and runs cargo with
+# valenc-rs as RUSTC_WORKSPACE_WRAPPER. Interop-only (it links the interop lib).
+[[bin]]
+name = "valen"
+path = "src/typing/rust_interop/valen/main.rs"
 required-features = ["rust_interop"]
 
 
