@@ -1,7 +1,7 @@
 use crate::parsing::ast::IMacroInclusionP;
 use crate::postparsing::ast::MacroCallS;
 use crate::postparsing::ast::{ExternS, ICitizenAttributeS, IStructMemberS, LocationInDenizen};
-use crate::postparsing::ast::{FunctionS, InterfaceS, StructS};
+use crate::postparsing::ast::{FunctionS, IBodyS, InterfaceS, StructS};
 use crate::postparsing::names::FunctionNameS;
 use crate::postparsing::names::IFunctionDeclarationNameS;
 use crate::postparsing::names::INameS;
@@ -244,11 +244,22 @@ where
         // Lazily compile a rust enum's methods — they are inherent, not virtual interface methods, so
         // they must not enter the vtable, and force-compiling one here would reference this interface
         // before it's registered. The same skip the struct-compile loop uses.
+        // A rust *trait*'s abstract methods are also is_rust_backed, but they ARE virtual interface
+        // methods — the interface's contract that override resolution checks against — so they must be
+        // compiled into the vtable eagerly like a native interface's. They are distinguishable: a
+        // trait's abstract method is eagerly registered with an `AbstractBody`, while an enum's
+        // inherent method is lazy (absent from the postparsed cache here) and never abstract.
         // VRI: Soon, we should lazily compile vale's internal methods too,
         // getting rid of this whole loop.
+        // VRI: this is basically saying, dont skip interface methods for rust traits, because
+        // interface methods must be listed in internal methods, so that ... look_for_override can
+        // see them.
         #[cfg(feature = "rust_interop")]
         {
-          if is_rust_backed(id) {
+          let is_abstract_interface_method = coutputs
+            .peek_postparsed_function(id)
+            .map_or(false, |f| matches!(f.body, IBodyS::AbstractBody(_)));
+          if is_rust_backed(id) && !is_abstract_interface_method {
             continue;
           }
         }

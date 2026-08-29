@@ -36,7 +36,7 @@ use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::names::names::*;
 use crate::typing::rust_interop::declarations::{
   synthesize_extern_function, synthesize_extern_interface, synthesize_extern_struct,
-  SYNTHESIZED_RANGE_OFFSET,
+  synthesize_extern_trait, SYNTHESIZED_RANGE_OFFSET,
 };
 use crate::typing::rust_interop::oracle::{RustItemId, RustOracle, ValeSig, ValeSigType};
 use crate::typing::rust_interop::reserved::is_rust_backed;
@@ -123,17 +123,34 @@ where
         None,
       )
     }
-    ImportedItemKind::Enum => {
-      // A Rust enum imports as an opaque sealed interface — the interface analog of the `Type` arm.
+    // A Rust enum imports as an opaque sealed interface; a Rust trait as an interface a struct can
+    // implement. Both are the interface analog of the `Type` arm; they differ only in whether the
+    // interface carries abstract methods — an enum has none, a trait projects its methods so an
+    // `impl` can override them.
+    ImportedItemKind::Enum | ImportedItemKind::Trait => {
       let template_name =
         interner.intern_interface_template_name(InterfaceTemplateNameT { human_namee: human_name });
       let interface_local_name = INameT::InterfaceTemplate(template_name);
-      let interface_s = synthesize_extern_interface(
-        compiler,
-        package_coord,
-        human_name,
-        oracle.type_generic_params(item, interner),
-      );
+      let interface_s = if name.kind == ImportedItemKind::Trait {
+        // The trait's abstract methods, read structurally, become the interface's internal methods,
+        // so an `impl Callback for MyCb` overrides each one by ordinary matching.
+        let method_sigs: Vec<(StrI<'s>, ValeSig<'s, 't>)> = oracle
+          .methods(item)
+          .into_iter()
+          .filter_map(|(mname, mitem)| {
+            let sig = oracle.fn_sig(mitem, interner)?;
+            Some((compiler.scout_arena.intern_str(&mname), sig))
+          })
+          .collect();
+        synthesize_extern_trait(compiler, package_coord, human_name, &method_sigs)
+      } else {
+        synthesize_extern_interface(
+          compiler,
+          package_coord,
+          human_name,
+          oracle.type_generic_params(item, interner),
+        )
+      };
       let interface_template_id = package_id.add_step(interner, interface_local_name);
       (
         interface_local_name,

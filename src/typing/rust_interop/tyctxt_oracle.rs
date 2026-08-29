@@ -120,6 +120,9 @@ pub(crate) enum ItemKind {
   /// A Rust enum — imported as an opaque sealed interface. Like `Type` it owns inherent methods and a
   /// drop; it differs only in lowering to `KindT::Interface` instead of `KindT::Struct`.
   Enum,
+  /// A Rust trait — imported as a Vale interface a struct can implement. Unlike `Enum` it owns no
+  /// inherent methods; its abstract methods are the trait's own associated functions.
+  Trait,
   /// A method, with the index of the type it hangs off.
   Method(usize),
 }
@@ -208,6 +211,7 @@ pub(crate) fn resolve_crate_qualified_path<'tcx>(
       Res::Def(DefKind::Fn, _) => ItemKind::Function,
       Res::Def(DefKind::Struct, _) => ItemKind::Type,
       Res::Def(DefKind::Enum, _) => ItemKind::Enum,
+      Res::Def(DefKind::Trait, _) => ItemKind::Trait,
       _ => continue,
     };
     let Res::Def(_, def_id) = child.res else { continue };
@@ -262,7 +266,17 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
           def_id,
           package: package_coord_for(tcx, scout_arena, def_id),
           kind,
-          generic_params: own_generic_param_names(tcx, scout_arena, def_id),
+          generic_params: {
+            let mut gps = own_generic_param_names(tcx, scout_arena, def_id);
+            if kind == ItemKind::Trait {
+              // A Rust trait's `own_params` include the implicit `Self` (index 0). `Self` is the
+              // interface itself, not one of its generic parameters, so it must not become a Vale
+              // interface generic — leaving it in makes `predict_interface_layer` panic trying to
+              // infer a rune nothing binds. `Self` is reserved, so filtering by name is safe.
+              gps.retain(|n| n.0 != "Self");
+            }
+            gps
+          },
         });
       }
     }
@@ -296,6 +310,32 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
             generic_params: parent_inclusive_generic_param_names(tcx, scout_arena, assoc.def_id),
           });
         }
+      }
+    }
+
+    // A trait's abstract methods come from its **own** associated items, not from inherent impls.
+    // They are recorded as `Method(trait_idx)` exactly like a type's inherent methods, so
+    // `methods(trait_item)` and `fn_sig` reach them through the same path. Their signatures name the
+    // trait's implicit `Self` (index 0 of the parent-inclusive params); the trait synthesis maps that
+    // `Self` to the interface itself when it builds the abstract method.
+    let trait_indices: Vec<usize> =
+      items.iter().enumerate().filter(|(_, i)| i.kind == ItemKind::Trait).map(|(idx, _)| idx).collect();
+    for owner_idx in trait_indices {
+      let owner_def_id = items[owner_idx].def_id;
+      let package = items[owner_idx].package;
+      for assoc in tcx.associated_items(owner_def_id).in_definition_order() {
+        if assoc.as_tag() != rustc_middle::ty::AssocTag::Fn {
+          continue;
+        }
+        let name = assoc.name().to_string();
+        items.push(RustItem {
+          human_name: scout_arena.intern_str(&name),
+          name,
+          def_id: assoc.def_id,
+          package,
+          kind: ItemKind::Method(owner_idx),
+          generic_params: parent_inclusive_generic_param_names(tcx, scout_arena, assoc.def_id),
+        });
       }
     }
 
@@ -525,6 +565,7 @@ where
       ImportedItemKind::Type => ItemKind::Type,
       ImportedItemKind::Function => ItemKind::Function,
       ImportedItemKind::Enum => ItemKind::Enum,
+      ImportedItemKind::Trait => ItemKind::Trait,
     };
     self
       .items
@@ -567,6 +608,7 @@ where
       ItemKind::Type => ImportedItemKind::Type,
       ItemKind::Function => ImportedItemKind::Function,
       ItemKind::Enum => ImportedItemKind::Enum,
+      ItemKind::Trait => ImportedItemKind::Trait,
       ItemKind::Method(_) => return None,
     };
     Some(ResolvedName {

@@ -914,6 +914,14 @@ where
             }
             Some(RustImportSeed::Interface(id, i)) => {
               template_id_to_postparsed_interface.insert(id, i);
+              // A synthesized interface (a Rust trait) carries abstract methods like a native one,
+              // but this seed path skips the internal-method registration the `program_a.interfaces`
+              // indexing loop above does. Register them here too so an `impl`'s override resolves
+              // them — a direct mirror of that loop.
+              for internal_method in i.internal_methods.iter() {
+                let (_, method_template_id) = self.internal_method_template_id(id, internal_method);
+                template_id_to_postparsed_function.insert(method_template_id, internal_method);
+              }
             }
             None => {}
           }

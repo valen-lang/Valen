@@ -770,7 +770,16 @@ where
       false,
     )?;
     let found_function = match potential_banner {
-      Err(_e) => panic!("Unimplemented: CouldntFindOverrideT error"),
+      // No function on the sub-citizen overrides this abstract interface method — none by that name
+      // and matching parameters exists. Surface it as a compile error rather than panicking; the
+      // find-function failure carries what was searched for and why each candidate was rejected, and
+      // its humanizer is the same one the call-site "couldn't find function" error uses.
+      Err(fff) => {
+        return Err(ICompileErrorT::CouldntFindOverrideT {
+          range: self.typing_interner.alloc_slice_from_vec(vec![range, impl_a.range]),
+          fff,
+        });
+      }
       Ok(candidate) => {
         StampFunctionSuccess { prototype: candidate.prototype, inferences: IndexMap::default() }
       }

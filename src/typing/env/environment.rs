@@ -65,6 +65,10 @@ pub enum ImportedItemKind {
   /// no variants are represented, so it can be received/passed/dropped and have its inherent methods
   /// called, but not matched or constructed. See §8.10 of the interop architecture.
   Enum,
+  /// A Rust trait, imported as a Vale interface a Vale struct can implement so Rust can call back in.
+  /// Unlike `Enum`, its abstract methods are projected into the interface so `impl Trait for Struct`
+  /// resolves through the ordinary override machinery.
+  Trait,
 }
 
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).

@@ -91,6 +91,8 @@ and every disk-reading test fails.
 - **Enums** — opaque sealed interfaces (`KindT::Interface`) via `synthesize_extern_interface`. You can
   receive one, call its inherent methods, pass it, and drop it. Variants are **not** represented: no
   matching `Some`/`None`, no constructing them.
+- **Traits** — imported as an interface a Vale struct can implement, so Rust can call back into Vale; see
+  the reverse-direction section.
 - **Real `std`** — `import rust.alloc.vec.Vec` + `import rust.alloc.alloc.Global` +
   `import rust.core.option.Option`: `Vec.new<int>()`, `v.push(42)`, `v.len()`, `v.pop().unwrap()`, and a
   scope-end drop all typecheck against live rustc. Only the called methods synthesize; the rest of `Vec`'s
@@ -258,6 +260,45 @@ ABI); domino's struct sizes and calling conventions are read from rustc (`layout
       `*mut T` receives an owned inline value; `buildCallOrSideCall`'s `DirectPtr` arm spills it to a slot
       and passes the address (`drop_in_place` runs on it; Vale keeps the stack slot).
 
+## Reverse direction — a Vale struct implements a Rust trait (Rust calls back into Vale)
+
+Rust calls back into Vale through a trait a Vale struct implements — static dispatch, no `&dyn`. The
+frontend and the collector-driven monomorphization are built; the inbound ABI and the callback's
+emission/execution are not. Design proposals S1–S3 in
+`src/typing/docs/architecture/typing-rust-interop-design.md`; ladder plan
+`~/.claude/plans/nope-please-plan-it-composed-hopper.md` (machine-local); reference
+`/Volumes/V/Harmonious/toylangc/` (`case4_sky_impl_rust_trait`, `stub_gen.rs`'s impl-block emission,
+`callbacks_impl.rs`'s discovery/drain, and `codegen_extern_wrapper` in `llvm_gen.rs` for the inbound ABI).
+
+**Built** (all in `rust_interop/` dirs except the one core interface-skip refinement in the core-touch
+section):
+- **Trait import.** `import rust.X.Trait` synthesizes an `InterfaceS` whose abstract methods are the
+  trait's, each a virtual-`self` `AbstractBody` method — `synthesize_extern_trait` (`declarations.rs`),
+  routed by `ImportedItemKind::Trait`. (`imports_a_rust_trait`.)
+- **Struct implements it, override enforced.** `impl Callback for MyCb` + `func on_call(self &MyCb) int`
+  resolves and matches through the existing override machinery; a missing or wrong-parameters override
+  is rejected with `CouldntFindOverrideT`. (`a_struct_implements_a_rust_trait`,
+  `a_trait_impl_missing_its_override_is_rejected`.)
+- **Generic monomorphization with a Vale type arg.** rustc monomorphizes `run_callback::<MyCb>`
+  (`fn run_callback<C: Callback>(c: &C)`) with a Vale struct as the type argument and walks the chain to
+  `<MyCb as Callback>::on_call` — `rustc_discovers_a_valen_trait_impl_callback` (collector-driven, exit
+  0). Fixture `fixtures_rust_trait/`; needed `resolve_local_type` (below).
+
+**Next** (the running callback):
+1. **Drain + per-callback symbol.** Emit `<MyCb as Callback>::on_call`'s Vale body under its
+   rustc-mangled symbol (`tcx.symbol_name`), generalizing the `__vale_main`-only `entry_symbol` capture
+   (the general form the "Entry symbol capture" note calls unbuilt). Discover trait-impl-method
+   monomorphizations from the unfiltered partition (`is_from_lang_stubs` + a new
+   `is_consumer_trait_impl_method`), deterministically sorted. Reference `callbacks_impl.rs` (discovery
+   + drain).
+2. **Inbound argument ABI.** The `&self` receiver + args cross Rust→Vale — a direction never run (every
+   inbound crossing today is nullary `() -> i32`). Extend `compute_extern_abi` to an inbound direction
+   and emit an inbound wrapper in the C++ backend (rustc-ABI signature forwarding to the internal Vale
+   body), modeled on `exportFunction` + `makeEntryFunction`; likely one "fire core edits" hook in
+   `vale.cpp`'s interop entry. Goal: `run_callback(&mmlcb)` returns 7 through a linked bin — then an
+   inbound Rust-borrow arg (the `&NobiliaWindow` shape), an inbound by-value Rust struct (`FrameInput`),
+   and Rust owning a loop that calls the callback N times (the NobiliaV `main_loop` capstone).
+
 ## The `valen build` pipeline
 
 `valen build [--manifest-path <Valen.toml>]` compiles a Valen crate against real Rust dependencies: it
@@ -380,9 +421,14 @@ Three edits in the core typing pass exist solely for interop. Each mirrors exist
 
 - the `rust_method_entries` hook in `precompile_interface` (`struct_compiler.rs`) — attaches an enum's
   methods/drop, twin of the one in `precompile_struct`.
-- the `RustImportSeed` match in `Compiler::evaluate` (`compiler.rs`) — seeds a struct **or** interface.
-- the `is_rust_backed` skip in `compile_interface_core` (`struct_compiler_core.rs`) — keeps Rust methods
-  out of the interface vtable, twin of the one in `compile_struct_core`.
+- the `RustImportSeed` match in `Compiler::evaluate` (`compiler.rs`) — seeds a struct **or** interface,
+  and for a synthesized interface also registers its abstract methods into the postparsed function
+  cache, mirroring the native `program_a.interfaces` indexing loop (a synthesized trait's methods reach
+  resolution only through this).
+- the `is_rust_backed` skip in `compile_interface_core` (`struct_compiler_core.rs`) — keeps a rust
+  enum's inherent methods out of the interface vtable, but **excepts a synthesized trait's abstract
+  methods** (identified by an `AbstractBody` via `peek_postparsed_function`), which must enter the
+  vtable so an `impl` resolves against them; the `compile_struct_core` twin has no such exception.
 
 The instantiator has one more, also `#[cfg]`-guarded: recording a Rust leaf's request at the
 `ExternFunctionCall` node in `translate_ref_expr` (`src/instantiating/instantiator.rs`), plus the three
@@ -418,13 +464,26 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
 - A Rust method's receiver borrow (`&self`) splits per @PFVSZ: the argument binds to the **value** rune,
   and the borrow concludes a separate **full-type** rune. Wiring the borrow onto the argument rune makes
   the peeled receiver fail `KindIsNotBorrowRef`.
+- A synthesized extern's `&C` parameter — a borrow of a **generic** — must wrap the rune `bind_sig_type`
+  *returns* (the generic's own rune), not the argument rune: for a generic inner `bind_sig_type` adds no
+  rule binding the argument rune, so wiring the borrow onto it leaves the parameter's rune-types
+  unsolved. Concrete borrows (`&Counter`) hide this because `bind_sig_type` returns the argument rune for
+  them; the forward corpus has no `&generic` param, so a `&C` extern (`run_callback`) first exposed it.
+- A Vale struct passed as a Rust generic's type argument (`run_callback::<MyCb>`) resolves to a **local**
+  rustc DefId in the stub crate — `resolve_local_type`, the type twin of `resolve_local_fn` — because
+  `resolve_crate_qualified_path` walks only loaded dependency crates. Branch on
+  `id.package_coord.module.0 == RUST_MODULE` to pick dependency vs local resolution; a local type reaching
+  the dependency path is the `ARGS-UNCONVERTIBLE` firing, not an `UNRESOLVED` one.
 - The "arity underflow" for `Vec::new` is self-inflicted by over-specifying the call. `new` has one own
   generic (`T`; the impl pins `Global`), so `Vec.new<int>()` / `Vec<int>.new()` supply one arg and never
   underflow — `Vec<int, Global>.new()` is what breaks it. The full arity is written only when `Vec` is
   named *as a type*; there is no default-generic-param support and none is wanted.
 - Putting a Rust type's methods in its outer env force-compiles them unless the citizen-compile loop skips
-  `is_rust_backed` — true for **both** structs (`compile_struct_core`) and interfaces
-  (`compile_interface_core`). Do not remove either skip.
+  `is_rust_backed` — for structs (`compile_struct_core`) and for a rust enum's inherent methods in
+  interfaces (`compile_interface_core`). Do not remove the skips — but the interface one **must except a
+  synthesized trait's abstract methods** (an `AbstractBody`): those are the interface's vtable contract,
+  and skipping them drops them from `InterfaceDefinitionT.internal_methods`, which silently disables
+  override enforcement (a missing override then compiles).
 - A manufactured drop recovers its owner from the id's last `init_step`: a `StructTemplate` for a struct
   owner, an `InterfaceTemplate` for an enum owner. `create_postparsed_function`'s drop branch must handle
   both, or an enum's drop vfails.

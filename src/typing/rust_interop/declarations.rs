@@ -23,9 +23,10 @@
 use crate::interner::StrI;
 use crate::parsing::ast::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::ast::{
-  ExternBodyS, ExternS, FunctionS, GenericParameterS, IBodyS, ICitizenAttributeS,
-  IFunctionAttributeS, IGenericParameterTypeS, InterfaceS, KindGenericParameterTypeS, MacroCallS,
-  LocationInDenizen, LocationInDenizenBuilder, ParameterS, SealedS, StructS,
+  AbstractBodyS, AbstractSP, ExternBodyS, ExternS, FunctionS, GenericParameterS, IBodyS,
+  ICitizenAttributeS, IFunctionAttributeS, IGenericParameterTypeS, InterfaceS,
+  KindGenericParameterTypeS, MacroCallS, LocationInDenizen, LocationInDenizenBuilder, ParameterS,
+  SealedS, StructS,
 };
 use crate::postparsing::itemplatatype::{
   FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
@@ -46,6 +47,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::names::names::{INameT, IStructTemplateNameT};
 use crate::typing::rust_interop::oracle::{RustItemId, ValeSig, ValeSigType};
 use crate::typing::templata::templata::ITemplataT;
+use crate::typing::typing_interner::TypingInterner;
 use crate::typing::types::types::*;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
@@ -132,12 +134,14 @@ where
       match sig_type {
         ValeSigType::Borrow(inner) => {
           // The argument binds to the *value* type: a dot-call peels the receiver's outer
-          // borrow and matches the value it encloses, so `own_rune` (the argument rune) is
-          // the value_type_rune, and the outer wrap concludes a fresh full-type rune *from*
-          // it. Wiring the borrow onto the argument rune instead makes the peeled `Counter`
-          // argument fail the wrap's `KindIsNotBorrowRef` check.
+          // borrow and matches the value it encloses. `bind_sig_type` returns the rune that
+          // value settled to — `own_rune` (the argument rune) for a concrete inner like
+          // `&Counter` (it binds `own_rune` via Lookup/Call), or the generic's own rune for a
+          // `&C` inner (a generic references its rune directly, with no rule that would bind
+          // `own_rune`). Using that returned rune — rather than always `own_rune` — is what lets a
+          // `&C` parameter resolve; wiring the borrow onto an unbound `own_rune` leaves it unsolved.
           let full_type_rune = fresh_rune(scout_arena, range, &mut next_synthetic);
-          bind_sig_type(
+          let value_rune = bind_sig_type(
             compiler,
             inner,
             own_rune,
@@ -149,13 +153,13 @@ where
           let outer = vec![IRulexSR::BorrowRef(BorrowRefSR {
             range,
             result_rune: full_type_rune,
-            inner_rune: own_rune,
+            inner_rune: value_rune,
             // Unspecified: an extern param carries no region annotation, matching the
             // `RegionT::Default` the settled-kind lowering uses. Real lifetime
             // reconciliation is deferred (@ELASZ).
             region: RegionSR::Unspecified,
           })];
-          (full_type_rune, own_rune, outer)
+          (full_type_rune, value_rune, outer)
         }
         _ => {
           let rune = bind_sig_type(
@@ -532,6 +536,230 @@ where
     tyype,
     &[], // rules
     &[], // internal_methods
+    &[], // impl_bounds
+  ))
+}
+
+/// Rewrite a trait method's signature so the trait's implicit `Self` (generic index 0) becomes the
+/// interface itself. A trait method's `&self` receiver reads as `&Self`; the abstract interface
+/// method's receiver must be `&Callback`, so every `Generic(0)` position is replaced by the interface
+/// citizen. Only the simple case is handled — a method whose sole generic is `Self` — so any other
+/// `Generic` here is an unsupported own-generic and is left as-is (its declaration will decline).
+fn map_self_to_interface<'s, 't>(
+  interner: &TypingInterner<'s, 't>,
+  sig_type: &ValeSigType<'s, 't>,
+  interface_name: StrI<'s>,
+  package: &'s PackageCoordinate<'s>,
+) -> ValeSigType<'s, 't>
+where
+  's: 't,
+{
+  match sig_type {
+    ValeSigType::Generic(0) => ValeSigType::Citizen { name: interface_name, package, args: &[] },
+    ValeSigType::Generic(i) => ValeSigType::Generic(*i),
+    ValeSigType::Kind(k) => ValeSigType::Kind(*k),
+    ValeSigType::Citizen { name, package: p, args } => {
+      let mapped: Vec<ValeSigType<'s, 't>> =
+        args.iter().map(|a| map_self_to_interface(interner, a, interface_name, package)).collect();
+      ValeSigType::Citizen { name: *name, package: p, args: interner.alloc_slice_from_vec(mapped) }
+    }
+    ValeSigType::Borrow(inner) => ValeSigType::Borrow(
+      interner.alloc(map_self_to_interface(interner, inner, interface_name, package)),
+    ),
+  }
+}
+
+/// One abstract method of a synthesized trait-interface — the AHT `FunctionS` `function_scout`
+/// produces for a native `func on_call(virtual self &Callback) int;`. It is `synthesize_extern_function`
+/// with exactly three differences: the receiver (parameter 0) is the virtual dispatch parameter, the
+/// body is `AbstractBody`, and it carries no `Extern` attribute (an interface method's abstractness is
+/// the parent interface plus the virtual receiver, not an attribute). `sig` must already have `Self`
+/// mapped to the interface and carry no generic parameters (they must equal the interface's, which is
+/// non-generic here). A borrowed receiver is the `@PFVSZ` outer-ref split, identical to a `&self`
+/// extern param — the borrow lives in the parameter's `type_outer_ref_rules` as a `BorrowRefSR`.
+fn synthesize_abstract_interface_method<'s, 'ctx, 't>(
+  compiler: &Compiler<'s, 'ctx, 't>,
+  human_name: StrI<'s>,
+  sig: &ValeSig<'s, 't>,
+) -> Option<&'s FunctionS<'s>>
+where
+  's: 't,
+{
+  let scout_arena = compiler.scout_arena;
+  let loc = CodeLocationS::internal(scout_arena, SYNTHESIZED_RANGE_OFFSET);
+  let range = RangeS::new(loc, loc);
+
+  // `InterfaceS::new` asserts each internal method's generic params equal the interface's. The
+  // interface is non-generic (Self filtered, generic trait methods unsupported), so the abstract
+  // method carries none and there are no generic runes to reference.
+  if !sig.generic_params.is_empty() {
+    return None;
+  }
+  let generic_runes: Vec<RuneUsage<'s>> = Vec::new();
+
+  let mut header_rules: Vec<IRulexSR<'s>> = Vec::new();
+  let mut next_synthetic: u32 = 0;
+  let mut params: Vec<ParameterS<'s>> = Vec::new();
+  let mut lidb = LocationInDenizenBuilder::new(Vec::new());
+  for (index, sig_type) in sig.params.iter().enumerate() {
+    let own_rune = RuneUsage {
+      range,
+      rune: scout_arena
+        .intern_rune(IRuneValS::ArgumentRune(ArgumentRuneS { arg_index: index as i32 })),
+    };
+    let mut value_type_rules: Vec<IRulexSR<'s>> = Vec::new();
+    let (full_type_rune, value_type_rune, outer_ref_rules): (_, _, Vec<IRulexSR<'s>>) =
+      match sig_type {
+        ValeSigType::Borrow(inner) => {
+          let full_type_rune = fresh_rune(scout_arena, range, &mut next_synthetic);
+          bind_sig_type(
+            compiler,
+            inner,
+            own_rune,
+            range,
+            &generic_runes,
+            &mut value_type_rules,
+            &mut next_synthetic,
+          )?;
+          let outer = vec![IRulexSR::BorrowRef(BorrowRefSR {
+            range,
+            result_rune: full_type_rune,
+            inner_rune: own_rune,
+            region: RegionSR::Unspecified,
+          })];
+          (full_type_rune, own_rune, outer)
+        }
+        _ => {
+          let rune = bind_sig_type(
+            compiler,
+            sig_type,
+            own_rune,
+            range,
+            &generic_runes,
+            &mut value_type_rules,
+            &mut next_synthetic,
+          )?;
+          (rune, rune, Vec::new())
+        }
+      };
+    // The receiver (parameter 0) is virtual — the interface-compile reads its virtual slot.
+    // `is_internal_method` is true because the method lives inside the interface citizen.
+    let virtuality =
+      if index == 0 { Some(AbstractSP { range, is_internal_method: true }) } else { None };
+    params.push(ParameterS::new(
+      range,
+      virtuality,
+      false,
+      IVarDeclarationNameS::CodeVarName(CodeVarNameS {
+        imprecise_name: scout_arena
+          .intern_code_name(scout_arena.intern_str(&format!("p{}", index))),
+        lid: lidb.child().consume_in_arena(scout_arena),
+      }),
+      ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: full_type_rune })),
+      full_type_rune,
+      value_type_rune,
+      scout_arena.alloc_slice_from_vec(outer_ref_rules),
+      scout_arena.alloc_slice_from_vec(value_type_rules),
+    ));
+  }
+
+  let ret_own_rune =
+    RuneUsage { range, rune: scout_arena.intern_rune(IRuneValS::ReturnRune(ReturnRuneS {})) };
+  let ret_rune = bind_sig_type(
+    compiler,
+    &sig.ret,
+    ret_own_rune,
+    range,
+    &generic_runes,
+    &mut header_rules,
+    &mut next_synthetic,
+  )?;
+
+  let tyype = TemplateTemplataType {
+    param_types: scout_arena.alloc_slice_from_vec::<ITemplataType<'s>>(Vec::new()),
+    return_type: scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
+  };
+
+  Some(scout_arena.alloc(FunctionS::new(
+    range,
+    IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+      imprecise_name: scout_arena.intern_code_name(human_name),
+      code_location: loc,
+      lid: LocationInDenizen { path: &[] },
+    }),
+    // No attributes: an interface method's abstractness is its parent interface plus the virtual
+    // receiver, not an attribute (`function_scout` rejects a redundant `abstract` here).
+    scout_arena.alloc_slice_from_vec(Vec::new()),
+    // Generic params must equal the interface's — empty here.
+    scout_arena.alloc_slice_from_vec(Vec::new()),
+    tyype,
+    scout_arena.alloc_slice_from_vec(params),
+    Some(ret_rune),
+    &[],
+    scout_arena.alloc_slice_from_vec(header_rules),
+    &[],
+    scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),
+  )))
+}
+
+/// A Rust **trait** becomes an interface carrying its abstract methods, so a Vale struct can `impl`
+/// it and Rust can call back in. Like `synthesize_extern_interface` (the enum analog) it is an
+/// opaque `Extern` interface; unlike it, each trait method is projected into `internal_methods` as an
+/// abstract method whose virtual receiver is the interface itself, so an `impl Callback for MyCb`
+/// resolves its `on_call` through the ordinary override machinery. Non-generic only for now (Self is
+/// filtered and generic trait methods are unsupported).
+pub fn synthesize_extern_trait<'s, 'ctx, 't>(
+  compiler: &Compiler<'s, 'ctx, 't>,
+  package_coord: &'s PackageCoordinate<'s>,
+  human_name: StrI<'s>,
+  methods: &[(StrI<'s>, ValeSig<'s, 't>)],
+) -> &'s InterfaceS<'s>
+where
+  's: 't,
+{
+  let scout_arena = compiler.scout_arena;
+  let interner = compiler.typing_interner;
+  let loc = CodeLocationS::internal(scout_arena, SYNTHESIZED_RANGE_OFFSET);
+  let range = RangeS::new(loc, loc);
+
+  let tyype = TemplateTemplataType {
+    param_types: scout_arena.alloc_slice_from_vec::<ITemplataType<'s>>(Vec::new()),
+    return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+  };
+
+  let mut internal_methods: Vec<&'s FunctionS<'s>> = Vec::new();
+  for (method_name, sig) in methods {
+    let mapped_params: Vec<ValeSigType<'s, 't>> = sig
+      .params
+      .iter()
+      .map(|p| map_self_to_interface(interner, p, human_name, package_coord))
+      .collect();
+    let mapped_ret = map_self_to_interface(interner, &sig.ret, human_name, package_coord);
+    let mapped_sig = ValeSig {
+      generic_params: &[],
+      params: interner.alloc_slice_from_vec(mapped_params),
+      ret: mapped_ret,
+    };
+    // A method that fails to project (an unsupported generic) is skipped; an override for it then
+    // fails to resolve, surfacing the gap at the impl rather than as a silent hole here.
+    if let Some(m) = synthesize_abstract_interface_method(compiler, *method_name, &mapped_sig) {
+      internal_methods.push(m);
+    }
+  }
+
+  scout_arena.alloc(InterfaceS::new(
+    range,
+    scout_arena.alloc(TopLevelInterfaceDeclarationNameS { name: human_name, range }),
+    scout_arena.alloc_slice_from_vec(vec![
+      ICitizenAttributeS::Extern(ExternS { package_coord }),
+      ICitizenAttributeS::Sealed(SealedS),
+    ]),
+    false, // not weakable
+    &[],   // no generic parameters
+    SharednessP::Single,
+    tyype,
+    &[], // rules
+    scout_arena.alloc_slice_from_vec(internal_methods),
     &[], // impl_bounds
   ))
 }

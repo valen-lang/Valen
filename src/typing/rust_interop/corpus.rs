@@ -64,6 +64,94 @@ exported func main() int {
   expect: Expect::Returns(42),
 };
 
+/// A Rust **trait** imports as a synthesized interface — the first step toward a Vale struct
+/// implementing a Rust trait so Rust can call back in. The import alone must resolve and compile;
+/// the trait is unused here, exactly as an imported-but-uncalled function is.
+pub const IMPORTS_A_RUST_TRAIT: Case = Case {
+  fixture: "fixtures",
+  name: "import-trait",
+  vale: r#"
+import rust.mycrate.Callback;
+exported func main() int {
+  return 0;
+}
+"#,
+  expect: Expect::Returns(0),
+};
+
+/// A Vale struct implements an imported Rust trait, and the trait's method resolves through an
+/// interface reference — proof the override matched. `invoke(cb &Callback)` calls `cb.on_call()`,
+/// which needs `Callback` to carry an abstract `on_call`; `invoke(&c)` upcasts `MyCb` to `&Callback`,
+/// which needs the impl's edge. An empty or unimplemented interface fails both. This is the frontend
+/// half of Rust calling a Vale callback.
+pub const A_STRUCT_IMPLEMENTS_A_RUST_TRAIT: Case = Case {
+  fixture: "fixtures",
+  name: "impl-rust-trait",
+  vale: r#"
+import rust.mycrate.Callback;
+struct MyCb { }
+impl Callback for MyCb;
+func on_call(self &MyCb) int {
+  return 7;
+}
+func invoke(cb &Callback) int {
+  return cb.on_call();
+}
+exported func main() int {
+  c = MyCb();
+  return invoke(&c);
+}
+"#,
+  expect: Expect::Returns(7),
+};
+
+/// An `impl` of a Rust trait that provides no override for the trait's method must be rejected: the
+/// trait projects an abstract `on_call` into the interface, so `impl Callback for MyCb` with no
+/// `on_call` leaves an abstract method unimplemented and fails to compile. This guards that the
+/// projected abstract method is actually *enforced* — without the projection the impl would compile
+/// vacuously. (This tests a mismatch Vale reliably catches; a wrong *return type* is a pre-existing,
+/// native-wide gap that Vale does not yet catch — see `native_interface_rejects_a_wrong_return_override`.)
+pub const A_TRAIT_IMPL_MISSING_ITS_OVERRIDE_IS_REJECTED: Case = Case {
+  fixture: "fixtures",
+  name: "impl-rust-trait-missing-override",
+  vale: r#"
+import rust.mycrate.Callback;
+struct MyCb { }
+impl Callback for MyCb;
+func invoke(cb &Callback) int {
+  return cb.on_call();
+}
+exported func main() int {
+  c = MyCb();
+  return invoke(&c);
+}
+"#,
+  expect: Expect::FailsToCompile("CouldntFindOverrideT"),
+};
+
+/// Rust calls back into a Valen callback: a Valen `MyCb` implements the Rust trait `Callback`, and a
+/// generic Rust `run_callback<C: Callback>(&C)` is monomorphized with `C = MyCb`, whose body calls
+/// `c.on_call()` back into Valen's override (returning 7). Its own fixture (`fixtures_rust_trait`)
+/// carries the trait, the generic fn, and a stub projecting `MyCb` + `impl Callback for MyCb`.
+pub const RUST_CALLS_A_VALEN_TRAIT_IMPL_CALLBACK: Case = Case {
+  fixture: "fixtures_rust_trait",
+  name: "rust-trait-callback",
+  vale: r#"
+import rust.mycrate.Callback;
+import rust.mycrate.run_callback;
+struct MyCb { }
+impl Callback for MyCb;
+func on_call(self &MyCb) int {
+  return 7;
+}
+exported func main() int {
+  mmlcb = MyCb();
+  return run_callback(&mmlcb);
+}
+"#,
+  expect: Expect::Returns(7),
+};
+
 /// Laziness, proven positively: three representable free functions are imported and exactly one is
 /// called. Only the called function's signature is ever queried. This is the whole payoff — importing
 /// a type with a hundred methods must not pay `fn_sig` for the ones a program never calls.

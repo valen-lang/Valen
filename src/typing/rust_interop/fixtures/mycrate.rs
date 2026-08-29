@@ -484,3 +484,11 @@ pub fn make_small(a: i32, b: i32, c: i32) -> Small8 {
 pub fn small_plus(s: Small8, bonus: i32) -> i32 {
     s.a + bonus
 }
+
+/// A Rust **trait** for a Vale struct to implement, so Rust can later call back into Vale through it
+/// (static dispatch). Vale imports it as a synthesized interface carrying this abstract method; a
+/// `struct MyCb {} impl Callback for MyCb;` then implements it. `on_call(&self) -> i32` is the
+/// simplest callback shape: a borrow receiver, no other arguments, a scalar return.
+pub trait Callback {
+    fn on_call(&self) -> i32;
+}

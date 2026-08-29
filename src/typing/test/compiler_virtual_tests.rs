@@ -63,6 +63,36 @@ impl Opt for Some;
   let _ = interface.internal_methods;
 }
 
+/// An `impl` that supplies no override for an interface's method must be reported as a compile
+/// error. `Impl` implements `Handler` but provides no `handle`, so the program must fail to compile.
+#[test]
+fn missing_interface_override_reports_a_compile_error() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
+sealed interface Handler { func handle(virtual self &Handler) int; }
+struct Impl { }
+impl Handler for Impl;
+exported func main() int { return 0; }
+";
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  assert!(compile.get_compiler_outputs().is_err());
+}
+
 #[test]
 fn regular_open_interface_and_struct_no_anonymous_interface() {
   let parse_bump = Bump::new();

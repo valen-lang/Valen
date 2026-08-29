@@ -157,6 +157,84 @@ fn calls_a_rust_free_function() {
   );
 }
 
+/// Ensures a program can import a Rust trait: the oracle resolves and offers it, and the import
+/// compiles even when unused. This is the first step toward a Vale struct implementing a Rust trait.
+#[test]
+fn imports_a_rust_trait() {
+  let outcome = run_case(&IMPORTS_A_RUST_TRAIT, callees_in_main);
+
+  outcome.check(&IMPORTS_A_RUST_TRAIT).expect("the case declares it compiles");
+
+  // Vacuity: the program would compile just as happily if `Callback` were never resolved. This is
+  // what says the trait actually reached Vale through the oracle.
+  assert!(
+    outcome.asked(|q| q.offered("Callback").is_some()),
+    "the oracle never offered the imported trait:\n{}",
+    outcome.rendered_log()
+  );
+}
+
+/// Ensures a Vale struct can implement an imported Rust trait: the impl resolves `on_call` against
+/// the trait's projected abstract method, and the method is callable through a `&Callback` reference.
+/// The program compiles only if the interface carries `on_call` and the impl's edge exists.
+#[test]
+fn a_struct_implements_a_rust_trait() {
+  let outcome = run_case(&A_STRUCT_IMPLEMENTS_A_RUST_TRAIT, callees_in_main);
+
+  outcome.check(&A_STRUCT_IMPLEMENTS_A_RUST_TRAIT).expect("the case declares it compiles");
+
+  // Vacuity: the trait must have reached Vale through the oracle for the impl to mean anything.
+  assert!(
+    outcome.asked(|q| q.offered("Callback").is_some()),
+    "the oracle never offered the implemented trait:\n{}",
+    outcome.rendered_log()
+  );
+}
+
+/// Ensures an `impl` of a Rust trait that provides no override for the trait's method is rejected —
+/// the projected abstract `on_call` is enforced, so an impl missing it fails to compile. This guards
+/// that the trait's method projection is real: without it, `impl Callback for MyCb` would compile
+/// vacuously.
+#[test]
+fn a_trait_impl_missing_its_override_is_rejected() {
+  let outcome = run_case(&A_TRAIT_IMPL_MISSING_ITS_OVERRIDE_IS_REJECTED, callees_in_main);
+
+  assert!(
+    outcome.check(&A_TRAIT_IMPL_MISSING_ITS_OVERRIDE_IS_REJECTED).is_none(),
+    "an impl missing its trait-method override was accepted:\n{}",
+    outcome.rendered_log()
+  );
+}
+
+/// Milestone (reverse direction): rustc's collector monomorphizes a generic Rust fn with a Valen
+/// struct as its type argument (`run_callback::<MyCb>`) and, walking its body, discovers the Valen
+/// trait-impl callback `<MyCb as Callback>::on_call`. Collector-driven (no run): asserts rustc drove
+/// `__vale_main`, requested `run_callback`, discovered `on_call`, resolved everything, and codegen'd.
+#[test]
+fn rustc_discovers_a_valen_trait_impl_callback() {
+  let run = run_case_rustc_driven_full(&RUST_CALLS_A_VALEN_TRAIT_IMPL_CALLBACK);
+  let firings = &run.firings;
+  assert!(
+    firings.iter().any(|f| f.contains("__vale_main")),
+    "per_instance_mir never fired on __vale_main; firings: {firings:?}"
+  );
+  // `run_callback::<MyCb>` must actually resolve — MyCb, a local Valen struct, converted to a rustc
+  // type argument and the generic monomorphization reified — not decline as unconvertible.
+  assert!(
+    !firings.iter().any(|f| f.contains("ARGS-UNCONVERTIBLE") || f.contains("UNRESOLVED")),
+    "run_callback::<MyCb> did not resolve (unconvertible/unresolved); firings: {firings:?}"
+  );
+  assert!(
+    firings.iter().any(|f| f.contains("run_callback") && f.contains("=>") && !f.contains("UNCONVERTIBLE")),
+    "run_callback::<MyCb> was not reified for rustc; firings: {firings:?}"
+  );
+  assert_eq!(
+    run.rustc_exit, 0,
+    "rustc did not complete codegen (exit {}); firings: {firings:?}",
+    run.rustc_exit
+  );
+}
+
 /// Laziness, proven positively: importing three representable free functions and calling one queries
 /// `fn_sig` for the called function and for neither uncalled one. This is the whole point of the slice
 /// — importing a type with a hundred methods must not pay `fn_sig` for the ones never called.

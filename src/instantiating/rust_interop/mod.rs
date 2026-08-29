@@ -57,6 +57,7 @@ use crate::instantiating::instantiator::{InstantiatedOutputsI, InstantiatorI};
 use crate::keywords::Keywords;
 use crate::scout_arena::ScoutArena;
 use crate::typing::hinputs_t::HinputsT;
+use crate::typing::rust_interop::reserved::RUST_MODULE;
 use crate::typing::rust_interop::tyctxt_oracle::resolve_crate_qualified_path;
 use crate::typing::typing_interner::TypingInterner;
 
@@ -261,6 +262,22 @@ fn resolve_local_fn(tcx: TyCtxt<'_>, name: &str) -> Option<DefId> {
     })
 }
 
+/// Find a struct defined in the crate under compilation (the stub) by name. A Valen struct that
+/// implements a Rust trait is projected into the stub, not a dependency, so
+/// `resolve_crate_qualified_path` (which walks only loaded dependency crates) cannot see it — this is
+/// the type analog of `resolve_local_fn`. It lets a local Valen type be passed as a Rust generic's
+/// type argument (`run_callback::<MyCb>`).
+fn resolve_local_type(tcx: TyCtxt<'_>, name: &str) -> Option<DefId> {
+  tcx
+    .module_children_local(rustc_hir::def_id::CRATE_DEF_ID)
+    .iter()
+    .find(|c| c.ident.name.as_str() == name)
+    .and_then(|c| match c.res {
+      rustc_hir::def::Res::Def(rustc_hir::def::DefKind::Struct, def_id) => Some(def_id),
+      _ => None,
+    })
+}
+
 /// Resolve a method request through its receiver type's inherent impls. The receiver is the request's
 /// first parameter; the method's generic args are the receiver's type args followed by the method's
 /// own (matching rustc's parent-inclusive generic order).
@@ -421,10 +438,18 @@ fn citizen_def_id_and_args<'tcx>(
     }
     _ => return None,
   };
-  let mut segments: Vec<&str> =
-    id.package_coord.packages.as_slice().iter().map(|s| s.as_str()).collect();
-  segments.push(human_name);
-  let (def_id, _kind) = resolve_crate_qualified_path(tcx, &segments.join("."))?;
+  // A rust-backed citizen (reserved `rust` module) lives in a loaded dependency crate; a Valen-defined
+  // citizen — e.g. a struct that implements a Rust trait — is projected into the stub crate under
+  // compilation, which `resolve_crate_qualified_path` (dependency crates only) can't see, so resolve
+  // it locally by name.
+  let def_id = if id.package_coord.module.0 == RUST_MODULE {
+    let mut segments: Vec<&str> =
+      id.package_coord.packages.as_slice().iter().map(|s| s.as_str()).collect();
+    segments.push(human_name);
+    resolve_crate_qualified_path(tcx, &segments.join("."))?.0
+  } else {
+    resolve_local_type(tcx, human_name)?
+  };
   let arg_tys: Vec<Ty<'tcx>> =
     template_args.iter().map(|t| templata_to_rustc_ty(tcx, t)).collect::<Option<_>>()?;
   Some((def_id, arg_tys))
