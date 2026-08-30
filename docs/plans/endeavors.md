@@ -29,6 +29,8 @@ eventually:
 
 smaller TODO:
 
+  get rid of all concat! in tests
+
   UpgradeWeakTE actually returns an option<borrow ref>. if the user wants to go from share ref to weak ref, we'll chain an UpgradeWeakTE with a BorrowToShareTE.
 
   AliasTE should go away

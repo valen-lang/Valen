@@ -708,7 +708,7 @@ pub struct PrototypeNameValS {}
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MagicParamImpreciseNameS<'s> {
   pub code_location: CodeLocationS<'s>,
-  /// Stable identity (see LIFE/LID design). Shared with the declaration's `lid`; the
+  /// Stable identity (see Loc/LID design). Shared with the declaration's `lid`; the
   /// already-arena-allocated slice means this needs no `'tmp` deferral (see @DSAUIMZ), unlike
   /// a builder-borrowed lid — the imprecise name holds the canonical lid directly.
   pub lid: LocationInDenizen<'s>,

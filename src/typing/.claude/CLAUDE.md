@@ -20,3 +20,5 @@ AI can add read-only print statements for debugging purposes only, if the user e
 **`self` is just another parameter.** Avoid separate code paths for self vs non-self parameters. If syntax separates the receiver (e.g., dot notation), reassemble the full parameter list so downstream logic can handle everything uniformly. Semantically, there is no difference between `self` and non-`self` parameters, so treating them differently is almost always a bug.
 
 **`drop` is just another function.** Avoid separate code paths for drop vs non-drop functions. Semantically, there is no difference between `drop` and non-`drop` parameters, so treating them differently is almost always a bug. The one exception is where the typing pass automatically inserts drop calls at the end of scopes.
+
+**Absolutely no nondeterminism.** No turning pointers into integers, no using `HashMap`, etc. If you find any nondeterminism: stop, switch gears, signal the human. Fixing nondeterminism is a P0 and higher priority than anything else.

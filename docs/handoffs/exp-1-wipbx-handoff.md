@@ -90,7 +90,7 @@ Both variable and function names now split into a **declaration** side (identity
 interned, @WVSBIZ) and an **imprecise** side (interned lookup key):
 - Variables: `IVarDeclarationNameS` embeds an interned `&'s <ImpreciseNameS>` + a `lid`; typing's
   `LocalNameT`/`MemberNameT` are `{ imprecise_name: &'s CodeNameS, life }` (life = the lid moved into
-  LIFE space via `LocationInFunctionEnvironmentT::from_lid`; a declaration's life *is* its lid, no `.0`).
+  Loc space via `LocationInFunctionEnvironmentT::from_lid`; a declaration's life *is* its lid, no `.0`).
   Every var-name variant that names a source binding — including `MagicParamNameT` and
   `ClosureParamNameT` — carries its interned imprecise name, so `IVarNameT::imprecise_name()` (in
   `environment.rs`) returns it and use-sites resolve by it through `get_variable`.

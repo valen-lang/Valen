@@ -88,7 +88,7 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
     needle: IImpreciseNameS<'s>,
   ) -> Option<(&StructMemberT<'s, 't>, usize)> {
     for (index, member) in self.members.iter().enumerate() {
-      if member.name.imprecise_name() == Some(needle) {
+      if IImpreciseNameS::CodeName(member.name.imprecise_name) == needle {
         return Some((member, index));
       }
     }
@@ -99,7 +99,7 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructMemberT<'s, 't> {
-  pub name: IVarNameT<'s, 't>,
+  pub name: &'t MemberNameT<'s, 't>,
   pub tyype: KindT<'s, 't>,
 }
 

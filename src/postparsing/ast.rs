@@ -223,7 +223,7 @@ pub struct NormalStructMemberS<'s> {
   pub range: RangeS<'s>,
   pub name: StrI<'s>,
   /// The member declaration's structural location, so the typing pass can give the member name a
-  /// LIFE (like a local) instead of a bare spelling — see typing-design.md P1.
+  /// Loc (like a local) instead of a bare spelling — see typing-design.md P1.
   pub lid: LocationInDenizen<'s>,
   pub type_rune: RuneUsage<'s>, // VCOORD: remove this in favor of the ITypeST
   pub tyype: ITypeST<'s>,

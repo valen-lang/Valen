@@ -373,7 +373,7 @@ where
             );
             let reference = substituter.substitute_for_kind(coutputs, member.tyype);
             let member_local: &'t LocalVariable<'s, 't> =
-              self.typing_interner.alloc(LocalVariable { name: member.name, tyype: reference });
+              self.typing_interner.alloc(LocalVariable { name: IVarNameT::Member(member.name), tyype: reference });
             member_local
           })
           .collect();

@@ -1209,7 +1209,7 @@ fn simple_struct() {
           weakable: false,
           sharedness: SharednessT::Single,
           members: [StructMemberT {
-            name: IVarNameT::Member(MemberNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. }),
+            name: MemberNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. },
             tyype: KindT::Int(IntT { bits: 32 }),
           }],
           ..

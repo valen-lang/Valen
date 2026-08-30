@@ -955,7 +955,7 @@ where
       self.typing_interner,
       load_range,
       container_alias,
-      member.name,
+      IVarNameT::Member(member.name),
       member_type,
     )))
   }

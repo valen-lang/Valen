@@ -338,10 +338,10 @@ where
     match member {
       IStructMemberS::NormalStructMember(n) => {
         StructMemberT {
-          name: IVarNameT::Member(self.typing_interner.intern_member_name(MemberNameT {
+          name: self.typing_interner.intern_member_name(MemberNameT {
             imprecise_name: self.scout_arena.intern_code_name(n.name),
             loct: LocT::from_lid(self.typing_interner, n.lid),
-          })),
+          }),
           tyype,
         }
       }

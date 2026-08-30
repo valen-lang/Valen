@@ -19,7 +19,7 @@ use crate::typing::ast::expressions::{
 use crate::typing::env::environment::IEnvironmentT;
 use crate::typing::env::function_environment_t::LocalVariable;
 use crate::typing::hinputs_t::{HinputsT, InstantiationBoundArgumentsT};
-use crate::typing::names::names::{INameT, IVarNameT, IdT};
+use crate::typing::names::names::{INameT, IVarNameT, IdT, MemberNameT};
 use crate::typing::templata::templata::{
   ExternFunctionTemplataT, FunctionTemplataT, ITemplataT, ImplDefinitionTemplataT,
   InterfaceDefinitionTemplataT, IsaTemplataT, KindListTemplataT, KindTemplataT,
@@ -125,6 +125,7 @@ pub enum NodeRefT<'s, 't> {
   // ---- Names + envs (trait-level only; we do not enumerate sub-variants) ----
   Name(&'t INameT<'s, 't>),
   VarName(&'t IVarNameT<'s, 't>),
+  MemberName(&'t MemberNameT<'s, 't>),
   Environment(IEnvironmentT<'s, 't>),
 
   // ---- Auxiliaries (trait-level only) ----
@@ -1324,6 +1325,14 @@ where
   collect_if(pred, out, NodeRefT::VarName(n));
 }
 
+fn visit_member_name<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, n: &'t MemberNameT<'s, 't>)
+where
+  F: Fn(NodeRefT<'s, 't>) -> Option<T>,
+  's: 't,
+{
+  collect_if(pred, out, NodeRefT::MemberName(n));
+}
+
 fn visit_function_attribute<'s, 't, T, F>(
   pred: &F,
   out: &mut Vec<T>,
@@ -1349,7 +1358,7 @@ where
   's: 't,
 {
   collect_if(pred, out, NodeRefT::StructMember(m));
-  visit_var_name(pred, out, &m.name);
+  visit_member_name(pred, out, m.name);
   visit_kind(pred, out, m.tyype);
 }
 

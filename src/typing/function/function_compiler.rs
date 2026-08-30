@@ -1,8 +1,9 @@
 use crate::postparsing::ast::FunctionS;
 use crate::postparsing::ast::{IBodyS, LocationInDenizen};
 use crate::postparsing::names::IRuneS;
-use crate::postparsing::names::{IFunctionDeclarationNameS, IVarDeclarationNameS};
+use crate::postparsing::names::{CodeVarNameS, IFunctionDeclarationNameS, IVarDeclarationNameS};
 use crate::typing::ast::ast::FunctionHeaderT;
+use crate::typing::ast::ast::LocT;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::ast::citizens::StructMemberT;
 use crate::typing::compiler::Compiler;
@@ -343,7 +344,15 @@ where
     env: &'t NodeEnvironmentT<'s, 't>,
     name: IVarDeclarationNameS<'s>,
   ) -> &'t StructMemberT<'s, 't> {
-    let translated_name = self.translate_var_name_step(name);
+    let member_name = match name {
+      IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name, lid }) => {
+        self.typing_interner.intern_member_name(MemberNameT {
+          imprecise_name,
+          loct: LocT::from_lid(self.typing_interner, lid),
+        })
+      }
+      other => panic!("Closure capture must be a code-named local, got {:?}", other),
+    };
     let name_imprecise = name.imprecise_name(self.scout_arena);
     let captured = match env.get_variable(name_imprecise).unwrap() {
       IVariableT::Local(local) => local.tyype,
@@ -357,6 +366,6 @@ where
         self.typing_interner.alloc(BorrowRefT { inner: captured}),
       ),
     };
-    self.typing_interner.alloc(StructMemberT { name: translated_name, tyype })
+    self.typing_interner.alloc(StructMemberT { name: member_name, tyype })
   }
 }

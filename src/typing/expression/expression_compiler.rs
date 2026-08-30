@@ -295,9 +295,7 @@ where
       .iter()
       .map(|member| {
         let StructMemberT { name: member_name, tyype, .. } = member;
-        let member_imprecise = member_name
-            .imprecise_name()
-            .unwrap_or_else(|| panic!("closure member has no imprecise name: {:?}", member_name));
+        let member_imprecise = IImpreciseNameS::CodeName(member_name.imprecise_name);
         let lookup = self
             .evaluate_lookup_for_load(coutputs, nenv, range, call_location, region, member_imprecise)
             .unwrap_or_else(|_| panic!("evaluate_lookup_for_load error"))
@@ -1078,13 +1076,13 @@ where
                 },
               )
               .substitute_for_kind(coutputs, unsubstituted_member_type);
-            assert!(struct_def.members.iter().any(|m| m.name.imprecise_name() == Some(needle)));
+            assert!(struct_def.members.iter().any(|m| IImpreciseNameS::CodeName(m.name.imprecise_name) == needle));
             ExpressionTE::MemberLookup(self.typing_interner.alloc(
               MemberLookupTE::new(
                 self.typing_interner,
                 dot.range,
                 container_expr_2,
-                struct_member.name,
+                IVarNameT::Member(struct_member.name),
                 member_type,
               ),
             ))

@@ -4,7 +4,7 @@
 
 (very incomplete, working on it)
 
-### LIFE/LID
+### Loc/LID
 
 We shouldn't use source location to uniquely identify something, because source location will change any time the user makes an edit, and we want things to be relatively stable (for LSP, incremental compilation, etc.).
 
@@ -12,15 +12,15 @@ Because of that, we made **LocationInDenizen** and **LocationInFunctionEnvironme
 
 **LocationInDenizen** ("LID") is created by postparser, and it's simply a list of numbers: 1.1 means "the first-thing's first-child". 1.3.2 means "first-thing's third-child's second-child". LIDs never contain 0.
 
-**LocationInFunctionEnvironment** ("LIFE") is the same thing, but created in the typing pass (for example for typing-pass-made temporary variables). LIFEs start at 0. If there's a 0 in it, then you know it's a location conjured in the typing pass. All LIFEs should start from a LID. If typing pass wants three children for LID 1.3.2, then it should make LIFE 1.3.2.0. Then from there, one can make any number of LIFE children for it, like 1.3.2.0.0, 1.3.2.0.1, 1.3.2.0.2.
+**LocationInFunctionEnvironment** ("Loc") is the same thing, but created in the typing pass (for example for typing-pass-made temporary variables). Locs start at 0. If there's a 0 in it, then you know it's a location conjured in the typing pass. All Locs should start from a LID. If typing pass wants three children for LID 1.3.2, then it should make Loc 1.3.2.0. Then from there, one can make any number of Loc children for it, like 1.3.2.0.0, 1.3.2.0.1, 1.3.2.0.2.
 
-The typing pass should only ever construct one LIFE from any particular LID. If we do that, then all these are guaranteed collision-free.
+The typing pass should only ever construct one Loc from any particular LID. If we do that, then all these are guaranteed collision-free.
 
-Every declaration in a function (local variable declaration, closure declaration, etc.) and expression node (let, call, etc) should have a LID or LIFE. Every NodeEnvironmentT should have a unique LIFE.
+Every declaration in a function (local variable declaration, closure declaration, etc.) and expression node (let, call, etc) should have a LID or Loc. Every NodeEnvironmentT should have a unique Loc.
 
-Every top-level denizen gets an emtpy LID/LIFE to start with, but lambdas do not. They are part of their parent's LID/LIFE.
+Every top-level denizen gets an emtpy LID/Loc to start with, but lambdas do not. They are part of their parent's LID/Loc.
 
-Nobody should ever make anything with an empty LID/LIFE (`[]`), except when seeding the original LID/LIFE for the entire top-level function/struct (NOT for struct members, function parameters, expressions, lambdas, etc).
+Nobody should ever make anything with an empty LID/Loc (`[]`), except when seeding the original LID/Loc for the entire top-level function/struct (NOT for struct members, function parameters, expressions, lambdas, etc).
 
 ### Names
 
@@ -30,7 +30,7 @@ There are two kinds of names throughout the compiler:
  * A **declaration name**, which is absolute and unique. There's many Mikes, but only one "Mike whose SSN is 123-456-7890".
 
 A declaration name is made of two things:
- * A location (LIFE/LID). This alone is enough to identify it.
+ * A location (Loc/LID). This alone is enough to identify it.
  * An imprecise name. This is for convenience (makes it a little easier for typing pass to know what a declaration's imprecise name). The instantiator lowers this to a string so that the backend is decoupled from all the frontend's name variants.
 
 An imprecise name:
@@ -51,15 +51,15 @@ entirely rather than tracking or solving them: a rule's region (e.g. a `BorrowRe
 rune the solver treats as something it must conclude.
 
 **P1 — Give struct members a location too; keep `IVarNameT` unified.**
-Every name = an imprecise name + a location (LID/LIFE). Let that include struct members: a member is
+Every name = an imprecise name + a location (LID/Loc). Let that include struct members: a member is
 declared at a source point, so it can carry that point's LID, just like a local. A member having a
 location does no harm, and it means *every* `IVarNameT` variant has one — so we don't split members
 out of `IVarNameT`, and `IVarNameT::life()` becomes total.
 
 Changes:
-- LID and LIFE stay two distinct types (`LocationInDenizen` vs `LocationInFunctionEnvironmentT`). A
-  postparse-declared name's `life` is its LID put into LIFE space through a single typed `Lid → Life`
-  conversion — that one seam is what makes the reserve-`0` rules (LIDs never contain 0; a LIFE always
+- LID and Loc stay two distinct types (`LocationInDenizen` vs `LocationInFunctionEnvironmentT`). A
+  postparse-declared name's `life` is its LID put into Loc space through a single typed `Lid → Life`
+  conversion — that one seam is what makes the reserve-`0` rules (LIDs never contain 0; a Loc always
   starts from a LID) compiler-enforced instead of convention.
 - `LocalNameT { name, lid }` → `{ imprecise_name: &CodeNameS, life }` — store the concrete
   `CodeNameS` (the spelling payload), not the full `IImpreciseNameS` enum, since a local/member

@@ -336,7 +336,10 @@ where
       .iter()
       .map(|member| {
         IVariableT::Capture(self.typing_interner.alloc(CapturedVariableT {
-          name: member.name,
+          name: IVarNameT::Local(self.typing_interner.intern_local_name(LocalNameT {
+            imprecise_name: member.name.imprecise_name,
+            loct: member.name.loct,
+          })),
           closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
           kind: substituter.substitute_for_kind(coutputs, member.tyype),
         }))

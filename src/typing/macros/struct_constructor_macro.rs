@@ -216,7 +216,7 @@ where
         .members
         .iter()
         .map(|member| {
-          (member.name, placeholder_substituter.substitute_for_kind(coutputs, member.tyype))
+          (IVarNameT::Member(member.name), placeholder_substituter.substitute_for_kind(coutputs, member.tyype))
         })
         .collect()
     };

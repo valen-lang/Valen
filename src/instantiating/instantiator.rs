@@ -970,7 +970,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_struct_member(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, perspective_region_t: &RegionT, member: &StructMemberT<'s, 't>) -> (KindIT<'s, 'i>, StructMemberI<'s, 'i>) {
         let StructMemberT { name, tyype } = member;
         let kind = self.translate_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, tyype);
-        let name = self.translate_var_name(name);
+        let name = self.translate_var_name(&IVarNameT::Member(*name));
         (kind, StructMemberI { name, tyype: kind })
     }
 
@@ -1334,7 +1334,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 };
                 let member_index =
                     self.find_struct(&struct_id_t).members.iter()
-                        .position(|m| m.name == member_name_t)
+                        .position(|m| IVarNameT::Member(m.name) == member_name_t)
                         .expect("MemberLookup: member name not found in struct") as i32;
                 // The member's (instantiated) type is the storage type the result borrow wraps.
                 let member_type = result_borrow.inner;
