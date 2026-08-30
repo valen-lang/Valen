@@ -45,7 +45,7 @@ where
     // (debug pattern match, not functionally needed)
 
     // val life = LocationInFunctionEnvironmentT(Vector())
-    let life = LocationInFunctionEnvironmentT {
+    let life = LocT {
       path: self.typing_interner.alloc_slice_from_vec(Vec::new()),
     };
 
@@ -140,7 +140,7 @@ where
               full_env_snapshot: full_env,
               call_range: call_range_arena,
               call_location,
-              life,
+              loct: life,
               attributes_t: attributes_t_arena,
               params_t: params_t_arena,
               is_destructor,
@@ -309,7 +309,7 @@ where
     full_env_snapshot: &'t FunctionEnvironmentT<'s, 't>,
     call_range: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     attributes_t: &'t [IFunctionAttributeT<'s>],
     params_t: &'t [ParameterT<'s, 't>],
     is_destructor: bool,
@@ -323,7 +323,7 @@ where
     let (maybe_evaluated_ret_coord, body2) = self.declare_and_evaluate_function_body(
       full_env_snapshot,
       coutputs,
-      life,
+      loct,
       call_range,
       call_location,
       full_env_snapshot.function,

@@ -102,15 +102,15 @@ pub fn humanize_name<'s, 'i>(
         INameI::PackageTopLevel(_) => panic!("humanize_name: PackageTopLevel branch"),
         INameI::Member(c) => c.name.0.to_string(),
         INameI::Local(l) => l.name.0.to_string(),
-        INameI::TypingPassBlockResultVar(b) => format!("b:{}", b.life.to_string()),
+        INameI::TypingPassBlockResultVar(b) => format!("b:{}", b.loci.to_string()),
         INameI::TypingPassFunctionResultVar(_) => "(result)".to_string(),
-        INameI::TypingPassTemporaryVar(t) => format!("t:{}", t.life.to_string()),
+        INameI::TypingPassTemporaryVar(t) => format!("t:{}", t.loci.to_string()),
         INameI::LambdaCitizen(c) => humanize_name(code_map, INameI::LambdaCitizenTemplate(&c.template), None) + "<>",
         INameI::LambdaCitizenTemplate(t) => "λC:".to_string() + &code_map(t.code_location),
         INameI::LambdaCallFunctionTemplate(t) => "λF:".to_string() + &code_map(t.code_location),
-        INameI::ClosureParam(c) => "λP:".to_string() + &c.life.to_string(),
+        INameI::ClosureParam(c) => "λP:".to_string() + &c.loci.to_string(),
         INameI::ConstructingMember(c) => format!("cm:{}", c.name.0),
-        INameI::MagicParam(m) => "mp:".to_string() + &m.life.to_string(),
+        INameI::MagicParam(m) => "mp:".to_string() + &m.loci.to_string(),
         INameI::LambdaCallFunction(n) => {
             humanize_name(code_map, INameI::LambdaCallFunctionTemplate(&n.template), None)
                 + &humanize_generic_args(code_map, n.template_args, None)
@@ -131,9 +131,9 @@ pub fn humanize_name<'s, 'i>(
                 + (match region { RegionT::Iso => "iso'", RegionT::Default => "default'" }) + ">"
                 + &humanize_kind(code_map, &element_type)
         }
-        INameI::Iterator(i) => "it:".to_string() + &i.life.to_string(),
-        INameI::Iterable(i) => "ib:".to_string() + &i.life.to_string(),
-        INameI::IterationOption(i) => "io:".to_string() + &i.life.to_string(),
+        INameI::Iterator(i) => "it:".to_string() + &i.loci.to_string(),
+        INameI::Iterable(i) => "ib:".to_string() + &i.loci.to_string(),
+        INameI::IterationOption(i) => "io:".to_string() + &i.loci.to_string(),
         INameI::AnonymousSubstruct(n) => {
             humanize_name(code_map, INameI::AnonymousSubstructTemplate(&n.template), None)
                 + "<" + &n.template_args.iter().map(|t| humanize_templata(code_map, t)).collect::<Vec<_>>().join(",") + ">"

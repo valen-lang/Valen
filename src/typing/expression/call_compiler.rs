@@ -28,7 +28,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     context_region: RegionT,
@@ -158,7 +158,7 @@ where
         let param_types = stamp_result.prototype.param_types();
         let args_exprs_2 = self.convert_exprs(
           nenv,
-          life,
+          loct,
           coutputs,
           range,
           call_location,
@@ -195,7 +195,7 @@ where
       other => self.evaluate_custom_call(
         nenv,
         coutputs,
-        life,
+        loct,
         range,
         call_location,
         context_region,
@@ -213,7 +213,7 @@ where
     &self,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     context_region: RegionT,
@@ -240,7 +240,7 @@ where
             nenv,
             range,
             call_location,
-            life,
+            loct,
             context_region,
             given_callable_unborrowed_expr_2,
           )?;
@@ -375,7 +375,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     region: RegionT,
@@ -388,7 +388,7 @@ where
     let (call_expr, pending_temp_drops) = self.evaluate_call(
       coutputs,
       nenv,
-      life,
+      loct,
       range,
       call_location,
       region,

@@ -23,7 +23,7 @@ where
     &self,
     parent_fate: &mut FunctionEnvironmentBuilder<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     region: RegionT,
@@ -45,7 +45,7 @@ where
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     region: RegionT,
     block_se: &'s BlockSE<'s>,
   ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>), ICompileErrorT<'s, 't>> {
@@ -53,7 +53,7 @@ where
       .evaluate_expression(
         coutputs,
         nenv,
-        life.add(self.typing_interner, 0),
+        loct.add(self.typing_interner, 0),
         parent_ranges,
         call_location,
         region,
@@ -73,7 +73,7 @@ where
           nenv,
           &drop_ranges,
           call_location,
-          life.add(self.typing_interner, 1),
+          loct.add(self.typing_interner, 1),
           region,
           undestructed_root_expression_with_pending_temps,
           pending_drops_from_exprs.take_vars()
@@ -86,7 +86,7 @@ where
           nenv,
           &drop_ranges,
           call_location,
-          life.add(self.typing_interner, 2),
+          loct.add(self.typing_interner, 2),
           region,
           undestructed_root_expression,
           nenv.snapshot(self.typing_interner).get_live_variables_introduced_since(starting_nenv)

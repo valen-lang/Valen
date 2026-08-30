@@ -65,7 +65,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     region: RegionT,
@@ -81,7 +81,7 @@ where
       let (ref_expr, returns, pending) = match self.evaluate_expression(
         coutputs,
         nenv,
-        life.add(self.typing_interner, index as i32),
+        loct.add(self.typing_interner, index as i32),
         parent_ranges,
         call_location,
         region,
@@ -371,7 +371,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     outer_call_location: LocationInDenizen<'s>,
     region: RegionT,
@@ -397,7 +397,7 @@ where
         let (uncasted_inner_expr_2_with_pending_drops, returns_from_inner_expr, pending_temp_drops_from_inner) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           region,
@@ -410,7 +410,7 @@ where
               nenv,
               &parent_ranges,
               outer_call_location,
-              life,
+              loct,
               region,
               uncasted_inner_expr_2_with_pending_drops,
               pending_temp_drops_from_inner.take_vars()
@@ -440,7 +440,7 @@ where
               }
               true => self.convert(
                 nenv,
-                life,
+                loct,
                 coutputs,
                 &range_list,
                 outer_call_location,
@@ -465,7 +465,7 @@ where
 
         let result_var_name = self
           .typing_interner
-          .intern_typing_pass_function_result_var_name(TypingPassFunctionResultVarNameT { life });
+          .intern_typing_pass_function_result_var_name(TypingPassFunctionResultVarNameT { loct: loct });
         let result_var_id = IVarNameT::TypingPassFunctionResultVar(result_var_name);
         let result_variable: &'t LocalVariable<'s, 't> = self
           .typing_interner
@@ -504,7 +504,7 @@ where
         let (source_expr_2, returns_from_source, pending_from_source) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           nenv.default_region(),
@@ -541,7 +541,7 @@ where
         let result_te = match self.infer_and_translate_pattern(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 1),
+          loct.add(self.typing_interner, 1),
           parent_ranges,
           outer_call_location,
           let_se.rules,
@@ -576,7 +576,7 @@ where
           let (undropped_expr_te_with_pending_drops, returns, pending_temp_drops) = self.evaluate_expression(
             coutputs,
             nenv,
-            life.add(self.typing_interner, index as i32),
+            loct.add(self.typing_interner, index as i32),
             parent_ranges,
             outer_call_location,
             region_for_inners,
@@ -592,7 +592,7 @@ where
                 nenv,
                 &range_with_parent,
                 outer_call_location,
-                life.add(self.typing_interner, (consecutor_se.exprs.len() + index) as i32),
+                loct.add(self.typing_interner, (consecutor_se.exprs.len() + index) as i32),
                 region,
                 undropped_expr_te_with_pending_drops,
                 pending_temp_drops.take_vars()
@@ -620,7 +620,7 @@ where
         let (last_expr_te_with_pending, last_returns, last_expr_pending_temp_drops) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, (consecutor_se.exprs.len() - 1) as i32),
+          loct.add(self.typing_interner, (consecutor_se.exprs.len() - 1) as i32),
           parent_ranges,
           outer_call_location,
           region_for_inners,
@@ -633,7 +633,7 @@ where
               nenv,
               &parent_ranges,
               outer_call_location,
-              life,
+              loct,
               region,
               last_expr_te_with_pending,
               last_expr_pending_temp_drops.take_vars()
@@ -669,7 +669,7 @@ where
               .evaluate_and_coerce_to_reference_expressions(
                 coutputs,
                 nenv,
-                life.add(self.typing_interner, 0),
+                loct.add(self.typing_interner, 0),
                 parent_ranges,
                 fc.location,
                 // See SRIE
@@ -734,7 +734,7 @@ where
             let (call_expr_2, pending_from_call) = match self.evaluate_prefix_call(
               coutputs,
               nenv,
-              life.add(self.typing_interner, 1),
+              loct.add(self.typing_interner, 1),
               &range_list,
               fc.location,
               region,
@@ -758,7 +758,7 @@ where
             let (undecayed_callable_expr_2, returns_from_callable, pending_from_callable) = self.evaluate_expression(
               coutputs,
               nenv,
-              life.add(self.typing_interner, 0),
+              loct.add(self.typing_interner, 0),
               parent_ranges,
               fc.location,
               region,
@@ -776,7 +776,7 @@ where
               .evaluate_and_coerce_to_reference_expressions(
                 coutputs,
                 nenv,
-                life.add(self.typing_interner, 1),
+                loct.add(self.typing_interner, 1),
                 parent_ranges,
                 fc.location,
                 nenv.default_region(),
@@ -791,7 +791,7 @@ where
             let (function_pointer_call_2, pending_from_call) = match self.evaluate_prefix_call(
               coutputs,
               nenv,
-              life.add(self.typing_interner, 2),
+              loct.add(self.typing_interner, 2),
               &{
                 let mut range_list = vec![fc.range];
                 range_list.extend_from_slice(parent_ranges);
@@ -849,7 +849,7 @@ where
         let (inner_te, returns_from_inner, pending_from_inner) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           region,
@@ -872,7 +872,7 @@ where
         let (inner_expr_2, returns_from_inner, pending_from_inner) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           region,
@@ -965,7 +965,7 @@ where
                   nenv,
                   &range_with_parent,
                   outer_call_location,
-                  life.add(self.typing_interner, 1),
+                  loct.add(self.typing_interner, 1),
                   region,
                   inner_expr_2,
                 )?;
@@ -1003,7 +1003,7 @@ where
                   nenv,
                   &range_with_parent,
                   outer_call_location,
-                  life.add(self.typing_interner, 1),
+                  loct.add(self.typing_interner, 1),
                   region,
                   inner_expr_2,
                 )?;
@@ -1020,7 +1020,7 @@ where
                   nenv,
                   &range_with_parent,
                   outer_call_location,
-                  life.add(self.typing_interner, 3),
+                  loct.add(self.typing_interner, 3),
                   region,
                   inner_expr_2,
                 )?;
@@ -1042,7 +1042,7 @@ where
         let (unborrowed_container_expr_2, returns_from_container_expr, pending_from_container) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           region,
@@ -1186,7 +1186,7 @@ where
         let (uncoerced_condition_expr_with_pending_drops, returns_from_condition, pending_temp_drops_from_condition) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 1),
+          loct.add(self.typing_interner, 1),
           parent_ranges,
           outer_call_location,
           nenv.default_region(),
@@ -1199,7 +1199,7 @@ where
               nenv,
               &parent_ranges,
               outer_call_location,
-              life,
+              loct,
               region,
               uncoerced_condition_expr_with_pending_drops,
               pending_temp_drops_from_condition.take_vars()
@@ -1236,7 +1236,7 @@ where
             coutputs,
             then_fate_starting,
             &mut then_fate,
-            life.add(self.typing_interner, 2),
+            loct.add(self.typing_interner, 2),
             parent_ranges,
             outer_call_location,
             nenv.default_region(),
@@ -1264,7 +1264,7 @@ where
             coutputs,
             else_fate_starting,
             &mut else_fate,
-            life.add(self.typing_interner, 3),
+            loct.add(self.typing_interner, 3),
             parent_ranges,
             outer_call_location,
             nenv.default_region(),
@@ -1350,7 +1350,7 @@ where
           once(if_se.range).chain(parent_ranges.iter().copied()).collect();
         let then_expr_2 = self.convert(
           nenv,
-          life,
+          loct,
           coutputs,
           &range_with_parent,
           outer_call_location,
@@ -1360,7 +1360,7 @@ where
         )?;
         let else_expr_2 = self.convert(
           nenv,
-          life,
+          loct,
           coutputs,
           &range_with_parent,
           outer_call_location,
@@ -1452,7 +1452,7 @@ where
               nenv,
               &range_with_parent,
               outer_call_location,
-              life,
+              loct,
               region,
               void_literal,
               nenv.snapshot(self.typing_interner).get_live_variables_introduced_since(while_nenv),
@@ -1483,7 +1483,7 @@ where
             coutputs,
             loop_block_fate_starting,
             &mut loop_block_fate,
-            life.add(self.typing_interner, 1),
+            loct.add(self.typing_interner, 1),
             parent_ranges,
             outer_call_location,
             nenv.default_region(),
@@ -1672,7 +1672,7 @@ where
         let (unconverted_source_expr_2, returns_from_source, pending_from_source) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           nenv.default_region(),
@@ -1681,7 +1681,7 @@ where
         let (destination_expr_2, returns_from_destination, pending_from_destination) = match self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 1),
+          loct.add(self.typing_interner, 1),
           parent_ranges,
           outer_call_location,
           region,
@@ -1720,7 +1720,7 @@ where
         }
         let converted_source_expr_2 = match self.convert(
           nenv,
-          life,
+          loct,
           coutputs,
           &range_with_parent,
           outer_call_location,
@@ -1749,7 +1749,7 @@ where
         let (unconverted_source_expr_2, returns_from_source, pending_from_source) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           region,
@@ -1793,7 +1793,7 @@ where
         assert!(is_convertible);
         let converted_source_expr_2 = match self.convert(
           nenv,
-          life,
+          loct,
           coutputs,
           &range_with_parent,
           outer_call_location,
@@ -1828,7 +1828,7 @@ where
         let (exprs_2, returns_from_elements, pending_from_elements) = self.evaluate_and_coerce_to_reference_expressions(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           nenv.default_region(),
@@ -1847,7 +1847,7 @@ where
         let (exprs_2, returns_from_elements, pending_from_elements) = self.evaluate_and_coerce_to_reference_expressions(
           coutputs,
           nenv,
-          life,
+          loct,
           parent_ranges,
           outer_call_location,
           nenv.default_region(),
@@ -1882,7 +1882,7 @@ where
         let (callable_te, returns_from_callable, pending_from_callable) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           nenv.default_region(),
@@ -1917,7 +1917,7 @@ where
         let (size_te, returns_from_size, pending_from_size) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           region,
@@ -1929,7 +1929,7 @@ where
             let (callable_te, rets, cb_pending) = self.evaluate_expression(
               coutputs,
               nenv,
-              life.add(self.typing_interner, 1),
+              loct.add(self.typing_interner, 1),
               parent_ranges,
               outer_call_location,
               nenv.default_region(),
@@ -1972,7 +1972,7 @@ where
           coutputs,
           child_starting,
           &mut child_environment,
-          life,
+          loct,
           parent_ranges,
           outer_call_location,
           nenv.default_region(),
@@ -2014,7 +2014,7 @@ where
         let (inner_expr_2, returns_from_array_expr, pending_from_inner) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           region,
@@ -2044,7 +2044,7 @@ where
                 let reference = substituter.substitute_for_kind(coutputs, unsubstituted_coord);
                 self.make_temporary_local(
                   nenv,
-                  life.add(self.typing_interner, 1 + index as i32),
+                  loct.add(self.typing_interner, 1 + index as i32),
                   reference,
                 )
               })
@@ -2090,7 +2090,7 @@ where
         let (unborrowed_container_expr_2, returns_from_container_expr, pending_from_container) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           outer_call_location,
           nenv.default_region(),
@@ -2112,7 +2112,7 @@ where
         let (index_expr_2, returns_from_index_expr, pending_from_index) = self.evaluate_expression(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 2),
+          loct.add(self.typing_interner, 2),
           parent_ranges,
           outer_call_location,
           nenv.default_region(),
@@ -2196,7 +2196,7 @@ where
           }
           ITemplataT::Prototype(_pt) => {
             let mut tiny_env =
-              nenv.function_environment().make_child_node_environment(expr_1, life);
+              nenv.function_environment().make_child_node_environment(expr_1, loct);
             let arbitrary_name_t =
               INameT::Arbitrary(self.typing_interner.intern_arbitrary_name(ArbitraryNameT {}));
             tiny_env.add_entries(
@@ -2681,7 +2681,7 @@ where
     coutputs: &mut CompilerOutputs<'s, 't>,
     starting_nenv: &'t NodeEnvironmentT<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     region: RegionT,
@@ -2693,7 +2693,7 @@ where
       nenv,
       parent_ranges,
       call_location,
-      life,
+      loct,
       region,
       block,
     )
@@ -2769,7 +2769,7 @@ where
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     region: RegionT,
     expr_te: ExpressionTE<'s, 't>,
     unreversed_variables_to_destruct: Vec<&'t LocalVariable<'s, 't>>
@@ -2811,7 +2811,7 @@ where
         }
         _ => {
           let (resultified_expr, result_local_variable) =
-            self.resultify_expressions(nenv, life.add(self.typing_interner, 1), expr_te);
+            self.resultify_expressions(nenv, loct.add(self.typing_interner, 1), expr_te);
           let reversed_variables_to_destruct: Vec<_> =
             unreversed_variables_to_destruct.iter().rev().copied().collect();
           let destroy_expressions = self.unlet_and_drop_all(
@@ -2837,12 +2837,12 @@ where
   pub fn resultify_expressions(
     &self,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     expr: ExpressionTE<'s, 't>,
   ) -> (ExpressionTE<'s, 't>, &'t LocalVariable<'s, 't>) {
     let result_var_ref = self
       .typing_interner
-      .intern_typing_pass_block_result_var_name(TypingPassBlockResultVarNameT { life });
+      .intern_typing_pass_block_result_var_name(TypingPassBlockResultVarNameT { loct: loct });
     let result_var_name: IVarNameT<'s, 't> = result_var_ref.into();
     let result_variable: &'t LocalVariable<'s, 't> =
       self.typing_interner.alloc(LocalVariable { name: result_var_name, tyype: expr.result() });

@@ -20,7 +20,7 @@ where
     _coutputs: &mut CompilerOutputs<'s, 't>,
     env: &'t FunctionEnvironmentT<'s, 't>,
     _generator_id: StrI<'s>,
-    _life: LocationInFunctionEnvironmentT<'t>,
+    _loct: LocT<'t>,
     _call_range: &[RangeS<'s>],
     _call_location: LocationInDenizen<'s>,
     _origin_function: Option<&FunctionS<'s>>,

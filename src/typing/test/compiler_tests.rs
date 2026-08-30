@@ -23,7 +23,7 @@ use crate::tests::tests::load_expected;
 use crate::tests::tests::new_test_package_source;
 use crate::tests::tests::{new_humanizer_test_code_map, new_test_code_map};
 use crate::typing::ast::ast::FunctionHeaderT;
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::ast::LocT;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::ast::ast::{KindExportT, SignatureValT};
@@ -4889,7 +4889,7 @@ fn humanize_errors() {
   )
   .is_empty());
   let hp_var_name: &MemberNameT =
-    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("hp")), life: LocationInFunctionEnvironmentT { path: &[] } });
+    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("hp")), loct: LocT { path: &[] } });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,
@@ -4902,7 +4902,7 @@ fn humanize_errors() {
   )
   .is_empty());
   let firefly_var_name: &MemberNameT =
-    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("firefly")), life: LocationInFunctionEnvironmentT { path: &[] } });
+    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("firefly")), loct: LocT { path: &[] } });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,

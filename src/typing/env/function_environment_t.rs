@@ -2,7 +2,7 @@ use crate::postparsing::ast::FunctionS;
 use crate::postparsing::expressions::IExpressionSE;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::scout_arena::ScoutArena;
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::ast::LocT;
 use crate::typing::env::environment::{
   GlobalEnvironmentT, IEnvironmentT, IInDenizenEnvironmentT, ILookupContext,
   TemplatasStoreBuilder, TemplatasStoreT,
@@ -224,7 +224,7 @@ where
   pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
   pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
   pub node: &'s IExpressionSE<'s>,
-  pub life: LocationInFunctionEnvironmentT<'t>,
+  pub loct: LocT<'t>,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
   pub declared_locals: &'t [IVariableT<'s, 't>],
   pub unstackified_locals: &'t [IVarNameT<'s, 't>],
@@ -238,7 +238,7 @@ where
 {
   fn hash<H: Hasher>(&self, state: &mut H) {
     self.parent_function_env.id.hash(state);
-    self.life.hash(state);
+    self.loct.hash(state);
   }
 }
 
@@ -247,7 +247,7 @@ where
   's: 't,
 {
   fn eq(&self, other: &Self) -> bool {
-    self.parent_function_env.id == other.parent_function_env.id && self.life == other.life
+    self.parent_function_env.id == other.parent_function_env.id && self.loct == other.loct
   }
 }
 impl<'s, 't> Eq for NodeEnvironmentT<'s, 't> where 's: 't {}
@@ -478,7 +478,7 @@ where
       parent_function_env: self.parent_function_env,
       parent_node_env: Some(self),
       node,
-      life: self.life.clone(),
+      loct: self.loct.clone(),
       templatas: empty_templatas,
       declared_locals: self.declared_locals, // See WTHPFE.
       unstackified_locals: self.unstackified_locals, // See WTHPFE
@@ -516,7 +516,7 @@ where
       parent_function_env: self.parent_function_env,
       parent_node_env: self.parent_node_env,
       node: self.node,
-      life: self.life,
+      loct: self.loct,
       templatas: interner.alloc(self.templatas.add_entries(
         interner,
         scout_arena,
@@ -557,7 +557,7 @@ where
   pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
   pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
   pub node: &'s IExpressionSE<'s>,
-  pub life: LocationInFunctionEnvironmentT<'t>,
+  pub loct: LocT<'t>,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
   pub declared_locals: Vec<IVariableT<'s, 't>>,
   pub unstackified_locals: Vec<IVarNameT<'s, 't>>,
@@ -574,7 +574,7 @@ where
       parent_function_env: node_env.parent_function_env,
       parent_node_env: node_env.parent_node_env,
       node: node_env.node,
-      life: node_env.life.clone(),
+      loct: node_env.loct.clone(),
       templatas_builder: TemplatasStoreBuilder::from_store(&node_env.templatas),
       declared_locals: node_env.declared_locals.to_vec(),
       unstackified_locals: node_env.unstackified_locals.to_vec(),
@@ -592,7 +592,7 @@ where
       parent_function_env: self.parent_function_env,
       parent_node_env: self.parent_node_env,
       node: self.node,
-      life: self.life.clone(),
+      loct: self.loct.clone(),
       templatas,
       declared_locals,
       unstackified_locals,
@@ -946,7 +946,7 @@ where
   pub fn make_child_node_environment(
     &'t self,
     node: &'s IExpressionSE<'s>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
   ) -> NodeEnvironmentBox<'s, 't> {
     // See WTHPFE, if this is a lambda, we let our blocks start with
     // locals from the parent function.
@@ -961,7 +961,7 @@ where
       parent_function_env: self,
       parent_node_env: None,
       node,
-      life,
+      loct,
       templatas_builder: TemplatasStoreBuilder::new(&self.id),
       declared_locals,
       unstackified_locals,

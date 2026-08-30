@@ -135,19 +135,19 @@ fn get_function_last_name_unapply<'s, 't>(
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct LocationInFunctionEnvironmentT<'t> {
+pub struct LocT<'t> {
   pub path: &'t [i32],
 }
 
-impl<'t> LocationInFunctionEnvironmentT<'t> {
+impl<'t> LocT<'t> {
   pub fn add<'s>(
     &self,
     interner: &TypingInterner<'s, 't>,
     sub_location: i32,
-  ) -> LocationInFunctionEnvironmentT<'t> {
+  ) -> LocT<'t> {
     let mut new_path: Vec<i32> = self.path.to_vec();
     new_path.push(sub_location);
-    LocationInFunctionEnvironmentT { path: interner.alloc_slice_from_vec(new_path) }
+    LocT { path: interner.alloc_slice_from_vec(new_path) }
   }
 
   /// The single seam that turns a postparse LID into a typing LIFE: it copies the LID's path
@@ -157,8 +157,8 @@ impl<'t> LocationInFunctionEnvironmentT<'t> {
   pub fn from_lid<'s>(
     interner: &TypingInterner<'s, 't>,
     lid: LocationInDenizen<'s>,
-  ) -> LocationInFunctionEnvironmentT<'t> {
-    LocationInFunctionEnvironmentT { path: interner.alloc_slice_from_vec(lid.path.to_vec()) }
+  ) -> LocT<'t> {
+    LocT { path: interner.alloc_slice_from_vec(lid.path.to_vec()) }
   }
 
   fn to_string(&self) -> String {

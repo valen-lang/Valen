@@ -22,7 +22,7 @@ where
     coutputs: &mut CompilerOutputs<'s, 't>,
     env: &'t FunctionEnvironmentT<'s, 't>,
     generator_id: StrI<'s>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     origin_function: Option<&FunctionS<'s>>,

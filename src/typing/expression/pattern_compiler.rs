@@ -36,7 +36,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     rules_s: &[IRulexSR<'s>],
@@ -48,7 +48,7 @@ where
         &Compiler<'s, 'ctx, 't>,
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
-        LocationInFunctionEnvironmentT<'t>,
+        LocT<'t>,
         &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
@@ -141,7 +141,7 @@ where
           once(pattern.range).chain(parent_ranges.iter().copied()).collect();
         self.convert(
           nenv,
-          life,
+          loct,
           coutputs,
           &range_list,
           call_location,
@@ -155,7 +155,7 @@ where
     Ok(self.inner_translate_sub_pattern_and_maybe_continue(
       coutputs,
       nenv,
-      life,
+      loct,
       parent_ranges,
       call_location,
       pattern,
@@ -172,7 +172,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     pattern: &'s AtomSP<'s>,
@@ -183,7 +183,7 @@ where
         &Compiler<'s, 'ctx, 't>,
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
-        LocationInFunctionEnvironmentT<'t>,
+        LocT<'t>,
         &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
@@ -310,7 +310,7 @@ where
           self,
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           &live_capture_locals,
         ));
         result
@@ -329,7 +329,7 @@ where
             vec![self.destructure_non_owning_and_maybe_continue(
               coutputs,
               nenv,
-              life.add(self.typing_interner, 2),
+              loct.add(self.typing_interner, 2),
               ranges,
               call_location,
               live_capture_locals_t,
@@ -352,7 +352,7 @@ where
             vec![self.destructure_owning(
               coutputs,
               nenv,
-              life.add(self.typing_interner, 1),
+              loct.add(self.typing_interner, 1),
               ranges,
               call_location,
               live_capture_locals_t,
@@ -375,7 +375,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     initial_live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
@@ -386,7 +386,7 @@ where
         &Compiler<'s, 'ctx, 't>,
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
-        LocationInFunctionEnvironmentT<'t>,
+        LocT<'t>,
         &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
@@ -423,7 +423,7 @@ where
         self.translate_destroy_struct_inner_and_maybe_continue(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 0),
+          loct.add(self.typing_interner, 0),
           parent_ranges,
           call_location,
           initial_live_capture_locals,
@@ -454,7 +454,7 @@ where
           .map(|i| {
             self.make_temporary_local(
               nenv,
-              life.add(self.typing_interner, (3 + i) as i32),
+              loct.add(self.typing_interner, (3 + i) as i32),
               element_type,
             )
           })
@@ -495,7 +495,7 @@ where
         let lets = self.make_lets_for_own_and_maybe_continue(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 4),
+          loct.add(self.typing_interner, 4),
           parent_ranges,
           call_location,
           live_capture_locals_slice,
@@ -526,7 +526,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     range: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
@@ -537,7 +537,7 @@ where
         &Compiler<'s, 'ctx, 't>,
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
-        LocationInFunctionEnvironmentT<'t>,
+        LocT<'t>,
         &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
@@ -557,7 +557,7 @@ where
     }
 
     let local_t =
-      self.make_temporary_local(nenv, life.add(self.typing_interner, 0), container_te.result());
+      self.make_temporary_local(nenv, loct.add(self.typing_interner, 0), container_te.result());
     let let_te =
       ExpressionTE::LetNormal(self.typing_interner.alloc(LetNormalTE::new(local_t, container_te)));
     // A local lookup is already a borrow reference to the local's value.
@@ -567,7 +567,7 @@ where
     let iterate_expr = self.iterate_destructure_non_owning_and_maybe_continue(
       coutputs,
       nenv,
-      life.add(self.typing_interner, 1),
+      loct.add(self.typing_interner, 1),
       range,
       call_location,
       live_capture_locals,
@@ -585,7 +585,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
@@ -599,7 +599,7 @@ where
           &Compiler<'s, 'ctx, 't>,
           &mut CompilerOutputs<'s, 't>,
           &mut NodeEnvironmentBox<'s, 't>,
-          LocationInFunctionEnvironmentT<'t>,
+          LocT<'t>,
           &[&'t LocalVariable<'s, 't>],
         ) -> ExpressionTE<'s, 't>
         + 'ctx,
@@ -626,7 +626,7 @@ where
         self,
         coutputs,
         nenv,
-        life.add(self.typing_interner, 0),
+        loct.add(self.typing_interner, 0),
         live_capture_locals,
       ),
       [head_maybe_destructure_member_pattern, tail_destructure_member_pattern_maybes @ ..] => {
@@ -663,7 +663,7 @@ where
         self.inner_translate_sub_pattern_and_maybe_continue(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 1),
+          loct.add(self.typing_interner, 1),
           parent_ranges,
           call_location,
           head_maybe_destructure_member_pattern,
@@ -674,7 +674,7 @@ where
             move |compiler: &Compiler<'s, 'ctx, 't>,
                   coutputs: &mut CompilerOutputs<'s, 't>,
                   nenv: &mut NodeEnvironmentBox<'s, 't>,
-                  life: LocationInFunctionEnvironmentT<'t>,
+                  loct: LocT<'t>,
                   live_capture_locals: &[&'t LocalVariable<'s, 't>]| {
               let live_capture_locals: &'t [&'t LocalVariable<'s, 't>] =
                 compiler.typing_interner.alloc_slice_copy(live_capture_locals);
@@ -694,7 +694,7 @@ where
               compiler.iterate_destructure_non_owning_and_maybe_continue(
                 coutputs,
                 nenv,
-                life,
+                loct,
                 parent_ranges,
                 call_location,
                 live_capture_locals,
@@ -716,7 +716,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     initial_live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
@@ -727,7 +727,7 @@ where
         &Compiler<'s, 'ctx, 't>,
         &mut CompilerOutputs<'s, 't>,
         &mut NodeEnvironmentBox<'s, 't>,
-        LocationInFunctionEnvironmentT<'t>,
+        LocT<'t>,
         &[&'t LocalVariable<'s, 't>],
       ) -> ExpressionTE<'s, 't>
       + 'ctx,
@@ -763,7 +763,7 @@ where
       .enumerate()
       .map(|(i, member)| {
         let member_type = substituter.substitute_for_kind(coutputs, member.tyype);
-        self.make_temporary_local(nenv, life.add(self.typing_interner, 1 + i as i32), member_type)
+        self.make_temporary_local(nenv, loct.add(self.typing_interner, 1 + i as i32), member_type)
       })
       .collect();
     let struct_tt_ref = self.typing_interner.alloc(struct_tt);
@@ -802,7 +802,7 @@ where
     let rest_te = self.make_lets_for_own_and_maybe_continue(
       coutputs,
       nenv,
-      life.add(self.typing_interner, 0),
+      loct.add(self.typing_interner, 0),
       parent_ranges,
       call_location,
       live_capture_locals,
@@ -818,7 +818,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     initial_live_capture_locals: &'t [&'t LocalVariable<'s, 't>],
@@ -830,7 +830,7 @@ where
           &Compiler<'s, 'ctx, 't>,
           &mut CompilerOutputs<'s, 't>,
           &mut NodeEnvironmentBox<'s, 't>,
-          LocationInFunctionEnvironmentT<'t>,
+          LocT<'t>,
           &[&'t LocalVariable<'s, 't>],
         ) -> ExpressionTE<'s, 't>
         + 'ctx,
@@ -855,7 +855,7 @@ where
         self,
         coutputs,
         nenv,
-        life.add(self.typing_interner, 0),
+        loct.add(self.typing_interner, 0),
         initial_live_capture_locals,
       ),
       (
@@ -884,7 +884,7 @@ where
         self.inner_translate_sub_pattern_and_maybe_continue(
           coutputs,
           nenv,
-          life.add(self.typing_interner, 1),
+          loct.add(self.typing_interner, 1),
           ranges,
           call_location,
           head_inner_pattern,

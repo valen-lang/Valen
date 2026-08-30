@@ -2,7 +2,7 @@ use crate::postparsing::ast::FunctionS;
 use crate::postparsing::ast::{IBodyS, LocationInDenizen, ParameterS};
 use crate::postparsing::expressions::{BodySE, IExpressionSE};
 use crate::postparsing::patterns::patterns::AtomSP;
-use crate::typing::ast::ast::{LocationInFunctionEnvironmentT, ParameterT};
+use crate::typing::ast::ast::{LocT, ParameterT};
 use crate::typing::ast::expressions::{
   ArgLookupTE, BlockTE, ExpressionTE, LetNormalTE, ReturnTE, VoidLiteralTE,
 };
@@ -26,7 +26,7 @@ where
     &self,
     func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     function_1: &'s FunctionS<'s>,
@@ -46,7 +46,7 @@ where
         let (body2, returns) = match self.evaluate_function_body(
           func_outer_env,
           coutputs,
-          life,
+          loct,
           parent_ranges,
           func_outer_env.default_region,
           call_location,
@@ -90,7 +90,7 @@ where
         let (body2, returns) = match self.evaluate_function_body(
           func_outer_env,
           coutputs,
-          life,
+          loct,
           parent_ranges,
           func_outer_env.default_region,
           call_location,
@@ -154,7 +154,7 @@ where
     &self,
     func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     region: RegionT,
     call_location: LocationInDenizen<'s>,
@@ -170,7 +170,7 @@ where
     // val env = NodeEnvironmentBox(funcOuterEnv.makeChildNodeEnvironment(body1.block, life))
     let block_as_expr: &'s IExpressionSE<'s> =
       self.scout_arena.alloc(IExpressionSE::Block(body_1.block));
-    let mut env = func_outer_env.make_child_node_environment(block_as_expr, life.clone());
+    let mut env = func_outer_env.make_child_node_environment(block_as_expr, loct.clone());
 
     let starting_env = env.snapshot(self.typing_interner);
 
@@ -182,7 +182,7 @@ where
     let patterns_te = self.evaluate_lets(
       &mut env,
       coutputs,
-      life.add(self.typing_interner, 0),
+      loct.add(self.typing_interner, 0),
       range_list,
       call_location,
       region,
@@ -195,7 +195,7 @@ where
         coutputs,
         starting_env,
         &mut env,
-        life.add(self.typing_interner, 1),
+        loct.add(self.typing_interner, 1),
         parent_ranges,
         call_location,
         starting_env.default_region,
@@ -222,7 +222,7 @@ where
           } else {
             self.convert(
               &mut env,
-              life,
+              loct,
               coutputs,
               &range_list,
               call_location,
@@ -294,7 +294,7 @@ where
     &self,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     range: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     region: RegionT,

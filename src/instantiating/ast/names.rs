@@ -5,7 +5,7 @@ use crate::postparsing::names::IRuneS;
 use crate::instantiating::ast::types::{KindIT, ICitizenIT, SharednessI};
 use crate::instantiating::ast::templata::ITemplataI;
 use crate::typing::types::types::RegionT;
-use crate::instantiating::ast::ast::LocationInFunctionEnvironmentI;
+use crate::instantiating::ast::ast::LocI;
 use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use std::marker::PhantomData;
 
@@ -1273,7 +1273,7 @@ impl<'s, 'i> From<IVarNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct TypingPassBlockResultVarNameI<'i> {
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 
@@ -1287,7 +1287,7 @@ pub struct TypingPassFunctionResultVarNameI;
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct TypingPassTemporaryVarNameI<'i> {
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 
@@ -1295,7 +1295,7 @@ pub struct TypingPassTemporaryVarNameI<'i> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct TypingPassPatternMemberNameI<'i> {
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 
@@ -1311,7 +1311,7 @@ pub struct TypingIgnoredParamNameI {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct TypingPassPatternDestructureeNameI<'i> {
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 
@@ -1327,7 +1327,7 @@ pub struct UnnamedLocalNameI<'s> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct ClosureParamNameI<'i> {
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 
@@ -1351,7 +1351,7 @@ pub struct WhileCondResultNameI<'s> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct IterableNameI<'i> {
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 
@@ -1359,7 +1359,7 @@ pub struct IterableNameI<'i> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct IteratorNameI<'i> {
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 
@@ -1367,7 +1367,7 @@ pub struct IteratorNameI<'i> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct IterationOptionNameI<'i> {
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 
@@ -1375,7 +1375,7 @@ pub struct IterationOptionNameI<'i> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct MagicParamNameI<'i> {
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 
@@ -1392,7 +1392,7 @@ pub struct MemberNameI<'s> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LocalNameI<'s, 'i> {
     pub name: StrI<'s>,
-    pub life: LocationInFunctionEnvironmentI<'i>,
+    pub loci: LocI<'i>,
 }
 
 

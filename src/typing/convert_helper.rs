@@ -2,7 +2,7 @@ use crate::utils::range::RangeS;
 
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::{CodeNameS, CodeNameValS, IImpreciseNameValS};
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::ast::LocT;
 use crate::typing::ast::expressions::UpcastTE;
 use crate::typing::ast::expressions::*;
 use crate::typing::citizen::impl_compiler::IsParentResult;
@@ -22,7 +22,7 @@ where
   pub fn convert_exprs(
     &self,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     coutputs: &mut CompilerOutputs<'s, 't>,
     range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
@@ -44,7 +44,7 @@ target:
     for (source_expr, target_pointer_type) in source_exprs.iter().zip(target_pointer_types.iter()) {
       let ref_expr = self.convert(
         nenv,
-        life,
+        loct,
         coutputs,
         range,
         call_location,
@@ -70,7 +70,7 @@ target:
   pub fn convert(
     &self,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     coutputs: &mut CompilerOutputs<'s, 't>,
     range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,

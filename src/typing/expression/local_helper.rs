@@ -30,12 +30,12 @@ where
   pub fn make_temporary_local(
     &self,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     coord: KindT<'s, 't>,
   ) -> &'t LocalVariable<'s, 't> {
     let var_id = self
       .typing_interner
-      .intern_typing_pass_temporary_var_name(TypingPassTemporaryVarNameT { life });
+      .intern_typing_pass_temporary_var_name(TypingPassTemporaryVarNameT { loct: loct });
     let rlv: &'t LocalVariable<'s, 't> =
       self.typing_interner.alloc(LocalVariable { name: var_id.into(), tyype: coord });
     nenv.add_variable(IVariableT::Local(rlv));
@@ -48,14 +48,14 @@ where
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     context_region: RegionT,
     r: ExpressionTE<'s, 't>,
   ) -> Result<
     (&'t LetAndLendTE<'s, 't>, PendingTempDrops<'s, 't>),
     ICompileErrorT<'s, 't>
   > {
-    let rlv = self.make_temporary_local(nenv, life, r.result());
+    let rlv = self.make_temporary_local(nenv, loct, r.result());
     let let_expr_2 = self.typing_interner.alloc(LetAndLendTE::new(
       self.typing_interner,
       rlv,

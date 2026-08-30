@@ -10,7 +10,7 @@ use crate::postparsing::names::IStructDeclarationNameS;
 use crate::postparsing::names::RuneNameS;
 use crate::postparsing::names::{CodeNameS, CodeNameValS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
 use crate::typing::ast::ast::PrototypeT;
-use crate::typing::ast::ast::{ExternT, ICitizenAttributeT, LocationInFunctionEnvironmentT};
+use crate::typing::ast::ast::{ExternT, ICitizenAttributeT, LocT};
 use crate::typing::ast::citizens::{InterfaceDefinitionT, StructDefinitionT, StructMemberT};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -340,7 +340,7 @@ where
         StructMemberT {
           name: IVarNameT::Member(self.typing_interner.intern_member_name(MemberNameT {
             imprecise_name: self.scout_arena.intern_code_name(n.name),
-            life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, n.lid),
+            loct: LocT::from_lid(self.typing_interner, n.lid),
           })),
           tyype,
         }
@@ -366,7 +366,7 @@ where
   {
     // VCOORD: make a life builder for stuff like this, this is fragile.
     let closure_life =
-        LocationInFunctionEnvironmentT::from_lid(self.typing_interner, call_location)
+        LocT::from_lid(self.typing_interner, call_location)
         .add(self.typing_interner, 0);
 
     // VCOORD:
@@ -460,7 +460,7 @@ where
         ),
         (
           INameT::Self_(self.typing_interner.intern_self_name(SelfNameT {
-            life: closure_life.add(self.typing_interner, 0),
+            loct: closure_life.add(self.typing_interner, 0),
           })),
           IEnvEntryT::Templata(ITemplataT::Kind(
             self

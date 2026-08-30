@@ -1270,7 +1270,7 @@ pub fn humanize_name<'s, 't>(
       panic!("implement: humanize_name TypingPassFunctionResultVar");
       // "(result)"
     }
-    INameT::TypingPassTemporaryVar(n) => format!("t:{:?}", n.life),
+    INameT::TypingPassTemporaryVar(n) => format!("t:{:?}", n.loct),
     INameT::FunctionBoundTemplate(n) => n.human_name.0.to_string(),
     INameT::LambdaCallFunctionTemplate(n) => "λF:".to_string() + &code_map(n.code_location),
     INameT::LambdaCitizenTemplate(n) => "λC:".to_string() + &code_map(n.code_location),

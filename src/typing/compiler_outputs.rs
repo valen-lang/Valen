@@ -33,7 +33,7 @@ where
     full_env_snapshot: &'t FunctionEnvironmentT<'s, 't>,
     call_range: &'t [RangeS<'s>],
     call_location: LocationInDenizen<'s>,
-    life: LocationInFunctionEnvironmentT<'t>,
+    loct: LocT<'t>,
     attributes_t: &'t [IFunctionAttributeT<'s>],
     params_t: &'t [ParameterT<'s, 't>],
     is_destructor: bool,

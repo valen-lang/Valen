@@ -127,14 +127,14 @@ impl<'s, 'i> FunctionDefinitionI<'s, 'i> {
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct LocationInFunctionEnvironmentI<'i> {
+pub struct LocI<'i> {
     pub path: &'i [i32],
 }
 
 
 
-impl<'i> LocationInFunctionEnvironmentI<'i> {
-    pub fn add(&self, sub_location: i32) -> LocationInFunctionEnvironmentI<'i> {
+impl<'i> LocI<'i> {
+    pub fn add(&self, sub_location: i32) -> LocI<'i> {
         panic!("Unimplemented: add")
         // LocationInFunctionEnvironmentI(path :+ subLocation)
     }

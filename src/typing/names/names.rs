@@ -2,7 +2,7 @@ use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::{ClosureParamImpreciseNameS, CodeNameS, ConstructingMemberImpreciseNameS, IImpreciseNameS, MagicParamImpreciseNameS};
 use crate::postparsing::names::IRuneS;
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::ast::LocT;
 use crate::typing::templata::templata::{expect_integer, expect_kind_templata, ITemplataT};
 use crate::typing::types::types::{ICitizenTT, KindT, RegionT};
 use crate::typing::typing_interner::{MustIntern, TypingInterner};
@@ -1184,19 +1184,19 @@ pub enum IVarNameT<'s, 't> {
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassBlockResultVarNameT<'t> {
-  pub life: LocationInFunctionEnvironmentT<'t>,
+  pub loct: LocT<'t>,
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassFunctionResultVarNameT<'t> {
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassTemporaryVarNameT<'t> {
-  pub life: LocationInFunctionEnvironmentT<'t>,
+  pub loct: LocT<'t>,
 }
 
 // /// Interned (see @TFITCX)
@@ -1221,14 +1221,14 @@ pub struct TypingPassTemporaryVarNameT<'t> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ClosureParamNameT<'s, 't> {
   pub imprecise_name: &'s ClosureParamImpreciseNameS,
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ConstructingMemberNameT<'s, 't> {
   pub imprecise_name: &'s ConstructingMemberImpreciseNameS<'s>,
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 // /// Interned (see @TFITCX)
@@ -1240,40 +1240,40 @@ pub struct ConstructingMemberNameT<'s, 't> {
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IterableNameT<'t> {
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IteratorNameT<'t> {
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IterationOptionNameT<'t> {
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct MagicParamNameT<'s, 't> {
   pub imprecise_name: &'s MagicParamImpreciseNameS<'s>,
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct MemberNameT<'s, 't> {
   pub imprecise_name: &'s CodeNameS<'s>,
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LocalNameT<'s, 't> {
   pub imprecise_name: &'s CodeNameS<'s>,
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 // /// Interned (see @TFITCX)
@@ -1424,7 +1424,7 @@ pub struct ConstructorTemplateNameT<'s> {
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct SelfNameT<'t> {
-  pub life: LocationInFunctionEnvironmentT<'t>
+  pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)

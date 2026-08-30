@@ -13,7 +13,7 @@ use crate::postparsing::names::{IImpreciseNameS, IRuneS};
 use crate::postparsing::rules::rules::IRulexSR;
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::ast::ICitizenAttributeT;
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::ast::LocT;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::ast::PrototypeValT;
 use crate::typing::ast::ast::{FunctionHeaderT, InterfaceEdgeBlueprintT, KindExportT, PrototypeT};
@@ -548,7 +548,7 @@ where
     _generator: IFunctionGenerator,
     _full_env: &'t FunctionEnvironmentT<'s, 't>,
     _coutputs: &mut CompilerOutputs<'s, 't>,
-    _life: LocationInFunctionEnvironmentT<'t>,
+    _loct: LocT<'t>,
     _call_range: &[RangeS<'s>],
     _origin_function: Option<&'s FunctionS<'s>>,
     _param_coords: &[ParameterT<'s, 't>],
@@ -1556,7 +1556,7 @@ where
             full_env_snapshot,
             call_range,
             call_location,
-            life,
+            loct: life,
             attributes_t,
             params_t,
             is_destructor,

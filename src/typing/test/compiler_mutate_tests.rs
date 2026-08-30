@@ -16,7 +16,7 @@ use crate::typing::ast::expressions::{
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::function_environment_t::LocalVariable;
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::ast::LocT;
 use crate::typing::names::names::StructNameT;
 use crate::typing::names::names::{
   MemberNameT, FunctionNameValT, FunctionTemplateNameT, INameT, IStructTemplateNameT, IVarNameT, LocalNameT,
@@ -460,7 +460,7 @@ exported func main() int {
 At test:0.vale:7:3:
   if true {
 Internal error: Must move same variables from inside branches!
-From then branch: {Local(LocalNameT { imprecise_name: CodeNameS { name: "s" }, life: LocationInFunctionEnvironmentT { path: [3, 1, 1, 1, 1, 1, 3, 1] } })}
+From then branch: {Local(LocalNameT { imprecise_name: CodeNameS { name: "s" }, loct: LocT { path: [3, 1, 1, 1, 1, 1, 3, 1] } })}
 From else branch: {}
 "##,
   );
@@ -720,7 +720,7 @@ fn humanize_errors() {
   )
   .is_empty());
   let hp_var_name: &MemberNameT =
-    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("hp")), life: LocationInFunctionEnvironmentT { path: &[] } });
+    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("hp")), loct: LocT { path: &[] } });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,
@@ -748,7 +748,7 @@ fn humanize_errors() {
   )
   .is_empty());
   let firefly_var_name: &MemberNameT =
-    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("firefly")), life: LocationInFunctionEnvironmentT { path: &[] } });
+    typing_bump.alloc(MemberNameT { imprecise_name: scout_arena.intern_code_name(scout_arena.intern_str("firefly")), loct: LocT { path: &[] } });
   assert!(!humanize(
     &scout_arena,
     &typing_interner,

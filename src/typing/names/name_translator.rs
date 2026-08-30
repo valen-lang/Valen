@@ -7,7 +7,7 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use std::marker::PhantomData;
 use std::mem::discriminant;
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::ast::LocT;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where
@@ -270,38 +270,38 @@ where
     match name {
       IVarDeclarationNameS::CodeVarName(CodeVarNameS { imprecise_name, lid }) => {
         IVarNameT::Local(
-          self.typing_interner.intern_local_name(LocalNameT { imprecise_name, life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
+          self.typing_interner.intern_local_name(LocalNameT { imprecise_name, loct: LocT::from_lid(self.typing_interner, lid) }),
         )
       }
       IVarDeclarationNameS::ClosureParamName(ClosureParamNameDeclarationS { imprecise_name, lid }) => {
         IVarNameT::ClosureParam(
-          self.typing_interner.intern_closure_param_name(ClosureParamNameT { imprecise_name, life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
+          self.typing_interner.intern_closure_param_name(ClosureParamNameT { imprecise_name, loct: LocT::from_lid(self.typing_interner, lid) }),
         )
       }
       IVarDeclarationNameS::MagicParamName(MagicParamNameDeclarationS { imprecise_name, lid }) => {
         IVarNameT::MagicParam(
-          self.typing_interner.intern_magic_param_name(MagicParamNameT { imprecise_name, life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
+          self.typing_interner.intern_magic_param_name(MagicParamNameT { imprecise_name, loct: LocT::from_lid(self.typing_interner, lid) }),
         )
       }
       IVarDeclarationNameS::SelfName(SelfNameDeclarationS { lid, .. }) => {
-        IVarNameT::Self_(self.typing_interner.intern_self_name(SelfNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }))
+        IVarNameT::Self_(self.typing_interner.intern_self_name(SelfNameT { loct: LocT::from_lid(self.typing_interner, lid) }))
       }
       IVarDeclarationNameS::ConstructingMemberName(ConstructingMemberNameDeclarationS { imprecise_name, lid }) => {
         IVarNameT::ConstructingMember(
           self.typing_interner.intern_constructing_member_name(ConstructingMemberNameT {
             imprecise_name,
-            life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid),
+            loct: LocT::from_lid(self.typing_interner, lid),
           }),
         )
       }
       IVarDeclarationNameS::IterableName(IterableNameDeclarationS { lid, .. }) => {
-        IVarNameT::Iterable(self.typing_interner.intern_iterable_name(IterableNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }))
+        IVarNameT::Iterable(self.typing_interner.intern_iterable_name(IterableNameT { loct: LocT::from_lid(self.typing_interner, lid) }))
       }
       IVarDeclarationNameS::IteratorName(IteratorNameDeclarationS { lid, .. }) => {
-        IVarNameT::Iterator(self.typing_interner.intern_iterator_name(IteratorNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }))
+        IVarNameT::Iterator(self.typing_interner.intern_iterator_name(IteratorNameT { loct: LocT::from_lid(self.typing_interner, lid) }))
       }
       IVarDeclarationNameS::IterationOptionName(IterationOptionNameDeclarationS{ lid, .. }) => IVarNameT::IterationOption(
-        self.typing_interner.intern_iteration_option_name(IterationOptionNameT { life: LocationInFunctionEnvironmentT::from_lid(self.typing_interner, lid) }),
+        self.typing_interner.intern_iteration_option_name(IterationOptionNameT { loct: LocT::from_lid(self.typing_interner, lid) }),
       ),
       _ => {
         panic!("implement: translate_var_name_step — {:?}", discriminant(&name));

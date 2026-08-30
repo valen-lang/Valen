@@ -33,7 +33,7 @@ use crate::utils::fx::IndexMap;
 use crate::instantiating::ast::ast::ExternI;
 use crate::instantiating::ast::ast::ICitizenAttributeI;
 use crate::instantiating::ast::ast::KindExternI;
-use crate::instantiating::ast::ast::LocationInFunctionEnvironmentI;
+use crate::instantiating::ast::ast::LocI;
 use crate::instantiating::ast::ast::LocalVariableI;
 use crate::instantiating::ast::citizens::InterfaceDefinitionI;
 use crate::instantiating::ast::citizens::StructDefinitionI;
@@ -111,7 +111,7 @@ use crate::instantiating::ast::types::WeakRefIT;
 use crate::instantiating::ast::types::USizeIT;
 use crate::instantiating::ast::types::VoidIT;
 use crate::typing::ast::ast::ICitizenAttributeT;
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::ast::LocT;
 use crate::typing::ast::expressions::ArgLookupTE;
 use crate::typing::ast::expressions::ArrayLengthTE;
 use crate::typing::ast::expressions::AsSubtypeTE;
@@ -2246,26 +2246,26 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             })),
             IVarNameT::Local(x) => IVarNameI::Local(self.interner.alloc(LocalNameI {
                 name: self.scout_arena.intern_str(&humanize_imprecise_name(IImpreciseNameS::CodeName(x.imprecise_name))),
-                life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(x.life.path.to_vec()) },
+              loci: LocI { path: self.interner.alloc_slice_from_vec(x.loct.path.to_vec()) },
             })),
-            IVarNameT::ClosureParam(ClosureParamNameT { life: LocationInFunctionEnvironmentT { path, .. }, .. }) => IVarNameI::ClosureParam(self.interner.alloc(ClosureParamNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
-            IVarNameT::TypingPassBlockResultVar(TypingPassBlockResultVarNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => {
+            IVarNameT::ClosureParam(ClosureParamNameT { loct: LocT { path, .. }, .. }) => IVarNameI::ClosureParam(self.interner.alloc(ClosureParamNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::TypingPassBlockResultVar(TypingPassBlockResultVarNameT { loct: LocT { path, .. } }) => {
                 IVarNameI::TypingPassBlockResultVar(self.interner.alloc(TypingPassBlockResultVarNameI {
-                                        life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) },
+                  loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) },
                 }))
             }
-            IVarNameT::TypingPassTemporaryVar(TypingPassTemporaryVarNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => {
+            IVarNameT::TypingPassTemporaryVar(TypingPassTemporaryVarNameT { loct: LocT { path, .. } }) => {
                 IVarNameI::TypingPassTemporaryVar(self.interner.alloc(TypingPassTemporaryVarNameI {
-                                        life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) },
+                  loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) },
                 }))
             }
             IVarNameT::ConstructingMember(x) => IVarNameI::ConstructingMember(self.interner.alloc(ConstructingMemberNameI {
                 name: self.scout_arena.intern_str(&humanize_imprecise_name(IImpreciseNameS::ConstructingMemberImpreciseName(x.imprecise_name))),
             })),
-            IVarNameT::Iterable(IterableNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::Iterable(self.interner.alloc(IterableNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
-            IVarNameT::Iterator(IteratorNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::Iterator(self.interner.alloc(IteratorNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
-            IVarNameT::IterationOption(IterationOptionNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => IVarNameI::IterationOption(self.interner.alloc(IterationOptionNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
-            IVarNameT::MagicParam(MagicParamNameT { life: LocationInFunctionEnvironmentT { path, .. }, .. }) => IVarNameI::MagicParam(self.interner.alloc(MagicParamNameI { life: LocationInFunctionEnvironmentI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::Iterable(IterableNameT { loct: LocT { path, .. } }) => IVarNameI::Iterable(self.interner.alloc(IterableNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::Iterator(IteratorNameT { loct: LocT { path, .. } }) => IVarNameI::Iterator(self.interner.alloc(IteratorNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::IterationOption(IterationOptionNameT { loct: LocT { path, .. } }) => IVarNameI::IterationOption(self.interner.alloc(IterationOptionNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::MagicParam(MagicParamNameT { loct: LocT { path, .. }, .. }) => IVarNameI::MagicParam(self.interner.alloc(MagicParamNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
             IVarNameT::Self_(_) => IVarNameI::Self_(self.interner.alloc(SelfNameI)),
         }
     }
