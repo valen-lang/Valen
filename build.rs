@@ -1,11 +1,11 @@
 // Builds the C++ backend as a static library and emits link directives so the
 // FrontendRust crate can call into it via FFI.
 //
-// Requires LLVM 21, dynamically linked against the Vale rustc fork's shared
-// libLLVM (so valec and valec-rs share one libLLVM; two static libLLVMs in one
-// process is duplicate-symbol UB — arch §3.6/§5.7). The build prefers
-// `$LLVM_CONFIG`; otherwise it derives the fork's llvm-config from the active
-// toolchain's sysroot (`<sysroot>/../llvm/bin/llvm-config`).
+// Requires LLVM 21. A stock-nightly dev build links a standalone LLVM 21 (Homebrew
+// `llvm@21`); an interop / fork-pinned build links the Vale rustc fork's shared libLLVM,
+// which it must share with rustc's own (two libLLVMs in one process is duplicate-symbol
+// UB — arch §3.6/§5.7). `locate_llvm_config` prefers `$LLVM_CONFIG`, then the fork's
+// sibling llvm-config (only when the active toolchain is the fork), then a standalone LLVM 21.
 
 use std::env;
 use std::path::PathBuf;
@@ -196,14 +196,24 @@ fn watch_dir_recursive(dir: &std::path::Path) {
   }
 }
 
+/// Locate an `llvm-config` for LLVM 21, in priority order:
+///   1. `$LLVM_CONFIG` — explicit override (CI, or a from-source LLVM).
+///   2. The Vale rustc fork's sibling llvm-config, derived from the active toolchain's
+///      sysroot (`<sysroot>/../llvm/bin/llvm-config`). This hits ONLY when the active
+///      toolchain is the fork (an interop or fork-pinned build), where the backend must
+///      share rustc's own libLLVM (arch §3.6/§5.7). A stock-nightly dev build has no such
+///      sibling, so this step is skipped and the standalone LLVM below is used instead.
+///   3. A standalone LLVM 21 (Homebrew `llvm@21`, or `llvm-config-21` / `llvm-config` on
+///      PATH), version-checked to be major 21. This is the dev/default path — no fork needed.
+///   4. Otherwise, abort with an actionable message.
 fn locate_llvm_config() -> PathBuf {
   if let Ok(path) = env::var("LLVM_CONFIG") {
     return PathBuf::from(path);
   }
-  // The Vale rustc fork builds its shared libLLVM as a sibling of the stage2
-  // sysroot: sysroot is `.../<target>/stage2`, and llvm-config lives at
-  // `.../<target>/llvm/bin/llvm-config`. Derive it from the active toolchain so
-  // no machine-specific path is baked in and it tracks whatever fork is pinned.
+  // The Vale rustc fork builds its shared libLLVM as a sibling of the stage2 sysroot: sysroot
+  // is `.../<target>/stage2`, and llvm-config lives at `.../<target>/llvm/bin/llvm-config`.
+  // The `.exists()` guard means this hits only when the active toolchain IS the fork; a stock
+  // nightly has no such sibling and falls through to the standalone LLVM below.
   let rustc = env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
   if let Ok(out) = Command::new(&rustc).args(["--print", "sysroot"]).output() {
     if out.status.success() {
@@ -214,7 +224,40 @@ fn locate_llvm_config() -> PathBuf {
       }
     }
   }
-  PathBuf::from("llvm-config")
+  // Standalone LLVM 21 for a stock-nightly dev build. Probe Homebrew's keg-only `llvm@21`
+  // and version-suffixed names on PATH; accept only major version 21 so a stray llvm@20
+  // does not slip in and break the LLVM 21 C API the backend uses.
+  let mut candidates: Vec<PathBuf> = Vec::new();
+  if let Ok(out) = Command::new("brew").args(["--prefix", "llvm@21"]).output() {
+    if out.status.success() {
+      let prefix = String::from_utf8_lossy(&out.stdout).trim().to_string();
+      candidates.push(PathBuf::from(prefix).join("bin").join("llvm-config"));
+    }
+  }
+  candidates.push(PathBuf::from("/opt/homebrew/opt/llvm@21/bin/llvm-config"));
+  candidates.push(PathBuf::from("llvm-config-21"));
+  candidates.push(PathBuf::from("llvm-config"));
+  for cand in candidates {
+    if llvm_config_is_v21(&cand) {
+      return cand;
+    }
+  }
+  panic!(
+    "no LLVM 21 llvm-config found. Set $LLVM_CONFIG to an LLVM 21 llvm-config, or install one \
+     (macOS: `brew install llvm@21`). A stock-nightly dev build needs a standalone LLVM 21; the \
+     Vale rustc fork supplies its own only for `--features rust_interop`."
+  );
+}
+
+/// True if `path` runs as an `llvm-config` and reports major version 21 (e.g. `21.1.8`,
+/// or the fork's `21.1.8-rust-dev`).
+fn llvm_config_is_v21(path: &PathBuf) -> bool {
+  match Command::new(path).arg("--version").output() {
+    Ok(out) if out.status.success() => {
+      String::from_utf8_lossy(&out.stdout).trim().split('.').next() == Some("21")
+    }
+    _ => false,
+  }
 }
 
 fn run(prog: &PathBuf, args: &[&str]) -> String {

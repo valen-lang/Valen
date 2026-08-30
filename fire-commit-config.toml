@@ -45,11 +45,12 @@ env = { VALE_TEST_BACKEND = "wasi" }
 when_changed = []
 
 # The `rust_interop` feature (lazy Rust imports) is off by default and its suite isn't in the default
-# gate. Gate it on changes to its subtree so it runs exactly when relevant. Prereq: the pinned nightly
-# needs `rustc-dev` (`rustup component add rustc-dev --toolchain <pinned>`); without it this command
-# fails rather than skips — install it, or `fire override green` if the change is unrelated.
+# gate. Gate it on changes to its subtree so it runs exactly when relevant. It builds against the Vale
+# rustc fork (`+rustc-fork`), whose sysroot already ships `rustc-dev` + `rust-src` (no `rustup component
+# add` step); the fork must be built and linked first (see docs/build-compiler.md). Without the fork
+# toolchain this command fails rather than skips — build it, or `fire override green` if unrelated.
 [[repo.tests]]
-cmd = "cargo test --manifest-path Cargo.toml --lib --features rust_interop"
+cmd = "cargo +rustc-fork test --manifest-path Cargo.toml --lib --features rust_interop"
 env = {}
 when_changed = ["src/typing/rust_interop/**"]
 

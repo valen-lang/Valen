@@ -17,16 +17,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install LLVM 16
+      - name: Install LLVM 21
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y llvm-16 llvm-16-dev clang-16 libpolly-16-dev cmake build-essential zlib1g-dev libzstd-dev libcurl4-openssl-dev
-          echo "LLVM_CONFIG=/usr/bin/llvm-config-16" >> $GITHUB_ENV
+          sudo apt-get install -y llvm-21 llvm-21-dev clang-21 libpolly-21-dev cmake build-essential zlib1g-dev libzstd-dev libcurl4-openssl-dev
+          echo "LLVM_CONFIG=/usr/bin/llvm-config-21" >> $GITHUB_ENV
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Cargo build
         run: cargo build --manifest-path Cargo.toml
@@ -54,13 +54,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install LLVM 16
+      - name: Install LLVM 21
         run: |
-          brew install llvm@16 cmake
-          echo "LLVM_CONFIG=$(brew --prefix llvm@16)/bin/llvm-config" >> $GITHUB_ENV
+          brew install llvm@21 cmake
+          echo "LLVM_CONFIG=$(brew --prefix llvm@21)/bin/llvm-config" >> $GITHUB_ENV
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Cargo build
         run: cargo build --manifest-path Cargo.toml
@@ -100,16 +100,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install LLVM 16
+      - name: Install LLVM 21
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y llvm-16 llvm-16-dev clang-16 libpolly-16-dev cmake build-essential zlib1g-dev libzstd-dev libcurl4-openssl-dev
-          echo "LLVM_CONFIG=/usr/bin/llvm-config-16" >> $GITHUB_ENV
+          sudo apt-get install -y llvm-21 llvm-21-dev clang-21 libpolly-21-dev cmake build-essential zlib1g-dev libzstd-dev libcurl4-openssl-dev
+          echo "LLVM_CONFIG=/usr/bin/llvm-config-21" >> $GITHUB_ENV
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Install wasi-sdk
         run: |

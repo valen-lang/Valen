@@ -9,24 +9,24 @@ FROM ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Base toolchain + LLVM 16 from apt.llvm.org
+# Base toolchain + LLVM 21 from apt.llvm.org
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
         ca-certificates curl wget gnupg lsb-release \
         git cmake build-essential pkg-config \
  && wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
- && echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" > /etc/apt/sources.list.d/llvm.list \
+ && echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main" > /etc/apt/sources.list.d/llvm.list \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
-        llvm-16 llvm-16-dev clang-16 libpolly-16-dev \
+        llvm-21 llvm-21-dev clang-21 libpolly-21-dev \
         zlib1g-dev libzstd-dev libcurl4-openssl-dev \
  && rm -rf /var/lib/apt/lists/*
 
-# Rust toolchain (rustup, default stable)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+# Rust toolchain (rustup, default nightly — the frontend needs nightly features)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-ENV LLVM_CONFIG=/usr/bin/llvm-config-16
+ENV LLVM_CONFIG=/usr/bin/llvm-config-21
 
 # Copy sources and build
 ARG RECOPY_DUMMY=0

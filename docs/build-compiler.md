@@ -102,36 +102,54 @@ The `rust_interop` cargo feature makes a Vale program typecheck against real Rus
 live rustc `TyCtxt` — `import rust.alloc.vec.Vec;` and the like. It is **off by default**; a normal
 build (the sections above) is the standalone compiler and never touches rustc.
 
-Everything here is **tier-1 typechecking only — nothing runs.** A program that imports `Vec` compiles
-against live rustc but does not execute: the C++ backend is deliberately not linked in an interop
-build (two libLLVMs in one process is UB), so codegen and execution are out of scope for this feature.
+A program that imports `Vec` typechecks against live rustc; with the collector-driven backend a Vale
+program that calls real Rust functions also links and runs (see `docs/handoffs/rust-interop-handoff.md`).
+The C++ backend links the fork's shared libLLVM 21 in **both** the standalone and interop builds — under
+interop the backend and rustc resolve to the same one libLLVM, so there is no dual-LLVM duplicate-symbol UB.
 
-### Toolchain: the Vale rustc fork
+### Toolchain: stock nightly for development
 
-Interop links rustc's internals (`#![feature(rustc_private)]`) and needs the fork's `per_instance_mir`
-patch, so it builds against the Vale rustc fork rather than an upstream nightly. `rust-toolchain.toml`
-pins it as the `rustc-fork` toolchain; build and link it once:
+**Developing the compiler uses stock Rust nightly** — there is no `rust-toolchain.toml` pin. A default
+build compiles as plain Rust (every fork-touching line is `#[cfg(feature = "rust_interop")]`-gated), so it
+needs only nightly plus a standalone **LLVM 21** for the C++ backend:
+
+```sh
+rustup toolchain install nightly     # if it is not already your rustup default
+brew install llvm@21                  # macOS; build.rs finds it automatically
+```
+
+`build.rs` locates `llvm-config` in this order: `$LLVM_CONFIG`, then the fork's sibling llvm-config (only
+when the active toolchain is the fork), then a standalone LLVM 21 (Homebrew `llvm@21`, or `llvm-config-21`
+/ `llvm-config` on `PATH`, version-checked to be 21). So a stock-nightly checkout builds with no fork
+present.
+
+### The Vale rustc fork (interop only)
+
+`--features rust_interop` links rustc's internals (`#![feature(rustc_private)]`) and needs the fork's
+`per_instance_mir` patch, so **that build alone** uses the Vale rustc fork, selected explicitly with
+`+rustc-fork`. Build and link it once:
 
 ```sh
 git clone https://github.com/Verdagon/rust ~/rust
-cd ~/rust && git checkout per-instance-mir && ./x build   # builds stage2 (~hours)
-rustup toolchain link rustc-fork ~/rust/build/host/stage2
+cd ~/rust && git checkout per-instance-mir && ./x build   # builds stage1 (~hours)
+rustup toolchain link rustc-fork ~/rust/build/host/stage1
 ln -sf ~/rust/build/aarch64-apple-darwin/stage0/bin/cargo \
-       ~/rust/build/host/stage2/bin/cargo                 # give the toolchain its own cargo
+       ~/rust/build/host/stage1/bin/cargo                 # give the toolchain its own cargo
 ```
 
-The fork's stage2 sysroot already ships the `rustc_private` libraries and `rust-src`, so there is
-**no** `rustup component add rustc-dev` step. Once linked, plain `cargo`/`rustc` in this repo use the
-fork automatically (via `rust-toolchain.toml`), and a standalone build compiles on it identically —
-the patches are inert without a plugin, so one rustc version serves both binaries.
+Link **stage1**, not stage2: a plain `./x build` populates stage1 with the `rustc-dev` component, whereas
+`./x build --stage 2` regenerates the stage2 sysroot *without* it. The fork's sysroot ships the
+`rustc_private` libraries and `rust-src`, so there is **no** `rustup component add rustc-dev` step. Under
+`+rustc-fork`, `build.rs`'s sibling-llvm-config derivation finds the fork's shared libLLVM automatically,
+which the interop build must share with rustc's own (two libLLVMs in one process is duplicate-symbol UB).
 
 ### Build and test
 
 From the repo root:
 
 ```sh
-cargo build --features rust_interop
-cargo test --lib --features rust_interop
+cargo +rustc-fork build --features rust_interop
+cargo +rustc-fork test --lib --features rust_interop
 ```
 
 The interop tests host rustc in-process (`run_compiler`) and assert against the typed AST, so they
@@ -139,12 +157,13 @@ live in the lib's own test target — run them with `--lib`, not as integration 
 
 ### Notes
 
- * **Backend-driving tests are excluded under the feature.** The suites that call the C++ backend
-   (`end_to_end_tests`, the `backend_ffi` FFI tests) are `#[cfg(all(test, not(feature = "rust_interop")))]`,
-   because the backend isn't linked in an interop build; they run in the normal (non-interop)
+ * **Backend-driving tests are excluded under the feature.** The suites that drive full owned-mode
+   codegen/execution through `pass_manager::build` (`end_to_end_tests`, the `backend_ffi` FFI tests) are
+   `#[cfg(all(test, not(feature = "rust_interop")))]` — the interop path never exercises that owned-mode
+   path, and it is untested against the interop rustc-private linkage. They run in the normal (non-interop)
    `cargo nextest` gates instead.
  * **`cargo clean` after moving the repo directory.** Fixture paths are baked in at compile time via
    `env!("CARGO_MANIFEST_DIR")`; a stale artifact from a previous location makes every fixture-loading
    test fail with file-not-found. Rebuild clean after any move or rename.
- * Interop runs only where the fork toolchain is built and linked, so it is not part of standard CI
-   yet — run it by hand.
+ * Interop runs only where the fork toolchain is built and linked (`+rustc-fork`), so it is not part of
+   standard CI — run it by hand.

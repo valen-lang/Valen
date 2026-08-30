@@ -17,8 +17,10 @@ becomes its own RFIGA plan (`docs/skills/tdd.md`) when it is actually picked up.
   (the map field stays opaque, so its generics/bounds never reach the importer), driven through a
   `&mut self` mutator, a `&self` method returning a **borrow of a held value bound to a local**, and a
   field accessor.
-- **Toolchain on the fork** — the repo pins `rustc-fork` (the Vale rustc fork with `per_instance_mir` and
-  `rustc-dev` in its sysroot); see the handoff and `docs/build-compiler.md`.
+- **Toolchain scoped to interop** — dev builds use stock nightly + a standalone LLVM 21 (no
+  `rust-toolchain.toml` pin); the Vale rustc fork (`rustc-fork`, with `per_instance_mir` + `rustc-dev` in
+  its sysroot) is selected with `+rustc-fork` only for `--features rust_interop`. See the handoff and
+  `docs/build-compiler.md`.
 
 ## Forward
 

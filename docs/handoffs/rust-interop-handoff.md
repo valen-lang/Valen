@@ -56,20 +56,22 @@ names and lacks two of its pieces. Tracked here so neither doc has to carry the 
 
 ## State (regenerate, don't trust stale)
 
-The repo pins the Vale rustc **fork** (`rust-toolchain.toml` → `rustc-fork`; the fork is
-`github.com/Verdagon/rust` @ `per-instance-mir`, setup in `docs/build-compiler.md`). The fork builds
-LLVM 21 **from source as one shared `libLLVM.dylib`** (its `config.toml`: `download-ci-llvm = false`,
-`link-shared = true`) so the C++ backend and rustc can share a single libLLVM (arch §3.6/§5.7 — two
-static libLLVMs in one process is duplicate-symbol UB). It carries the interop patches (the
-`per_instance_mir` query + `fill_extra_modules`) and ships the `rustc_private` libraries + `rust-src`, so
-interop needs **no** `rustup component add rustc-dev`; a standalone build compiles on it identically (the
-patches are inert without a plugin). The `rustc-fork` toolchain is linked to the fork's **stage1**
-sysroot, not stage2: a plain `./x build` populates stage1 with the `rustc-dev` component, but a
-`./x build --stage 2` regenerates the stage2 sysroot *without* it (see the Lessons trap), so stage1 is
-the complete one. Build/test from the repo root:
+**Developing the compiler uses stock Rust nightly** — there is no `rust-toolchain.toml` pin. A default
+build compiles as plain Rust; `build.rs` links a standalone **LLVM 21** for the C++ backend (Homebrew
+`llvm@21`, or whatever `$LLVM_CONFIG` names). The Vale rustc **fork** (`github.com/Verdagon/rust` @
+`per-instance-mir`, setup in `docs/build-compiler.md`) is used **only** for `--features rust_interop`,
+selected explicitly with `+rustc-fork`. The fork builds LLVM 21 **from source as one shared
+`libLLVM.dylib`** (its `config.toml`: `download-ci-llvm = false`, `link-shared = true`) so that under
+interop the C++ backend and rustc share a single libLLVM (arch §3.6/§5.7 — two libLLVMs in one process is
+duplicate-symbol UB); under `+rustc-fork`, `build.rs` finds that shared libLLVM via its sysroot-sibling
+derivation. The fork carries the interop patches (the `per_instance_mir` query + `fill_extra_modules`) and
+ships the `rustc_private` libraries + `rust-src`, so interop needs **no** `rustup component add rustc-dev`.
+The `rustc-fork` toolchain is linked to the fork's **stage1** sysroot, not stage2: a plain `./x build`
+populates stage1 with the `rustc-dev` component, but a `./x build --stage 2` regenerates the stage2
+sysroot *without* it (see the Lessons trap), so stage1 is the complete one. Build/test from the repo root:
 
-- default: `cargo test --manifest-path ./Cargo.toml --lib`
-- interop: `cargo test --manifest-path ./Cargo.toml --lib --features rust_interop`
+- default (stock nightly): `cargo test --manifest-path ./Cargo.toml --lib`
+- interop (fork): `cargo +rustc-fork test --manifest-path ./Cargo.toml --lib --features rust_interop`
 
 Read the counts from `grep "test result"` — both are green and the numbers move as cases are added, so a
 hardcoded figure rots. The interop `--lib` runs in the fire-commit gate; CI does not run it yet (no fork
