@@ -16,6 +16,7 @@ pub struct LetSE<'s> {
 #[derive(Debug, PartialEq)]
 pub struct IfSE<'s> {
   pub range: RangeS<'s>,
+  pub loc: LocationInDenizen<'s>,
   pub condition: &'s IExpressionSE<'s>,
   pub then_body: &'s BlockSE<'s>,
   pub else_body: &'s BlockSE<'s>,
@@ -29,6 +30,7 @@ pub struct BreakSE<'s> {
 #[derive(Debug, PartialEq)]
 pub struct WhileSE<'s> {
   pub range: RangeS<'s>,
+  pub loc: LocationInDenizen<'s>,
   pub body: &'s BlockSE<'s>,
 }
 

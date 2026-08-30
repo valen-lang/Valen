@@ -297,6 +297,7 @@ target:
           .is_some());
         let args_te = self.typing_interner.alloc_slice_from_vec(vec![source_expr]);
         Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+          LocT::from_lid(self.typing_interner, call_location),
           stamp.prototype,
           args_te,
           stamp.prototype.return_type,

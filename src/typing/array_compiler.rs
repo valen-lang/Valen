@@ -15,6 +15,7 @@ use crate::postparsing::names::IRuneValS;
 use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
 use crate::postparsing::rules::rules::RuneUsage;
 use crate::postparsing::rules::rules::*;
+use crate::typing::ast::ast::LocT;
 use crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::ast::expressions::*;
@@ -345,6 +346,7 @@ where
       args_te.push(c);
     }
     let call_te = ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+      LocT::from_lid(self.typing_interner, call_location),
       prototype,
       self.typing_interner.alloc_slice_from_vec(args_te),
       result_te,

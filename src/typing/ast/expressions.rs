@@ -297,6 +297,7 @@ pub struct IfTE<'s, 't>
 where
   's: 't,
 {
+  pub loct: LocT<'t>,
   pub condition: ExpressionTE<'s, 't>,
   pub then_call: ExpressionTE<'s, 't>,
   pub else_call: ExpressionTE<'s, 't>,
@@ -309,6 +310,7 @@ where
   's: 't,
 {
   pub fn new(
+    loct: LocT<'t>,
     condition: ExpressionTE<'s, 't>,
     then_call: ExpressionTE<'s, 't>,
     else_call: ExpressionTE<'s, 't>,
@@ -329,7 +331,7 @@ where
       KindT::Never(_) => else_result,
       _ => then_result,
     };
-    IfTE { condition, then_call, else_call, result, _sealed: () }
+    IfTE { loct, condition, then_call, else_call, result, _sealed: () }
   }
 }
 /// Arena-allocated (see @TFITCX)
@@ -338,6 +340,7 @@ pub struct WhileTE<'s, 't>
 where
   's: 't,
 {
+  pub loct: LocT<'t>,
   pub block: BlockTE<'s, 't>,
   pub result: KindT<'s, 't>,
   _sealed: (),
@@ -347,14 +350,14 @@ impl<'s, 't> WhileTE<'s, 't>
 where
   's: 't,
 {
-  pub fn new(block: BlockTE<'s, 't>) -> WhileTE<'s, 't> {
+  pub fn new(loct: LocT<'t>, block: BlockTE<'s, 't>) -> WhileTE<'s, 't> {
     let result = match block.result {
       KindT::Void(_) => block.result,
       KindT::Never(NeverT { from_break: true }) => KindT::Void(VoidT),
       KindT::Never(NeverT { from_break: false }) => block.result,
       _ => panic!("vwat"),
     };
-    WhileTE { block, result, _sealed: () }
+    WhileTE { loct, block, result, _sealed: () }
   }
 }
 /// Arena-allocated (see @TFITCX)
@@ -947,6 +950,7 @@ pub struct FunctionCallTE<'s, 't>
 where
   's: 't,
 {
+  pub loct: LocT<'t>,
   pub callable: &'t PrototypeT<'s, 't>,
   pub args: &'t [ExpressionTE<'s, 't>],
   // VCOORD: rename to return_type
@@ -959,11 +963,12 @@ where
   's: 't,
 {
   pub fn new(
+    loct: LocT<'t>,
     callable: &'t PrototypeT<'s, 't>,
     args: &'t [ExpressionTE<'s, 't>],
     result: KindT<'s, 't>,
   ) -> FunctionCallTE<'s, 't> {
-    FunctionCallTE { callable, args, result, _sealed: () }
+    FunctionCallTE { loct, callable, args, result, _sealed: () }
   }
 }
 /// Arena-allocated (see @TFITCX)

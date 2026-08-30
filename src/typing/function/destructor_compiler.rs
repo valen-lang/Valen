@@ -1,6 +1,7 @@
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::{CodeNameS, CodeNameValS};
 use crate::postparsing::names::IImpreciseNameValS;
+use crate::typing::ast::ast::LocT;
 use crate::typing::ast::expressions::{DiscardTE, ExpressionTE, FunctionCallTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -130,6 +131,7 @@ where
           .is_some());
         let result_tt = destructor_prototype.return_type;
         ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+          LocT::from_lid(self.typing_interner, call_location),
           destructor_prototype,
           self.typing_interner.alloc_slice_from_vec(vec![undestructed_expr_2]),
           result_tt,

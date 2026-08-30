@@ -163,6 +163,7 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
           } else {
             &*post_parser.scout_arena.alloc(IExpressionSE::While(WhileSE {
               range: each_range_s.clone(),
+              loc: loop_lidb.child().consume_in_arena(post_parser.scout_arena),
               body: loop_body_se,
             }))
           };
@@ -200,6 +201,7 @@ fn scout_each_body<'s, 'p, 'ctx>(
   let (stack_frame4, if_se, if_self_uses, if_child_uses) = PostParser::new_if(
     stack_frame0,
     lidb,
+    post_parser.scout_arena,
     range,
     |stack_frame1, condition_lidb| {
       // Per @PPSPASTNZ, synthesize loop iteration as parser AST, allocated in parse_arena.
@@ -423,6 +425,7 @@ pub(crate) fn scout_while<'s, 'p, 'ctx>(
           )?;
           let while_se = &*post_parser.scout_arena.alloc(IExpressionSE::While(WhileSE {
             range: while_range_s.clone(),
+            loc: innermost_lidb.child().consume_in_arena(post_parser.scout_arena),
             body: loop_body_se,
           }));
           Ok((stack_frame4, while_se, loop_body_self_uses, loop_body_child_uses))
@@ -450,6 +453,7 @@ fn scout_while_body<'s, 'p, 'ctx>(
   let (stack_frame4, if_se, if_self_uses, if_child_uses) = PostParser::new_if(
     stack_frame0,
     lidb,
+    post_parser.scout_arena,
     range,
     |stack_frame2, condition_lidb| {
       let (stack_frame3, cond_se, cond_self_uses, cond_child_uses) = post_parser

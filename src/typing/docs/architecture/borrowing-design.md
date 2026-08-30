@@ -3,9 +3,9 @@
 ## Design (human-only)
 
 TODO to prepare:
- * Rename LocationInFunctionEnvironment<'t> to Loc<'t>.
- * Add Loc to `FunctionCallTE`, `WhileTE`, and `IfTE`.
- * Make it so StructMemberT.name contains a MemberNameT, not an IVarNameT.
+ * (DONE) Rename LocationInFunctionEnvironment<'t> to Loc<'t>.
+ * (DONE) Add Loc to `FunctionCallTE`, `WhileTE`, and `IfTE`.
+ * (DONE) Make it so StructMemberT.name contains a MemberNameT, not an IVarNameT.
 
 ### Context
 

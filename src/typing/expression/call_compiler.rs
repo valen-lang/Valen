@@ -184,6 +184,7 @@ where
         Ok(
           (
             ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+              LocT::from_lid(self.typing_interner, call_location),
               stamp_result.prototype,
               self.typing_interner.alloc_slice_from_vec(args_exprs_2),
               result_te,
@@ -326,6 +327,7 @@ where
     Ok(
       (
         ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+          LocT::from_lid(self.typing_interner, call_location),
           resolved.prototype,
           self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
           result_te,

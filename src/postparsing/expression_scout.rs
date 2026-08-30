@@ -6,6 +6,7 @@ use crate::parsing::ast::{
 };
 use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::scout_arena::ScoutArena;
 use crate::postparsing::expressions::BreakSE;
 use crate::postparsing::expressions::ConstantFloatSE;
 use crate::postparsing::expressions::UnletSE;
@@ -1070,6 +1071,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             let child_uses = cond_child_uses.then_merge(&child_case_uses);
             let if_se = &*self.scout_arena.alloc(IExpressionSE::If(IfSE {
               range: PostParser::eval_range(file_coordinate, if_expr.range),
+              loc: block_lidb.child().consume_in_arena(self.scout_arena),
               condition: cond_se,
               then_body: then_se,
               else_body: else_se,
@@ -1409,6 +1411,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         let (stack_frame_z, if_se, self_uses, child_uses) = Self::new_if(
           stack_frame,
           lidb,
+          self.scout_arena,
           and_pe.range,
           |sf1, lidb| self.scout_expression_and_coerce(sf1, lidb, and_pe.left, LoadAsP::Use),
           |sf2, lidb| {
@@ -1444,6 +1447,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         let (stack_frame_z, if_se, self_uses, child_uses) = Self::new_if(
           stack_frame,
           lidb,
+          self.scout_arena,
           or_pe.range,
           |sf1, lidb| self.scout_expression_and_coerce(sf1, lidb, or_pe.left, LoadAsP::Use),
           |sf2, _lidb| {
@@ -1615,6 +1619,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
   pub(crate) fn new_if<FCond, FThen, FElse>(
     stack_frame0: StackFrame<'s>,
     lidb: &mut LocationInDenizenBuilder,
+    scout_arena: &ScoutArena<'s>,
     range: RangeL,
     make_condition: FCond,
     make_then: FThen,
@@ -1670,6 +1675,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
 
     let if_se = IfSE {
       range: PostParser::eval_range(file, range),
+      loc: lidb.child().consume_in_arena(scout_arena),
       condition: cond_se,
       then_body: then_se,
       else_body: else_se,

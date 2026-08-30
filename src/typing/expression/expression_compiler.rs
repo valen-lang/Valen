@@ -1368,6 +1368,7 @@ where
         )?;
 
         let if_expr_2 = ExpressionTE::If(self.typing_interner.alloc(IfTE::new(
+          LocT::from_lid(self.typing_interner, if_se.loc),
           condition_expr,
           then_expr_2,
           else_expr_2,
@@ -1527,8 +1528,10 @@ where
           }
         }
 
-        let loop_expr_2 =
-          ExpressionTE::While(self.typing_interner.alloc(WhileTE::new(uncoerced_body_block_2)));
+        let loop_expr_2 = ExpressionTE::While(self.typing_interner.alloc(WhileTE::new(
+          LocT::from_lid(self.typing_interner, w.loc),
+          uncoerced_body_block_2,
+        )));
         Ok((loop_expr_2, body_returns_from_exprs, PendingTempDrops::none()))
       }
       IExpressionSE::Map(m) => {
