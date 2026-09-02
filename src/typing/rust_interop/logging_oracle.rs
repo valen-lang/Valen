@@ -20,6 +20,7 @@ use std::cell::RefCell;
 use crate::interner::StrI;
 use crate::postparsing::ast::ImportS;
 use crate::typing::env::environment::ResolvedName;
+use crate::typing::compiler_error_reporter::CouldNotPostparseReason;
 use crate::typing::rust_interop::oracle::{RustItemId, RustOracle, ValeSig, ValeSigType};
 use crate::typing::rust_interop::reserved::is_rust_backed_kind;
 use crate::typing::types::types::*;
@@ -163,7 +164,7 @@ fn shape_of(sig: &ValeSig) -> SigShape {
       ValeSigType::Citizen { name, package: _, args } => {
         SigPosition::Citizen { name: name.0.to_string(), args: args.iter().map(position).collect() }
       }
-      ValeSigType::Borrow(inner) => SigPosition::Borrow(Box::new(position(inner))),
+      ValeSigType::Borrow { inner, .. } => SigPosition::Borrow(Box::new(position(inner))),
     }
   }
   SigShape {
@@ -207,25 +208,28 @@ impl<'a, 's, 't> RustOracle<'s, 't> for LoggingOracle<'a, 's, 't> {
     answer
   }
 
-  fn fn_sig(&self, item: RustItemId, interner: &TypingInterner<'s, 't>) -> Option<ValeSig<'s, 't>> {
+  fn fn_sig(
+    &self,
+    item: RustItemId,
+    interner: &TypingInterner<'s, 't>,
+  ) -> Result<ValeSig<'s, 't>, CouldNotPostparseReason> {
     let answer = self.inner.fn_sig(item, interner);
     // The generic-parameter list is logged alongside the positions because together they are
     // the @EarlyBinder evidence under structural reading: they show that the signature came
-    // back with its parameters intact rather than collapsed to one instantiation. A `None`
-    // here is equally worth seeing — it means the signature mentions something with no Vale
-    // form, so the declaration is about to be dropped.
+    // back with its parameters intact rather than collapsed to one instantiation. An `Err`
+    // here is equally worth seeing — it is a decline, naming why the signature has no Vale form.
     //
     // Rendered by hand rather than by `{:?}`-ing an `Option<String>`, which would escape every
     // quote inside it and leave assertions matching against `\"A\"`. The log exists to be read
     // — by a person and by a test — so the readable form is the correct one.
     let line = match answer {
-      Some(sig) => format!(
+      Ok(sig) => format!(
         "fn_sig({item:?}) -> generics {:?} params {:?} ret {:?}",
         sig.generic_params, sig.params, sig.ret
       ),
-      None => format!("fn_sig({item:?}) -> None"),
+      Err(reason) => format!("fn_sig({item:?}) -> declined ({reason:?})"),
     };
-    self.record(OracleQuery::FnSig { item, answer: answer.as_ref().map(shape_of) }, line);
+    self.record(OracleQuery::FnSig { item, answer: answer.as_ref().ok().map(shape_of) }, line);
     answer
   }
 

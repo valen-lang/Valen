@@ -69,6 +69,23 @@ impl Counter {
     }
 }
 
+/// Two reference parameters — one `&mut`, one `&` — so the importer can mirror Rust's mutation into
+/// Vale groups: `a` lands in a mutated group, `b` in a distinct shared one. Calling it with the same
+/// local for both (`nudge(&s, &s)`) then aliases that local into a mutated group and a disjoint group,
+/// which Vale's borrow checker must reject. The body is immaterial to tier 1 (typecheck only).
+pub fn nudge(a: &mut Counter, b: &Counter) -> i32 {
+    a.value = b.value;
+    a.value
+}
+
+/// Two reference parameters sharing one explicit lifetime `'a`. Vale would have to tie both parameters
+/// into a single group, which needs lifetime decoding Vale does not do yet, so importing this must be a
+/// compile error rather than a guess that the two are disjoint.
+pub fn tie<'a>(a: &'a mut Counter, b: &'a mut Counter) -> i32 {
+    a.value = b.value;
+    a.value
+}
+
 /// A nested module, so path resolution is exercised below the crate root.
 ///
 /// Every other item in this fixture sits **at** the root, which is the degenerate path — one

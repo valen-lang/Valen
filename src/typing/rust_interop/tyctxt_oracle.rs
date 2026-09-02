@@ -19,9 +19,8 @@ use crate::postparsing::ast::ImportS;
 use crate::scout_arena::ScoutArena;
 use crate::typing::env::environment::{ImportedItemKind, ResolvedName};
 use crate::typing::names::names::*;
-use crate::typing::rust_interop::oracle::{
-  DeclineReason, RustItemId, RustOracle, ValeSig, ValeSigType,
-};
+use crate::typing::compiler_error_reporter::CouldNotPostparseReason;
+use crate::typing::rust_interop::oracle::{RustItemId, RustOracle, ValeSig, ValeSigType};
 use crate::typing::rust_interop::reserved::RUST_MODULE;
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
 use crate::typing::types::types::*;
@@ -358,7 +357,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     idx: usize,
     args: rustc_middle::ty::GenericArgsRef<'tcx>,
     interner: &TypingInterner<'s, 't>,
-  ) -> Result<KindT<'s, 't>, DeclineReason>
+  ) -> Result<KindT<'s, 't>, CouldNotPostparseReason>
   where
     's: 't,
   {
@@ -371,7 +370,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
       .map(|arg| {
         Ok(ITemplataT::Kind(interner.alloc(KindTemplataT { kind: self.lower_ty(arg, interner)? })))
       })
-      .collect::<Result<Vec<_>, DeclineReason>>()?;
+      .collect::<Result<Vec<_>, CouldNotPostparseReason>>()?;
     let template_args = interner.alloc_slice_from_vec(template_args);
     // A Rust enum imports as an opaque sealed interface (`KindT::Interface`); everything else is a
     // struct kind. Only the interned name and kind differ — the args ride identically.
@@ -436,7 +435,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     own_param_names: &[StrI<'s>],
     def_id: DefId,
     interner: &TypingInterner<'s, 't>,
-  ) -> Result<ValeSigType<'s, 't>, DeclineReason>
+  ) -> Result<ValeSigType<'s, 't>, CouldNotPostparseReason>
   where
     's: 't,
   {
@@ -447,14 +446,14 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
           Some(index) => Ok(ValeSigType::Generic(index as u32)),
           // Not among the item's own parameters, so it was inherited from a parent impl.
           // Vale's declaration has no slot for it until the container is declared too.
-          None => Err(DeclineReason::InheritedParameter),
+          None => Err(CouldNotPostparseReason::InheritedParameter),
         }
       }
       // A projection — `<I as Iterator>::Item` and friends. Not merely unbounded: resolving
       // it *requires* the `I: Iterator` predicate to find the impl, and we deliberately read
       // no predicates at all. So the type isn't unreadable-for-now, it's un-normalizable, and
       // importing it would put an alias in the declaration that nothing can resolve.
-      TyKind::Alias(..) => Err(DeclineReason::UnnormalizableAlias),
+      TyKind::Alias(..) => Err(CouldNotPostparseReason::UnnormalizableAlias),
       // An imported citizen, kept **unapplied** with its arguments as signature positions of
       // their own. Lowering it to a settled `KindT` here is what used to lose a generic
       // argument (`Holder<i32>` and `Holder<bool>` interning alike) and then, once the args
@@ -467,7 +466,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
           .items
           .iter()
           .position(|i| matches!(i.kind, ItemKind::Type | ItemKind::Enum) && i.def_id == did)
-          .ok_or(DeclineReason::UnimportedType)?;
+          .ok_or(CouldNotPostparseReason::UnimportedType)?;
         let args: Vec<ValeSigType<'s, 't>> = adt_args
           .types()
           .map(|arg| self.lower_sig_ty(arg, own_param_names, def_id, interner))
@@ -483,12 +482,10 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
       // slot, exactly as the non-reference cases above do. The settled `KindT::BorrowRef` that
       // `lower_ty` would build in the fallthrough carries neither, which is why a `&Counter`
       // receiver could not be synthesized before this arm.
-      TyKind::Ref(_, inner, _) => Ok(ValeSigType::Borrow(interner.alloc(self.lower_sig_ty(
-        *inner,
-        own_param_names,
-        def_id,
-        interner,
-      )?))),
+      TyKind::Ref(_, inner, mutbl) => Ok(ValeSigType::Borrow {
+        inner: interner.alloc(self.lower_sig_ty(*inner, own_param_names, def_id, interner)?),
+        is_mut: mutbl.is_mut(),
+      }),
       _ => Ok(ValeSigType::Kind(self.lower_ty(ty, interner)?)),
     }
   }
@@ -506,7 +503,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     &self,
     ty: Ty<'tcx>,
     interner: &TypingInterner<'s, 't>,
-  ) -> Result<KindT<'s, 't>, DeclineReason>
+  ) -> Result<KindT<'s, 't>, CouldNotPostparseReason>
   where
     's: 't,
   {
@@ -516,14 +513,14 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
       TyKind::Int(int_ty) => match int_ty {
         rustc_middle::ty::IntTy::I32 => Ok(KindT::Int(IntT::I32)),
         rustc_middle::ty::IntTy::I64 => Ok(KindT::Int(IntT::I64)),
-        _ => Err(DeclineReason::IntWidth),
+        _ => Err(CouldNotPostparseReason::IntWidth),
       },
       // `usize` imports as the Vale `usize` primitive (a distinct kind, never unified with
       // `int`/`i64`). The other unsigned widths (`u8`..`u64`) still decline for now.
       TyKind::Uint(rustc_middle::ty::UintTy::Usize) => Ok(KindT::USize(USizeT)),
-      TyKind::Uint(_) => Err(DeclineReason::UnsignedInteger),
-      TyKind::Float(_) => Err(DeclineReason::Float),
-      TyKind::Str | TyKind::Slice(_) | TyKind::Dynamic(..) => Err(DeclineReason::Unsized),
+      TyKind::Uint(_) => Err(CouldNotPostparseReason::UnsignedInteger),
+      TyKind::Float(_) => Err(CouldNotPostparseReason::Float),
+      TyKind::Str | TyKind::Slice(_) | TyKind::Dynamic(..) => Err(CouldNotPostparseReason::Unsized),
       TyKind::Adt(adt_def, adt_args) => {
         let did = adt_def.did();
         match self
@@ -532,7 +529,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
           .position(|i| matches!(i.kind, ItemKind::Type | ItemKind::Enum) && i.def_id == did)
         {
           Some(idx) => self.type_kind(idx, adt_args, interner),
-          None => Err(DeclineReason::UnimportedType),
+          None => Err(CouldNotPostparseReason::UnimportedType),
         }
       }
       TyKind::Ref(_, inner, _) => {
@@ -543,7 +540,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
         // lossy when group borrowing and real lifetime reconciliation land.
         Ok(KindT::BorrowRef(interner.alloc(BorrowRefT { inner: self.lower_ty(*inner, interner)? })))
       }
-      _ => Err(DeclineReason::Unrepresentable),
+      _ => Err(CouldNotPostparseReason::Unrepresentable),
     }
   }
 }
@@ -619,8 +616,13 @@ where
     })
   }
 
-  fn fn_sig(&self, item: RustItemId, interner: &TypingInterner<'s, 't>) -> Option<ValeSig<'s, 't>> {
-    let rust_item = self.items.get(item.0 as usize)?;
+  fn fn_sig(
+    &self,
+    item: RustItemId,
+    interner: &TypingInterner<'s, 't>,
+  ) -> Result<ValeSig<'s, 't>, CouldNotPostparseReason> {
+    let rust_item =
+      self.items.get(item.0 as usize).expect("fn_sig: RustItemId out of range (internal bug)");
     let def_id = rust_item.def_id;
 
     // @EarlyBinder: deliberately NOT instantiating. `instantiate_identity` discards the
@@ -634,25 +636,45 @@ where
     let binder = self.tcx.fn_sig(def_id).instantiate_identity();
     let sig = binder.skip_binder();
 
+    // A lifetime shared across two or more parameters (`fn f<'a>(x: &'a mut A, y: &'a B)`) would have
+    // to tie those parameters into one Vale group, which needs lifetime decoding not built yet. Decline
+    // rather than guess they are disjoint — the assumption per-parameter groups make. Only each
+    // parameter's top-level reference is inspected: an explicit shared `'a` is an early-bound region,
+    // equal across parameters after `instantiate_identity`, while elided lifetimes are distinct
+    // late-bound regions, so region equality catches exactly the shared case.
+    let param_regions: Vec<rustc_middle::ty::Region<'tcx>> = sig
+      .inputs()
+      .iter()
+      .filter_map(|input| match input.kind() {
+        TyKind::Ref(region, _, _) => Some(*region),
+        _ => None,
+      })
+      .collect();
+    for i in 0..param_regions.len() {
+      for j in (i + 1)..param_regions.len() {
+        if param_regions[i] == param_regions[j] {
+          return Err(CouldNotPostparseReason::SharedParameterLifetime);
+        }
+      }
+    }
+
     // Interned at construction; see `RustItem::generic_params` for why the arena cannot be
     // held here.
     let generic_params = &rust_item.generic_params;
 
-    // VCOORD: the `DeclineReason` is dropped here, and this is exactly where the side table
-    // attaches. Enumeration is the only place that knows *which item* declined and *why* at the
-    // same moment, so a table populated here is what lets the eventual lookup failure say
-    // "found `first`, but its return type names an associated type" instead of "couldn't find
-    // `first`". Until it exists the reason is computed and thrown away — deliberately, because
-    // unifying the exits is worth landing on its own and the table's consumer may sit in core.
+    // Each position lowers to a `ValeSigType` or declines with a `CouldNotPostparseReason`. The first decline
+    // is propagated, so a *called* function whose signature Vale cannot represent fails with the
+    // reason rather than a bare miss — `Compiler::get_or_create_postparsed_function` turns that reason
+    // into a `CouldNotPostparseFunction` compile error. This is the reason-carrying exit the earlier
+    // "compute the reason then drop it" comment reserved.
     let params: Vec<ValeSigType<'s, 't>> = sig
       .inputs()
       .iter()
       .map(|ty| self.lower_sig_ty(*ty, generic_params, def_id, interner))
-      .collect::<Result<Vec<_>, _>>()
-      .ok()?;
-    let ret = self.lower_sig_ty(sig.output(), generic_params, def_id, interner).ok()?;
+      .collect::<Result<Vec<_>, _>>()?;
+    let ret = self.lower_sig_ty(sig.output(), generic_params, def_id, interner)?;
 
-    Some(ValeSig {
+    Ok(ValeSig {
       generic_params: interner.alloc_slice_copy(generic_params),
       params: interner.alloc_slice_from_vec(params),
       ret,

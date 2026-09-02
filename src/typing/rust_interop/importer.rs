@@ -38,6 +38,7 @@ use crate::typing::rust_interop::declarations::{
   synthesize_extern_function, synthesize_extern_interface, synthesize_extern_struct,
   synthesize_extern_trait, SYNTHESIZED_RANGE_OFFSET,
 };
+use crate::typing::compiler_error_reporter::CouldNotPostparseReason;
 use crate::typing::rust_interop::oracle::{RustItemId, RustOracle, ValeSig, ValeSigType};
 use crate::typing::rust_interop::reserved::is_rust_backed;
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT, PrototypeTemplataT};
@@ -138,7 +139,10 @@ where
           .methods(item)
           .into_iter()
           .filter_map(|(mname, mitem)| {
-            let sig = oracle.fn_sig(mitem, interner)?;
+            // A trait method whose signature declines is dropped from the interface — the same skip
+            // this `filter_map` did when `fn_sig` returned `Option`. Surfacing it as an error belongs
+            // to the reverse-direction (imported-trait) work, not here.
+            let sig = oracle.fn_sig(mitem, interner).ok()?;
             Some((compiler.scout_arena.intern_str(&mname), sig))
           })
           .collect();
@@ -221,17 +225,17 @@ where
 /// A free function's own id resolves directly. A method nests under its owner type, so its owner is
 /// resolved first and the method found among that type's `methods` by name.
 ///
-/// Returns `None` when the id is not a Rust-backed function template (a genuine bug, surfaced by the
-/// caller's vfail) or when the signature declines — a called function whose type Vale cannot name. That
-/// decline path is out of scope for now (Vale2's callsite/overload rework owns graceful errors), so the
-/// caller's vfail is the interim behavior.
+/// Outer `None` when the id is not a Rust-backed function template — a genuine bug the caller's vfail
+/// surfaces. `Some(Err(reason))` when the signature declines: a called function whose type Vale cannot
+/// name, which the caller (`get_or_create_postparsed_function`) turns into a `CouldNotPostparseFunction`
+/// compile error. `Some(Ok(f))` on a successful synthesis.
 pub fn create_postparsed_function<'s, 'ctx, 't>(
   compiler: &Compiler<'s, 'ctx, 't>,
   // Read-only handle: rust_interop is a pure producer of the postparsed `FunctionS`; core
   // (`get_or_create_postparsed_function`) owns registering it and queuing its deferred compile.
   _coutputs: &CompilerOutputs<'s, 't>,
   template_id: &'t IdT<'s, 't>,
-) -> Option<&'s FunctionS<'s>>
+) -> Option<Result<&'s FunctionS<'s>, CouldNotPostparseReason>>
 where
   's: 't,
 {
@@ -250,7 +254,10 @@ where
     // A top-level free function: its own canonical name resolves directly to the item.
     let name = resolved_name_of(template_id.package_coord, template_id.local_name)?;
     let item = oracle.resolve(&name)?;
-    oracle.fn_sig(item, interner)?
+    match oracle.fn_sig(item, interner) {
+      Ok(sig) => sig,
+      Err(reason) => return Some(Err(reason)),
+    }
   } else {
     // A denizen nested under its owner type (`OwnerTemplate.add_step(name)`): resolve the owner.
     let owner_local_name = *template_id.init_steps.last()?;
@@ -290,13 +297,16 @@ where
         // picks the right method; its identity is still the `DefId` behind the returned item.
         .find(|(n, _)| n.as_str() == human_name.0) // ataflbz-allow: selection
         .map(|(_, item)| item)?;
-      oracle.fn_sig(method_item, interner)?
+      match oracle.fn_sig(method_item, interner) {
+        Ok(sig) => sig,
+        Err(reason) => return Some(Err(reason)),
+      }
     }
   };
 
   let function_s =
     synthesize_extern_function(compiler, template_id.package_coord, human_name, &sig)?;
-  Some(function_s)
+  Some(Ok(function_s))
 }
 
 /// The id-only method entries that belong in a Rust type's outer environment (Vale's home for a type's

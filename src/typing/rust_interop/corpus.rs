@@ -551,6 +551,24 @@ exported func main() int {
   expect: Expect::Returns(7),
 };
 
+/// A declined signature that is actually **called** surfaces as a compile error, not a panic. The
+/// decline cases here import an unrepresentable item but never call it, so lazy synthesis never reads
+/// its signature. Calling it forces `fn_sig`, which declines (an unsigned-int return), and the compiler
+/// must report `CouldNotPostparseFunction` — a real diagnostic naming the item and reason — rather than
+/// aborting with a `vfail` panic.
+pub const CALLING_A_DECLINED_SIGNATURE_IS_A_COMPILE_ERROR: Case = Case {
+  fixture: "fixtures",
+  name: "call-declined-unsigned",
+  vale: r#"
+import rust.mycrate.unsigned_count;
+exported func main() int {
+  unsigned_count();
+  return 0;
+}
+"#,
+  expect: Expect::FailsToCompile("CouldNotPostparseFunction"),
+};
+
 /// A float declines because `FloatT` is a unit struct with no width, so `f32` and `f64` would
 /// intern identically.
 ///
@@ -1586,6 +1604,61 @@ exported func main() int {
 "#,
   // The glyph stored under key 7 has location 7, so `d_ref.location()` is 7.
   expect: Expect::Returns(7),
+};
+
+/// Rust's `&mut` mutation, mirrored into Vale groups. `nudge(a: &mut Counter, b: &Counter)` imports as
+/// `func nudge<g0', g1'>(a &Counter in g0, b &Counter in g1) mut(g0)`. Passing the same local for both
+/// arguments aliases it into the mutated group `g0` and the disjoint group `g1`, which the callee is
+/// entitled to treat as non-aliasing — so the borrow checker rejects it.
+pub const A_MUT_BORROW_ALIASING_A_SHARED_BORROW_IS_REJECTED: Case = Case {
+  fixture: "fixtures",
+  name: "nudge-aliasing-rejected",
+  vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.nudge;
+exported func main() int {
+  s = Counter.new();
+  return nudge(&s, &s);
+}
+"#,
+  expect: Expect::FailsToCompile("BorrowCheckError"),
+};
+
+/// The disjoint counterpart: `nudge(&s, &t)` sends two *distinct* locals into `nudge`'s mutated and
+/// shared groups, so nothing aliases and the program compiles. Guards against the group mirroring
+/// over-rejecting every two-borrow call.
+pub const A_MUT_BORROW_AND_A_SHARED_BORROW_OF_DISTINCT_LOCALS_IS_CLEAN: Case = Case {
+  fixture: "fixtures",
+  name: "nudge-distinct-clean",
+  vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.nudge;
+exported func main() int {
+  s = Counter.new();
+  t = Counter.new();
+  return nudge(&s, &t);
+}
+"#,
+  expect: Expect::Returns(5),
+};
+
+/// A Rust function that shares one lifetime across two parameters (`fn tie<'a>(a: &'a mut Counter,
+/// b: &'a mut Counter)`) is declined, not imported. Faithfully mirroring it would tie both parameters
+/// into one group, which needs lifetime decoding Vale does not do yet — so rather than guess the two
+/// are disjoint (what per-parameter groups assume), calling it is a `CouldNotPostparseFunction` error.
+pub const CALLING_A_SHARED_PARAMETER_LIFETIME_IMPORT_IS_A_COMPILE_ERROR: Case = Case {
+  fixture: "fixtures",
+  name: "call-shared-lifetime",
+  vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.tie;
+exported func main() int {
+  s = Counter.new();
+  t = Counter.new();
+  return tie(&s, &t);
+}
+"#,
+  expect: Expect::FailsToCompile("CouldNotPostparseFunction"),
 };
 
 /// A large struct crosses the boundary BY VALUE as an argument: `domino_size(d)` moves a 48-byte

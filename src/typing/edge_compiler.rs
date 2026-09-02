@@ -297,7 +297,8 @@ where
     let origin_function_templata =
       maybe_origin_function_templata.expect("vassertSome: originFunctionTemplata");
     let origin_func = self
-      .get_or_create_postparsed_function(coutputs, origin_function_templata.function_template_id);
+      .get_or_create_postparsed_function(coutputs, origin_function_templata.function_template_id)
+      .expect("an already-resolved function cannot decline");
     let impl_a = coutputs.get_postparsed_impl(impl_t.templata.impl_template_id);
     let range = origin_func.range;
 

@@ -611,6 +611,36 @@ fn a_struct_wrapping_a_hashmap_is_used_through_methods() {
   );
 }
 
+/// An imported `fn nudge(a: &mut Counter, b: &Counter)` becomes `func nudge<g0', g1'>(a &Counter in g0,
+/// b &Counter in g1) mut(g0)`; calling `nudge(&s, &s)` aliases `s` into the mutated group `g0` and the
+/// disjoint group `g1`, so the borrow checker must reject it.
+#[test]
+fn a_mut_borrow_aliasing_a_shared_borrow_of_one_local_is_rejected() {
+  // Mirroring Rust `&mut` into a `mut(g)` group makes a callee's disjoint-group assumption checkable:
+  // the same local into a mutated group and a distinct group is an aliasing violation.
+  run_case(&A_MUT_BORROW_ALIASING_A_SHARED_BORROW_IS_REJECTED, callees_in_main)
+    .check(&A_MUT_BORROW_ALIASING_A_SHARED_BORROW_IS_REJECTED);
+}
+
+/// The disjoint counterpart compiles: distinct locals into `nudge`'s mutated and shared groups do not
+/// alias, so the group mirroring must not reject them.
+#[test]
+fn a_mut_borrow_and_a_shared_borrow_of_distinct_locals_compiles() {
+  // Guards against over-rejection: emitting groups must flag only aliasing calls, not every two-borrow one.
+  run_case(&A_MUT_BORROW_AND_A_SHARED_BORROW_OF_DISTINCT_LOCALS_IS_CLEAN, callees_in_main)
+    .check(&A_MUT_BORROW_AND_A_SHARED_BORROW_OF_DISTINCT_LOCALS_IS_CLEAN);
+}
+
+/// A Rust signature sharing one lifetime across two parameters is declined, not imported with a guess.
+/// Faithfully mirroring it needs lifetime decoding Vale doesn't do yet, so calling it is a compile error.
+#[test]
+fn calling_a_shared_parameter_lifetime_import_is_a_compile_error() {
+  // Shared-across-parameters lifetimes are rejected rather than assumed disjoint (what per-parameter
+  // groups would assume) — the one case where we refuse to guess until real decoding lands.
+  run_case(&CALLING_A_SHARED_PARAMETER_LIFETIME_IMPORT_IS_A_COMPILE_ERROR, callees_in_main)
+    .check(&CALLING_A_SHARED_PARAMETER_LIFETIME_IMPORT_IS_A_COMPILE_ERROR);
+}
+
 /// The pass **past typing**: run the instantiator (monomorphizer) on an interop program, no backend.
 /// The simplest shape first — a call to a Rust free function — so a failure here isolates "the
 /// instantiator cannot handle a synthesized extern at all" from anything the domino case adds.
@@ -1546,6 +1576,15 @@ fn declines_an_unsigned_integer() {
     "`unsigned_count` is imported but never called, so its signature must never be queried:\n{}",
     outcome.rendered_log()
   );
+}
+
+/// The decline path, actually forced: a called Rust function whose signature Vale cannot represent
+/// (an unsigned-int return) surfaces as a `CouldNotPostparseFunction` compile error, not a panic.
+#[test]
+fn calling_a_declined_signature_is_a_compile_error() {
+  // A forced decline must be a clean diagnostic naming the item, not a `vfail` panic mid-resolution.
+  run_case(&CALLING_A_DECLINED_SIGNATURE_IS_A_COMPILE_ERROR, callees_in_main)
+    .check(&CALLING_A_DECLINED_SIGNATURE_IS_A_COMPILE_ERROR);
 }
 
 /// A float would decline if forced — `FloatT` has no width, so `f32` and `f64` would intern

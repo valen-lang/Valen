@@ -22,7 +22,7 @@ use crate::typing::ast::expressions::{ConsecutorTE, ExpressionTE, VoidLiteralTE}
 use crate::typing::citizen::struct_compiler::IResolveOutcome;
 use crate::typing::citizen::struct_compiler::UncheckedDefiningConclusions;
 use crate::typing::compilation::TypingPassOptions;
-use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::compiler_error_reporter::{CouldNotPostparseReason, ICompileErrorT};
 use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
 use crate::typing::env::environment::ExportEnvironmentT;
 use crate::typing::env::environment::ExternEnvironmentT;
@@ -571,20 +571,31 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     template_id: &'t IdT<'s, 't>,
-  ) -> &'s FunctionS<'s> {
+  ) -> Result<&'s FunctionS<'s>, CouldNotPostparseReason> {
     if let Some(f) = coutputs.peek_postparsed_function(template_id) {
-      return f;
+      return Ok(f);
     }
     #[cfg(feature = "rust_interop")]
     {
-      if let Some(f) = create_postparsed_function(self, coutputs, template_id) {
+      match create_postparsed_function(self, coutputs, template_id) {
         // rust_interop only produces the FunctionS; core commits it. Register so re-entrant
         // lookups memoize, then queue it for the deferred-compile drain (near end of typing) so
         // `make_extern_function` runs on it — its wrapper + `function_extern`, exactly as a user
         // `extern func` gets via the top-level loop. The drain derives its outer env from the id.
-        coutputs.register_postparsed_function(template_id, f);
-        coutputs.defer_evaluating_function(DeferredActionT::EvaluateFunction { function_id: template_id });
-        return f;
+        Some(Ok(f)) => {
+          coutputs.register_postparsed_function(template_id, f);
+          coutputs.defer_evaluating_function(DeferredActionT::EvaluateFunction {
+            function_id: template_id,
+          });
+          return Ok(f);
+        }
+        // A called Rust function whose signature Vale cannot represent. The reason travels out; the
+        // one caller that can trigger this — overload resolution, which holds the call range — builds
+        // it into a `CouldNotPostparseFunction` compile error. Every other lookup site is a cache hit
+        // that cannot decline (the function was resolved first), so they `.expect` this never happens.
+        Some(Err(reason)) => return Err(reason),
+        // Not a Rust-backed function template at all — a genuine bug, not a decline.
+        None => {}
       }
     }
     panic!("vfail: no postparsed function for {:?}", template_id);
@@ -1310,7 +1321,9 @@ where
               LocationInDenizen { path: &[] },
               *id,
             )?;
-            let function_a = self.get_or_create_postparsed_function(&mut coutputs, id);
+            let function_a = self
+              .get_or_create_postparsed_function(&mut coutputs, id)
+              .expect("an already-resolved function cannot decline");
             let maybe_export = function_a.attributes.iter().find_map(|a| match a {
               IFunctionAttributeS::Export(e) => Some(e),
               _ => None,

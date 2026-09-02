@@ -173,6 +173,25 @@ pub fn humanize<'s, 't>(
       format!("Couldn't resolve the Rust import `rust.{path}` to any importable item. Name the crate \
                and a `pub` type or function, e.g. `import rust.mycrate.Widget;`.")
     }
+    ICompileErrorT::CouldNotPostparseFunction { range: _, path, reason } => {
+      use crate::typing::compiler_error_reporter::CouldNotPostparseReason;
+      let why = match reason {
+        CouldNotPostparseReason::IntWidth => "an integer of a width Vale can't represent",
+        CouldNotPostparseReason::UnsignedInteger => {
+          "an unsigned integer, which Vale doesn't distinguish from signed"
+        }
+        CouldNotPostparseReason::Float => "a floating-point type Vale can't yet represent",
+        CouldNotPostparseReason::Unsized => "an unsized type (`str`, `[T]`, or `dyn Trait`)",
+        CouldNotPostparseReason::UnimportedType => "a type that hasn't been imported",
+        CouldNotPostparseReason::UnnormalizableAlias => "an associated-type projection Vale can't normalize",
+        CouldNotPostparseReason::InheritedParameter => "a generic parameter inherited from a parent impl",
+        CouldNotPostparseReason::SharedParameterLifetime => {
+          "two parameters that share one lifetime, which Vale can't yet tie into a single group"
+        }
+        CouldNotPostparseReason::Unrepresentable => "a type Vale has no representation for",
+      };
+      format!("The Rust function `{path}` can't be called: its signature names {why}.")
+    }
     ICompileErrorT::CouldntNarrowDownCandidates { range: _, candidates } => {
       let parts: Vec<String> = candidates.iter().map(|proto| {
         format!("\n  {}", humanize_id(scout_arena, typing_interner, code_map, proto.id))
