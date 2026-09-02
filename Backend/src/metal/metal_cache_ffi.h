@@ -45,11 +45,13 @@ typedef struct PackageBuilderHandle  PackageBuilderHandle;
 typedef struct ProgramBuilderHandle  ProgramBuilderHandle;
 
 // How one argument or return value crosses an extern boundary; mirrors CoercionKind/Coercion in
-// metal/ast.h. `kind` is the CoercionKind ordinal; `bits` is the integer width for DirectInt
-// (ignored otherwise). Passed to metal_package_builder_add_extern_abi.
+// metal/ast.h. `kind` is the CoercionKind ordinal; `bits` is the integer width for DirectInt/Cast or
+// a Pair's first component width (ignored otherwise); `bits2` is a Pair's second component width.
+// Passed to metal_package_builder_add_extern_abi. Field order/types must match the Rust mirror.
 typedef struct CoercionFFI {
   uint32_t kind;
   uint32_t bits;
+  uint32_t bits2;
 } CoercionFFI;
 
 // --- Lifecycle ---

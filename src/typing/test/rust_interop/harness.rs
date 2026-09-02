@@ -49,7 +49,7 @@ use crate::instantiating::instantiator;
 use crate::instantiating::ast::ast::FunctionExportI;
 use crate::instantiating::instantiator::InstantiatedOutputsI;
 use crate::instantiating::rust_interop::{
-  arm_driver_state, consumer_fill_modules, vale_override_queries, DriverState,
+  arm_driver_state, consumer_fill_modules, vale_override_queries, CallbackReq, DriverState,
 };
 use crate::typing::compiler::Compiler;
 use std::cell::RefCell;
@@ -695,6 +695,7 @@ fn drive_rustc(case: &Case, emit_backend: bool, crate_type: &str, run_exe: bool)
   let monouts_slot: RefCell<InstantiatedOutputsI> = RefCell::new(InstantiatedOutputsI::new());
   let function_exports_slot: RefCell<Vec<FunctionExportI>> = RefCell::new(Vec::new());
   let entry_symbol_slot: RefCell<Option<String>> = RefCell::new(None);
+  let callbacks_slot: RefCell<Vec<CallbackReq>> = RefCell::new(Vec::new());
   let firings_slot: RefCell<Vec<String>> = RefCell::new(Vec::new());
   let extern_abis_slot: RefCell<HashMap<String, ExternAbi>> = RefCell::new(HashMap::new());
   let state = DriverState {
@@ -707,6 +708,7 @@ fn drive_rustc(case: &Case, emit_backend: bool, crate_type: &str, run_exe: bool)
     monouts: &monouts_slot,
     function_exports: &function_exports_slot,
     entry_symbol: &entry_symbol_slot,
+    callbacks: &callbacks_slot,
     firings: &firings_slot,
     extern_abis: &extern_abis_slot,
     emit_backend,

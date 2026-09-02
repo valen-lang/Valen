@@ -451,5 +451,6 @@ S2. A Valen **library** compiles in **two passes** inside `valenc-rs`: pass 1 us
 
  * design-assistant
  * src/typing/docs/architecture/typing-rust-interop-design.md
+ * Backend/docs/architecture/backend-rust-interop-design.md
  * src/instantiating/docs/architecture/instantiating-rust-interop-design.md
  * docs/architecture/vale-rust-interop-architecture.md

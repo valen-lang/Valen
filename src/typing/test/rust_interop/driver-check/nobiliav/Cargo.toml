@@ -1,0 +1,10 @@
+[package]
+name = "nobiliav"
+version = "0.1.0"
+edition = "2021"
+
+# A dependency-free STUB of NobiliaV's real `nobiliav` crate. Every body is `unimplemented!()`; this
+# crate exists only to present the public API the Valen interop reads (NobiliaWindow / FrameInput /
+# MainLoopCallback and the arrow-key functions) while typechecking driver_check.valen — reproducing
+# the typing crash without the real render/geometry/app/winit/wgpu dependency graph. See ../README.md.
+[dependencies]

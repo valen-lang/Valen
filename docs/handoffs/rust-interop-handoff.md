@@ -16,9 +16,11 @@ Tier-2 harness runs the linked executable and asserts its exit code (`seven()` �
 calls `&mut self`/`&self` methods on it, gets a `&Glyph` back, and returns through it. The whole
 aggregate ABI is sourced from rustc (`tcx.layout_of` + `tcx.fn_abi_of_instance`). See "The aggregate
 ABI" for how the coercion modes are handled: a large struct crosses by value as an indirect pointer, a
-small (≤8-byte) struct as a single register integer (`Cast`). Multi-register-split shapes (`Pair`, wider
-`Cast`, float-HFA) are deferred with no NobiliaV consumer. See "The `valen build` pipeline" for compiling
-and running a Vale program against real Rust crates.
+small (≤8-byte) struct as a single register integer (`Cast`), and a two-scalar struct as a register `Pair`.
+Wider `Cast`, float-HFA, and pointer-component Pairs stay deferred with no NobiliaV consumer. Rust also calls
+back into Vale (a Vale struct implements an imported Rust trait) — see "Reverse direction"; NobiliaV's entire
+real windowed program now builds and runs through this. See "The `valen build` pipeline" for compiling and
+running a Vale program against real Rust crates.
 Design
 sources of truth: `docs/architecture/vale-rust-interop-architecture.md`,
 `src/instantiating/docs/architecture/instantiating-rust-interop-design.md`, the backend's `Backend/backend-design.md` (the C-ABI /
@@ -246,9 +248,10 @@ ABI); domino's struct sizes and calling conventions are read from rustc (`layout
   and `Cast` share one backend mechanism (a struct reinterpreted through an integer-aligned slot): one
   arg branch and one return branch in `buildCallOrSideCall`, which takes its declared param types and the
   sret flag from `buildBoundarySignature` (the same signature `declareExternFunction` declares from), so
-  the call site cannot drift from the declaration. Multi-piece `Cast` (`[N x i64]`), `Pair` (`ScalarPair`
-  types), float-HFA, and on-stack byval (`Indirect { on_stack: true }`) still `panic!`; a leaf that hits
-  one adds its own arm.
+  the call site cannot drift from the declaration. A `Pair` (`ScalarPair`, two integer scalars) is handled
+  too — two register params for an arg, an `{iN,iM}` aggregate for a return, both directions. Multi-piece
+  `Cast` (`[N x i64]`), float-HFA, pointer-component Pairs, and on-stack byval (`Indirect { on_stack: true }`)
+  still `panic!`; a leaf that hits one adds its own arm.
 
   Two boundary subtleties the domino run forced, both in the consumers:
     - **`sret` needs the LLVM `sret` attribute.** An `Indirect` return passes the out-pointer in the
@@ -264,42 +267,65 @@ ABI); domino's struct sizes and calling conventions are read from rustc (`layout
 
 ## Reverse direction — a Vale struct implements a Rust trait (Rust calls back into Vale)
 
-Rust calls back into Vale through a trait a Vale struct implements — static dispatch, no `&dyn`. The
-frontend and the collector-driven monomorphization are built; the inbound ABI and the callback's
-emission/execution are not. Design proposals S1–S3 in
-`src/typing/docs/architecture/typing-rust-interop-design.md`; ladder plan
-`~/.claude/plans/nope-please-plan-it-composed-hopper.md` (machine-local); reference
-`/Volumes/V/Harmonious/toylangc/` (`case4_sky_impl_rust_trait`, `stub_gen.rs`'s impl-block emission,
-`callbacks_impl.rs`'s discovery/drain, and `codegen_extern_wrapper` in `llvm_gen.rs` for the inbound ABI).
+Rust calls back into Vale through a trait a Vale struct implements — static dispatch, no `&dyn`. Built
+end to end: rustc monomorphizes a generic Rust caller over the Vale struct, dispatches into the Vale
+override, and the linked binary runs it. Design proposals S1–S3 in
+`src/typing/docs/architecture/typing-rust-interop-design.md`; reference `/Volumes/V/Harmonious/toylangc/`
+(`case4_sky_impl_rust_trait`, `callbacks_impl.rs`'s drain, `codegen_extern_wrapper` in `llvm_gen.rs`).
 
-**Built** (all in `rust_interop/` dirs except the one core interface-skip refinement in the core-touch
-section):
-- **Trait import.** `import rust.X.Trait` synthesizes an `InterfaceS` whose abstract methods are the
-  trait's, each a virtual-`self` `AbstractBody` method — `synthesize_extern_trait` (`declarations.rs`),
-  routed by `ImportedItemKind::Trait`. (`imports_a_rust_trait`.)
-- **Struct implements it, override enforced.** `impl Callback for MyCb` + `func on_call(self &MyCb) int`
-  resolves and matches through the existing override machinery; a missing or wrong-parameters override
-  is rejected with `CouldntFindOverrideT`. (`a_struct_implements_a_rust_trait`,
-  `a_trait_impl_missing_its_override_is_rejected`.)
-- **Generic monomorphization with a Vale type arg.** rustc monomorphizes `run_callback::<MyCb>`
-  (`fn run_callback<C: Callback>(c: &C)`) with a Vale struct as the type argument and walks the chain to
-  `<MyCb as Callback>::on_call` — `rustc_discovers_a_valen_trait_impl_callback` (collector-driven, exit
-  0). Fixture `fixtures_rust_trait/`; needed `resolve_local_type` (below).
+**Frontend + monomorphization.** `import rust.X.Trait` synthesizes an `InterfaceS` whose abstract methods
+are the trait's (`synthesize_extern_trait`, `declarations.rs`); a Vale struct's `impl` resolves and matches
+through the existing override machinery (a missing/wrong override is `CouldntFindOverrideT`); rustc
+monomorphizes `run_callback::<MyCb>` with the Vale struct as the type arg and walks to
+`<MyCb as Callback>::on_call` (needed `resolve_local_type` for a Vale-struct-as-generic-arg). Tests
+`imports_a_rust_trait`, `a_struct_implements_a_rust_trait`, `a_trait_impl_missing_its_override_is_rejected`,
+`rustc_discovers_a_valen_trait_impl_callback`.
 
-**Next** (the running callback):
-1. **Drain + per-callback symbol.** Emit `<MyCb as Callback>::on_call`'s Vale body under its
-   rustc-mangled symbol (`tcx.symbol_name`), generalizing the `__vale_main`-only `entry_symbol` capture
-   (the general form the "Entry symbol capture" note calls unbuilt). Discover trait-impl-method
-   monomorphizations from the unfiltered partition (`is_from_lang_stubs` + a new
-   `is_consumer_trait_impl_method`), deterministically sorted. Reference `callbacks_impl.rs` (discovery
-   + drain).
-2. **Inbound argument ABI.** The `&self` receiver + args cross Rust→Vale — a direction never run (every
-   inbound crossing today is nullary `() -> i32`). Extend `compute_extern_abi` to an inbound direction
-   and emit an inbound wrapper in the C++ backend (rustc-ABI signature forwarding to the internal Vale
-   body), modeled on `exportFunction` + `makeEntryFunction`; likely one "fire core edits" hook in
-   `vale.cpp`'s interop entry. Goal: `run_callback(&mmlcb)` returns 7 through a linked bin — then an
-   inbound Rust-borrow arg (the `&NobiliaWindow` shape), an inbound by-value Rust struct (`FrameInput`),
-   and Rust owning a loop that calls the callback N times (the NobiliaV `main_loop` capstone).
+**Running the callback.** When `per_instance_mir` fires on a Vale codegen target that is not a
+`FunctionExportI` (a trait-impl method Rust reached), `collect_callback` (`mod.rs`) instantiates the concrete
+override via `translate_prototype` + `drain_instantiation_queue` (no core-instantiator change), computes its
+inbound ABI (`compute_extern_abi`, role-agnostic), reifies any Rust leaves the callback body itself calls
+(shared `resolve_new_requests`), and records `(rustc symbol, vale name)` on `DriverState.callbacks`. The
+backend emits one wrapper per callback under its rustc-mangled symbol (single-symbol) via
+`emitInboundCallbackWrapper` (`Backend/src/rust_interop/rust_interop.cpp`), reached from the one core hook
+after `makeEntryFunction` (`vale.cpp`). Callbacks sort by symbol (deterministic). The concrete override is
+found among same-named `hinputs.functions` by `get_abstract_interface().is_none()` (the abstract interface
+method shares the name).
+
+Proven inbound (linked bin runs), tests in `cases.rs`: `rust_calls_back_a_valen_callback_returns_seven`
+(→7), `a_valen_callback_takes_a_scalar_arg` (scalar arg →35), `a_valen_callback_receives_a_rust_borrow` (a
+shared borrow inbound + the callback calls back out to Rust →5), `a_valen_callback_receives_a_rust_struct_by_value`
+(a small integer-`Pair` struct by value →9), `a_valen_callback_returns_a_rust_struct_by_value` (a `Pair`
+return →9), and the capstone `rust_owns_a_loop_calling_the_callback` (Rust owns a loop calling the callback
+N times →10). A void return and a multi-arg wrapper are implemented, but only single-arg shapes have fixtures.
+
+**The real NobiliaV `on_tick` builds and runs.** `MainLoopCallback::on_tick(&self, w &NobiliaWindow, input
+&FrameInput)` — two imported-type borrow params, void return, invoked through a generic *method* caller
+(`w.main_loop::<C>(&cb)`) — compiles and runs end to end. NobiliaV's real `driver.vale` (windowed, winit +
+wgpu) and its bounded twin `driver_check.vale` (auto-exits after 30 frames → 7) both build through `valen
+build` against the real multi-crate `nobiliav` graph and run. Two things this took, both **interim**:
+
+- **The stub generator projects the Vale struct + its trait impl.** `generate_stub_source` now emits a `pub
+  struct <S> {}` + `impl <ImportedTrait> for <S> { #[vale::emit_consumer_body] fn <m>(...) { unreachable!() } }`
+  per Vale struct that implements an imported trait (see the `valen build` section). Without it,
+  `resolve_local_type(<S>)` finds nothing → the outbound `main_loop::<S>` leaf is ARGS-UNCONVERTIBLE → no
+  `FunctionExternI` is materialized → the backend aborts on an undeclared extern (`buildCallOrSideCall` in
+  `externs.cpp`). Do not read that backend assert as a backend bug — it faithfully reports a leaf the stub
+  never let resolve. The earlier-feared `toRef` codegen assert did **not** fire for this shape once the
+  projection landed.
+- **A DO-NOT-SUBMIT typing patch.** The reachable-bounds gather skips an imported (`is_rust_backed`) citizen
+  rather than calling `get_inner_env_for_type` on its unregistered inner env — the branch in
+  `check_defining_conclusions_and_resolve` (`infer_compiler.rs`) and the harvest in `templata_compiler.rs`,
+  both `#[cfg(feature = "rust_interop")]`-guarded and marked `V: DO NOT SUBMIT`. Without it, that gather
+  `None`.unwrap()s at `compiler_outputs.rs` compiling the synthesized interface's abstract-method header (it
+  surfaces only with **builtins present** — the `valen build` path — since builtins pull the imported
+  param-type runes into the reachable set; the bare `--lib` harness never hits it). The real fix is for
+  `get_inner_env_for_type` to lazily compile an imported type's (empty) inner env on demand. Core typing.
+
+Staged: `fixtures_two_imported_params/` + `A_TRAIT_METHOD_WITH_TWO_IMPORTED_PARAMS` (its test reverted to keep
+the suite green) — a minimal in-tree callback via a generic *method* caller. Note the corpus drives
+hand-written fixture stubs, so it does **not** exercise `generate_stub_source`; the projection is guarded by
+the `stub_gen_projects_a_valen_struct_that_implements_a_rust_trait` unit test and the `run_wrapper` path.
 
 ## The `valen build` pipeline
 
@@ -325,33 +351,67 @@ AI-editable, in `src/typing/rust_interop/`:
 - **`generate_stub_source`** (`stub_gen.rs`) — the `vale-stub-gen` seed (arch §6.4, @RTMEIZ), **parse-driven**:
   from the parse tree (`FileP.denizens`, via `ScoutCompilation::get_parseds()`, no scout/rustc) it emits one
   `pub use` per `import rust.X.Y`, a `#[vale::emit_consumer_body]` `__vale_<export>` root per exported func,
-  the marker, and the `__vale_drop` shim. It errors on an exported Vale struct/trait — the pass-2,
-  `HinputsT`-driven exported-declaration emission the library form adds. This is the pass-1 `lib.rs`/crate root
-  in the design's two-lib-file split: the pass-1 file is parse-driven, only the pass-2 exported decls are
-  typing-driven — do not read design §30 as making the crate root typing-driven.
+  the marker, the `__vale_drop` shim, and — for the reverse direction — a `pub struct <S> {}` + `impl
+  <ImportedTrait> for <S>` per Vale struct that implements an imported trait, each override rendered from the
+  Vale `func <m>(self &<S>, ...)` (a `self &<S>` receiver → `&self`, a `&T` param → `&T`, `int` → `i32`) with
+  a `#[vale::emit_consumer_body]` body. This projection is what lets `resolve_local_type` find the struct so a
+  generic Rust caller monomorphized over it resolves; scope is a ZST callback struct with borrow/scalar-param
+  overrides (a data-carrying struct or an unrenderable param type is a loud `StubGenError`, not a wrong stub).
+  It still errors on an *exported* Vale struct/trait — the pass-2, `HinputsT`-driven exported-declaration
+  emission the library form adds. This is the pass-1 `lib.rs`/crate root in the design's two-lib-file split:
+  the pass-1 file is parse-driven, only the pass-2 exported decls are typing-driven — do not read design §30
+  as making the crate root typing-driven.
 - **`generate_workspace` / `run_build`** (`orchestrator.rs`) — the `valen` orchestrator. `generate_workspace`
-  is pure (parsed `Manifest` → the cargo file set, no cargo/fs). `run_build` reads the `Valen.toml`
-  (`toml`+`serde`), writes the workspace, copies the project `src/`, and spawns `cargo build` with
-  `RUSTC_WORKSPACE_WRAPPER=valenc-rs`. The `valen` bin (`valen/main.rs`) is the thin `main()` over it.
-  Interim shape: a single flat cargo package (not the design's multi-project workspace), cargo's `[[bin]]
-  path` points straight at the `.valen`, and rust-dep paths render verbatim; `valen-dependencies` and the
-  multi-project layout are the library/permanent form.
+  is pure (parsed `Manifest` → the cargo file set, no cargo/fs); it emits a standalone `[workspace]` table in
+  the generated `Cargo.toml` so the package never tries to fold into a parent cargo workspace it is nested
+  under (the build dir sits at `<project>/target/valen-build`, typically inside the user's real workspace —
+  without `[workspace]` cargo errors "believes it's in a workspace when it's not"). `run_build` reads the
+  `Valen.toml` (`toml`+`serde`), writes the workspace, copies the project `src/`, clears the driven crate's
+  incremental cache (interim — see the incremental item under "Next"), and spawns `cargo build` with
+  `RUSTC_WORKSPACE_WRAPPER=valenc-rs`. The `valen` bin (`valen/main.rs`) is the thin `main()` over it, finding
+  `valenc-rs` beside itself (so no PATH setup). Interim shape: a single flat cargo package (not the design's
+  multi-project workspace), cargo's `[[bin]] path` points straight at the `.valen`, and rust-dep paths render
+  verbatim; `valen-dependencies` and the multi-project layout are the library/permanent form.
 
-The register-split ABI arms (`Pair`, multi-piece `Cast`, float-HFA) stay deferred with a *confirmed* absence
-of NobiliaV consumer: their `TileSpec` (16 bytes) is `Indirect` (already handled), and `PieceId` (8 bytes)
-is the single-integer `Cast` that is now done.
+Integer-scalar `Pair` (a small struct crossing as two register scalars, e.g. `{i32,i32}`) is built, as an
+argument and a return, in both directions (a `Coercion::Pair(bits0, bits1)` threaded through the metal FFI to
+`buildBoundarySignature`/`buildCallOrSideCall` and the inbound wrapper). Still deferred (loud `panic!`/assert,
+confirmed no NobiliaV consumer): a `Pair` whose component is a pointer/float (fat pointer/slice, HFA),
+multi-piece `Cast` (`[N x i64]`), and on-stack byval (`Indirect { on_stack: true }`).
 
 ## Next
 
-The `valen build` pipeline works for the binary + rust-dependency case (above). The detailed plan is
-`~/.claude/plans/logical-skipping-muffin.md` (machine-local); reference implementation
+The `valen build` pipeline works for the binary + rust-dependency case (above). Reference implementation
 `/Volumes/V/Harmonious/toylangc/` (`src/build.rs` orchestrator + `src/main.rs` wrapper dispatch). Remaining:
 
+NobiliaV's **entire real program builds and runs** through `valen build`: the windowed `driver.vale` (winit +
+wgpu, loops until the window closes / Esc) and the bounded twin `driver_check.vale` (auto-exits after 30
+frames → 7). It builds the actual fork graph (winit, wgpu, objc2-*, geometry, render, app, nobiliav) under
+`rustc-fork` and links the Vale-through-Rust callback loop — the reverse-callback endeavor is proven on the
+real target. The `Valen.toml` lives in the NobiliaV repo at `crates/nobiliav/valen/Valen.toml` (two `[[bin]]`s
+for `driver`/`driver_check`, `[rust-dependencies] nobiliav = { path = "../../.." }`), with the `.valen` crate
+roots under `valen/src/`.
+
 **Short-term (very soon):**
-1. **Unify the `#[cfg(test)] drive_rustc` harness onto `run_driven_rustc`.** `harness.rs`'s `drive_rustc`
-   duplicates the engine; the whole interop corpus (900+ tests) runs through it, so this is a real cleanup but
-   a risky one — do it deliberately with the corpus watched.
-2. **Pull the stdlib into the interop compilation.** Today only the compiler builtins are compiled in
+1. **Fix incremental builds without forking.** `run_build` currently clears the driven crate's incremental
+   cache before every `cargo build` — a workaround, not a fix, so a rebuild pays a full re-codegen
+   of the `.valen` bin (~2s; dep rlibs still skip). Cause: Valen emits the program's bodies (`__vale_main`,
+   the callback wrappers) into rustc's module out-of-band via `fill_extra_modules`, which rustc's incremental
+   system does not track as an output, so an incremental *reuse* of the `.valen` crate's cached codegen yields
+   the object from before the emit (missing `__vale_main`) → link failure. `CARGO_INCREMENTAL=0` is **not** the
+   fix: its merged-CGU layout drops the reified Rust leaves the Valen body calls (`main_loop::<MyCb>`,
+   `__vale_drop::<T>`). Want a way to make the extra-module output participate in incremental tracking (or
+   otherwise invalidate just the driven crate's cache) **preferably without a fork patch** — keep the fork's
+   interop surface to the two existing hooks.
+2. **Land the real typing fix for imported-type reachable bounds**, retiring the DO-NOT-SUBMIT patch in
+   `infer_compiler.rs` + `templata_compiler.rs` (see "Reverse direction"): `get_inner_env_for_type` should
+   lazily compile an imported type's (empty) inner env, so the reachable-bounds gather needs no
+   `is_rust_backed` special-case. Core typing.
+3. **Unify the `#[cfg(test)] drive_rustc` harness onto `run_driven_rustc`.** `harness.rs`'s `drive_rustc`
+   duplicates the engine; the whole interop corpus runs through it, so this is a real cleanup but a risky one
+   — do it deliberately with the corpus watched. (Also folds in the builtins the bare harness lacks, so a
+   `valen build`-path bug can be reproduced in-suite.)
+4. **Pull the stdlib into the interop compilation.** Today only the compiler builtins are compiled in
    (`run_driven_rustc`), so a Valen program can use operators but not stdlib collections (`Option`, `Vec`,
    `str`, …). A feature, not a cleanup: needs the stdlib's per-import tree-shaking and native-impl
    interop-compat (mirror `pass_manager.rs`'s stdlib handling).
@@ -360,9 +420,7 @@ The `valen build` pipeline works for the binary + rust-dependency case (above). 
 typing-driven `lib.rs` (exported declarations from `HinputsT`), two rustc passes, and per-export symbol
 capture generalized beyond `__vale_main`. The **`vale`→`valen` rename** (internal symbols — `__vale_main`,
 `__VALE_STUBS_MARKER`, `is_vale_codegen_target`, the argv[0] literals — still spell `vale`; the two bins are
-already `valenc-rs`/`valen`) is a mechanical tree-wide sweep. The **real-graph e2e** — Pearl running `valen
-build` on the actual nobiliav (winit/wgpu/glam) — is the true "it works for NobiliaV" proof; the in-tree e2e
-proved the mechanism on a one-dep fixture.
+already `valenc-rs`/`valen`) is a mechanical tree-wide sweep.
 
 Durable facts:
 - **Almost entirely AI-editable.** The whole rustc-integration lives in `rust_interop/` dirs (including the
@@ -636,3 +694,26 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   `lib.rs`** (exported declarations, which need typed facts). The **pass-1 crate root** — imports→`use` +
   `__vale_main` + marker, what `generate_stub_source` emits — is parse-driven and correct that way; do not
   "fix" it to run off `HinputsT`.
+- To reproduce a bug seen through `valen build`, run the real pipeline (`run_driven_rustc` / `run_wrapper`),
+  not the bare `--lib` harness (`run_case_rustc_driven*` / `drive_rustc`). The harness compiles **no
+  builtins**, so any path gated on builtin bounds — e.g. the reachable-bounds gather in
+  `check_defining_conclusions_and_resolve` — never fires there, and a program shape that panics under
+  `valen build` compiles clean in the harness. Copying the user's project and running `valen build` (or a
+  `drive_tests.rs`-style `run_wrapper` test, which does compile builtins) is the only faithful repro.
+- A backend "missing extern" abort (`buildCallOrSideCall` in `externs.cpp`, `externFuncIter != end()`) on a
+  Rust leaf is usually **upstream**, not a backend bug: the leaf's request resolved to `dep: None` (so no
+  `FunctionExternI` was materialized), which the driven firing log shows as `<path> => ARGS-UNCONVERTIBLE` or
+  `=> UNRESOLVED`. On the `valen build` path those firings are dropped, so a temporary `eprintln!` in
+  `resolve_new_requests` / `lang_per_instance_mir` (AI-editable) surfaces them before the abort. A Vale
+  struct passed as a Rust generic's type arg is `ARGS-UNCONVERTIBLE` when `resolve_local_type` can't find it —
+  which is exactly when the stub generator hasn't projected that struct into the crate root.
+- A generated `Cargo.toml` needs its own `[workspace]` table, or cargo refuses it whenever the build dir is
+  nested inside an existing workspace (the common real-repo case): "believes it's in a workspace when it's
+  not." A scratchpad build outside any workspace hides this — always test the pipeline from inside a real repo.
+- **Incremental-compilation trap (live).** rustc's incremental system does not track Valen's
+  out-of-band `fill_extra_modules` emit, so an incremental *reuse* of the driven `.valen` crate's codegen
+  drops `__vale_main` and the link fails on a rebuild; `run_build` clears the incremental cache each build to
+  force a fresh full codegen. Do **not** "simplify" that to `CARGO_INCREMENTAL=0` — disabling incremental
+  switches rustc to a merged-CGU layout that then drops the reified Rust leaves the Valen body calls
+  (`main_loop::<MyCb>`, `__vale_drop::<T>`), a *different* link failure. The working point is incremental's
+  per-item CGU layout with a *fresh* (unreused) cache.

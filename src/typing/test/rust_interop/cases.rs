@@ -235,6 +235,121 @@ fn rustc_discovers_a_valen_trait_impl_callback() {
   );
 }
 
+/// Milestone (reverse direction, tier 2): **Rust owns the call**, and a Valen method runs because Rust
+/// called it. `run_callback::<MyCb>(&mmlcb)` is rustc's own generic fn; its `c.on_call()` dispatches
+/// statically to `<MyCb as Callback>::on_call`, whose body Valen emits under rustc's mangled symbol
+/// (single-symbol). The linked bin runs and returns 7 — `rustc_discovers_...` above only proved rustc
+/// *reached* `on_call`; this proves the Valen body actually runs when Rust invokes it.
+#[test]
+fn rust_calls_back_a_valen_callback_returns_seven() {
+  let run = run_case_rustc_driven_and_run(&RUST_CALLS_A_VALEN_TRAIT_IMPL_CALLBACK);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven callback bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 6 (reverse direction): a scalar argument crosses Rust->Valen. `run_adder::<MyAdder>(&a, 35)`
+/// hands the i32 `35` inbound to Valen's `add`, which returns it; the linked bin exits 35. The
+/// `&self`-only callback above proved static dispatch; this proves an inbound *value* arrives intact.
+#[test]
+fn a_valen_callback_takes_a_scalar_arg() {
+  let run = run_case_rustc_driven_and_run(&A_VALEN_CALLBACK_TAKES_A_SCALAR_ARG);
+  assert_eq!(
+    run.process_exit,
+    Some(35),
+    "the driven scalar-arg callback bin did not exit 35 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 7 (reverse direction): a Rust borrow crosses inbound and the callback calls back out to Rust.
+/// `run_ticker::<MyTicker>()` makes a `Counter` and hands `&Counter` to Valen's `on_tick`, which
+/// returns `w.peek()` — an outbound Rust call on the received borrow. The linked bin exits 5.
+#[test]
+fn a_valen_callback_receives_a_rust_borrow() {
+  let run = run_case_rustc_driven_and_run(&A_VALEN_CALLBACK_RECEIVES_A_RUST_BORROW);
+  assert_eq!(
+    run.process_exit,
+    Some(5),
+    "the driven borrow-arg callback bin did not exit 5 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 8 (reverse direction): a Rust struct crosses inbound **by value**. `run_summer::<MySummer>()`
+/// makes a `Small { a: 3, b: 6 }` and hands it inbound by value to Valen's `on_sum`, which returns
+/// `s.sum()` (3 + 6). The linked bin exits 9 — a small aggregate reassembled from its two registers.
+#[test]
+fn a_valen_callback_receives_a_rust_struct_by_value() {
+  let run = run_case_rustc_driven_and_run(&A_VALEN_CALLBACK_RECEIVES_A_RUST_STRUCT_BY_VALUE);
+  assert_eq!(
+    run.process_exit,
+    Some(9),
+    "the driven byval-struct callback bin did not exit 9 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 8c (forward direction): a `Pair` **return** — Vale calls `Small2.new(3,6)` (a Rust assoc fn
+/// returning `{i32,i32}` by value), binds it, and reads `s.sum()`. The struct returns in two registers
+/// and is reassembled Vale-side. Exits 9.
+#[test]
+fn vale_receives_a_rust_pair_return() {
+  let run = run_case_rustc_driven_and_run(&VALE_RECEIVES_A_RUST_PAIR_RETURN);
+  assert_eq!(
+    run.process_exit,
+    Some(9),
+    "the driven pair-return bin did not exit 9 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 8b (forward direction): a `Pair` **argument** — Vale passes a small `{i32,i32}` struct by
+/// value into a Rust free function (`add_small(s)`). The struct crosses outbound in two registers.
+/// Exits 9.
+#[test]
+fn vale_passes_a_rust_pair_arg() {
+  let run = run_case_rustc_driven_and_run(&VALE_PASSES_A_RUST_PAIR_ARG);
+  assert_eq!(
+    run.process_exit,
+    Some(9),
+    "the driven pair-arg bin did not exit 9 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 8d (reverse direction): a callback **returns** a Rust struct by value. Valen's `make` returns
+/// `Small.new(3,6)` and Rust's `run_maker::<MyMaker>()` reads `c.make().sum()`. The struct crosses
+/// Valen -> Rust in two registers (an inbound Pair return). Exits 9.
+#[test]
+fn a_valen_callback_returns_a_rust_struct_by_value() {
+  let run = run_case_rustc_driven_and_run(&A_VALEN_CALLBACK_RETURNS_A_RUST_STRUCT_BY_VALUE);
+  assert_eq!(
+    run.process_exit,
+    Some(9),
+    "the driven retpair callback bin did not exit 9 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 9 (the capstone): **Rust owns a loop** calling the Valen callback N times. `main_loop::<MyCb>`
+/// loops `i = 0..5` calling `c.on_tick(i)` (which returns `i`) and sums the returns; the linked bin
+/// exits 10 (0 + 1 + 2 + 3 + 4). Proves the callback survives repeated re-entry with a fresh scalar
+/// each iteration — the NobiliaV `main_loop` shape where Rust drives the loop and calls Valen per frame.
+#[test]
+fn rust_owns_a_loop_calling_the_callback() {
+  let run = run_case_rustc_driven_and_run(&RUST_OWNS_A_LOOP_CALLING_THE_CALLBACK);
+  assert_eq!(
+    run.process_exit,
+    Some(10),
+    "the driven main-loop bin did not exit 10 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
 /// Laziness, proven positively: importing three representable free functions and calling one queries
 /// `fn_sig` for the called function and for neither uncalled one. This is the whole point of the slice
 /// — importing a type with a hundred methods must not pay `fn_sig` for the ones never called.

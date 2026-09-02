@@ -46,16 +46,20 @@ pub enum Coercion {
     /// A small struct that rustc `Cast`s to a single integer of this many bits: it crosses as that
     /// integer (the struct's bytes reinterpreted), e.g. an 8-byte struct as an `i64`.
     Cast(u32),
+    /// A small struct rustc passes as two register scalars (`ScalarPair`), e.g. `{i32, i32}`: it
+    /// crosses as two integers of these bit-widths, reassembled into the struct on the far side.
+    Pair(u32, u32),
 }
 
 impl Coercion {
     fn to_ffi(&self) -> CoercionFFI {
         match self {
-            Coercion::Ignore => CoercionFFI { kind: 0, bits: 0 },
-            Coercion::DirectInt(bits) => CoercionFFI { kind: 1, bits: *bits },
-            Coercion::DirectPtr => CoercionFFI { kind: 2, bits: 0 },
-            Coercion::Indirect => CoercionFFI { kind: 3, bits: 0 },
-            Coercion::Cast(bits) => CoercionFFI { kind: 4, bits: *bits },
+            Coercion::Ignore => CoercionFFI { kind: 0, bits: 0, bits2: 0 },
+            Coercion::DirectInt(bits) => CoercionFFI { kind: 1, bits: *bits, bits2: 0 },
+            Coercion::DirectPtr => CoercionFFI { kind: 2, bits: 0, bits2: 0 },
+            Coercion::Indirect => CoercionFFI { kind: 3, bits: 0, bits2: 0 },
+            Coercion::Cast(bits) => CoercionFFI { kind: 4, bits: *bits, bits2: 0 },
+            Coercion::Pair(bits0, bits1) => CoercionFFI { kind: 5, bits: *bits0, bits2: *bits1 },
         }
     }
 }
@@ -197,7 +201,18 @@ impl<'cache> Lowerer<'cache> {
                 continue;
             }
             let func = self.lower_function(f);
-            pb.add_function(&humanize_id(&code_map, &f.header.id, None), func);
+            let fname = humanize_id(&code_map, &f.header.id, None);
+            pb.add_function(&fname, func);
+            // A Rust→Vale callback's body is an ordinary function here, but it also carries an inbound
+            // ABI (how Rust hands args to it), keyed by this same humanized name — the name its metal
+            // prototype gets, and the key the wrapper's `buildBoundarySignature` → `lookupExternAbi`
+            // reads. Record it on the package so the wrapper finds it, exactly as extern leaves do.
+            // Absent for ordinary Vale functions (nothing inserted an entry), so this is a no-op there.
+            if let Some(abi) = extern_abis.get(&fname) {
+                let ret = abi.ret.to_ffi();
+                let args: Vec<CoercionFFI> = abi.args.iter().map(|c| c.to_ffi()).collect();
+                pb.add_extern_abi(&fname, ret, &args);
+            }
         }
         for s in monouts.structs.iter() {
             if s.instantiated_citizen.id.package_coord as *const _ as usize != pkg_key {

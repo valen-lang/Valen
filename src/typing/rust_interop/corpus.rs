@@ -152,6 +152,185 @@ exported func main() int {
   expect: Expect::Returns(7),
 };
 
+/// A Rust->Valen callback that takes a scalar argument. `Adder::add(&self, n: i32) -> i32`, with a
+/// Valen `MyAdder` implementing it; Rust's `run_adder::<MyAdder>(&a, 35)` passes `35` inbound and
+/// Valen's `add` returns it. Proves an inbound *value* crosses Rust->Valen — the `&self`-only
+/// callback above never passed one. `add` returns the argument rather than transforming it because
+/// the driven harness compiles no builtins, so Valen operators are unavailable here.
+pub const A_VALEN_CALLBACK_TAKES_A_SCALAR_ARG: Case = Case {
+  fixture: "fixtures_rust_callback_scalar",
+  name: "rust-callback-scalar-arg",
+  vale: r#"
+import rust.mycrate.Adder;
+import rust.mycrate.run_adder;
+struct MyAdder { }
+impl Adder for MyAdder;
+func add(self &MyAdder, n int) int {
+  return n;
+}
+exported func main() int {
+  a = MyAdder();
+  return run_adder(&a, 35);
+}
+"#,
+  expect: Expect::Returns(35),
+};
+
+/// A Rust->Valen callback that receives a Rust **borrow** and calls back out to Rust through it.
+/// `Ticker::on_tick(&self, w: &Counter) -> i32`, with a Valen `MyTicker` implementing it; Rust's
+/// `run_ticker::<MyTicker>()` makes a `Counter` (value 5) and hands `&Counter` inbound, and Valen's
+/// `on_tick` returns `w.peek()` — an outbound Rust call on the received borrow. Proves a Rust borrow
+/// crosses inbound and that a callback body can itself call back out to Rust (value 5).
+pub const A_VALEN_CALLBACK_RECEIVES_A_RUST_BORROW: Case = Case {
+  fixture: "fixtures_rust_callback_borrow",
+  name: "rust-callback-borrow-arg",
+  vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.Ticker;
+import rust.mycrate.run_ticker;
+struct MyTicker { }
+impl Ticker for MyTicker;
+func on_tick(self &MyTicker, w &Counter) int {
+  return w.peek();
+}
+exported func main() int {
+  t = MyTicker();
+  return run_ticker(&t);
+}
+"#,
+  expect: Expect::Returns(5),
+};
+
+/// A Rust->Valen callback that receives a Rust struct **by value**. `Summer::on_sum(&self, s: Small)
+/// -> i32`, with a Valen `MySummer` implementing it; Rust's `run_summer::<MySummer>()` makes a
+/// `Small { a: 3, b: 6 }` and hands it inbound by value, and Valen's `on_sum` returns `s.sum()` (a
+/// by-value method that consumes it back out to Rust). Proves a small aggregate crosses inbound in
+/// registers (3 + 6 = 9).
+pub const A_VALEN_CALLBACK_RECEIVES_A_RUST_STRUCT_BY_VALUE: Case = Case {
+  fixture: "fixtures_rust_callback_byval",
+  name: "rust-callback-byval-arg",
+  vale: r#"
+import rust.mycrate.Small;
+import rust.mycrate.Summer;
+import rust.mycrate.run_summer;
+struct MySummer { }
+impl Summer for MySummer;
+func on_sum(self &MySummer, s Small) int {
+  return s.sum();
+}
+exported func main() int {
+  m = MySummer();
+  return run_summer(&m);
+}
+"#,
+  expect: Expect::Returns(9),
+};
+
+/// Forward direction, `Pair` **return**: Vale calls a Rust associated fn returning a small `{i32,i32}`
+/// struct by value (`Small2.new(3,6)`), binds it, and reads it (`s.sum()`). The struct comes back in
+/// two registers and is reassembled Vale-side. Returns 9.
+pub const VALE_RECEIVES_A_RUST_PAIR_RETURN: Case = Case {
+  fixture: "fixtures_pair_forward",
+  name: "pair-return-forward",
+  vale: r#"
+import rust.mycrate.Small2;
+exported func main() int {
+  s = Small2.new(3, 6);
+  return s.sum();
+}
+"#,
+  expect: Expect::Returns(9),
+};
+
+/// Forward direction, `Pair` **argument**: Vale passes a small `{i32,i32}` struct by value into a Rust
+/// free function (`add_small(s)`). The struct crosses outbound in two registers. Returns 9.
+pub const VALE_PASSES_A_RUST_PAIR_ARG: Case = Case {
+  fixture: "fixtures_pair_forward",
+  name: "pair-arg-forward",
+  vale: r#"
+import rust.mycrate.Small2;
+import rust.mycrate.add_small;
+exported func main() int {
+  s = Small2.new(3, 6);
+  return add_small(^s);
+}
+"#,
+  expect: Expect::Returns(9),
+};
+
+/// A Rust->Valen callback that **returns** a Rust struct by value. `Maker::make(&self) -> Small`, with
+/// a Valen `MyMaker` implementing it; Valen's `make` returns `Small.new(3,6)` and Rust's
+/// `run_maker::<MyMaker>()` reads it (`c.make().sum()`). The struct crosses Valen -> Rust in two
+/// registers (an inbound Pair return). Returns 9.
+pub const A_VALEN_CALLBACK_RETURNS_A_RUST_STRUCT_BY_VALUE: Case = Case {
+  fixture: "fixtures_rust_callback_retpair",
+  name: "rust-callback-retpair",
+  vale: r#"
+import rust.mycrate.Small;
+import rust.mycrate.Maker;
+import rust.mycrate.run_maker;
+struct MyMaker { }
+impl Maker for MyMaker;
+func make(self &MyMaker) Small {
+  return Small.new(3, 6);
+}
+exported func main() int {
+  m = MyMaker();
+  return run_maker(&m);
+}
+"#,
+  expect: Expect::Returns(9),
+};
+
+/// The capstone: **Rust owns a loop** that calls the Valen callback once per iteration. `main_loop::
+/// <MyCb>(&cb)` loops `i = 0..5`, each iteration calling `c.on_tick(i)` into Valen's override (which
+/// returns `i`), and sums the returns (0 + 1 + 2 + 3 + 4 = 10). Proves the callback survives repeated
+/// re-entry with a fresh scalar each time — the NobiliaV shape where Rust drives the frame loop and
+/// calls Valen's `on_tick` every frame.
+pub const RUST_OWNS_A_LOOP_CALLING_THE_CALLBACK: Case = Case {
+  fixture: "fixtures_rust_main_loop",
+  name: "rust-main-loop",
+  vale: r#"
+import rust.mycrate.Looper;
+import rust.mycrate.main_loop;
+struct MyCb { }
+impl Looper for MyCb;
+func on_tick(self &MyCb, i int) int {
+  return i;
+}
+exported func main() int {
+  cb = MyCb();
+  return main_loop(&cb);
+}
+"#,
+  expect: Expect::Returns(10),
+};
+
+/// Repro (reverse direction): an imported trait whose method takes TWO imported-type borrow params and
+/// returns void. Compiling the synthesized `Cb` interface's abstract `go` header panics in
+/// `get_inner_env_for_type` for one of the imported param types. Proven single-param callbacks
+/// (`&Counter`) work; this pins down the two-imported-param / void shape Pearl's `on_tick` needs.
+pub const A_TRAIT_METHOD_WITH_TWO_IMPORTED_PARAMS: Case = Case {
+  fixture: "fixtures_two_imported_params",
+  name: "two-imported-params",
+  vale: r#"
+import rust.mycrate.Alpha;
+import rust.mycrate.Beta;
+import rust.mycrate.Cb;
+struct MyCb { }
+impl Cb for MyCb;
+func go(self &MyCb, x &Alpha, y &Beta) {
+  x.touch();
+}
+exported func main() int {
+  a = Alpha.new();
+  cb = MyCb();
+  return a.run_cb(&cb);
+}
+"#,
+  expect: Expect::Returns(7),
+};
+
 /// Laziness, proven positively: three representable free functions are imported and exactly one is
 /// called. Only the called function's signature is ever queried. This is the whole payoff — importing
 /// a type with a hundred methods must not pay `fn_sig` for the ones a program never calls.

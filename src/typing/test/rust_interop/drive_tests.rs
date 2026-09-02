@@ -127,6 +127,36 @@ fn stub_gen_emits_pub_use_and_consumer_body_from_parsed_program() {
   assert!(stub.contains("fn main()"), "stub:\n{stub}");
 }
 
+// A Vale struct that implements an imported Rust trait must be projected into the stub as a real Rust
+// type + trait impl, so rustc can monomorphize the generic caller over it and reach the override body
+// (which the Valen backend fills under the same mangled symbol). Without this projection the struct's
+// type arg is unconvertible, the generic-method leaf never resolves, and the backend aborts on an
+// undeclared extern (the NobiliaV `on_tick` crash). The override signature is rendered from the Vale
+// one: a `self &Struct` receiver → `&self`, a `&ImportedType` param → `&ImportedType`, void return.
+#[test]
+fn stub_gen_projects_a_valen_struct_that_implements_a_rust_trait() {
+  let vale = r#"
+import rust.mycrate.Widget;
+import rust.mycrate.Cb;
+struct MyCb { }
+impl Cb for MyCb;
+func on_event(self &MyCb, w &Widget) {
+  w.poke();
+}
+exported func main() int {
+  return 7;
+}
+"#;
+  let stub = generate_stub_source_from_vale(vale).expect("stub generation should succeed");
+  assert!(stub.contains("pub struct MyCb {}"), "stub:\n{stub}");
+  assert!(stub.contains("impl Cb for MyCb {"), "stub:\n{stub}");
+  // The override is emitted inside the impl with a deferred body and the rendered Rust signature.
+  assert!(stub.contains("fn on_event(&self, _w: &Widget) {"), "stub:\n{stub}");
+  assert!(stub.contains("unreachable!()"), "stub:\n{stub}");
+  // Only the trait impl is projected; a plain `pub use` of the imported trait is still emitted.
+  assert!(stub.contains("pub use mycrate::Cb;"), "stub:\n{stub}");
+}
+
 // The pure-Rust passthrough (@PRCCBIVRZ). A crate whose root is `.rs` is not a Valen crate, so
 // `run_wrapper`'s extension dispatch takes the passthrough branch: it installs no query overrides and no
 // fill_extra_modules hook (`drove_valen == false`, no firings), compiling exactly as vanilla rustc would.
