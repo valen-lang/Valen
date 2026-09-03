@@ -123,6 +123,10 @@ where
   // parameters never mint the same group name — distinct groups are what make Rust's parameters
   // read as independently borrowed (@ELASZ elision gives each borrow its own lifetime).
   let mut next_region: u32 = 0;
+  // Each reference parameter's group rune, in order, so a borrow return can tie its group to the one
+  // the input borrowed into (Rust elision). It must be the *same* rune declared on the parameter: the
+  // borrow checker's `arg_rune_subst` only substitutes a return rune that a parameter also declares.
+  let mut param_region_runes: Vec<RuneUsage<'s>> = Vec::new();
   // The synthesized interop function mints its own lid space; each param gets a distinct child.
   let mut lidb = LocationInDenizenBuilder::new(Vec::new());
   for (index, sig_type) in sig.params.iter().enumerate() {
@@ -179,6 +183,7 @@ where
             range,
             rune: scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: region_name })),
           };
+          param_region_runes.push(region_rune);
           let group = scout_arena.alloc(GroupS::Rune(scout_arena.alloc(region_rune)));
           if *is_mut {
             effects.push(EffectS::Mut(group));
@@ -246,6 +251,27 @@ where
     &mut next_synthetic,
   )?;
 
+  // A borrow return ties, by Rust elision, to the one reference input it borrows from — and it
+  // borrows somewhere *within* that input's territory, so its group is the descendant `g...` form,
+  // reusing that input parameter's group rune. When a call churns that argument (`mut(g)`), the
+  // returned reference is invalidated (use-after-churn). Only the single-reference-input case is
+  // handled — elision rule 2, and the `&self` receiver every imported borrow-returning method has;
+  // zero or several reference inputs can't be elided here and leave the return groupless (deferred).
+  let maybe_return_type = match (&sig.ret, param_region_runes.as_slice()) {
+    (ValeSigType::Borrow { .. }, [input_region_rune]) => {
+      let base = scout_arena.alloc(GroupS::Rune(scout_arena.alloc(*input_region_rune)));
+      let descendant = scout_arena.alloc(GroupS::Ellipsis { base });
+      Some(ITypeST::BorrowRef(scout_arena.alloc(BorrowRefST {
+        range,
+        // A bare rune for the referent, as the parameter side does — the borrow checker reads the
+        // group off the region, and a non-borrow referent is groupless.
+        inner: scout_arena.alloc(ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: ret_rune }))),
+        region: RegionS::Group(descendant),
+      })))
+    }
+    _ => None,
+  };
+
   // One template parameter per declared generic, typed as a kind. Empty for a concrete
   // function, which is what makes `make_extern_function` — which reads its template arguments
   // off the *solved* environment — work identically for both.
@@ -271,8 +297,10 @@ where
     tyype,
     scout_arena.alloc_slice_from_vec(params),
     Some(ret_rune),
-    // A Rust import has no user-written Vale return type; its return crosses via `ret_rune`.
-    None,
+    // The return's group-annotated type when it is a borrow tied to an input (built above); `None`
+    // otherwise, as for a non-borrow return. The borrow checker reads this to derive a callee's
+    // returned-borrow group at the call site.
+    maybe_return_type,
     // One `mut(g)` per `&mut` parameter — Rust's mutation, mirrored so the borrow checker can hold
     // callers to the callee's aliasing rules. Empty when nothing is borrowed mutably.
     scout_arena.alloc_slice_from_vec(effects),
