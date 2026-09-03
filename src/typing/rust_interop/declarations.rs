@@ -671,6 +671,15 @@ where
 
   let mut header_rules: Vec<IRulexSR<'s>> = Vec::new();
   let mut next_synthetic: u32 = 0;
+  // A `mut(g)` effect per `&mut` borrow, mirroring `synthesize_extern_function`'s forward behavior — the
+  // faithful representation of Rust's `&mut` on the reverse-direction abstract method. It is not itself
+  // borrow-checked (an abstract method is never groupified), so this is inert until scope C enforces
+  // `mut`-parity between the abstract method and its override; it is the representation that enforcement
+  // reads. Empty when nothing is borrowed mutably.
+  let mut effects: Vec<EffectS<'s>> = Vec::new();
+  // Names the region groups, one per borrow parameter, matching the forward path. Function-scoped so two
+  // parameters never mint the same group name.
+  let mut next_region: u32 = 0;
   let mut params: Vec<ParameterS<'s>> = Vec::new();
   let mut lidb = LocationInDenizenBuilder::new(Vec::new());
   for (index, sig_type) in sig.params.iter().enumerate() {
@@ -680,15 +689,15 @@ where
         .intern_rune(IRuneValS::ArgumentRune(ArgumentRuneS { arg_index: index as i32 })),
     };
     let mut value_type_rules: Vec<IRulexSR<'s>> = Vec::new();
-    let (full_type_rune, value_type_rune, outer_ref_rules): (_, _, Vec<IRulexSR<'s>>) =
+    let (full_type_rune, value_type_rune, outer_ref_rules, tyype): (_, _, Vec<IRulexSR<'s>>, _) =
       match sig_type {
-        // A trait's abstract method carries no region groups: its generic params must equal the
-        // (non-generic) interface's, so it has no room for a region parameter, and `is_mut` is not
-        // mirrored here. This is the reverse direction (Rust calling into a Vale override), separate
-        // from mirroring a called Rust function's parameter mutation.
-        ValeSigType::Borrow { inner, .. } => {
+        // Mirror `synthesize_extern_function`'s borrow arm: a borrow parameter (including the `&mut self`
+        // receiver) carries a region group on its `tyype`, and a `&mut` marks that group `mut(g)`. The
+        // group rune is a `CodeRune` kept OUT of `generic_params` (the postparser filters region params
+        // out), so it lives only on the tyype and effects — never as an identifying rune.
+        ValeSigType::Borrow { inner, is_mut } => {
           let full_type_rune = fresh_rune(scout_arena, range, &mut next_synthetic);
-          bind_sig_type(
+          let value_rune = bind_sig_type(
             compiler,
             inner,
             own_rune,
@@ -697,13 +706,30 @@ where
             &mut value_type_rules,
             &mut next_synthetic,
           )?;
+          let region_name = scout_arena.intern_str(&format!("__rust_group{}", next_region));
+          next_region += 1;
+          let region_rune = RuneUsage {
+            range,
+            rune: scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: region_name })),
+          };
+          let group = scout_arena.alloc(GroupS::Rune(scout_arena.alloc(region_rune)));
+          if *is_mut {
+            effects.push(EffectS::Mut(group));
+          }
           let outer = vec![IRulexSR::BorrowRef(BorrowRefSR {
             range,
             result_rune: full_type_rune,
-            inner_rune: own_rune,
+            inner_rune: value_rune,
+            // Unspecified on the outer rule: the group lives on the `tyype`, matching the postparser.
             region: RegionSR::Unspecified,
           })];
-          (full_type_rune, own_rune, outer)
+          let tyype = ITypeST::BorrowRef(scout_arena.alloc(BorrowRefST {
+            range,
+            inner: scout_arena
+              .alloc(ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: value_rune }))),
+            region: RegionS::Group(group),
+          }));
+          (full_type_rune, value_rune, outer, tyype)
         }
         _ => {
           let rune = bind_sig_type(
@@ -715,7 +741,8 @@ where
             &mut value_type_rules,
             &mut next_synthetic,
           )?;
-          (rune, rune, Vec::new())
+          let tyype = ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune }));
+          (rune, rune, Vec::new(), tyype)
         }
       };
     // The receiver (parameter 0) is virtual — the interface-compile reads its virtual slot.
@@ -731,7 +758,7 @@ where
           .intern_code_name(scout_arena.intern_str(&format!("p{}", index))),
         lid: lidb.child().consume_in_arena(scout_arena),
       }),
-      ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: full_type_rune })),
+      tyype,
       full_type_rune,
       value_type_rune,
       scout_arena.alloc_slice_from_vec(outer_ref_rules),
@@ -751,7 +778,7 @@ where
     &mut next_synthetic,
   )?;
 
-  let tyype = TemplateTemplataType {
+  let template_type = TemplateTemplataType {
     param_types: scout_arena.alloc_slice_from_vec::<ITemplataType<'s>>(Vec::new()),
     return_type: scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
   };
@@ -768,11 +795,13 @@ where
     scout_arena.alloc_slice_from_vec(Vec::new()),
     // Generic params must equal the interface's — empty here.
     scout_arena.alloc_slice_from_vec(Vec::new()),
-    tyype,
+    template_type,
     scout_arena.alloc_slice_from_vec(params),
     Some(ret_rune),
     None, // no user-written return group
-    &[],
+    // One `mut(g)` per `&mut` borrow, mirroring Rust's mutation — the faithful representation scope C
+    // enforces. Inert until then (an abstract method is not groupified). Empty when nothing is `&mut`.
+    scout_arena.alloc_slice_from_vec(effects),
     scout_arena.alloc_slice_from_vec(header_rules),
     &[],
     scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),
@@ -886,5 +915,64 @@ where
     KindT::Void(_) => Some(compiler.keywords.void),
     KindT::USize(_) => Some(compiler.keywords.usize),
     _ => None,
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::compile_options::GlobalOptions;
+  use crate::keywords::Keywords;
+  use crate::typing::oracles::Oracles;
+  use crate::typing::TypingPassOptions;
+  use bumpalo::Bump;
+  use std::sync::Arc;
+
+  fn test_opts() -> TypingPassOptions {
+    TypingPassOptions {
+      global_options: GlobalOptions {
+        sanity_check: true,
+        use_overload_index: true,
+        use_optimized_solver: true,
+        verbose_errors: true,
+        debug_output: false,
+      },
+      debug_out: Arc::new(|_: &str| {}),
+      tree_shaking_enabled: true,
+    }
+  }
+
+  // Slice 3 (scope B): the reverse-direction abstract method mirrors Rust `&mut` into `mut(g)` on its
+  // synthesized `FunctionS` — the faithful representation scope C's enforcement will read. White-box by
+  // necessity: an abstract method's effects are behaviorally inert until scope C (nothing groupifies or
+  // matches on them), so the synthesized `FunctionS` is the only observation seam. The two `&mut` borrows
+  // (the `&mut self` receiver and a `&mut` parameter) each yield one `EffectS::Mut`; the shared `&`
+  // parameter yields none — two effects, mirroring `synthesize_extern_function`'s forward behavior.
+  #[test]
+  fn abstract_method_mirrors_mut_borrow_params_to_mut_effects() {
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let opts = test_opts();
+    let compiler = Compiler::new(&scout_arena, &typing_interner, &keywords, &opts, Oracles::none());
+
+    // `on_tick(&mut self, w &mut _, input &_)` reduced to borrows of a primitive, so the sig needs no
+    // imported package — only the `&mut` vs `&` distinction matters for this lock.
+    let borrow = |is_mut| ValeSigType::Borrow {
+      inner: typing_interner.alloc(ValeSigType::Kind(KindT::Void(VoidT))),
+      is_mut,
+    };
+    let params =
+      typing_interner.alloc_slice_from_vec(vec![borrow(true), borrow(true), borrow(false)]);
+    let sig =
+      ValeSig { generic_params: &[], params, ret: ValeSigType::Kind(KindT::Void(VoidT)) };
+
+    let name = scout_arena.intern_str("on_tick");
+    let f = synthesize_abstract_interface_method(&compiler, name, &sig).unwrap();
+
+    let mut_effect_count = f.effects.iter().filter(|e| matches!(e, EffectS::Mut(_))).count();
+    assert_eq!(mut_effect_count, 2, "expected two mut(g) effects, got {:?}", f.effects);
   }
 }

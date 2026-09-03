@@ -19,7 +19,7 @@ use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::parsing::ast::ast::{FileP, FunctionP, IAttributeP, IDenizenP, ImplP, ImportP, StructP};
 use crate::parsing::ast::pattern::ParameterP;
-use crate::parsing::ast::templex::ITemplexPT;
+use crate::parsing::ast::templex::{BorrowRefPT, EffectP, GroupP, ITemplexPT, RegionP};
 use crate::postparsing::ScoutCompilation;
 use crate::scout_arena::ScoutArena;
 use crate::typing::rust_interop::RUST_MODULE;
@@ -250,9 +250,33 @@ fn struct_has_data_members(s: &StructP) -> bool {
   })
 }
 
+/// Whether a borrow's region is declared mutable — i.e. its `in g` names a region in the override's
+/// `mut(g)` set. Only a top-level `in g` region is consulted; a nested borrow carries no such annotation.
+fn borrow_region_is_mut(b: &BorrowRefPT, mut_regions: &[&str]) -> bool {
+  match b.region {
+    RegionP::Group(GroupP::Name(name)) => mut_regions.contains(&name.as_str()),
+    _ => false,
+  }
+}
+
+/// A parameter's Rust type rendering. A top-level borrow whose region is `mut` renders `&mut T`,
+/// matching the Rust trait's `&mut`; every other shape defers to the shared `render_rust_type`. The
+/// mut-ness is a property of *this* borrow's region only — nested borrows are rendered shared, as Rust
+/// elision gives us no inner-mutability signal here.
+fn render_param_type(t: &ITemplexPT, mut_regions: &[&str]) -> Result<String, StubGenError> {
+  if let ITemplexPT::BorrowRef(b) = t {
+    if borrow_region_is_mut(b, mut_regions) {
+      return Ok(format!("&mut {}", render_rust_type(b.inner)?));
+    }
+  }
+  render_rust_type(t)
+}
+
 /// Lower a Vale type templex to its Rust rendering for a projected override signature. Handles the
 /// shapes a callback boundary uses today — a plain scalar/imported-type name and a shared borrow of one
-/// — and errors on anything else (the interim renderer, not the permanent `HinputsT`-driven form).
+/// — and errors on anything else (the interim renderer, not the permanent `HinputsT`-driven form). The
+/// `&mut` decision lives in `render_param_type`/`render_receiver`, which read the override's `mut(g)`
+/// set; this renders the shared `&T` and the inner types.
 fn render_rust_type(t: &ITemplexPT) -> Result<String, StubGenError> {
   match t {
     ITemplexPT::NameOrRune(n) => Ok(map_scalar_name(n.name.as_str())),
@@ -283,16 +307,29 @@ fn render_impl_method(func: &FunctionP) -> Result<String, StubGenError> {
     .map(|n| n.as_str())
     .ok_or_else(|| StubGenError::UnsupportedCallbackType("anonymous override".to_string()))?;
   let params = func.header.params.as_ref().map(|p| p.params).unwrap_or(&[]);
+  // The regions this override declares mutable, read from its `mut(g)` effect clauses. A borrow (a
+  // parameter's or the receiver's) whose `in g` region is in this set renders `&mut` — the only place
+  // Vale records mutability, since it lives on the effect clause and the region, never on the `&T` type.
+  // A `Vec` (not a set) is enough — a handful of regions — and stays deterministic.
+  let mut_regions: Vec<&str> = func
+    .header
+    .effects
+    .iter()
+    .filter_map(|effect| match effect {
+      EffectP::Mut(GroupP::Name(name)) => Some(name.as_str()),
+      _ => None,
+    })
+    .collect();
   let mut rendered: Vec<String> = Vec::new();
   for (i, param) in params.iter().enumerate() {
     if i == 0 && is_self_param(param) {
-      rendered.push(render_receiver(param)?);
+      rendered.push(render_receiver(param, &mut_regions)?);
     } else {
       let pname = param_local_name(param).unwrap_or("arg");
       let templex = param.pattern.as_ref().and_then(|p| p.templex.as_ref()).ok_or_else(|| {
         StubGenError::UnsupportedCallbackType(format!("parameter `{pname}` has no type"))
       })?;
-      rendered.push(format!("_{pname}: {}", render_rust_type(templex)?));
+      rendered.push(format!("_{pname}: {}", render_param_type(templex, &mut_regions)?));
     }
   }
   let ret = match &func.header.ret.ret_type {
@@ -305,13 +342,18 @@ fn render_impl_method(func: &FunctionP) -> Result<String, StubGenError> {
   ))
 }
 
-/// Render a `self` receiver as its Rust form. A borrow receiver (`self &Struct` or the bare `&self`) is
-/// `&self`; a by-value one (`self Struct`) is `self`. A weak/other shape is not expressible yet.
-fn render_receiver(param: &ParameterP) -> Result<String, StubGenError> {
+/// Render a `self` receiver as its Rust form. A borrow receiver whose region is `mut` (`self &Struct in
+/// s` with `mut(s)`) is `&mut self`, matching a `&mut self` Rust trait method; an unmutated borrow
+/// receiver (`self &Struct` or the bare `&self`) is `&self`; a by-value one (`self Struct`) is `self`. A
+/// weak/other shape is not expressible yet. The bare `&self` form carries no region, so it is shared.
+fn render_receiver(param: &ParameterP, mut_regions: &[&str]) -> Result<String, StubGenError> {
   if param.self_borrow.is_some() {
     return Ok("&self".to_string());
   }
   match param.pattern.as_ref().and_then(|p| p.templex.as_ref()) {
+    Some(ITemplexPT::BorrowRef(b)) if borrow_region_is_mut(b, mut_regions) => {
+      Ok("&mut self".to_string())
+    }
     Some(ITemplexPT::BorrowRef(_)) => Ok("&self".to_string()),
     Some(ITemplexPT::NameOrRune(_)) | Some(ITemplexPT::OwnRef(_)) => Ok("self".to_string()),
     other => {

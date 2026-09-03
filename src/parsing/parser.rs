@@ -159,7 +159,14 @@ where
       Some(INodeLEEnum::Parend(parend)) => {
         iter.advance();
         let mut inner = ScrambleIterator::new(&parend.contents);
-        self.templex_parser.parse_group(&mut inner)
+        let group = self.templex_parser.parse_group(&mut inner)?;
+        // One group per clause. `parse_group` stops at a `,` (or any non-path token), so anything left
+        // in the parens is a multi-group clause like `mut(a, b)` — reject it rather than silently
+        // keeping only the first group. Two mutated regions are written as `mut(a) mut(b)`.
+        if inner.has_next() {
+          return Err(ParseError::MultipleGroupsInEffectClause(inner.get_pos()));
+        }
+        Ok(group)
       }
       _ => Err(ParseError::BadTypeExpression(iter.get_pos())),
     }

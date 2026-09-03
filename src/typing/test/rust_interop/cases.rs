@@ -2013,7 +2013,11 @@ fn use_after_churn_through_a_rust_borrow_return_is_rejected() {
 /// `CouldntFindFunctionToCallT`. This is the first of three blockers to a real-`Vec` element
 /// use-after-churn; the use-after-churn R test itself uses the Domino wrapper (inherent
 /// `get_glyph -> &Glyph`).
+// Ignored until the Deref method-discovery work lands (the next rust-interop task; see the handoff's
+// "Next"). `get` is unreachable until the importer follows `Deref<Target=[T]>` and lowers the slice
+// `[T]` / `usize`, so the program cannot compile yet.
 #[test]
+#[ignore = "Vec::get needs Deref<Target=[T]> method discovery + slice/usize lowering + Option<&T> return groups — planned next, see the handoff"]
 fn a_real_vec_element_accessor_is_importable() {
   let outcome = run_case(&REAL_VEC_ELEMENT_ACCESSOR_IS_IMPORTABLE, callees_in_main);
 

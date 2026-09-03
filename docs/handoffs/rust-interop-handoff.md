@@ -405,6 +405,17 @@ real target. The `Valen.toml` lives in the NobiliaV repo at `crates/nobiliav/val
 for `driver`/`driver_check`, `[rust-dependencies] nobiliav = { path = "../../.." }`), with the `.valen` crate
 roots under `valen/src/`.
 
+**Immediate next — import methods reached through `Deref`.** Rust parameter mutation (`&mut` → `mut(g)`)
+and borrow-return regions (a `&self`-tied return → `&T in g...`, the descendant form) are now mirrored into
+synthesized functions by `synthesize_extern_function` (`declarations.rs`), so the group borrow checker
+accepts and churns imported borrows. The next gap a real program hits is `Deref`: `Vec::get`/`first`/`last`/
+indexing are slice (`[T]`) methods reached from `Vec<T>` only through `Deref<Target=[T]>`, but method
+discovery walks only `tcx.inherent_impls` (`TyCtxtOracle::methods` in `tyctxt_oracle.rs`), so `get` is never
+synthesized and `v.get(0)` fails to resolve (`CouldntFindFunctionToCallT`, empty rejected list). The work:
+follow `Deref` in method discovery, then lower what those slice signatures need — the slice `[T]` (which
+declines `Unsized` today), `usize`↔`int` matching, and the `Option<&T>` return (a borrow nested in an enum
+arg, plus its return group). Tracked by the ignored `a_real_vec_element_accessor_is_importable` (`cases.rs`).
+
 **Short-term (very soon):**
 1. **Fix incremental builds without forking.** `run_build` currently clears the driven crate's incremental
    cache before every `cargo build` — a workaround, not a fix, so a rebuild pays a full re-codegen

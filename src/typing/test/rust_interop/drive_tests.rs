@@ -157,6 +157,38 @@ exported func main() int {
   assert!(stub.contains("pub use mycrate::Cb;"), "stub:\n{stub}");
 }
 
+// A Vale override that mirrors a Rust `&mut` trait method must project `&mut` into the stub, or rustc
+// rejects the impl with E0053 ("types differ in mutability") — the NobiliaV `on_tick(&mut self, w: &mut
+// NobiliaWindow, ...)` wall. Mutability lives in the override's `mut(g)` effect clause plus each borrow's
+// `in g` region, never on the `&T` type, so the emitter reads the effect clause and each parameter's (and
+// the receiver's) region: a borrow whose region is marked `mut` renders `&mut`. `input` has no `mut`
+// region and is the negative control that stays a shared `&FrameInput`. (The non-mut `on_event` test
+// above is the regression guard that a shared-only override still renders `&self`/`&Widget`.)
+#[test]
+fn stub_gen_projects_mut_borrows_as_mut_references() {
+  let vale = r#"
+import rust.mycrate.Widget;
+import rust.mycrate.FrameInput;
+import rust.mycrate.Cb;
+struct MyCb { }
+impl Cb for MyCb;
+func on_tick<r', s'>(self &MyCb in s, w &Widget in r, input &FrameInput) mut(r) mut(s) {
+  w.poke();
+}
+exported func main() int {
+  return 7;
+}
+"#;
+  let stub = generate_stub_source_from_vale(vale).expect("stub generation should succeed");
+  // `&mut self` (region s is mut), `&mut Widget` (region r is mut), and a shared `&FrameInput` (no mut
+  // region) — all three in one signature, so the mut-set read and the shared negative control are proven
+  // together.
+  assert!(
+    stub.contains("fn on_tick(&mut self, _w: &mut Widget, _input: &FrameInput) {"),
+    "stub:\n{stub}"
+  );
+}
+
 // The pure-Rust passthrough (@PRCCBIVRZ). A crate whose root is `.rs` is not a Valen crate, so
 // `run_wrapper`'s extension dispatch takes the passthrough branch: it installs no query overrides and no
 // fill_extra_modules hook (`drove_valen == false`, no firings), compiling exactly as vanilla rustc would.
@@ -256,6 +288,69 @@ fn wrapper_links_a_cargo_crate_through_a_pub_use_re_export() {
       format!("--extern=greeter={}", greeter_rlib.display()),
       format!("-Ldependency={}", deps_dir.display()),
     ],
+  );
+  assert_eq!(exit, 7);
+}
+
+// The combined reverse + forward `&mut` shape, end to end through the wrapper — the exact two walls
+// NobiliaV's driver hits the instant the reverse stub compiles, in one program:
+//   - REVERSE: a Vale struct `impl`s a Rust trait whose method takes `&mut self` + a `&mut Window` (an
+//     opaque imported struct) inbound; the override calls `w.push()`, a `&mut self` window method.
+//   - FORWARD: `main` hands its own Vale struct to a Rust `fn run<C>(&mut self, cb: &mut C)` by exclusive
+//     ref, and calls that `&mut self` method on an owned opaque `Window` local.
+// The generated consumer stub must render `&mut self`/`&mut Window` (slice 1) or rustc rejects the impl
+// with E0053; then the whole thing links and runs → 7. Proves both `&mut` directions cross the boundary
+// together, not just the reverse stub in isolation.
+#[test]
+fn wrapper_drives_a_reverse_and_forward_mut_callback_to_exit_seven() {
+  let out = TempDir::new().expect("could not create scratch dir");
+  let out_dir = out.path();
+
+  // The Rust facade: an opaque `Window` with a `&mut self` method (`push`) and a generic `&mut self`
+  // caller (`run`) that owns a `Frame` and calls the callback's `&mut self` `on_tick` with `&mut self`
+  // (the window) inbound — NobiliaV's `main_loop`/`on_tick` shape after its interior-mutability removal.
+  let noblike_rs = out_dir.join("noblike.rs");
+  fs::write(
+    &noblike_rs,
+    "pub struct Window { pub ticks: i32 }\n\
+     pub struct Frame {}\n\
+     pub trait MainLoop {\n\
+     \x20   fn on_tick(&mut self, w: &mut Window, input: &Frame);\n\
+     }\n\
+     impl Window {\n\
+     \x20   pub fn new() -> Window { Window { ticks: 0 } }\n\
+     \x20   pub fn push(&mut self) { self.ticks += 1; }\n\
+     \x20   pub fn run<C: MainLoop>(&mut self, cb: &mut C) -> i32 {\n\
+     \x20       let frame = Frame {};\n\
+     \x20       cb.on_tick(self, &frame);\n\
+     \x20       7\n\
+     \x20   }\n\
+     }\n",
+  )
+  .expect("could not write noblike.rs");
+  build_dep_rlib("noblike", &noblike_rs, out_dir);
+  let rlib = out_dir.join("libnoblike.rlib");
+
+  let vale = r#"
+import rust.noblike.Window;
+import rust.noblike.Frame;
+import rust.noblike.MainLoop;
+struct MyCb { }
+impl MainLoop for MyCb;
+func on_tick<r', s'>(self &MyCb in s, w &Window in r, input &Frame) mut(r) mut(s) {
+  w.push();
+}
+exported func main() int {
+  w = Window.new();
+  mmlcb = MyCb();
+  return w.run(&mmlcb);
+}
+"#;
+
+  let exit = wrapper_run_binary(
+    out_dir,
+    vale,
+    vec![format!("--extern=noblike={}", rlib.display()), format!("-L{}", out_dir.display())],
   );
   assert_eq!(exit, 7);
 }
