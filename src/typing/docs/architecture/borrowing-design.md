@@ -40,6 +40,8 @@ The borrow checker reads typing pass output, and consults the original postparse
 
 `KindT` never contains anything about groups.
 
+Also, because of this, whenever we need to fill a value into a group generic parameter, we just fill it with a `GroupTemplataT{}`.
+
 ### check_function Has Two Phases
 
 `check_function` has two phases.

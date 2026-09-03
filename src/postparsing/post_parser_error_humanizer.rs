@@ -282,7 +282,6 @@ pub fn humanize_templata_type(tyype: &ITemplataType) -> String {
     ITemplataType::KindTemplataType(_) => "Kind".to_string(),
     ITemplataType::FunctionTemplataType(_) => "Func".to_string(),
     ITemplataType::IntegerTemplataType(_) => "Int".to_string(),
-    ITemplataType::RegionTemplataType(_) => "Region".to_string(),
     ITemplataType::GroupTemplataType(_) => "Group".to_string(),
     ITemplataType::BooleanTemplataType(_) => "Bool".to_string(),
     ITemplataType::StringTemplataType(_) => "Str".to_string(),

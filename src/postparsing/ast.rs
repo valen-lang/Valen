@@ -2,7 +2,7 @@ use crate::interner::StrI;
 use crate::parsing::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::expressions::BodySE;
 use crate::postparsing::itemplatatype::{
-  ITemplataType, KindTemplataType, RegionTemplataType, TemplateTemplataType,
+  GroupTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
   ExportAsNameS, IFunctionDeclarationNameS, IImplDeclarationNameS, IImpreciseNameS, IRuneS,
@@ -508,7 +508,7 @@ pub struct RegionGenericParameterTypeS {}
 
 impl RegionGenericParameterTypeS {
   pub fn tyype<'a>(&self) -> ITemplataType<'a> {
-    ITemplataType::RegionTemplataType(RegionTemplataType {})
+    ITemplataType::GroupTemplataType(GroupTemplataType {})
   }
 }
 
@@ -529,7 +529,7 @@ pub struct OtherGenericParameterTypeS<'s> {
 impl<'s> OtherGenericParameterTypeS<'s> {
   pub fn new(tyype: ITemplataType<'s>) -> Self {
     assert!(
-      !matches!(tyype, ITemplataType::RegionTemplataType(_) | ITemplataType::KindTemplataType(_)),
+      !matches!(tyype, ITemplataType::GroupTemplataType(_) | ITemplataType::KindTemplataType(_)),
       "vwat: Use RegionGenericParameterTypeS or KindGenericParameterTypeS for these types"
     );
     Self { tyype, _sealed: () }

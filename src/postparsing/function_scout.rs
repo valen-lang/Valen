@@ -906,12 +906,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     generic_params.extend(extra_generic_params_from_explicit_params_s);
     generic_params.extend(extra_generic_params_from_body);
     generic_params.extend(extra_generic_params_from_parent);
-    generic_params = generic_params
-      .into_iter()
-      .filter(|generic_param| {
-        !matches!(generic_param.tyype, IGenericParameterTypeS::RegionGenericParameterType(_))
-      })
-      .collect();
 
     let unfiltered_rules_array: Vec<IRulexSR<'s>> = rules;
     let rules_array = match &maybe_parent {
