@@ -62,6 +62,7 @@ Everything else is reference; skip it until you need it.
 - **"It compiles" does not prove a syntax was captured.** `&T in g[]` compiled clean while `parse_group` silently dropped the `[]` and produced a plain `Rune` group; only a parser/postparse unit test asserting the scouted `GroupS`/AST shape caught it. Assert the shape, not just that a fixture compiles.
 - **A `todo!`'s comment can name the wrong cause.** `make_kind_g`'s arm labelled "position rule (`rc`, class tier)" was in fact hit only by ordinary generics instantiated with a reference (written type a bare rune, `ITypeST::Rune`), never by a class. Log the actual `(KindT, ITypeST)` shapes reaching a `todo!` across the corpus before trusting its label.
 - **To split a class of derivation failures by root cause, panic on the bad state and census the panic's caller frame.** When groupify began panicking on any underivable borrow, grepping the failing suite's backtraces for the panicking helper (`member_result` vs `call_result_kind`) partitioned every failure into closure-capture vs optional-borrow-return in one run.
+- **`cargo test --lib` can report failures a fresh rebuild doesn't — incremental staleness, not a flaky test.** One run showed 42 failed / 429 ignored; a `touch`-and-rebuild (and `cargo nextest run`) then showed 0 failed / 471 ignored, stably across 7 runs. The tell: the ignored count matched the source `#[ignore]` count exactly (`grep -rEc '#\[ignore' src`), so the stale binary had been running tests the source marks ignored. `nextest` (a process per test) sidesteps it; when a suite result surprises you, force a rebuild before trusting or acting on it.
 
 **Architect preferences, generalized**
 
@@ -75,7 +76,7 @@ Everything else is reference; skip it until you need it.
 - **Renaming is an acceptable price.** Where two things want one name, making the user rename one is preferable to a mechanism that tells them apart.
 - **Widen on the way in rather than narrowing on the way in.** An error type that holds less than its producers do forces each of them to flatten, and a flatten silently drops whatever did not fit.
 - **Authorize removals category-by-category.** The architect clears one kind of edit at a time (*"just that, no other kinds of typing pass edits"*); surface the boundary of a cascade and wait for the go-ahead rather than bundling the next category in.
-- **Only three kinds of work: a simplifying refactor, a new feature driven by a red test, or a bugfix driven by a red test.** Nothing else — no speculative plumbing, no "cheaper to do it now before it's needed". A "cheaper to do it now, before the checker depends on it" argument does not clear the bar; the core stays untouched until a red test proves the change is needed. (This is why source ranges — defect 15 — and minting `GroupB` are deferred, not do-early: no observable behavior to red-test yet.)
+- **Only three kinds of work: a simplifying refactor, a new feature driven by a red test, or a bugfix driven by a red test.** Nothing else — no speculative plumbing, no "cheaper to do it now before it's needed". A "cheaper to do it now, before the checker depends on it" argument does not clear the bar; the core stays untouched until a red test proves the change is needed. (Minting `GroupB` stays deferred on this bar — no observable behavior to red-test yet. Source ranges cleared it once the borrow-check diagnostic needed them, and landed.)
 - **Do not preserve backwards compatibility or maintain unused code.** Code as if there are no users: a superseded function whose only callers are its own recursion is dead — delete it, don't keep it working alongside its replacement.
 - **Do not mirror a foreign reference implementation's structure as a template.** Copying Polonius's file/struct layout would import loans/origins/constraints — abstractions for jobs (region inference, exclusivity) group borrowing does not have; write a small own-shape layering doc instead.
 - **No `Option` return or struct field, and no fallback / default / graceful-degradation, without explicit human sign-off** — a `// VOPT:` / `// VFALLBACK:` marker on the site, or a mention in a `*-design.md` `## Design (human-only)` section. "The data might not exist" is not a reason for an `Option`; make the data exist (or panic on the impossible). A two-state enum is *not* an acceptable substitute for a banned `Option`.
@@ -160,7 +161,8 @@ ratchets. **Their commits do reach our files** — the lookup-path change touche
 `Opt<&Spaceship>` parameter, which the plan's §2 upcastability step resolves.
 
 For archaeology: `8d40eff9d` and `699241ffb` reshaped the interop seam from the Vale4 side — **read
-them before planning interop work.** This handoff is gitignored, so it never lands in either tree.
+them before planning interop work.** This handoff is tracked (not gitignored) and was committed to the
+branch in `acb43c66` — flag to the architect if it should instead be gitignored.
 
 **►► SEQUENCE BY CAPABILITY, NOT BY PANIC SITE ◄◄** A test stops at its *first* blocker, so a cluster
 count is a first-blocker count and never a total. **Panics hide panics**: clearing a cluster moves its
@@ -248,10 +250,9 @@ Goal: **the compiler is whole again** end to end, and the corpus stops lying abo
   `#!DeriveStructDrop`→`#explicitly_destroyed`. All three are measured and ready.
 - **The `&&`-as-weak corpus sites** — the compiler cannot drive this migration, because `&&T`
   stays a legal type and nothing errors. Needs the hand-list.
-- **Source ranges on AST nodes** — only 6 of 49 `ExpressionTE` variants carry a `RangeS`, and the
-  call/control nodes have none, so a post-hoc checker's diagnostics need them. **Deferred, not
-  do-early** (defect 15): added only when a borrow-check diagnostic needs a range and a red test
-  proves the gap — no speculative typing-pass change.
+- **Source ranges on AST nodes — DONE** (`acb43c66`, defect 15 closed). Every `ExpressionTE` variant
+  now carries a `range: RangeS`, populated at every construction site, so a borrow-check diagnostic can
+  point at the exact node. The borrow-check underivable diagnostic is what motivated it.
 
 #### LONG TERM — the borrow checker, and the backend arc
 
@@ -725,7 +726,7 @@ Everything below is open. Nothing else is. Grouped by what unblocks it.
 **Design questions still open (ours)**
 - **The effect representation.** A bare `mutates: RegionT` is too narrow (upstream answer 21). Live candidate is the per-group permission map; the axes are `held` (destruction), `dangle`/`opaque` (dereference), and a possible `softmut` tier — **partly independent flags, not an ordered level.** Needs an eager canonical form for the group algebra, since map keys are group expressions.
 - **Our clone bound has no effect slot** (upstream answer 25).
-- **Provenance / "contributing site."** Undercut by defect 15 — most AST nodes carry no `RangeS`, so a genuinely post-hoc checker cannot point at the offending line. Decide whether to add ranges or thread a side-table (which makes it not post-hoc). `CaseRuneFromImpl { inner_rune }` remains the in-tree precedent for canonicalize-the-value-keep-the-origin.
+- **Provenance / "contributing site."** No longer undercut by ranges — every `ExpressionTE` node now carries a `RangeS` (`acb43c66`), so a post-hoc checker can point at the offending line. `CaseRuneFromImpl { inner_rune }` remains the in-tree precedent for canonicalize-the-value-keep-the-origin.
 - **"Params get runes, locals get classified" needs amending** — answer 19 says some group parameters can be *independent*, so the clean split doesn't hold as stated.
 - **`BorrowState`'s shape** — still correctly parked behind its stated trigger.
 - **Telling phase 0's two failures apart** — *"the target is not knowable yet"* (the explicit-`T` error) versus *"the target is known and the argument does not match"* (an ordinary type error). Both present as "cannot convert this" and want different diagnostics. Everything else about sends is settled; see CALL-SITE PHASES.
@@ -851,7 +852,35 @@ grammar; and effect *checking*. Shadowing is not yet detected-and-panicked. The 
 child-bearing nodes (and `ExternFunctionCall`/`InterfaceFunctionCall`, which carry no `loct`) are
 documented false-negative gaps. The tests these deferrals block are `#[ignore]`d with a
 `// VCOORD: re enable w borrowing` marker — re-enable them as each feature lands (grep that marker to
-find them); the suite is green (`cargo test --manifest-path Cargo.toml --lib`).
+find them); the `--lib` suite is green (`cargo test --manifest-path Cargo.toml --lib`; also native +
+wasi `cargo nextest run`).
+
+**The interop lane is red, deliberately — 12 failures split 8/4 across two owners.**
+`cargo +rustc-fork test --lib --features rust_interop` fails 12; all landed red under `fire override
+green` in `acb43c66`, none `#[ignore]`d.
+- **8 are the importer's (exp-4).** 7 bind a Rust method's borrow return (`get_glyph(&self) -> &Glyph`,
+  the hashmap-wrapping struct, the domino cases) and panic in `call_result_kind`'s `None` arm because
+  `synthesize_extern_function` (`rust_interop/declarations.rs`) passes `maybe_return_type: None` — no
+  return group is synthesized. The fix is to synthesize the extern return as `&T in <the elided param's
+  group>` (Rust elision); the checker then consumes it **unchanged** (`arg_rune_subst` +
+  `substitute_groups` already resolve a return rune shared with a param). The 8th,
+  `a_real_vec_element_accessor_is_importable`, fails earlier at typing (`CouldntFindFunctionToCallT`,
+  before the checker): `Vec::get` is a slice method reached via `Deref<Target=[T]>` the importer does
+  not follow. See `docs/handoffs/rust-interop-handoff.md`.
+- **4 are ours — the group-generic-closures deferral.** The `wrapper_drives_*` / `wrapper_links_*`
+  tests use the driven harness that compiles `Source::builtins` (`rust_interop/drive.rs`), so they
+  borrow-check `migrate.vale`'s capturing closure and panic in `member_result` — the same deferral as
+  the 39 `#[ignore]`d `--lib` closure tests, surfacing here because these are not `#[ignore]`d.
+  `wrapper_drives_int_operators` (`3 + 4`, no Rust import) proves it is a Vale builtin, not the
+  importer. They clear when the closure wiring above lands. The domino/hashmap *cases* stay purely the
+  importer's: their harness (`test/rust_interop/harness.rs`) compiles only the test package
+  (tree-shaken, no builtins), so they never reach `migrate.vale`.
+
+**Panic-message accuracy — a small TODO.** The deferred-case panics in `borrow_types.rs`
+(`make_kind_g_groupless`'s borrow arm, `group_anon`, the two `Group`-templata arms,
+`group_expr_from_group_s`'s `Local` arm) all point at `group-generic-closures-plan.md`, but several are
+really the weak / group-argument / `in x`-local / `held` deferrals, not closures. Retarget each message
+to its own feature when picking that feature up.
 
 ## Current state
 
@@ -1097,7 +1126,7 @@ Grouped by what you would do with them. **Everything here is traced from source 
 12. **Not a defect: the `While` arm's move propagation is correct.** The report that a loop-body move never propagates outward (the arm not calling `mark_local_unstackified`) was false — do not re-file it. The one real loop move-tracker defect is defect 6.
 13. **Not a defect: no `While` duplicate-block or wrong-local bug.** The "verbatim duplicate block reporting the wrong local" report was false; the sole real loop move-check defect is the `Never`-guard skip, defect 6.
 14. **Our loop rule rejects the desugar of `for`.** `CantUnstackifyOutsideLocalFromInsideWhile` forbids moves of outer locals outright; upstream confirmed move-and-restore is intended to compile, and the `for` desugar *is* one — `while Some[(it2, x)] = it^.next() { body; set it = it2 }`. **A defect, not a strictness preference.**
-15. **Most AST nodes carry no source range** — 6 of 49; the call/control nodes (`FunctionCallTE`, `IfTE`, `WhileTE`, `ReturnTE`, `BreakTE`) have none, so a post-hoc checker cannot point at them. **Deferred, not do-early**: no typing-pass change lands without a failing test motivating it, so ranges are added only when a borrow-check diagnostic needs one and a red test proves the gap — not proactively. It is a core edit (needs "fire core edits"); fold in the vestigial `BreakTE.region: RegionT` removal then.
+15. **DONE** (`acb43c66`) — every `ExpressionTE` variant now carries a `range: RangeS`, populated at all construction sites (a core edit, done under "fire core edits"). The borrow checker's underivable-borrow diagnostic motivated it. Remaining tidy: the vestigial `BreakTE.region: RegionT` was not removed alongside it — fold that in when convenient.
 
 ### Dead code, verified
 
@@ -1167,7 +1196,7 @@ is the design and the built-vs-unwired line. Still-true mechanics:
 
 **Body compilation and the expression walk.**
 - **Control flow DOES survive into the finished `ExpressionTE` tree** — the load-bearing fact for a post-hoc checker. Structural nesting plus `KindT::Never { from_break }` is enough to derive successors: `IfTE` is its own join point and its `result` says whether the join is reachable; `WhileTE`'s back edge is total and implicit (Vale's `while` *is* `loop`; the condition desugars into the body with a `Break`); break targets are the nearest enclosing `WhileTE`, sound because break can't cross a function boundary; return always targets function exit. **There is no `continue` in the language.**
-- **Only 6 of 49 nodes carry a `RangeS`** — the five lookups and `DerefTE`. `LetNormal`, `Unlet`, `If`, `While`, `Break`, `Return`, `FunctionCall`, `Destroy`, `Discard` carry **none**. **A post-hoc checker cannot point at the offending line for most node kinds.** Either add `range` fields or thread a side-table during compilation (which makes it not post-hoc).
+- **Every `ExpressionTE` variant now carries a `range: RangeS`** (`acb43c66`) — the post-hoc checker can point at any node. Synthesized macro nodes with no user source use `RangeS::internal`; a real range is threaded everywhere one exists.
 - **`typing/test/traverse.rs` is a complete live traversal skeleton** — all 49 variants, with collect macros. It is the template for a checker's walk and arguably wants promoting out of `test/`.
 - **`typing/reachability.rs` is a live module whose every method is `panic!("Unimplemented: Slab 15")`.**
 - **`DeferTE` has undefined semantics** — live, emitted from five sites via `make_temporary_local_defer`, and encodes neither *when* the deferred expression runs nor what happens if the inner one diverges. Every consumer that would have defined it is dead code. A checker must pick a semantics and state it.
