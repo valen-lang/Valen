@@ -38,6 +38,10 @@ pub enum BorrowErrorKind<'s, 't> {
   /// An expression produces a borrow whose group could not be derived (looking only at signatures) —
   /// it came out empty. Every borrow must carry a real group.
   UnderivableBorrowGroup,
+  /// A call churns a group reached through one of the enclosing function's parameters, but that
+  /// function's signature declares no `mut(...)` effect covering it — so callers cannot see the churn.
+  /// Every parameter-group churn must be declared.
+  UndeclaredChurn,
 }
 
 impl<'s, 't> BorrowErrorKind<'s, 't> {
@@ -94,6 +98,11 @@ impl<'s, 't> BorrowErrorKind<'s, 't> {
       }
       BorrowErrorKind::UnderivableBorrowGroup => {
         "The group of this borrow reference can't be determined from the expression that produces it."
+          .to_string()
+      }
+      BorrowErrorKind::UndeclaredChurn => {
+        "this call churns a group reached through a parameter, but the enclosing function does not \
+         declare a mut effect for it."
           .to_string()
       }
     }

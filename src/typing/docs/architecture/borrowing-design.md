@@ -337,10 +337,11 @@ struct GroupSubtree {
 }
 ```
 
-`check_usages` does two things:
+`check_usages` does three things:
 
  * Builds out the GroupSubtree tree as it discovers more locals and held registers.
  * Invalidates entries in the tree as it discovers mut effects.
+ * Checks that a function's body only churns parameters in ways that its signature declares `mut` effects for.
 
 #### Local/Register Discovery
 
@@ -424,7 +425,17 @@ func main() {
 }
 ```
 
+#### Overrides
+
+For now, when an override implements an abstract method, its declared `mut(...)` must match exactly.
+
+
 ## Design Proposals
+
+**Override effect-matching is a borrow-check.** Override resolution invokes the borrow checker to
+compare an override's declared `mut(...)` against the abstract method it implements, and a mismatch is
+a `BorrowErrorKind`; so the borrow checker has two entry points — per-body `check_function` and
+override-conformance from the impl seam.
 
 **Group-generic closures.** A closure that captures a reference is generic over the groups its captures
 need: for each capture, the closure struct gains a group parameter per free group in that capture's type

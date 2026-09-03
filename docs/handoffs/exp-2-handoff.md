@@ -8,7 +8,7 @@ RSBEX gate denies edits by sessions whose transcript shows the skill was never l
 
 **The RED-slice phase is over: the enabled `--lib` suite passes** (measure with the PICK UP HERE command; read the measurement traps under "Current state" first). The deferred feature families — closures/lambdas, `str`/share lowering, the anonymous-interface macro, and weaks — are `#[ignore]`d rather than failing; `simplifying/`, `hammer/`, `backend/`, `testvm/`, `integration_tests/` stay commented out or `#[cfg(any())]`-gated in `lib.rs`.
 
-**The borrow checker is live** — a two-phase whole-function walk in `src/typing/borrow_checker/` catching use-after-churn and the two joint-argument checks; see "Region borrow checker". Rung 0 (groups on the declaration side, `BorrowRefT` emptied of its region) and the group syntax (`&T in g` / `g.items` / `g[]` / `g...`, `<g': T>`, `mut(g)` / `not(mut(g))`) are built. Use-after-churn through a returned reference is caught too; the remaining work (group-generic closures first, then optional-borrow returns, more child-group sources, effect checking) is in "Region borrow checker".
+**The borrow checker is live** — a two-phase whole-function walk in `src/typing/borrow_checker/` catching use-after-churn and the two joint-argument checks; see "Region borrow checker". Rung 0 (groups on the declaration side, `BorrowRefT` emptied of its region) and the group syntax (`&T in g` / `g.items` / `g[]` / `g...`, `<g': T>`, `mut(g)` / `not(mut(g))`) are built. Use-after-churn through a returned reference is caught too; the remaining work (making `mut(g)` load-bearing — the producer churn gate is landed, override effect-matching next — then group-generic closures and the other deferrals) is in "Region borrow checker".
 
 **Read order for a fresh session:**
 0. **"LESSONS LEARNED"** — short, and it will save you an afternoon.
@@ -63,6 +63,7 @@ Everything else is reference; skip it until you need it.
 - **A `todo!`'s comment can name the wrong cause.** `make_kind_g`'s arm labelled "position rule (`rc`, class tier)" was in fact hit only by ordinary generics instantiated with a reference (written type a bare rune, `ITypeST::Rune`), never by a class. Log the actual `(KindT, ITypeST)` shapes reaching a `todo!` across the corpus before trusting its label.
 - **To split a class of derivation failures by root cause, panic on the bad state and census the panic's caller frame.** When groupify began panicking on any underivable borrow, grepping the failing suite's backtraces for the panicking helper (`member_result` vs `call_result_kind`) partitioned every failure into closure-capture vs optional-borrow-return in one run.
 - **`cargo test --lib` can report failures a fresh rebuild doesn't — incremental staleness, not a flaky test.** One run showed 42 failed / 429 ignored; a `touch`-and-rebuild (and `cargo nextest run`) then showed 0 failed / 471 ignored, stably across 7 runs. The tell: the ignored count matched the source `#[ignore]` count exactly (`grep -rEc '#\[ignore' src`), so the stale binary had been running tests the source marks ignored. `nextest` (a process per test) sidesteps it; when a suite result surprises you, force a rebuild before trusting or acting on it.
+- **The interop lane is gated on `rust_interop/**` changes, so a commit that doesn't touch that path never runs it — even when it breaks it.** Removing the `function_scout` group-param strip let group templatas reach the instantiator, whose `Group` arms were missing; native + wasi stayed green (they don't build the instantiator/interop) and the gap landed latent, caught only when an interop test rebased onto it. A change that alters what flows *through* the pass (group params, new templata shapes) can break the instantiator/interop without touching `rust_interop/**`; run the interop lane by hand for such changes.
 
 **Architect preferences, generalized**
 
@@ -837,15 +838,25 @@ Member-element paths (`g.tiles[]`) work in parameter and return position. The `.
 end to end: `mut(g...)` normalizes to `mut(g)`, and an ellipsis reference is invalidated by any churn
 whose path overlaps its base in either direction (`borrowing-design.md`'s S1).
 
-**Next borrow-checker work — first step is the closure wiring.** Build **group-generic closures** per
-`docs/plans/group-generic-closures-plan.md` so a closure capturing a reference (`*(self.capture)`)
-derives a group instead of panicking. This is the dominant deferral: `migrate.vale`'s capturing closure
-alone accounts for most currently-panicking tests, because any test that compiles the arrays builtin
-trips it. Its prerequisite is written up there — `function_scout.rs`'s `generic_params` assembly (its
-`.filter` dropping every `IGenericParameterTypeS::RegionGenericParameterType`, ~lines 909-914) strips a
-function's group generic params before they reach the pass, so that strip must be narrowed/removed
-first. After closures: optional/weak-borrow returns (a call or an `x.as<T>()` downcast yielding
-`Opt<&T>`, whose inner borrow is underivable and panics); removing the remaining check-phase `Option`s
+**Next borrow-checker work — Scope C, making `mut(g)` load-bearing.** The **producer churn gate** is
+landed: `check_usages` rejects a call that churns a group reached through one of the enclosing function's
+parameters unless the signature declares a `mut(...)` covering it (`BorrowErrorKind::UndeclaredChurn`; a
+churn of a local the function owns is exempt; `producer_gate_tests.rs`). Next is **override
+effect-matching** — an override's declared `mut(...)` must match the abstract method's exactly, compared
+positionally per parameter (top-level param groups only; a nested-group `mut` on an override pair is a
+deferred-case error). It is a borrow-check whose comparison lives in `borrow_checker/` but is invoked from
+`edge_compiler.rs`'s override resolution — a second borrow-checker entry point, so it needs "fire core
+edits", and coordinate with exp-4 (they own `rust_interop` synthesis). See `borrowing-design.md`'s
+Overrides ruling and its "Override effect-matching is a borrow-check" proposal; Gap 2 (borrow-checking the
+abstract method's own body) was un-ratified — Gaps 1+3 cover the reverse-callback safety.
+
+After Scope C, **group-generic closures** per `docs/plans/group-generic-closures-plan.md` so a closure
+capturing a reference (`*(self.capture)`) derives a group instead of panicking — the dominant deferral.
+Its prerequisite is done: the `function_scout.rs` group-param strip is removed, so group params now flow
+through the whole pass, concluding to the ceremonial `ITemplataT::Group(GroupTemplataT{})`
+(`RegionTemplataType` is gone — the Region→Group rename). After closures: optional/weak-borrow returns (a
+call or an `x.as<T>()` downcast yielding `Opt<&T>`, whose inner borrow is underivable and panics);
+removing the remaining check-phase `Option`s
 and helpers in `check_usages.rs`/`groupify.rs` (no `Option` return or field survives without a `// VOPT:`
 or a `## Design (human-only)` mention); `Box`/`Variant` child-group sources; the `a | b` union / `rc`
 grammar; and effect *checking*. Shadowing is not yet detected-and-panicked. The walk's un-handled
@@ -855,26 +866,16 @@ documented false-negative gaps. The tests these deferrals block are `#[ignore]`d
 find them); the `--lib` suite is green (`cargo test --manifest-path Cargo.toml --lib`; also native +
 wasi `cargo nextest run`).
 
-**The interop lane is red, deliberately — 12 failures split 8/4 across two owners.**
-`cargo +rustc-fork test --lib --features rust_interop` fails 12; all landed red under `fire override
-green` in `acb43c66`, none `#[ignore]`d.
-- **8 are the importer's (exp-4).** 7 bind a Rust method's borrow return (`get_glyph(&self) -> &Glyph`,
-  the hashmap-wrapping struct, the domino cases) and panic in `call_result_kind`'s `None` arm because
-  `synthesize_extern_function` (`rust_interop/declarations.rs`) passes `maybe_return_type: None` — no
-  return group is synthesized. The fix is to synthesize the extern return as `&T in <the elided param's
-  group>` (Rust elision); the checker then consumes it **unchanged** (`arg_rune_subst` +
-  `substitute_groups` already resolve a return rune shared with a param). The 8th,
-  `a_real_vec_element_accessor_is_importable`, fails earlier at typing (`CouldntFindFunctionToCallT`,
-  before the checker): `Vec::get` is a slice method reached via `Deref<Target=[T]>` the importer does
-  not follow. See `docs/handoffs/rust-interop-handoff.md`.
-- **4 are ours — the group-generic-closures deferral.** The `wrapper_drives_*` / `wrapper_links_*`
-  tests use the driven harness that compiles `Source::builtins` (`rust_interop/drive.rs`), so they
-  borrow-check `migrate.vale`'s capturing closure and panic in `member_result` — the same deferral as
-  the 39 `#[ignore]`d `--lib` closure tests, surfacing here because these are not `#[ignore]`d.
-  `wrapper_drives_int_operators` (`3 + 4`, no Rust import) proves it is a Vale builtin, not the
-  importer. They clear when the closure wiring above lands. The domino/hashmap *cases* stay purely the
-  importer's: their harness (`test/rust_interop/harness.rs`) compiles only the test package
-  (tree-shaken, no builtins), so they never reach `migrate.vale`.
+**The interop lane is green except one tracked gap.** `cargo +rustc-fork test --lib --features
+rust_interop` passes except `a_real_vec_element_accessor_is_importable`, `#[ignore]`d: `Vec::get` is a
+slice method reached via `Deref<Target=[T]>` the importer does not follow yet (see
+`docs/handoffs/rust-interop-handoff.md`). The Rust borrow-return importer gap is fixed —
+`synthesize_extern_function` (`rust_interop/declarations.rs`) synthesizes an extern's borrow return as
+`&T in <the elided `&self` param's group>` and the checker consumes it unchanged (`arg_rune_subst` +
+`substitute_groups` resolve a return rune shared with a param). The driven-harness closure failures are
+worked around by a temporary `MigrateDropFunctor` stub in `migrate.vale` (`// VCOORD: re-enable when
+borrowing is ok`) that routes the arrays builtin around its reference-capturing closures until
+group-generic closures land — so `migrate` currently drains its source and ignores its target.
 
 **Panic-message accuracy — a small TODO.** The deferred-case panics in `borrow_types.rs`
 (`make_kind_g_groupless`'s borrow arm, `group_anon`, the two `Group`-templata arms,
@@ -1170,12 +1171,15 @@ Grouped by what you would do with them. **Everything here is traced from source 
 **Groups / regions.** The region-on-the-value-type model is retired: `BorrowRefT` is `{ inner }`
 with no region, and groups live only on declaration-side structures. `docs/plans/path-to-borrowing.md`
 is the design and the built-vs-unwired line. Still-true mechanics:
-- **`ITemplataType` carries both `RegionTemplataType` and `GroupTemplataType`; `ITemplataT` carries a
-  `Group(GroupTemplataT)` variant**, and a group param concludes to the ceremonial
-  `ITemplataT::Group(GroupTemplataT {})` constant, minted in `create_placeholder`'s
-  `GroupTemplataType` arm (`templata_compiler.rs`). It is inert: `substitute_templatas_in_templata`
-  returns it unchanged and `get_placeholders_in_templata` treats it as no placeholder. Real region
-  params still mint a `Placeholder`.
+- **`ITemplataType` carries `GroupTemplataType`; `ITemplataT` carries a `Group(GroupTemplataT)`
+  variant** — the `RegionTemplataType` twin is gone (the Region→Group rename). A group generic param
+  (`<g'>`, a `RegionGenericParameterTypeS`) types as `GroupTemplataType` and concludes to the ceremonial
+  `ITemplataT::Group(GroupTemplataT {})` constant *everywhere*: on the defining side via
+  `create_placeholder`'s `GroupTemplataType` arm (`templata_compiler.rs`), and seeded directly on the
+  call-site and virtual-dispatcher resolve paths (`function_compiler_solving_layer.rs`). It is inert:
+  `substitute_templatas_in_templata` returns it unchanged and `get_placeholders_in_templata` treats it
+  as no placeholder — a group param never mints a `Placeholder`. The instantiator mirrors it with
+  `ITemplataI::Group(GroupTemplataI {})` (`instantiating/`).
 - **`KindT` is a deliberately 16-byte `Copy+Eq+Hash` enum (`@WVSBIZ`)** — this is *why* a group must
   never live in it: it would join type equality, arena interning, and monomorphization identity.
 - **`RegionT` (`Iso`/`Default`) is vestigial scaffolding** — still on `context_region` params and the

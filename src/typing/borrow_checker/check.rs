@@ -27,7 +27,7 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
   ) -> Result<(), ICompileErrorT<'s, 't>> {
     self.check_return_group(function_s)?;
     let body_g = self.groupify_function(coutputs, function_s, function_t, check_arena)?;
-    self.check_usages(coutputs, &body_g)
+    self.check_usages(coutputs, function_s, &body_g)
   }
 
   /// A returned reference must declare the group it points into (signature-only derivation): reject a

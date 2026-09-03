@@ -37,7 +37,7 @@ fn program(body: &str) -> String {
 fn test_churn_sibling_param_in_same_group_rejected() {
   assert_borrow_error_renders_with_arrays(
     &program(concat!(
-      "func attack<r'>(a &Vec<Entity> in r, t &Vec<Entity> in r) {\n",
+      "func attack<r'>(a &Vec<Entity> in r, t &Vec<Entity> in r) mut(r) {\n",
       "  e = &a.data[0];\n",
       "  grow(t);\n",
       "  observe(e);\n",
@@ -81,7 +81,7 @@ fn test_churn_fresh_local_group_is_accepted() {
 fn test_churn_same_param_rejected() {
   assert_borrow_error_renders_with_arrays(
     &program(concat!(
-      "func attack<r'>(a &Vec<Entity> in r, t &Vec<Entity> in r) {\n",
+      "func attack<r'>(a &Vec<Entity> in r, t &Vec<Entity> in r) mut(r) {\n",
       "  e = &a.data[0];\n",
       "  grow(a);\n",
       "  observe(e);\n",

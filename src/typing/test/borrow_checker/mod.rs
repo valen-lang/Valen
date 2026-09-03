@@ -5,6 +5,7 @@ mod ellipsis_tests;
 mod held_register_tests;
 mod joint_argument_move_tests;
 mod joint_argument_tests;
+mod producer_gate_tests;
 mod robustness_tests;
 mod same_group_aliasing_tests;
 mod use_after_churn_tests;

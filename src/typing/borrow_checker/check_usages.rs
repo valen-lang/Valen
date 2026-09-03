@@ -9,14 +9,15 @@
 //! branch from the pre-branch state and unions the non-diverging invalidations; `while` pre-applies its
 //! body's churns, so there is no fixpoint. See `docs/architecture/borrowing-design.md`.
 
+use crate::postparsing::ast::FunctionS;
 use crate::postparsing::names::IRuneS;
 use crate::postparsing::rules::types::EffectS;
 use crate::typing::ast::ast::LocT;
 use crate::typing::ast::expressions::{ExpressionTE, FunctionCallTE};
 use crate::typing::borrow_checker::borrow_error::BorrowErrorKind;
-use crate::typing::borrow_checker::borrow_types::{GroupExprG, KindGT};
+use crate::typing::borrow_checker::borrow_types::{group_expr_from_group_s, GroupExprG, KindGT};
 use crate::typing::borrow_checker::grouped_ast::{
-  flatten, paths_alias, GroupStep, IExpressionGE, JointFact,
+  flatten, paths_alias, split_unions, GroupStep, IExpressionGE, JointFact,
 };
 use crate::typing::borrow_checker::groupify::{
   effect_root_rune, expr_range, held_range, moved_local, param_group_rune, place_root_local,
@@ -61,23 +62,37 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
   pub fn check_usages<'g>(
     &self,
     coutputs: &CompilerOutputs<'s, 't>,
+    function_s: &'s FunctionS<'s>,
     body: &IExpressionGE<'s, 't, 'g>,
   ) -> Result<(), ICompileErrorT<'s, 't>> {
+    // The groups this function is allowed to churn, as flat paths in its own frame — the same paths a
+    // caller derives from these effects. A body churn rooted at a parameter's group is legal only if
+    // one of these covers it (see `path_covers`).
+    let declared_mut: Vec<Vec<GroupStep<'s, 't>>> = function_s
+      .effects
+      .iter()
+      .filter_map(|e| match e {
+        EffectS::Mut(gs) => Some(gs),
+        _ => None,
+      })
+      .flat_map(|gs| split_unions(&group_expr_from_group_s(gs)))
+      .collect();
     let mut tree = GroupSubtree::default();
     let mut next_held = 0;
-    self.check_ge(coutputs, body, &mut tree, &mut next_held)
+    self.check_ge(coutputs, &declared_mut, body, &mut tree, &mut next_held)
   }
 
   fn check_ge<'g>(
     &self,
     coutputs: &CompilerOutputs<'s, 't>,
+    declared_mut: &[Vec<GroupStep<'s, 't>>],
     node: &IExpressionGE<'s, 't, 'g>,
     tree: &mut GroupSubtree<'s, 't>,
     next_held: &mut u32,
   ) -> Result<(), ICompileErrorT<'s, 't>> {
     match node {
       IExpressionGE::LetNormal { expr, bind, .. } => {
-        self.check_ge(coutputs, expr, tree, next_held)?;
+        self.check_ge(coutputs, declared_mut,expr, tree, next_held)?;
         if let Some((local, group)) = bind {
           register(tree, RefKey::Named(*local), group);
         }
@@ -88,7 +103,7 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         // produced, so a later sibling argument's churn can invalidate it.
         let mut held_keys = vec![];
         for (i, arg) in args.iter().enumerate() {
-          self.check_ge(coutputs, arg, tree, next_held)?;
+          self.check_ge(coutputs, declared_mut,arg, tree, next_held)?;
           if let Some((group, range)) = held_register_of(&call.args[i], arg) {
             let key = RefKey::Held(*next_held);
             *next_held += 1;
@@ -113,16 +128,23 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
           return Err(self.joint_error(fact));
         }
         for path in mut_effects {
+          // Producer gate: a churn rooted at one of this function's parameter groups must be covered
+          // by a declared `mut(...)`. A churn of a local the function owns needs no declaration.
+          if is_param_rooted(&path.steps)
+            && !declared_mut.iter().any(|declared| path_covers(declared, &path.steps))
+          {
+            return Err(BorrowErrorKind::UndeclaredChurn.at(self, call.range[0]));
+          }
           churn(tree, &path.steps, path.effecting_node_loc);
         }
         Ok(())
       }
       IExpressionGE::If { condition, then_call, else_call, then_diverges, else_diverges, .. } => {
-        self.check_ge(coutputs, condition, tree, next_held)?;
+        self.check_ge(coutputs, declared_mut,condition, tree, next_held)?;
         let mut then_tree = tree.clone();
-        self.check_ge(coutputs, then_call, &mut then_tree, next_held)?;
+        self.check_ge(coutputs, declared_mut,then_call, &mut then_tree, next_held)?;
         let mut else_tree = tree.clone();
-        self.check_ge(coutputs, else_call, &mut else_tree, next_held)?;
+        self.check_ge(coutputs, declared_mut,else_call, &mut else_tree, next_held)?;
         merge(tree, &then_tree, &else_tree, *then_diverges, *else_diverges);
         Ok(())
       }
@@ -130,12 +152,12 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         for path in mut_effects {
           churn(tree, &path.steps, path.effecting_node_loc);
         }
-        self.check_ge(coutputs, body, tree, next_held)
+        self.check_ge(coutputs, declared_mut,body, tree, next_held)
       }
       // Every other node has nothing for the checker itself; walk its children in evaluation order.
       other => {
         for child in other.children() {
-          self.check_ge(coutputs, child, tree, next_held)?;
+          self.check_ge(coutputs, declared_mut,child, tree, next_held)?;
         }
         Ok(())
       }
@@ -281,6 +303,21 @@ fn result_borrow_group<'a, 's, 't>(kind: &'a KindGT<'s, 't>) -> Option<&'a Group
     KindGT::BorrowRef(b) => Some(&b.group),
     _ => None,
   }
+}
+
+/// Whether a churn path is rooted at a parameter's group (so it needs a declared `mut`), rather than
+/// a local the function owns.
+fn is_param_rooted<'s, 't>(steps: &[GroupStep<'s, 't>]) -> bool {
+  match steps.first() {
+    Some(GroupStep::Rune(_)) | Some(GroupStep::ParamAnonymousGroup(_)) => true,
+    _ => false,
+  }
+}
+
+/// Whether a declared `mut` path covers a churn: the declared group's path is a prefix of (or equal
+/// to) the churned path, so `mut(g)` covers a churn of `g`, `g.m`, or `g[]`.
+fn path_covers<'s, 't>(declared: &[GroupStep<'s, 't>], churn: &[GroupStep<'s, 't>]) -> bool {
+  declared.len() <= churn.len() && churn[..declared.len()] == *declared
 }
 
 /// Register a live reference under each group its `GroupExprG` names: a union under each member, an
