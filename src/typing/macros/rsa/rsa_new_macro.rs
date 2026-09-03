@@ -66,13 +66,16 @@ where
 
     let array_tt = self.resolve_runtime_sized_array(element_type, RegionT::Default);
 
-    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(ExpressionTE::Return(
-      self.typing_interner.alloc(ReturnTE::new(ExpressionTE::NewRuntimeSizedArray(
+    // This is a compiler-generated builtin body, so its nodes have no user source; the honest range is a synthesized internal one.
+    let synth_range = RangeS::internal(self.scout_arena, -70050);
+    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(synth_range, ExpressionTE::Return(
+      self.typing_interner.alloc(ReturnTE::new(synth_range, ExpressionTE::NewRuntimeSizedArray(
         self.typing_interner.alloc(NewRuntimeSizedArrayTE::new(
+          synth_range,
           self.typing_interner.alloc(array_tt),
           RegionT::Default,
           ExpressionTE::ArgLookup(
-            self.typing_interner.alloc(ArgLookupTE::new(0, param_coords[0].tyype)),
+            self.typing_interner.alloc(ArgLookupTE::new(synth_range, 0, param_coords[0].tyype)),
           ),
         )),
       ))),

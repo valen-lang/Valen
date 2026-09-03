@@ -44,9 +44,12 @@ where
     };
     let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
       self.get_option(coutputs, env, call_range, call_location, RegionT::Default, borrow_coord)?;
+    // This is a compiler-generated builtin body, so its nodes have no user source; the honest range is a synthesized internal one.
+    let synth_range = RangeS::internal(self.scout_arena, -70020);
     let lock_expr = ExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE::new(
+      synth_range,
       ExpressionTE::ArgLookup(
-        self.typing_interner.alloc(ArgLookupTE::new(0, param_coords[0].tyype)),
+        self.typing_interner.alloc(ArgLookupTE::new(synth_range, 0, param_coords[0].tyype)),
       ),
       opt_coord,
       self.typing_interner.alloc(some_constructor),
@@ -54,8 +57,8 @@ where
       some_impl_id,
       none_impl_id,
     )));
-    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(ExpressionTE::Return(
-      self.typing_interner.alloc(ReturnTE::new(lock_expr)),
+    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(synth_range, ExpressionTE::Return(
+      self.typing_interner.alloc(ReturnTE::new(synth_range, lock_expr)),
     ))));
     Ok((header, body))
   }

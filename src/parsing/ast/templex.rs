@@ -126,6 +126,8 @@ pub enum GroupP<'p> {
   Member { base: &'p GroupP<'p>, member: NameP<'p> },
   /// `in x.items[]`: an element of the member.
   Elements { base: &'p GroupP<'p> },
+  /// `in g...`: somewhere within g's territory (a descendant, exact spot unknown).
+  Ellipsis { base: &'p GroupP<'p> },
   /// `in (a | b)`: a union of groups.
   Union { members: &'p [&'p GroupP<'p>] },
 }

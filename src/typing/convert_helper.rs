@@ -107,7 +107,7 @@ target:
           // relabels the pointee rather than doing runtime work.
           // VCOORD: change this from a Reinterpret to an instruction custom made for turning @something into &something
           Ok(ExpressionTE::Reinterpret(
-            self.typing_interner.alloc(ReinterpretTE::new(source_expr, target_pointer_type)),
+            self.typing_interner.alloc(ReinterpretTE::new(range[0], source_expr, target_pointer_type)),
           ))
         } else {
           // The borrow stays and the citizen widens, e.g. `&Dog` to `&Animal`.
@@ -133,7 +133,7 @@ target:
       (KindT::BorrowRef(source_borrow), target) if source_borrow.inner == target => {
         match source_borrow.inner {
           x if self.kind_is_implicitly_cloneable(coutputs, x) => {
-            let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(source_expr, target));
+            let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(range[0], source_expr, target));
             Ok(ExpressionTE::CopyPrim(copy_prim_te))
           }
           _ => self.convert_via_implicit_clone(
@@ -157,7 +157,7 @@ target:
         // Ok(ExpressionTE::Defer(defer))
       }
       (KindT::ShareRef(source_share), target) if source_share.inner == target => {
-        let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(source_expr, target));
+        let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(range[0], source_expr, target));
         Ok(ExpressionTE::CopyPrim(copy_prim_te))
       }
       (KindT::ShareRef(source_share), KindT::BorrowRef(target_borrow))
@@ -167,7 +167,7 @@ target:
         // relabels the handle as a borrow rather than doing runtime work.
         // VCOORD: change this from a Reinterpret to an instruction custom made for turning @something into &something
         Ok(ExpressionTE::Reinterpret(
-          self.typing_interner.alloc(ReinterpretTE::new(source_expr, target_pointer_type)),
+          self.typing_interner.alloc(ReinterpretTE::new(range[0], source_expr, target_pointer_type)),
         ))
       }
       (source, target)
@@ -241,6 +241,7 @@ target:
           .is_some());
         Ok(ExpressionTE::Upcast(self.typing_interner.alloc(UpcastTE::new(
           self.typing_interner,
+          range[0],
           source_expr,
           target_super_kind,
           is_parent.impl_id,
@@ -298,6 +299,7 @@ target:
         let args_te = self.typing_interner.alloc_slice_from_vec(vec![source_expr]);
         Ok(ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
           LocT::from_lid(self.typing_interner, call_location),
+          self.typing_interner.alloc_slice_copy(range),
           stamp.prototype,
           args_te,
           stamp.prototype.return_type,

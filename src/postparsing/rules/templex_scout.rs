@@ -812,8 +812,9 @@ fn split_type_st_into<'s>(
 
 /// Lowers a parse-side group expression (`GroupP`) into the symbolic scout-side `GroupS`. A bare
 /// group name resolves to `GroupS::Rune` when it is a declared group/region rune, else
-/// `GroupS::Local`, using the same name-vs-rune test the NameOrRune type arm uses. Reused by borrow
-/// regions and effect clauses. Member/element/union group expressions are deferred.
+/// `GroupS::Local`, using the same name-vs-rune test the NameOrRune type arm uses. `x.items` becomes
+/// a `Member` step and `x.items[]` an `Elements` step, recursing on the base. Reused by borrow
+/// regions and effect clauses. Union group expressions are deferred.
 fn translate_group_p_into_group_s<'s, 'p>(
   scout_arena: &ScoutArena<'s>,
   env: &IEnvironmentS<'s>,
@@ -837,7 +838,17 @@ fn translate_group_p_into_group_s<'s, 'p>(
         )))
       }
     }
-    _ => panic!("POSTPARSER_GROUP_MEMBER_ELEMENT_UNION_NOT_YET_IMPLEMENTED"),
+    GroupP::Member { base, member } => scout_arena.alloc(GroupS::Member {
+      base: translate_group_p_into_group_s(scout_arena, env, base),
+      member_name: scout_arena.intern_str(member.str().as_str()),
+    }),
+    GroupP::Elements { base } => scout_arena.alloc(GroupS::Elements {
+      base: translate_group_p_into_group_s(scout_arena, env, base),
+    }),
+    GroupP::Ellipsis { base } => scout_arena.alloc(GroupS::Ellipsis {
+      base: translate_group_p_into_group_s(scout_arena, env, base),
+    }),
+    GroupP::Union { .. } => panic!("POSTPARSER_GROUP_UNION_NOT_YET_IMPLEMENTED"),
   }
 }
 
@@ -1098,9 +1109,11 @@ pub fn translate_templex<'s, 'p>(
         let region = match borrow_ref.region {
           RegionP::Unspecified => RegionSR::Unspecified,
           RegionP::Held => RegionSR::Held,
-          RegionP::Group(_group_p) => {
-            panic!("POSTPARSER_LEGACY_TRANSLATE_TEMPLEX_GROUP_NOT_SUPPORTED")
-          }
+          // The rules/solver side carries no group (`RegionSR` is `Unspecified`/`Held`/`Rune` only);
+          // the borrow checker reads a written `in g` off the `ITypeST`, not off the rules. So a group
+          // annotation here becomes `Unspecified` for the solve, exactly as the `ITypeST`→`RegionSR`
+          // conversion does elsewhere in this file.
+          RegionP::Group(_group_p) => RegionSR::Unspecified,
         };
         translate_borrow_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune, region)
       }

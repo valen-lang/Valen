@@ -40,7 +40,7 @@ Do these first because they're cheap and unblock the code work:
 
 1. **Reconcile `bare-clone-borrow-move-design.md`** — add "obsoleted by onion typing" banner at top. Resolve the `@T retires` (Phase I) and `share → class` (Phase H) conflicts per A15.
 2. **Add "under active onion-typing rewrite" banner** to `typing-pass-design-v3.md`, `instantiator-design.md`, `instantiator_design_2.md`, `simplifier-design.md` — flagging pre-onion patterns for readers.
-3. **Reviewer skills sync** — mark BEFORE examples in `valec-reviewer.md` / `prose-reviewer.md` / `typing-reviewer.md` with `// pre-onion` where relevant. Don't rewrite yet; the arc will update them.
+3. **Reviewer skills sync** — mark BEFORE examples in `valec-guidelines.md` / `prose-reviewer.md` / `typing-reviewer.md` with `// pre-onion` where relevant. Don't rewrite yet; the arc will update them.
 4. **Interner discipline docs (@TFITCX, @WVSBIZ)** — add the four new ref-variant payload structs to the payload-family inventory. Small doc-only change; sets up the interner cascade.
 5. **Weak-fixture audit** — enumerate the 13 `.vale` files using `&&Muta`. Include in the atomic parser-flip subcommit (§C.2).
 6. **`weak` identifier audit** — grep `.vale` fixtures for `weak` as a local/param name. Rename any collisions in the atomic parser-flip subcommit.
@@ -302,7 +302,7 @@ Rendering:
 - Consider adding a new arcana shield covering "reference layers are structural, not tag-based." (Optional; grep-able discoverability.)
 
 **Reviewer skills — update BEFORE examples:**
-- `docs/skills/valec-reviewer.md`.
+- `docs/skills/valec-guidelines.md`.
 - `docs/skills/prose-reviewer.md`.
 - `src/typing/docs/skills/typing-reviewer.md`.
 

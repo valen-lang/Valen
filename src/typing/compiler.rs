@@ -2028,7 +2028,7 @@ where
     // interfaceA.attributes.exists({ case ExportS(_) => true case _ => false })
   }
 
-  pub fn consecutive(&self, exprs: &[ExpressionTE<'s, 't>]) -> ExpressionTE<'s, 't> {
+  pub fn consecutive(&self, range: RangeS<'s>, exprs: &[ExpressionTE<'s, 't>]) -> ExpressionTE<'s, 't> {
     match exprs {
       [] => panic!("Shouldn't have zero-element consecutors!"),
       [only] => *only,
@@ -2054,7 +2054,7 @@ where
           [only] => *only,
           _ => {
             let exprs_slice = self.typing_interner.alloc_slice_copy(&without_init_voids);
-            ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE::new(exprs_slice)))
+            ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE::new(range, exprs_slice)))
           }
         }
       }

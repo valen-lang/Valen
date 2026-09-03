@@ -21,7 +21,7 @@ Arena-backed interning on `ScoutArena<'s>` uses two parallel enums per type hier
 | `IImpreciseNameS<'s>` | `IImpreciseNameValS<'s>` | `intern_imprecise_name()` |
 | `INameS<'s>` | `INameValS<'s>` | `intern_name()` |
 | `IFunctionDeclarationNameS<'s>` | `IFunctionDeclarationNameValS<'s>` | via `INameS` |
-| `IVarNameS<'s>` | `IVarNameValS<'s>` | via `INameS` |
+| `IVarDeclarationNameS<'s>` | `IVarDeclarationNameValS<'s>` | via `INameS` |
 
 Note: `IRuneValS` has a second lifetime `'tmp` because some of its variants contain transient slice data (see @DSAUIMZ). The other Val enums don't have slices yet, so they use only `'s`.
 

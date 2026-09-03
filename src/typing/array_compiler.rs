@@ -158,6 +158,7 @@ where
     }
 
     Ok(StaticArrayFromCallableTE::new(
+      parent_ranges[0],
       self.typing_interner.alloc(ssa_mt),
       region,
       callable_te,
@@ -347,6 +348,7 @@ where
     }
     let call_te = ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
       LocT::from_lid(self.typing_interner, call_location),
+      self.typing_interner.alloc_slice_copy(parent_ranges),
       prototype,
       self.typing_interner.alloc_slice_from_vec(args_te),
       result_te,
@@ -487,6 +489,7 @@ where
     let ssa_ref = self.typing_interner.alloc(static_sized_array_type);
     let ssa_coord = KindT::StaticSizedArray(ssa_ref);
     Ok(StaticArrayFromValuesTE::new(
+      parent_ranges[0],
       self.typing_interner.alloc_slice_from_vec(exprs_2),
       ssa_coord,
       ssa_ref,
@@ -516,7 +519,7 @@ where
       array_tt.element_type(),
       context_region,
     )?;
-    Ok(DestroyStaticSizedArrayIntoFunctionTE::new(arr_te, array_tt, callable_te, prototype))
+    Ok(DestroyStaticSizedArrayIntoFunctionTE::new(range[0], arr_te, array_tt, callable_te, prototype))
   }
 
   pub fn compile_static_sized_array(

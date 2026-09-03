@@ -271,6 +271,8 @@ where
     tyype,
     scout_arena.alloc_slice_from_vec(params),
     Some(ret_rune),
+    // A Rust import has no user-written Vale return type; its return crosses via `ret_rune`.
+    None,
     // One `mut(g)` per `&mut` parameter — Rust's mutation, mirrored so the borrow checker can hold
     // callers to the callee's aliasing rules. Empty when nothing is borrowed mutably.
     scout_arena.alloc_slice_from_vec(effects),
@@ -741,6 +743,7 @@ where
     tyype,
     scout_arena.alloc_slice_from_vec(params),
     Some(ret_rune),
+    None, // no user-written return group
     &[],
     scout_arena.alloc_slice_from_vec(header_rules),
     &[],

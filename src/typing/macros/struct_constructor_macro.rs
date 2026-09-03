@@ -155,6 +155,7 @@ where
       },
       params_slice,
       Some(ret_rune),
+      None, // no user-written return group
       // A synthesized constructor carries no effect clause.
       &[],
       rules_slice,
@@ -266,23 +267,26 @@ where
       maybe_origin_function_templata: Some(env.templata()),
     };
 
+    // This is a compiler-generated constructor body, so its nodes have no user source; the honest range is a synthesized internal one.
+    let struct_range = RangeS::internal(self.scout_arena, -70130);
     let args: Vec<ExpressionTE<'s, 't>> = constructor_params_slice
       .iter()
       .enumerate()
       .map(|(index, p)| {
-        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(index as i32, p.tyype)))
+        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(struct_range, index as i32, p.tyype)))
       })
       .collect();
     let args_slice = self.typing_interner.alloc_slice_from_vec(args);
     let struct_tt_ref = self.typing_interner.alloc(struct_tt);
     let construct_expr = ExpressionTE::Construct(self.typing_interner.alloc(ConstructTE::new(
+      struct_range,
       struct_tt_ref,
       constructor_return_type,
       args_slice,
     )));
     let return_expr =
-      ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(construct_expr)));
-    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(return_expr)));
+      ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(struct_range, construct_expr)));
+    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(struct_range, return_expr)));
     (header, body)
   }
 }

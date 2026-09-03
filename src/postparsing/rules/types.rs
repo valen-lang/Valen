@@ -159,6 +159,8 @@ pub enum GroupS<'s> {
   Member { base: &'s GroupS<'s>, member_name: StrI<'s> },
   /// `in x.items[]`: an element of the member.
   Elements { base: &'s GroupS<'s> },
+  /// `in g...`: somewhere within g's territory (a descendant, exact spot unknown).
+  Ellipsis { base: &'s GroupS<'s> },
   /// `in (a | b)`: a union of groups.
   Union { members: &'s [&'s GroupS<'s>] },
 }

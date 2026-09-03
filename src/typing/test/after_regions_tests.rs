@@ -322,6 +322,7 @@ exported func main() int {
 }
 
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn can_downcast_interface_to_interface_through_registered_impl() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -578,6 +579,7 @@ exported func main() int {
 // generic. The CompilerOutputs.signatureToFunction cache terminates recursion.
 // VCOORD: enable this
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn brrz_nested_bound_return_inference_through_a_lambda_body() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

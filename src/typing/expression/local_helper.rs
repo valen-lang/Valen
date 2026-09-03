@@ -58,6 +58,7 @@ where
     let rlv = self.make_temporary_local(nenv, loct, r.result());
     let let_expr_2 = self.typing_interner.alloc(LetAndLendTE::new(
       self.typing_interner,
+      range[0],
       rlv,
       r,
     ));
@@ -66,11 +67,12 @@ where
 
   pub fn unlet_local_without_dropping(
     &self,
+    range: RangeS<'s>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
     local_var: &'t LocalVariable<'s, 't>,
   ) -> UnletTE<'s, 't> {
     nenv.mark_local_unstackified(local_var.name);
-    UnletTE::new(local_var)
+    UnletTE::new(range, local_var)
   }
 
   pub fn unlet_and_drop_all(
@@ -85,7 +87,7 @@ where
     variables
       .iter()
       .map(|variable| {
-        let unlet = self.unlet_local_without_dropping(nenv, *variable);
+        let unlet = self.unlet_local_without_dropping(range[0], nenv, *variable);
         let unlet_ref = ExpressionTE::Unlet(self.typing_interner.alloc(unlet));
         let snapshot = nenv.snapshot(self.typing_interner);
         let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
@@ -98,14 +100,14 @@ where
     &self,
     _coutputs: &CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
-    _range: &[RangeS<'s>],
+    range: &[RangeS<'s>],
     variables: &[&'t LocalVariable<'s, 't>],
   ) -> Vec<ExpressionTE<'s, 't>> {
     variables
       .iter()
       .map(|variable| {
         ExpressionTE::Unlet(
-          self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, *variable)),
+          self.typing_interner.alloc(self.unlet_local_without_dropping(range[0], nenv, *variable)),
         )
       })
       .collect()

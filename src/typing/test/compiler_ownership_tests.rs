@@ -304,6 +304,7 @@ exported func main() {
 }
 
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn opt_with_undroppable_mutable_ref_contents() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

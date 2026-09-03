@@ -1751,3 +1751,94 @@ exported func main() int {
 "#,
   expect: Expect::RustcFails,
 };
+
+// ---------------------------------------------------------------------------
+// H. Borrow checking across the interop boundary (RED — awaiting importer group facts)
+// ---------------------------------------------------------------------------
+//
+// The borrow checker catches use-after-churn natively: a reference into a group's child (an array
+// element, a returned `&T in g[]`) is invalid after a call that declares `mut(g)`. The checker reads
+// those facts off the callee's scout `FunctionS` — `effects` and the group-annotated param/return
+// `ITypeST` — and is entirely source-agnostic, so it would work across the Rust boundary too, if the
+// importer attached the same facts to a synthesized Rust declaration.
+//
+// It does not yet. `declarations.rs` builds each imported function with `&[]` effects ("an extern
+// Rust function's body is opaque, so it declares none") and `None` for the return group. So a Rust
+// `&mut self` method carries no `mut(g)`, and a Rust `&self` method returning `&T` carries no return
+// group — the checker sees no churn and no tracked reference, and the program below compiles.
+//
+// These cases are the spec for teaching the importer to translate Rust's own borrow facts into Vale
+// groups: `&mut self` → `mut(g)` on the receiver's group; a returned reference borrowed from `&self`
+// → `&T in g`. They are RED until that lands, and no borrow-checker change is needed — only the
+// importer.
+
+/// A `&Glyph` returned by a Rust `&self` method (`get_glyph`) is used after a Rust `&mut self` method
+/// (`add_glyph`) churns its owner — a use-after-churn through the interop boundary, the Rust-`Vec`
+/// shape (an element reference held across a mutation). RED until the importer emits `mut(g)` for
+/// `&mut self` and a return group for a `&self`-borrowed return.
+pub const USE_AFTER_CHURN_THROUGH_A_RUST_BORROW_RETURN: Case = Case {
+  fixture: "fixtures",
+  name: "interop-use-after-churn",
+  vale: r#"
+import rust.mycrate.Domino;
+import rust.mycrate.Glyph;
+exported func main() int {
+  d = Domino.new();
+  d.add_glyph(Glyph.new(7));
+  d_ref = d.get_glyph(7);
+  d.add_glyph(Glyph.new(8));
+  return d_ref.location();
+}
+"#,
+  expect: Expect::FailsToCompile("BorrowCheckError"),
+};
+
+/// RED: a `std::vec::Vec` element accessor should be importable, so `v.get(0)` should resolve. It
+/// does not today — `get`/`first`/index are slice methods reached through `Deref<Target=[T]>`, and
+/// the importer discovers only a type's *inherent* methods (`new`/`push`/`pop`/`len`), never
+/// Deref-reached ones — so the call fails with `CouldntFindFunctionToCallT`, upstream of the borrow
+/// checker. This is the first blocker to a real-`Vec` element use-after-churn; the R test drives the
+/// importer to follow `Deref<Target=[T]>`.
+///
+/// Two further blockers sit behind it (so the use-after-churn R test itself uses the Domino wrapper,
+/// whose *inherent* `get_glyph` returns a bare `&Glyph`): a `Vec` element accessor returns
+/// `Option<&T>` — a group nested in a reference-typed field, which the checker does not yet track —
+/// and using a `&int` element needs a read-out the pass does not do yet.
+pub const REAL_VEC_ELEMENT_ACCESSOR_IS_IMPORTABLE: Case = Case {
+  fixture: "fixtures",
+  name: "interop-vec-element-accessor-importable",
+  vale: r#"
+import rust.alloc.vec.Vec;
+import rust.alloc.alloc.Global;
+import rust.core.option.Option;
+exported func main() int {
+  v = Vec.new<int>();
+  v.push(7);
+  e = (v.get(0)).unwrap();
+  return 0;
+}
+"#,
+  expect: Expect::Returns(0),
+};
+
+/// The clean companion — a negative control: taking the `&Glyph` borrow *after* the last churn is
+/// valid, so this program must compile. It shares the fixture and the churn method with the case
+/// above; what differs is only the order (`add_glyph` before `get_glyph`), which is what use-after-
+/// churn turns on. Once the importer carries the group facts, this must stay `Returns`, guarding the
+/// churn rule against over-rejection. GREEN today (nothing is checked), RED never.
+pub const RUST_BORROW_RETURN_TAKEN_AFTER_LAST_CHURN_IS_CLEAN: Case = Case {
+  fixture: "fixtures",
+  name: "interop-borrow-after-last-churn",
+  vale: r#"
+import rust.mycrate.Domino;
+import rust.mycrate.Glyph;
+exported func main() int {
+  d = Domino.new();
+  d.add_glyph(Glyph.new(7));
+  d.add_glyph(Glyph.new(8));
+  d_ref = d.get_glyph(7);
+  return d_ref.location();
+}
+"#,
+  expect: Expect::Returns(7),
+};

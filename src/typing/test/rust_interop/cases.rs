@@ -1988,3 +1988,49 @@ fn a_fatal_rustc_error_costs_one_case() {
     "rustc was expected to fail before after_expansion, but the callback ran"
   );
 }
+
+/// R (RED until the importer carries Rust borrow facts): a `&Glyph` returned by a Rust `&self` method
+/// is used after a Rust `&mut self` method churns its owner — a use-after-churn across the interop
+/// boundary, the Rust-`Vec` shape. `declarations.rs` synthesizes each imported function with no
+/// effects and no return group, so the checker sees no churn and no tracked reference, and the
+/// program compiles. This fails until `&mut self` → `mut(g)` and a `&self`-borrowed return → `&T in g`
+/// land in the importer; the borrow checker itself needs no change.
+#[test]
+fn use_after_churn_through_a_rust_borrow_return_is_rejected() {
+  let outcome = run_case(&USE_AFTER_CHURN_THROUGH_A_RUST_BORROW_RETURN, callees_in_main);
+
+  assert!(
+    outcome.check(&USE_AFTER_CHURN_THROUGH_A_RUST_BORROW_RETURN).is_none(),
+    "a use-after-churn across the Rust interop boundary was accepted:\n{}",
+    outcome.rendered_log()
+  );
+}
+
+/// RED (until the importer follows `Deref<Target=[T]>`): a real `std::vec::Vec` element accessor
+/// should be importable, so `v.get(0)` should resolve and the program should compile. It does not
+/// today — `get` is a slice method reached through `Deref<[T]>`, and the importer discovers only a
+/// type's inherent methods (`new`/`push`/`pop`/`len`), so the call fails with
+/// `CouldntFindFunctionToCallT`. This is the first of three blockers to a real-`Vec` element
+/// use-after-churn; the use-after-churn R test itself uses the Domino wrapper (inherent
+/// `get_glyph -> &Glyph`).
+#[test]
+fn a_real_vec_element_accessor_is_importable() {
+  let outcome = run_case(&REAL_VEC_ELEMENT_ACCESSOR_IS_IMPORTABLE, callees_in_main);
+
+  outcome
+    .check(&REAL_VEC_ELEMENT_ACCESSOR_IS_IMPORTABLE)
+    .expect("a real Vec's element accessor (`get`) should resolve, but the program did not compile");
+}
+
+/// The negative control for the case above: the same fixture and churn method, but the `&Glyph`
+/// borrow is taken *after* the last churn, so it is valid and the program must compile. It guards the
+/// eventual churn rule against over-rejection — once the importer carries the group facts, this must
+/// stay compiling.
+#[test]
+fn rust_borrow_return_taken_after_last_churn_is_clean() {
+  let outcome = run_case(&RUST_BORROW_RETURN_TAKEN_AFTER_LAST_CHURN_IS_CLEAN, callees_in_main);
+
+  outcome
+    .check(&RUST_BORROW_RETURN_TAKEN_AFTER_LAST_CHURN_IS_CLEAN)
+    .expect("the case declares it compiles");
+}

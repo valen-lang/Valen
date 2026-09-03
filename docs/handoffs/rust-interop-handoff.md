@@ -56,6 +56,19 @@ names and lacks two of its pieces. Tracked here so neither doc has to carry the 
   entry is the only inbound Rust→Valen crossing today. The general form — every export emitted under its
   rustc-mangled name, the inbound mirror of `FunctionExternI.link_name` — is unbuilt.
 
+## Borrow groups on Rust returns (design requirement the importer must meet)
+
+The borrowing design (`src/typing/docs/architecture/borrowing-design.md`, ratified) now forbids a
+groupless borrow: after `groupify_function` every borrow reference carries a group, and a function
+whose return type is a borrow with no group (`&T`, not `&T in g`) is a compile error. A Rust import
+that returns a borrow (`&Glyph`, `&V`) is synthesized with no group (`declarations.rs`/`corpus.rs`
+emit empty effects + no return group), so the **importer must synthesize an `&T in g` return group**
+(and `mut(g)` effects) for Rust borrow-returning methods; until it does, those returns are underivable
+and rejected. This is the concrete form of the "awaiting importer group facts" the RED borrow cases
+(`use_after_churn_through_a_rust_borrow_return_is_rejected`, `a_real_vec_element_accessor_is_importable`
+in `src/typing/test/rust_interop/cases.rs`) are blocked on. Design-vs-code: the ruling and the checker
+enforcement are landing on the borrow-checker branch; the importer-side group synthesis is unbuilt.
+
 ## State (regenerate, don't trust stale)
 
 **Developing the compiler uses stock Rust nightly** — there is no `rust-toolchain.toml` pin. A default
@@ -521,6 +534,9 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
 
 ## Lessons learned
 
+- The borrow checker no longer accepts a groupless borrow: a Rust import's borrow return (`&Glyph`,
+  `&V`) needs an importer-synthesized `&T in g` group and `mut(g)` effects, or it is rejected as
+  underivable — the old silently-untracked `Empty` group is gone.
 - A Rust method's receiver borrow (`&self`) splits per @PFVSZ: the argument binds to the **value** rune,
   and the borrow concludes a separate **full-type** rune. Wiring the borrow onto the argument rune makes
   the peeled receiver fail `KindIsNotBorrowRef`.

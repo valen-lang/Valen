@@ -36,16 +36,18 @@ where
       return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
       maybe_origin_function_templata: Some(env.templata()),
     };
-    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(ExpressionTE::Return(
-      self.typing_interner.alloc(ReturnTE::new(ExpressionTE::PopRuntimeSizedArray({
+    // This is a compiler-generated builtin body, so its nodes have no user source; the honest range is a synthesized internal one.
+    let synth_range = RangeS::internal(self.scout_arena, -70060);
+    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(synth_range, ExpressionTE::Return(
+      self.typing_interner.alloc(ReturnTE::new(synth_range, ExpressionTE::PopRuntimeSizedArray({
         let array_expr = ExpressionTE::ArgLookup(
-          self.typing_interner.alloc(ArgLookupTE::new(0, param_coords[0].tyype)),
+          self.typing_interner.alloc(ArgLookupTE::new(synth_range, 0, param_coords[0].tyype)),
         );
         let element_type = match peel_all_references(array_expr.result()) {
           KindT::RuntimeSizedArray(rsa) => rsa.element_type(),
           other => panic!("vwat: {:?}", other),
         };
-        self.typing_interner.alloc(PopRuntimeSizedArrayTE::new(array_expr, element_type))
+        self.typing_interner.alloc(PopRuntimeSizedArrayTE::new(synth_range, array_expr, element_type))
       }))),
     ))));
     (header, body)

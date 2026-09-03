@@ -3,8 +3,8 @@ use super::util::assert_borrow_error_renders;
 // The violation is the same aliasing `badpair(&e, &e)`; these slices vary only *where* it is nested,
 // exercising the walk. The rendered diagnostic is identical (it points at the caller `main`), which
 // is exactly what confirms the walk found the same violation in each position.
-const ALIASING_DIAGNOSTIC: &str = r#"At test:0.vale:3:1:
-exported func main() int {
+const ALIASING_DIAGNOSTIC: &str = r#"At test:0.vale:6:14:
+    badpair(&e, &e);
 Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
 "#;
 
@@ -58,8 +58,8 @@ fn test_violation_in_nested_arg_call_caught() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:4:1:
-exported func main() int {
+    r#"At test:0.vale:6:19:
+  outer(badpairi(&e, &e));
 Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
 "#,
   );
@@ -80,7 +80,10 @@ fn value_call_program(statement: &str) -> String {
 fn test_violation_in_let_initializer_caught() {
   assert_borrow_error_renders(
     &value_call_program("  y = badpairi(&e, &e);\n  return y;"),
-    ALIASING_DIAGNOSTIC,
+    r#"At test:0.vale:5:17:
+  y = badpairi(&e, &e);
+Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
+"#,
   );
 }
 
@@ -89,7 +92,10 @@ fn test_violation_in_let_initializer_caught() {
 fn test_violation_in_return_caught() {
   assert_borrow_error_renders(
     &value_call_program("  return badpairi(&e, &e);"),
-    ALIASING_DIAGNOSTIC,
+    r#"At test:0.vale:5:20:
+  return badpairi(&e, &e);
+Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
+"#,
   );
 }
 
@@ -98,7 +104,10 @@ fn test_violation_in_return_caught() {
 fn test_violation_in_set_source_caught() {
   assert_borrow_error_renders(
     &value_call_program("  y = 0;\n  set y = badpairi(&e, &e);\n  return y;"),
-    ALIASING_DIAGNOSTIC,
+    r#"At test:0.vale:6:21:
+  set y = badpairi(&e, &e);
+Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
+"#,
   );
 }
 

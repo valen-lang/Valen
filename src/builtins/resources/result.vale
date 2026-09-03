@@ -42,9 +42,9 @@ func expect<OkType, ErrType>(ok Ok<OkType, ErrType>, msg str) OkType {
   return ^value;
 }
 
-abstract func expect<OkType, ErrType>(virtual result &Result<OkType, ErrType>, msg str) &OkType;
-func expect<OkType, ErrType>(err &Err<OkType, ErrType>, msg str) &OkType { panic(msg); }
-func expect<OkType, ErrType>(ok &Ok<OkType, ErrType>, msg str) &OkType { return &ok.value; }
+abstract func expect<OkType, ErrType, g'>(virtual result &Result<OkType, ErrType> in g, msg str) &OkType in g...;
+func expect<OkType, ErrType, g'>(err &Err<OkType, ErrType> in g, msg str) &OkType in g... { panic(msg); }
+func expect<OkType, ErrType, g'>(ok &Ok<OkType in g, ErrType>, msg str) &OkType in g... { return &ok.value; }
 
 
 
@@ -55,6 +55,6 @@ func expect_err<OkType, ErrType>(err Err<OkType, ErrType>, msg str) ErrType {
   return ^value;
 }
 
-abstract func expect_err<OkType, ErrType>(virtual result &Result<OkType, ErrType>, msg str) &ErrType;
-func expect_err<OkType, ErrType>(ok &Ok<OkType, ErrType>, msg str) &ErrType { panic(msg); }
-func expect_err<OkType, ErrType>(err &Err<OkType, ErrType>, msg str) &ErrType { return &err.value; }
+abstract func expect_err<OkType, ErrType, g'>(virtual result &Result<OkType, ErrType> in g, msg str) &ErrType in g...;
+func expect_err<OkType, ErrType, g'>(ok &Ok<OkType, ErrType> in g, msg str) &ErrType in g... { panic(msg); }
+func expect_err<OkType, ErrType, g'>(err &Err<OkType, ErrType> in g, msg str) &ErrType in g... { return &err.value; }

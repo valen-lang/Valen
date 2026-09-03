@@ -45,16 +45,20 @@ where
       KindT::StaticSizedArray(ssa) => ssa.size(),
       other => panic!("SSALenMacro received non-SSA param: {:?}", other),
     };
+    // This is a compiler-generated builtin body, so its nodes have no user source; the honest range is a synthesized internal one.
+    let synth_range = RangeS::internal(self.scout_arena, -70090);
     let discard_te =
-      ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(ExpressionTE::ArgLookup(
-        self.typing_interner.alloc(ArgLookupTE::new(0, param_coords[0].tyype)),
+      ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(synth_range, ExpressionTE::ArgLookup(
+        self.typing_interner.alloc(ArgLookupTE::new(synth_range, 0, param_coords[0].tyype)),
       ))));
     let return_te =
-      ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(ExpressionTE::ConstantInt(
-        self.typing_interner.alloc(ConstantIntTE::new(len, 32, RegionT::Default)),
+      ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(synth_range, ExpressionTE::ConstantInt(
+        self.typing_interner.alloc(ConstantIntTE::new(synth_range, len, 32, RegionT::Default)),
       ))));
     let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
+      synth_range,
       ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE::new(
+        synth_range,
         self.typing_interner.alloc_slice_from_vec(vec![discard_te, return_te]),
       ))),
     )));

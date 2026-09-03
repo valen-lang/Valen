@@ -34,14 +34,17 @@ where
       return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
       maybe_origin_function_templata: Some(env.templata()),
     };
-    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(ExpressionTE::Return(
-      self.typing_interner.alloc(ReturnTE::new(ExpressionTE::PushRuntimeSizedArray(
+    // This is a compiler-generated builtin body, so its nodes have no user source; the honest range is a synthesized internal one.
+    let synth_range = RangeS::internal(self.scout_arena, -70070);
+    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(synth_range, ExpressionTE::Return(
+      self.typing_interner.alloc(ReturnTE::new(synth_range, ExpressionTE::PushRuntimeSizedArray(
         self.typing_interner.alloc(PushRuntimeSizedArrayTE::new(
+          synth_range,
           ExpressionTE::ArgLookup(
-            self.typing_interner.alloc(ArgLookupTE::new(0, param_coords[0].tyype)),
+            self.typing_interner.alloc(ArgLookupTE::new(synth_range, 0, param_coords[0].tyype)),
           ),
           ExpressionTE::ArgLookup(
-            self.typing_interner.alloc(ArgLookupTE::new(1, param_coords[1].tyype)),
+            self.typing_interner.alloc(ArgLookupTE::new(synth_range, 1, param_coords[1].tyype)),
           ),
         )),
       ))),

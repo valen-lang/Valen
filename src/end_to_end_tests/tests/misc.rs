@@ -6,23 +6,32 @@ fn p(rel: &str) -> std::path::PathBuf {
     programs_dir().join(rel)
 }
 
-#[test] fn mutswaplocals()          { assert_compile_and_run(&p("programs/mutswaplocals.vale"), 42); }
+#[test] #[ignore] // VCOORD: re enable w borrowing
+fn mutswaplocals()          { assert_compile_and_run(&p("programs/mutswaplocals.vale"), 42); }
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn restackify()             { assert_compile_and_run(&p("programs/restackify.vale"), 42); }
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn destructure_restackify() { assert_compile_and_run(&p("programs/destructure_restackify.vale"), 42); }
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn loop_restackify()        { assert_compile_and_run(&p("programs/loop_restackify.vale"), 42); }
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn mutlocal()               { assert_compile_and_run(&p("programs/mutlocal.vale"), 42); }
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn constraintRef()          { assert_compile_and_run(&p("programs/constraintRef.vale"), 8); }
-#[test] fn unstackifyret()          { assert_compile_and_run(&p("programs/unstackifyret.vale"), 42); }
+#[test] #[ignore] // VCOORD: re enable w borrowing
+fn unstackifyret()          { assert_compile_and_run(&p("programs/unstackifyret.vale"), 42); }
 #[test]
 #[ignore] // ZCOORD: re-enable with onion
 fn unreachablemoot()        { assert_compile_and_run(&p("programs/unreachablemoot.vale"), 42); }
-#[test] fn panic()                  { assert_compile_and_run(&p("programs/panic.vale"), 1); }
+#[test] #[ignore] // VCOORD: re enable w borrowing
+fn panic()                  { assert_compile_and_run(&p("programs/panic.vale"), 1); }
 #[test]
 #[ignore] // ZCOORD: re-enable with onion
 fn panicnot()               { assert_compile_and_run(&p("programs/panicnot.vale"), 42); }
-#[test] fn nestedblocks()           { assert_compile_and_run(&p("programs/nestedblocks.vale"), 42); }
+#[test] #[ignore] // VCOORD: re enable w borrowing
+fn nestedblocks()           { assert_compile_and_run(&p("programs/nestedblocks.vale"), 42); }

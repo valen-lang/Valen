@@ -47,9 +47,10 @@ func get<T>(opt Some<T>) T {
   return ^value;
 }
 
-abstract func get<T>(virtual opt &Opt<T>) &T;
-func get<T>(opt &None<T>) &T { panic("Called get() on a None!"); }
-func get<T>(opt &Some<T>) &T { return &opt.value; }
+// TODO: figure out what to do instead of this g... perhaps an associated group inside Opt?
+abstract func get<T, g'>(virtual opt &Opt<T> in g) &T in g...;
+func get<T, g'>(opt &None<T> in g) &T in g... { panic("Called get() on a None!"); }
+func get<T, g'>(opt &Some<T> in g) &T in g... { return &opt.value; }
 
 abstract func expect_none<T>(virtual opt Opt<T>) None<T>;
 func expect_none<T>(opt Some<T>) None<T> { panic("Called expect_none() on a Some!"); }

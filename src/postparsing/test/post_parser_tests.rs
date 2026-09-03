@@ -2313,3 +2313,105 @@ fn exported_function_keeps_export_and_is_user_function() {
     main.attributes
   );
 }
+
+#[test]
+fn test_return_position_group_captured() {
+  // `func foo<g'>(a &int in g) &int in g`: the written return type is captured as a group-annotated
+  // `ITypeST` on `FunctionS.maybe_return_type`, its borrow carrying group `g` — where the borrow
+  // checker reads a returned reference's group. A group on a return used to panic the scout.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func foo<g'>(a &int in g) &int in g { return a; }",
+  );
+  let foo = program.lookup_function("foo");
+  match foo.maybe_return_type {
+    Some(ITypeST::BorrowRef(BorrowRefST { region: RegionS::Group(GroupS::Rune(_)), .. })) => {}
+    other => {
+      panic!("expected return `&int in g` captured as a borrow with a group region; got {:?}", other)
+    }
+  }
+}
+
+#[test]
+fn test_return_element_group_captured() {
+  // `... &int in g[]`: the return's group is an element path (`Elements` over `g`), captured on
+  // `maybe_return_type` — so a returned element reference's child group is visible to the checker.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func first<g'>(a &[]int in g) &int in g[] { return &a[0]; }",
+  );
+  let first = program.lookup_function("first");
+  match first.maybe_return_type {
+    Some(ITypeST::BorrowRef(BorrowRefST {
+      region: RegionS::Group(GroupS::Elements { base: GroupS::Rune(_) }),
+      ..
+    })) => {}
+    other => {
+      panic!("expected return `&int in g[]` captured as a borrow with an element group; got {:?}", other)
+    }
+  }
+}
+
+#[test]
+fn test_return_descendant_group_captured() {
+  // `... &int in g...`: the return's group is an ellipsis path (`Ellipsis` over `g`), captured on
+  // `maybe_return_type` — a returned reference pointing somewhere within g's territory.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func peek<g'>(a &[]int in g) &int in g... { return &a[0]; }",
+  );
+  let peek = program.lookup_function("peek");
+  match peek.maybe_return_type {
+    Some(ITypeST::BorrowRef(BorrowRefST {
+      region: RegionS::Group(GroupS::Ellipsis { base: GroupS::Rune(_) }),
+      ..
+    })) => {}
+    other => {
+      panic!("expected return `&int in g...` captured as a borrow with an ellipsis group; got {:?}", other)
+    }
+  }
+}
+
+#[test]
+fn test_effect_ellipsis_scouts_to_mut() {
+  // `mut(g...)` scouts its effect clause onto FunctionS.effects as a `Mut` over an `Ellipsis` group.
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    r#"
+exported func foo<g'>() int mut(g...) { return 0; }
+"#,
+  );
+  let foo = program.lookup_function("foo");
+  match foo.effects {
+    [EffectS::Mut(GroupS::Ellipsis { base: GroupS::Rune(_) })] => {}
+    other => panic!("expected FunctionS.effects [Mut(Ellipsis(Rune g))]; got {:?}", other),
+  }
+}
