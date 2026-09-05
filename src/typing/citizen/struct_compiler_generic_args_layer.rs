@@ -128,7 +128,7 @@ where
     coutputs.add_instantiation_bounds(
       self.opts.global_options.sanity_check,
       self.typing_interner,
-      original_calling_env.denizen_template_id(),
+      *original_calling_env.denizen_template_id(),
       id,
       complete_resolve_solve.rune_to_bound,
     );
@@ -448,7 +448,7 @@ where
     coutputs.add_instantiation_bounds(
       self.opts.global_options.sanity_check,
       self.typing_interner,
-      original_calling_env.denizen_template_id(),
+      *original_calling_env.denizen_template_id(),
       id,
       complete_resolve_solve.rune_to_bound,
     );

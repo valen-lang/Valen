@@ -1,4 +1,4 @@
-weakable struct Muta { hp int; }
+struct Muta share { hp int; }
 exported func main() int {
   ownMuta = Muta(7);
   weakMuta = &&ownMuta;

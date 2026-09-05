@@ -82,7 +82,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     *self
       .structs
       .iter()
-      .find(|s| s.instantiated_citizen.id == struct_id)
+      .find(|s| *s.instantiated_citizen.id == struct_id)
       .expect("lookup_struct: missing")
   }
 

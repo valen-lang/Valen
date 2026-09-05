@@ -472,9 +472,6 @@ where
 {
   collect_if(pred, out, NodeRefP::Attribute(attribute));
   match attribute {
-    IAttributeP::WeakableAttribute(WeakableAttributeP { range }) => {
-      visit_weakable_attribute(pred, out, range)
-    }
     IAttributeP::SealedAttribute(SealedAttributeP { range }) => {
       visit_sealed_attribute(pred, out, range)
     }
@@ -483,12 +480,6 @@ where
     }
     _ => {}
   }
-}
-
-fn visit_weakable_attribute<'p, T, F>(_pred: &F, _out: &mut Vec<T>, _range: &RangeL)
-where
-  F: Fn(NodeRefP<'p>) -> Option<T>,
-{
 }
 
 fn visit_sealed_attribute<'p, T, F>(_pred: &F, _out: &mut Vec<T>, _range: &RangeL)

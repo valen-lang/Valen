@@ -640,13 +640,13 @@ where 's: 't,
           IStructDeclarationNameS::AnonymousSubstructTemplateName(
                 *self.scout_arena.alloc(struct_template_name_s)),
           attributes_slice,
-          false,
           generic_params_slice,
           interface_a.sharedness,
           tyype,
           header_rules_slice,
           member_rules_slice,
           members_slice,
+          &[],
           &[],
           &[],
         );
@@ -903,8 +903,10 @@ where 's: 't,
             new_tyype,
             new_params_slice,
             Some(inherited_return_rune),
+            &[], // effects
             rules_slice,
-            &[],
+            &[], // impl_bounds
+            &[], // func_bounds
             body,
         ))
     }

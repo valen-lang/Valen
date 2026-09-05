@@ -1,5 +1,5 @@
 use crate::interner::{Interner, StrI};
-use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::ast::{ICitizenDenizenS, IDenizenS, LocationInDenizen};
 use crate::postparsing::ast::{FunctionS, ImplS, InterfaceS, StructS};
 use crate::postparsing::names::*;
 use crate::postparsing::*;
@@ -78,7 +78,6 @@ where
   pub type_name_to_outer_env: HashMap<IdT<'s, 't>, IInDenizenEnvironmentT<'s, 't>>,
   pub type_name_to_inner_env: HashMap<IdT<'s, 't>, IInDenizenEnvironmentT<'s, 't>>,
 
-  pub type_name_to_sharedness: HashMap<IdT<'s, 't>, SharednessT>,
   pub interface_name_to_sealed: HashMap<IdT<'s, 't>, bool>,
 
   // Per @IIIOZ, iterated by get_all_structs / get_all_interfaces → IndexMap for cross-run determinism.
@@ -127,7 +126,6 @@ where
       function_name_to_inner_env: HashMap::default(),
       type_name_to_outer_env: HashMap::default(),
       type_name_to_inner_env: HashMap::default(),
-      type_name_to_sharedness: HashMap::default(),
       interface_name_to_sealed: HashMap::default(),
       struct_template_name_to_definition: IndexMap::default(),
       interface_template_name_to_definition: IndexMap::default(),
@@ -144,11 +142,6 @@ where
       finished_deferred_function_body_compiles: HashSet::default(),
       finished_deferred_function_compiles: HashSet::default(),
     }
-  }
-
-  pub fn count_denizens(&self) -> i32 {
-    panic!("Unimplemented: Slab 10");
-    // signatureToFunction.size + structTemplateNameToDefinition.size + interfaceTemplateNameToDefinition.size
   }
 
   pub fn peek_next_deferred_function_body_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
@@ -223,9 +216,9 @@ where
         match reachable_prototype.id.local_name {
           INameT::FunctionBound(_) => {
             let reachable_func_super_template_id_init_steps =
-              Compiler::get_super_template(interner, reachable_prototype.id).init_steps;
+              Compiler::get_super_template(interner, &reachable_prototype.id).init_steps;
             let original_calling_super_template_id_init_steps =
-              Compiler::get_super_template(interner, _original_calling_template_id).init_steps;
+              Compiler::get_super_template(interner, &_original_calling_template_id).init_steps;
             assert!(
                             reachable_func_super_template_id_init_steps.starts_with(original_calling_super_template_id_init_steps),
                             "addInstantiationBounds: reachable func super template id init steps doesn't start with original calling super template id init steps"
@@ -240,7 +233,7 @@ where
         INameT::FunctionBound(_) => {
           if _sanity_check {
             let caller_bound_arg_func_super_template_id_init_steps =
-              Compiler::get_super_template(interner, caller_bound_arg_function.id).init_steps;
+              Compiler::get_super_template(interner, &caller_bound_arg_function.id).init_steps;
             let original_calling_super_template_id_steps =
               Compiler::get_root_super_template(interner, _original_calling_template_id).init_steps;
             assert!(
@@ -326,16 +319,6 @@ where
     self.type_declared_names.insert(*template_name);
   }
 
-  pub fn declare_type_sharedness(
-    &mut self,
-    template_name: &'t IdT<'s, 't>,
-    sharedness: SharednessT,
-  ) {
-    assert!(self.type_declared_names.contains(template_name));
-    assert!(!self.type_name_to_sharedness.contains_key(template_name));
-    self.type_name_to_sharedness.insert(*template_name, sharedness);
-  }
-
   pub fn declare_type_sealed(&mut self, template_name: IdT<'s, 't>, sealed: bool) {
     assert!(self.type_declared_names.contains(&template_name));
     assert!(!self.interface_name_to_sealed.contains_key(&template_name));
@@ -398,13 +381,11 @@ where
   }
 
   pub fn add_struct(&mut self, struct_def: &'t StructDefinitionT<'s, 't>) {
-    assert!(self.type_name_to_sharedness.contains_key(&struct_def.template_name));
     assert!(!self.struct_template_name_to_definition.contains_key(&struct_def.template_name));
     self.struct_template_name_to_definition.insert(struct_def.template_name, struct_def);
   }
 
   pub fn add_interface(&mut self, interface_def: &'t InterfaceDefinitionT<'s, 't>) {
-    assert!(self.type_name_to_sharedness.contains_key(&interface_def.template_name));
     assert!(self.interface_name_to_sealed.contains_key(&interface_def.template_name));
     assert!(!self.interface_template_name_to_definition.contains_key(&interface_def.template_name));
     self.interface_template_name_to_definition.insert(interface_def.template_name, interface_def);
@@ -423,13 +404,6 @@ where
       .entry(impl_t.super_interface_template_id)
       .or_insert_with(Vec::new)
       .push(impl_t);
-  }
-
-  pub fn get_parent_impls_for_sub_citizen_template(
-    &self,
-    sub_citizen_template: IdT<'s, 't>,
-  ) -> Vec<&'t ImplT<'s, 't>> {
-    panic!("Unimplemented: Slab 10");
   }
 
   pub fn get_child_impls_for_super_interface_template(
@@ -469,15 +443,6 @@ where
     self.function_exports.push(export);
   }
 
-  pub fn add_kind_extern(
-    &mut self,
-    kind: KindT<'s, 't>,
-    package_coord: PackageCoordinate<'s>,
-    exported_name: StrI<'s>,
-  ) {
-    panic!("Unimplemented: Slab 10");
-  }
-
   pub fn add_function_extern(
     &mut self,
     range: RangeS<'s>,
@@ -514,19 +479,11 @@ where
     self.deferred_function_compiles.insert(*name, devf);
   }
 
-  pub fn struct_declared(&self, template_name: IdT<'s, 't>) -> bool {
-    panic!("Unimplemented: Slab 10");
-  }
-
   pub fn lookup_sealed(&self, template_name: IdT<'s, 't>) -> bool {
     match self.interface_name_to_sealed.get(&template_name) {
       None => panic!("vfail: Still figuring out sealed for struct: {:?}", template_name), // See MFDBRE
       Some(m) => *m,
     }
-  }
-
-  pub fn interface_declared(&self, template_name: IdT<'s, 't>) -> bool {
-    panic!("Unimplemented: Slab 10");
   }
 
   pub fn lookup_struct(
@@ -593,9 +550,9 @@ where
     compiler: &Compiler<'s, '_, 't>,
   ) -> CitizenDefinitionT<'s, 't> {
     match citizen_tt {
-      ICitizenTT::Struct(s) => CitizenDefinitionT::Struct(self.lookup_struct(s.id, compiler)),
+      ICitizenTT::Struct(s) => CitizenDefinitionT::Struct(self.lookup_struct(*s.id, compiler)),
       ICitizenTT::Interface(i) => {
-        CitizenDefinitionT::Interface(self.lookup_interface(i.id, compiler))
+        CitizenDefinitionT::Interface(self.lookup_interface(*i.id, compiler))
       }
     }
   }
@@ -612,17 +569,6 @@ where
     self.signature_to_function.values().copied().collect()
   }
 
-  pub fn get_all_impls(&self) -> Vec<&'t ImplT<'s, 't>> {
-    panic!("Unimplemented: Slab 10");
-  }
-
-  pub fn get_env_for_function_signature(
-    &self,
-    sig: &'t SignatureT<'s, 't>,
-  ) -> &'t FunctionEnvironmentT<'s, 't> {
-    panic!("Unimplemented: Slab 10");
-  }
-
   pub fn get_outer_env_for_type(
     &self,
     name: IdT<'s, 't>,
@@ -635,23 +581,12 @@ where
     }
   }
 
-  pub fn get_inner_env_for_type(&self, name: IdT<'s, 't>) -> IInDenizenEnvironmentT<'s, 't> {
+  pub fn get_inner_env_for_type(&self, name: &'t IdT<'s, 't>) -> IInDenizenEnvironmentT<'s, 't> {
     *self.type_name_to_inner_env.get(&name).unwrap()
-  }
-
-  pub fn get_inner_env_for_function(&self, name: IdT<'s, 't>) -> IInDenizenEnvironmentT<'s, 't> {
-    panic!("Unimplemented: Slab 10");
   }
 
   pub fn get_outer_env_for_function(&self, name: IdT<'s, 't>) -> IInDenizenEnvironmentT<'s, 't> {
     *self.function_name_to_outer_env.get(&name).expect("vassertSome: get_outer_env_for_function")
-  }
-
-  pub fn get_return_type_for_signature(
-    &self,
-    sig: &'t SignatureT<'s, 't>,
-  ) -> Option<KindT<'s, 't>> {
-    panic!("Unimplemented: Slab 10");
   }
 
   pub fn get_kind_exports(&self) -> Vec<&'t KindExportT<'s, 't>> {
@@ -684,11 +619,33 @@ where
   // Compiler::get_or_create_postparsed_function, which turns a miss into a build. Struct/interface/impl
   // are always eager (seeded at index time), so their accessors are total and cannot reveal existence:
   // a miss is a vfail (compiler bug), never a recoverable "not there".
+  // VCOORD: revisit
+  // VENFORCE: only called by illuminate_function
   pub(in crate::typing) fn peek_postparsed_function(
     &self,
     template_id: &'t IdT<'s, 't>,
   ) -> Option<&'s FunctionS<'s>> {
     self.template_id_to_postparsed_function.get(template_id).copied()
+  }
+  // VENFORCE: only called by borrow checker and tests i think?
+  pub(in crate::typing) fn expect_postparsed_function(
+    &self,
+    template_id: &'t IdT<'s, 't>,
+  ) -> &'s FunctionS<'s> {
+    self.template_id_to_postparsed_function.get(template_id).copied().unwrap()
+  }
+  // VCOORD: revisit
+  pub(in crate::typing) fn peek_postparsed_type(
+    &self,
+    template_id: &'t IdT<'s, 't>,
+  ) -> Option<ICitizenDenizenS<'s>> {
+    if let Some(strukt) = self.template_id_to_postparsed_struct.get(template_id) {
+      return Some(ICitizenDenizenS::TopLevelStruct(*strukt));
+    }
+    if let Some(interface) = self.template_id_to_postparsed_interface.get(template_id) {
+      return Some(ICitizenDenizenS::TopLevelInterface(*interface));
+    }
+    return None;
   }
 
   pub(in crate::typing) fn get_postparsed_struct(

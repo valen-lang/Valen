@@ -10,7 +10,7 @@ use crate::typing::names::names::{IVarNameT, IdT};
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::rune_typing::rune_type_solver::RuneTypeSolveError;
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::types::types::{InterfaceTT, KindT, StructTT};
+use crate::typing::types::types::{InterfaceTT, KindT, SharednessT, StructTT};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
 use std::slice::from_ref;
@@ -264,10 +264,10 @@ pub enum ICompileErrorT<'s, 't> {
     range: &'t [RangeS<'s>],
     kind: BorrowErrorKind<'s, 't>,
   },
-  WeakableImplingMismatch {
+  SharedImplingMismatch {
     range: &'t [RangeS<'s>],
-    struct_weakable: bool,
-    interface_weakable: bool,
+    struct_shared: SharednessT,
+    interface_shared: SharednessT,
   },
   TookWeakRefOfNonWeakableError {
     range: &'t [RangeS<'s>],
@@ -343,7 +343,7 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
       Self::NonCitizenCantImpl { range, .. } => *range,
       Self::RangedInternalErrorT { range, .. } => *range,
       Self::BorrowCheckError { range, .. } => *range,
-      Self::WeakableImplingMismatch { range, .. } => *range,
+      Self::SharedImplingMismatch { range, .. } => *range,
       Self::TookWeakRefOfNonWeakableError { range, .. } => *range,
       Self::NoImplicitCloneDefinedT { range, .. } => *range,
       Self::ImplicitCloneRejectedT { range, .. } => *range,

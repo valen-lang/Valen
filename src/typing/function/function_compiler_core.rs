@@ -97,7 +97,7 @@ where
         // remove this once the postparser correctly peeks at sharedness and wraps.
         let ret_coord = match coord_templata.kind {
           KindT::Struct(struct_tt)
-            if coutputs.lookup_struct(struct_tt.id, self).sharedness == SharednessT::Shared =>
+            if coutputs.lookup_struct(*struct_tt.id, self).sharedness == SharednessT::Shared =>
           {
             KindT::ShareRef(self.typing_interner.alloc(ShareRefT { inner: coord_templata.kind }))
           }

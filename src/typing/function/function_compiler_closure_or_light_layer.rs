@@ -43,13 +43,16 @@ where
   ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
     let (variables, entries) = self.make_closure_variables_and_entries(
       coutputs,
-      calling_env.denizen_template_id(),
+      *calling_env.denizen_template_id(),
       closure_struct_ref,
     );
     let name = self.typing_interner.alloc(parent_env.id().add_step(
       self.typing_interner,
       self.translate_generic_template_function_name(function.name, arg_types),
     ));
+    // Register the lambda's __call FunctionS under its LambdaCallFunctionTemplate id — the id the
+    // borrow checker's resolve_callee looks up — so a call to a lambda has a postparsed present.
+    coutputs.register_postparsed_function(*name, function);
     let mut builder = TemplatasStoreBuilder::new(name);
     builder.add_entries(self.scout_arena, entries);
     let templatas = builder.build_in(self.typing_interner);
@@ -257,6 +260,9 @@ where
       self.typing_interner,
       self.translate_generic_template_function_name(function.name, arg_types),
     );
+    // Register a light lambda's __call FunctionS under its LambdaCallFunctionTemplate id (the id the
+    // borrow checker's resolve_callee looks up), mirroring the closure banner above.
+    coutputs.register_postparsed_function(outer_env_id, function);
     let outer_env = self.make_env_without_closure_stuff(parent_env, function, outer_env_id, false);
     self.evaluate_templated_light_banner_from_call(
       outer_env,
@@ -323,10 +329,10 @@ where
     original_calling_denizen_id: IdT<'s, 't>,
     closure_struct_ref: StructTT<'s, 't>,
   ) -> (Vec<IVariableT<'s, 't>>, Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>) {
-    let closure_struct_def = coutputs.lookup_struct(closure_struct_ref.id, self);
+    let closure_struct_def = coutputs.lookup_struct(*closure_struct_ref.id, self);
     let substituter = self.get_placeholder_substituter(
       self.opts.global_options.sanity_check,
-      original_calling_denizen_id,
+      &original_calling_denizen_id,
       closure_struct_ref.id,
       // This is a parameter, so we can grab bounds from it.
       IBoundArgumentsSource::InheritBoundsFromTypeItself,

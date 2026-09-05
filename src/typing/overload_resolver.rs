@@ -320,7 +320,7 @@ where
     match candidate {
       ICalleeCandidate::Function(FunctionCalleeCandidate { ft }) => {
         // See OFCBT.
-        let function = self.get_or_create_postparsed_function(coutputs, ft.function_template_id);
+        let function = self.illuminate_function(coutputs, ft.function_template_id);
         let identifying_rune_templata_types = function.tyype.param_types;
         // Now we want to check that the user didn't specify too many right here.
         // The function can inherit runes from its container, so subtract those first.
@@ -594,7 +594,7 @@ where
         let substituter = self.get_placeholder_substituter(
           self.opts.global_options.sanity_check,
           calling_env.denizen_template_id(),
-          prototype_t.id,
+          &prototype_t.id,
           IBoundArgumentsSource::InheritBoundsFromTypeItself,
         );
         let func_name = IFunctionNameT::try_from(prototype_t.id.local_name).unwrap_or_else(|_| {
@@ -649,10 +649,10 @@ where
         };
         match type_whose_env_to_search {
           KindT::Struct(sr) => {
-            vec![coutputs.get_outer_env_for_type(self.get_struct_template(sr.id))]
+            vec![coutputs.get_outer_env_for_type(self.get_struct_template(*sr.id))]
           }
           KindT::Interface(ir) => {
-            vec![coutputs.get_outer_env_for_type(self.get_interface_template(ir.id))]
+            vec![coutputs.get_outer_env_for_type(self.get_interface_template(*ir.id))]
           }
           KindT::KindPlaceholder(kp) => {
             vec![coutputs.get_outer_env_for_type(self.get_placeholder_template(kp.id))]
@@ -697,7 +697,7 @@ where
           for m in matching {
             match m {
               ITemplataT::Isa(&IsaTemplataT { super_kind: KindT::Interface(super_id), .. }) => {
-                let template_id = self.get_interface_template(super_id.id);
+                let template_id = self.get_interface_template(*super_id.id);
                 if !seen.contains(&template_id) {
                   seen.insert(template_id);
                   collected.push(coutputs.get_outer_env_for_type(template_id));

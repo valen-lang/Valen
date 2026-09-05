@@ -115,8 +115,6 @@ where
     let struct_template_id =
       self.resolve_struct_template(coutputs, self.typing_interner.alloc(struct_templata));
     coutputs.declare_type(struct_template_id);
-    // VCOORD: rename to declare_type_sharedness
-    coutputs.declare_type_sharedness(struct_template_id, translate_sharedness(struct_a.sharedness));
     // Build internal method entries for the outer env
     let internal_method_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = struct_a
       .internal_methods
@@ -174,8 +172,6 @@ where
     let interface_template_id =
       self.resolve_interface_template(coutputs, self.typing_interner.alloc(interface_templata));
     coutputs.declare_type(interface_template_id);
-    coutputs
-      .declare_type_sharedness(interface_template_id, translate_sharedness(interface_a.sharedness));
     // We do this here because we might compile a virtual function somewhere before we compile
     // the interface. The virtual function will need to know if the type is sealed to know
     // whether it's allowed to be virtual on this interface.
@@ -328,13 +324,6 @@ where
     )
   }
 
-  pub fn get_compound_type_mutability(&self, member_types: &[KindT<'s, 't>]) -> SharednessT {
-    panic!("Unimplemented: Slab 15");
-    // val membersOwnerships = memberTypes2.map(_.ownership)
-    // val allMembersImmutable = membersOwnerships.isEmpty || membersOwnerships.toSet == Set(ShareT)
-    // if (allMembersImmutable) ImmutableT else MutableT
-  }
-
   // VCOORD: see if we can get rid of this function and just inline it
   pub fn struct_compiler_get_sharedness(
     &self,
@@ -346,6 +335,6 @@ where
     _bound_arguments_source: IBoundArgumentsSource<'s, 't>,
   ) -> SharednessT {
     // Sharedness is parse-time-known and not template-parametric, so no substitution needed.
-    coutputs.lookup_struct(struct_tt.id, self).sharedness
+    coutputs.lookup_struct(*struct_tt.id, self).sharedness
   }
 }

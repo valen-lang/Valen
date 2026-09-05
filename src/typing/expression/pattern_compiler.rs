@@ -750,10 +750,10 @@ where
       _ => panic!("translateDestroyStructInnerAndMaybeContinue: expected Struct kind"),
     };
     // We don't pattern match against closure structs.
-    let struct_def_t = coutputs.lookup_struct(struct_tt.id, self);
+    let struct_def_t = coutputs.lookup_struct(*struct_tt.id, self);
     let substituter = self.get_placeholder_substituter(
       self.opts.global_options.sanity_check,
-      nenv.function_environment().template_id,
+      &nenv.function_environment().template_id,
       struct_tt.id,
       IBoundArgumentsSource::InheritBoundsFromTypeItself,
     );
@@ -936,10 +936,10 @@ where
     struct_tt: StructTT<'s, 't>,
     index: i32,
   ) -> ExpressionTE<'s, 't> {
-    let struct_def_t = coutputs.lookup_struct(struct_tt.id, self);
+    let struct_def_t = coutputs.lookup_struct(*struct_tt.id, self);
     let member = &struct_def_t.members[index as usize];
     let instantiation_bounds =
-      coutputs.get_instantiation_bounds(self.typing_interner, struct_tt.id).unwrap();
+      coutputs.get_instantiation_bounds(self.typing_interner, *struct_tt.id).unwrap();
     let member_type = self
       .get_placeholder_substituter(
         self.opts.global_options.sanity_check,

@@ -17,6 +17,7 @@ use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::types::types::IntT;
 use crate::typing::types::types::KindT;
+use crate::typing::types::types::SharednessT;
 use crate::typing::typing_interner::TypingInterner;
 use bumpalo::Bump;
 
@@ -434,9 +435,8 @@ Multiple candidates for call:
   );
 }
 
-// This test does not pass yet, use #[ignore].
 #[test]
-fn cant_make_non_weakable_extend_a_weakable() {
+fn cant_make_non_shared_extend_a_shared() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
   let typing_bump = Bump::new();
@@ -445,7 +445,7 @@ fn cant_make_non_weakable_extend_a_weakable() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
-weakable interface IUnit {}
+interface IUnit share {}
 struct Muta { hp int; }
 impl IUnit for Muta;
 func main(muta Muta) int  { return 7; }
@@ -463,27 +463,26 @@ func main(muta Muta) int  { return 7; }
   let err = compile
     .get_compiler_outputs()
     .err()
-    .unwrap_or_else(|| panic!("expected Err(WeakableImplingMismatch(false, true)), got Ok"));
+    .unwrap_or_else(|| panic!("expected Err(SharedImplingMismatch(Single, Shared)), got Ok"));
   match &err {
-    ICompileErrorT::WeakableImplingMismatch {
-      struct_weakable: false,
-      interface_weakable: true,
+    ICompileErrorT::SharedImplingMismatch {
+      struct_shared: SharednessT::Single,
+      interface_shared: SharednessT::Shared,
       ..
     } => {}
-    e => panic!("expected WeakableImplingMismatch(false, true), got Err({:?})", e),
+    e => panic!("expected SharedImplingMismatch(Single, Shared), got Err({:?})", e),
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
     r#"At test:0.vale:4:1:
 impl IUnit for Muta;
-Weakable mismatch in impl: struct is not weakable, but interface is.
+Sharedness mismatch in impl: struct is not shared, but interface is shared.
 "#,
   );
 }
 
-// This test does not pass yet, use #[ignore].
 #[test]
-fn cant_make_weakable_extend_a_non_weakable() {
+fn cant_make_shared_extend_a_non_shared() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
   let typing_bump = Bump::new();
@@ -493,7 +492,7 @@ fn cant_make_weakable_extend_a_non_weakable() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
 interface IUnit {}
-weakable struct Muta { hp int; }
+struct Muta share { hp int; }
 impl IUnit for Muta;
 func main(muta Muta) int  { return 7; }
 ";
@@ -510,20 +509,20 @@ func main(muta Muta) int  { return 7; }
   let err = compile
     .get_compiler_outputs()
     .err()
-    .unwrap_or_else(|| panic!("expected Err(WeakableImplingMismatch(true, false)), got Ok"));
+    .unwrap_or_else(|| panic!("expected Err(SharedImplingMismatch(Shared, Single)), got Ok"));
   match &err {
-    ICompileErrorT::WeakableImplingMismatch {
-      struct_weakable: true,
-      interface_weakable: false,
+    ICompileErrorT::SharedImplingMismatch {
+      struct_shared: SharednessT::Shared,
+      interface_shared: SharednessT::Single,
       ..
     } => {}
-    e => panic!("expected WeakableImplingMismatch(true, false), got Err({:?})", e),
+    e => panic!("expected SharedImplingMismatch(Shared, Single), got Err({:?})", e),
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
     r#"At test:0.vale:4:1:
 impl IUnit for Muta;
-Weakable mismatch in impl: struct is weakable, but interface is not.
+Sharedness mismatch in impl: struct is shared, but interface is not shared.
 "#,
   );
 }

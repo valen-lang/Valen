@@ -564,11 +564,25 @@ where
     use InternedKindPayloadValT as V;
     let canonical = match val {
       V::StructTT(v) => {
-        let c = StructTT { id: v.id, _must_intern: MustIntern(()) };
+        let c = StructTT {
+          id: self.intern_id(IdValT {
+            package_coord: v.id.package_coord,
+            init_steps: v.id.init_steps,
+            local_name: v.id.local_name,
+          }),
+          _must_intern: MustIntern(()),
+        };
         T::StructTT(self.bump.alloc(c))
       }
       V::InterfaceTT(v) => {
-        let c = InterfaceTT { id: v.id, _must_intern: MustIntern(()) };
+        let c = InterfaceTT {
+          id: self.intern_id(IdValT {
+            package_coord: v.id.package_coord,
+            init_steps: v.id.init_steps,
+            local_name: v.id.local_name,
+          }),
+          _must_intern: MustIntern(()),
+        };
         T::InterfaceTT(self.bump.alloc(c))
       }
       V::StaticSizedArrayTT(v) => {

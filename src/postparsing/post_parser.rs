@@ -703,6 +703,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         &mut child_lidb,
         &mut rule_builder,
         &mut impl_bounds,
+        &mut Vec::new(),
         default_region_rune_s.clone(),
         template_rules_p,
       );
@@ -1042,6 +1043,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     let generic_parameters_s = struct_user_specified_generic_parameters_s;
 
     let mut header_impl_bounds = Vec::new();
+    let mut header_func_bounds: Vec<(RuneUsage<'s>, FunctionS<'s>)> = Vec::new();
     translate_rulexes(
       self.scout_arena,
       self.keywords,
@@ -1049,6 +1051,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       &mut lidb.child(),
       &mut header_rule_builder,
       &mut header_impl_bounds,
+      &mut header_func_bounds,
       default_region_rune_s.clone(),
       &template_rules_p,
     );
@@ -1127,8 +1130,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       param_types: self.scout_arena.alloc_slice_copy(&param_types_vec),
       return_type: self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
     };
-    let weakable =
-      head.attributes.iter().any(|attr| matches!(attr, IAttributeP::WeakableAttribute(_)));
     let attrs_without_linear_s = Self::translate_citizen_attributes(
       self.scout_arena,
       file,
@@ -1136,7 +1137,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       &head
         .attributes
         .iter()
-        .filter(|attr| !matches!(attr, IAttributeP::WeakableAttribute(_)))
         .cloned()
         .collect::<Vec<_>>(),
     );
@@ -1163,7 +1163,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       struct_range_s,
       IStructDeclarationNameS::TopLevelStructDeclarationName(*struct_name),
       self.scout_arena.alloc_slice_from_vec(attrs_s),
-      weakable,
       self.scout_arena.alloc_slice_from_vec(generic_parameters_s),
       head.sharedness,
       tyype,
@@ -1172,6 +1171,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       self.scout_arena.alloc_slice_from_vec(members_s),
       self.scout_arena.alloc_slice_from_vec(internal_methods_s_vec),
       self.scout_arena.alloc_slice_from_vec(header_impl_bounds),
+      self.scout_arena.alloc_slice_from_vec(header_func_bounds),
     ))
   }
 
@@ -1222,8 +1222,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       "POSTPARSER_SCOUT_INTERFACE_DEFAULT_REGION_RUNE_NOT_YET_IMPLEMENTED"
     );
 
-    let weakable =
-      interface.attributes.iter().any(|attr| matches!(attr, IAttributeP::WeakableAttribute(_)));
     let attrs_without_linear_s = Self::translate_citizen_attributes(
       self.scout_arena,
       file,
@@ -1231,7 +1229,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       &interface
         .attributes
         .iter()
-        .filter(|attr| !matches!(attr, IAttributeP::WeakableAttribute(_)))
         .cloned()
         .collect::<Vec<_>>(),
     );
@@ -1303,6 +1300,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       .collect::<Vec<_>>();
 
     let mut impl_bounds = Vec::new();
+    let mut func_bounds: Vec<(RuneUsage<'s>, FunctionS<'s>)> = Vec::new();
     translate_rulexes(
       self.scout_arena,
       self.keywords,
@@ -1310,6 +1308,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       &mut lidb.child(),
       &mut rule_builder,
       &mut impl_bounds,
+      &mut func_bounds,
       default_region_rune_s.clone(),
       &rules_p,
     );
@@ -1343,13 +1342,13 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
       interface_range_s,
       interface_name,
       self.scout_arena.alloc_slice_from_vec(attributes),
-      weakable,
       generic_parameters_s,
       interface.sharedness,
       tyype,
       self.scout_arena.alloc_slice_from_vec(rules_s),
       self.scout_arena.alloc_slice_from_vec(internal_methods),
       self.scout_arena.alloc_slice_from_vec(impl_bounds),
+      self.scout_arena.alloc_slice_from_vec(func_bounds),
     ))
   }
 }

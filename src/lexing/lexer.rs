@@ -139,11 +139,6 @@ where
       return Ok(Some(IAttributeL::ExportAttribute(RangeL::new(attribute_begin, end))));
     }
 
-    if iter.try_skip_complete_word("weakable") {
-      let end = iter.get_pos();
-      return Ok(Some(IAttributeL::WeakableAttribute(RangeL::new(attribute_begin, end))));
-    }
-
     if iter.try_skip_complete_word("sealed") {
       let end = iter.get_pos();
       return Ok(Some(IAttributeL::SealedAttribute(RangeL::new(attribute_begin, end))));

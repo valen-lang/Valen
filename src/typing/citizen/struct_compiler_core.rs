@@ -168,7 +168,6 @@ where
       template_name: template_id_t,
       instantiated_citizen: placeholdered_struct_tt,
       attributes: attributes_slice,
-      weakable: struct_a.weakable,
       sharedness,
       members: members_slice,
       instantiation_bound_params,
@@ -297,7 +296,6 @@ where
       instantiated_interface: placeholdered_interface_tt,
       ref_: placeholdered_interface_tt,
       attributes: attributes_slice,
-      weakable: interface_a.weakable,
       sharedness,
       instantiation_bound_params,
       internal_methods: internal_methods_slice,
@@ -510,13 +508,11 @@ where
       understruct_templated_id,
       IInDenizenEnvironmentT::Citizen(struct_inner_env),
     );
-    coutputs.declare_type_sharedness(understruct_templated_id, sharedness);
 
     let closure_struct_definition = StructDefinitionT {
       template_name: *understruct_templated_id,
       instantiated_citizen: *understruct_struct_tt,
       attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
-      weakable: false,
       sharedness,
       members: self.typing_interner.alloc_slice_from_vec(
         members

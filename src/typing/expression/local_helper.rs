@@ -350,7 +350,7 @@ where
   /// only ways to discharge are the two `Compiler` methods above — no public raw-`Vec` escape hatch.
   pub fn take_vars(mut self) -> Vec<&'t LocalVariable<'s, 't>> {
     self.bomb.defuse();
-    let mut vars = mem::take(&mut self.vars);
+    let vars = mem::take(&mut self.vars);
     vars
   }
 }

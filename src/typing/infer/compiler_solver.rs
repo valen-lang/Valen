@@ -605,9 +605,9 @@ where
                             if let Some(ITemplataT::Kind(kt)) = solver_state.get_conclusion(&rune) {
                                 match kt.kind {
                                     KindT::Struct(sr) => rune_value_envs.push(
-                                        state.get_outer_env_for_type(self.get_struct_template(sr.id))),
+                                        state.get_outer_env_for_type(self.get_struct_template(*sr.id))),
                                     KindT::Interface(ir) => rune_value_envs.push(
-                                        state.get_outer_env_for_type(self.get_interface_template(ir.id))),
+                                        state.get_outer_env_for_type(self.get_interface_template(*ir.id))),
                                     KindT::KindPlaceholder(kp) => rune_value_envs.push(
                                         state.get_outer_env_for_type(self.get_placeholder_template(kp.id))),
                                     _ => {}
@@ -1620,7 +1620,7 @@ where
               result_rune.rune,
               ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
                 kind: KindT::Struct(
-                  self.typing_interner.intern_struct_tt(StructTTValT { id: kind.id }),
+                  self.typing_interner.intern_struct_tt(StructTTValT { id: *kind.id }),
                 ),
               })),
             );
@@ -1664,7 +1664,7 @@ where
               result_rune.rune,
               ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
                 kind: KindT::Interface(
-                  self.typing_interner.intern_interface_tt(InterfaceTTValT { id: kind.id }),
+                  self.typing_interner.intern_interface_tt(InterfaceTTValT { id: *kind.id }),
                 ),
               })),
             );

@@ -42,14 +42,14 @@ pub(super) fn resolve_callee<'s, 'ctx, 't>(
   call: &FunctionCallTE<'s, 't>,
   coutputs: &CompilerOutputs<'s, 't>,
   compiler: &Compiler<'s, 'ctx, 't>,
-) -> Option<&'s FunctionS<'s>> {
+) -> &'s FunctionS<'s> {
   let template_id_val = Compiler::get_function_template(compiler.typing_interner, call.callable.id);
   let template_id = compiler.typing_interner.intern_id(IdValT {
     package_coord: template_id_val.package_coord,
     init_steps: template_id_val.init_steps,
     local_name: template_id_val.local_name,
   });
-  coutputs.peek_postparsed_function(template_id)
+  coutputs.expect_postparsed_function(template_id)
 }
 
 /// Check one call's arguments jointly:
@@ -62,10 +62,7 @@ pub fn check_call<'s, 'ctx, 't>(
   coutputs: &CompilerOutputs<'s, 't>,
   compiler: &Compiler<'s, 'ctx, 't>,
 ) -> Result<(), ICompileErrorT<'s, 't>> {
-  let callee = match resolve_callee(call, coutputs, compiler) {
-    Some(callee) => callee,
-    None => return Ok(()),
-  };
+  let callee = resolve_callee(call, coutputs, compiler);
 
   let arg_count = call.args.len().min(callee.params.len());
   for i in 0..arg_count {

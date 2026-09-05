@@ -3,8 +3,8 @@
 // to permanent arena storage only inside intern_rune on a miss.
 
 use crate::keywords::Keywords;
-use crate::parsing::ast::{BuiltinCallPR, EqualsPR, IRulexPR, ITypePR};
-use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::parsing::ast::{BuiltinCallPR, EqualsPR, IRulexPR, ITemplexPT, ITypePR};
+use crate::postparsing::ast::{FunctionS, LocationInDenizenBuilder};
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType, PackTemplataType,
   RegionTemplataType,
@@ -12,7 +12,7 @@ use crate::postparsing::itemplatatype::{
 use crate::postparsing::names::{CodeRuneS, IRuneS, IRuneValS, ImplicitRuneValS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
 use crate::postparsing::rules::rules::{EqualsSR, IRulexSR, ImplBoundS, RuneUsage};
-use crate::postparsing::rules::templex_scout::translate_templex;
+use crate::postparsing::rules::templex_scout::{translate_func_templex, translate_templex};
 use crate::scout_arena::ScoutArena;
 
 /// Returns the translated versions of the given rules. Two things exit through out-params instead:
@@ -25,6 +25,7 @@ pub fn translate_rulexes<'s, 'p>(
   lidb: &mut LocationInDenizenBuilder,
   builder: &mut Vec<IRulexSR<'s>>,
   impl_bounds: &mut Vec<ImplBoundS<'s>>,
+  func_bounds: &mut Vec<(RuneUsage<'s>, FunctionS<'s>)>,
   context_region: IRuneS<'s>,
   rules_p: &[IRulexPR<'p>],
 ) -> Vec<RuneUsage<'s>> {
@@ -39,6 +40,7 @@ pub fn translate_rulexes<'s, 'p>(
         &mut child_lidb,
         builder,
         impl_bounds,
+        func_bounds,
         context_region.clone(),
         rule_p,
       )
@@ -53,6 +55,7 @@ fn translate_rulex<'s, 'p>(
   lidb: &mut LocationInDenizenBuilder,
   builder: &mut Vec<IRulexSR<'s>>,
   impl_bounds: &mut Vec<ImplBoundS<'s>>,
+  func_bounds: &mut Vec<(RuneUsage<'s>, FunctionS<'s>)>,
   context_region: IRuneS<'s>,
   rulex: &IRulexPR<'p>,
 ) -> RuneUsage<'s> {
@@ -76,15 +79,29 @@ fn translate_rulex<'s, 'p>(
     }
     IRulexPR::Templex(templex) => {
       let mut child_lidb = lidb.child();
-      translate_templex(
-        scout_arena,
-        keywords,
-        env,
-        &mut child_lidb,
-        builder,
-        context_region,
-        templex,
-      )
+      // A top-level `where func ..` bound is captured into func_bounds; every other templex (and any
+      // nested func-typed param, which is reached through translate_templex, not here) is not.
+      match templex {
+        ITemplexPT::Func(func) => translate_func_templex(
+          scout_arena,
+          keywords,
+          env,
+          &mut child_lidb,
+          builder,
+          context_region,
+          func,
+          Some(func_bounds),
+        ),
+        _ => translate_templex(
+          scout_arena,
+          keywords,
+          env,
+          &mut child_lidb,
+          builder,
+          context_region,
+          templex,
+        ),
+      }
     }
     IRulexPR::Equals(EqualsPR { range, left, right }) => {
       let mut child_lidb = lidb.child();
@@ -99,6 +116,7 @@ fn translate_rulex<'s, 'p>(
           &mut child_lidb,
           builder,
           impl_bounds,
+          func_bounds,
           context_region.clone(),
           left,
         )
@@ -112,6 +130,7 @@ fn translate_rulex<'s, 'p>(
           &mut child_lidb,
           builder,
           impl_bounds,
+          func_bounds,
           context_region.clone(),
           right,
         )
@@ -147,6 +166,7 @@ fn translate_rulex<'s, 'p>(
         &mut lidb.child(),
         builder,
         impl_bounds,
+        func_bounds,
         context_region.clone(),
         &args[0],
       );
@@ -157,6 +177,7 @@ fn translate_rulex<'s, 'p>(
         &mut lidb.child(),
         builder,
         impl_bounds,
+        func_bounds,
         context_region,
         &args[1],
       );

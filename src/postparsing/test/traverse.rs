@@ -3,8 +3,7 @@ use crate::postparsing::ast::{
   GeneratedBodyS, GenericParameterDefaultS, GenericParameterS, IBodyS, ICitizenAttributeS,
   ICitizenDenizenS, ICitizenS, IDenizenS, IFunctionAttributeS, IGenericParameterTypeS,
   IStructMemberS, ImplS, ImportS, InterfaceS, MacroCallS, NormalStructMemberS, ParameterS,
-  ProgramS, SealedS, StructS, TopLevelExportAsS, TopLevelFunctionS, TopLevelImplS, TopLevelImportS,
-  TopLevelInterfaceS, TopLevelStructS, UserFunctionS, VariadicStructMemberS,
+  ProgramS, SealedS, StructS, UserFunctionS, VariadicStructMemberS,
 };
 use crate::postparsing::expressions::{
   BlockSE, BodySE, DotSE, IExpressionSE, LocalS, OutsideLoadSE, OwnershippedSE, ReturnSE,
@@ -35,13 +34,7 @@ pub enum NodeRefS<'s> {
   Import(&'s ImportS<'s>),
 
   Denizen(&'s IDenizenS<'s>),
-  TopLevelFunction(&'s TopLevelFunctionS<'s>),
-  TopLevelImpl(&'s TopLevelImplS<'s>),
-  TopLevelExportAs(&'s TopLevelExportAsS<'s>),
-  TopLevelImport(&'s TopLevelImportS<'s>),
-  TopLevelStruct(&'s TopLevelStructS<'s>),
-  TopLevelInterface(&'s TopLevelInterfaceS<'s>),
-  CitizenDenizen(&'s ICitizenDenizenS<'s>),
+  CitizenDenizen(ICitizenDenizenS<'s>),
 
   CitizenAttribute(&'s ICitizenAttributeS<'s>),
   FunctionAttribute(&'s IFunctionAttributeS<'s>),
@@ -143,14 +136,14 @@ where
 }
 
 pub fn collect_in_citizen_denizen<'s, T, F>(
-  denizen: &'s ICitizenDenizenS<'s>,
+  denizen: ICitizenDenizenS<'s>,
   predicate: &F,
 ) -> Vec<T>
 where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
   let mut out = Vec::new();
-  visit_citizen_denizen(predicate, &mut out, denizen);
+  visit_citizen_denizen(predicate, &mut out, &denizen);
   out
 }
 
@@ -237,28 +230,28 @@ where
   collect_if(pred, out, NodeRefS::Denizen(denizen));
   match denizen {
     IDenizenS::TopLevelFunction(x) => {
-      collect_if(pred, out, NodeRefS::TopLevelFunction(x));
-      visit_function(pred, out, &x.function);
+      collect_if(pred, out, NodeRefS::Function(*x));
+      visit_function(pred, out, *x);
     }
     IDenizenS::TopLevelImpl(x) => {
-      collect_if(pred, out, NodeRefS::TopLevelImpl(x));
-      visit_impl(pred, out, &x.impl_);
+      collect_if(pred, out, NodeRefS::Impl(*x));
+      visit_impl(pred, out, *x);
     }
     IDenizenS::TopLevelExportAs(x) => {
-      collect_if(pred, out, NodeRefS::TopLevelExportAs(x));
-      visit_export_as(pred, out, &x.export);
+      collect_if(pred, out, NodeRefS::ExportAs(*x));
+      visit_export_as(pred, out, *x);
     }
     IDenizenS::TopLevelImport(x) => {
-      collect_if(pred, out, NodeRefS::TopLevelImport(x));
-      visit_import(pred, out, &x.imporrt);
+      collect_if(pred, out, NodeRefS::Import(*x));
+      visit_import(pred, out, *x);
     }
     IDenizenS::TopLevelStruct(x) => {
-      collect_if(pred, out, NodeRefS::TopLevelStruct(x));
-      visit_struct(pred, out, &x.strukt);
+      collect_if(pred, out, NodeRefS::Struct(*x));
+      visit_struct(pred, out, *x);
     }
     IDenizenS::TopLevelInterface(x) => {
-      collect_if(pred, out, NodeRefS::TopLevelInterface(x));
-      visit_interface(pred, out, &x.interface);
+      collect_if(pred, out, NodeRefS::Interface(*x));
+      visit_interface(pred, out, *x);
     }
   }
 }
@@ -273,19 +266,19 @@ where
   }
 }
 
-fn visit_citizen_denizen<'s, T, F>(pred: &F, out: &mut Vec<T>, denizen: &'s ICitizenDenizenS<'s>)
+fn visit_citizen_denizen<'s, T, F>(pred: &F, out: &mut Vec<T>, denizen: &ICitizenDenizenS<'s>)
 where
   F: Fn(NodeRefS<'s>) -> Option<T>,
 {
-  collect_if(pred, out, NodeRefS::CitizenDenizen(denizen));
+  collect_if(pred, out, NodeRefS::CitizenDenizen(*denizen));
   match denizen {
     ICitizenDenizenS::TopLevelStruct(x) => {
-      collect_if(pred, out, NodeRefS::TopLevelStruct(x));
-      visit_struct(pred, out, &x.strukt);
+      collect_if(pred, out, NodeRefS::Struct(x));
+      visit_struct(pred, out, x);
     }
     ICitizenDenizenS::TopLevelInterface(x) => {
-      collect_if(pred, out, NodeRefS::TopLevelInterface(x));
-      visit_interface(pred, out, &x.interface);
+      collect_if(pred, out, NodeRefS::Interface(x));
+      visit_interface(pred, out, x);
     }
   }
 }
@@ -322,6 +315,9 @@ where
   for impl_bound in strukt.impl_bounds {
     visit_impl_bound(pred, out, impl_bound);
   }
+  for (_, func_bound) in strukt.func_bounds {
+    visit_function(pred, out, func_bound);
+  }
 }
 
 fn visit_interface<'s, T, F>(pred: &F, out: &mut Vec<T>, interface: &'s InterfaceS<'s>)
@@ -350,6 +346,9 @@ where
   }
   for impl_bound in interface.impl_bounds {
     visit_impl_bound(pred, out, impl_bound);
+  }
+  for (_, func_bound) in interface.func_bounds {
+    visit_function(pred, out, func_bound);
   }
 }
 
@@ -416,6 +415,9 @@ where
   }
   for impl_bound in function.impl_bounds {
     visit_impl_bound(pred, out, impl_bound);
+  }
+  for (_, func_bound) in function.func_bounds {
+    visit_function(pred, out, func_bound);
   }
   visit_body(pred, out, &function.body);
 }

@@ -204,19 +204,19 @@ where
     rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect()
   }
 
-  pub fn get_function_template(interner: &TypingInterner<'s, 't>, id: IdT<'s, 't>) -> IdT<'s, 't> {
+  pub fn get_function_template(interner: &TypingInterner<'s, 't>, id: IdT<'s, 't>) -> &'t IdT<'s, 't> {
     let func_name = IFunctionNameT::try_from(id.local_name).unwrap_or_else(|_| {
       panic!("get_function_template: not a function name: {:?}", id.local_name)
     });
     let template_local: INameT<'s, 't> = ITemplateNameT::from(func_name.template()).into();
-    *interner.intern_id(IdValT {
+    interner.intern_id(IdValT {
       package_coord: id.package_coord,
       init_steps: id.init_steps,
       local_name: template_local,
     })
   }
 
-  pub fn get_citizen_template(&self, id: IdT<'s, 't>) -> IdT<'s, 't> {
+  pub fn get_citizen_template(&self, id: &IdT<'s, 't>) -> &'t IdT<'s, 't> {
     let local_name = match id.local_name {
       INameT::Struct(s) => match s.template {
         IStructTemplateNameT::StructTemplate(tmpl) => INameT::StructTemplate(tmpl),
@@ -230,7 +230,7 @@ where
       INameT::AnonymousSubstruct(a) => INameT::AnonymousSubstructTemplate(a.template),
       _ => panic!("get_citizen_template called with non-citizen name: {:?}", id.local_name),
     };
-    *self.typing_interner.intern_id(IdValT {
+    self.typing_interner.intern_id(IdValT {
       package_coord: id.package_coord,
       init_steps: id.init_steps,
       local_name,
@@ -244,11 +244,11 @@ where
     }
   }
 
-  pub fn get_super_template(interner: &TypingInterner<'s, 't>, id: IdT<'s, 't>) -> IdT<'s, 't> {
+  pub fn get_super_template(interner: &TypingInterner<'s, 't>, id: &IdT<'s, 't>) -> &'t IdT<'s, 't> {
     let new_init_steps: Vec<INameT<'s, 't>> =
       id.init_steps.iter().map(|n| Self::get_name_template(*n)).collect();
     let new_local_name = Self::get_name_template(id.local_name);
-    *interner.intern_id(IdValT {
+    interner.intern_id(IdValT {
       package_coord: id.package_coord,
       init_steps: &new_init_steps,
       local_name: new_local_name,
@@ -259,7 +259,7 @@ where
     interner: &TypingInterner<'s, 't>,
     id: IdT<'s, 't>,
   ) -> IdT<'s, 't> {
-    let mut tentative_id = Self::get_super_template(interner, id);
+    let mut tentative_id = *Self::get_super_template(interner, &id);
     loop {
       let contains_lambda = tentative_id.init_steps.iter().any(|n| match n {
         INameT::LambdaCitizenTemplate(_) => true,
@@ -343,18 +343,6 @@ where
       init_steps: id.init_steps,
       local_name,
     })
-  }
-
-  pub fn get_export_template(&self, id: IdT<'s, 't>) -> IdT<'s, 't> {
-    panic!("Unimplemented: Slab 10");
-    // val IdT(packageCoord, initSteps, last) = id
-    // IdT(packageCoord, initSteps, last.template)
-  }
-
-  pub fn get_extern_template(&self, id: IdT<'s, 't>) -> IdT<'s, 't> {
-    panic!("Unimplemented: Slab 10");
-    // val IdT(packageCoord, initSteps, last) = id
-    // IdT(packageCoord, initSteps, last.template)
   }
 
   pub fn get_impl_template(interner: &TypingInterner<'s, 't>, id: IdT<'s, 't>) -> IdT<'s, 't> {
@@ -701,7 +689,7 @@ where
     let new_struct = interner.intern_struct_tt(StructTTValT { id: *new_id });
     // See SBITAFD, we need to register bounds for these new instantiations.
     let instantiation_bound_args =
-      coutputs.get_instantiation_bounds(interner, struct_tt.id).unwrap();
+      coutputs.get_instantiation_bounds(interner, *struct_tt.id).unwrap();
     let translated_bounds = interner.alloc(Self::translate_instantiation_bounds(
       coutputs,
       sanity_check,
@@ -717,7 +705,7 @@ where
       sanity_check,
       interner,
       original_calling_denizen_id,
-      new_struct.id,
+      *new_struct.id,
       translated_bounds,
     );
     new_struct
@@ -1021,7 +1009,7 @@ where
     let new_interface = interner.intern_interface_tt(InterfaceTTValT { id: *new_id });
     // See SBITAFD, we need to register bounds for these new instantiations.
     let instantiation_bound_args =
-      coutputs.get_instantiation_bounds(interner, interface_tt.id).unwrap();
+      coutputs.get_instantiation_bounds(interner, *interface_tt.id).unwrap();
     let translated_bounds = interner.alloc(Self::translate_instantiation_bounds(
       coutputs,
       sanity_check,
@@ -1037,7 +1025,7 @@ where
       sanity_check,
       interner,
       original_calling_denizen_id,
-      new_interface.id,
+      *new_interface.id,
       translated_bounds,
     );
     new_interface
@@ -1247,15 +1235,6 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
     )
   }
 
-  pub fn substitute_for_interface(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    interface_tt: InterfaceTT<'s, 't>,
-  ) -> InterfaceTT<'s, 't> {
-    panic!("Unimplemented: Slab 15");
-    // Compiler.substituteTemplatasInInterface(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, interfaceTT)
-  }
-
   pub fn substitute_for_templata(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1291,15 +1270,6 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
       proto,
     )
   }
-
-  pub fn substitute_for_impl_id(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    impl_id: IdT<'s, 't>,
-  ) -> IdT<'s, 't> {
-    panic!("Unimplemented: Slab 15");
-    // Compiler.substituteTemplatasInImplId(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, implId)
-  }
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -1309,11 +1279,11 @@ where
   pub fn get_placeholder_substituter(
     &self,
     sanity_check: bool,
-    original_calling_denizen_id: IdT<'s, 't>,
-    name: IdT<'s, 't>,
+    original_calling_denizen_id: &IdT<'s, 't>,
+    name: &IdT<'s, 't>,
     bound_arguments_source: IBoundArgumentsSource<'s, 't>,
   ) -> IPlaceholderSubstituter<'s, 'ctx, 't> {
-    let top_level_denizen_id = self.get_top_level_denizen_id(name);
+    let top_level_denizen_id = self.get_top_level_denizen_id(*name);
     let top_level_local_name: IInstantiationNameT<'s, 't> =
             top_level_denizen_id.local_name.try_into()
                 .unwrap_or_else(|_| panic!("get_placeholder_substituter: topLevelDenizenId.localName must be IInstantiationNameT, got {:?}", top_level_denizen_id.local_name));
@@ -1325,7 +1295,7 @@ where
       sanity_check,
       interner: self.typing_interner,
       keywords: self.keywords,
-      original_calling_denizen_id,
+      original_calling_denizen_id: *original_calling_denizen_id,
       needle_template_name,
       new_substituting_templatas: template_args,
       bound_arguments_source,
@@ -1335,7 +1305,7 @@ where
   pub fn get_reachable_bounds(
     &self,
     sanity_check: bool,
-    original_calling_denizen_id: IdT<'s, 't>,
+    original_calling_denizen_id: &'t IdT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
     citizen: ICitizenTT<'s, 't>,
   ) -> (InstantiationReachableBoundArgumentsT<'s, 't>, IndexMap<IRuneS<'s>, Vec<KindT<'s, 't>>>) {
@@ -1507,8 +1477,8 @@ where
       return true;
     }
     match kind {
-      KindT::Struct(s) => coutputs.lookup_struct(s.id, self).sharedness == SharednessT::Shared,
-      KindT::Interface(i) => coutputs.lookup_interface(i.id, self).sharedness == SharednessT::Shared,
+      KindT::Struct(s) => coutputs.lookup_struct(*s.id, self).sharedness == SharednessT::Shared,
+      KindT::Interface(i) => coutputs.lookup_interface(*i.id, self).sharedness == SharednessT::Shared,
       _ => false,
     }
   }
@@ -1714,16 +1684,6 @@ where
   //     }
   // }
 
-  pub fn lookup_templata_by_name(
-    &self,
-    env: IEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    range: &[RangeS<'s>],
-    name: INameT<'s, 't>,
-  ) -> ITemplataT<'s, 't> {
-    panic!("Unimplemented: Slab 15");
-  }
-
   pub fn lookup_templata_by_rune(
     &self,
     env: IEnvironmentT<'s, 't>,
@@ -1810,13 +1770,6 @@ where
     declaring_env.id().add_step(self.typing_interner, local_name)
   }
 
-  pub fn resolve_citizen_template(
-    &self,
-    citizen_templata: &'t CitizenDefinitionTemplataT<'s, 't>,
-  ) -> IdT<'s, 't> {
-    panic!("Unimplemented: Slab 15");
-  }
-
   pub fn citizen_is_from_template(
     &self,
     coutputs: &CompilerOutputs<'s, 't>,
@@ -1827,17 +1780,17 @@ where
       ITemplataT::StructDefinition(st) => *self.resolve_struct_template(coutputs, st),
       ITemplataT::InterfaceDefinition(it) => *self.resolve_interface_template(coutputs, it),
       ITemplataT::Kind(kt) => {
-        match ISubKindTT::try_from(kt.kind) {
+        *match ISubKindTT::try_from(kt.kind) {
           // VCOORD: doublecheck. ISubKindTT::try_from accepts a KindPlaceholder, so a
           // generic T passed as expected_citizen_templata reaches get_citizen_template,
           // which panics on a placeholder id.
-          Ok(sub) => self.get_citizen_template(sub.id()),
+          Ok(sub) => self.get_citizen_template(&sub.id()),
           Err(_) => return false,
         }
       }
       _ => return false,
     };
-    self.get_citizen_template(ISubKindTT::from(actual_citizen_ref).id()) == citizen_template_id
+    *self.get_citizen_template(&ISubKindTT::from(actual_citizen_ref).id()) == citizen_template_id
   }
 
   pub fn create_placeholder(
@@ -1917,7 +1870,7 @@ where
         self.typing_interner,
         self.scout_arena,
         env,
-        *kind_placeholder_template_id,
+        kind_placeholder_template_id,
         kind_placeholder_template_id,
         vec![],
       );

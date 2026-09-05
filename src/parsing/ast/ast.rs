@@ -77,11 +77,6 @@ pub struct ImportP<'p> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct WeakableAttributeP {
-  pub range: RangeL,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SealedAttributeP {
   pub range: RangeL,
 }
@@ -164,7 +159,6 @@ pub struct InterfaceP<'p> {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IAttributeP<'p> {
-  WeakableAttribute(WeakableAttributeP),
   SealedAttribute(SealedAttributeP),
   MacroCall(MacroCallP<'p>),
   AbstractAttribute(AbstractAttributeP),

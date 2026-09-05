@@ -290,16 +290,16 @@ where
     }
   }
 
-  pub fn denizen_template_id(&self) -> IdT<'s, 't> {
+  pub fn denizen_template_id(&self) -> &'t IdT<'s, 't> {
     match self {
-      IInDenizenEnvironmentT::Citizen(e) => e.template_id,
-      IInDenizenEnvironmentT::Function(e) => e.template_id,
-      IInDenizenEnvironmentT::Node(e) => e.parent_function_env.template_id,
-      IInDenizenEnvironmentT::BuildingWithClosureds(e) => e.id,
-      IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => e.id,
-      IInDenizenEnvironmentT::General(e) => e.template_id,
-      IInDenizenEnvironmentT::Export(e) => e.template_id,
-      IInDenizenEnvironmentT::Extern(e) => e.template_id,
+      IInDenizenEnvironmentT::Citizen(e) => &e.template_id,
+      IInDenizenEnvironmentT::Function(e) => &e.template_id,
+      IInDenizenEnvironmentT::Node(e) => &e.parent_function_env.template_id,
+      IInDenizenEnvironmentT::BuildingWithClosureds(e) => &e.id,
+      IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => &e.id,
+      IInDenizenEnvironmentT::General(e) => &e.template_id,
+      IInDenizenEnvironmentT::Export(e) => &e.template_id,
+      IInDenizenEnvironmentT::Extern(e) => &e.template_id,
     }
   }
 
@@ -1325,7 +1325,7 @@ pub fn child_of<'s, 't>(
   interner: &TypingInterner<'s, 't>,
   scout_arena: &ScoutArena<'s>,
   parent_env: IInDenizenEnvironmentT<'s, 't>,
-  new_template_id: IdT<'s, 't>,
+  new_template_id: &IdT<'s, 't>,
   new_id: &'t IdT<'s, 't>,
   new_entries_list: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
 ) -> &'t GeneralEnvironmentT<'s, 't>
@@ -1338,7 +1338,7 @@ where
   interner.alloc(GeneralEnvironmentT {
     global_env: parent_env.global_env(),
     parent_env,
-    template_id: new_template_id,
+    template_id: *new_template_id,
     id: *new_id,
     templatas,
   })

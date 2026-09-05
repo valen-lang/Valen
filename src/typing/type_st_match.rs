@@ -57,7 +57,7 @@ where
     )?;
 
     if let KindT::Struct(_) | KindT::Interface(_) = peeled_arg {
-      if self.get_citizen_template(arg_sub_kind.id()) == expected_template_id {
+      if *self.get_citizen_template(&arg_sub_kind.id()) == expected_template_id {
         return None;
       }
     }
@@ -71,7 +71,7 @@ where
       .into_iter()
       .find(|s| {
         matches!(s, ISuperKindTT::Interface(_))
-          && self.get_citizen_template(s.id()) == expected_template_id
+          && *self.get_citizen_template(&s.id()) == expected_template_id
       })
       .map(KindT::from)
   }

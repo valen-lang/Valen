@@ -146,7 +146,6 @@ pub struct StructS<'s> {
   pub range: RangeS<'s>,
   pub name: IStructDeclarationNameS<'s>,
   pub attributes: &'s [ICitizenAttributeS<'s>],
-  pub weakable: bool,
   pub generic_params: &'s [&'s GenericParameterS<'s>],
   pub sharedness: SharednessP,
   pub tyype: TemplateTemplataType<'s>,
@@ -156,6 +155,8 @@ pub struct StructS<'s> {
   pub internal_methods: &'s [&'s FunctionS<'s>],
   /// `where implements(Sub, Super)` clauses; see ImplBoundS.
   pub impl_bounds: &'s [ImplBoundS<'s>],
+  /// `where func foo(..)..` bounds, each captured as a synthesized abstract-function `FunctionS`.
+  pub func_bounds: &'s [(RuneUsage<'s>, FunctionS<'s>)],
   _sealed: (),
 }
 
@@ -164,7 +165,6 @@ impl<'s> StructS<'s> {
     range: RangeS<'s>,
     name: IStructDeclarationNameS<'s>,
     attributes: &'s [ICitizenAttributeS<'s>],
-    weakable: bool,
     generic_params: &'s [&'s GenericParameterS<'s>],
     sharedness: SharednessP,
     tyype: TemplateTemplataType<'s>,
@@ -173,6 +173,7 @@ impl<'s> StructS<'s> {
     members: &'s [IStructMemberS<'s>],
     internal_methods: &'s [&'s FunctionS<'s>],
     impl_bounds: &'s [ImplBoundS<'s>],
+    func_bounds: &'s [(RuneUsage<'s>, FunctionS<'s>)],
   ) -> Self {
     assert!(
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
@@ -182,7 +183,6 @@ impl<'s> StructS<'s> {
       range,
       name,
       attributes,
-      weakable,
       generic_params,
       sharedness,
       tyype,
@@ -191,6 +191,7 @@ impl<'s> StructS<'s> {
       members,
       internal_methods,
       impl_bounds,
+      func_bounds,
       _sealed: (),
     }
   }
@@ -246,7 +247,6 @@ pub struct InterfaceS<'s> {
   pub range: RangeS<'s>,
   pub name: &'s TopLevelInterfaceDeclarationNameS<'s>,
   pub attributes: &'s [ICitizenAttributeS<'s>],
-  pub weakable: bool,
   pub generic_params: &'s [&'s GenericParameterS<'s>],
   pub sharedness: SharednessP,
   pub tyype: TemplateTemplataType<'s>,
@@ -254,6 +254,8 @@ pub struct InterfaceS<'s> {
   pub internal_methods: &'s [&'s FunctionS<'s>],
   /// `where implements(Sub, Super)` clauses; see ImplBoundS.
   pub impl_bounds: &'s [ImplBoundS<'s>],
+  /// `where func foo(..)..` bounds, each captured as a synthesized abstract-function `FunctionS`.
+  pub func_bounds: &'s [(RuneUsage<'s>, FunctionS<'s>)],
   _sealed: (),
 }
 impl<'s> InterfaceS<'s> {
@@ -261,13 +263,13 @@ impl<'s> InterfaceS<'s> {
     range: RangeS<'s>,
     name: &'s TopLevelInterfaceDeclarationNameS<'s>,
     attributes: &'s [ICitizenAttributeS<'s>],
-    weakable: bool,
     generic_params: &'s [&'s GenericParameterS<'s>],
     sharedness: SharednessP,
     tyype: TemplateTemplataType<'s>,
     rules: &'s [IRulexSR<'s>],
     internal_methods: &'s [&'s FunctionS<'s>],
     impl_bounds: &'s [ImplBoundS<'s>],
+    func_bounds: &'s [(RuneUsage<'s>, FunctionS<'s>)],
   ) -> Self {
     assert!(
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
@@ -283,13 +285,13 @@ impl<'s> InterfaceS<'s> {
       range,
       name,
       attributes,
-      weakable,
       generic_params,
       sharedness,
       tyype,
       rules,
       internal_methods,
       impl_bounds,
+      func_bounds,
       _sealed: (),
     }
   }
@@ -569,6 +571,8 @@ pub struct FunctionS<'s> {
   /// `where implements(Sub, Super)` clauses. Kept out of `rules` because they are checked after
   /// the solve rather than solved; see ImplBoundS.
   pub impl_bounds: &'s [ImplBoundS<'s>],
+  /// `where func foo(..)..` bounds, each captured as a synthesized abstract-function `FunctionS`.
+  pub func_bounds: &'s [(RuneUsage<'s>, FunctionS<'s>)],
   pub body: &'s IBodyS<'s>,
   _sealed: (),
 }
@@ -584,6 +588,7 @@ impl<'s> FunctionS<'s> {
     effects: &'s [EffectS<'s>],
     rules: &'s [IRulexSR<'s>],
     impl_bounds: &'s [ImplBoundS<'s>],
+    func_bounds: &'s [(RuneUsage<'s>, FunctionS<'s>)],
     body: &'s IBodyS<'s>,
   ) -> Self {
     assert!(
@@ -617,6 +622,7 @@ impl<'s> FunctionS<'s> {
       effects,
       header_rules: rules,
       impl_bounds,
+      func_bounds,
       body,
       _sealed: (),
     }
@@ -756,38 +762,18 @@ impl<'x> LocationInDenizen<'x> {
 
 #[derive(Debug, PartialEq)]
 pub enum IDenizenS<'s> {
-  TopLevelFunction(TopLevelFunctionS<'s>),
-  TopLevelImpl(TopLevelImplS<'s>),
-  TopLevelExportAs(TopLevelExportAsS<'s>),
-  TopLevelImport(TopLevelImportS<'s>),
-  TopLevelStruct(TopLevelStructS<'s>),
-  TopLevelInterface(TopLevelInterfaceS<'s>),
+  TopLevelFunction(&'s FunctionS<'s>),
+  TopLevelImpl(&'s ImplS<'s>),
+  TopLevelExportAs(&'s ExportAsS<'s>),
+  TopLevelImport(&'s ImportS<'s>),
+  TopLevelStruct(&'s StructS<'s>),
+  TopLevelInterface(&'s InterfaceS<'s>),
 }
 
-#[derive(Debug, PartialEq)]
-pub struct TopLevelFunctionS<'s> {
-  pub function: FunctionS<'s>,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct TopLevelImplS<'s> {
-  pub impl_: ImplS<'s>,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct TopLevelExportAsS<'s> {
-  pub export: ExportAsS<'s>,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct TopLevelImportS<'s> {
-  pub imporrt: ImportS<'s>,
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum ICitizenDenizenS<'s> {
-  TopLevelStruct(TopLevelStructS<'s>),
-  TopLevelInterface(TopLevelInterfaceS<'s>),
+  TopLevelStruct(&'s StructS<'s>),
+  TopLevelInterface(&'s InterfaceS<'s>),
 }
 
 impl<'s> ICitizenDenizenS<'s> {
@@ -799,16 +785,6 @@ impl<'s> ICitizenDenizenS<'s> {
 // MIGALLOW: unapply -> as_citizen_denizen
 pub fn as_citizen_denizen<'s>(_x: &IDenizenS<'s>) -> Option<ICitizenDenizenS<'s>> {
   panic!("as_citizen_denizen is dead code")
-}
-
-#[derive(Debug, PartialEq)]
-pub struct TopLevelStructS<'s> {
-  pub strukt: StructS<'s>,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct TopLevelInterfaceS<'s> {
-  pub interface: InterfaceS<'s>,
 }
 
 #[derive(Debug, PartialEq)]

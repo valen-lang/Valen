@@ -192,6 +192,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     };
     let mut rules: Vec<IRulexSR<'s>> = Vec::new();
     let mut impl_bounds: Vec<ImplBoundS<'s>> = Vec::new();
+    let mut func_bounds: Vec<(RuneUsage<'s>, FunctionS<'s>)> = Vec::new();
     // Function declaration names are identity (not interned, @WVSBIZ): built directly, carrying the
     // denizen-root lid and the interned imprecise (spelling) name, then wrapped in
     // `INameS::FunctionDeclaration` where a denizen name is needed.
@@ -307,6 +308,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
           &mut child_lidb,
           &mut rules,
           &mut impl_bounds,
+          &mut func_bounds,
           default_region_rune.clone(),
           template_rules_p,
         );
@@ -326,6 +328,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
           &mut child_lidb,
           &mut rules,
           &mut impl_bounds,
+          &mut func_bounds,
           default_region_rune.clone(),
           template_rules_p,
         );
@@ -960,6 +963,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         self.scout_arena.alloc_slice_from_vec(effects_s),
         rules_array,
         self.scout_arena.alloc_slice_from_vec(impl_bounds),
+        self.scout_arena.alloc_slice_from_vec(func_bounds),
         body_s,
       )),
       variable_uses,

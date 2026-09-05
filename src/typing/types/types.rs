@@ -269,8 +269,8 @@ where
 {
   pub fn id(&self) -> IdT<'s, 't> {
     match self {
-      ISubKindTT::Struct(s) => s.id,
-      ISubKindTT::Interface(i) => i.id,
+      ISubKindTT::Struct(s) => *s.id,
+      ISubKindTT::Interface(i) => *i.id,
       ISubKindTT::KindPlaceholder(kp) => kp.id,
     }
   }
@@ -310,7 +310,7 @@ where
 {
   pub fn id(&self) -> IdT<'s, 't> {
     match self {
-      ISuperKindTT::Interface(i) => i.id,
+      ISuperKindTT::Interface(i) => *i.id,
       ISuperKindTT::KindPlaceholder(kp) => kp.id,
     }
   }
@@ -346,8 +346,8 @@ where
 {
   pub fn id(&self) -> IdT<'s, 't> {
     match self {
-      ICitizenTT::Struct(s) => s.id,
-      ICitizenTT::Interface(i) => i.id,
+      ICitizenTT::Struct(s) => *s.id,
+      ICitizenTT::Interface(i) => *i.id,
     }
   }
 
@@ -371,7 +371,7 @@ where
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructTT<'s, 't> {
-  pub id: IdT<'s, 't>,
+  pub id: &'t IdT<'s, 't>,
   pub _must_intern: MustIntern,
 }
 
@@ -384,7 +384,7 @@ pub struct StructTTValT<'s, 't> {
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceTT<'s, 't> {
-  pub id: IdT<'s, 't>,
+  pub id: &'t IdT<'s, 't>,
   pub _must_intern: MustIntern,
 }
 

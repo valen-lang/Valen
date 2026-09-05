@@ -445,7 +445,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
         let interfaces: Vec<InterfaceDefinitionI<'s, 'i>> =
             monouts.interfaces_without_methods.values().map(|interface| {
-                let InterfaceDefinitionI { instantiated_interface: ref_, attributes, weakable, sharedness: mutability, .. } = **interface;
+                let InterfaceDefinitionI { instantiated_interface: ref_, attributes, sharedness: mutability, .. } = **interface;
                 let map = monouts.interface_to_abstract_func_to_virtual_index.get(&ref_.id).expect("vassertSome: interface_to_abstract_func_to_virtual_index");
                 let mut methods_entries: Vec<(&'i PrototypeI<'s, 'i>, i32)> = Vec::new();
                 for (proto, (idx, _index_in_edge)) in map.iter() {
@@ -454,7 +454,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 InterfaceDefinitionI {
                     instantiated_interface: ref_,
                     attributes,
-                    weakable,
                   sharedness: mutability,
                     rune_to_function_bound: ArenaIndexMap::new_in(self.interner.bump()),
                     rune_to_impl_bound: ArenaIndexMap::new_in(self.interner.bump()),
@@ -709,7 +708,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
 
     pub fn find_struct(&self, _struct_id: &IdT<'s, 't>) -> &'t StructDefinitionT<'s, 't> {
-        let target = Compiler::get_super_template(self.typing_interner, *_struct_id);
+        let target = Compiler::get_super_template(self.typing_interner, _struct_id);
         let matches: Vec<_> = self.hinputs.structs.iter().filter(|s| Compiler::get_super_template(self.typing_interner, s.instantiated_citizen.id) == target).collect();
         assert_eq!(matches.len(), 1);
         matches[0]
@@ -717,7 +716,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
 
     pub fn find_interface(&self, _interface_id: &IdT<'s, 't>) -> &'t InterfaceDefinitionT<'s, 't> {
-        let target = Compiler::get_super_template(self.typing_interner, *_interface_id);
+        let target = Compiler::get_super_template(self.typing_interner, _interface_id);
         let matches: Vec<_> = self.hinputs.interfaces.iter().filter(|i| Compiler::get_super_template(self.typing_interner, i.instantiated_interface.id) == target).collect();
         assert_eq!(matches.len(), 1);
         matches[0]
@@ -846,10 +845,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
 
     pub fn translate_function_callsite(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, desired_prototype_t: &PrototypeT<'s, 't>, desired_prototype: &PrototypeI<'s, 'i>, _supplied_bound_args: &InstantiationBoundArgumentsI<'s, 'i>, _maybe_denizen_bound_to_denizen_caller_supplied_thing: Option<&DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>) -> &'i FunctionDefinitionI<'s, 'i> {
-        let desired_func_super_template_name = Compiler::get_super_template(self.typing_interner, desired_prototype_t.id);
+        let desired_func_super_template_name = Compiler::get_super_template(self.typing_interner, &desired_prototype_t.id);
         let func_t =
             vassert_one(self.hinputs.functions.iter().filter(|func_t| {
-                Compiler::get_super_template(self.typing_interner, func_t.header.id) == desired_func_super_template_name
+                Compiler::get_super_template(self.typing_interner, &func_t.header.id) == desired_func_super_template_name
             }));
 
         let denizen_bound_to_denizen_caller_supplied_thing =
@@ -876,9 +875,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_abstract_func(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, interface_id: &IdI<'s, 'i>, desired_abstract_prototype_t: &PrototypeT<'s, 't>, desired_abstract_prototype: &PrototypeI<'s, 'i>, virtual_index: usize, supplied_bound_args: InstantiationBoundArgumentsI<'s, 'i>) {
         let desired_abstract_prototype = *desired_abstract_prototype;
 
-        let desired_super_template_id = Compiler::get_super_template(self.typing_interner, desired_abstract_prototype_t.id);
+        let desired_super_template_id = Compiler::get_super_template(self.typing_interner, &desired_abstract_prototype_t.id);
         let func_t = vassert_one(self.hinputs.functions.iter().copied().filter(|f| {
-            Compiler::get_super_template(self.typing_interner, f.header.id) == desired_super_template_id
+            Compiler::get_super_template(self.typing_interner, &f.header.id) == desired_super_template_id
         }));
 
         let denizen_bound_to_denizen_caller_supplied_thing =
@@ -1038,16 +1037,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
                 // If we're instantiating something whose name starts with our name, then we're instantiating our lambda.
                 let maybe_denizen_bound_to_denizen_caller_supplied_thing =
-                    if Compiler::get_super_template(self.typing_interner, desired_prototype_t.id).steps()
-                        .starts_with(&Compiler::get_super_template(self.typing_interner, *denizen_name).steps()) {
+                    if Compiler::get_super_template(self.typing_interner, &desired_prototype_t.id).steps()
+                        .starts_with(&Compiler::get_super_template(self.typing_interner, denizen_name).steps()) {
                         // We need to supply our bounds to our lambdas, see LCCPGB and LCNBAFA.
                         Some(denizen_bound_to_denizen_caller_supplied_thing.clone())
                     } else {
                         if self.opts.sanity_check {
-                            let desired_func_super_template_name = Compiler::get_super_template(self.typing_interner, desired_prototype_t.id);
+                            let desired_func_super_template_name = Compiler::get_super_template(self.typing_interner, &desired_prototype_t.id);
                             let func_t =
                                 vassert_one(self.hinputs.functions.iter().filter(|func_t| {
-                                    Compiler::get_super_template(self.typing_interner, func_t.header.id) == desired_func_super_template_name
+                                    Compiler::get_super_template(self.typing_interner, &func_t.header.id) == desired_func_super_template_name
                                 }));
                             assert!(rune_to_bound_args_for_call.rune_to_function_bound_arg.len() == func_t.instantiation_bound_params.rune_to_bound_prototype.len());
                             assert!(
@@ -1148,7 +1147,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
 
     pub fn translate_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _new_id_t: &IdT<'s, 't>, _new_id: &IdI<'s, 'i>, _struct_def_t: &StructDefinitionT<'s, 't>) {
-        let StructDefinitionT { template_name: _, instantiated_citizen: _, attributes, weakable, sharedness, members, instantiation_bound_params: _ } = _struct_def_t;
+        let StructDefinitionT { template_name: _, instantiated_citizen: _, attributes, sharedness, members, instantiation_bound_params: _ } = _struct_def_t;
         let perspective_region_t = RegionT::Default;
         let sharedness_i = Self::translate_mutability(sharedness);
         if _monouts.struct_to_sharedness.contains_key(_new_id) {
@@ -1163,7 +1162,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let result = StructDefinitionI {
             instantiated_citizen: self.interner.alloc(StructIT { id: *_new_id }),
             attributes: self.interner.bump().alloc_slice_fill_iter(attributes_i.into_iter()),
-            weakable: *weakable,
             sharedness: sharedness_i,
             members: self.interner.bump().alloc_slice_fill_iter(members_i.into_iter()),
             rune_to_function_bound: ArenaIndexMap::new_in(self.interner.bump()),
@@ -1182,7 +1180,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         if _monouts.interface_to_sharedness.contains_key(_new_id) {
             return;
         }
-        let InterfaceDefinitionT { template_name: _, instantiated_interface: _, ref_: _, attributes, weakable, sharedness, instantiation_bound_params: _, internal_methods: _ } = _interface_def_t;
+        let InterfaceDefinitionT { template_name: _, instantiated_interface: _, ref_: _, attributes, sharedness, instantiation_bound_params: _, internal_methods: _ } = _interface_def_t;
         assert!(!_monouts.interface_to_impl_to_abstract_prototype_to_override.contains_key(_new_id));
         _monouts.interface_to_impl_to_abstract_prototype_to_override.insert(*_new_id, IndexMap::default());
         assert!(!_monouts.interface_to_abstract_func_to_virtual_index.contains_key(_new_id));
@@ -1197,7 +1195,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let result = InterfaceDefinitionI {
             instantiated_interface: new_interface_it,
             attributes: self.interner.bump().alloc_slice_fill_iter(attributes_i.into_iter()),
-            weakable: *weakable,
             sharedness: sharedness_i,
             rune_to_function_bound: ArenaIndexMap::new_in(self.interner.bump()),
             rune_to_impl_bound: ArenaIndexMap::new_in(self.interner.bump()),
@@ -1745,7 +1742,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let args_ce: Vec<ExpressionIE<'s, 'i>> = args.iter().map(|arg_te| {
                     self.translate_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te).1
                 }).collect();
-                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(struct_tt.id));
+                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(*struct_tt.id));
                 let struct_it = self.translate_struct(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, struct_tt, &bound_args);
                 ExpressionIE::Construct(self.interner.bump().alloc(ConstructIE {
                     struct_tt: struct_it,
@@ -1881,7 +1878,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let DestroyTE { expr: expr_t, struct_tt, destination_reference_variables, .. } = **d;
                 let (_source_it, source_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &expr_t);
-                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(struct_tt.id));
+                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(*struct_tt.id));
                 let struct_id = self.translate_struct_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &struct_tt.id, &bound_args);
                 let dest_ref_vars: Vec<&'i LocalVariableI<'s, 'i>> =
                     destination_reference_variables.iter().map(|dest_ref_var_t| {
@@ -2068,7 +2065,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_super_kind(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _perspective_region_t: &RegionT, _kind: &ISuperKindTT<'s, 't>) -> InterfaceIT<'s, 'i> {
         match _kind {
             ISuperKindTT::Interface(i) => {
-                let bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(i.id));
+                let bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(*i.id));
                 self.translate_interface(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, i, &bound_args)
             }
             ISuperKindTT::KindPlaceholder(_) => panic!("Unimplemented: translate_super_kind KindPlaceholder"),
@@ -2166,12 +2163,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }
             }
             KindT::Struct(s) => {
-                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(s.id));
+                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(*s.id));
                 let struct_it = self.translate_struct(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, s, &bound_args);
                 KindIT::StructIT(self.interner.alloc(struct_it))
             }
             KindT::Interface(s) => {
-                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(s.id));
+                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(*s.id));
                 let interface_it = self.translate_interface(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, s, &bound_args);
                 KindIT::InterfaceIT(self.interner.alloc(interface_it))
             }

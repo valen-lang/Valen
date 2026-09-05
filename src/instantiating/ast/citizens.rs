@@ -19,7 +19,6 @@ pub enum ICitizenDefinitionI<'s, 'i> {
 pub struct StructDefinitionI<'s, 'i> {
     pub instantiated_citizen: &'i StructIT<'s, 'i>,
     pub attributes: &'i [ICitizenAttributeI<'s>],
-    pub weakable: bool,
     pub sharedness: SharednessI,
     pub members: &'i [StructMemberI<'s, 'i>],
     pub rune_to_function_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
@@ -50,7 +49,6 @@ pub struct StructMemberI<'s, 'i> {
 pub struct InterfaceDefinitionI<'s, 'i> {
     pub instantiated_interface: &'i InterfaceIT<'s, 'i>,
     pub attributes: &'i [ICitizenAttributeI<'s>],
-    pub weakable: bool,
     pub sharedness: SharednessI,
     pub rune_to_function_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
     pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,

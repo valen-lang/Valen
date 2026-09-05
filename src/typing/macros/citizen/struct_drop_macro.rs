@@ -208,6 +208,7 @@ where
       &[],
       rules_slice,
       &[],
+      &[],
       self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS {
         generator_id: self.keywords.drop_generator,
       })),
@@ -301,6 +302,7 @@ where
       &[],
       rules,
       &[],
+      &[],
       self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS {
         generator_id: self.keywords.drop_generator,
       })),
@@ -325,7 +327,7 @@ where
       KindT::Struct(s) => s,
       _ => panic!("struct drop: first param is not a struct"),
     };
-    let struct_def = coutputs.lookup_struct(struct_tt.id, self);
+    let struct_def = coutputs.lookup_struct(*struct_tt.id, self);
     // A share citizen is only ever held ShareRef-wrapped; a single one is held bare.
     let struct_type = match struct_def.sharedness {
       SharednessT::Single => KindT::Struct(struct_tt),
@@ -367,7 +369,7 @@ where
           .map(|member| {
             let substituter = self.get_placeholder_substituter(
               self.opts.global_options.sanity_check,
-              env.template_id,
+              &env.template_id,
               struct_tt.id,
               IBoundArgumentsSource::InheritBoundsFromTypeItself,
             );

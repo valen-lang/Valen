@@ -314,7 +314,7 @@ impl<'cache> Lowerer<'cache> {
             self.mutability_for(s.sharedness),
             &edges,
             &members,
-            if s.weakable { Weakability::Weakable } else { Weakability::NonWeakable },
+            if s.sharedness == SharednessI::Single { Weakability::NonWeakable } else { Weakability::Weakable },
         )
     }
 
@@ -338,7 +338,7 @@ impl<'cache> Lowerer<'cache> {
             self.mutability_for(it.sharedness),
             &super_interfaces,
             &methods,
-            if it.weakable { Weakability::Weakable } else { Weakability::NonWeakable },
+            if it.sharedness == SharednessI::Single { Weakability::NonWeakable } else { Weakability::Weakable },
         )
     }
 

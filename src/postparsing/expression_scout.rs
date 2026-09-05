@@ -1150,6 +1150,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
             &mut rule_lidb,
             &mut rule_builder,
             &mut Vec::new(),
+            &mut Vec::new(),
             stack_frame1.context_region.clone(),
             &[],
           );

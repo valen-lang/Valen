@@ -241,6 +241,7 @@ where
     // which is why a signature that *needs* one (`first<I: Iterator> -> I::Item`) is declined
     // outright rather than imported with a bound nothing could satisfy.
     &[],
+    &[],
     scout_arena.alloc(IBodyS::ExternBody(ExternBodyS {})),
   )))
 }
@@ -471,12 +472,12 @@ where
       dont_call(compiler.keywords.derive_struct_constructor),
       dont_call(compiler.keywords.derive_struct_drop),
     ]),
-    // Rust will never support either, so these are permanent rather than provisional.
-    false,
+    // Rust will never support sharedness variants, so Single is permanent rather than provisional.
     scout_arena.alloc_slice_from_vec(generic_params),
     SharednessP::Single,
     tyype,
     // No bounds: rustc discharges a Rust type's own obligations, and we read no predicates.
+    &[],
     &[],
     &[],
     &[],
@@ -530,13 +531,13 @@ where
       ICitizenAttributeS::Extern(ExternS { package_coord }),
       ICitizenAttributeS::Sealed(SealedS),
     ]),
-    false, // not weakable
     scout_arena.alloc_slice_from_vec(generic_params),
     SharednessP::Single,
     tyype,
     &[], // rules
     &[], // internal_methods
     &[], // impl_bounds
+    &[], // func_bounds
   ))
 }
 
@@ -698,6 +699,7 @@ where
     &[],
     scout_arena.alloc_slice_from_vec(header_rules),
     &[],
+    &[],
     scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),
   )))
 }
@@ -754,13 +756,13 @@ where
       ICitizenAttributeS::Extern(ExternS { package_coord }),
       ICitizenAttributeS::Sealed(SealedS),
     ]),
-    false, // not weakable
     &[],   // no generic parameters
     SharednessP::Single,
     tyype,
     &[], // rules
     scout_arena.alloc_slice_from_vec(internal_methods),
     &[], // impl_bounds
+    &[], // func_bounds
   ))
 }
 

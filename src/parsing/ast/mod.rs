@@ -14,7 +14,7 @@ pub use ast::{
   GenericParametersP, IAttributeP, IDenizenP, IMacroInclusionP, IRuneAttributeP, IStructContent,
   ImplP, ImportP, InterfaceP, LoadAsP, MacroCallP, NameP, NormalStructMemberP, ParamsP,
   SealedAttributeP, SharednessP, StructMembersP, StructP, TemplateRulesP, UnitP,
-  VariadicStructMemberP, WeakableAttributeP,
+  VariadicStructMemberP,
 };
 
 // Re-export everything from expressions.rs

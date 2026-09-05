@@ -600,9 +600,6 @@ where
   /// Parse an attribute
   fn parse_attribute(&self, attr_l: IAttributeL<'p>) -> ParseResult<IAttributeP<'p>> {
     match attr_l {
-      IAttributeL::WeakableAttribute(range) => {
-        Ok(IAttributeP::WeakableAttribute(WeakableAttributeP { range }))
-      }
       IAttributeL::SealedAttribute(range) => {
         Ok(IAttributeP::SealedAttribute(SealedAttributeP { range }))
       }

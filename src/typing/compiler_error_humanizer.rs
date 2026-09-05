@@ -142,10 +142,10 @@ pub fn humanize<'s, 't>(
     ICompileErrorT::CantUseRuneValueAsExpression { range: _, rune } => {
       format!("Can't use rune `{}` as a value expression. Did you mean a local variable with a similar name?", humanize_rune(*rune))
     }
-    ICompileErrorT::WeakableImplingMismatch { range: _, struct_weakable, interface_weakable } => {
-      format!("Weakable mismatch in impl: struct {} weakable, but interface {}.",
-        if *struct_weakable { "is" } else { "is not" },
-        if *interface_weakable { "is" } else { "is not" })
+    ICompileErrorT::SharedImplingMismatch { range: _, struct_shared, interface_shared } => {
+      format!("Sharedness mismatch in impl: struct is {}, but interface is {}.",
+        if *struct_shared == SharednessT::Shared { "shared" } else { "not shared" },
+        if *interface_shared == SharednessT::Shared { "shared" } else { "not shared" })
     }
     ICompileErrorT::TookWeakRefOfNonWeakableError { range: _ } => {
       "Took a weak reference of something that isn't weakable. Did you mean to add the `weakable` keyword?".to_string()
@@ -1099,10 +1099,10 @@ fn humanize_kind<'s, 't>(
     KindT::USize(_) => "usize".to_string(),
     KindT::OverloadSet(s) => format!("(overloads: {})", humanize_imprecise_name(*s.name)),
     KindT::Interface(name) => {
-      humanize_id(scout_arena, typing_interner, code_map, name.id)
+      humanize_id(scout_arena, typing_interner, code_map, *name.id)
     }
     KindT::Struct(name) => {
-      humanize_id(scout_arena, typing_interner, code_map, name.id)
+      humanize_id(scout_arena, typing_interner, code_map, *name.id)
     }
     KindT::RuntimeSizedArray(rsa) => {
       "Array<".to_string()

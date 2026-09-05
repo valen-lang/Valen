@@ -113,7 +113,7 @@ where
       },
     };
     let function =
-      self.get_or_create_postparsed_function(coutputs, function_id);
+      self.illuminate_function(coutputs, function_id);
     if function.is_light() {
       let mut new_ranges: Vec<RangeS<'s>> = Vec::with_capacity(1 + parent_ranges.len());
       new_ranges.push(function.range);
@@ -130,26 +130,6 @@ where
     }
   }
 
-  pub fn evaluate_templated_light_function_from_call_for_prototype(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    calling_env: IInDenizenEnvironmentT<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    function_templata: FunctionTemplataT<'s, 't>,
-    already_specified_template_args: &[ITemplataT<'s, 't>],
-    context_region: RegionT,
-    arg_types: &[KindT<'s, 't>],
-  ) -> IEvaluateFunctionResult<'s, 't> {
-    panic!("Unimplemented: Slab 15");
-    // Profiler.frame(() => {
-    //   val FunctionTemplataT(declaringEnv, function) = functionTemplata
-    //   closureOrLightLayer.evaluateTemplatedLightBannerFromCall(
-    //     declaringEnv, coutputs, callingEnv, callRange, callLocation, function,
-    //     alreadySpecifiedTemplateArgs, contextRegion, argTypes)
-    // })
-  }
-
   pub fn evaluate_templated_function_from_call_for_prototype(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
@@ -163,7 +143,7 @@ where
   ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
     let FunctionTemplataT { outer_env: declaring_env, function_template_id: function_id } =
       function_templata;
-    let function = self.get_or_create_postparsed_function(coutputs, function_id);
+    let function = self.illuminate_function(coutputs, function_id);
     if function.is_light() {
       self.evaluate_templated_light_banner_from_call_closure_or_light(
         declaring_env,
@@ -219,39 +199,6 @@ where
     }
   }
 
-  pub fn evaluate_templated_function_from_call_for_prototype_ext(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    calling_env: IInDenizenEnvironmentT<'s, 't>,
-    function_templata: FunctionTemplataT<'s, 't>,
-    explicit_template_args: &[ITemplataT<'s, 't>],
-    context_region: RegionT,
-    arg_types: &[KindT<'s, 't>],
-  ) -> IEvaluateFunctionResult<'s, 't> {
-    panic!("Unimplemented: Slab 15");
-    // Profiler.frame(() => {
-    //   val FunctionTemplataT(env, function) = functionTemplata
-    //   if (function.isLight()) {
-    //     closureOrLightLayer.evaluateTemplatedLightFunctionFromCallForPrototype2(
-    //       env, coutputs, callingEnv, callRange, callLocation, function,
-    //       explicitTemplateArgs, contextRegion, argTypes)
-    //   } else {
-    //     val lambdaCitizenName2 =
-    //       function.name match {
-    //         case LambdaDeclarationNameS(codeLocation) => interner.intern(LambdaCitizenNameT(interner.intern(LambdaCitizenTemplateNameT(nameTranslator.translateCodeLocation(codeLocation)))))
-    //         case _ => vwat()
-    //       }
-    //     val KindTemplataT(closureStructRef @ StructTT(_)) =
-    //       vassertOne(env.lookupNearestWithName(lambdaCitizenName2, Set(TemplataLookupContext)))
-    //     closureOrLightLayer.evaluateTemplatedClosureFunctionFromCallForPrototype(
-    //       env, coutputs, callingEnv, callRange, callLocation, closureStructRef, function,
-    //       explicitTemplateArgs, contextRegion, argTypes)
-    //   }
-    // })
-  }
-
   pub fn evaluate_generic_virtual_dispatcher_function_for_prototype(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
@@ -262,7 +209,7 @@ where
     args: &[Option<KindT<'s, 't>>],
   ) -> Result<IDefineFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
     let FunctionTemplataT { outer_env, function_template_id: function_id } = function_templata;
-    let function = self.get_or_create_postparsed_function(coutputs, function_id);
+    let function = self.illuminate_function(coutputs, function_id);
     self.evaluate_generic_virtual_dispatcher_function_for_prototype_closure_or_light(
       outer_env,
       coutputs,
@@ -287,7 +234,7 @@ where
     container_rune_initial_knowns: &[InitialKnown<'s, 't>],
   ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
     let FunctionTemplataT { outer_env: env, function_template_id: function_id } = function_templata;
-    let function = self.get_or_create_postparsed_function(coutputs, function_id);
+    let function = self.illuminate_function(coutputs, function_id);
     self.evaluate_generic_light_function_from_call_for_prototype2(
       env,
       coutputs,

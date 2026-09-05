@@ -24,8 +24,8 @@ use crate::postparsing::expressions::{
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, CodeVarNameS, ConstructingMemberImpreciseNameS,
-  ConstructingMemberNameDeclarationS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS,
-  IVarDeclarationNameS,
+  ConstructingMemberNameDeclarationS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
+  IRuneS, IRuneValS, IVarDeclarationNameS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::post_parser::VariableNameAlreadyExists;
@@ -1713,6 +1713,141 @@ fn test_function_where_func_bound_carries_an_itypest() {
       other => panic!("expected the return Name to be `bool`; got {:?}", other),
     },
     other => panic!("expected return_type to be a concrete Name; got {:?}", other),
+  }
+}
+
+// A `where func foo(&T)bool` bound is also captured as a synthesized abstract-function `FunctionS`
+// in `func_bounds` (in addition to its rules) — a bound is an abstract-function declaration.
+#[test]
+fn test_function_where_func_bound_becomes_a_func_bound() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func bar<T>(x T) where func foo(&T)bool { }",
+  );
+  let bar = program.lookup_function("bar");
+  let bound = &expect_1(bar.func_bounds).1;
+  match &bound.name {
+    IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+      imprecise_name: CodeNameS { name: StrI("foo"), .. },
+      ..
+    }) => {}
+    other => panic!("expected a func bound named `foo`, got {:?}", other),
+  }
+  match &bound.body {
+    IBodyS::AbstractBody(_) => {}
+    other => panic!("expected an abstract body for a func bound, got {:?}", other),
+  }
+  let param = expect_1(bound.params);
+  match &param.name {
+    IVarDeclarationNameS::DesugaredParamName(_) => {}
+    other => panic!("expected a synthetic DesugaredParamName for the nameless bound param, got {:?}", other),
+  }
+}
+
+// An anonymous `where func(&F, &T)void` bound is captured too, under the `__call` spelling.
+#[test]
+fn test_function_where_anonymous_func_bound_becomes_a_func_bound() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func bar<F, T>(x T) where func(&F, &T)void { }",
+  );
+  let bar = program.lookup_function("bar");
+  let bound = &expect_1(bar.func_bounds).1;
+  match &bound.name {
+    IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+      imprecise_name: CodeNameS { name: StrI("__call"), .. },
+      ..
+    }) => {}
+    other => panic!("expected an anonymous bound under the `__call` name, got {:?}", other),
+  }
+  match &bound.body {
+    IBodyS::AbstractBody(_) => {}
+    other => panic!("expected an abstract body, got {:?}", other),
+  }
+  let (first, second) = expect_2(bound.params);
+  match &first.name {
+    IVarDeclarationNameS::DesugaredParamName(_) => {}
+    other => panic!("expected a synthetic DesugaredParamName for bound param 0, got {:?}", other),
+  }
+  match &second.name {
+    IVarDeclarationNameS::DesugaredParamName(_) => {}
+    other => panic!("expected a synthetic DesugaredParamName for bound param 1, got {:?}", other),
+  }
+}
+
+// A struct's `where func drop(T)void` bound lands in the struct's `func_bounds`.
+#[test]
+fn test_struct_where_func_bound_becomes_a_func_bound() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    r#"
+struct MyStruct<T> where func drop(T)void {
+  x T;
+}
+"#,
+  );
+  let my_struct = program.lookup_struct("MyStruct");
+  let bound = &expect_1(my_struct.func_bounds).1;
+  match &bound.name {
+    IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+      imprecise_name: CodeNameS { name: StrI("drop"), .. },
+      ..
+    }) => {}
+    other => panic!("expected a struct func bound named `drop`, got {:?}", other),
+  }
+  match &bound.body {
+    IBodyS::AbstractBody(_) => {}
+    other => panic!("expected an abstract body, got {:?}", other),
+  }
+}
+
+// An interface's `where func drop(T)void` bound lands in the interface's `func_bounds`.
+#[test]
+fn test_interface_where_func_bound_becomes_a_func_bound() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "interface MyInterface<T> where func drop(T)void { }",
+  );
+  let my_interface = program.lookup_interface("MyInterface");
+  let bound = &expect_1(my_interface.func_bounds).1;
+  match &bound.name {
+    IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+      imprecise_name: CodeNameS { name: StrI("drop"), .. },
+      ..
+    }) => {}
+    other => panic!("expected an interface func bound named `drop`, got {:?}", other),
+  }
+  match &bound.body {
+    IBodyS::AbstractBody(_) => {}
+    other => panic!("expected an abstract body, got {:?}", other),
   }
 }
 

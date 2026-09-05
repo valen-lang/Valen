@@ -235,7 +235,7 @@ where
     coutputs.add_instantiation_bounds(
       self.opts.global_options.sanity_check,
       self.typing_interner,
-      original_calling_env.denizen_template_id(),
+      *original_calling_env.denizen_template_id(),
       prototype_templata.prototype.id,
       instantiation_bound_args,
     );
@@ -399,7 +399,7 @@ where
     coutputs.add_instantiation_bounds(
       self.opts.global_options.sanity_check,
       self.typing_interner,
-      original_calling_env.denizen_template_id(),
+      *original_calling_env.denizen_template_id(),
       prototype_templata.prototype.id,
       instantiation_bound_args,
     );
@@ -683,7 +683,7 @@ where
     coutputs.add_instantiation_bounds(
       self.opts.global_options.sanity_check,
       self.typing_interner,
-      calling_env.root_compiling_denizen_env().denizen_template_id(),
+      *calling_env.root_compiling_denizen_env().denizen_template_id(),
       prototype.id,
       self.typing_interner.alloc(rune_to_function_bound),
     );

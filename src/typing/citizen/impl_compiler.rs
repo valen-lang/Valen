@@ -406,18 +406,18 @@ where
           })
         }
       };
-    let super_interface_template_id = self.get_interface_template(super_interface.id);
+    let super_interface_template_id = self.get_interface_template(*super_interface.id);
 
-    let sub_citizen_weakable = match coutputs.lookup_citizen_by_tt(sub_citizen, self) {
-      CitizenDefinitionT::Struct(s) => s.weakable,
-      CitizenDefinitionT::Interface(i) => i.weakable,
+    let sub_citizen_sharedness = match coutputs.lookup_citizen_by_tt(sub_citizen, self) {
+      CitizenDefinitionT::Struct(s) => s.sharedness,
+      CitizenDefinitionT::Interface(i) => i.sharedness,
     };
-    let super_interface_weakable = coutputs.lookup_interface(super_interface.id, self).weakable;
-    if sub_citizen_weakable != super_interface_weakable {
-      return Err(ICompileErrorT::WeakableImplingMismatch {
+    let super_interface_sharedness = coutputs.lookup_interface(*super_interface.id, self).sharedness;
+    if sub_citizen_sharedness != super_interface_sharedness {
+      return Err(ICompileErrorT::SharedImplingMismatch {
         range: self.typing_interner.alloc_slice_copy(&[impl_a.range]),
-        struct_weakable: sub_citizen_weakable,
-        interface_weakable: super_interface_weakable,
+        struct_shared: sub_citizen_sharedness,
+        interface_shared: super_interface_sharedness,
       });
     }
 
@@ -454,7 +454,7 @@ where
       self.typing_interner,
       self.scout_arena,
       IInDenizenEnvironmentT::Citizen(impl_outer_env),
-      *impl_template_id,
+      impl_template_id,
       instantiated_id_ref,
       inner_env_entries,
     );
@@ -496,7 +496,7 @@ where
       templata: impl_templata,
       instantiated_id,
       template_id: *impl_template_id,
-      sub_citizen_template_id,
+      sub_citizen_template_id: *sub_citizen_template_id,
       sub_citizen,
       super_interface: *super_interface,
       super_interface_template_id,
@@ -599,7 +599,7 @@ where
       ),
     }];
     let _child_env =
-      coutputs.get_outer_env_for_type(self.get_citizen_template(child.id()));
+      coutputs.get_outer_env_for_type(*self.get_citizen_template(&child.id()));
     let conclusions = match self.resolve_impl(
       coutputs,
       parent_ranges,
@@ -772,7 +772,7 @@ where
       coutputs.add_instantiation_bounds(
         self.opts.global_options.sanity_check,
         self.typing_interner,
-        calling_env.denizen_template_id(),
+        *calling_env.denizen_template_id(),
         impl_isa.impl_name,
         make(self.typing_interner, vec![], vec![], vec![]),
       );
@@ -856,7 +856,7 @@ where
         coutputs.add_instantiation_bounds(
           self.opts.global_options.sanity_check,
           self.typing_interner,
-          calling_env.root_compiling_denizen_env().denizen_template_id(),
+          *calling_env.root_compiling_denizen_env().denizen_template_id(),
           instantiated_id,
           rune_to_bound,
         );

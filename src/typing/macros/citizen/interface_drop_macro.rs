@@ -118,6 +118,7 @@ where
       &[],
       rules_slice,
       &[],
+      &[],
       self.scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),
     ));
     let drop_name_local = match self.translate_generic_function_name(drop_function_a.name) {

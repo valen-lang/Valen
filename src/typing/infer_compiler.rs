@@ -1,4 +1,4 @@
-use crate::postparsing::ast::{GenericParameterS, LocationInDenizen};
+use crate::postparsing::ast::{FunctionS, GenericParameterS, LocationInDenizen};
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::postparsing::names::*;
 use crate::postparsing::rules::rules::*;
@@ -668,6 +668,15 @@ where
     include_reachable_bounds_for_runes: &[IRuneS<'s>],
     conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
   ) -> Result<&'t InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
+    // First, register the original FunctionS for each bound that we have.
+    // We'll also do this for the reachable bounds, later below.
+    let own_func_bounds =
+        self.func_bounds_of(state, envs.original_calling_env.denizen_template_id());
+    for (rune_usage, func_bound) in own_func_bounds {
+      if let Some(ITemplataT::Prototype(pt)) = conclusions.get(&rune_usage.rune) {
+        self.register_bound_prototype(state, func_bound, pt.prototype);
+      }
+    }
     let reachable_bounds: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> =
       include_reachable_bounds_for_runes
         .iter()
@@ -677,7 +686,7 @@ where
             ITemplataT::Kind(KindTemplataT { kind }) => Some(*kind),
             _ => None,
           };
-          let maybe_id_and_template_id: Option<(IdT<'s, 't>, IdT<'s, 't>)> =
+          let maybe_id_and_template_id: Option<(&'t IdT<'s, 't>, &'t IdT<'s, 't>)> =
             match maybe_mentioned_kind {
               Some(KindT::Struct(s)) => Some((s.id, self.get_citizen_template(s.id))),
               Some(KindT::Interface(i)) => Some((i.id, self.get_citizen_template(i.id))),
@@ -688,6 +697,7 @@ where
             None => self.typing_interner.alloc_index_map(),
             Some((id, template_id)) => {
               let inner_env = state.get_inner_env_for_type(template_id);
+              let citizen_rune_to_func_bound = self.func_bounds_of(state, template_id);
               let substituter = self.get_placeholder_substituter(
                 self.opts.global_options.sanity_check,
                 envs.original_calling_env.denizen_template_id(),
@@ -730,6 +740,17 @@ where
                         });
                         let subst_prototype =
                           substituter.substitute_for_prototype(state, prototype);
+                        // Now that we have the prototype in terms of this compiling denizen, let's
+                        // register the FunctionS for this function bound.
+                        // VLAZY: turn citizen_rune_to_func_bound into a map
+                        if let Some((_, func_bound)) = citizen_rune_to_func_bound
+                          .iter()
+                          .find(|(ru, _)| ru.rune == rune_name.rune)
+                        {
+                          self.register_bound_prototype(state, func_bound, subst_prototype);
+                        } else {
+                          panic!("vcurious");
+                        }
                         Some((rune_name.rune, *subst_prototype))
                       }
                       _ => unreachable!(),
@@ -771,6 +792,73 @@ where
       Err(e) => return Err(e),
     };
     Ok(instantiation_bound_args)
+  }
+
+  // The postparsed `func_bounds` of a denizen, given its already-template id.
+  // VLAZY: move this into coutputs or compiler
+  fn func_bounds_of(
+    &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    denizen_template_id: &'t IdT<'s, 't>,
+  ) -> &'s [(RuneUsage<'s>, FunctionS<'s>)] {
+    match denizen_template_id.local_name {
+      INameT::FunctionTemplate(_) => self.illuminate_function(coutputs, denizen_template_id).func_bounds,
+      INameT::StructTemplate(_) => coutputs.get_postparsed_struct(denizen_template_id).func_bounds,
+      INameT::InterfaceTemplate(_) => coutputs.get_postparsed_interface(denizen_template_id).func_bounds,
+      // Lambdas (and anything else) declare no where-clause bounds.
+      _ => &[],
+    }
+  }
+
+  // Register the `func_bound` identified by `rune` (each bound's result rune) at the id the borrow
+  // checker looks up (`get_function_template(proto.id)`).
+  // VLAZY: this is a bit of a mess
+  fn register_bound_prototype(
+    &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    func_bound: &'s FunctionS<'s>,
+    prototype: &PrototypeT<'s, 't>,
+  ) {
+    if !matches!(prototype.id.local_name, INameT::FunctionBound(_)) {
+      panic!("vcurious");
+    }
+    let key = Compiler::get_function_template(self.typing_interner, prototype.id);
+    if coutputs.peek_postparsed_function(key).is_some() {
+      // VLAZY: investigate this
+      //
+      // Analysis from claude, verify before trusting:
+      //
+      // Why does a key sometimes come back already-registered here?
+      //
+      // NOT because the bound is citizen-anchored (an earlier belief). A function bound's prototype
+      // is re-anchored away from the citizen it was copied from: when a reachable bound is
+      // substituted, `substitute_templatas_in_prototype` (templata_compiler.rs, the `FunctionBound`
+      // arm marked MFBFDP) rebuilds the id as `original_calling_denizen_id.add_step(FunctionBound)`.
+      // The reachable path above passes F's *template* id as that anchor (the
+      // `get_placeholder_substituter` call uses `denizen_template_id()`). F's OWN where-clause bounds
+      // are instead anchored at F's *full* denizen id (`assemble_prototype`, compiler.rs, uses
+      // `denizen_id()`). `get_function_template` copies `init_steps` verbatim, so:
+      //     own bound key       = F_full_id      + FunctionBoundTemplate(name)
+      //     reachable bound key = F_template_id  + FunctionBoundTemplate(name)
+      // They differ in F's own name step (full vs template), so an own bound and a reachable bound
+      // never collide with each other.
+      //
+      // A hit here therefore means the SAME key is registered twice, from one of:
+      //   (a) `check_defining_conclusions_and_resolve` running more than once for the same F (it has
+      //       three callers) — re-registers an identical (key, FunctionS); harmless in isolation.
+      //   (b) F reaching the same-signature bound from two DIFFERENT sources — two citizen runes,
+      //       possibly two different citizens that each require e.g. `drop(T)`. Both substitute to the
+      //       same `F_template + FunctionBound(drop, [T])`, so they land on the same key, yet the
+      //       `func_bound` FunctionS resolved per-rune is each citizen's own bound object — DIFFERENT
+      //       FunctionS. This is the real defect the guard catches: the key (F-template, name only,
+      //       args stripped by `get_function_template`) is too coarse to keep two distinct reachable
+      //       bounds apart. It is signature-equivalent for the borrow checker (a bound carries only
+      //       params/effects), but it is a genuine identity collapse — so a silent early-return here
+      //       would paper over (b), not fix it. The fix is to give each bound a distinct, this-
+      //       function-anchored id so distinct bounds get distinct keys.
+      return;
+    }
+    coutputs.register_postparsed_function(key, func_bound);
   }
 
   pub fn import_reachable_bounds(

@@ -19,25 +19,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where
   's: 't,
 {
-  pub fn evaluate_block(
-    &self,
-    parent_fate: &mut FunctionEnvironmentBuilder<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    loct: LocT<'t>,
-    parent_ranges: &'t [RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    region: RegionT,
-    block_1: &'s BlockSE<'s>,
-  ) -> (
-    &'t BlockTE<'s, 't>,
-    HashSet<IVarNameT<'s, 't>>,
-    HashSet<IVarNameT<'s, 't>>,
-    HashSet<KindT<'s, 't>>,
-  ) {
-    panic!("Unimplemented: Slab 15");
-    // evaluateBlockStatements with child fate, BlockTE wrap, return effect sets via getEffectsSince
-  }
-
   pub fn evaluate_block_statements_block(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,

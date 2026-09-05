@@ -10,15 +10,15 @@ backend.
 
 Green. The gates (from `fire-commit-config.toml`), with last measured counts — re-run to refresh:
 
-- `cargo nextest run --manifest-path Cargo.toml` (native) — 823 passed (one backend-e2e test,
+- `cargo nextest run --manifest-path Cargo.toml` (native) — 855 passed (one backend-e2e test,
   `pass_manager_main_builds_simple_program_end_to_end`, sometimes reports LEAK — non-fatal, it passes).
-- `VALE_TEST_BACKEND=wasi cargo nextest run --manifest-path Cargo.toml` — 823 passed.
+- `VALE_TEST_BACKEND=wasi cargo nextest run --manifest-path Cargo.toml` — 855 passed.
 - `cargo test --manifest-path Cargo.toml --lib --features rust_interop` — 858 passed (gate for changes
   under `src/typing/rust_interop/**`; needs `rustc-dev` on the pinned nightly; re-measure — not run this session).
 
 ## Lambda typing
 
-Lambdas type-check through the typing pass: `src/typing/test/compiler_lambda_tests.rs` has 10 of 12
+Lambdas type-check through the typing pass — `src/typing/test/compiler_lambda_tests.rs` is fully
 enabled and green (`cargo nextest run --manifest-path Cargo.toml compiler_lambda_tests`). Param-bearing
 `__call` resolution binds param runes in the two per-call-site solve fns
 (`evaluate_templated_function_from_call_for_banner`, `evaluate_templated_light_banner_from_call` in
@@ -27,14 +27,28 @@ enabled and green (`cargo nextest run --manifest-path Cargo.toml compiler_lambda
 using `assemble_initial_sends_from_args`. Closure captures lower to `MemberLookup(self, member)` (a
 genuine `&&`, decayed) with no `SoftLoad`/`OwnershipT`.
 
-Two stay `#[ignore]`d — genuine gaps, not regressions:
-- `tests_lambda_and_concept_function` — fails in expression compilation (concept-function + lambda).
-- `lambda_inside_template` — needs clone-of-borrow-in-generics bound resolution (`&&T` structural
-  distinctness), per its own `#[ignore]` reason; its test setup also omits the imported package sources
-  (`printutils`, `drop`, …), which must be added alongside.
+`lambda_inside_template` and `tests_lambda_and_concept_function` use `bool`, not `str`, to sidestep the
+open `&str` exact-match gap (see Bound resolution below).
 
 Stale `// VCOORD: enable this` comments sit above the now-enabled tests (Guardian NRVMX blocks AI
 removal of V-markers) — the architect can clear them.
+
+## Bound resolution (BRRZ / FuncBoundStep)
+
+To satisfy a `where func(&G)E` bound at a call site, the `ResolveSR` handler in
+`src/typing/infer/compiler_solver.rs` gathers the search env from each bound param's **rune
+substitution value** — the type the rune resolved to, taken whole (`G` → the closure struct's env,
+where its `__call` is declared) — and hands them to `find_function`'s `extra_envs_to_look_in`. This is
+FuncBoundStep (`docs/plans/plan-phased-calls.md` §5.5–§5.8; @BRRZ in
+`docs/arcana/BoundReturnResolution-BRRZ.md`); matching stays exact (@ENECCLZ). It unblocked BRRZ, the
+interface forwarders, and a lambda program end-to-end.
+
+**Open — the borrow blanket (clone-of-borrow-in-generics).** When a rune's value is itself a borrow
+(`clone(&T)T` at `T=&Ship`), the env should resolve in `borrow.vale`, which does not exist yet. Needs
+`func clone<T>(x &&T) &T` (plus `drop`/`__call` analogs) in a new `borrow.vale`, and a `BorrowRef →
+borrow.vale` arm in `get_param_environments` (`src/typing/overload_resolver.rs`), which today gathers no
+env for a borrow value under exact. Until then `rsa_callable` and the `&str` exact-match lambda tests
+stay ignored.
 
 ## Active project: seal the postparse interner
 
@@ -141,3 +155,7 @@ needs no backend-code edits. Member lookup is by spelling (`get_member_and_index
   slices empty). So the call-site solve must use `assemble_initial_sends_from_args` (peels by
   `type_outer_ref_rules.len()`, = 0 here, so `&closure` lands intact), not
   `old_assemble_initial_sends_from_args` (peels all refs → the arg conflicts with the `&` rune).
+- **To resolve a bound, look in the environment of the rune's *value*, taken whole — never peel the
+  param coord.** For `where func(&G)E`, search the env of what `G` resolved to (FuncBoundStep,
+  `plan-phased-calls.md` §5.5–§5.8). Stripping `&closure`, or collapsing `&&Ship`→`Ship`, breaks the
+  exact-shape determinism the borrow blanket relies on (@ENECCLZ; `exp-2-handoff.md` decision 3).

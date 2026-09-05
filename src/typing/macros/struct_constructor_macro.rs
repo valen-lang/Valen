@@ -159,6 +159,7 @@ where
       &[],
       rules_slice,
       &[],
+      &[],
       self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS {
         generator_id: self.keywords.struct_constructor_generator,
       })),
@@ -196,10 +197,10 @@ where
       KindT::Struct(s) => s,
       _ => panic!("Expected struct kind in generate_function_body_struct_constructor"),
     };
-    let definition = coutputs.lookup_struct(struct_tt.id, self);
+    let definition = coutputs.lookup_struct(*struct_tt.id, self);
     let instantiation_bound_params = definition.instantiation_bound_params;
     let instantiation_bounds = coutputs
-      .get_instantiation_bounds(self.typing_interner, struct_tt.id)
+      .get_instantiation_bounds(self.typing_interner, *struct_tt.id)
       .expect("vassertSome: getInstantiationBounds");
     let bound_arguments_source = IBoundArgumentsSource::UseBoundsFromContainer {
       instantiation_bound_params,
@@ -208,7 +209,7 @@ where
     let members: Vec<(IVarNameT<'s, 't>, KindT<'s, 't>)> = {
       let placeholder_substituter = self.get_placeholder_substituter(
         false, // sanity_check
-        env.template_id,
+        &env.template_id,
         struct_tt.id,
         bound_arguments_source,
       );

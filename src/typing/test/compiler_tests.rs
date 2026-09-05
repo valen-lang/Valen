@@ -1206,7 +1206,6 @@ fn simple_struct() {
             },
             ..
           },
-          weakable: false,
           sharedness: SharednessT::Single,
           members: [StructMemberT {
             name: MemberNameT { imprecise_name: CodeNameS { name: StrI("a"), .. }, .. },
@@ -1364,7 +1363,6 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
     .iter()
     .filter(|d| {
       unapply_simple_name(&d.template_name).as_deref() == Some("MyInterface")
-        && !d.weakable
         && matches!(d.sharedness, SharednessT::Single)
         && d.internal_methods.is_empty()
     })
@@ -1376,7 +1374,6 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
     .iter()
     .filter(|d| {
       unapply_simple_name(&d.template_name).as_deref() == Some("MyStruct")
-        && !d.weakable
         && matches!(d.sharedness, SharednessT::Single)
     })
     .collect();
@@ -1387,8 +1384,8 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
     .iter()
     .flat_map(|(_, sub_map)| sub_map.values())
     .any(|edge| {
-      edge.sub_citizen.id() == struct_def.instantiated_citizen.id
-        && edge.super_interface == interface_def.instantiated_interface.id
+      edge.sub_citizen.id() == *struct_def.instantiated_citizen.id
+        && edge.super_interface == *interface_def.instantiated_interface.id
     }));
 }
 
@@ -1426,7 +1423,6 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
     .iter()
     .filter(|d| {
       unapply_simple_name(&d.template_name).as_deref() == Some("MyInterface")
-        && !d.weakable
         && matches!(d.sharedness, SharednessT::Single)
     })
     .collect();
@@ -1444,7 +1440,6 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
     .iter()
     .filter(|d| {
       unapply_simple_name(&d.template_name).as_deref() == Some("MyStruct")
-        && !d.weakable
         && matches!(d.sharedness, SharednessT::Single)
     })
     .collect();
@@ -1455,8 +1450,8 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
     .iter()
     .flat_map(|(_, sub_map)| sub_map.values())
     .any(|edge| {
-      edge.sub_citizen.id() == struct_def.instantiated_citizen.id
-        && edge.super_interface == interface_def.instantiated_interface.id
+      edge.sub_citizen.id() == *struct_def.instantiated_citizen.id
+        && edge.super_interface == *interface_def.instantiated_interface.id
     }));
 }
 
@@ -5272,7 +5267,7 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
   let interface = coutputs.lookup_interface_by_template_name(interface_template_name);
   let my_struct = coutputs.lookup_struct_by_template_name(struct_template_name);
 
-  coutputs.lookup_impl(my_struct.instantiated_citizen.id, interface.instantiated_interface.id);
+  coutputs.lookup_impl(*my_struct.instantiated_citizen.id, *interface.instantiated_interface.id);
 }
 
 // TSUGAR: deleted `report_when_imm_contains_varying_member` — ImmStructCantHaveVaryingMember validator was removed.

@@ -282,10 +282,10 @@ where
     region: RegionT,
     closure_struct_ref: StructTT<'s, 't>,
   ) -> ExpressionTE<'s, 't> {
-    let closure_struct_def = coutputs.lookup_struct(closure_struct_ref.id, self);
+    let closure_struct_def = coutputs.lookup_struct(*closure_struct_ref.id, self);
     let substituter = self.get_placeholder_substituter(
       self.opts.global_options.sanity_check,
-      nenv.function_environment().template_id,
+      &nenv.function_environment().template_id,
       closure_struct_ref.id,
       IBoundArgumentsSource::InheritBoundsFromTypeItself,
     );
@@ -1057,18 +1057,18 @@ where
         };
         let expr_2 = match peel_all_references(container_expr_2.result()) {
           KindT::Struct(struct_tt) => {
-            let struct_def = coutputs.lookup_struct(struct_tt.id, self);
+            let struct_def = coutputs.lookup_struct(*struct_tt.id, self);
             let (struct_member, _member_index) = struct_def
               .get_member_and_index(needle)
               .unwrap_or_else(|| panic!("CouldntFindMemberT"));
             let unsubstituted_member_type = struct_member.tyype;
             let instantiation_bounds = coutputs
-              .get_instantiation_bounds(self.typing_interner, struct_tt.id)
+              .get_instantiation_bounds(self.typing_interner, *struct_tt.id)
               .unwrap_or_else(|| panic!("vassertSome: getInstantiationBounds"));
             let member_type = self
               .get_placeholder_substituter(
                 self.opts.global_options.sanity_check,
-                nenv.function_environment().template_id,
+                &nenv.function_environment().template_id,
                 struct_tt.id,
                 IBoundArgumentsSource::UseBoundsFromContainer {
                   instantiation_bound_params: struct_def.instantiation_bound_params,
@@ -1166,10 +1166,10 @@ where
         };
         match expr_2.result() {
           KindT::Struct(s) => {
-            assert!(coutputs.get_instantiation_bounds(self.typing_interner, s.id).is_some());
+            assert!(coutputs.get_instantiation_bounds(self.typing_interner, *s.id).is_some());
           }
           KindT::Interface(i) => {
-            assert!(coutputs.get_instantiation_bounds(self.typing_interner, i.id).is_some());
+            assert!(coutputs.get_instantiation_bounds(self.typing_interner, *i.id).is_some());
           }
           _ => {}
         }
@@ -2029,10 +2029,10 @@ where
 
         let destroy_2 = match inner_expr_2.result() {
           KindT::Struct(struct_tt) => {
-            let struct_def = coutputs.lookup_struct(struct_tt.id, self);
+            let struct_def = coutputs.lookup_struct(*struct_tt.id, self);
             let substituter = self.get_placeholder_substituter(
               self.opts.global_options.sanity_check,
-              nenv.function_environment().template_id,
+              &nenv.function_environment().template_id,
               struct_tt.id,
               IBoundArgumentsSource::InheritBoundsFromTypeItself,
             );
@@ -2283,38 +2283,6 @@ where
     }
   }
 
-  pub fn check_array(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    range: &[RangeS<'s>],
-    array_mutability: SharednessT,
-    element_coord: KindT<'s, 't>,
-    generator_prototype: PrototypeT<'s, 't>,
-    generator_type: KindT<'s, 't>,
-  ) {
-    panic!("Unimplemented: Slab 15");
-    // if (generatorPrototype.returnType != elementCoord) {
-    //   throw CompileErrorExceptionT(RangedInternalErrorT(range, "Generator return type doesn't agree with array element type!"))
-    // }
-    // if (generatorPrototype.paramTypes.size != 2) {
-    //   throw CompileErrorExceptionT(RangedInternalErrorT(range, "Generator must take in 2 args!"))
-    // }
-    // if (generatorPrototype.paramTypes(0) != generatorType) {
-    //   throw CompileErrorExceptionT(RangedInternalErrorT(range, "Generator first param doesn't agree with generator expression's result!"))
-    // }
-    // generatorPrototype.paramTypes(1) match {
-    //   case CoordT(ShareT, _, IntT.i32) =>
-    //   case _ => {
-    //     throw CompileErrorExceptionT(
-    //       RangedInternalErrorT(range, "Generator must take in an integer as its second param!"))
-    //   }
-    // }
-    // if (arrayMutability == ImmutableT &&
-    //   Compiler.getMutability(coutputs, elementCoord.kind) == MutabilityTemplataT(MutableT)) {
-    //   throw CompileErrorExceptionT(RangedInternalErrorT(range, "Can't have an immutable array of mutable elements!"))
-    // }
-  }
-
   pub fn get_option(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
@@ -2352,7 +2320,7 @@ where
       _ => panic!("vfail"),
     };
     let opt_interface_ref =
-      self.typing_interner.intern_interface_tt(InterfaceTTValT { id: opt_interface_val.id });
+      self.typing_interner.intern_interface_tt(InterfaceTTValT { id: *opt_interface_val.id });
     let own_opt_coord = KindT::Interface(opt_interface_ref);
 
     let some_name = self
@@ -2484,7 +2452,7 @@ where
       _ => panic!("vfail"),
     };
     let result_interface_ref =
-      self.typing_interner.intern_interface_tt(InterfaceTTValT { id: result_interface_val.id });
+      self.typing_interner.intern_interface_tt(InterfaceTTValT { id: *result_interface_val.id });
     let own_result_coord = KindT::Interface(result_interface_ref);
 
     let ok_name = self
@@ -2596,14 +2564,14 @@ where
   ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
     match expr.result() {
       KindT::Struct(sr) => {
-        let struct_def = coutputs.lookup_struct(sr.id, self);
-        if !struct_def.weakable {
+        let struct_def = coutputs.lookup_struct(*sr.id, self);
+        if struct_def.sharedness != SharednessT::Shared {
           return Err(ICompileErrorT::TookWeakRefOfNonWeakableError { range: parent_ranges });
         }
       }
       KindT::Interface(ir) => {
-        let interface_def = coutputs.lookup_interface(ir.id, self);
-        if !interface_def.weakable {
+        let interface_def = coutputs.lookup_interface(*ir.id, self);
+        if interface_def.sharedness != SharednessT::Shared {
           return Err(ICompileErrorT::TookWeakRefOfNonWeakableError { range: parent_ranges });
         }
       }
@@ -2760,6 +2728,7 @@ where
       function_s.effects,
       function_s.header_rules,
       function_s.impl_bounds,
+      function_s.func_bounds,
       body_s,
     ))
   }

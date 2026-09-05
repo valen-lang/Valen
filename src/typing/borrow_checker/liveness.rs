@@ -233,10 +233,7 @@ impl<'s, 'ctx, 't, 'a> Liveness<'s, 'ctx, 't, 'a> {
 
   /// The caller-side group of each array the callee churns (a `mut`-group parameter's argument).
   fn churned_groups(&self, call: &'t FunctionCallTE<'s, 't>) -> Vec<RootGroup<'s, 't>> {
-    let callee = match resolve_callee(call, self.coutputs, self.compiler) {
-      Some(callee) => callee,
-      None => return Vec::new(),
-    };
+    let callee = resolve_callee(call, self.coutputs, self.compiler);
     let mut groups = Vec::new();
     let arg_count = call.args.len().min(callee.params.len());
     for i in 0..arg_count {

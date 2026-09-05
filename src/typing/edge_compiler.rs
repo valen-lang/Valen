@@ -102,7 +102,7 @@ where
                         let overriding_citizen = overriding_impl.sub_citizen;
                         assert!(coutputs.get_instantiation_bounds(self.typing_interner, ISubKindTT::from(overriding_citizen).id()).is_some());
                         let super_interface_id = overriding_impl.super_interface.id;
-                        assert!(coutputs.get_instantiation_bounds(self.typing_interner, super_interface_id).is_some());
+                        assert!(coutputs.get_instantiation_bounds(self.typing_interner, *super_interface_id).is_some());
                         let mut abstract_func_to_override_func = ArenaIndexMap::new_in(self.typing_interner.bump());
                         for (k, v) in found_functions {
                             abstract_func_to_override_func.insert(k, v);
@@ -110,14 +110,14 @@ where
                         let edge = self.typing_interner.alloc(EdgeT {
                             edge_id: overriding_impl.instantiated_id,
                             sub_citizen: overriding_citizen,
-                            super_interface: super_interface_id,
+                            super_interface: *super_interface_id,
                             instantiation_bound_params: overriding_impl.instantiation_bound_params,
                             abstract_func_to_override_func,
                         });
                         let overriding_citizen_def = coutputs.lookup_citizen_by_template_name(overriding_citizen_template_id);
                         Ok((ISubKindTT::from(overriding_citizen_def.instantiated_citizen()).id(), edge))
                     }).collect::<Result<HashMap<_, _>, _>>()?;
-                Ok((interface_id, overriding_citizen_to_found_function))
+                Ok((*interface_id, overriding_citizen_to_found_function))
             }).collect::<Result<HashMap<_, _>, _>>()?;
 
     Ok((interface_edge_blueprints, itables))
@@ -138,7 +138,7 @@ where
         match function.header.get_abstract_interface() {
           None => Vec::new(),
           Some(abstract_interface) => {
-            let abstract_interface_template = self.get_interface_template(abstract_interface.id);
+            let abstract_interface_template = self.get_interface_template(*abstract_interface.id);
             vec![(abstract_interface_template, *function)]
           }
         }
@@ -211,7 +211,7 @@ where
           function_headers.into_iter().map(|(p, vi)| (p, vi as i32)).collect(),
         );
         self.typing_interner.alloc(InterfaceEdgeBlueprintT {
-          interface: interface_def.instantiated_interface.id,
+          interface: *interface_def.instantiated_interface.id,
           super_family_root_headers,
         })
       })
@@ -249,7 +249,7 @@ where
         self.typing_interner,
         self.scout_arena,
         dispatcher_outer_env,
-        placeholder_template_id,
+        &placeholder_template_id,
         placeholder_template_id_ref,
         vec![],
       )),
@@ -297,11 +297,11 @@ where
     let origin_function_templata =
       maybe_origin_function_templata.expect("vassertSome: originFunctionTemplata");
     let origin_func = self
-      .get_or_create_postparsed_function(coutputs, origin_function_templata.function_template_id);
+      .illuminate_function(coutputs, origin_function_templata.function_template_id);
     let impl_a = coutputs.get_postparsed_impl(impl_t.templata.impl_template_id);
     let range = origin_func.range;
 
-    let abstract_func_outer_env = coutputs.get_outer_env_for_function(abstract_func_template_id);
+    let abstract_func_outer_env = coutputs.get_outer_env_for_function(*abstract_func_template_id);
 
     let dispatcher_template_name = self.typing_interner.intern_override_dispatcher_template_name(
       OverrideDispatcherTemplateNameT { impl_id: impl_t.template_id },
@@ -312,7 +312,7 @@ where
       self.typing_interner,
       self.scout_arena,
       abstract_func_outer_env,
-      *dispatcher_template_id_ref,
+      dispatcher_template_id_ref,
       dispatcher_template_id_ref,
       vec![],
     );
@@ -474,7 +474,7 @@ where
       self.typing_interner,
       self.scout_arena,
       IInDenizenEnvironmentT::from(dispatcher_outer_env),
-      *dispatcher_template_id_ref,
+      dispatcher_template_id_ref,
       dispatcher_id_ref,
       dispatcher_inner_inferences
         .iter()
@@ -565,11 +565,11 @@ where
       })
       .flat_map(|(rune_in_impl, c)| {
         let citizen_id = c.id();
-        let citizen_template_id = self.get_citizen_template(citizen_id);
+        let citizen_template_id = self.get_citizen_template(&citizen_id);
         let substituter = self.get_placeholder_substituter(
           self.opts.global_options.sanity_check,
-          *dispatcher_template_id_ref,
-          citizen_id,
+          dispatcher_template_id_ref,
+          &citizen_id,
           IBoundArgumentsSource::InheritBoundsFromTypeItself,
         );
         let raw_entries: Vec<(
@@ -646,7 +646,7 @@ where
         self.typing_interner,
         self.scout_arena,
         IInDenizenEnvironmentT::from(dispatcher_inner_env),
-        *dispatcher_template_id_ref,
+        dispatcher_template_id_ref,
         dispatcher_id_ref,
         dispatcher_and_case_placeholdered_impl_reachable_prototypes
           .iter()
@@ -727,7 +727,7 @@ where
       self.typing_interner,
       self.scout_arena,
       IInDenizenEnvironmentT::from(dispatcher_inner_env_with_bounds_for_sub_citizen),
-      *dispatcher_case_id_ref,
+      dispatcher_case_id_ref,
       dispatcher_case_id_ref,
       vec![],
     );

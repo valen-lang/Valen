@@ -1,7 +1,7 @@
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parsing::ast::ast::IMacroInclusionP;
-use crate::postparsing::ast::IFunctionAttributeS;
+use crate::postparsing::ast::{ICitizenDenizenS, IDenizenS, IFunctionAttributeS};
 use crate::postparsing::ast::{FunctionS, ImplS, InterfaceS, ProgramS, StructS};
 use crate::postparsing::ast::{ICitizenAttributeS, LocationInDenizen, MacroCallS};
 use crate::postparsing::itemplatatype::ITemplataType;
@@ -67,8 +67,8 @@ use crate::typing::templata::templata::{
   PrototypeTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT,
   StructDefinitionTemplataT,
 };
-use crate::typing::templata_compiler::IBoundArgumentsSource;
-use crate::typing::types::types::ICitizenTT;
+use crate::typing::templata_compiler::{translate_sharedness, IBoundArgumentsSource};
+use crate::typing::types::types::{ICitizenTT, SharednessT};
 use crate::typing::types::types::ISubKindTT;
 use crate::typing::types::types::RegionT;
 use crate::typing::types::types::RuntimeSizedArrayTT;
@@ -106,15 +106,6 @@ pub enum IFunctionGenerator {
   AbstractBody,
 }
 
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where
-  's: 't,
-{
-  pub fn print(&self, x: ()) {
-    panic!("Unimplemented: Slab 15");
-    // println("###: " + x)
-  }
-}
 pub struct Compiler<'s, 'ctx, 't>
 where
   's: 't,
@@ -492,7 +483,7 @@ where
     state.add_instantiation_bounds(
       self.opts.global_options.sanity_check,
       self.typing_interner,
-      envs.original_calling_env.denizen_template_id(),
+      *envs.original_calling_env.denizen_template_id(),
       result.id,
       empty_bounds,
     );
@@ -567,7 +558,7 @@ where
   // function read passes, so no read site ever touches the sealed table directly. See the sealing
   // VCOORD in compiler_outputs.rs. Struct/interface/impl are always eager, so their reads stay on the
   // total coutputs.get_postparsed_* accessors, which likewise never reveal existence.
-  pub(in crate::typing) fn get_or_create_postparsed_function(
+  pub(in crate::typing) fn illuminate_function(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     template_id: &'t IdT<'s, 't>,
@@ -1310,7 +1301,7 @@ where
               LocationInDenizen { path: &[] },
               *id,
             )?;
-            let function_a = self.get_or_create_postparsed_function(&mut coutputs, id);
+            let function_a = self.illuminate_function(&mut coutputs, id);
             let maybe_export = function_a.attributes.iter().find_map(|a| match a {
               IFunctionAttributeS::Export(e) => Some(e),
               _ => None,
@@ -1874,13 +1865,13 @@ where
           // and gets checked at instantiation.
           let kind_is_fine_in_extern_func = match param_type {
             KindT::Struct(s) => coutputs
-              .lookup_struct(s.id, self)
+              .lookup_struct(*s.id, self)
               .attributes
               .iter()
               .any(|a| matches!(a, ICitizenAttributeT::Extern(_))),
             // VCOORD: test for this case please
             KindT::Interface(i) => coutputs
-                .lookup_interface(i.id, self)
+                .lookup_interface(*i.id, self)
                 .attributes
                 .iter()
                 .any(|a| matches!(a, ICitizenAttributeT::Extern(_))),
@@ -1908,10 +1899,10 @@ where
       for (exported_kind, export) in exported_kind_to_export.iter() {
         match exported_kind {
           KindT::Struct(sr) => {
-            let struct_def = coutputs.lookup_struct(sr.id, self);
+            let struct_def = coutputs.lookup_struct(*sr.id, self);
             let substituter = self.get_placeholder_substituter(
               self.opts.global_options.sanity_check,
-              struct_def.template_name,
+              &struct_def.template_name,
               sr.id,
               IBoundArgumentsSource::InheritBoundsFromTypeItself,
             );
@@ -1992,29 +1983,6 @@ where
     Ok(())
   }
 
-  pub fn is_root_function(&self, function_a: &'s FunctionS<'s>) -> bool {
-    panic!("Unimplemented: Slab 15");
-    // functionA.name match {
-    //   case FunctionNameS(StrI("main"), _) => return true
-    //   case _ =>
-    // }
-    // functionA.attributes.exists({
-    //   case ExportS(_) => true
-    //   case ExternS(_) => true
-    //   case _ => false
-    // })
-  }
-
-  pub fn is_root_struct(&self, struct_a: &'s StructS<'s>) -> bool {
-    panic!("Unimplemented: Slab 15");
-    // structA.attributes.exists({ case ExportS(_) => true case _ => false })
-  }
-
-  pub fn is_root_interface(&self, interface_a: &'s InterfaceS<'s>) -> bool {
-    panic!("Unimplemented: Slab 15");
-    // interfaceA.attributes.exists({ case ExportS(_) => true case _ => false })
-  }
-
   pub fn consecutive(&self, exprs: &[ExpressionTE<'s, 't>]) -> ExpressionTE<'s, 't> {
     match exprs {
       [] => panic!("Shouldn't have zero-element consecutors!"),
@@ -2068,12 +2036,32 @@ where
     }
   }
 
-  pub fn get_mutabilities(
+  pub fn get_sharedness(
     &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    concrete_values2: &[KindT<'s, 't>],
-  ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: Slab 15");
-    // concreteValues2.map(concreteValue2 => getMutability(coutputs, concreteValue2))
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    id: &'t IdT<'s, 't>,
+  ) -> SharednessT {
+    translate_sharedness(
+      match self.illuminate_type(coutputs, id) {
+        ICitizenDenizenS::TopLevelStruct(strukt) => strukt.sharedness,
+        ICitizenDenizenS::TopLevelInterface(interface) => interface.sharedness,
+      })
+  }
+
+  pub(in crate::typing) fn illuminate_type(
+    &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    template_id: &'t IdT<'s, 't>,
+  ) -> ICitizenDenizenS<'s> {
+    // VLAZY: someday lazily generate both
+    if let Some(c) = coutputs.peek_postparsed_type(template_id) { return c; }
+    #[cfg(feature = "rust_interop")]
+    {
+      // VLAZY: on-demand rust-interop citizen illumination is not implemented yet —
+      // create_postparsed_citizen / register_illuminated_citizen are still TODO.
+      panic!("Unimplemented: lazy rust-interop citizen illumination for {:?}", template_id);
+    }
+    #[cfg(not(feature = "rust_interop"))]
+    panic!("vfail: no postparsed citizen for {:?}", template_id);
   }
 }

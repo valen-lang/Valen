@@ -5,16 +5,20 @@
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
-  BoolPT, EffectP, GroupP, ITemplexPT, ITemplexPT::NameOrRune, IntPT, NameOrRunePT, NameP, RegionP,
-  RegionRunePT, StringPT,
+  BoolPT, EffectP, FuncPT, GroupP, ITemplexPT, ITemplexPT::NameOrRune, IntPT, NameOrRunePT, NameP,
+  RegionP, RegionRunePT, StringPT,
 };
-use crate::postparsing::ast::LocationInDenizenBuilder;
-use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
+use crate::postparsing::ast::{
+  AbstractBodyS, FunctionS, IBodyS, LocationInDenizenBuilder, ParameterS,
+};
+use crate::postparsing::itemplatatype::{
+  FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
+};
 use crate::postparsing::names::CodeNameValS;
 use crate::postparsing::names::IRuneValS::{CodeRune, ImplicitRune};
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, IRuneS, IVarDeclarationNameS,
-  ImplicitRuneValS,
+  CodeNameS, CodeRuneS, DesugaredParamNameDeclarationS, FunctionNameS, IFunctionDeclarationNameS,
+  IImpreciseNameS, IImpreciseNameValS::CodeName, IRuneS, IVarDeclarationNameS, ImplicitRuneValS,
 };
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
 use crate::postparsing::rules::rules::IRulexSR::{Call, Lookup};
@@ -971,6 +975,170 @@ where
   }
 }
 
+// Lowers a `func NAME(TYPES)RET` templex — a where-clause function bound — into its rule stream
+// (CallSiteFunc/DefinitionFunc/Resolve, unchanged from before). When `maybe_func_bounds` is Some
+// (only the top-level where-clause path passes it; a nested func-typed param passes None), it also
+// captures the bound as a synthesized abstract-function `FunctionS`.
+pub fn translate_func_templex<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  context_region: IRuneS<'s>,
+  func: &FuncPT<'p>,
+  maybe_func_bounds: Option<&mut Vec<(RuneUsage<'s>, FunctionS<'s>)>>,
+) -> RuneUsage<'s> {
+  let file = env.file();
+  let range_s = PostParser::eval_range(file, func.range);
+  let params_range_s = PostParser::eval_range(file, func.params_range);
+  let NameP(_, name_p) = &func.name;
+  let name: StrI<'s> = scout_arena.intern_str(name_p.as_str());
+  let mut params_types = Vec::<ITypeST<'s>>::new();
+  for param_p in func.parameters {
+    params_types.push(translate_templex_into_type_st(scout_arena, env.clone(), param_p));
+  }
+  let return_type = translate_templex_into_type_st(scout_arena, env.clone(), func.return_type);
+
+  // Retain each param's @PFVSZ rune split + type (all Copy) so the synthesized bound `FunctionS` can
+  // build a `ParameterS` from the same data; the rule stream produced below is unchanged.
+  let mut retained_params: Vec<(
+    RuneUsage<'s>,
+    RuneUsage<'s>,
+    &'s [IRulexSR<'s>],
+    &'s [IRulexSR<'s>],
+    ITypeST<'s>,
+  )> = Vec::new();
+  let params_s: Vec<RuneUsage<'s>> = params_types
+    .iter()
+    .map(|param_type| {
+      let (full, value, outer_vec, value_vec) = translate_signature_type_st(
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        context_region.clone(),
+        param_type,
+      );
+      let value_slice = scout_arena.alloc_slice_copy(&value_vec);
+      let outer_slice = scout_arena.alloc_slice_copy(&outer_vec);
+      rule_builder.extend(value_vec);
+      rule_builder.extend(outer_vec);
+      retained_params.push((full, value, outer_slice, value_slice, *param_type));
+      full
+    })
+    .collect();
+  let param_list_rune_s = RuneUsage {
+    range: params_range_s.clone(),
+    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
+  };
+  rule_builder.push(IRulexSR::KindList(KindListSR {
+    range: params_range_s,
+    result_rune: param_list_rune_s.clone(),
+    members: scout_arena.alloc_slice_from_vec(params_s),
+  }));
+
+  let (return_rune_s, _rt_value, rt_outer_vec, rt_value_vec) = translate_signature_type_st(
+    scout_arena,
+    keywords,
+    env.clone(),
+    &mut lidb.child(),
+    context_region.clone(),
+    &return_type,
+  );
+  // The return-type rules become the synthesized bound's own header_rules (param-type rules live on
+  // its ParameterS, per @PFVSZ). Copy them out before they are moved into the outer rule stream.
+  let mut bound_header_rules_vec: Vec<IRulexSR<'s>> = Vec::new();
+  bound_header_rules_vec.extend(rt_value_vec.iter().copied());
+  bound_header_rules_vec.extend(rt_outer_vec.iter().copied());
+  rule_builder.extend(rt_value_vec);
+  rule_builder.extend(rt_outer_vec);
+
+  let result_rune_s = RuneUsage {
+    range: PostParser::eval_range(file, func.range),
+    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
+  };
+
+  // Only appears in call site; filtered out when solving definition
+  rule_builder.push(IRulexSR::CallSiteFunc(CallSiteFuncSR {
+    range: range_s.clone(),
+    prototype_rune: result_rune_s.clone(),
+    name: name.clone(),
+    params_list_rune: param_list_rune_s.clone(),
+    return_rune: return_rune_s.clone(),
+  }));
+  // Only appears in definition; filtered out when solving call site
+  rule_builder.push(IRulexSR::DefinitionFunc(DefinitionFuncSR {
+    range: range_s.clone(),
+    result_rune: result_rune_s.clone(),
+    name: name.clone(),
+    params_list_rune: param_list_rune_s.clone(),
+    return_rune: return_rune_s.clone(),
+  }));
+
+  // Only appears in call site; filtered out when solving definition
+  rule_builder.push(IRulexSR::Resolve(ResolveSR {
+    range: range_s,
+    result_rune: result_rune_s.clone(),
+    name: name.clone(),
+    params_list_rune: param_list_rune_s,
+    params_types: scout_arena.alloc_slice_from_vec(params_types),
+    return_rune: return_rune_s,
+    return_type,
+  }));
+
+  // A function bound is an abstract-function declaration; when collecting bounds, capture one.
+  // Done last, so the implicit-rune LIDs consumed by the rules above are unchanged. Nameless bound
+  // params get a synthetic DesugaredParamName; an anonymous bound flows through as `__call`.
+  if let Some(func_bounds) = maybe_func_bounds {
+    let params_vec: Vec<ParameterS<'s>> = retained_params
+      .iter()
+      .enumerate()
+      .map(|(i, (full, value, outer_slice, value_slice, param_type))| {
+        ParameterS::new(
+          PostParser::eval_range(file, func.parameters[i].range()),
+          None,
+          false,
+          IVarDeclarationNameS::DesugaredParamName(DesugaredParamNameDeclarationS {
+            imprecise_name: scout_arena
+              .intern_desugared_param_name(PostParser::eval_pos(file, func.parameters[i].range().begin())),
+            lid: lidb.child().consume_in_arena(scout_arena),
+          }),
+          *param_type,
+          *full,
+          *value,
+          outer_slice,
+          value_slice,
+        )
+      })
+      .collect();
+    let bound_name = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+      imprecise_name: scout_arena.intern_code_name(name),
+      code_location: PostParser::eval_pos(file, func.range.begin()),
+      lid: lidb.child().consume_in_arena(scout_arena),
+    });
+    func_bounds.push((result_rune_s, FunctionS::new(
+      PostParser::eval_range(file, func.range),
+      bound_name,
+      &[],
+      &[],
+      TemplateTemplataType {
+        param_types: &[],
+        return_type: scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
+      },
+      scout_arena.alloc_slice_from_vec(params_vec),
+      Some(return_rune_s),
+      &[],
+      scout_arena.alloc_slice_from_vec(bound_header_rules_vec),
+      &[],
+      &[],
+      scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),
+    )));
+  }
+
+  result_rune_s
+}
+
 pub fn translate_templex<'s, 'p>(
   scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
@@ -1177,92 +1345,16 @@ pub fn translate_templex<'s, 'p>(
         panic!("POSTPARSER_TRANSLATE_TEMPLEX_FUNCTION_NOT_YET_IMPLEMENTED")
       }
 
-      ITemplexPT::Func(func) => {
-        let range_s = PostParser::eval_range(file, func.range);
-        let params_range_s = PostParser::eval_range(file, func.params_range);
-        let NameP(_, name_p) = &func.name;
-        let name: StrI<'s> = scout_arena.intern_str(name_p.as_str());
-        let mut params_types = Vec::<ITypeST<'s>>::new();
-        for param_p in func.parameters {
-          params_types.push(translate_templex_into_type_st(scout_arena, env.clone(), param_p));
-        }
-        let return_type =
-          translate_templex_into_type_st(scout_arena, env.clone(), func.return_type);
-
-        let params_s: Vec<RuneUsage<'s>> = params_types
-          .iter()
-          .map(|param_type| {
-            let (full, _value, outer_vec, value_vec) = translate_signature_type_st(
-              scout_arena,
-              keywords,
-              env.clone(),
-              &mut lidb.child(),
-              context_region.clone(),
-              param_type,
-            );
-            rule_builder.extend(value_vec);
-            rule_builder.extend(outer_vec);
-            full
-          })
-          .collect();
-        let param_list_rune_s = RuneUsage {
-          range: params_range_s.clone(),
-          rune: scout_arena
-            .intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
-        };
-        rule_builder.push(IRulexSR::KindList(KindListSR {
-          range: params_range_s,
-          result_rune: param_list_rune_s.clone(),
-          members: scout_arena.alloc_slice_from_vec(params_s),
-        }));
-
-        let (return_rune_s, _rt_value, rt_outer_vec, rt_value_vec) = translate_signature_type_st(
-          scout_arena,
-          keywords,
-          env.clone(),
-          &mut lidb.child(),
-          context_region.clone(),
-          &return_type,
-        );
-        rule_builder.extend(rt_value_vec);
-        rule_builder.extend(rt_outer_vec);
-
-        let result_rune_s = RuneUsage {
-          range: PostParser::eval_range(file, func.range),
-          rune: scout_arena
-            .intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
-        };
-
-        // Only appears in call site; filtered out when solving definition
-        rule_builder.push(IRulexSR::CallSiteFunc(CallSiteFuncSR {
-          range: range_s.clone(),
-          prototype_rune: result_rune_s.clone(),
-          name: name.clone(),
-          params_list_rune: param_list_rune_s.clone(),
-          return_rune: return_rune_s.clone(),
-        }));
-        // Only appears in definition; filtered out when solving call site
-        rule_builder.push(IRulexSR::DefinitionFunc(DefinitionFuncSR {
-          range: range_s.clone(),
-          result_rune: result_rune_s.clone(),
-          name: name.clone(),
-          params_list_rune: param_list_rune_s.clone(),
-          return_rune: return_rune_s.clone(),
-        }));
-
-        // Only appears in call site; filtered out when solving definition
-        rule_builder.push(IRulexSR::Resolve(ResolveSR {
-          range: range_s,
-          result_rune: result_rune_s.clone(),
-          name: name.clone(),
-          params_list_rune: param_list_rune_s,
-          params_types: scout_arena.alloc_slice_from_vec(params_types),
-          return_rune: return_rune_s,
-          return_type,
-        }));
-
-        result_rune_s
-      }
+      ITemplexPT::Func(func) => translate_func_templex(
+        scout_arena,
+        keywords,
+        env,
+        lidb,
+        rule_builder,
+        context_region,
+        func,
+        None,
+      ),
 
       ITemplexPT::Pack(_pack) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_PACK_NOT_YET_IMPLEMENTED"),
 
