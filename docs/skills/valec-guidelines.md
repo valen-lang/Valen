@@ -1,5 +1,5 @@
 ---
-name: valec-reviewer
+name: valec-guidelines
 description: "Valec reviewer notes: cross-pass compiler style rules (never discard Err payloads, route on honest attributes)."
 g_read_when: Read when reviewing or writing FrontendRust compiler code in any pass.
 g_mention_in:
@@ -383,3 +383,63 @@ pub fn translate_signature_templex<'s, 'p>(...) -> (RuneUsage<'s>, RuneUsage<'s>
 ```
 
 AFTER: (deleted)
+
+
+## When adding a helper method
+
+How many callers does it have? If just one, lean towards inlining it.
+
+If it only has a few callers, please think through: what would it look like if it were inlined? Would any of the inlined sites end up having simplifications?
+
+Sometimes a helper method is actually more complex than just inlining at every callsite.
+
+
+## When changing a helper method
+
+Does the helper method make sense anymore?
+
+What was the mindset when it was built? Is that mindset valid anymore? If not, consider removing the helper or inlining it or changing it.
+
+
+## Style guide
+
+ * Don't reorder existing params, but when adding new ones, add them in roughly lifetime order.
+    * Example: if `Game` contains `Level` contains `Tile`, a signature would be `fn tile_collect_mana(game: &Game, level: &Level, tile: &Tile)`.
+    * Example: if `CompilerOutputs` outlives environments, a signature would be `fn something(coutputs: &CompilerOutputs, env: &IEnvironment, key: String)`.
+ * If you want to pipe some data to where it isn't already, prefer:
+    * As a function parameter.
+    * If it's immutable (calculated once at construction, never changed), you can include it in whatever struct seems best.
+    * Do not add it to a convenient mutable struct (like World or CompilerOutputs) without human approval.
+
+
+## Need Human Approval For Optional Returns and Fields and Empty Variants
+
+Get human approval for any function that returns any Option, and any struct field that contains an Option, or any enum that contains a "None"/"Empty"/"Null"/"Unspecified"/etc variant.
+
+If you think you need an Option in a return type, you are probably wrong.
+
+ * If you think "I need this Option because the data might not exist", you're wrong, the data should have existed, and you need to ask the human to make it exist.
+
+If you think you need an Option in a struct field, you're probably wrong.
+
+If you think an enum needs a "None"/"Empty"/"Null"/"Unspecified"/etc variant, you're probably wrong.
+
+Changing the Option to a two-state enum is **NOT** appropriate, that is just a workaround that violates the spirit of this rule. Ask a human for the proper resolution.
+
+If you see an Option in a return or field or an Empty-ish variant that doesn't have `// VOPT:` above it, tell the human, so the human can look into it and see if we need to rip it out.
+
+Only the human may explicitly specifically allow one of these by adding a `// VOPT:` comment above it, or by describing it in a `## Design (human-only)` section in a `*-design.md` doc. If you see one not explicitly authorized by `// VOPT:` or a `*-design.md`'s `## Design (human-only)` section, let the human know.
+
+## Need Human Approval For Fallbacks
+
+Get human approval for any code that does a "fallback", or a "default" or a "graceful degradation" or "graceful callback". Fallbacks are always, without fail, an error in this compiler.
+
+Do not try to justify adding a gracefull fallback. Catch yourself if you try to justify it. That's a signal that you need to escalate it.
+
+Only the human may explicitly specifically allow a fallback by adding a `// VFALLBACK:` comment above it, or by describing it in a `## Design (human-only)` section in a `*-design.md` doc. If you see one not explicitly authorized by `// VFALLBACK:` or a `*-design.md`'s `## Design (human-only)` section, let the human know.
+
+For example, flag any `unwrap_or`.
+
+## Required Reading
+
+ * prose-reviewer

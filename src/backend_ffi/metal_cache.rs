@@ -70,12 +70,14 @@ pub enum Mutability { Immutable = 0, Mutable = 1 }
 pub enum Weakability { Weakable = 0, NonWeakable = 1 }
 
 /// C-repr mirror of CoercionFFI in metal/ast.h's FFI header. `kind` is the CoercionKind ordinal
-/// (Ignore=0, DirectInt=1, DirectPtr=2, Indirect=3); `bits` is the DirectInt width, else 0.
+/// (Ignore=0, DirectInt=1, DirectPtr=2, Indirect=3, Cast=4, Pair=5); `bits` is the DirectInt/Cast
+/// width or a Pair's first component width (else 0); `bits2` is a Pair's second component width (else 0).
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct CoercionFFI {
     pub kind: u32,
     pub bits: u32,
+    pub bits2: u32,
 }
 
 extern "C" {

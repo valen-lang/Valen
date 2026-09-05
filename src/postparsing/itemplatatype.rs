@@ -1,6 +1,3 @@
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RegionTemplataType {}
-
 /// The type of a group generic param's value (`ITemplataT::Group`). The param stays uniform with
 /// type/int params; its value is the ceremonial constant `Group(Default)` and never enters a `KindT`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -45,7 +42,6 @@ pub struct TemplateTemplataType<'s> {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ITemplataType<'s> {
-  RegionTemplataType(RegionTemplataType),
   GroupTemplataType(GroupTemplataType),
   ImplTemplataType(ImplTemplataType),
   KindTemplataType(KindTemplataType),

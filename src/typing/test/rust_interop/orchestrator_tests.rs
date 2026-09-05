@@ -40,6 +40,9 @@ fn generate_workspace_emits_expected_manifests() {
   assert!(cargo.contains("name = \"prog\""), "Cargo.toml:\n{cargo}");
   assert!(cargo.contains("version = \"0.1.0\""), "Cargo.toml:\n{cargo}");
   assert!(cargo.contains("edition = \"2021\""), "Cargo.toml:\n{cargo}");
+  // A standalone `[workspace]` so the generated package doesn't try to join a parent cargo workspace
+  // it may be nested inside (the real-repo case).
+  assert!(cargo.contains("[workspace]"), "Cargo.toml:\n{cargo}");
   assert!(cargo.contains("tiny = { path = \"/abs/tiny\" }"), "Cargo.toml:\n{cargo}");
   assert!(cargo.contains("[[bin]]"), "Cargo.toml:\n{cargo}");
   assert!(cargo.contains("path = \"src/main.valen\""), "Cargo.toml:\n{cargo}");

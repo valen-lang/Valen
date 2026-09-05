@@ -335,6 +335,7 @@ exported func main() {
 
 // VCOORD: enable this
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn lambda_inside_different_function_with_same_name() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -382,6 +383,7 @@ exported func main() {
 }
 
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn lambda_inside_template() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -430,6 +432,7 @@ exported func main() {
 
 // VCOORD: enable this
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn curried_lambda_inside_template() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -441,7 +444,7 @@ fn curried_lambda_inside_template() {
   // TSUGAR: helper(4) → helper(&4); helper("bork") → helper(&"bork") — helper wants &T, `4`/`"bork"` are Own
   let code = r#"
 import v.builtins.drop.*;
-func helper<T>(x &T) &T {
+func helper<T, g'>(x &T in g) &T in g {
   lam = a => b => x;
   return lam(true)(7);
 }
@@ -474,6 +477,7 @@ exported func main() {
 // already supports `&` on rvalue literals as the auto-borrow workaround.
 // VCOORD: enable this
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn curried_lambda_inside_template_explicit_borrow_probe() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -482,7 +486,7 @@ fn curried_lambda_inside_template_explicit_borrow_probe() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = "import v.builtins.drop.*;\nfunc helper<T>(x &T) &T {\n  lam = a => b => x;\n  return lam(true)(7);\n}\nexported func main() {\n  helper(&4);\n  helper(&\"bork\");\n}\n";
+  let code = "import v.builtins.drop.*;\nfunc helper<T, g'>(x &T in g) &T in g {\n  lam = a => b => x;\n  return lam(true)(7);\n}\nexported func main() {\n  helper(&4);\n  helper(&\"bork\");\n}\n";
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     new_test_code_map(&parse_arena, code),

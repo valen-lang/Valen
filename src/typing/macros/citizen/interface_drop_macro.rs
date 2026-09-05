@@ -114,6 +114,7 @@ where
         self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
       )]),
       Some(use_(-64002, void_kind_rune_s)),
+      None, // no user-written return group
       // A synthesized drop carries no effect clause.
       &[],
       rules_slice,

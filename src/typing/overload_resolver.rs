@@ -320,7 +320,21 @@ where
     match candidate {
       ICalleeCandidate::Function(FunctionCalleeCandidate { ft }) => {
         // See OFCBT.
-        let function = self.illuminate_function(coutputs, ft.function_template_id);
+        // The one site where a Rust import's signature decline can surface: it holds the call range,
+        // the reason, and the function name at once, so it builds the complete diagnostic here.
+        let function = self
+          .illuminate_function(coutputs, ft.function_template_id)
+          .map_err(|reason| {
+            let path = match ft.function_template_id.local_name {
+              INameT::FunctionTemplate(t) => t.human_name.0.to_string(),
+              other => panic!("CouldNotPostparseFunction on a non-function template: {:?}", other),
+            };
+            ICompileErrorT::CouldNotPostparseFunction {
+              range: self.typing_interner.alloc_slice_copy(call_range),
+              path,
+              reason,
+            }
+          })?;
         let identifying_rune_templata_types = function.tyype.param_types;
         // Now we want to check that the user didn't specify too many right here.
         // The function can inherit runes from its container, so subtract those first.

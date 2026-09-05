@@ -22,7 +22,7 @@ fn test_disjoint_fields_attack_is_safe() {
   assert_compiles_clean(concat!(
     "struct Ship { fuel int; }\n",
     "struct Fleet { flagship Ship; escort Ship; }\n",
-    "func attack2<r', s'>(a &Ship in r, d &Ship in s) mut(r, s) { }\n",
+    "func attack2<r', s'>(a &Ship in r, d &Ship in s) mut(r) mut(s) { }\n",
     "exported func main() int {\n",
     "  fleet = Fleet(Ship(1), Ship(2));\n",
     "  attack2(&fleet.flagship, &fleet.escort);\n",

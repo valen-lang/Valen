@@ -566,6 +566,13 @@ where
       v.extend(container_rune_initial_knowns.iter().copied());
       v
     };
+    // Per @BCHATZ, fill group generic parameters with `GroupTemplataT{}`.
+    for generic_param in function.generic_params {
+      if let Some(ITemplataType::GroupTemplataType(_)) = rune_to_type.get(&generic_param.rune.rune) {
+        initial_knowns
+          .push(InitialKnown { rune: generic_param.rune, templata: ITemplataT::Group(GroupTemplataT {}) });
+      }
+    }
     for s in initial_sends {
       initial_knowns.push(InitialKnown { rune: s.sender_rune, templata: s.send_templata });
       call_site_rules.push(IRulexSR::Equals(EqualsSR {
@@ -785,9 +792,14 @@ where
       .flat_map(|(index, generic_param)| {
         match preliminary_inferences.get(&generic_param.rune.rune) {
           Some(&x) => Some(InitialKnown { rune: generic_param.rune, templata: x }),
-          None => {
-            panic!("implement: create placeholder for missing preliminary inference");
-          }
+          // Per @BCHATZ, fill group generic parameters with `GroupTemplataT{}`.
+          None => match function_rune_to_type.get(&generic_param.rune.rune) {
+            Some(ITemplataType::GroupTemplataType(_)) => Some(InitialKnown {
+              rune: generic_param.rune,
+              templata: ITemplataT::Group(GroupTemplataT {}),
+            }),
+            _ => panic!("implement: create placeholder for missing preliminary inference"),
+          },
         }
       })
       .collect();

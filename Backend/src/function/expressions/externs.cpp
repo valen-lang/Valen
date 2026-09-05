@@ -102,6 +102,28 @@ Ref buildCallOrSideCall(
         hostArgsLE.push_back(slot);
         continue;
       }
+      if (c.kind == CoercionKind::Pair && dynamic_cast<StructKind*>(argValueKind)) {
+        // rustc passes this small struct as two register scalars. Spill the Vale struct to a slot,
+        // reinterpret it as {iN,iM}, and load each field as its declared integer param — the two-register
+        // analog of the DirectInt/Cast single-integer arm above. Pushes TWO host args for one Vale arg.
+        auto valeArgLE =
+            globalState->getRegion(argValueKind)
+                ->checkValidReference(FL(), functionState, builder, true, valeArgRefMT, valeArg);
+        auto base = hostArgsLE.size() + (sig.usesReturnOutParam ? 1u : 0u);
+        auto i0 = sig.paramTypesL[base];
+        auto i1 = sig.paramTypesL[base + 1];
+        LLVMTypeRef pairElems[2] = {i0, i1};
+        auto pairLT = LLVMStructTypeInContext(globalState->context, pairElems, 2, /*packed=*/0);
+        auto slot = makeBackendLocal(functionState, builder, pairLT, "argPairSlot", LLVMGetUndef(pairLT));
+        LLVMBuildStore(
+            builder, valeArgLE,
+            LLVMBuildBitCast(builder, slot, LLVMPointerType(LLVMTypeOf(valeArgLE), 0), "argPairPtr"));
+        hostArgsLE.push_back(
+            LLVMBuildLoad2(builder, i0, LLVMBuildStructGEP2(builder, pairLT, slot, 0, "apf0"), "argP0"));
+        hostArgsLE.push_back(
+            LLVMBuildLoad2(builder, i1, LLVMBuildStructGEP2(builder, pairLT, slot, 1, "apf1"), "argP1"));
+        continue;
+      }
       // A scalar DirectInt already is its integer. Fall through.
     }
 
@@ -176,6 +198,18 @@ Ref buildCallOrSideCall(
     hostReturnLE = LLVMBuildLoad2(
         builder, valeStructLT,
         LLVMBuildBitCast(builder, slot, LLVMPointerType(valeStructLT, 0), "retCoercePtr"), "retStruct");
+  }
+
+  if (hasAbi && abi->ret.kind == CoercionKind::Pair && dynamic_cast<StructKind*>(returnKind)) {
+    // rustc returned this small struct as two register scalars, i.e. an {iN,iM} aggregate. Reinterpret
+    // it back into the Vale struct through a slot of the aggregate's own type — the two-register analog
+    // of the Cast/DirectInt return arm above.
+    auto valeStructLT = globalState->getRegion(returnKind)->translateType(returnKind);
+    auto slot =
+        makeBackendLocal(functionState, builder, LLVMTypeOf(hostReturnLE), "retPairSlot", hostReturnLE);
+    hostReturnLE = LLVMBuildLoad2(
+        builder, valeStructLT,
+        LLVMBuildBitCast(builder, slot, LLVMPointerType(valeStructLT, 0), "retPairPtr"), "retPairStruct");
   }
 
   auto valeReturnRef =

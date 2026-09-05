@@ -9,8 +9,8 @@ use std::os::raw::c_char;
 use std::ptr;
 
 use self::backend_inputs::{
-    BackendInputs, BackendInputsFFIRaw, BackendMode, InteropInputsFFIRaw, BACKEND_MODE_INTEROP,
-    BACKEND_MODE_STANDALONE,
+    BackendInputs, BackendInputsFFIRaw, BackendMode, CallbackFFIRaw, InteropInputsFFIRaw,
+    BACKEND_MODE_INTEROP, BACKEND_MODE_STANDALONE,
 };
 
 // Optimization level, matches BACKEND_OPT_LEVEL_* in Backend/src/backend_options_ffi.h.
@@ -129,6 +129,29 @@ pub fn compile(inputs: BackendInputs) -> i32 {
         ),
     };
 
+    // The callback wrappers' symbol/name strings must outlive the FFI call, so bind the CStrings
+    // here (and the raw array pointing at them, below). Empty for standalone / no callbacks.
+    let callback_cstrings: Vec<(CString, CString)> = match &inputs.mode {
+        BackendMode::Interop(interop) => interop
+            .callbacks
+            .iter()
+            .map(|c| {
+                (
+                    CString::new(c.symbol).expect("callback symbol contains NUL"),
+                    CString::new(c.vale_name).expect("callback vale_name contains NUL"),
+                )
+            })
+            .collect(),
+        BackendMode::Standalone(_) => Vec::new(),
+    };
+    let callbacks_raw: Vec<CallbackFFIRaw> = callback_cstrings
+        .iter()
+        .map(|(symbol, vale_name)| CallbackFFIRaw {
+            symbol: symbol.as_ptr(),
+            vale_name: vale_name.as_ptr(),
+        })
+        .collect();
+
     let raw = BackendInputsFFIRaw {
         cache: inputs.cache.raw() as *mut c_void,
         program: inputs.program.raw(),
@@ -138,6 +161,8 @@ pub fn compile(inputs: BackendInputs) -> i32 {
             context,
             module,
             entry_symbol: entry_symbol_c.as_ptr(),
+            callbacks: callbacks_raw.as_ptr(),
+            num_callbacks: callbacks_raw.len(),
         },
     };
     unsafe { backend_compile(&raw) }

@@ -91,6 +91,8 @@ Instead, use the same file.
 - **Read when the human says this session continues, resumes, or picks up an earlier session or convo.** → docs/skills/continue-session.md
 - **Read when asked to deep-read a document, or when a skill or doc has a Required reading section that must be followed recursively.** → docs/skills/deep-read.md
 - **Read when the human wants to work with you to edit a markdown ending in -design.md.** → docs/skills/design-assistant.md
+- **Read when auditing an implementation against a `*-design.md` to find where the code deviated from the spec.** → docs/skills/design-audit.md
+- **Read when implementing code against a `*-design.md` design document — turning a design-assistant doc into code.** → docs/skills/design-implement.md
 - **Read when reporting a failure to the human, or when the user says "/diagnose" — dig for the root cause of a failure without proposing fixes.** → docs/skills/diagnose.md
 - **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → docs/skills/feature-development-flow.md
 - **Read when reviewing a diff for added code that doesn't serve the change's goal — dead helpers, redundant reinventions, unused flexibility, and the stale comments that hide them.** → docs/skills/find-deadweight.md
@@ -121,4 +123,4 @@ Instead, use the same file.
 - **Read when editing `vcoord-handoff.md` or any other long-lived handoff or plan doc.** → docs/skills/update-handoff.md
 - **Read when a human asks you to use the mailbox to send mail, or you have trouble arming a mail watcher.** → docs/skills/use-mailbox.md
 - **Read when reviewing a plan document or FrontendRust code, to flag suspicious patterns — new jargon, broken existing patterns, and creation-order changes that reduce decoupling.** → docs/skills/valec-approach-review.md
-- **Read when reviewing or writing FrontendRust compiler code in any pass.** → docs/skills/valec-reviewer.md
+- **Read when reviewing or writing FrontendRust compiler code in any pass.** → docs/skills/valec-guidelines.md

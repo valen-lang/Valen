@@ -152,6 +152,185 @@ exported func main() int {
   expect: Expect::Returns(7),
 };
 
+/// A Rust->Valen callback that takes a scalar argument. `Adder::add(&self, n: i32) -> i32`, with a
+/// Valen `MyAdder` implementing it; Rust's `run_adder::<MyAdder>(&a, 35)` passes `35` inbound and
+/// Valen's `add` returns it. Proves an inbound *value* crosses Rust->Valen — the `&self`-only
+/// callback above never passed one. `add` returns the argument rather than transforming it because
+/// the driven harness compiles no builtins, so Valen operators are unavailable here.
+pub const A_VALEN_CALLBACK_TAKES_A_SCALAR_ARG: Case = Case {
+  fixture: "fixtures_rust_callback_scalar",
+  name: "rust-callback-scalar-arg",
+  vale: r#"
+import rust.mycrate.Adder;
+import rust.mycrate.run_adder;
+struct MyAdder { }
+impl Adder for MyAdder;
+func add(self &MyAdder, n int) int {
+  return n;
+}
+exported func main() int {
+  a = MyAdder();
+  return run_adder(&a, 35);
+}
+"#,
+  expect: Expect::Returns(35),
+};
+
+/// A Rust->Valen callback that receives a Rust **borrow** and calls back out to Rust through it.
+/// `Ticker::on_tick(&self, w: &Counter) -> i32`, with a Valen `MyTicker` implementing it; Rust's
+/// `run_ticker::<MyTicker>()` makes a `Counter` (value 5) and hands `&Counter` inbound, and Valen's
+/// `on_tick` returns `w.peek()` — an outbound Rust call on the received borrow. Proves a Rust borrow
+/// crosses inbound and that a callback body can itself call back out to Rust (value 5).
+pub const A_VALEN_CALLBACK_RECEIVES_A_RUST_BORROW: Case = Case {
+  fixture: "fixtures_rust_callback_borrow",
+  name: "rust-callback-borrow-arg",
+  vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.Ticker;
+import rust.mycrate.run_ticker;
+struct MyTicker { }
+impl Ticker for MyTicker;
+func on_tick(self &MyTicker, w &Counter) int {
+  return w.peek();
+}
+exported func main() int {
+  t = MyTicker();
+  return run_ticker(&t);
+}
+"#,
+  expect: Expect::Returns(5),
+};
+
+/// A Rust->Valen callback that receives a Rust struct **by value**. `Summer::on_sum(&self, s: Small)
+/// -> i32`, with a Valen `MySummer` implementing it; Rust's `run_summer::<MySummer>()` makes a
+/// `Small { a: 3, b: 6 }` and hands it inbound by value, and Valen's `on_sum` returns `s.sum()` (a
+/// by-value method that consumes it back out to Rust). Proves a small aggregate crosses inbound in
+/// registers (3 + 6 = 9).
+pub const A_VALEN_CALLBACK_RECEIVES_A_RUST_STRUCT_BY_VALUE: Case = Case {
+  fixture: "fixtures_rust_callback_byval",
+  name: "rust-callback-byval-arg",
+  vale: r#"
+import rust.mycrate.Small;
+import rust.mycrate.Summer;
+import rust.mycrate.run_summer;
+struct MySummer { }
+impl Summer for MySummer;
+func on_sum(self &MySummer, s Small) int {
+  return s.sum();
+}
+exported func main() int {
+  m = MySummer();
+  return run_summer(&m);
+}
+"#,
+  expect: Expect::Returns(9),
+};
+
+/// Forward direction, `Pair` **return**: Vale calls a Rust associated fn returning a small `{i32,i32}`
+/// struct by value (`Small2.new(3,6)`), binds it, and reads it (`s.sum()`). The struct comes back in
+/// two registers and is reassembled Vale-side. Returns 9.
+pub const VALE_RECEIVES_A_RUST_PAIR_RETURN: Case = Case {
+  fixture: "fixtures_pair_forward",
+  name: "pair-return-forward",
+  vale: r#"
+import rust.mycrate.Small2;
+exported func main() int {
+  s = Small2.new(3, 6);
+  return s.sum();
+}
+"#,
+  expect: Expect::Returns(9),
+};
+
+/// Forward direction, `Pair` **argument**: Vale passes a small `{i32,i32}` struct by value into a Rust
+/// free function (`add_small(s)`). The struct crosses outbound in two registers. Returns 9.
+pub const VALE_PASSES_A_RUST_PAIR_ARG: Case = Case {
+  fixture: "fixtures_pair_forward",
+  name: "pair-arg-forward",
+  vale: r#"
+import rust.mycrate.Small2;
+import rust.mycrate.add_small;
+exported func main() int {
+  s = Small2.new(3, 6);
+  return add_small(^s);
+}
+"#,
+  expect: Expect::Returns(9),
+};
+
+/// A Rust->Valen callback that **returns** a Rust struct by value. `Maker::make(&self) -> Small`, with
+/// a Valen `MyMaker` implementing it; Valen's `make` returns `Small.new(3,6)` and Rust's
+/// `run_maker::<MyMaker>()` reads it (`c.make().sum()`). The struct crosses Valen -> Rust in two
+/// registers (an inbound Pair return). Returns 9.
+pub const A_VALEN_CALLBACK_RETURNS_A_RUST_STRUCT_BY_VALUE: Case = Case {
+  fixture: "fixtures_rust_callback_retpair",
+  name: "rust-callback-retpair",
+  vale: r#"
+import rust.mycrate.Small;
+import rust.mycrate.Maker;
+import rust.mycrate.run_maker;
+struct MyMaker { }
+impl Maker for MyMaker;
+func make(self &MyMaker) Small {
+  return Small.new(3, 6);
+}
+exported func main() int {
+  m = MyMaker();
+  return run_maker(&m);
+}
+"#,
+  expect: Expect::Returns(9),
+};
+
+/// The capstone: **Rust owns a loop** that calls the Valen callback once per iteration. `main_loop::
+/// <MyCb>(&cb)` loops `i = 0..5`, each iteration calling `c.on_tick(i)` into Valen's override (which
+/// returns `i`), and sums the returns (0 + 1 + 2 + 3 + 4 = 10). Proves the callback survives repeated
+/// re-entry with a fresh scalar each time — the NobiliaV shape where Rust drives the frame loop and
+/// calls Valen's `on_tick` every frame.
+pub const RUST_OWNS_A_LOOP_CALLING_THE_CALLBACK: Case = Case {
+  fixture: "fixtures_rust_main_loop",
+  name: "rust-main-loop",
+  vale: r#"
+import rust.mycrate.Looper;
+import rust.mycrate.main_loop;
+struct MyCb { }
+impl Looper for MyCb;
+func on_tick(self &MyCb, i int) int {
+  return i;
+}
+exported func main() int {
+  cb = MyCb();
+  return main_loop(&cb);
+}
+"#,
+  expect: Expect::Returns(10),
+};
+
+/// Repro (reverse direction): an imported trait whose method takes TWO imported-type borrow params and
+/// returns void. Compiling the synthesized `Cb` interface's abstract `go` header panics in
+/// `get_inner_env_for_type` for one of the imported param types. Proven single-param callbacks
+/// (`&Counter`) work; this pins down the two-imported-param / void shape Pearl's `on_tick` needs.
+pub const A_TRAIT_METHOD_WITH_TWO_IMPORTED_PARAMS: Case = Case {
+  fixture: "fixtures_two_imported_params",
+  name: "two-imported-params",
+  vale: r#"
+import rust.mycrate.Alpha;
+import rust.mycrate.Beta;
+import rust.mycrate.Cb;
+struct MyCb { }
+impl Cb for MyCb;
+func go(self &MyCb, x &Alpha, y &Beta) {
+  x.touch();
+}
+exported func main() int {
+  a = Alpha.new();
+  cb = MyCb();
+  return a.run_cb(&cb);
+}
+"#,
+  expect: Expect::Returns(7),
+};
+
 /// Laziness, proven positively: three representable free functions are imported and exactly one is
 /// called. Only the called function's signature is ever queried. This is the whole payoff — importing
 /// a type with a hundred methods must not pay `fn_sig` for the ones a program never calls.
@@ -370,6 +549,24 @@ exported func main() int {
 }
 "#,
   expect: Expect::Returns(7),
+};
+
+/// A declined signature that is actually **called** surfaces as a compile error, not a panic. The
+/// decline cases here import an unrepresentable item but never call it, so lazy synthesis never reads
+/// its signature. Calling it forces `fn_sig`, which declines (an unsigned-int return), and the compiler
+/// must report `CouldNotPostparseFunction` — a real diagnostic naming the item and reason — rather than
+/// aborting with a `vfail` panic.
+pub const CALLING_A_DECLINED_SIGNATURE_IS_A_COMPILE_ERROR: Case = Case {
+  fixture: "fixtures",
+  name: "call-declined-unsigned",
+  vale: r#"
+import rust.mycrate.unsigned_count;
+exported func main() int {
+  unsigned_count();
+  return 0;
+}
+"#,
+  expect: Expect::FailsToCompile("CouldNotPostparseFunction"),
 };
 
 /// A float declines because `FloatT` is a unit struct with no width, so `f32` and `f64` would
@@ -1409,6 +1606,61 @@ exported func main() int {
   expect: Expect::Returns(7),
 };
 
+/// Rust's `&mut` mutation, mirrored into Vale groups. `nudge(a: &mut Counter, b: &Counter)` imports as
+/// `func nudge<g0', g1'>(a &Counter in g0, b &Counter in g1) mut(g0)`. Passing the same local for both
+/// arguments aliases it into the mutated group `g0` and the disjoint group `g1`, which the callee is
+/// entitled to treat as non-aliasing — so the borrow checker rejects it.
+pub const A_MUT_BORROW_ALIASING_A_SHARED_BORROW_IS_REJECTED: Case = Case {
+  fixture: "fixtures",
+  name: "nudge-aliasing-rejected",
+  vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.nudge;
+exported func main() int {
+  s = Counter.new();
+  return nudge(&s, &s);
+}
+"#,
+  expect: Expect::FailsToCompile("BorrowCheckError"),
+};
+
+/// The disjoint counterpart: `nudge(&s, &t)` sends two *distinct* locals into `nudge`'s mutated and
+/// shared groups, so nothing aliases and the program compiles. Guards against the group mirroring
+/// over-rejecting every two-borrow call.
+pub const A_MUT_BORROW_AND_A_SHARED_BORROW_OF_DISTINCT_LOCALS_IS_CLEAN: Case = Case {
+  fixture: "fixtures",
+  name: "nudge-distinct-clean",
+  vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.nudge;
+exported func main() int {
+  s = Counter.new();
+  t = Counter.new();
+  return nudge(&s, &t);
+}
+"#,
+  expect: Expect::Returns(5),
+};
+
+/// A Rust function that shares one lifetime across two parameters (`fn tie<'a>(a: &'a mut Counter,
+/// b: &'a mut Counter)`) is declined, not imported. Faithfully mirroring it would tie both parameters
+/// into one group, which needs lifetime decoding Vale does not do yet — so rather than guess the two
+/// are disjoint (what per-parameter groups assume), calling it is a `CouldNotPostparseFunction` error.
+pub const CALLING_A_SHARED_PARAMETER_LIFETIME_IMPORT_IS_A_COMPILE_ERROR: Case = Case {
+  fixture: "fixtures",
+  name: "call-shared-lifetime",
+  vale: r#"
+import rust.mycrate.Counter;
+import rust.mycrate.tie;
+exported func main() int {
+  s = Counter.new();
+  t = Counter.new();
+  return tie(&s, &t);
+}
+"#,
+  expect: Expect::FailsToCompile("CouldNotPostparseFunction"),
+};
+
 /// A large struct crosses the boundary BY VALUE as an argument: `domino_size(d)` moves a 48-byte
 /// `Domino` into a Rust free function. rustc classifies the parameter `PassMode::Indirect`, so it must
 /// cross as LLVM `byval` (a pointer to a caller-owned copy, ownership moved to the callee). This is the
@@ -1498,4 +1750,95 @@ exported func main() int {
 }
 "#,
   expect: Expect::RustcFails,
+};
+
+// ---------------------------------------------------------------------------
+// H. Borrow checking across the interop boundary (RED — awaiting importer group facts)
+// ---------------------------------------------------------------------------
+//
+// The borrow checker catches use-after-churn natively: a reference into a group's child (an array
+// element, a returned `&T in g[]`) is invalid after a call that declares `mut(g)`. The checker reads
+// those facts off the callee's scout `FunctionS` — `effects` and the group-annotated param/return
+// `ITypeST` — and is entirely source-agnostic, so it would work across the Rust boundary too, if the
+// importer attached the same facts to a synthesized Rust declaration.
+//
+// It does not yet. `declarations.rs` builds each imported function with `&[]` effects ("an extern
+// Rust function's body is opaque, so it declares none") and `None` for the return group. So a Rust
+// `&mut self` method carries no `mut(g)`, and a Rust `&self` method returning `&T` carries no return
+// group — the checker sees no churn and no tracked reference, and the program below compiles.
+//
+// These cases are the spec for teaching the importer to translate Rust's own borrow facts into Vale
+// groups: `&mut self` → `mut(g)` on the receiver's group; a returned reference borrowed from `&self`
+// → `&T in g`. They are RED until that lands, and no borrow-checker change is needed — only the
+// importer.
+
+/// A `&Glyph` returned by a Rust `&self` method (`get_glyph`) is used after a Rust `&mut self` method
+/// (`add_glyph`) churns its owner — a use-after-churn through the interop boundary, the Rust-`Vec`
+/// shape (an element reference held across a mutation). RED until the importer emits `mut(g)` for
+/// `&mut self` and a return group for a `&self`-borrowed return.
+pub const USE_AFTER_CHURN_THROUGH_A_RUST_BORROW_RETURN: Case = Case {
+  fixture: "fixtures",
+  name: "interop-use-after-churn",
+  vale: r#"
+import rust.mycrate.Domino;
+import rust.mycrate.Glyph;
+exported func main() int {
+  d = Domino.new();
+  d.add_glyph(Glyph.new(7));
+  d_ref = d.get_glyph(7);
+  d.add_glyph(Glyph.new(8));
+  return d_ref.location();
+}
+"#,
+  expect: Expect::FailsToCompile("BorrowCheckError"),
+};
+
+/// RED: a `std::vec::Vec` element accessor should be importable, so `v.get(0)` should resolve. It
+/// does not today — `get`/`first`/index are slice methods reached through `Deref<Target=[T]>`, and
+/// the importer discovers only a type's *inherent* methods (`new`/`push`/`pop`/`len`), never
+/// Deref-reached ones — so the call fails with `CouldntFindFunctionToCallT`, upstream of the borrow
+/// checker. This is the first blocker to a real-`Vec` element use-after-churn; the R test drives the
+/// importer to follow `Deref<Target=[T]>`.
+///
+/// Two further blockers sit behind it (so the use-after-churn R test itself uses the Domino wrapper,
+/// whose *inherent* `get_glyph` returns a bare `&Glyph`): a `Vec` element accessor returns
+/// `Option<&T>` — a group nested in a reference-typed field, which the checker does not yet track —
+/// and using a `&int` element needs a read-out the pass does not do yet.
+pub const REAL_VEC_ELEMENT_ACCESSOR_IS_IMPORTABLE: Case = Case {
+  fixture: "fixtures",
+  name: "interop-vec-element-accessor-importable",
+  vale: r#"
+import rust.alloc.vec.Vec;
+import rust.alloc.alloc.Global;
+import rust.core.option.Option;
+exported func main() int {
+  v = Vec.new<int>();
+  v.push(7);
+  e = (v.get(0)).unwrap();
+  return 0;
+}
+"#,
+  expect: Expect::Returns(0),
+};
+
+/// The clean companion — a negative control: taking the `&Glyph` borrow *after* the last churn is
+/// valid, so this program must compile. It shares the fixture and the churn method with the case
+/// above; what differs is only the order (`add_glyph` before `get_glyph`), which is what use-after-
+/// churn turns on. Once the importer carries the group facts, this must stay `Returns`, guarding the
+/// churn rule against over-rejection. GREEN today (nothing is checked), RED never.
+pub const RUST_BORROW_RETURN_TAKEN_AFTER_LAST_CHURN_IS_CLEAN: Case = Case {
+  fixture: "fixtures",
+  name: "interop-borrow-after-last-churn",
+  vale: r#"
+import rust.mycrate.Domino;
+import rust.mycrate.Glyph;
+exported func main() int {
+  d = Domino.new();
+  d.add_glyph(Glyph.new(7));
+  d.add_glyph(Glyph.new(8));
+  d_ref = d.get_glyph(7);
+  return d_ref.location();
+}
+"#,
+  expect: Expect::Returns(7),
 };

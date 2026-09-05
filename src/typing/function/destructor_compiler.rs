@@ -102,12 +102,12 @@ where
       | KindT::ShareRef(_)
       | KindT::WeakRef(_) => {
         // Just discard
-        ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(undestructed_expr_2)))
+        ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(call_range[0], undestructed_expr_2)))
       }
       KindT::Str(_) => {
         // Discard here will drop the reference count.
         // VCOORD: at some point we'll want to have more precise instructions for the backend for this probably
-        ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(undestructed_expr_2)))
+        ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(call_range[0], undestructed_expr_2)))
       }
       // Every one of these resolves `drop` by name against the value's own kind, so they share
       // one body: an interface dispatches to its abstract drop, an array to arrays.vale's
@@ -132,6 +132,7 @@ where
         let result_tt = destructor_prototype.return_type;
         ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
           LocT::from_lid(self.typing_interner, call_location),
+          self.typing_interner.alloc_slice_copy(call_range),
           destructor_prototype,
           self.typing_interner.alloc_slice_from_vec(vec![undestructed_expr_2]),
           result_tt,

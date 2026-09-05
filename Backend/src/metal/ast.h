@@ -523,10 +523,13 @@ enum class CoercionKind {
   Cast,       // a small struct rustc casts to one integer of `directIntBits` bits: its bytes cross as
               // that integer, e.g. an 8-byte struct as an i64. Distinct from DirectInt in that the
               // struct is a memory-class aggregate, and the integer needs its own alignment on reassembly.
+  Pair,       // a small struct rustc passes as two register scalars (ScalarPair), e.g. {i32,i32}: it
+              // crosses as two integers (`directIntBits`, `directIntBits2`), reassembled into the struct.
 };
 struct Coercion {
   CoercionKind kind;
-  uint32_t directIntBits;  // width when kind == DirectInt or Cast; ignored otherwise
+  uint32_t directIntBits;   // width when kind == DirectInt / Cast, or a Pair's first component; else ignored
+  uint32_t directIntBits2;  // a Pair's second component width; ignored otherwise
 };
 // One extern function's ABI: how its return and each argument cross.
 struct ExternAbi {

@@ -8,6 +8,96 @@
 
 use super::util::{assert_borrow_error_renders_with_arrays, assert_compiles_clean_with_arrays};
 
+// A group annotation on a return type (`&int in g`) compiles — the rules/solver side treats it as
+// `Unspecified` (it carries no group), so a returned grouped reference no longer panics the scout.
+#[test]
+fn test_return_position_group_compiles() {
+  assert_compiles_clean_with_arrays(concat!(
+    "import v.builtins.drop.*;\n",
+    "func idr<g'>(a &int in g) &int in g { return a; }\n",
+    "exported func main() int { return 0; }\n",
+  ));
+}
+
+// Rung 3: a reference returned by a call points into an element of the argument's group; churning
+// that group afterward invalidates it, so using it is a use-after-churn.
+#[test]
+fn test_use_returned_reference_after_churn_rejected() {
+  assert_borrow_error_renders_with_arrays(
+    concat!(
+      "import v.builtins.arrays.*;\n",
+      "import v.builtins.drop.*;\n",
+      "func get<g'>(a &[]int in g) &int in g[] { return &a[0]; }\n",
+      "func churn<g'>(a &[]int in g) mut(g) { }\n",
+      "func observe<T>(x &T) { }\n",
+      "exported func main() int {\n",
+      "  arr = Array<int>(3);\n",
+      "  v = get(&arr);\n",
+      "  churn(&arr);\n",
+      "  observe(v);\n",
+      "  return 0;\n",
+      "}\n",
+    ),
+    r#"At test:0.vale:10:11:
+  observe(v);
+v references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
+"#,
+  );
+}
+
+// Rung 3 (clean): a returned reference into a group that is never churned stays live. The callee's
+// return group is mapped to the specific argument (`arr`), so churning a *different* array leaves it.
+#[test]
+fn test_returned_reference_into_untouched_group_is_clean() {
+  assert_compiles_clean_with_arrays(concat!(
+    "import v.builtins.arrays.*;\n",
+    "import v.builtins.drop.*;\n",
+    "func get<g'>(a &[]int in g) &int in g[] { return &a[0]; }\n",
+    "func churn<g'>(a &[]int in g) mut(g) { }\n",
+    "func observe<T>(x &T) { }\n",
+    "exported func main() int {\n",
+    "  arr = Array<int>(3);\n",
+    "  other = Array<int>(3);\n",
+    "  v = get(&arr);\n",
+    "  churn(&other);\n",
+    "  observe(v);\n",
+    "  return 0;\n",
+    "}\n",
+  ));
+}
+
+// An element-path group annotation (`in g[]`) on a parameter compiles.
+#[test]
+fn test_param_element_group_compiles() {
+  assert_compiles_clean_with_arrays(concat!(
+    "import v.builtins.arrays.*;\n",
+    "import v.builtins.drop.*;\n",
+    "func peek<g'>(a &[]int in g, e &int in g[]) { }\n",
+    "exported func main() int { return 0; }\n",
+  ));
+}
+
+// An inline-member reference survives a churn of its parent group: `&w.val` is a `Member` step (same
+// group as `w`), not a child group, so churning `w` cannot dangle it. Only child groups (`Elements`)
+// die.
+#[test]
+fn test_inline_member_reference_survives_parent_churn() {
+  assert_compiles_clean_with_arrays(concat!(
+    "import v.builtins.arrays.*;\n",
+    "import v.builtins.drop.*;\n",
+    "struct Wrap { val int; }\n",
+    "func churn<r'>(w &Wrap in r) mut(r) { }\n",
+    "func observe<T>(x &T) { }\n",
+    "exported func main() int {\n",
+    "  w = Wrap(3);\n",
+    "  f = &w.val;\n",
+    "  churn(&w);\n",
+    "  observe(f);\n",
+    "  return 0;\n",
+    "}\n",
+  ));
+}
+
 // Slice 1 (Phase 0): the pipeline reaches the (no-op) checker for an RSA-element fixture — build an
 // array, borrow an element, call a `mut(r)` function, and never use the element afterward. Clean.
 #[test]
@@ -42,8 +132,8 @@ fn test_use_element_after_churn_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:9:11:
+  observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -127,8 +217,8 @@ fn test_element_ref_dies_but_sibling_whole_array_ref_lives() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:11:11:
+  observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -193,8 +283,8 @@ fn test_churn_in_one_arm_use_after_if_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:11:11:
+  observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -221,8 +311,8 @@ fn test_churn_in_both_arms_use_after_if_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:13:11:
+  observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -247,8 +337,8 @@ fn test_churn_then_use_within_arm_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:10:13:
+    observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -317,8 +407,8 @@ fn test_use_at_loop_top_after_body_churn_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:9:13:
+    observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -343,8 +433,8 @@ fn test_use_after_loop_with_body_churn_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:11:11:
+  observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -424,8 +514,8 @@ fn test_pass_invalidated_element_ref_as_arg_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:9:11:
+  pair(7, ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -470,8 +560,8 @@ fn test_multiple_element_refs_all_invalidated_by_one_churn() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:10:11:
+  observe(first);
 first references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -495,8 +585,8 @@ fn test_ring_ref_used_after_damage_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:5:1:
-exported func main() int {
+    r#"At test:0.vale:9:11:
+  observe(ring);
 ring references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
   );
@@ -523,4 +613,58 @@ fn test_whole_array_ref_after_damage_is_clean() {
     "  return 0;\n",
     "}\n",
   ));
+}
+
+// A held element reference is invalidated by a *sibling* argument's churn in the same call:
+// evaluating `churn_ret(&arr)` for the second argument churns `arr` while `ref` waits in a register
+// for the first, so `use2` consumes a dangling reference.
+#[test]
+fn test_held_element_ref_invalidated_by_sibling_arg_churn_rejected() {
+  assert_borrow_error_renders_with_arrays(
+    concat!(
+      "import v.builtins.arrays.*;\n",
+      "import v.builtins.drop.*;\n",
+      "func churn_ret<r'>(a &[]int in r) int mut(r) { return 0; }\n",
+      "func use2<T>(a &T, b int) { }\n",
+      "exported func main() int {\n",
+      "  arr = Array<int>(3);\n",
+      "  ref = &arr[0];\n",
+      "  use2(ref, churn_ret(&arr));\n",
+      "  return 0;\n",
+      "}\n",
+    ),
+    r#"At test:0.vale:8:8:
+  use2(ref, churn_ret(&arr));
+ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
+"#,
+  );
+}
+
+// A nested member-element path: `get_tile` returns a reference into `lvl.tiles`'s elements
+// (`&int in l.tiles[]`), and `churn_tiles` churns that member group (`mut(l.tiles)`), so using the
+// returned reference afterward is a use-after-churn — the churn path `[Local(lvl), Member(tiles)]` is
+// a prefix of the reference's `[Local(lvl), Member(tiles), Elements]`.
+#[test]
+fn test_nested_member_element_path_churn_rejected() {
+  assert_borrow_error_renders_with_arrays(
+    concat!(
+      "import v.builtins.arrays.*;\n",
+      "import v.builtins.drop.*;\n",
+      "struct Level { tiles []int; }\n",
+      "func get_tile<l'>(lvl &Level in l) &int in l.tiles[] { return &lvl.tiles[0]; }\n",
+      "func churn_tiles<l'>(lvl &Level in l) mut(l.tiles) { }\n",
+      "func observe<T>(x &T) { }\n",
+      "exported func main() int {\n",
+      "  lvl = Level(Array<int>(3));\n",
+      "  t = get_tile(&lvl);\n",
+      "  churn_tiles(&lvl);\n",
+      "  observe(t);\n",
+      "  return 0;\n",
+      "}\n",
+    ),
+    r#"At test:0.vale:11:11:
+  observe(t);
+t references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
+"#,
+  );
 }

@@ -1,0 +1,51 @@
+// Era 2, rung 2 — the bounded twin of driver.vale: identical, plus a frame cap so it auto-exits
+// (no human closing the window). It is the automated proof that the whole inverted loop compiles and
+// runs end to end through the interop — the callback dispatch, the by-reference input, the outbound
+// calls on the window — returning 7 after 30 frames. driver.vale is a strict subset of it.
+//
+// Run (headless-cut-be-damned, a window opens briefly then exits 7), through exp-4's permanent
+// pipeline (valen build + Valen.toml naming the fork-built nobiliav crate; recipe paired with exp-4).
+
+import rust.nobiliav.NobiliaWindow;
+import rust.nobiliav.FrameInput;
+import rust.nobiliav.MainLoopCallback;
+import rust.nobiliav.key_arrow_left;
+import rust.nobiliav.key_arrow_right;
+import rust.nobiliav.key_arrow_up;
+import rust.nobiliav.key_arrow_down;
+
+struct MyMainLoopCallback { }
+impl MainLoopCallback for MyMainLoopCallback;
+
+func on_tick(self &MyMainLoopCallback, w &NobiliaWindow, input &FrameInput) {
+  key = input.key();
+  if (key == key_arrow_left()) {
+    w.rotate_camera(-4, 0);
+  } else if (key == key_arrow_right()) {
+    w.rotate_camera(4, 0);
+  } else if (key == key_arrow_up()) {
+    w.rotate_camera(0, 4);
+  } else if (key == key_arrow_down()) {
+    w.rotate_camera(0, -4);
+  }
+
+  if (input.mouse_x() != -1) {
+    w.report_pick(input.mouse_x(), input.mouse_y());
+  }
+
+  // The one line driver.vale lacks: end the run after 30 frames instead of waiting for a human.
+  if (w.frame_index() >= 30) {
+    w.request_exit();
+  }
+}
+
+exported func main() int {
+  w = NobiliaWindow.new(1200, 900);
+
+  w.load_terrain();
+  w.fit_camera(37, 42);
+
+  mmlcb = MyMainLoopCallback();
+  w.main_loop(&mmlcb);
+  return 7;
+}

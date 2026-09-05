@@ -2,7 +2,7 @@ use crate::interner::StrI;
 use crate::parsing::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::expressions::BodySE;
 use crate::postparsing::itemplatatype::{
-  ITemplataType, KindTemplataType, RegionTemplataType, TemplateTemplataType,
+  GroupTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
   ExportAsNameS, IFunctionDeclarationNameS, IImplDeclarationNameS, IImpreciseNameS, IRuneS,
@@ -510,7 +510,7 @@ pub struct RegionGenericParameterTypeS {}
 
 impl RegionGenericParameterTypeS {
   pub fn tyype<'a>(&self) -> ITemplataType<'a> {
-    ITemplataType::RegionTemplataType(RegionTemplataType {})
+    ITemplataType::GroupTemplataType(GroupTemplataType {})
   }
 }
 
@@ -531,7 +531,7 @@ pub struct OtherGenericParameterTypeS<'s> {
 impl<'s> OtherGenericParameterTypeS<'s> {
   pub fn new(tyype: ITemplataType<'s>) -> Self {
     assert!(
-      !matches!(tyype, ITemplataType::RegionTemplataType(_) | ITemplataType::KindTemplataType(_)),
+      !matches!(tyype, ITemplataType::GroupTemplataType(_) | ITemplataType::KindTemplataType(_)),
       "vwat: Use RegionGenericParameterTypeS or KindGenericParameterTypeS for these types"
     );
     Self { tyype, _sealed: () }
@@ -562,6 +562,9 @@ pub struct FunctionS<'s> {
   pub tyype: TemplateTemplataType<'s>,
   pub params: &'s [ParameterS<'s>],
   pub maybe_ret_kind_rune: Option<RuneUsage<'s>>,
+  /// The written return type as a group-annotated tree, when the return type is written. The borrow
+  /// checker reads a returned reference's `in g` group off this — symmetric with `ParameterS.tyype`.
+  pub maybe_return_type: Option<ITypeST<'s>>,
   /// Effect clauses (`mut(g)` / `not(mut(g))`). Symbolic (`EffectS` over `GroupS`); the typing pass
   /// lands these (borrowed from `'s`) in the per-`FunctionT` side table, never on `FunctionHeaderT`.
   pub effects: &'s [EffectS<'s>],
@@ -585,6 +588,7 @@ impl<'s> FunctionS<'s> {
     tyype: TemplateTemplataType<'s>,
     params: &'s [ParameterS<'s>],
     maybe_ret_kind_rune: Option<RuneUsage<'s>>,
+    maybe_return_type: Option<ITypeST<'s>>,
     effects: &'s [EffectS<'s>],
     rules: &'s [IRulexSR<'s>],
     impl_bounds: &'s [ImplBoundS<'s>],
@@ -619,6 +623,7 @@ impl<'s> FunctionS<'s> {
       tyype,
       params,
       maybe_ret_kind_rune,
+      maybe_return_type,
       effects,
       header_rules: rules,
       impl_bounds,

@@ -149,6 +149,98 @@ fn borrow_with_group() {
 }
 
 #[test]
+fn borrow_with_element_group() {
+  // A trailing `in g[]` parses to an `Elements` group over `g` — a reference into an element of g.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &MyStruct in g[]");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region: RegionP::Group(GroupP::Elements { base: GroupP::Name(NameP(_, StrI("g"))) }),
+      ..
+    }) => {}
+    other => panic!("expected `&MyStruct in g[]` → Group(Elements(Name g)), got {:?}", other),
+  }
+}
+
+#[test]
+fn borrow_with_member_group() {
+  // A trailing `in g.items` parses to a `Member` group naming member `items` of `g`.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &MyStruct in g.items");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region:
+        RegionP::Group(GroupP::Member {
+          base: GroupP::Name(NameP(_, StrI("g"))),
+          member: NameP(_, StrI("items")),
+        }),
+      ..
+    }) => {}
+    other => panic!("expected `&MyStruct in g.items` → Group(Member(Name g, items)), got {:?}", other),
+  }
+}
+
+#[test]
+fn borrow_with_member_element_group() {
+  // `in g.items[]` parses to `Elements` over `Member(g, items)` — an element of g's `items`.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &MyStruct in g.items[]");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region:
+        RegionP::Group(GroupP::Elements {
+          base: GroupP::Member { base: GroupP::Name(NameP(_, StrI("g"))), member: NameP(_, StrI("items")) },
+        }),
+      ..
+    }) => {}
+    other => panic!("expected `&MyStruct in g.items[]` → Group(Elements(Member(g, items))), got {:?}", other),
+  }
+}
+
+#[test]
+fn borrow_with_descendant_group() {
+  // A trailing `in g...` parses to an `Ellipsis` group over `g` — a reference somewhere within g.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &MyStruct in g...");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region: RegionP::Group(GroupP::Ellipsis { base: GroupP::Name(NameP(_, StrI("g"))) }),
+      ..
+    }) => {}
+    other => panic!("expected `&MyStruct in g...` → Group(Ellipsis(Name g)), got {:?}", other),
+  }
+}
+
+#[test]
+fn borrow_with_member_descendant_group() {
+  // `in g.items...` parses to `Ellipsis` over `Member(g, items)` — somewhere within g's items.
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &MyStruct in g.items...");
+  match pattern.templex.as_ref().unwrap() {
+    ITemplexPT::BorrowRef(BorrowRefPT {
+      region:
+        RegionP::Group(GroupP::Ellipsis {
+          base: GroupP::Member { base: GroupP::Name(NameP(_, StrI("g"))), member: NameP(_, StrI("items")) },
+        }),
+      ..
+    }) => {}
+    other => {
+      panic!("expected `&MyStruct in g.items...` → Group(Ellipsis(Member(g, items))), got {:?}", other)
+    }
+  }
+}
+
+#[test]
 fn held_ref_type() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);

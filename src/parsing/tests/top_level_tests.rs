@@ -21,21 +21,14 @@ fn function_then_struct() {
 }
 
 #[test]
-fn ellipses_ignored() {
+fn unicode_ellipsis_is_an_expression() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  // Unicode … symbol is treated as an expression by the parser
+  // The Unicode `…` symbol parses as an ordinary expression. (Three ASCII dots `...` are no longer a
+  // comment — they are the descendant group operator, e.g. `&T in g...`.)
   compile(&parse_arena, &keywords, "exported func main() int {x = …;}");
   compile(&parse_arena, &keywords, "exported func main() int {set x = …;}");
-  // Three dots is treated as a comment
-  compile(&parse_arena, &keywords, "exported func main(...) int {}");
-  compile(&parse_arena, &keywords, "exported func main() ... {}");
-  compile(&parse_arena, &keywords, "exported func main() int {} ... ");
-  compile(&parse_arena, &keywords, "exported func main() int {...}");
-  compile(&parse_arena, &keywords, "exported func main() int {moo(...)}");
-  compile(&parse_arena, &keywords, "struct Moo {} ... ");
-  compile(&parse_arena, &keywords, "struct Moo {...}");
 }
 
 #[test]
@@ -176,7 +169,7 @@ fn empty() {
     &parse_arena,
     &keywords,
     r#"
-      func foo() { ... }
+      func foo() { }
       "#,
   );
   let main = &program.denizens[0];

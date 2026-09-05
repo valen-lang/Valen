@@ -267,19 +267,54 @@ where
     Ok(RegionP::Group(self.parse_group(iter)?))
   }
 
-  /// Parse a group expression, e.g. `g` at `&Ship in g` or inside `mut(g)`. Near-term only a single
-  /// group name (`GroupP::Name`) is accepted; member/element/union group expressions come later.
+  /// Parse a group expression, e.g. `g` at `&Ship in g` or inside `mut(g)`. A bare name
+  /// (`GroupP::Name`) followed by any number of path steps: `.member` (`GroupP::Member`) and `[]`
+  /// (`GroupP::Elements` — an element of the group), so `g.items[]` is an element of g's `items`.
+  /// Union group expressions come later.
   pub fn parse_group(
     &self,
     iter: &mut ScrambleIterator<'p, '_>,
   ) -> ParseResult<&'p GroupP<'p>> {
-    match iter.peek_cloned() {
+    let mut group = match iter.peek_cloned() {
       Some(INodeLEEnum::Word(WordLE { range, str })) => {
         iter.advance();
-        Ok(&*self.parse_arena.alloc(GroupP::Name(NameP(range, str))))
+        &*self.parse_arena.alloc(GroupP::Name(NameP(range, str)))
       }
-      _ => Err(ParseError::BadTypeExpression(iter.get_pos())),
+      _ => return Err(ParseError::BadTypeExpression(iter.get_pos())),
+    };
+    loop {
+      // `...` — a descendant step; terminal, so nothing follows it. Checked before `.member`, since
+      // `try_skip_symbols` only advances when all three dots are present.
+      if iter.try_skip_symbols(&['.', '.', '.']) {
+        group = &*self.parse_arena.alloc(GroupP::Ellipsis { base: group });
+        break;
+      }
+      match iter.peek_cloned() {
+        // `.member`
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '.'))) => {
+          iter.advance();
+          match iter.peek_cloned() {
+            Some(INodeLEEnum::Word(WordLE { range, str })) => {
+              iter.advance();
+              group =
+                &*self.parse_arena.alloc(GroupP::Member { base: group, member: NameP(range, str) });
+            }
+            _ => return Err(ParseError::BadTypeExpression(iter.get_pos())),
+          }
+        }
+        // `[]` — empty brackets are an element step; a non-empty `[...]` is not a group step.
+        Some(INodeLEEnum::Squared(squared)) => {
+          let contents = squared.contents.clone();
+          if ScrambleIterator::new(&contents).has_next() {
+            break;
+          }
+          iter.advance();
+          group = &*self.parse_arena.alloc(GroupP::Elements { base: group });
+        }
+        _ => break,
+      }
     }
+    Ok(group)
   }
 
   /// Parse ending region suffix (type')

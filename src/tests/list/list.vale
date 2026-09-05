@@ -31,7 +31,7 @@ func add<E>(list &List<E>, newElement E) {
   (&list.array).push(^newElement);
 }
 
-func get<E>(list &List<E>, index int) &E {
+func get<E>(list &List<E>, index int) &E in list.array[] {
   a &[]E = &list.array;
   // TSUGAR:   return a[index];
   return &a[__copy_prim(&index)];

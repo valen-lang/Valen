@@ -1313,6 +1313,20 @@ where
       ICitizenTT::Struct(s) => s.id,
       ICitizenTT::Interface(i) => i.id,
     };
+    // An imported Rust citizen is opaque: it carries no Vale-side `where` bounds to harvest, and its
+    // inner env may not exist (compiled only on demand, unlike an eagerly-compiled native citizen).
+    // Return empty reachable bounds rather than fetch an inner env it hasn't got — the full harvest
+    // below would produce the same empty result for an opaque type anyway.
+    // VCOORD: do the lazy compilation refactor to get rid of this
+    #[cfg(feature = "rust_interop")]
+    if crate::typing::rust_interop::is_rust_backed(&citizen_id) {
+      return (
+        InstantiationReachableBoundArgumentsT {
+          citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map(),
+        },
+        IndexMap::default(),
+      );
+    }
     let substituter = self.get_placeholder_substituter(
       sanity_check,
       original_calling_denizen_id,

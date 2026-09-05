@@ -42,14 +42,26 @@ typedef struct BackendCompileOptionsFFI {
 #define BACKEND_MODE_STANDALONE 0
 #define BACKEND_MODE_INTEROP    1
 
+// One Rust→Vale callback wrapper the interop backend must emit: `symbol` is the
+// rustc-mangled name to define the wrapper under (so Rust's static call resolves to
+// Vale's body — single-symbol), `vale_name` the humanized name of the internal Vale
+// body to forward to (also its key in the program's extern-ABI map). Field order and
+// types must stay in sync with CallbackFFIRaw in src/backend_ffi/backend_inputs.rs.
+typedef struct CallbackFFI {
+  const char* symbol;
+  const char* vale_name;
+} CallbackFFI;
+
 // Interop-only inputs, read by the backend only when
 // BackendInputsFFI.mode == BACKEND_MODE_INTEROP: rustc's borrowed LLVMContext +
-// Module, and the rustc-mangled symbol to emit the entry under ("" or null → the
-// literal __vale_main).
+// Module, the rustc-mangled symbol to emit the entry under ("" or null → the
+// literal __vale_main), and the Rust→Vale callback wrappers to emit.
 typedef struct InteropInputsFFI {
   void* context;
   void* module;
   const char* entry_symbol;
+  const CallbackFFI* callbacks;   // num_callbacks-long array, or null when none
+  size_t num_callbacks;
 } InteropInputsFFI;
 
 // The single unified backend entry payload. `mode` selects which fields are read:

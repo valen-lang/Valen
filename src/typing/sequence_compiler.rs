@@ -36,6 +36,7 @@ where
     let tuple_kind = self.make_tuple_kind(env, coutputs, parent_ranges, call_location, types_2);
     let struct_tt = self.typing_interner.alloc(tuple_kind);
     let final_expr = ExpressionTE::Construct(self.typing_interner.alloc(ConstructTE::new(
+      parent_ranges[0],
       struct_tt,
       KindT::Struct(struct_tt),
       self.typing_interner.alloc_slice_from_vec(exprs),

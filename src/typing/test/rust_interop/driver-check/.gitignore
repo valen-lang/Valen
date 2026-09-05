@@ -1,0 +1,5 @@
+# `valen build` generates the cargo workspace and all its build artifacts under
+# target/valen-build/ (a nested cargo target dir included). Everything here is
+# regenerable from Valen.toml + src/, so none of it is committed. Unanchored so it also
+# covers a stray nobiliav/target/ from building the vendored crate directly.
+target/

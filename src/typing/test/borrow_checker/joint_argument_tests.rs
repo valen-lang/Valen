@@ -14,8 +14,8 @@ fn test_alias_same_local_into_distinct_mut_groups_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:3:1:
-exported func main() int {
+    r#"At test:0.vale:5:12:
+  badpair(&e, &e);
 Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
 "#,
   );
@@ -80,8 +80,8 @@ fn test_same_field_alias_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:4:1:
-exported func main() int {
+    r#"At test:0.vale:6:13:
+  badships(&f.flagship, &f.flagship);
 Arguments 0 and 1 both borrow into f, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
 "#,
   );
@@ -118,8 +118,8 @@ fn test_prefix_path_alias_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:4:1:
-exported func main() int {
+    r#"At test:0.vale:6:11:
+  badmix(&f, &f.flagship);
 Arguments 0 and 1 both borrow into f, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
 "#,
   );
@@ -139,8 +139,8 @@ fn test_nonadjacent_arg_pair_alias_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:3:1:
-exported func main() int {
+    r#"At test:0.vale:6:9:
+  bad3(&e, &other, &e);
 Arguments 0 and 2 both borrow into e, but their parameters are in disjoint mutated groups r and u, which the callee may treat as non-aliasing.
 "#,
   );
@@ -159,8 +159,8 @@ fn test_mut_on_second_group_triggers() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:3:1:
-exported func main() int {
+    r#"At test:0.vale:5:14:
+  badpair_s(&e, &e);
 Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
 "#,
   );

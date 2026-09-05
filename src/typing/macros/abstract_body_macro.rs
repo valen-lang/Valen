@@ -145,25 +145,30 @@ where
 
     let virtual_index =
       header.get_virtual_index().expect("vassertSome: header.getVirtualIndex") as i32;
+    // This is a compiler-generated abstract-function body, so its nodes have no user source; the honest range is a synthesized internal one.
+    let synth_range = RangeS::internal(self.scout_arena, -70100);
     let args: Vec<ExpressionTE<'s, 't>> = prototype
       .param_types()
       .iter()
       .enumerate()
       .map(|(index, param_type)| {
         ExpressionTE::ArgLookup(
-          self.typing_interner.alloc(ArgLookupTE::new(index as i32, *param_type)),
+          self.typing_interner.alloc(ArgLookupTE::new(synth_range, index as i32, *param_type)),
         )
       })
       .collect();
     let args_slice = self.typing_interner.alloc_slice_from_vec(args);
     let ifc = InterfaceFunctionCallTE::new(
+      synth_range,
       self.typing_interner.alloc(prototype),
       virtual_index,
       prototype.return_type,
       args_slice,
     );
     let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(
+      synth_range,
       ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
+        synth_range,
         ExpressionTE::InterfaceFunctionCall(self.typing_interner.alloc(ifc)),
       ))),
     )));

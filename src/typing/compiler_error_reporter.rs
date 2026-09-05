@@ -15,6 +15,43 @@ use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
 use std::slice::from_ref;
 
+/// Why a resolved Rust item's signature has no Vale form, carried by
+/// `ICompileErrorT::CouldNotPostparseFunction` and rendered by the humanizer. Produced by the Rust
+/// interop oracle (`src/typing/rust_interop/`), but defined here in core so the error type — and
+/// `get_or_create_postparsed_function`, which returns it — can name it in every build.
+///
+/// **Structure only — no rendering here.** A case asserts the variant; the wording a person reads is
+/// built where diagnostics are built. The reason travels because it *is* the point of declining: a
+/// bare miss makes the eventual failure read *"couldn't find function `foo`"* for a function that
+/// plainly exists, and carrying the reason is what avoids that lie.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum CouldNotPostparseReason {
+  /// An integer width `IntT` cannot hold — it carries only `bits`, and only 32 and 64 are mapped.
+  IntWidth,
+  /// `IntT` has no signedness, so an unsigned type would silently become its signed counterpart.
+  UnsignedInteger,
+  /// `FloatT` is a unit struct with no width field, so `f32` and `f64` would intern identically.
+  Float,
+  /// Vale has no unsized concept, so `str` / `[T]` / `dyn Trait` cannot be value types.
+  Unsized,
+  /// A type reached only through this signature and never imported (@RTMEIZ).
+  UnimportedType,
+  /// A projection such as `<I as Iterator>::Item`. Normalizing it *requires* reading the
+  /// `I: Iterator` predicate to find the impl, and no predicates are read at all — so it is
+  /// un-normalizable rather than merely unread.
+  UnnormalizableAlias,
+  /// A `ty::Param` inherited from a parent impl. Vale's declaration has no slot for it until the
+  /// container is declared too.
+  InheritedParameter,
+  /// Two or more parameters share one lifetime (e.g. `fn f<'a>(x: &'a mut A, y: &'a B)`). Faithfully
+  /// mirroring it would tie those parameters into a single Vale group, which needs lifetime decoding
+  /// not yet built — so the import is declined rather than guessing the parameters are disjoint (what
+  /// per-parameter groups assume).
+  SharedParameterLifetime,
+  /// A rustc type kind with no Vale representation yet — the catch-all.
+  Unrepresentable,
+}
+
 #[derive(Debug)]
 pub enum ICompileErrorT<'s, 't> {
   CouldntNarrowDownCandidates {
@@ -88,6 +125,15 @@ pub enum ICompileErrorT<'s, 't> {
   UnresolvableRustImport {
     range: &'t [RangeS<'s>],
     path: String,
+  },
+  /// A **resolved** Rust item that is nonetheless called with a signature Vale cannot represent — an
+  /// unsigned-int or float type, a return naming an unimported type, and the like. Distinct from
+  /// `UnresolvableRustImport` (an import statement that resolves to nothing): here the item exists, but
+  /// its signature has no Vale form. `path` is the function's human name; `reason` is why it declined.
+  CouldNotPostparseFunction {
+    range: &'t [RangeS<'s>],
+    path: String,
+    reason: CouldNotPostparseReason,
   },
   ArrayElementsHaveDifferentTypes {
     range: &'t [RangeS<'s>],
@@ -304,6 +350,7 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
       Self::CouldntFindTypeT { range, .. } => *range,
       Self::TooManyTypesWithNameT { range, .. } => *range,
       Self::UnresolvableRustImport { range, .. } => *range,
+      Self::CouldNotPostparseFunction { range, .. } => *range,
       Self::ArrayElementsHaveDifferentTypes { range, .. } => *range,
       Self::UnexpectedArrayElementType { range, .. } => *range,
       Self::InitializedWrongNumberOfElements { range, .. } => *range,

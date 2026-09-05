@@ -1,14 +1,19 @@
 import v.builtins.implicit_clone.*;
 import v.builtins.arrays.*;
+import v.builtins.panic.*;
 
-func migrate<E>(from []E, to &[]E) {
+func migrate<E, g'>(from []E, to &[]E in g) {
   intermediate = Array<E>((&from).capacity());
-  drop_into(^from, &{ (&intermediate).push(^_); });
-  drop_into(^intermediate, &{ to.push(^_); });
+  // VCOORD: re-enable when borrowing is ok
+  // drop_into(^from, &{ (&intermediate).push(^_); });
+  // drop_into(^intermediate, &{ to.push(^_); });
+  __vbi_panic()
 }
 
-func migrate<E, N Int>(from StaticArray<N, E>, to &[]E) {
+func migrate<E, N Int, g'>(from StaticArray<N, E>, to &[]E in g) {
   intermediate = Array<E>(N);
-  drop_into(^from, &{ (&intermediate).push(^_); });
-  drop_into(^intermediate, &{ to.push(^_); });
+  // VCOORD: re-enable when borrowing is ok
+  // drop_into(^from, &{ (&intermediate).push(^_); });
+  // drop_into(^intermediate, &{ to.push(^_); });
+  __vbi_panic()
 }

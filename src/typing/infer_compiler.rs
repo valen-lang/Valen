@@ -693,6 +693,14 @@ where
               Some(_) => None,
               None => None,
             };
+          // An imported Rust citizen is opaque: it carries no Vale-side `where` bounds, so it
+          // contributes no reachable bounds. It is also compiled only on demand (unlike a native
+          // citizen, which the eager compiling phase always compiles), so its inner env may not even
+          // exist. Drop it to the empty-map branch below rather than fetch an inner env it hasn't got.
+          // VCOORD: do the lazy compilation refactor to get rid of this
+          #[cfg(feature = "rust_interop")]
+          let maybe_id_and_template_id =
+            maybe_id_and_template_id.filter(|(id, _)| !crate::typing::rust_interop::is_rust_backed(id));
           let citizen_rune_to_reachable_prototype = match maybe_id_and_template_id {
             None => self.typing_interner.alloc_index_map(),
             Some((id, template_id)) => {
@@ -802,7 +810,10 @@ where
     denizen_template_id: &'t IdT<'s, 't>,
   ) -> &'s [(RuneUsage<'s>, FunctionS<'s>)] {
     match denizen_template_id.local_name {
-      INameT::FunctionTemplate(_) => self.illuminate_function(coutputs, denizen_template_id).func_bounds,
+      INameT::FunctionTemplate(_) => self
+        .illuminate_function(coutputs, denizen_template_id)
+        .expect("an already-resolved function cannot decline")
+        .func_bounds,
       INameT::StructTemplate(_) => coutputs.get_postparsed_struct(denizen_template_id).func_bounds,
       INameT::InterfaceTemplate(_) => coutputs.get_postparsed_interface(denizen_template_id).func_bounds,
       // Lambdas (and anything else) declare no where-clause bounds.

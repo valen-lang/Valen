@@ -17,8 +17,8 @@ fn test_only_the_unsafe_call_among_many_is_flagged() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:4:1:
-exported func main() int {
+    r#"At test:0.vale:7:12:
+  badpair(&e, &e);
 Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
 "#,
   );
@@ -55,8 +55,8 @@ fn test_same_callee_safe_and_unsafe_sites() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:3:1:
-exported func main() int {
+    r#"At test:0.vale:7:12:
+  badpair(&e, &e);
 Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
 "#,
   );

@@ -14,6 +14,10 @@ pub enum ParseError {
   RangedInternalError { pos: i32, msg: String },
   UnrecognizableExpressionAfterRefPrefix(i32),
   OnlyRegionRunesCanHaveMutability(i32),
+  /// A single effect clause held more than one group, e.g. `mut(a, b)`. Each clause takes exactly one
+  /// group; two mutated regions are spelled as separate clauses (`mut(a) mut(b)`). Rejected rather than
+  /// silently keeping only the first group.
+  MultipleGroupsInEffectClause(i32),
   BadMemberEnd(i32),
   BadLambdaBegin(i32),
   BadLambdaBodyBegin(i32),
@@ -136,6 +140,7 @@ impl ParseError {
       ParseError::BadPrototypeParams(p) => *p,
       ParseError::BadRuleCallParam(p) => *p,
       ParseError::BadTypeExpression(p) => *p,
+      ParseError::MultipleGroupsInEffectClause(p) => *p,
       ParseError::BadTemplateCallParam(p) => *p,
       ParseError::BadTupleElement(p) => *p,
       ParseError::BadDestructureError(p) => *p,

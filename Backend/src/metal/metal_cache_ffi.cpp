@@ -605,10 +605,10 @@ extern "C" VIS void metal_package_builder_add_extern_abi(
     PackageBuilderHandle* h, const char* p, size_t n,
     CoercionFFI ret, const CoercionFFI* args, size_t args_len) {
   ExternAbi abi;
-  abi.ret = Coercion{static_cast<CoercionKind>(ret.kind), ret.bits};
+  abi.ret = Coercion{static_cast<CoercionKind>(ret.kind), ret.bits, ret.bits2};
   abi.args.reserve(args_len);
   for (size_t i = 0; i < args_len; i++) {
-    abi.args.push_back(Coercion{static_cast<CoercionKind>(args[i].kind), args[i].bits});
+    abi.args.push_back(Coercion{static_cast<CoercionKind>(args[i].kind), args[i].bits, args[i].bits2});
   }
   PB(h)->externAbis[str(p, n)] = std::move(abi);
 }

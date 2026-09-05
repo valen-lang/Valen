@@ -68,6 +68,11 @@ pub fn generate_workspace(manifest: &Manifest) -> GeneratedWorkspace {
   cargo.push_str(&format!("name = \"{}\"\n", manifest.project.name));
   cargo.push_str(&format!("version = \"{}\"\n", manifest.project.version));
   cargo.push_str("edition = \"2021\"\n\n");
+  // Declare our own workspace so cargo never tries to fold the generated package into a parent
+  // workspace it happens to be nested under. The build dir (`<project>/target/valen-build`) is often
+  // inside the user's real cargo workspace — e.g. a `Valen.toml` beside a crate in a `members` glob —
+  // and without this cargo errors that the package "believes it's in a workspace when it's not".
+  cargo.push_str("[workspace]\n\n");
   cargo.push_str("[dependencies]\n");
   for (name, spec) in &manifest.rust_dependencies {
     cargo.push_str(&render_dep(name, spec));
@@ -141,8 +146,27 @@ pub fn stage_workspace(inputs: &BuildInputs) -> Result<(), String> {
 /// the fork, and `valenc-rs`'s baked rpath finds `librustc_driver`, so no toolchain/dylib env is set
 /// here; a leaked `RUSTC` is cleared so it cannot override the wrapper. cargo invokes `valenc-rs` once
 /// per crate — a `.valen` crate drives Valen, a pure-Rust dependency passes through.
+///
+/// Before building, the driven crate's incremental cache is cleared (interim). Valen emits the
+/// program's bodies — the entry `__vale_main` and each callback wrapper — into rustc's module out-of-band
+/// via `fill_extra_modules`, which rustc's incremental system does not track as an output. So an
+/// incremental *reuse* of the `.valen` crate's cached codegen units yields the object from *before*
+/// Valen's emit, missing `__vale_main`, and the link fails with an undefined symbol — the exact failure
+/// on any rebuild (`stage_workspace` re-copies the source, so cargo recompiles the bin every time).
+/// Disabling incremental entirely (`CARGO_INCREMENTAL=0`) is *not* the fix: its merged CGU layout drops
+/// the reified Rust leaves the Valen body calls (e.g. `main_loop::<MyCb>`). Clearing the cache instead
+/// forces a fresh *full* codegen on incremental's per-item CGU layout, so both Valen's emit and the leaves
+/// land. Dep rlibs live under `deps/` and are fingerprinted separately, so they still skip — only the
+/// driven bin recompiles (~2s). The permanent fix is fork-side: make the extra-module output participate
+/// in incremental tracking.
 pub fn run_build(inputs: &BuildInputs) -> Result<i32, String> {
   stage_workspace(inputs)?;
+  let incremental = inputs.build_dir.join("target").join("debug").join("incremental");
+  if incremental.exists() {
+    fs::remove_dir_all(&incremental).map_err(|e| {
+      format!("could not clear the incremental cache at {}: {e}", incremental.display())
+    })?;
+  }
   let status = Command::new("cargo")
     .current_dir(&inputs.build_dir)
     .arg("build")

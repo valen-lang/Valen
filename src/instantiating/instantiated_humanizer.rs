@@ -25,6 +25,8 @@ pub fn humanize_templata<'s, 'i>(
         ITemplataI::StructDefinition(t) => humanize_id(code_map, &t.env_id, None),
         ITemplataI::Integer(i) => i.value.to_string(),
         ITemplataI::Kind(k) => humanize_kind(code_map, &k.kind),
+        // The ceremonial erased group carries no payload; a bare label is all there is to show.
+        ITemplataI::Group(_) => "Group".to_string(),
         _ => panic!("humanize_templata: unimplemented variant"),
     }
 }

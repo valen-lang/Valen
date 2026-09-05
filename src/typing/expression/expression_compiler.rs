@@ -167,11 +167,11 @@ where
         match nenv.lookup_nearest_with_imprecise_name(name_imprecise, &lookup_filter, self.typing_interner) {
                     Some(ITemplataT::Integer(num)) => {
                         Ok(Some(ExpressionTE::ConstantInt(self.typing_interner.alloc(
-                            ConstantIntTE::new(ITemplataT::Integer(num), 32, region)))))
+                            ConstantIntTE::new(ranges[0], ITemplataT::Integer(num), 32, region)))))
                     }
                     Some(ITemplataT::Boolean(b)) => {
                         Ok(Some(ExpressionTE::ConstantBool(self.typing_interner.alloc(
-                            ConstantBoolTE::new(b, region)))))
+                            ConstantBoolTE::new(ranges[0], b, region)))))
                     }
                     None => Ok(None),
                     _ => unreachable!("evaluateLookupForLoad None-branch is exhaustive over IntegerTemplataT/BooleanTemplataT/None"),
@@ -315,6 +315,7 @@ where
     let result_type = KindT::Struct(struct_ref);
 
     let construct_expr2 = ConstructTE::new(
+      range[0],
       struct_ref,
       result_type,
       self.typing_interner.alloc_slice_from_vec(lookup_expressions2),
@@ -377,13 +378,14 @@ where
   ) -> Result<(ExpressionTE<'s, 't>, HashSet<KindT<'s, 't>>, PendingTempDrops<'s, 't>), ICompileErrorT<'s, 't>> {
     // VTRACE: show
     match expr_1 {
-      IExpressionSE::Void(_) => Ok((
-        ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(region))),
+      IExpressionSE::Void(v) => Ok((
+        ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(v.range, region))),
         HashSet::default(),
         PendingTempDrops::none(),
       )),
       IExpressionSE::ConstantInt(c) => Ok((
         ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE::new(
+          c.range,
           ITemplataT::Integer(c.value),
           c.bits,
           region,
@@ -469,7 +471,7 @@ where
           .typing_interner
           .alloc(LocalVariable { name: result_var_id, tyype: inner_expr_2.result() });
         let result_let = ExpressionTE::LetNormal(
-          self.typing_interner.alloc(LetNormalTE::new(result_variable, inner_expr_2)),
+          self.typing_interner.alloc(LetNormalTE::new(ret.range, result_variable, inner_expr_2)),
         );
         nenv.add_variable(IVariableT::Local(result_variable));
 
@@ -484,7 +486,7 @@ where
           &reversed_variables_to_destruct,
         )?;
 
-        let get_result_expr = self.unlet_local_without_dropping(nenv, &result_variable);
+        let get_result_expr = self.unlet_local_without_dropping(ret.range, nenv, &result_variable);
         let get_result_expr_ref = ExpressionTE::Unlet(self.typing_interner.alloc(get_result_expr));
 
         let mut all_exprs: Vec<ExpressionTE<'s, 't>> = Vec::new();
@@ -492,9 +494,9 @@ where
         all_exprs.extend(destruct_exprs_refs);
         all_exprs.push(get_result_expr_ref);
 
-        let consecutor = self.consecutive(&all_exprs);
+        let consecutor = self.consecutive(ret.range, &all_exprs);
 
-        let return_te = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(consecutor)));
+        let return_te = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(ret.range, consecutor)));
 
         Ok((return_te, returns, PendingTempDrops::none()))
       }
@@ -549,7 +551,7 @@ where
           region,
           |compiler, _coutputs, nenv, _life, _live_capture_locals| {
             ExpressionTE::VoidLiteral(
-              self.typing_interner.alloc(VoidLiteralTE::new(nenv.default_region())),
+              self.typing_interner.alloc(VoidLiteralTE::new(let_se.range, nenv.default_region())),
             )
           },
         ) {
@@ -640,7 +642,7 @@ where
         init_exprs_te.push(last_expr_te);
         init_returns.extend(last_returns);
 
-        let result = self.consecutive(&init_exprs_te);
+        let result = self.consecutive(consecutor_se.range(), &init_exprs_te);
         Ok((result, init_returns, PendingTempDrops::none()))
       }
       IExpressionSE::LocalLoad(local_load) => {
@@ -724,6 +726,7 @@ where
             let callable_expr = self.new_global_function_group_expression(
               env_ref,
               coutputs,
+              fc.range,
               nenv.default_region(),
               last_part.name,
             );
@@ -862,7 +865,7 @@ where
           Some(inner) if inner.is_primitive() => inner,
           _ => panic!("__copy_prim expects &primitive, got {:?}", inner_coord),
         };
-        let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(inner_te, result_coord));
+        let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(cp.range, inner_te, result_coord));
         Ok((ExpressionTE::CopyPrim(copy_prim_te), returns_from_inner, pending_from_inner))
       }
       IExpressionSE::Ownershipped(ownershipped) => {
@@ -896,7 +899,7 @@ where
                     // VCOORD: it's weird that we' previously allocated an LocalLookupTE but now we're discarding it.
                     Ok((
                       ExpressionTE::Unlet(
-                        self.typing_interner.alloc(UnletTE::new(*local_variable)),
+                        self.typing_interner.alloc(UnletTE::new(ownershipped.range, *local_variable)),
                       ),
                       returns_from_inner,
                       pending_from_inner,
@@ -1092,6 +1095,7 @@ where
               let index = dot.member.0.parse::<i64>().expect("vassert: member is digit string");
               let index_expr_2 =
                 ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE::new(
+                  dot.range,
                   ITemplataT::Integer(index),
                   32,
                   region,
@@ -1117,6 +1121,7 @@ where
               let index = dot.member.0.parse::<i64>().expect("vassert: member is digit string");
               let index_expr_2 =
                 ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE::new(
+                  dot.range,
                   ITemplataT::Integer(index),
                   32,
                   region,
@@ -1209,7 +1214,7 @@ where
           KindT::BorrowRef(BorrowRefT { inner: KindT::Bool(_), .. }) => ExpressionTE::CopyPrim(
             self
               .typing_interner
-              .alloc(CopyPrimTE::new(uncoerced_condition_expr, KindT::Bool(BoolT {}))),
+              .alloc(CopyPrimTE::new(if_se.condition.range(), uncoerced_condition_expr, KindT::Bool(BoolT {}))),
           ),
           actual_type => {
             let range_with_parent: Vec<RangeS<'s>> =
@@ -1240,7 +1245,7 @@ where
             nenv.default_region(),
             if_se.then_body,
           )?;
-        let uncoerced_then_block_2 = BlockTE::new(then_expressions_with_result);
+        let uncoerced_then_block_2 = BlockTE::new(if_se.then_body.range, then_expressions_with_result);
         let (then_unstackified_ancestor_locals, then_restackified_ancestor_locals) = then_fate
           .snapshot(self.typing_interner)
           .get_effects_since(nenv.snapshot(self.typing_interner));
@@ -1268,7 +1273,7 @@ where
             nenv.default_region(),
             if_se.else_body,
           )?;
-        let uncoerced_else_block_2 = BlockTE::new(else_expressions_with_result);
+        let uncoerced_else_block_2 = BlockTE::new(if_se.else_body.range, else_expressions_with_result);
         let (else_unstackified_ancestor_locals, else_restackified_ancestor_locals) = else_fate
           .snapshot(self.typing_interner)
           .get_effects_since(nenv.snapshot(self.typing_interner));
@@ -1368,6 +1373,7 @@ where
         )?;
 
         let if_expr_2 = ExpressionTE::If(self.typing_interner.alloc(IfTE::new(
+          if_se.range,
           LocT::from_lid(self.typing_interner, if_se.loc),
           condition_expr,
           then_expr_2,
@@ -1444,7 +1450,7 @@ where
           Some((while_nenv, _)) => {
             assert!(region == nenv.default_region()); // vcurious
             let void_literal =
-              ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(region)));
+              ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(b.range, region)));
 
             let drops_te = self.drop_since(
               coutputs,
@@ -1456,8 +1462,8 @@ where
               void_literal,
               nenv.snapshot(self.typing_interner).get_live_variables_introduced_since(while_nenv),
             )?;
-            let break_te = ExpressionTE::Break(self.typing_interner.alloc(BreakTE::new(region)));
-            let drops_and_break_te = self.consecutive(&[drops_te, break_te]);
+            let break_te = ExpressionTE::Break(self.typing_interner.alloc(BreakTE::new(b.range, region)));
+            let drops_and_break_te = self.consecutive(b.range, &[drops_te, break_te]);
             Ok((drops_and_break_te, HashSet::default(), PendingTempDrops::none()))
           }
         }
@@ -1488,7 +1494,7 @@ where
             nenv.default_region(),
             w.body,
           )?;
-        let uncoerced_body_block_2 = BlockTE::new(body_expressions_with_result);
+        let uncoerced_body_block_2 = BlockTE::new(w.body.range, body_expressions_with_result);
 
         match uncoerced_body_block_2.result {
           KindT::Never(_) => {}
@@ -1529,6 +1535,7 @@ where
         }
 
         let loop_expr_2 = ExpressionTE::While(self.typing_interner.alloc(WhileTE::new(
+          w.range,
           LocT::from_lid(self.typing_interner, w.loc),
           uncoerced_body_block_2,
         )));
@@ -1738,7 +1745,7 @@ where
         };
         // VCOORD: lets rename all the _2 to _te etc.
         let mutate_2 = ExpressionTE::Mutate(
-          self.typing_interner.alloc(MutateTE::new(destination_expr_2, converted_source_expr_2)),
+          self.typing_interner.alloc(MutateTE::new(em.range, destination_expr_2, converted_source_expr_2)),
         );
         let mut returns = returns_from_source;
         returns.extend(returns_from_destination);
@@ -1816,11 +1823,11 @@ where
             ExpressionTE::Restackify(
               self
                 .typing_interner
-                .alloc(RestackifyTE::new(local_lookup.local_variable, converted_source_expr_2)),
+                .alloc(RestackifyTE::new(lm.range, local_lookup.local_variable, converted_source_expr_2)),
             )
           }
           _ => ExpressionTE::Mutate(
-            self.typing_interner.alloc(MutateTE::new(destination_expr_2, converted_source_expr_2)),
+            self.typing_interner.alloc(MutateTE::new(lm.range, destination_expr_2, converted_source_expr_2)),
           ),
         };
         Ok((expr_te, returns_from_source, pending_from_source))
@@ -1980,7 +1987,7 @@ where
           b,
         )?;
         let block_2 =
-          ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(expressions_with_result)));
+          ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(b.range, expressions_with_result)));
         let (unstackified_ancestor_locals, restackified_ancestor_locals) = child_environment
           .snapshot(self.typing_interner)
           .get_effects_since(nenv.snapshot(self.typing_interner));
@@ -2000,6 +2007,7 @@ where
       IExpressionSE::ConstantStr(c) => {
         let result = ExpressionTE::ConstantStr(self.typing_interner.alloc(ConstantStrTE::new(
           self.typing_interner,
+          c.range,
           c.value,
           region,
         )));
@@ -2007,7 +2015,7 @@ where
       }
       IExpressionSE::ConstantFloat(c) => {
         let result = ExpressionTE::ConstantFloat(
-          self.typing_interner.alloc(ConstantFloatTE::new(c.value, region)),
+          self.typing_interner.alloc(ConstantFloatTE::new(c.range, c.value, region)),
         );
         Ok((result, HashSet::default(), PendingTempDrops::none()))
       }
@@ -2051,6 +2059,7 @@ where
               })
               .collect();
             ExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE::new(
+              destruct_se.range,
               inner_expr_2,
               struct_tt,
               self.typing_interner.alloc_slice_from_vec(destination_locals),
@@ -2081,7 +2090,7 @@ where
             //   "No local with name: " + name))
           }
         };
-        let result_expr = self.unlet_local_without_dropping(nenv, &local);
+        let result_expr = self.unlet_local_without_dropping(unlet_se.range, nenv, &local);
         // This will likely be dropped, as theyre probably not doing anything with it.
         // But who knows, maybe they'll do something with it, like pass it as a parameter
         // to something.
@@ -2179,6 +2188,7 @@ where
         match templata {
           ITemplataT::Integer(value) => {
             let result = ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE::new(
+              r.range,
               ITemplataT::Integer(value),
               32,
               region,
@@ -2189,6 +2199,7 @@ where
             if matches!(p.tyype, ITemplataType::IntegerTemplataType(_)) =>
           {
             let result = ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE::new(
+              r.range,
               ITemplataT::Placeholder(p),
               32,
               region,
@@ -2212,6 +2223,7 @@ where
             let expr = self.new_global_function_group_expression(
               IInDenizenEnvironmentT::Node(tiny_env_snapshot),
               coutputs,
+              r.range,
               RegionT::Default,
               arbitrary_imprecise,
             );
@@ -2229,7 +2241,7 @@ where
       }
       IExpressionSE::ConstantBool(c) => {
         let result = ExpressionTE::ConstantBool(
-          self.typing_interner.alloc(ConstantBoolTE::new(c.value, region)),
+          self.typing_interner.alloc(ConstantBoolTE::new(c.range, c.value, region)),
         );
         Ok((result, HashSet::default(), PendingTempDrops::none()))
       }
@@ -2580,7 +2592,7 @@ where
 
     match expr.result() {
       KindT::BorrowRef(_) => Ok(ExpressionTE::BorrowToWeak(
-        self.typing_interner.alloc(BorrowToWeakTE::new(self.typing_interner, expr)),
+        self.typing_interner.alloc(BorrowToWeakTE::new(self.typing_interner, parent_ranges[0], expr)),
       )),
       other => panic!("vwat: {:?}", other),
     }
@@ -2631,6 +2643,7 @@ where
     &self,
     env: IInDenizenEnvironmentT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    range: RangeS<'s>,
     region: RegionT,
     name: IImpreciseNameS<'s>,
   ) -> ExpressionTE<'s, 't> {
@@ -2638,9 +2651,9 @@ where
     let overload_set =
       self.typing_interner.intern_overload_set(OverloadSetTValT { env, name: name_ref });
     let void_expr: ExpressionTE<'s, 't> =
-      ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(region)));
+      ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(range, region)));
     ExpressionTE::Reinterpret(
-      self.typing_interner.alloc(ReinterpretTE::new(void_expr, KindT::OverloadSet(overload_set))),
+      self.typing_interner.alloc(ReinterpretTE::new(range, void_expr, KindT::OverloadSet(overload_set))),
     )
   }
 
@@ -2725,6 +2738,7 @@ where
       tyype.clone(),
       params_s,
       maybe_ret_coord_rune.clone(),
+      function_s.maybe_return_type,
       function_s.effects,
       function_s.header_rules,
       function_s.impl_bounds,
@@ -2763,9 +2777,9 @@ where
           exprs.push(expr_te);
           exprs.extend(destroy_expressions);
           exprs.push(ExpressionTE::VoidLiteral(
-            self.typing_interner.alloc(VoidLiteralTE::new(region)),
+            self.typing_interner.alloc(VoidLiteralTE::new(range[0], region)),
           ));
-          Ok(self.consecutive(&exprs))
+          Ok(self.consecutive(range[0], &exprs))
         }
         KindT::Never(_) => {
           // In this case, we want to not drop them, so we can support things like:
@@ -2781,7 +2795,7 @@ where
         }
         _ => {
           let (resultified_expr, result_local_variable) =
-            self.resultify_expressions(nenv, loct.add(self.typing_interner, 1), expr_te);
+            self.resultify_expressions(nenv, range[0], loct.add(self.typing_interner, 1), expr_te);
           let reversed_variables_to_destruct: Vec<_> =
             unreversed_variables_to_destruct.iter().rev().copied().collect();
           let destroy_expressions = self.unlet_and_drop_all(
@@ -2796,9 +2810,9 @@ where
           exprs.push(resultified_expr);
           exprs.extend(destroy_expressions);
           let result_ilocal_variable = result_local_variable;
-          let unlet_te = self.unlet_local_without_dropping(nenv, result_ilocal_variable);
+          let unlet_te = self.unlet_local_without_dropping(range[0], nenv, result_ilocal_variable);
           exprs.push(ExpressionTE::Unlet(self.typing_interner.alloc(unlet_te)));
-          Ok(self.consecutive(&exprs))
+          Ok(self.consecutive(range[0], &exprs))
         }
       }
     }
@@ -2807,6 +2821,7 @@ where
   pub fn resultify_expressions(
     &self,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
+    range: RangeS<'s>,
     loct: LocT<'t>,
     expr: ExpressionTE<'s, 't>,
   ) -> (ExpressionTE<'s, 't>, &'t LocalVariable<'s, 't>) {
@@ -2816,7 +2831,7 @@ where
     let result_var_name: IVarNameT<'s, 't> = result_var_ref.into();
     let result_variable: &'t LocalVariable<'s, 't> =
       self.typing_interner.alloc(LocalVariable { name: result_var_name, tyype: expr.result() });
-    let result_let = LetNormalTE::new(result_variable, expr);
+    let result_let = LetNormalTE::new(range, result_variable, expr);
     nenv.add_variable(IVariableT::Local(result_variable));
     (ExpressionTE::LetNormal(self.typing_interner.alloc(result_let)), result_variable)
   }

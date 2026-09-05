@@ -29,6 +29,19 @@ pub enum BorrowErrorKind<'s, 't> {
   UseAfterChurn {
     local: IVarNameT<'s, 't>,
   },
+  /// Like `UseAfterChurn`, but the churned reference is an unnamed held register (a temporary waiting
+  /// in a register to be passed to a call), so there is no local name to point at.
+  UseAfterChurnTemporary,
+  /// A function's return type is a borrow with no group (`&T` rather than `&T in g`). Signature-only:
+  /// callers derive the returned reference's group from this annotation, so it must be present.
+  GrouplessReturnBorrow,
+  /// An expression produces a borrow whose group could not be derived (looking only at signatures) —
+  /// it came out empty. Every borrow must carry a real group.
+  UnderivableBorrowGroup,
+  /// A call churns a group reached through one of the enclosing function's parameters, but that
+  /// function's signature declares no `mut(...)` effect covering it — so callers cannot see the churn.
+  /// Every parameter-group churn must be declared.
+  UndeclaredChurn,
 }
 
 impl<'s, 't> BorrowErrorKind<'s, 't> {
@@ -72,6 +85,25 @@ impl<'s, 't> BorrowErrorKind<'s, 't> {
            deleted, so it can't be used here.",
           var_name(local),
         )
+      }
+      BorrowErrorKind::UseAfterChurnTemporary => {
+        "This reference into an array element is held while a sibling argument churns its group, \
+         which may have moved or deleted the element, so it can't be passed here."
+          .to_string()
+      }
+      BorrowErrorKind::GrouplessReturnBorrow => {
+        "This function returns a borrow reference with no group. Annotate the group it points into, \
+         like `&T in g`."
+          .to_string()
+      }
+      BorrowErrorKind::UnderivableBorrowGroup => {
+        "The group of this borrow reference can't be determined from the expression that produces it."
+          .to_string()
+      }
+      BorrowErrorKind::UndeclaredChurn => {
+        "this call churns a group reached through a parameter, but the enclosing function does not \
+         declare a mut effect for it."
+          .to_string()
       }
     }
   }

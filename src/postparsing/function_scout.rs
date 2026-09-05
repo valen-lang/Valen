@@ -678,6 +678,19 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         ret_rune
       }
     };
+    // Build the written return type as a group-annotated tree (mirroring a parameter's `tyype`), so
+    // the borrow checker can read a returned reference's `in g` group. A `RegionRune` return isn't a
+    // real type.
+    let maybe_return_type = match &function.header.ret.ret_type {
+      Some(ret_type_p) if !matches!(ret_type_p, ITemplexPT::RegionRune(_)) => {
+        Some(translate_templex_into_type_st(
+          self.scout_arena,
+          IEnvironmentS::FunctionEnvironment(function_environment.clone()),
+          ret_type_p,
+        ))
+      }
+      _ => None,
+    };
     let has_extern_attr =
       function.header.attributes.iter().any(|attr| matches!(attr, IAttributeP::ExternAttribute(_)));
     let has_abstract_attr = function
@@ -896,12 +909,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
     generic_params.extend(extra_generic_params_from_explicit_params_s);
     generic_params.extend(extra_generic_params_from_body);
     generic_params.extend(extra_generic_params_from_parent);
-    generic_params = generic_params
-      .into_iter()
-      .filter(|generic_param| {
-        !matches!(generic_param.tyype, IGenericParameterTypeS::RegionGenericParameterType(_))
-      })
-      .collect();
 
     let unfiltered_rules_array: Vec<IRulexSR<'s>> = rules;
     let rules_array = match &maybe_parent {
@@ -960,6 +967,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         tyype,
         self.scout_arena.alloc_slice_from_vec(total_params_s),
         maybe_ret_kind_rune,
+        maybe_return_type,
         self.scout_arena.alloc_slice_from_vec(effects_s),
         rules_array,
         self.scout_arena.alloc_slice_from_vec(impl_bounds),

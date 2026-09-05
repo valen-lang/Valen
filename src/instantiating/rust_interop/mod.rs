@@ -39,7 +39,7 @@ use std::sync::OnceLock;
 
 use crate::backend_ffi::metal_cache::MetalCache;
 use crate::backend_ffi::metal_lowerer::populate_metal_cache;
-use crate::backend_ffi::backend_inputs::{BackendInputs, BackendMode, InteropInputs};
+use crate::backend_ffi::backend_inputs::{BackendInputs, BackendMode, Callback, InteropInputs};
 use crate::backend_ffi::metal_lowerer::{Coercion, ExternAbi, StructLayout};
 use crate::backend_ffi::{compile, BackendCompileOptions};
 use crate::instantiating::instantiated_humanizer::humanize_id;
@@ -53,8 +53,12 @@ use crate::instantiating::ast::templata::ITemplataI;
 use crate::instantiating::ast::types::KindIT;
 use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::instantiating::ast::ast::{FunctionExportI, FunctionExternI};
-use crate::instantiating::instantiator::{InstantiatedOutputsI, InstantiatorI};
+use crate::instantiating::instantiator::{DenizenBoundToDenizenCallerBoundArgI, InstantiatedOutputsI, InstantiatorI};
 use crate::keywords::Keywords;
+use crate::typing::names::names::{IdT, INameT};
+use crate::typing::ast::ast::PrototypeT;
+use crate::typing::types::types::RegionT;
+use crate::utils::fx::IndexMap;
 use crate::scout_arena::ScoutArena;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::rust_interop::reserved::RUST_MODULE;
@@ -87,6 +91,11 @@ pub struct DriverState<'s, 'ctx, 't, 'i> {
   /// the stub's `fn main`, which calls the Rust name `__vale_main`, resolves to Vale's real body rather
   /// than rustc's `unreachable!()` placeholder (which the partition filter removes). `None` = no entry.
   pub entry_symbol: &'ctx RefCell<Option<String>>,
+  /// Rust→Vale callbacks the collector reached: a Vale method (a trait-impl override) that *Rust*
+  /// calls, not a Vale export. For each, the backend emits a wrapper under the rustc-mangled symbol
+  /// that adapts the Rust ABI and forwards to the internal Vale body (single-symbol, arch §5.2).
+  /// Accumulated as `per_instance_mir` fires on each such method; read at emit.
+  pub callbacks: &'ctx RefCell<Vec<CallbackReq>>,
   /// Per-run log of what the provider did, keyed by nothing — one line per Vale item it fired on.
   /// Lives here (per driven run) rather than in a global so parallel driven tests never race.
   pub firings: &'ctx RefCell<Vec<String>>,
@@ -98,6 +107,15 @@ pub struct DriverState<'s, 'ctx, 't, 'i> {
   /// borrowed module (Stage 2+), or just record that it fired (Stage 1 / the Milestone-M driven tests
   /// that assert only on resolution, not emission). Off keeps those tests off the backend path.
   pub emit_backend: bool,
+}
+
+/// One Rust→Vale callback the backend must emit a wrapper for: `symbol` is the rustc-mangled name
+/// Rust's monomorphized call site targets (so the wrapper is the sole definition — single-symbol),
+/// and `vale_name` is the humanized name of the internal Vale body to forward to. `vale_name` is
+/// also the key its inbound ABI is stored under in `extern_abis`, matching the metal prototype name.
+pub struct CallbackReq {
+  pub symbol: String,
+  pub vale_name: String,
 }
 
 impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
@@ -135,11 +153,23 @@ impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
     self.function_exports.borrow_mut().push(export_i);
     instantiator.drain_instantiation_queue(&mut monouts);
 
-    // Resolve each newly-collected Rust leaf and materialize its `FunctionExternI` here — this is where
-    // the leaf's real (rustc-mangled) symbol becomes known, so this is where the extern is defined.
+    self.resolve_new_requests(tcx, &mut monouts, &before)
+  }
+
+  /// Resolve each Rust leaf collected since `before` (a snapshot of `rust_instantiation_requests`'
+  /// keys), materialize its `FunctionExternI` with rustc's real mangled symbol — the one place that
+  /// symbol is known — and stash its boundary ABI, returning the resolved requests so the caller can
+  /// reify each as a `ReifyFnPointer` in its synthetic body. Shared by the export path and the
+  /// callback path: a callback body can call out to Rust (`w.get()`) exactly as an export body does.
+  fn resolve_new_requests<'tcx>(
+    &self,
+    tcx: TyCtxt<'tcx>,
+    monouts: &mut InstantiatedOutputsI<'s, 't, 'i>,
+    before: &HashSet<IdI<'s, 'i>>,
+  ) -> Vec<ResolvedRequest<'tcx>> {
     // Collect first (this borrows the requests map immutably), keeping each request's `PrototypeI`.
-    // `tcx.symbol_name(Instance)` is a pure read of the same instance the `ReifyFnPointer` reifies, so it
-    // matches the symbol rustc actually codegens the leaf under.
+    // `tcx.symbol_name(Instance)` is a pure read of the same instance the `ReifyFnPointer` reifies, so
+    // it matches the symbol rustc actually codegens the leaf under.
     let new_reqs: Vec<_> = monouts
       .rust_instantiation_requests
       .iter()
@@ -153,15 +183,15 @@ impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
         let instance = ty::Instance::new_raw(def_id, args);
         let symbol = tcx.symbol_name(instance).name;
         let symbol_i: &str = self.interner.bump().alloc_str(symbol);
-        // The extern is born here, complete, with rustc's real symbol — the one place it is known. This
-        // is the sole registration point for Rust externs (the instantiator only records the request).
+        // The extern is born here, complete, with rustc's real symbol — the sole registration point
+        // for a Rust extern (the instantiator only records the request).
         monouts.function_externs.push(FunctionExternI {
           prototype: *proto,
           num_inherited_generic_parameters: 0,
           link_name: symbol_i,
         });
-        // Compute the leaf's boundary ABI from rustc's FnAbi and stash it keyed by the same humanized
-        // prototype name the metal lowerer uses, so the backend's buildCallOrSideCall finds it.
+        // The leaf's boundary ABI, keyed by the same humanized prototype name the metal lowerer uses,
+        // so the backend's buildCallOrSideCall finds it.
         if let Some(abi) = compute_extern_abi(tcx, instance) {
           self.extern_abis.borrow_mut().insert(humanize_id(&code_map, &proto.id, None), abi);
         }
@@ -169,6 +199,95 @@ impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
     }
 
     new_reqs.into_iter().map(|(_, req)| req).collect()
+  }
+
+  /// Catch a Rust→Vale callback the collector reached: a Vale trait-impl override (`item_name`, e.g.
+  /// `on_call`) that *Rust* calls directly, not a Vale export. Instantiate its body into `monouts`
+  /// (so the backend emits it as an internal Vale function), compute its inbound ABI (how Rust hands
+  /// the receiver/args in), and record the wrapper the backend must emit under the method's
+  /// rustc-mangled symbol. The body is instantiated through the ordinary `translate_prototype` +
+  /// `drain` — a callback is an ordinary non-generic function whose only distinction is *who* calls
+  /// it, so no override/vtable machinery is needed (Rust dispatched statically to the concrete impl).
+  fn collect_callback<'tcx>(
+    &self,
+    tcx: TyCtxt<'tcx>,
+    instance: Instance<'tcx>,
+    item_name: &str,
+  ) -> Vec<ResolvedRequest<'tcx>> {
+    let hinputs_ref = self.hinputs.borrow();
+    let hinputs = match hinputs_ref.as_ref() {
+      Some(h) => h,
+      None => return Vec::new(),
+    };
+    // The Vale override body lives in hinputs.functions under its own short name (e.g. "on_call").
+    // Two functions share that name: the trait's *abstract* method (a virtual/abstract self param,
+    // from the interface projection) and the concrete *override*. We want the override — the
+    // non-abstract one. Slice 5 has a single impl, so this is unambiguous; multiple impls would need
+    // the receiver type to disambiguate, which is a later slice.
+    let overrides: Vec<_> = hinputs
+      .functions
+      .iter()
+      .copied()
+      .filter(|f| {
+        matches!(&f.header.id.local_name, INameT::Function(n) if n.template.human_name.as_str() == item_name)
+          && f.header.get_abstract_interface().is_none()
+      })
+      .collect();
+    let override_def = match overrides.as_slice() {
+      [f] => *f,
+      [] => return Vec::new(), // no concrete override to emit (a resolved callback always has one)
+      _ => panic!(
+        "multiple concrete overrides named {item_name:?}; receiver-type disambiguation is a later slice"
+      ),
+    };
+    let override_proto_t: PrototypeT = override_def.header.to_prototype();
+
+    let instantiator = InstantiatorI {
+      opts: self.opts,
+      interner: self.interner,
+      typing_interner: self.typing_interner,
+      scout_arena: self.scout_arena,
+      keywords: self.keywords,
+      hinputs,
+    };
+    let mut monouts = self.monouts.borrow_mut();
+    // Snapshot the Rust-leaf requests before instantiating the callback body, so `resolve_new_requests`
+    // returns only the ones this body added (e.g. an outbound `w.get()`).
+    let before: HashSet<_> = monouts.rust_instantiation_requests.keys().copied().collect();
+    // A non-generic override: no caller bounds, no placeholder substitutions. `translate_prototype`
+    // builds the instantiated prototype and enqueues the body; `drain` translates it into
+    // `monouts.functions`, from where `assemble_hinputs`/the backend emits it.
+    let empty_bound = DenizenBoundToDenizenCallerBoundArgI {
+      func_id_to_bound_arg_prototype: IndexMap::default(),
+      bound_param_impl_id_to_bound_arg_impl_id: IndexMap::default(),
+    };
+    let empty_subs: IndexMap<IdT, ITemplataI> = IndexMap::default();
+    let proto_i = instantiator.translate_prototype(
+      &mut monouts,
+      &override_proto_t.id,
+      &empty_bound,
+      &empty_subs,
+      &RegionT::Default,
+      &override_proto_t,
+    );
+    instantiator.drain_instantiation_queue(&mut monouts);
+
+    // The instantiated body's metal name is `humanize_id(proto_i.id)` (metal_lowerer's
+    // `lower_function` keys it that way). That single string is both the extern-ABI key the wrapper's
+    // `buildBoundarySignature` looks up and the `vale_name` the wrapper forwards through.
+    let code_map = |loc: CodeLocationS| format!("{:?}", loc);
+    let vale_name = humanize_id(&code_map, &proto_i.id, None);
+    let symbol = tcx.symbol_name(instance).name.to_string();
+    // The inbound ABI is role-agnostic: the same `fn_abi_of_instance` read the outbound leaves use
+    // gives how Rust passes the `&self` receiver (and args) into the callback.
+    if let Some(abi) = compute_extern_abi(tcx, instance) {
+      self.extern_abis.borrow_mut().insert(vale_name.clone(), abi);
+    }
+    self.callbacks.borrow_mut().push(CallbackReq { symbol, vale_name });
+
+    // Reify any Rust leaves the callback body itself calls (e.g. `w.get()`), so rustc's collector
+    // queues and codegens them — the same treatment an export body's leaves get.
+    self.resolve_new_requests(tcx, &mut monouts, &before)
   }
 }
 
@@ -622,17 +741,35 @@ fn lang_per_instance_mir<'tcx>(
   // Capture the entry symbol: `__vale_main` is the Vale binary's entry, and the backend must emit its
   // body under rustc's own mangled name for this stub instance so the stub's `fn main` (which calls the
   // Rust name `__vale_main`) links to Vale's body. A pure read of the same instance rustc codegens.
-  if stub_name == "__vale_main" {
-    *state.entry_symbol.borrow_mut() = Some(tcx.symbol_name(instance).name.to_string());
-  }
-  let requests = state.collect_new_rust_requests(tcx, &export_name);
+  // Is this fired item a Vale *export* that Vale drives (`__vale_main`, or a library export), or a
+  // trait-impl *callback* that rustc's collector reached because Rust calls it directly? An export is
+  // named in `hinputs.function_exports`; a callback (e.g. `on_call`) is not, so it takes the branch
+  // that instantiates its body and records an inbound wrapper.
+  let is_export = {
+    let h = state.hinputs.borrow();
+    h.as_ref()
+      .map_or(false, |h| h.function_exports.iter().any(|e| e.exported_name.0 == export_name))
+  };
 
   // Each resolved request's `(DefId, args)` becomes a `ReifyFnPointer` cast in the body, which is
   // what puts that Rust `Instance` into the collector's queue.
-  let rust_deps: Vec<(DefId, ty::GenericArgsRef<'tcx>)> =
-    requests.iter().filter_map(|r| r.dep).collect();
-  let log = requests.iter().map(|r| r.log.as_str()).collect::<Vec<_>>().join(", ");
-  state.firings.borrow_mut().push(format!("{stub_name} -> [{log}]"));
+  let rust_deps: Vec<(DefId, ty::GenericArgsRef<'tcx>)> = if is_export {
+    if stub_name == "__vale_main" {
+      *state.entry_symbol.borrow_mut() = Some(tcx.symbol_name(instance).name.to_string());
+    }
+    let requests = state.collect_new_rust_requests(tcx, &export_name);
+    let log = requests.iter().map(|r| r.log.as_str()).collect::<Vec<_>>().join(", ");
+    state.firings.borrow_mut().push(format!("{stub_name} -> [{log}]"));
+    requests.iter().filter_map(|r| r.dep).collect()
+  } else {
+    // A Rust→Vale callback: instantiate its body, record the wrapper the backend emits under the
+    // rustc-mangled symbol, and reify any Rust leaves the callback body itself calls (e.g. an
+    // outbound `w.get()`) so rustc's collector queues them — just like an export body's leaves.
+    let requests = state.collect_callback(tcx, instance, &stub_name);
+    let log = requests.iter().map(|r| r.log.as_str()).collect::<Vec<_>>().join(", ");
+    state.firings.borrow_mut().push(format!("{stub_name} -> [callback: {log}]"));
+    requests.iter().filter_map(|r| r.dep).collect()
+  };
 
   let body = build_dependency_body(tcx, instance, &rust_deps);
   Some(tcx.arena.alloc(body))
@@ -728,6 +865,14 @@ fn emit_vale_into_borrowed_module<'tcx>(
 
   let opts = BackendCompileOptions::default();
   let entry_symbol = state.entry_symbol.borrow();
+  // The Rust→Vale callbacks, sorted deterministically by their rustc symbol (which encodes
+  // self/args/trait/method) so the emitted module is byte-stable regardless of collector walk order.
+  let callback_reqs = state.callbacks.borrow();
+  let mut callbacks: Vec<Callback> = callback_reqs
+    .iter()
+    .map(|c| Callback { symbol: c.symbol.as_str(), vale_name: c.vale_name.as_str() })
+    .collect();
+  callbacks.sort_by(|a, b| a.symbol.cmp(b.symbol));
   // `llcx`/`llmod` are rustc's live borrowed handles for this call; the C++ side emits into
   // the module and disposes nothing (rustc owns their lifecycle and disposes them after the hook).
   compile(BackendInputs {
@@ -738,6 +883,7 @@ fn emit_vale_into_borrowed_module<'tcx>(
       context: llcx,
       module: llmod,
       entry_symbol: entry_symbol.as_deref(),
+      callbacks,
     }),
   })
 }
@@ -814,7 +960,23 @@ fn compute_extern_abi<'tcx>(tcx: TyCtxt<'tcx>, instance: Instance<'tcx>) -> Opti
         }
         Coercion::Cast(cast.rest.unit.size.bits() as u32)
       }
-      other => panic!("unsupported PassMode {other:?} for interop extern (Pair/Cast and on-stack byval not yet handled)"),
+      // A small struct rustc passes as two register scalars (`ScalarPair`), e.g. `{i32, i32}`. Each
+      // component crosses as its own integer; the struct is reassembled from the two on the far side.
+      // Only integer components are handled — a pointer component (a fat pointer / slice) is deferred.
+      PassMode::Pair(_, _) => match arg.layout.backend_repr {
+        BackendRepr::ScalarPair(s0, s1) => {
+          if matches!(s0.primitive(), Primitive::Pointer(_))
+            || matches!(s1.primitive(), Primitive::Pointer(_))
+          {
+            panic!(
+              "unsupported Pair with a pointer component for interop extern (fat pointer not handled)"
+            );
+          }
+          Coercion::Pair(s0.size(&tcx).bits() as u32, s1.size(&tcx).bits() as u32)
+        }
+        other => panic!("PassMode::Pair without a ScalarPair backend_repr: {other:?}"),
+      },
+      other => panic!("unsupported PassMode {other:?} for interop extern (on-stack byval / multi-piece Cast / HFA not yet handled)"),
     }
   };
   let ret = coercion_of(&fn_abi.ret);

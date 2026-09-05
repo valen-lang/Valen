@@ -6,8 +6,8 @@ use crate::keywords::Keywords;
 use crate::parsing::ast::{BuiltinCallPR, EqualsPR, IRulexPR, ITemplexPT, ITypePR};
 use crate::postparsing::ast::{FunctionS, LocationInDenizenBuilder};
 use crate::postparsing::itemplatatype::{
-  BooleanTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType, PackTemplataType,
-  RegionTemplataType,
+  BooleanTemplataType, GroupTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
+  PackTemplataType,
 };
 use crate::postparsing::names::{CodeRuneS, IRuneS, IRuneValS, ImplicitRuneValS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
@@ -215,7 +215,7 @@ pub fn translate_type<'s>(scout_arena: &ScoutArena<'s>, tyype: ITypePR) -> ITemp
     ITypePR::CoordListType => ITemplataType::PackTemplataType(PackTemplataType {
       element_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
     }),
-    ITypePR::RegionType => ITemplataType::RegionTemplataType(RegionTemplataType {}),
+    ITypePR::RegionType => ITemplataType::GroupTemplataType(GroupTemplataType {}),
     ITypePR::CitizenTemplateType => {
       panic!("POSTPARSER_TRANSLATE_TYPE_CITIZEN_TEMPLATE_NOT_YET_IMPLEMENTED")
     }

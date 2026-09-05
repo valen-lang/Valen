@@ -219,7 +219,7 @@ where
           };
           nenv.mark_local_restackified(local_t.name);
           current_instructions.push(ExpressionTE::Restackify(
-            self.typing_interner.alloc(RestackifyTE::new(local_t, input_expr)),
+            self.typing_interner.alloc(RestackifyTE::new(pattern.range, local_t, input_expr)),
           ));
           local_t
         } else {
@@ -239,7 +239,7 @@ where
             input_expr.result(),
           );
           current_instructions.push(ExpressionTE::LetNormal(
-            self.typing_interner.alloc(LetNormalTE::new(local_t, input_expr)),
+            self.typing_interner.alloc(LetNormalTE::new(pattern.range, local_t, input_expr)),
           ));
           local_t
         };
@@ -368,7 +368,7 @@ where
 
     let mut all_exprs = current_instructions;
     all_exprs.extend(destructure_exprs);
-    self.consecutive(&all_exprs)
+    self.consecutive(pattern.range, &all_exprs)
   }
 
   pub fn destructure_owning(
@@ -461,6 +461,7 @@ where
           .collect();
         let destroy_te = ExpressionTE::DestroyStaticSizedArrayIntoLocals(
           self.typing_interner.alloc(DestroyStaticSizedArrayIntoLocalsTE::new(
+            parent_ranges[0],
             input_expr,
             self.typing_interner.alloc(*static_sized_array_t),
             self.typing_interner.alloc_slice_from_vec(element_locals.clone()),
@@ -504,7 +505,7 @@ where
           region,
           Box::new(after_destructure_success_continuation),
         );
-        self.consecutive(&[destroy_te, lets])
+        self.consecutive(parent_ranges[0], &[destroy_te, lets])
       }
       KindT::RuntimeSizedArray(_) => {
         if !list_of_maybe_destructure_member_patterns.is_empty() {
@@ -512,7 +513,7 @@ where
           // throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Can only destruct RSA with zero destructure targets."))
         }
         ExpressionTE::DestroyRuntimeSizedArray(
-          self.typing_interner.alloc(DestroyRuntimeSizedArrayTE::new(input_expr)),
+          self.typing_interner.alloc(DestroyRuntimeSizedArrayTE::new(parent_ranges[0], input_expr)),
         )
       }
       _ => {
@@ -559,7 +560,7 @@ where
     let local_t =
       self.make_temporary_local(nenv, loct.add(self.typing_interner, 0), container_te.result());
     let let_te =
-      ExpressionTE::LetNormal(self.typing_interner.alloc(LetNormalTE::new(local_t, container_te)));
+      ExpressionTE::LetNormal(self.typing_interner.alloc(LetNormalTE::new(range[0], local_t, container_te)));
     // A local lookup is already a borrow reference to the local's value.
     let container_aliasing_expr_te: ExpressionTE<'s, 't> = ExpressionTE::LocalLookup(
       self.typing_interner.alloc(LocalLookupTE::new(self.typing_interner, range[0], local_t)),
@@ -578,7 +579,7 @@ where
       region,
       Box::new(after_destructure_success_continuation),
     );
-    self.consecutive(&[let_te, iterate_expr])
+    self.consecutive(range[0], &[let_te, iterate_expr])
   }
 
   pub fn iterate_destructure_non_owning_and_maybe_continue(
@@ -769,6 +770,7 @@ where
     let struct_tt_ref = self.typing_interner.alloc(struct_tt);
     let member_locals_ref = self.typing_interner.alloc_slice_copy(&member_locals);
     let destroy_te = ExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE::new(
+      parent_ranges[0],
       input_struct_expr,
       struct_tt_ref,
       member_locals_ref,
@@ -811,7 +813,7 @@ where
       region,
       Box::new(after_destroy_success_continuation),
     );
-    self.consecutive(&[destroy_te, rest_te])
+    self.consecutive(parent_ranges[0], &[destroy_te, rest_te])
   }
 
   pub fn make_lets_for_own_and_maybe_continue(
@@ -862,7 +864,7 @@ where
         [head_member_local_variable, tail_member_local_variables @ ..],
         [head_inner_pattern, tail_inner_pattern_maybes @ ..],
       ) => {
-        let unlet_expr = self.unlet_local_without_dropping(nenv, head_member_local_variable);
+        let unlet_expr = self.unlet_local_without_dropping(head_inner_pattern.range, nenv, head_member_local_variable);
         let unlet_expr_te = ExpressionTE::Unlet(self.typing_interner.alloc(unlet_expr));
         let live_capture_locals: &'t [&'t LocalVariable<'s, 't>] =
           self.typing_interner.alloc_slice_copy(
@@ -968,6 +970,7 @@ where
     index: i32,
   ) -> ExpressionTE<'s, 't> {
     let index_expr = ExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE::new(
+      range,
       ITemplataT::Integer(index as i64),
       32,
       RegionT::Default,

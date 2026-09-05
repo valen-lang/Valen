@@ -41,7 +41,9 @@ use crate::postparsing::names::{
 use crate::postparsing::rules::rules::{
   BorrowRefSR, CallSR, EqualsSR, IRulexSR, LookupSR, RegionSR, RuneUsage,
 };
-use crate::postparsing::rules::types::{ITypeST, RuneUsageST};
+use crate::postparsing::rules::types::{
+  BorrowRefST, EffectS, GroupS, ITypeST, RegionS, RuneUsageST,
+};
 use crate::scout_arena::ScoutArena;
 use crate::typing::compiler::Compiler;
 use crate::typing::names::names::{INameT, IStructTemplateNameT};
@@ -114,6 +116,17 @@ where
   let mut next_synthetic: u32 = 0;
 
   let mut params: Vec<ParameterS<'s>> = Vec::new();
+  // A `mut(g)` effect per `&mut` parameter, mirroring Rust's mutation so the borrow checker can
+  // enforce the callee's aliasing rules at the call site. Empty when nothing is borrowed mutably.
+  let mut effects: Vec<EffectS<'s>> = Vec::new();
+  // Names the region group parameters, one per reference parameter. Function-scoped so two
+  // parameters never mint the same group name — distinct groups are what make Rust's parameters
+  // read as independently borrowed (@ELASZ elision gives each borrow its own lifetime).
+  let mut next_region: u32 = 0;
+  // Each reference parameter's group rune, in order, so a borrow return can tie its group to the one
+  // the input borrowed into (Rust elision). It must be the *same* rune declared on the parameter: the
+  // borrow checker's `arg_rune_subst` only substitutes a return rune that a parameter also declares.
+  let mut param_region_runes: Vec<RuneUsage<'s>> = Vec::new();
   // The synthesized interop function mints its own lid space; each param gets a distinct child.
   let mut lidb = LocationInDenizenBuilder::new(Vec::new());
   for (index, sig_type) in sig.params.iter().enumerate() {
@@ -130,9 +143,13 @@ where
     // they enclose. A `&self`/`&T` receiver is the one place a synthesized extern has an outer
     // wrap: the borrow chains the full type (the argument rune) down to the value type (a fresh
     // rune bound in the value bucket). Every other position has no wrap, so full == value.
-    let (full_type_rune, value_type_rune, outer_ref_rules): (_, _, Vec<IRulexSR<'s>>) =
+    //
+    // The fourth element is the parameter's `tyype`: a `BorrowRefST` carrying the region group for
+    // a borrow (which is where the borrow checker reads the group), a bare rune otherwise. It is
+    // metadata alongside the binding rules (@PFVSZ), which stay the source of truth for typing.
+    let (full_type_rune, value_type_rune, outer_ref_rules, tyype): (_, _, Vec<IRulexSR<'s>>, _) =
       match sig_type {
-        ValeSigType::Borrow(inner) => {
+        ValeSigType::Borrow { inner, is_mut } => {
           // The argument binds to the *value* type: a dot-call peels the receiver's outer
           // borrow and matches the value it encloses. `bind_sig_type` returns the rune that
           // value settled to — `own_rune` (the argument rune) for a concrete inner like
@@ -150,16 +167,43 @@ where
             &mut value_type_rules,
             &mut next_synthetic,
           )?;
+          // A region group for this borrow: the parameter borrows `in <group>`, and a `&mut` marks
+          // that group `mut(g)`. One `CodeRune` is shared by the `in` clause on the `tyype` and the
+          // effect, so the borrow checker sees them as one group; each borrow gets its own group.
+          //
+          // The group rune is deliberately NOT a `generic_params` entry. The real postparser scouts a
+          // region generic parameter but then filters every `RegionGenericParameterType` out of the
+          // function's `generic_params` (function_scout.rs, the region filter after IRRAE), so a
+          // region rune lives only on the parameter `tyype` and the effects — never as an identifying
+          // rune. Pushing it into `generic_params` instead makes it an unsolvable identifying rune at
+          // every call site, since a region rune appears in no solver rule.
+          let region_name = scout_arena.intern_str(&format!("__rust_group{}", next_region));
+          next_region += 1;
+          let region_rune = RuneUsage {
+            range,
+            rune: scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: region_name })),
+          };
+          param_region_runes.push(region_rune);
+          let group = scout_arena.alloc(GroupS::Rune(scout_arena.alloc(region_rune)));
+          if *is_mut {
+            effects.push(EffectS::Mut(group));
+          }
           let outer = vec![IRulexSR::BorrowRef(BorrowRefSR {
             range,
             result_rune: full_type_rune,
             inner_rune: value_rune,
-            // Unspecified: an extern param carries no region annotation, matching the
-            // `RegionT::Default` the settled-kind lowering uses. Real lifetime
-            // reconciliation is deferred (@ELASZ).
+            // Unspecified on the outer rule: the group lives on the `tyype` below, matching the
+            // postparser — `region_s_into_region_sr` collapses a group to `Unspecified` on the rule
+            // side, so an `in g` group survives only on the `BorrowRefST`.
             region: RegionSR::Unspecified,
           })];
-          (full_type_rune, value_rune, outer)
+          let tyype = ITypeST::BorrowRef(scout_arena.alloc(BorrowRefST {
+            range,
+            inner: scout_arena
+              .alloc(ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: value_rune }))),
+            region: RegionS::Group(group),
+          }));
+          (full_type_rune, value_rune, outer, tyype)
         }
         _ => {
           let rune = bind_sig_type(
@@ -171,7 +215,11 @@ where
             &mut value_type_rules,
             &mut next_synthetic,
           )?;
-          (rune, rune, Vec::new())
+          // A bare rune, exactly what the postparser hands a closure or magic param
+          // (`create_lambda_param`/`create_magic_parameters`). The binding rules stay the source of
+          // truth (@PFVSZ); this carries the shape alongside them.
+          let tyype = ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune }));
+          (rune, rune, Vec::new(), tyype)
         }
       };
     params.push(ParameterS::new(
@@ -183,12 +231,7 @@ where
           .intern_code_name(scout_arena.intern_str(&format!("p{}", index))),
         lid: lidb.child().consume_in_arena(scout_arena),
       }),
-      // The param's syntactic type is "whatever `full_type_rune` resolves to" — a bare rune, exactly
-      // what the postparser hands a closure or magic param (`create_lambda_param`/`create_magic_parameters`).
-      // For a `&self` receiver `full_type_rune` is the borrow the outer-ref bucket concludes, so this points
-      // at the full type in both the wrapped and unwrapped cases. The binding rules stay the source of truth
-      // (@PFVSZ); this carries the shape alongside them.
-      ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: full_type_rune })),
+      tyype,
       full_type_rune,
       value_type_rune,
       scout_arena.alloc_slice_from_vec(outer_ref_rules),
@@ -207,6 +250,27 @@ where
     &mut header_rules,
     &mut next_synthetic,
   )?;
+
+  // A borrow return ties, by Rust elision, to the one reference input it borrows from — and it
+  // borrows somewhere *within* that input's territory, so its group is the descendant `g...` form,
+  // reusing that input parameter's group rune. When a call churns that argument (`mut(g)`), the
+  // returned reference is invalidated (use-after-churn). Only the single-reference-input case is
+  // handled — elision rule 2, and the `&self` receiver every imported borrow-returning method has;
+  // zero or several reference inputs can't be elided here and leave the return groupless (deferred).
+  let maybe_return_type = match (&sig.ret, param_region_runes.as_slice()) {
+    (ValeSigType::Borrow { .. }, [input_region_rune]) => {
+      let base = scout_arena.alloc(GroupS::Rune(scout_arena.alloc(*input_region_rune)));
+      let descendant = scout_arena.alloc(GroupS::Ellipsis { base });
+      Some(ITypeST::BorrowRef(scout_arena.alloc(BorrowRefST {
+        range,
+        // A bare rune for the referent, as the parameter side does — the borrow checker reads the
+        // group off the region, and a non-borrow referent is groupless.
+        inner: scout_arena.alloc(ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: ret_rune }))),
+        region: RegionS::Group(descendant),
+      })))
+    }
+    _ => None,
+  };
 
   // One template parameter per declared generic, typed as a kind. Empty for a concrete
   // function, which is what makes `make_extern_function` — which reads its template arguments
@@ -233,8 +297,13 @@ where
     tyype,
     scout_arena.alloc_slice_from_vec(params),
     Some(ret_rune),
-    // No effects: an extern Rust function's body is opaque, so it declares none.
-    &[],
+    // The return's group-annotated type when it is a borrow tied to an input (built above); `None`
+    // otherwise, as for a non-borrow return. The borrow checker reads this to derive a callee's
+    // returned-borrow group at the call site.
+    maybe_return_type,
+    // One `mut(g)` per `&mut` parameter — Rust's mutation, mirrored so the borrow checker can hold
+    // callers to the callee's aliasing rules. Empty when nothing is borrowed mutably.
+    scout_arena.alloc_slice_from_vec(effects),
     scout_arena.alloc_slice_from_vec(header_rules),
     // No impl bounds, and that is the truth rather than a placeholder. A Rust function's trait
     // obligations are discharged by rustc, never by Vale — and we read no predicates at all,
@@ -335,11 +404,13 @@ where
       }));
       Some(own_rune)
     }
-    ValeSigType::Borrow(inner) => {
+    ValeSigType::Borrow { inner, .. } => {
       // A borrow in a non-parameter position — a return type, or nested inside a citizen's
       // arguments (`Vec<&T>`) — where the wrap belongs inline in the value rules rather than in
       // a parameter's outer-ref bucket. A parameter's *top-level* borrow is split off by the
-      // caller in `synthesize_extern_function` before it reaches here, per @PFVSZ.
+      // caller in `synthesize_extern_function` before it reaches here, per @PFVSZ. A nested borrow's
+      // mutation is not yet mirrored into a group (only a top-level parameter borrow is), so `is_mut`
+      // is not read here.
       let inner_rune = fresh_rune(scout_arena, range, next_synthetic);
       bind_sig_type(compiler, inner, inner_rune, range, generic_runes, rules, next_synthetic)?;
       rules.push(IRulexSR::BorrowRef(BorrowRefSR {
@@ -564,9 +635,10 @@ where
         args.iter().map(|a| map_self_to_interface(interner, a, interface_name, package)).collect();
       ValeSigType::Citizen { name: *name, package: p, args: interner.alloc_slice_from_vec(mapped) }
     }
-    ValeSigType::Borrow(inner) => ValeSigType::Borrow(
-      interner.alloc(map_self_to_interface(interner, inner, interface_name, package)),
-    ),
+    ValeSigType::Borrow { inner, is_mut } => ValeSigType::Borrow {
+      inner: interner.alloc(map_self_to_interface(interner, inner, interface_name, package)),
+      is_mut: *is_mut,
+    },
   }
 }
 
@@ -600,6 +672,15 @@ where
 
   let mut header_rules: Vec<IRulexSR<'s>> = Vec::new();
   let mut next_synthetic: u32 = 0;
+  // A `mut(g)` effect per `&mut` borrow, mirroring `synthesize_extern_function`'s forward behavior — the
+  // faithful representation of Rust's `&mut` on the reverse-direction abstract method. It is not itself
+  // borrow-checked (an abstract method is never groupified), so this is inert until scope C enforces
+  // `mut`-parity between the abstract method and its override; it is the representation that enforcement
+  // reads. Empty when nothing is borrowed mutably.
+  let mut effects: Vec<EffectS<'s>> = Vec::new();
+  // Names the region groups, one per borrow parameter, matching the forward path. Function-scoped so two
+  // parameters never mint the same group name.
+  let mut next_region: u32 = 0;
   let mut params: Vec<ParameterS<'s>> = Vec::new();
   let mut lidb = LocationInDenizenBuilder::new(Vec::new());
   for (index, sig_type) in sig.params.iter().enumerate() {
@@ -609,11 +690,15 @@ where
         .intern_rune(IRuneValS::ArgumentRune(ArgumentRuneS { arg_index: index as i32 })),
     };
     let mut value_type_rules: Vec<IRulexSR<'s>> = Vec::new();
-    let (full_type_rune, value_type_rune, outer_ref_rules): (_, _, Vec<IRulexSR<'s>>) =
+    let (full_type_rune, value_type_rune, outer_ref_rules, tyype): (_, _, Vec<IRulexSR<'s>>, _) =
       match sig_type {
-        ValeSigType::Borrow(inner) => {
+        // Mirror `synthesize_extern_function`'s borrow arm: a borrow parameter (including the `&mut self`
+        // receiver) carries a region group on its `tyype`, and a `&mut` marks that group `mut(g)`. The
+        // group rune is a `CodeRune` kept OUT of `generic_params` (the postparser filters region params
+        // out), so it lives only on the tyype and effects — never as an identifying rune.
+        ValeSigType::Borrow { inner, is_mut } => {
           let full_type_rune = fresh_rune(scout_arena, range, &mut next_synthetic);
-          bind_sig_type(
+          let value_rune = bind_sig_type(
             compiler,
             inner,
             own_rune,
@@ -622,13 +707,30 @@ where
             &mut value_type_rules,
             &mut next_synthetic,
           )?;
+          let region_name = scout_arena.intern_str(&format!("__rust_group{}", next_region));
+          next_region += 1;
+          let region_rune = RuneUsage {
+            range,
+            rune: scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: region_name })),
+          };
+          let group = scout_arena.alloc(GroupS::Rune(scout_arena.alloc(region_rune)));
+          if *is_mut {
+            effects.push(EffectS::Mut(group));
+          }
           let outer = vec![IRulexSR::BorrowRef(BorrowRefSR {
             range,
             result_rune: full_type_rune,
-            inner_rune: own_rune,
+            inner_rune: value_rune,
+            // Unspecified on the outer rule: the group lives on the `tyype`, matching the postparser.
             region: RegionSR::Unspecified,
           })];
-          (full_type_rune, own_rune, outer)
+          let tyype = ITypeST::BorrowRef(scout_arena.alloc(BorrowRefST {
+            range,
+            inner: scout_arena
+              .alloc(ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: value_rune }))),
+            region: RegionS::Group(group),
+          }));
+          (full_type_rune, value_rune, outer, tyype)
         }
         _ => {
           let rune = bind_sig_type(
@@ -640,7 +742,8 @@ where
             &mut value_type_rules,
             &mut next_synthetic,
           )?;
-          (rune, rune, Vec::new())
+          let tyype = ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune }));
+          (rune, rune, Vec::new(), tyype)
         }
       };
     // The receiver (parameter 0) is virtual — the interface-compile reads its virtual slot.
@@ -656,7 +759,7 @@ where
           .intern_code_name(scout_arena.intern_str(&format!("p{}", index))),
         lid: lidb.child().consume_in_arena(scout_arena),
       }),
-      ITypeST::Rune(scout_arena.alloc(RuneUsageST { rune: full_type_rune })),
+      tyype,
       full_type_rune,
       value_type_rune,
       scout_arena.alloc_slice_from_vec(outer_ref_rules),
@@ -676,7 +779,7 @@ where
     &mut next_synthetic,
   )?;
 
-  let tyype = TemplateTemplataType {
+  let template_type = TemplateTemplataType {
     param_types: scout_arena.alloc_slice_from_vec::<ITemplataType<'s>>(Vec::new()),
     return_type: scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
   };
@@ -693,10 +796,13 @@ where
     scout_arena.alloc_slice_from_vec(Vec::new()),
     // Generic params must equal the interface's — empty here.
     scout_arena.alloc_slice_from_vec(Vec::new()),
-    tyype,
+    template_type,
     scout_arena.alloc_slice_from_vec(params),
     Some(ret_rune),
-    &[],
+    None, // no user-written return group
+    // One `mut(g)` per `&mut` borrow, mirroring Rust's mutation — the faithful representation scope C
+    // enforces. Inert until then (an abstract method is not groupified). Empty when nothing is `&mut`.
+    scout_arena.alloc_slice_from_vec(effects),
     scout_arena.alloc_slice_from_vec(header_rules),
     &[],
     &[],
@@ -811,5 +917,64 @@ where
     KindT::Void(_) => Some(compiler.keywords.void),
     KindT::USize(_) => Some(compiler.keywords.usize),
     _ => None,
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::compile_options::GlobalOptions;
+  use crate::keywords::Keywords;
+  use crate::typing::oracles::Oracles;
+  use crate::typing::TypingPassOptions;
+  use bumpalo::Bump;
+  use std::sync::Arc;
+
+  fn test_opts() -> TypingPassOptions {
+    TypingPassOptions {
+      global_options: GlobalOptions {
+        sanity_check: true,
+        use_overload_index: true,
+        use_optimized_solver: true,
+        verbose_errors: true,
+        debug_output: false,
+      },
+      debug_out: Arc::new(|_: &str| {}),
+      tree_shaking_enabled: true,
+    }
+  }
+
+  // Slice 3 (scope B): the reverse-direction abstract method mirrors Rust `&mut` into `mut(g)` on its
+  // synthesized `FunctionS` — the faithful representation scope C's enforcement will read. White-box by
+  // necessity: an abstract method's effects are behaviorally inert until scope C (nothing groupifies or
+  // matches on them), so the synthesized `FunctionS` is the only observation seam. The two `&mut` borrows
+  // (the `&mut self` receiver and a `&mut` parameter) each yield one `EffectS::Mut`; the shared `&`
+  // parameter yields none — two effects, mirroring `synthesize_extern_function`'s forward behavior.
+  #[test]
+  fn abstract_method_mirrors_mut_borrow_params_to_mut_effects() {
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let opts = test_opts();
+    let compiler = Compiler::new(&scout_arena, &typing_interner, &keywords, &opts, Oracles::none());
+
+    // `on_tick(&mut self, w &mut _, input &_)` reduced to borrows of a primitive, so the sig needs no
+    // imported package — only the `&mut` vs `&` distinction matters for this lock.
+    let borrow = |is_mut| ValeSigType::Borrow {
+      inner: typing_interner.alloc(ValeSigType::Kind(KindT::Void(VoidT))),
+      is_mut,
+    };
+    let params =
+      typing_interner.alloc_slice_from_vec(vec![borrow(true), borrow(true), borrow(false)]);
+    let sig =
+      ValeSig { generic_params: &[], params, ret: ValeSigType::Kind(KindT::Void(VoidT)) };
+
+    let name = scout_arena.intern_str("on_tick");
+    let f = synthesize_abstract_interface_method(&compiler, name, &sig).unwrap();
+
+    let mut_effect_count = f.effects.iter().filter(|e| matches!(e, EffectS::Mut(_))).count();
+    assert_eq!(mut_effect_count, 2, "expected two mut(g) effects, got {:?}", f.effects);
   }
 }

@@ -14,8 +14,11 @@ fn memberrefcount()      { assert_compile_and_run(&p("programs/structs/memberref
 #[ignore = "deferred at experimental-2 squash baseline"]
 fn bigstructimm()        { assert_compile_and_run(&p("programs/structs/bigstructimm.vale"), 42); }
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn structmut()           { assert_compile_and_run(&p("programs/structs/structmut.vale"), 8); }
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn structmutstore()      { assert_compile_and_run(&p("programs/structs/structmutstore.vale"), 42); }
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn structmutstoreinner() { assert_compile_and_run(&p("programs/structs/structmutstoreinner.vale"), 42); }

@@ -29,6 +29,7 @@
 #include "error.h"
 #include "translatetype.h"
 #include "externs.h"
+#include "rust_interop/rust_interop.h"
 
 #include <cstring>
 
@@ -607,8 +608,6 @@ Prototype* compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, 
   // VCOORD: supply this into constructor
   globalState->ffiHandleStructs =
       std::make_unique<FfiHandleStructs>(globalState->context);
-
-  std::cout << "Region override: fast" << std::endl;
 
 //  if (globalState->opt->regionOverride == RegionOverride::ASSIST) {
 //    if (!globalState->opt->census) {
@@ -1362,7 +1361,8 @@ extern "C" MetalCache* metal_cache_ffi_inner(MetalCacheHandle*);
 static int32_t compileIntoModuleFromRustc(
     MetalCache* metalCache, Program* program,
     const BackendCompileOptionsFFI* ffi_opts,
-    void* context, void* mod, const char* entrySymbol) {
+    void* context, void* mod, const char* entrySymbol,
+    const CallbackFFI* callbacks, size_t numCallbacks) {
   ValeOptions valeOptions;
   int ok = loadFromFfi(&valeOptions, ffi_opts);
   if (ok <= 0) {
@@ -1391,6 +1391,13 @@ static int32_t compileIntoModuleFromRustc(
         (entrySymbol != nullptr && entrySymbol[0] != '\0') ? std::string(entrySymbol) : "__vale_main";
     makeEntryFunction(&globalState, valeMainPrototype, entryName, /*emitLibcShim=*/false);
   }
+  // Rust->Vale callbacks: for each Vale trait-impl method that Rust calls, emit a wrapper under its
+  // rustc-mangled symbol that adapts the Rust ABI and forwards to the internal Vale body (single-
+  // symbol, arch §5.2). The bodies were emitted by compileValeCode above, so lookups resolve now.
+  for (size_t i = 0; i < numCallbacks; i++) {
+    emitInboundCallbackWrapper(
+        &globalState, program, callbacks[i].symbol, callbacks[i].vale_name);
+  }
   // generateExports (the C-ABI export headers/sources) is deliberately NOT called here: it
   // is the standalone-valec C-FFI boundary, it requires an outputDir and writes files to
   // disk, and interop exports go through single-symbol instead (Vale bodies emitted under
@@ -1415,7 +1422,8 @@ int32_t backend_compile(const BackendInputsFFI* in) {
     case BACKEND_MODE_INTEROP:
       return compileIntoModuleFromRustc(
           cache, program, &in->options,
-          in->interop.context, in->interop.module, in->interop.entry_symbol);
+          in->interop.context, in->interop.module, in->interop.entry_symbol,
+          in->interop.callbacks, in->interop.num_callbacks);
     default:
       return -1;
   }

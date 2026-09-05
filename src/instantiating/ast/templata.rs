@@ -37,6 +37,7 @@ pub fn expect_integer_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> IntegerT
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum ITemplataI<'s, 'i> {
   Kind(KindTemplataI<'s, 'i>),
+  Group(GroupTemplataI),
   RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataI),
   StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataI),
   Function(FunctionTemplataI<'s, 'i>),
@@ -138,6 +139,12 @@ pub struct ImplDefinitionTemplataI<'s, 'i> {
 
 
 /// Polyvalue
+/// The ceremonial group-param constant, instantiated. Like the typing pass's `GroupTemplataT` it is
+/// never read (a group param's value carries no payload), so it is empty. It exists only so a group
+/// generic parameter has a uniform instantiated value.
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub struct GroupTemplataI {}
+
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct BooleanTemplataI {
   pub value: bool,

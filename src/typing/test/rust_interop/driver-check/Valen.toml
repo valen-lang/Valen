@@ -1,0 +1,14 @@
+[project]
+name = "nobiliav-driver-check"
+version = "0.1.0"
+edition = "2021"
+
+# Vendored, stubbed crate lives beside this Valen.toml (see nobiliav/). The path is rendered verbatim
+# into the generated target/valen-build/Cargo.toml, so it is relative to *that* dir — two levels down
+# from here — hence the `../../`.
+[rust-dependencies]
+nobiliav = { path = "../../nobiliav" }
+
+[[bin]]
+name = "driver_check"
+source = "src/driver_check.valen"

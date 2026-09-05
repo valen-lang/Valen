@@ -383,6 +383,54 @@ fn effect_clause_not_mut() {
   }
 }
 
+// A single `mut(...)` clause takes exactly one group. `mut(a, b)` used to parse and silently drop `b`;
+// it is now a parse error, so a signature meaning to mutate two regions must spell them as separate
+// clauses (see effect_clause_two_separate_mut_clauses_parse).
+#[test]
+fn effect_clause_multiple_groups_in_one_clause_is_rejected() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let err = compile_for_error(&parse_arena, &keywords, "func f<a', b'>() mut(a, b){}");
+  assert!(matches!(err, ParseError::MultipleGroupsInEffectClause(_)), "got {:?}", err);
+}
+
+// The same single-group rule holds for `not(mut(...))`, which shares the parenthesized-group parser.
+#[test]
+fn effect_clause_not_mut_multiple_groups_is_rejected() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let err = compile_for_error(&parse_arena, &keywords, "func f<a', b'>() not(mut(a, b)){}");
+  assert!(matches!(err, ParseError::MultipleGroupsInEffectClause(_)), "got {:?}", err);
+}
+
+// Two mutated regions are spelled as two separate clauses; this parses to two `Mut` effects (the
+// supported form the rejection above steers toward).
+#[test]
+fn effect_clause_two_separate_mut_clauses_parse() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let denizen =
+    compile_denizen_expect(&parse_arena, &keywords, "func f<a', b'>() mut(a) mut(b){}");
+  match denizen {
+    IDenizenP::TopLevelFunction(FunctionP {
+      header:
+        FunctionHeaderP {
+          effects:
+            [
+              EffectP::Mut(GroupP::Name(NameP(_, StrI("a")))),
+              EffectP::Mut(GroupP::Name(NameP(_, StrI("b")))),
+            ],
+          ..
+        },
+      ..
+    }) => {}
+    other => panic!("expected header effects [Mut(a), Mut(b)]; got {:?}", other),
+  }
+}
+
 #[test]
 fn attack_signature_parses() {
   // The whole `attack` header parses: a typed group param, two `&Entity in r` params, and `mut(r)`.

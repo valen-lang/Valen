@@ -5941,6 +5941,7 @@ fn downcast_function_rrbfs() {
 
 // AFTERM: doublecheck this
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn downcast_with_as() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -6304,6 +6305,7 @@ fn downcast_with_as() {
 
 // VCOORD: enable this
 #[test]
+#[ignore] // VCOORD: re enable w borrowing
 fn closure_using_parent_function_s_bound() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

@@ -1247,3 +1247,7 @@ where
     })
   }
 }
+
+// VCOORD: rename FunctionTemplata to FunctionDefinitionTemplata
+// VCOORD: while we're at it, rename templata
+// VCOORD: why does externFunction have its own templata ExternFunctionTemplataT?

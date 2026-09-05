@@ -106,6 +106,11 @@ BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* pr
         // Per @EACBIPZ, an Indirect arg (like a DirectPtr borrow) is a plain pointer, no byval.
         case CoercionKind::DirectPtr:
         case CoercionKind::Indirect: paramTypesL.push_back(ptrLT); break;
+        // A ScalarPair struct crosses as two separate integer register params.
+        case CoercionKind::Pair:
+          paramTypesL.push_back(LLVMIntTypeInContext(globalState->context, c.directIntBits));
+          paramTypesL.push_back(LLVMIntTypeInContext(globalState->context, c.directIntBits2));
+          break;
       }
     }
     LLVMTypeRef returnLT;
@@ -117,6 +122,15 @@ BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* pr
       case CoercionKind::Cast:
         returnLT = LLVMIntTypeInContext(globalState->context, abi->ret.directIntBits); break;
       case CoercionKind::DirectPtr: returnLT = ptrLT; break;
+      // A ScalarPair struct returns in two registers as an {iN, iM} aggregate.
+      case CoercionKind::Pair: {
+        LLVMTypeRef elems[2] = {
+            LLVMIntTypeInContext(globalState->context, abi->ret.directIntBits),
+            LLVMIntTypeInContext(globalState->context, abi->ret.directIntBits2),
+        };
+        returnLT = LLVMStructTypeInContext(globalState->context, elems, 2, /*packed=*/0);
+        break;
+      }
       default: { assert(false); throw 1337; }
     }
     return BoundarySignature{returnLT, std::move(paramTypesL), usesReturnOutParam};

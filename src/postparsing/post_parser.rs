@@ -36,7 +36,7 @@ use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
 use crate::postparsing::function_scout::IFunctionParent;
 use crate::postparsing::function_scout::ParentCitizen;
 use crate::postparsing::itemplatatype::{
-  ITemplataType, KindTemplataType, PackTemplataType, RegionTemplataType, TemplateTemplataType,
+  GroupTemplataType, ITemplataType, KindTemplataType, PackTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, ExportAsNameS, IFunctionDeclarationNameS,
@@ -428,9 +428,9 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
         }
         IGenericParameterTypeS::KindGenericParameterType(KindGenericParameterTypeS {})
       }
-      ITemplataType::RegionTemplataType(_) => {
+      ITemplataType::GroupTemplataType(_) => {
         if !generic_param_p.attributes.is_empty() {
-          panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_BAD_REGION_RUNE_ATTRIBUTE");
+          panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_BAD_GROUP_RUNE_ATTRIBUTE");
         }
         IGenericParameterTypeS::RegionGenericParameterType(RegionGenericParameterTypeS {})
       }

@@ -102,8 +102,11 @@ where
       }
     };
 
+    // This is a compiler-generated builtin body, so its nodes have no user source; the honest range is a synthesized internal one.
+    let synth_range = RangeS::internal(self.scout_arena, -70110);
     let as_subtype_expr = ExpressionTE::AsSubtype(self.typing_interner.alloc(AsSubtypeTE::new(
-      ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(0, incoming_coord))),
+      synth_range,
+      ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(synth_range, 0, incoming_coord))),
       success_coord,
       result_coord,
       self.typing_interner.alloc(ok_constructor),
@@ -113,8 +116,8 @@ where
       err_result_impl,
     )));
 
-    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(ExpressionTE::Return(
-      self.typing_interner.alloc(ReturnTE::new(as_subtype_expr)),
+    let body = ExpressionTE::Block(self.typing_interner.alloc(BlockTE::new(synth_range, ExpressionTE::Return(
+      self.typing_interner.alloc(ReturnTE::new(synth_range, as_subtype_expr)),
     ))));
     Ok((header, body))
   }

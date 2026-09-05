@@ -38,7 +38,6 @@ impl<'a> LexingIterator<'a> {
   fn consume_comments(&mut self) {
     self.consume_line_comments();
     self.consume_chevron_comments();
-    self.consume_ellipses_comments();
   }
 
   /// Skip to past a specific character
@@ -67,25 +66,6 @@ impl<'a> LexingIterator<'a> {
 
       self.consume_comments();
     }
-  }
-
-  /// Consume ellipses comments (...)
-  fn consume_ellipses_comments(&mut self) {
-    let pos_after_whitespace = self.find_whitespace_end();
-
-    if pos_after_whitespace + 2 < self.code.len()
-      && self.code.as_bytes()[pos_after_whitespace] == b'.'
-      && self.code.as_bytes()[pos_after_whitespace + 1] == b'.'
-      && self.code.as_bytes()[pos_after_whitespace + 2] == b'.'
-    {
-      let begin = self.position;
-      self.position = pos_after_whitespace + 3;
-      assert!(self.position <= self.code.len());
-      self.comments.push(RangeL::new(begin as i32, self.position as i32));
-      self.consume_comments();
-    }
-
-    self.try_skip_str("...");
   }
 
   /// Consume line comments (//)

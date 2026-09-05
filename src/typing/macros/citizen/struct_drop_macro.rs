@@ -204,6 +204,7 @@ where
         self.scout_arena.alloc_slice_from_vec::<IRulexSR<'s>>(Vec::new()),
       )]),
       Some(use_(-64002, void_kind_rune_s)),
+      None, // no user-written return group
       // A synthesized drop carries no effect clause.
       &[],
       rules_slice,
@@ -298,6 +299,7 @@ where
       },
       params,
       maybe_ret_coord_rune,
+      None, // no user-written return group
       // A synthesized drop/free carries no effect clause.
       &[],
       rules,
@@ -352,11 +354,14 @@ where
       header.return_type,
     );
 
+    // This is a compiler-generated drop body, so its nodes have no user source; the honest range is a synthesized internal one.
+    let synth_range = RangeS::internal(self.scout_arena, -70120);
     let is_extern =
       struct_def.attributes.iter().any(|a| matches!(a, ICitizenAttributeT::Extern(_)));
     let body_expr: ExpressionTE<'s, 't> = match struct_def.sharedness {
       SharednessT::Shared => ExpressionTE::Discard(self.typing_interner.alloc(DiscardTE::new(
-        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(0, struct_type))),
+        synth_range,
+        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(synth_range, 0, struct_type))),
       ))),
       SharednessT::Single if is_extern => {
         // VCOORD: implement this per todo/opaque-extern-drop.md
@@ -382,8 +387,9 @@ where
         let member_local_variables_slice =
           self.typing_interner.alloc_slice_from_vec(member_local_variables.clone());
         let arg_lookup =
-          ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(0, struct_type)));
+          ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(synth_range, 0, struct_type)));
         let destroy = ExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE::new(
+          synth_range,
           arg_lookup,
           struct_tt,
           member_local_variables_slice,
@@ -395,7 +401,7 @@ where
         let drop_exprs: Vec<ExpressionTE<'s, 't>> = member_local_variables
           .iter()
           .map(|v| {
-            let unlet = ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE::new(*v)));
+            let unlet = ExpressionTE::Unlet(self.typing_interner.alloc(UnletTE::new(synth_range, *v)));
             self.drop(
               body_env,
               coutputs,
@@ -408,15 +414,16 @@ where
           .collect::<Result<Vec<_>, _>>()?;
         let mut all_exprs: Vec<ExpressionTE<'s, 't>> = vec![destroy];
         all_exprs.extend(drop_exprs.into_iter());
-        self.consecutive(&all_exprs)
+        self.consecutive(synth_range, &all_exprs)
       }
     };
 
     let return_expr = ExpressionTE::Return(self.typing_interner.alloc(ReturnTE::new(
-      ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(RegionT::Default))),
+      synth_range,
+      ExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE::new(synth_range, RegionT::Default))),
     )));
     let body = ExpressionTE::Block(
-      self.typing_interner.alloc(BlockTE::new(self.consecutive(&[body_expr, return_expr]))),
+      self.typing_interner.alloc(BlockTE::new(synth_range, self.consecutive(synth_range, &[body_expr, return_expr]))),
     );
 
     Ok((header, body))

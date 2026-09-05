@@ -15,8 +15,8 @@ fn test_borrow_into_moved_local_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:3:1:
-exported func main() int {
+    r#"At test:0.vale:5:12:
+  consume(&h, ^h);
 Argument 0 borrows into h, but argument 1 moves it, so the borrow would dangle.
 "#,
   );
@@ -37,8 +37,8 @@ fn test_field_borrow_into_moved_local_rejected() {
       "  return 0;\n",
       "}\n",
     ),
-    r#"At test:0.vale:4:1:
-exported func main() int {
+    r#"At test:0.vale:6:13:
+  consume2(&h.ship, ^h);
 Argument 0 borrows into h, but argument 1 moves it, so the borrow would dangle.
 "#,
   );

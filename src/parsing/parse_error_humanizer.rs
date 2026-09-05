@@ -27,6 +27,9 @@ impl ParseErrorHumanizer {
       ParseError::BadTemplateCallParam(_) => "Bad template call param.",
       ParseError::BadDestructureError(_) => "Bad destructure.",
       ParseError::BadTypeExpression(_) => "Bad type expression.",
+      ParseError::MultipleGroupsInEffectClause(_) => {
+        "Each effect clause takes a single group; write `mut(a) mut(b)` instead of `mut(a, b)`."
+      }
       ParseError::BadLocalName(_) => "Bad local name.",
       ParseError::LightFunctionMustHaveParamTypes { .. } => "Function parameter must have a type!",
       ParseError::BadStringInterpolationEnd(_) => "Bad string interpolation end.",

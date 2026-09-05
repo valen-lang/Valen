@@ -15,6 +15,7 @@ We'll have a design document, ending in `-design.md`. Whenever the human asks yo
  * This doc is intended to be a living doc, serving as the source of truth for a codebase.
  * This doesn't replace the handoff document. But the handoff document shouldnt contain anything that would be better in here.
  * To check what the human changed, use **verbatim** the command `diff -U2 <(sed -n '1,/^## Design Proposals/p' /tmp/plan-phased-calls-0.md) <(sed -n '1,/^## Design Proposals/p' docs/plans/plan-phased-calls.md) || true; cp docs/plans/plan-phased-calls.md /tmp/plan-phased-calls-1.md`, updating the 0 and 1 as you go. If the human says only "read" or "diff", they might mean this.
+    * DO NOT use the same number! BAD: `/tmp/plan-phased-calls-3.md` and `/tmp/plan-phased-calls-3.md`. Good: `/tmp/plan-phased-calls-3.md` and `/tmp/plan-phased-calls-4.md`.
  * The first thing you should do is run the above command to establish a version 0 baseline.
 
 Sections:
@@ -39,7 +40,12 @@ Sections:
 After you write a proposal, do an "editing pass" on it to rewrite it to better adhere to prose-reviewer and the below rules:
 
  * Every item in this section should be short, effective, and to the point.
- * This section should **only** contain the desired state as a consistent specific point in time. It should **not** contain details for how we'll get there. If necessary, those can go into Details.
+ * This section should **only** contain the desired end state.
+    * This section should **not** contain details for how we'll get there.
+    * It should not talk about interim state.
+    * It should not talk about what it replaces.
+    * It should only say what we'll do, don't say what we won't do.
+    * If necessary, those details can go into Details.
  * Aggressively modify or delete any outdated proposals. This section should **not** contain outdated proposals. Every proposal should be kept up to date. No "refined by other proposals" or "supersedes" or "superseded by" markers.
  * Every proposal should be stated simply and clearly. No fluff, no redundancy.
  * Only one sentence of motivation or context is allowed.

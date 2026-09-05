@@ -112,8 +112,9 @@ where
           make_top_level_environment(global_env, parent_id, self.typing_interner))
       },
     };
-    let function =
-      self.illuminate_function(coutputs, function_id);
+    let function = self
+      .illuminate_function(coutputs, function_id)
+      .expect("an already-resolved function cannot decline");
     if function.is_light() {
       let mut new_ranges: Vec<RangeS<'s>> = Vec::with_capacity(1 + parent_ranges.len());
       new_ranges.push(function.range);
@@ -143,7 +144,9 @@ where
   ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
     let FunctionTemplataT { outer_env: declaring_env, function_template_id: function_id } =
       function_templata;
-    let function = self.illuminate_function(coutputs, function_id);
+    let function = self
+      .illuminate_function(coutputs, function_id)
+      .expect("an already-resolved function cannot decline");
     if function.is_light() {
       self.evaluate_templated_light_banner_from_call_closure_or_light(
         declaring_env,
@@ -209,7 +212,9 @@ where
     args: &[Option<KindT<'s, 't>>],
   ) -> Result<IDefineFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
     let FunctionTemplataT { outer_env, function_template_id: function_id } = function_templata;
-    let function = self.illuminate_function(coutputs, function_id);
+    let function = self
+      .illuminate_function(coutputs, function_id)
+      .expect("an already-resolved function cannot decline");
     self.evaluate_generic_virtual_dispatcher_function_for_prototype_closure_or_light(
       outer_env,
       coutputs,
@@ -234,7 +239,9 @@ where
     container_rune_initial_knowns: &[InitialKnown<'s, 't>],
   ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
     let FunctionTemplataT { outer_env: env, function_template_id: function_id } = function_templata;
-    let function = self.illuminate_function(coutputs, function_id);
+    let function = self
+      .illuminate_function(coutputs, function_id)
+      .expect("an already-resolved function cannot decline");
     self.evaluate_generic_light_function_from_call_for_prototype2(
       env,
       coutputs,

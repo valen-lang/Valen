@@ -17,6 +17,15 @@ use super::{BackendCompileOptions, BackendCompileOptionsFFIRaw};
 pub(crate) const BACKEND_MODE_STANDALONE: i32 = 0;
 pub(crate) const BACKEND_MODE_INTEROP: i32 = 1;
 
+/// C-repr mirror of CallbackFFI in Backend/src/backend_options_ffi.h. One Rust→Vale callback
+/// wrapper to emit: `symbol` the rustc-mangled name to define it under, `vale_name` the humanized
+/// name of the internal Vale body to forward to (also its key in the program's extern-ABI map).
+#[repr(C)]
+pub(crate) struct CallbackFFIRaw {
+    pub(crate) symbol: *const c_char,
+    pub(crate) vale_name: *const c_char,
+}
+
 /// C-repr mirror of InteropInputsFFI in Backend/src/backend_options_ffi.h. Read by the
 /// backend only when `BackendInputsFFIRaw.mode == BACKEND_MODE_INTEROP`.
 #[repr(C)]
@@ -25,6 +34,9 @@ pub(crate) struct InteropInputsFFIRaw {
     pub(crate) module: *mut c_void,
     // The rustc-mangled entry symbol, or "" for the literal `__vale_main`.
     pub(crate) entry_symbol: *const c_char,
+    // Rust→Vale callback wrappers to emit: a `num_callbacks`-long array (null when none).
+    pub(crate) callbacks: *const CallbackFFIRaw,
+    pub(crate) num_callbacks: usize,
 }
 
 /// C-repr mirror of BackendInputsFFI in Backend/src/backend_options_ffi.h. Field order
@@ -60,6 +72,14 @@ pub enum BackendMode<'a> {
 /// those settings can move here later.
 pub struct StandaloneInputs {}
 
+/// One Rust→Vale callback the backend must emit a wrapper for: `symbol` is the rustc-mangled name
+/// Rust's monomorphized call site targets (the wrapper is its sole definition — single-symbol), and
+/// `vale_name` is the humanized name of the internal Vale body to forward to (also its extern-ABI key).
+pub struct Callback<'a> {
+    pub symbol: &'a str,
+    pub vale_name: &'a str,
+}
+
 /// Borrowed-mode (rustc interop) inputs: rustc lends its LLVMContext + Module, and names
 /// the mangled symbol to emit the entry under.
 pub struct InteropInputs<'a> {
@@ -71,4 +91,7 @@ pub struct InteropInputs<'a> {
     /// The rustc-mangled symbol to emit the entry under, or None for the literal
     /// `__vale_main` (also None for a library with no entry).
     pub entry_symbol: Option<&'a str>,
+    /// Rust→Vale callbacks: for each, the backend emits a wrapper under `symbol` that adapts the
+    /// Rust ABI and forwards to the internal Vale body `vale_name`. Empty for a program with none.
+    pub callbacks: Vec<Callback<'a>>,
 }

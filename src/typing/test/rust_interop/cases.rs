@@ -235,6 +235,121 @@ fn rustc_discovers_a_valen_trait_impl_callback() {
   );
 }
 
+/// Milestone (reverse direction, tier 2): **Rust owns the call**, and a Valen method runs because Rust
+/// called it. `run_callback::<MyCb>(&mmlcb)` is rustc's own generic fn; its `c.on_call()` dispatches
+/// statically to `<MyCb as Callback>::on_call`, whose body Valen emits under rustc's mangled symbol
+/// (single-symbol). The linked bin runs and returns 7 — `rustc_discovers_...` above only proved rustc
+/// *reached* `on_call`; this proves the Valen body actually runs when Rust invokes it.
+#[test]
+fn rust_calls_back_a_valen_callback_returns_seven() {
+  let run = run_case_rustc_driven_and_run(&RUST_CALLS_A_VALEN_TRAIT_IMPL_CALLBACK);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven callback bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 6 (reverse direction): a scalar argument crosses Rust->Valen. `run_adder::<MyAdder>(&a, 35)`
+/// hands the i32 `35` inbound to Valen's `add`, which returns it; the linked bin exits 35. The
+/// `&self`-only callback above proved static dispatch; this proves an inbound *value* arrives intact.
+#[test]
+fn a_valen_callback_takes_a_scalar_arg() {
+  let run = run_case_rustc_driven_and_run(&A_VALEN_CALLBACK_TAKES_A_SCALAR_ARG);
+  assert_eq!(
+    run.process_exit,
+    Some(35),
+    "the driven scalar-arg callback bin did not exit 35 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 7 (reverse direction): a Rust borrow crosses inbound and the callback calls back out to Rust.
+/// `run_ticker::<MyTicker>()` makes a `Counter` and hands `&Counter` to Valen's `on_tick`, which
+/// returns `w.peek()` — an outbound Rust call on the received borrow. The linked bin exits 5.
+#[test]
+fn a_valen_callback_receives_a_rust_borrow() {
+  let run = run_case_rustc_driven_and_run(&A_VALEN_CALLBACK_RECEIVES_A_RUST_BORROW);
+  assert_eq!(
+    run.process_exit,
+    Some(5),
+    "the driven borrow-arg callback bin did not exit 5 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 8 (reverse direction): a Rust struct crosses inbound **by value**. `run_summer::<MySummer>()`
+/// makes a `Small { a: 3, b: 6 }` and hands it inbound by value to Valen's `on_sum`, which returns
+/// `s.sum()` (3 + 6). The linked bin exits 9 — a small aggregate reassembled from its two registers.
+#[test]
+fn a_valen_callback_receives_a_rust_struct_by_value() {
+  let run = run_case_rustc_driven_and_run(&A_VALEN_CALLBACK_RECEIVES_A_RUST_STRUCT_BY_VALUE);
+  assert_eq!(
+    run.process_exit,
+    Some(9),
+    "the driven byval-struct callback bin did not exit 9 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 8c (forward direction): a `Pair` **return** — Vale calls `Small2.new(3,6)` (a Rust assoc fn
+/// returning `{i32,i32}` by value), binds it, and reads `s.sum()`. The struct returns in two registers
+/// and is reassembled Vale-side. Exits 9.
+#[test]
+fn vale_receives_a_rust_pair_return() {
+  let run = run_case_rustc_driven_and_run(&VALE_RECEIVES_A_RUST_PAIR_RETURN);
+  assert_eq!(
+    run.process_exit,
+    Some(9),
+    "the driven pair-return bin did not exit 9 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 8b (forward direction): a `Pair` **argument** — Vale passes a small `{i32,i32}` struct by
+/// value into a Rust free function (`add_small(s)`). The struct crosses outbound in two registers.
+/// Exits 9.
+#[test]
+fn vale_passes_a_rust_pair_arg() {
+  let run = run_case_rustc_driven_and_run(&VALE_PASSES_A_RUST_PAIR_ARG);
+  assert_eq!(
+    run.process_exit,
+    Some(9),
+    "the driven pair-arg bin did not exit 9 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 8d (reverse direction): a callback **returns** a Rust struct by value. Valen's `make` returns
+/// `Small.new(3,6)` and Rust's `run_maker::<MyMaker>()` reads `c.make().sum()`. The struct crosses
+/// Valen -> Rust in two registers (an inbound Pair return). Exits 9.
+#[test]
+fn a_valen_callback_returns_a_rust_struct_by_value() {
+  let run = run_case_rustc_driven_and_run(&A_VALEN_CALLBACK_RETURNS_A_RUST_STRUCT_BY_VALUE);
+  assert_eq!(
+    run.process_exit,
+    Some(9),
+    "the driven retpair callback bin did not exit 9 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Slice 9 (the capstone): **Rust owns a loop** calling the Valen callback N times. `main_loop::<MyCb>`
+/// loops `i = 0..5` calling `c.on_tick(i)` (which returns `i`) and sums the returns; the linked bin
+/// exits 10 (0 + 1 + 2 + 3 + 4). Proves the callback survives repeated re-entry with a fresh scalar
+/// each iteration — the NobiliaV `main_loop` shape where Rust drives the loop and calls Valen per frame.
+#[test]
+fn rust_owns_a_loop_calling_the_callback() {
+  let run = run_case_rustc_driven_and_run(&RUST_OWNS_A_LOOP_CALLING_THE_CALLBACK);
+  assert_eq!(
+    run.process_exit,
+    Some(10),
+    "the driven main-loop bin did not exit 10 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
 /// Laziness, proven positively: importing three representable free functions and calling one queries
 /// `fn_sig` for the called function and for neither uncalled one. This is the whole point of the slice
 /// — importing a type with a hundred methods must not pay `fn_sig` for the ones never called.
@@ -494,6 +609,36 @@ fn a_struct_wrapping_a_hashmap_is_used_through_methods() {
     callees.iter().any(|c| c.name == "location" && c.rust_backed && c.ret == "int32"),
     "`location` did not return int, so main's observable is wrong: {callees:?}"
   );
+}
+
+/// An imported `fn nudge(a: &mut Counter, b: &Counter)` becomes `func nudge<g0', g1'>(a &Counter in g0,
+/// b &Counter in g1) mut(g0)`; calling `nudge(&s, &s)` aliases `s` into the mutated group `g0` and the
+/// disjoint group `g1`, so the borrow checker must reject it.
+#[test]
+fn a_mut_borrow_aliasing_a_shared_borrow_of_one_local_is_rejected() {
+  // Mirroring Rust `&mut` into a `mut(g)` group makes a callee's disjoint-group assumption checkable:
+  // the same local into a mutated group and a distinct group is an aliasing violation.
+  run_case(&A_MUT_BORROW_ALIASING_A_SHARED_BORROW_IS_REJECTED, callees_in_main)
+    .check(&A_MUT_BORROW_ALIASING_A_SHARED_BORROW_IS_REJECTED);
+}
+
+/// The disjoint counterpart compiles: distinct locals into `nudge`'s mutated and shared groups do not
+/// alias, so the group mirroring must not reject them.
+#[test]
+fn a_mut_borrow_and_a_shared_borrow_of_distinct_locals_compiles() {
+  // Guards against over-rejection: emitting groups must flag only aliasing calls, not every two-borrow one.
+  run_case(&A_MUT_BORROW_AND_A_SHARED_BORROW_OF_DISTINCT_LOCALS_IS_CLEAN, callees_in_main)
+    .check(&A_MUT_BORROW_AND_A_SHARED_BORROW_OF_DISTINCT_LOCALS_IS_CLEAN);
+}
+
+/// A Rust signature sharing one lifetime across two parameters is declined, not imported with a guess.
+/// Faithfully mirroring it needs lifetime decoding Vale doesn't do yet, so calling it is a compile error.
+#[test]
+fn calling_a_shared_parameter_lifetime_import_is_a_compile_error() {
+  // Shared-across-parameters lifetimes are rejected rather than assumed disjoint (what per-parameter
+  // groups would assume) — the one case where we refuse to guess until real decoding lands.
+  run_case(&CALLING_A_SHARED_PARAMETER_LIFETIME_IMPORT_IS_A_COMPILE_ERROR, callees_in_main)
+    .check(&CALLING_A_SHARED_PARAMETER_LIFETIME_IMPORT_IS_A_COMPILE_ERROR);
 }
 
 /// The pass **past typing**: run the instantiator (monomorphizer) on an interop program, no backend.
@@ -1433,6 +1578,15 @@ fn declines_an_unsigned_integer() {
   );
 }
 
+/// The decline path, actually forced: a called Rust function whose signature Vale cannot represent
+/// (an unsigned-int return) surfaces as a `CouldNotPostparseFunction` compile error, not a panic.
+#[test]
+fn calling_a_declined_signature_is_a_compile_error() {
+  // A forced decline must be a clean diagnostic naming the item, not a `vfail` panic mid-resolution.
+  run_case(&CALLING_A_DECLINED_SIGNATURE_IS_A_COMPILE_ERROR, callees_in_main)
+    .check(&CALLING_A_DECLINED_SIGNATURE_IS_A_COMPILE_ERROR);
+}
+
 /// A float would decline if forced — `FloatT` has no width, so `f32` and `f64` would intern
 /// identically. Offered but uncalled, it is never forced.
 #[test]
@@ -1833,4 +1987,54 @@ fn a_fatal_rustc_error_costs_one_case() {
     outcome.is_none(),
     "rustc was expected to fail before after_expansion, but the callback ran"
   );
+}
+
+/// R (RED until the importer carries Rust borrow facts): a `&Glyph` returned by a Rust `&self` method
+/// is used after a Rust `&mut self` method churns its owner — a use-after-churn across the interop
+/// boundary, the Rust-`Vec` shape. `declarations.rs` synthesizes each imported function with no
+/// effects and no return group, so the checker sees no churn and no tracked reference, and the
+/// program compiles. This fails until `&mut self` → `mut(g)` and a `&self`-borrowed return → `&T in g`
+/// land in the importer; the borrow checker itself needs no change.
+#[test]
+fn use_after_churn_through_a_rust_borrow_return_is_rejected() {
+  let outcome = run_case(&USE_AFTER_CHURN_THROUGH_A_RUST_BORROW_RETURN, callees_in_main);
+
+  assert!(
+    outcome.check(&USE_AFTER_CHURN_THROUGH_A_RUST_BORROW_RETURN).is_none(),
+    "a use-after-churn across the Rust interop boundary was accepted:\n{}",
+    outcome.rendered_log()
+  );
+}
+
+/// RED (until the importer follows `Deref<Target=[T]>`): a real `std::vec::Vec` element accessor
+/// should be importable, so `v.get(0)` should resolve and the program should compile. It does not
+/// today — `get` is a slice method reached through `Deref<[T]>`, and the importer discovers only a
+/// type's inherent methods (`new`/`push`/`pop`/`len`), so the call fails with
+/// `CouldntFindFunctionToCallT`. This is the first of three blockers to a real-`Vec` element
+/// use-after-churn; the use-after-churn R test itself uses the Domino wrapper (inherent
+/// `get_glyph -> &Glyph`).
+// Ignored until the Deref method-discovery work lands (the next rust-interop task; see the handoff's
+// "Next"). `get` is unreachable until the importer follows `Deref<Target=[T]>` and lowers the slice
+// `[T]` / `usize`, so the program cannot compile yet.
+#[test]
+#[ignore = "Vec::get needs Deref<Target=[T]> method discovery + slice/usize lowering + Option<&T> return groups — planned next, see the handoff"]
+fn a_real_vec_element_accessor_is_importable() {
+  let outcome = run_case(&REAL_VEC_ELEMENT_ACCESSOR_IS_IMPORTABLE, callees_in_main);
+
+  outcome
+    .check(&REAL_VEC_ELEMENT_ACCESSOR_IS_IMPORTABLE)
+    .expect("a real Vec's element accessor (`get`) should resolve, but the program did not compile");
+}
+
+/// The negative control for the case above: the same fixture and churn method, but the `&Glyph`
+/// borrow is taken *after* the last churn, so it is valid and the program must compile. It guards the
+/// eventual churn rule against over-rejection — once the importer carries the group facts, this must
+/// stay compiling.
+#[test]
+fn rust_borrow_return_taken_after_last_churn_is_clean() {
+  let outcome = run_case(&RUST_BORROW_RETURN_TAKEN_AFTER_LAST_CHURN_IS_CLEAN, callees_in_main);
+
+  outcome
+    .check(&RUST_BORROW_RETURN_TAKEN_AFTER_LAST_CHURN_IS_CLEAN)
+    .expect("the case declares it compiles");
 }

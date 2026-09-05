@@ -959,6 +959,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         }
                     }
                     (ITemplataT::Placeholder(pt), templata_i) => vec![(pt.id, *templata_i)],
+                    // Groups are ignored by typing pass and instantiator.
+                    (ITemplataT::Group(_), _) => vec![],
                     _ => panic!("assemble_placeholder_map_inner: unimplemented arm"),
                 }
             })
@@ -2226,6 +2228,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 // case StringTemplataT(value) => StringTemplataI(value)
             }
             ITemplataT::Kind(c) => ITemplataI::Kind(KindTemplataI { kind: self.translate_kind(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &c.kind) }),
+            ITemplataT::Group(_) => ITemplataI::Group(GroupTemplataI {}),
             _ => {
                 panic!("Unimplemented: translate_templata other");
                 // case other => vimpl(other)

@@ -202,7 +202,7 @@ where
         body_1.block,
       )?;
 
-    let unconverted_body_without_return = self.consecutive(&[patterns_te, statements_from_block]);
+    let unconverted_body_without_return = self.consecutive(parent_ranges[0], &[patterns_te, statements_from_block]);
 
     let starting_env_ref = IInDenizenEnvironmentT::Node(starting_env);
     let converted_body_without_return = match maybe_expected_result_type {
@@ -247,7 +247,7 @@ where
         let mut returns = returns_from_inside_maybe_with_never;
         returns.insert(converted_body_without_return.result());
         let return_te = ExpressionTE::Return(
-          self.typing_interner.alloc(ReturnTE::new(converted_body_without_return)),
+          self.typing_interner.alloc(ReturnTE::new(parent_ranges[0], converted_body_without_return)),
         );
         (return_te, returns)
       };
@@ -287,7 +287,7 @@ where
       }
     }
 
-    Ok(Ok((&*self.typing_interner.alloc(BlockTE::new(converted_body_with_return)), returns)))
+    Ok(Ok((&*self.typing_interner.alloc(BlockTE::new(parent_ranges[0], converted_body_with_return)), returns)))
   }
 
   pub fn evaluate_lets(
@@ -306,7 +306,7 @@ where
       .iter()
       .enumerate()
       .map(|(index, p)| {
-        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(index as i32, p.tyype)))
+        ExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE::new(range[0], index as i32, p.tyype)))
       })
       .collect();
 
@@ -324,7 +324,7 @@ where
         param_lookup_2.result(),
       );
       let_exprs.push(ExpressionTE::LetNormal(
-        self.typing_interner.alloc(LetNormalTE::new(local, param_lookup_2)),
+        self.typing_interner.alloc(LetNormalTE::new(range[0], local, param_lookup_2)),
       ));
     }
 
@@ -332,8 +332,8 @@ where
     // for everything inside the body to use
 
     let_exprs.push(ExpressionTE::VoidLiteral(
-      self.typing_interner.alloc(VoidLiteralTE::new(nenv.default_region())),
+      self.typing_interner.alloc(VoidLiteralTE::new(range[0], nenv.default_region())),
     ));
-    self.consecutive(&let_exprs)
+    self.consecutive(range[0], &let_exprs)
   }
 }
