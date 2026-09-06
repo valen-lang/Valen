@@ -54,6 +54,10 @@ where
   // Per @IIIOZ, iterated by get_all_functions → IndexMap for cross-run determinism.
   pub signature_to_function: IndexMap<SignatureT<'s, 't>, &'t FunctionDefinitionT<'s, 't>>,
 
+  // The borrow checker's aliasing info per function. IndexMap for cross-run determinism. Surfaced
+  // onto HinputsT for the backend.
+  pub signature_to_aliasing_info: IndexMap<SignatureT<'s, 't>, FunctionAliasingInfoT>,
+
   // VCOORD: whether a postparsed already exists in these tables must be undetectable to callers.
   // Once Rust imports go lazy, get_or_create_postparsed_* builds a missing denizen on demand, so a
   // caller that could ask "is this id in the table yet?" would observe that build order. It must not.
@@ -116,6 +120,7 @@ where
     Self {
       return_types_by_signature: HashMap::default(),
       signature_to_function: IndexMap::default(),
+      signature_to_aliasing_info: IndexMap::default(),
       template_id_to_postparsed_function,
       template_id_to_postparsed_struct,
       template_id_to_postparsed_interface,
@@ -295,6 +300,16 @@ where
     assert!(!self.signature_to_function.contains_key(signature), "wot");
 
     self.signature_to_function.insert(*signature, function);
+  }
+
+  /// Record the borrow checker's aliasing info for one function, keyed by signature.
+  pub fn record_aliasing_info(
+    &mut self,
+    signature: SignatureT<'s, 't>,
+    aliasing_info: FunctionAliasingInfoT,
+  ) {
+    let prev = self.signature_to_aliasing_info.insert(signature, aliasing_info);
+    assert!(prev.is_none(), "aliasing info recorded twice for one signature");
   }
 
   pub fn declare_function(&mut self, call_ranges: &[RangeS<'s>], name: &'t IdT<'s, 't>) {

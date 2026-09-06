@@ -1,3 +1,4 @@
+pub mod aliasing_info;
 pub mod borrow_error;
 pub mod borrow_types;
 pub mod check;

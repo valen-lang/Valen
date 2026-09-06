@@ -214,6 +214,16 @@ pub struct PrototypeTemplataCalleeCandidate<'s, 't> {
 }
 
 impl<'s, 't> PrototypeTemplataCalleeCandidate<'s, 't> {}
+
+/// The borrow checker's aliasing facts for one function, carried to the backend. Holds the
+/// per-parameter `noalias` verdict now, and will grow to carry the block-scoped restrict regions.
+#[derive(Clone, Debug)]
+pub struct FunctionAliasingInfoT {
+  /// One entry per parameter, in signature order: true when the parameter is the sole reference into a
+  /// group no other parameter aliases, so the backend may emit `noalias`.
+  pub param_noalias: Vec<bool>,
+}
+
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct SignatureT<'s, 't> {

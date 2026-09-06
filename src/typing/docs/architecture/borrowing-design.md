@@ -48,6 +48,7 @@ Also, because of this, whenever we need to fill a value into a group generic par
 
  * It calls `groupify_function`, which makes an AST that has the "true types" of everything (types with groups).
  * It calls `check_usages`, which tracks what references are valid, and checks uses.
+ * It calls `calculate_aliasing_info`, which tracks what parameters and locals are `noalias` and when, to later feed to the backend for optimization.
 
 ```rs
 pub fn check_function<'s, 'ctx, 't, 'g>(
@@ -58,10 +59,11 @@ pub fn check_function<'s, 'ctx, 't, 'g>(
   check_arena: &'g Bump,
 ) -> Result<(), ICompileErrorT<'s, 't>> {
   let body_g = self.groupify_function(coutputs, function_s, function_t, check_arena);
-  self.check_usages(coutputs, &body_g)
+  self.check_usages(coutputs, &body_g)?;
+  Ok(self.calculate_aliasing_info()?)
 }
 ```
-**This function must stay pure (all immutable inputs, only error outputs).**
+**This function must stay pure (all immutable inputs, only error+aliasing outputs).**
 
 `check_function` and all the other things it calls will be methods on `Compiler`.
 
@@ -429,6 +431,43 @@ func main() {
 
 For now, when an override implements an abstract method, its declared `mut(...)` must match exactly.
 
+### calculate_aliasing_info
+
+`calculate_aliasing_info` is a function that tracks what parameters and locals are `noalias` and when, to later feed to the backend for optimization. It looks like this:
+
+```rs
+fn calculate_aliasing_info<'g>(
+  &self,
+  function_s: &'s FunctionS<'s>,
+  function_t: &'t FunctionDefinitionT<'s, 't>,
+  body: &'g IExpressionGE<'s, 't, 'g>,
+) -> FunctionAliasingInfoT { ... }
+```
+
+If a function parameter is the *only* way to reach into a certain group, then that parameter should be codegen'd with `noalias`. The borrow checker should output, for the function, a boolean per parameter.
+
+The borrow checker should also calculate in which scopes a parameter is the only one used to reach into a certain group.
+
+For example:
+```
+// a and b are both in group g (so they might alias) and it's being mutated,
+// so neither can be `noalias`.
+func do_things<g'>(a &Ship in g, b &Ship in g) mut(g) {
+  set a.fuel = a.fuel + 1;
+  set b.fuel = b.fuel + 1;
+
+  // In this trailing part, only `a` reaches into g, and b is never touched again,
+  // and do_unrelated doesn't churn g. So `a` is restrict here, despite sharing g.
+  set a.fuel = a.fuel + 1;
+  do_unrelated();
+  set a.fuel = a.fuel + 1;
+}
+```
+So, `a` is restrict for part of that function. The borrow checker should communicate, for each area where one reference is the only one reaching into its group, the group it names and the access sites inside the area. Backend uses this to emit `!alias.scope` and `!noalias` metadata on those accesses.
+
+Q: Why do we have both, if the block-scoped restrict is strictly more powerful?
+A: We need some way to communicate _across function call boundaries_ which parameters are already restrict. There's no way for block-scoped metadata to do that.
+
 
 ## Design Proposals
 
@@ -479,6 +518,22 @@ A use-after-churn of a *named* reference renders as `BorrowErrorKind::UseAfterCh
 use site. A use-after-churn of a *held register* — an unnamed mid-expression temporary — renders as a
 distinct `BorrowErrorKind::UseAfterChurnTemporary`, pointing at the argument that holds the stale
 reference; the per-argument source range comes from `FunctionCallTE.range`.
+
+### Noalias output (from Noalias)
+
+`check_function` returns the per-parameter booleans and the restrict regions alongside its `Result`.
+They are owned data, because they must outlive `check_arena`, which the caller drops the moment
+checking finishes.
+
+The per-parameter output keys by parameter index, which reaches the backend unchanged. The restrict
+regions key their access sites by `Loc` (see Open Questions).
+
+Both are computed once on the generic function. Group structure doesn't vary per monomorphization, so
+every instantiation carries the same facts.
+
+Neither survives to the backend today: the grouped AST dies with `check_arena`, and instantiation
+erases groups (BCHATZ), so `ParameterT` carries only `KindT`. A durable carrier from `check_function`
+through `HinputsT` to the backend is needed — a core change.
 
 ## Test cases
 
@@ -547,6 +602,11 @@ unnamed temporary.
 ### Undocumented
 
 ## Open Questions
+
+ * **How a restrict region names its access sites so they survive to the backend instruction.** The
+   metadata lands on the `load`/`store`/`call` that dereferences the reference. `FunctionCallTE`,
+   `IfTE`, and `WhileTE` carry a `Loc`, but a member `load` does not yet, so a per-access key needs one
+   (or a substitute). The per-parameter `noalias` output sidesteps this — it keys by parameter index.
 
 ## Required Reading
 

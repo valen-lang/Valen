@@ -304,6 +304,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             interfaces: _interfaces_t,
             structs: _structs_t,
             functions: _functions_t,
+            signature_to_aliasing_info: _,
             interface_to_edge_blueprints: _interface_to_edge_blueprints_t,
             interface_to_sub_citizen_to_edge: _interface_to_sub_citizen_to_edge_t,
             instantiation_name_to_instantiation_bounds: _instantiation_name_to_function_bound_to_rune_t,

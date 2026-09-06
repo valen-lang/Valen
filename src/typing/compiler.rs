@@ -1629,10 +1629,17 @@ where
       instantiation_name_to_instantiation_bounds.insert(*id, *bounds);
     }
 
+    let signature_to_aliasing_info = coutputs
+      .signature_to_aliasing_info
+      .iter()
+      .map(|(sig, aliasing_info)| (*sig, aliasing_info.clone()))
+      .collect();
+
     let hinputs = HinputsT {
       interfaces: reachable_interfaces,
       structs: reachable_structs,
       functions: reachable_functions.clone(),
+      signature_to_aliasing_info,
       interface_to_edge_blueprints,
       interface_to_sub_citizen_to_edge,
       instantiation_name_to_instantiation_bounds,

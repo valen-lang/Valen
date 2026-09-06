@@ -53,6 +53,29 @@ pub fn assert_compiles_clean(code: &str) {
   compile.expect_compiler_outputs();
 }
 
+/// Compile `code` and assert the borrow checker's per-parameter `noalias` verdict for the function
+/// named `function_human_name` — one bool per parameter, in signature order, true where the parameter
+/// is the sole reference into a group no other parameter aliases.
+pub fn assert_param_noalias(code: &str, function_human_name: &str, expected: &[bool]) {
+  let (parse_bump, scout_bump, typing_bump) = (Bump::new(), Bump::new(), Bump::new());
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let hinputs = compile.expect_compiler_outputs();
+  assert_eq!(hinputs.param_noalias(function_human_name), expected);
+}
+
 /// Like `assert_borrow_error_renders`, but the code source also carries the array builtins, so a
 /// fixture may use runtime-sized arrays (`Array<int>(n)`, `a[i]`). The fixture must `import
 /// v.builtins.arrays.*;` (and any other builtins it needs).

@@ -1,33 +1,35 @@
 //! The borrow checker's entry point, per `docs/architecture/borrowing-design.md`.
 //!
-//! `check_function` runs the two phases: `groupify_function` builds the grouped body (each reference
-//! binding carries its group, each call its churns and joint-argument facts), then `check_usages`
-//! walks it once and rejects a use of a reference a churn spoiled. It stays pure — all inputs
-//! immutable, the only output an error.
+//! `check_function` runs three phases: `groupify_function` builds the grouped body (each reference
+//! binding carries its group, each call its churns and joint-argument facts), `check_usages` walks it
+//! once and rejects a use of a reference a churn spoiled, then `calculate_aliasing_info` reports which
+//! parameters may be treated as `noalias`. It stays pure — all inputs immutable, the outputs an error
+//! or the aliasing info.
 
 use bumpalo::Bump;
 
 use crate::postparsing::ast::FunctionS;
 use crate::postparsing::rules::types::{ITypeST, RegionS};
-use crate::typing::ast::ast::FunctionDefinitionT;
+use crate::typing::ast::ast::{FunctionAliasingInfoT, FunctionDefinitionT};
 use crate::typing::borrow_checker::borrow_error::BorrowErrorKind;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
-  /// Borrow-check one finished function body. `check_arena` (the `'g` arena) holds the grouped AST
-  /// that phase 1 builds and phase 2 walks.
+  /// Borrow-check one finished function body and compute its aliasing info. `check_arena` (the `'g`
+  /// arena) holds the grouped AST that phase 1 builds and phase 2 walks.
   pub fn check_function<'g>(
     &self,
     coutputs: &CompilerOutputs<'s, 't>,
     function_s: &'s FunctionS<'s>,
     function_t: &'t FunctionDefinitionT<'s, 't>,
     check_arena: &'g Bump,
-  ) -> Result<(), ICompileErrorT<'s, 't>> {
+  ) -> Result<FunctionAliasingInfoT, ICompileErrorT<'s, 't>> {
     self.check_return_group(function_s)?;
     let body_g = self.groupify_function(coutputs, function_s, function_t, check_arena)?;
-    self.check_usages(coutputs, function_s, &body_g)
+    self.check_usages(coutputs, function_s, &body_g)?;
+    Ok(self.calculate_aliasing_info(function_s, function_t, &body_g))
   }
 
   /// A returned reference must declare the group it points into (signature-only derivation): reject a
