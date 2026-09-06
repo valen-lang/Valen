@@ -48,17 +48,17 @@ fn test_violation_in_while_body_caught() {
 #[test]
 fn test_violation_in_nested_arg_call_caught() {
   assert_borrow_error_renders(
-    concat!(
-      "struct Entity { hp int; }\n",
-      "func badpairi<r', s'>(a &Entity in r, d &Entity in s) int mut(r) { return 0; }\n",
-      "func outer(x int) int { return x; }\n",
-      "exported func main() int {\n",
-      "  e = Entity(5);\n",
-      "  outer(badpairi(&e, &e));\n",
-      "  return 0;\n",
-      "}\n",
-    ),
-    r#"At test:0.vale:6:19:
+    r#"
+struct Entity { hp int; }
+func badpairi<r', s'>(a &Entity in r, d &Entity in s) int mut(r) { return 0; }
+func outer(x int) int { return x; }
+exported func main() int {
+  e = Entity(5);
+  outer(badpairi(&e, &e));
+  return 0;
+}
+"#,
+    r#"At test:0.vale:7:19:
   outer(badpairi(&e, &e));
 Arguments 0 and 1 both borrow into e, but their parameters are in disjoint mutated groups r and s, which the callee may treat as non-aliasing.
 "#,

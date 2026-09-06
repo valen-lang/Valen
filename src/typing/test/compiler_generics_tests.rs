@@ -24,32 +24,31 @@ fn upcasting_with_generic_bounds() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "\n",
-    "import v.builtins.panic.*;\n",
-    "import v.builtins.drop.*;\n",
-    "\n",
-    "#!DeriveInterfaceDrop\n",
-    "sealed interface XOpt<T> where func drop(T)void {\n",
-    "  func harvest(virtual opt XOpt<T>) T;\n",
-    "}\n",
-    "\n",
-    "#!DeriveStructDrop\n",
-    "struct XNone<T> where func drop(T)void  { }\n",
-    "\n",
-    "impl<T> XOpt<T> for XNone<T>;\n",
-    "\n",
-    "func harvest<T>(opt XNone<T>) T {\n",
-    "  __vbi_panic();\n",
-    "}\n",
-    "\n",
-    "exported func main() int {\n",
-    "  m XOpt<int> = XNone<int>();\n",
-    // TSUGAR:         "  return (m).harvest();\n",
-    "  return (^m).harvest();\n",
-    "}\n",
-    "\n",
-  );
+  // TSUGAR: the `return (^m).harvest();` line below was `  return (m).harvest();` pre-sugar.
+  let code = r#"
+import v.builtins.panic.*;
+import v.builtins.drop.*;
+
+#!DeriveInterfaceDrop
+sealed interface XOpt<T> where func drop(T)void {
+  func harvest(virtual opt XOpt<T>) T;
+}
+
+#!DeriveStructDrop
+struct XNone<T> where func drop(T)void  { }
+
+impl<T> XOpt<T> for XNone<T>;
+
+func harvest<T>(opt XNone<T>) T {
+  __vbi_panic();
+}
+
+exported func main() int {
+  m XOpt<int> = XNone<int>();
+  return (^m).harvest();
+}
+
+"#;
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),

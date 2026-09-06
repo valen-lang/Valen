@@ -14,19 +14,19 @@ use super::util::{assert_borrow_error_renders_with_arrays, assert_compiles_clean
 #[test]
 fn test_held_call_result_invalidated_by_sibling_arg_churn_rejected() {
   assert_borrow_error_renders_with_arrays(
-    concat!(
-      "import v.builtins.arrays.*;\n",
-      "import v.builtins.drop.*;\n",
-      "func get<g'>(a &[]int in g) &int in g[] { return &a[0]; }\n",
-      "func churn_ret<g'>(a &[]int in g) int mut(g) { return 0; }\n",
-      "func use2<T>(a &T, b int) { }\n",
-      "exported func main() int {\n",
-      "  arr = Array<int>(3);\n",
-      "  use2(get(&arr), churn_ret(&arr));\n",
-      "  return 0;\n",
-      "}\n",
-    ),
-    r#"At test:0.vale:8:8:
+    r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+func get<g'>(a &[]int in g) &int in g[] { return &a[0]; }
+func churn_ret<g'>(a &[]int in g) int mut(g) { return 0; }
+func use2<T>(a &T, b int) { }
+exported func main() int {
+  arr = Array<int>(3);
+  use2(get(&arr), churn_ret(&arr));
+  return 0;
+}
+"#,
+    r#"At test:0.vale:9:8:
   use2(get(&arr), churn_ret(&arr));
 This reference into an array element is held while a sibling argument churns its group, which may have moved or deleted the element, so it can't be passed here.
 "#,
@@ -38,17 +38,17 @@ This reference into an array element is held while a sibling argument churns its
 // safely.
 #[test]
 fn test_held_call_result_into_untouched_group_is_clean() {
-  assert_compiles_clean_with_arrays(concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.drop.*;\n",
-    "func get<g'>(a &[]int in g) &int in g[] { return &a[0]; }\n",
-    "func churn_ret<g'>(a &[]int in g) int mut(g) { return 0; }\n",
-    "func use2<T>(a &T, b int) { }\n",
-    "exported func main() int {\n",
-    "  arr = Array<int>(3);\n",
-    "  other = Array<int>(3);\n",
-    "  use2(get(&arr), churn_ret(&other));\n",
-    "  return 0;\n",
-    "}\n",
-  ));
+  assert_compiles_clean_with_arrays(r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+func get<g'>(a &[]int in g) &int in g[] { return &a[0]; }
+func churn_ret<g'>(a &[]int in g) int mut(g) { return 0; }
+func use2<T>(a &T, b int) { }
+exported func main() int {
+  arr = Array<int>(3);
+  other = Array<int>(3);
+  use2(get(&arr), churn_ret(&other));
+  return 0;
+}
+"#);
 }

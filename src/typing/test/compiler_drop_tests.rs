@@ -19,11 +19,11 @@ fn generic_struct_type_param_member_auto_drops() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.drop.*;\n",
-    "struct Box<T> { val T; }\n",
-    "exported func main() { b = Box<int>(5); }\n",
-  );
+  let code = r#"
+import v.builtins.drop.*;
+struct Box<T> { val T; }
+exported func main() { b = Box<int>(5); }
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_bundle(&parse_arena, &parser_keywords, &["drop", "implicit_clone"]),
     new_test_code_map(&parse_arena, code),
@@ -46,12 +46,12 @@ fn generic_struct_nested_generic_member_auto_drops() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.drop.*;\n",
-    "struct Box<T> { val T; }\n",
-    "struct Holder<T> { held Box<T>; }\n",
-    "exported func main() { h = Holder<int>(Box<int>(5)); }\n",
-  );
+  let code = r#"
+import v.builtins.drop.*;
+struct Box<T> { val T; }
+struct Holder<T> { held Box<T>; }
+exported func main() { h = Holder<int>(Box<int>(5)); }
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_bundle(&parse_arena, &parser_keywords, &["drop", "implicit_clone"]),
     new_test_code_map(&parse_arena, code),
@@ -74,10 +74,10 @@ fn empty_generic_struct_stays_droppable() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct None<T> { }\n",
-    "exported func main() { n = None<int>(); }\n",
-  );
+  let code = r#"
+struct None<T> { }
+exported func main() { n = None<int>(); }
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(

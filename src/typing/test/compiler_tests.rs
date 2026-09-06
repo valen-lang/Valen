@@ -896,16 +896,16 @@ fn custom_destructor() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: line below was: "  return Moo(42).hp;\n"
-  let code = concat!(
-    "#!DeriveStructDrop\n",
-    "exported struct Moo { hp int; }\n",
-    "func drop(self Moo) {\n",
-    "  [_] = ^self;\n",
-    "}\n",
-    "exported func main() int {\n",
-    "  return __copy_prim(&Moo(42).hp);\n",
-    "}\n",
-  );
+  let code = r#"
+#!DeriveStructDrop
+exported struct Moo { hp int; }
+func drop(self Moo) {
+  [_] = ^self;
+}
+exported func main() int {
+  return __copy_prim(&Moo(42).hp);
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1096,10 +1096,10 @@ fn test_templates() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "func bork<T>(a T) T { return ^a; }\n",
-    "exported func main() int { bork(true); bork(2); bork(3) }\n",
-  );
+  let code = r#"
+func bork<T>(a T) T { return ^a; }
+exported func main() int { bork(true); bork(2); bork(3) }
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1126,14 +1126,14 @@ fn test_taking_a_callable_param() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "func do<F>(callable F) int\n",
-    "where func(&F)int, func drop(F)void\n",
-    "{\n",
-    "  return callable();\n",
-    "}\n",
-    "exported func main() int { return do({ return 3; }); }\n",
-  );
+  let code = r#"
+func do<F>(callable F) int
+where func(&F)int, func drop(F)void
+{
+  return callable();
+}
+exported func main() int { return do({ return 3; }); }
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1158,14 +1158,14 @@ fn simple_struct() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "#!DeriveStructDrop\n",
-    "struct MyStruct { a int; }\n",
-    "exported func main() {\n",
-    "  ms = MyStruct(7);\n",
-    "  [_] = ^ms;\n",
-    "}\n",
-  );
+  let code = r#"
+#!DeriveStructDrop
+struct MyStruct { a int; }
+exported func main() {
+  ms = MyStruct(7);
+  [_] = ^ms;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1285,15 +1285,15 @@ fn calls_destructor_on_local_var() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Muta { }\n",
-    "func destructor(m Muta) {\n",
-    "  Muta[ ] = ^m;\n",
-    "}\n",
-    "exported func main() {\n",
-    "  a = Muta();\n",
-    "}\n",
-  );
+  let code = r#"
+struct Muta { }
+func destructor(m Muta) {
+  Muta[ ] = ^m;
+}
+exported func main() {
+  a = Muta();
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1340,12 +1340,12 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "sealed interface MyInterface { }\n",
-    "struct MyStruct { }\n",
-    "impl MyInterface for MyStruct;\n",
-    "func main(a MyStruct) {}\n",
-  );
+  let code = r#"
+sealed interface MyInterface { }
+struct MyStruct { }
+impl MyInterface for MyStruct;
+func main(a MyStruct) {}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1398,14 +1398,14 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "exported sealed interface MyInterface {\n",
-    "  func bork(virtual self &MyInterface);\n",
-    "}\n",
-    "exported struct MyStruct { }\n",
-    "impl MyInterface for MyStruct;\n",
-    "func bork(self &MyStruct) {}\n",
-  );
+  let code = r#"
+exported sealed interface MyInterface {
+  func bork(virtual self &MyInterface);
+}
+exported struct MyStruct { }
+impl MyInterface for MyStruct;
+func bork(self &MyStruct) {}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1464,23 +1464,23 @@ fn stamps_an_interface_template_via_a_function_return() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.drop.*;\n",
-    "\n",
-    "sealed interface MyInterface<X> where func drop(X)void { }\n",
-    "\n",
-    "struct SomeStruct<X> where func drop(X)void { x X; }\n",
-    "impl<X> MyInterface<X> for SomeStruct<X>;\n",
-    "\n",
-    "func doAThing<T>(t T) SomeStruct<T>\n",
-    "where func drop(T)void {\n",
-    "  return SomeStruct<T>(^t);\n",
-    "}\n",
-    "\n",
-    "exported func main() {\n",
-    "  doAThing(4);\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.drop.*;
+
+sealed interface MyInterface<X> where func drop(X)void { }
+
+struct SomeStruct<X> where func drop(X)void { x X; }
+impl<X> MyInterface<X> for SomeStruct<X>;
+
+func doAThing<T>(t T) SomeStruct<T>
+where func drop(T)void {
+  return SomeStruct<T>(^t);
+}
+
+exported func main() {
+  doAThing(4);
+}
+"#;
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     new_test_code_map(&parse_arena, code),
@@ -1508,16 +1508,16 @@ fn reads_a_struct_member() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: line below was: "  x = ms.a;\n",
-  let code = concat!(
-    "#!DeriveStructDrop\n",
-    "struct MyStruct { a int; }\n",
-    "exported func main() int {\n",
-    "  ms = MyStruct(7);\n",
-    "  x = __copy_prim(&ms.a);\n",
-    "  [_] = ^ms;\n",
-    "  return ^x;\n",
-    "}\n",
-  );
+  let code = r#"
+#!DeriveStructDrop
+struct MyStruct { a int; }
+exported func main() int {
+  ms = MyStruct(7);
+  x = __copy_prim(&ms.a);
+  [_] = ^ms;
+  return ^x;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1551,13 +1551,13 @@ fn automatically_drops_struct() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: line below was: "  return ms.a;\n"
-  let code = concat!(
-    "struct MyStruct { a int; }\n",
-    "exported func main() int {\n",
-    "  ms = MyStruct(7);\n",
-    "  return __copy_prim(&ms.a);\n",
-    "}\n",
-  );
+  let code = r#"
+struct MyStruct { a int; }
+exported func main() int {
+  ms = MyStruct(7);
+  return __copy_prim(&ms.a);
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1614,7 +1614,10 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!("interface MyOption<T> { }\n", "func main(a &MyOption<int>) { }\n",);
+  let code = r#"
+interface MyOption<T> { }
+func main(a &MyOption<int>) { }
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1804,11 +1807,11 @@ fn tests_single_expression_and_single_statement_functions_returns() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct MyThing { value int; }\n",
-    "func moo() MyThing { return MyThing(4); }\n",
-    "exported func main() { moo(); }\n",
-  );
+  let code = r#"
+struct MyThing { value int; }
+func moo() MyThing { return MyThing(4); }
+exported func main() { moo(); }
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -1858,13 +1861,13 @@ fn tests_calling_a_templated_struct_s_constructor() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: line below was: "  return MySome<int>(4).value;\n"
-  let code = concat!(
-    "import v.builtins.drop.*;\n",
-    "struct MySome<T> where func drop(T)void { value T; }\n",
-    "exported func main() int {\n",
-    "  return __copy_prim(&MySome<int>(4).value);\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.drop.*;
+struct MySome<T> where func drop(T)void { value T; }
+exported func main() int {
+  return __copy_prim(&MySome<int>(4).value);
+}
+"#;
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
@@ -2318,7 +2321,12 @@ fn tests_calling_a_templated_function_with_explicit_template_args() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!("func moo<T> () { }\n", "exported func main() {\n", "  moo<int>();\n", "}\n",);
+  let code = r#"
+func moo<T> () { }
+exported func main() {
+  moo<int>();
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -2342,20 +2350,19 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: line below was: "  return y;\n"
-  let code = concat!(
-    "\n",
-    "struct Vec3i {\n",
-    "  x int;\n",
-    "  y int;\n",
-    "  z int;\n",
-    "}\n",
-    "\n",
-    "exported func main() int {\n",
-    "  v = Vec3i(3, 4, 5);\n",
-    "\t [x, y, z] = &v;\n",
-    "  return __copy_prim(&y);\n",
-    "}\n",
-  );
+  let code = r#"
+struct Vec3i {
+  x int;
+  y int;
+  z int;
+}
+
+exported func main() int {
+  v = Vec3i(3, 4, 5);
+	 [x, y, z] = &v;
+  return __copy_prim(&y);
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -2395,22 +2402,21 @@ fn tests_making_a_variable_with_a_pattern() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "\n",
-    "sealed interface MyOption<T> { }\n",
-    "\n",
-    "struct MySome<T> {}\n",
-    "impl<T> MyOption<T> for MySome<T>;\n",
-    "\n",
-    "func doSomething(opt MyOption<int>) int {\n",
-    "  return 9;\n",
-    "}\n",
-    "\n",
-    "exported func main() int {\n",
-    "\tx MyOption<int> = MySome<int>();\n",
-    "\treturn doSomething(^x);\n",
-    "}\n",
-  );
+  let code = r#"
+sealed interface MyOption<T> { }
+
+struct MySome<T> {}
+impl<T> MyOption<T> for MySome<T>;
+
+func doSomething(opt MyOption<int>) int {
+  return 9;
+}
+
+exported func main() int {
+	x MyOption<int> = MySome<int>();
+	return doSomething(^x);
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -2751,15 +2757,15 @@ fn tests_calling_a_function_with_an_upcast() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "interface ISpaceship {}\n",
-    "struct Firefly {}\n",
-    "impl ISpaceship for Firefly;\n",
-    "func launch(ship &ISpaceship) { }\n",
-    "func main() {\n",
-    "  launch(&Firefly());\n",
-    "}\n",
-  );
+  let code = r#"
+interface ISpaceship {}
+struct Firefly {}
+impl ISpaceship for Firefly;
+func launch(ship &ISpaceship) { }
+func main() {
+  launch(&Firefly());
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -2801,15 +2807,15 @@ fn tests_calling_a_templated_function_with_an_upcast() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "interface ISpaceship<T> {}\n",
-    "struct Firefly<T> {}\n",
-    "impl<T> ISpaceship<T> for Firefly<T>;\n",
-    "func launch<T>(ship &ISpaceship<T>) { }\n",
-    "func main() {\n",
-    "  launch(&Firefly<int>());\n",
-    "}\n",
-  );
+  let code = r#"
+interface ISpaceship<T> {}
+struct Firefly<T> {}
+impl<T> ISpaceship<T> for Firefly<T>;
+func launch<T>(ship &ISpaceship<T>) { }
+func main() {
+  launch(&Firefly<int>());
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -2851,15 +2857,15 @@ fn tests_upcast_with_generics_has_the_right_stuff() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "interface ISpaceship<T> {}\n",
-    "struct Firefly<T> {}\n",
-    "impl<T> ISpaceship<T> for Firefly<T>;\n",
-    "func launch<T>(ship &ISpaceship<T>) { }\n",
-    "func main() {\n",
-    "  launch(&Firefly<int>());\n",
-    "}\n",
-  );
+  let code = r#"
+interface ISpaceship<T> {}
+struct Firefly<T> {}
+impl<T> ISpaceship<T> for Firefly<T>;
+func launch<T>(ship &ISpaceship<T>) { }
+func main() {
+  launch(&Firefly<int>());
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -2967,19 +2973,18 @@ fn test_return_from_inside_if_destroys_locals() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: line below was: "      m.hp\n"
-  let code = concat!(
-    "struct Marine { hp int; }\n",
-    "exported func main() int {\n",
-    "  m = Marine(5);\n",
-    "  x =\n",
-    "    if (true) {\n",
-    "      return 7;\n",
-    "    } else {\n",
-    "      __copy_prim(&m.hp)\n",
-    "    };\n",
-    "  return ^x;\n",
-    "}",
-  );
+  let code = r#"
+struct Marine { hp int; }
+exported func main() int {
+  m = Marine(5);
+  x =
+    if (true) {
+      return 7;
+    } else {
+      __copy_prim(&m.hp)
+    };
+  return ^x;
+}"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -3032,12 +3037,12 @@ fn recursive_struct() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct ListNode share {\n",
-    "  tail ListNode;\n",
-    "}\n",
-    "func main(a ListNode) {}\n",
-  );
+  let code = r#"
+struct ListNode share {
+  tail ListNode;
+}
+func main(a ListNode) {}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -3060,13 +3065,13 @@ fn recursive_struct_with_opt() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.opt.*;\n",
-    "struct ListNode {\n",
-    "  tail Opt<ListNode>;\n",
-    "}\n",
-    "func main(a ListNode) {}\n",
-  );
+  let code = r#"
+import v.builtins.opt.*;
+struct ListNode {
+  tail Opt<ListNode>;
+}
+func main(a ListNode) {}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_opt(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -3094,13 +3099,13 @@ fn templated_imm_struct() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.drop.*;\n",
-    "struct ListNode<T> share {\n",
-    "  tail ListNode<T>;\n",
-    "}\n",
-    "func main(a ListNode<int>) {}\n",
-  );
+  let code = r#"
+import v.builtins.drop.*;
+struct ListNode<T> share {
+  tail ListNode<T>;
+}
+func main(a ListNode<int>) {}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_bundle(&parse_arena, &parser_keywords, &["drop", "implicit_clone"]),
     new_test_code_map(&parse_arena, code),
@@ -3128,19 +3133,19 @@ fn borrow_load_member() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: line below was: "func getX(bork &Bork) int { return bork.x; }\n",
-  let code = concat!(
-    "struct Bork {\n",
-    "  x int;\n",
-    "}\n",
-    "func getX(bork &Bork) int { return __copy_prim(&bork.x); }\n",
-    "struct List {\n",
-    "  array Bork;\n",
-    "}\n",
-    "exported func main() int {\n",
-    "  l = List(Bork(0));\n",
-    "  return getX(&l.array);\n",
-    "}\n",
-  );
+  let code = r#"
+struct Bork {
+  x int;
+}
+func getX(bork &Bork) int { return __copy_prim(&bork.x); }
+struct List {
+  array Bork;
+}
+exported func main() int {
+  l = List(Bork(0));
+  return getX(&l.array);
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -3164,18 +3169,18 @@ fn test_vector_of_struct_templata() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.drop.*;\n",
-    "\n",
-    "struct Vec2 share {\n",
-    "  x float;\n",
-    "  y float;\n",
-    "}\n",
-    "struct Pattern share {\n",
-    "  patternTiles []Vec2;\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+
+struct Vec2 share {
+  x float;
+  y float;
+}
+struct Pattern share {
+  patternTiles []Vec2;
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arrays(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -3202,17 +3207,17 @@ fn if_branches_returns_never_and_struct() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.panicutils.*;\n",
-    "exported struct Moo {}\n",
-    "exported func main() Moo {\n",
-    "  if true {\n",
-    "    Moo()\n",
-    "  } else {\n",
-    "    panic(\"Error in CreateDir\");\n",
-    "  }\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.panicutils.*;
+exported struct Moo {}
+exported func main() Moo {
+  if true {
+    Moo()
+  } else {
+    panic("Error in CreateDir");
+  }
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_panicutils(&parse_arena, &parser_keywords),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
@@ -3332,12 +3337,12 @@ fn zero_method_anonymous_interface() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "interface MyInterface {}\n",
-    "exported func main() {\n",
-    "  x = MyInterface();\n",
-    "}\n",
-  );
+  let code = r#"
+interface MyInterface {}
+exported func main() {
+  x = MyInterface();
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -3600,13 +3605,13 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Muta { }\n",
-    "func doSomething(m &Muta, i int) {}\n",
-    "exported func main() {\n",
-    "  doSomething(&Muta(), 1)\n",
-    "}\n",
-  );
+  let code = r#"
+struct Muta { }
+func doSomething(m &Muta, i int) {}
+exported func main() {
+  doSomething(&Muta(), 1)
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -3637,12 +3642,12 @@ fn reports_when_ssa_from_callable_has_unknown_element_type() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "exported func main() int {\n",
-    "  a = [#5]NoSuchType(&{_ * 42});\n",
-    "  return 7;\n",
-    "}\n",
-  );
+  let code = r#"
+exported func main() int {
+  a = [#5]NoSuchType(&{_ * 42});
+  return 7;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -3660,9 +3665,9 @@ fn reports_when_ssa_from_callable_has_unknown_element_type() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:1:1:
+    r#"At test:0.vale:2:1:
 exported func main() int {
-At test:0.vale:2:7:
+At test:0.vale:3:7:
   a = [#5]NoSuchType(&{_ * 42});
 : Couldn't solve generics types:
 Couldn't find anything with the name 'NoSuchType'
@@ -3680,13 +3685,13 @@ fn reports_when_ssa_callable_returns_wrong_element_type() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.arith.*;\n",
-    "exported func main() int {\n",
-    "  a = [#5]int(&{ _ == 0 });\n",
-    "  return 7;\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arith.*;
+exported func main() int {
+  a = [#5]int(&{ _ == 0 });
+  return 7;
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arith(&parse_arena, &parser_keywords),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
@@ -3709,9 +3714,9 @@ fn reports_when_ssa_callable_returns_wrong_element_type() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:2:1:
+    r#"At test:0.vale:3:1:
 exported func main() int {
-At test:0.vale:3:7:
+At test:0.vale:4:7:
   a = [#5]int(&{ _ == 0 });
 Unexpected type for array element, tried to put a bool into an array of i32
 "#,
@@ -3727,14 +3732,14 @@ fn reports_when_rsa_from_callable_has_unknown_element_type() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.drop.*;\n",
-    "exported func main() int {\n",
-    "  a = []NoSuchType(3, &(i int) => { i });\n",
-    "  return 7;\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+exported func main() int {
+  a = []NoSuchType(3, &(i int) => { i });
+  return 7;
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arrays(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -3756,9 +3761,9 @@ fn reports_when_rsa_from_callable_has_unknown_element_type() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:3:1:
+    r#"At test:0.vale:4:1:
 exported func main() int {
-At test:0.vale:4:7:
+At test:0.vale:5:7:
   a = []NoSuchType(3, &(i int) => { i });
 : Couldn't solve generics types:
 Couldn't find anything with the name 'NoSuchType'
@@ -3854,15 +3859,15 @@ fn reports_when_rsa_callable_returns_wrong_element_type() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.arith.*;\n",
-    "import v.builtins.drop.*;\n",
-    "exported func main() int {\n",
-    "  a = []int(5, &{ _ == 0 });\n",
-    "  return 7;\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arrays.*;
+import v.builtins.arith.*;
+import v.builtins.drop.*;
+exported func main() int {
+  a = []int(5, &{ _ == 0 });
+  return 7;
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arrays(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -3884,9 +3889,9 @@ fn reports_when_rsa_callable_returns_wrong_element_type() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:4:1:
+    r#"At test:0.vale:5:1:
 exported func main() int {
-At test:0.vale:5:7:
+At test:0.vale:6:7:
   a = #[]int(5, &{ _ == 0 });
 Unexpected type for array element, tried to put a bool into an array of i32
 "#,
@@ -3902,12 +3907,12 @@ fn reports_when_ssa_from_values_has_unknown_element_type() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "exported func main() int {\n",
-    "  a = [#]NoSuchType(1, 2, 3);\n",
-    "  return 7;\n",
-    "}\n",
-  );
+  let code = r#"
+exported func main() int {
+  a = [#]NoSuchType(1, 2, 3);
+  return 7;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -3925,9 +3930,9 @@ fn reports_when_ssa_from_values_has_unknown_element_type() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:1:1:
+    r#"At test:0.vale:2:1:
 exported func main() int {
-At test:0.vale:2:7:
+At test:0.vale:3:7:
   a = [#]NoSuchType(1, 2, 3);
 : Couldn't solve generics types:
 Couldn't find anything with the name 'NoSuchType'
@@ -3944,12 +3949,12 @@ fn reports_when_ssa_values_have_wrong_element_type() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "exported func main() int {\n",
-    "  a = [#]int(true, false, true);\n",
-    "  return 7;\n",
-    "}\n",
-  );
+  let code = r#"
+exported func main() int {
+  a = [#]int(true, false, true);
+  return 7;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -3967,9 +3972,9 @@ fn reports_when_ssa_values_have_wrong_element_type() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:1:1:
+    r#"At test:0.vale:2:1:
 exported func main() int {
-At test:0.vale:2:7:
+At test:0.vale:3:7:
   a = [#]int(true, false, true);
 Unexpected type for array element, tried to put a bool into an array of i32
 "#,
@@ -3985,14 +3990,14 @@ fn reports_when_rsa_indexed_with_non_integer() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.drop.*;\n",
-    "exported func main() int {\n",
-    "  a = Array<int>(3);\n",
-    "  return a[true];\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+exported func main() int {
+  a = Array<int>(3);
+  return a[true];
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arrays(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -4014,11 +4019,11 @@ fn reports_when_rsa_indexed_with_non_integer() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:3:1:
+    r#"At test:0.vale:4:1:
 exported func main() int {
-At test:0.vale:5:10:
+At test:0.vale:6:10:
   return a[true];
-At test:0.vale:5:10:
+At test:0.vale:6:10:
   return a[true];
 Indexed array with non-integer: bool
 "#,
@@ -4035,14 +4040,14 @@ fn runtime_sized_array_local_drops_cleanly() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.drop.*;\n",
-    "exported func main() int {\n",
-    "  arr = Array<int>(3);\n",
-    "  return 0;\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+exported func main() int {
+  arr = Array<int>(3);
+  return 0;
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arrays(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -4069,7 +4074,12 @@ fn reports_when_dot_applied_to_non_container() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!("exported func main() int {\n", "  x = 5;\n", "  return x.foo;\n", "}\n",);
+  let code = r#"
+exported func main() int {
+  x = 5;
+  return x.foo;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -4088,9 +4098,9 @@ fn reports_when_dot_applied_to_non_container() {
   // TODO: the RangedInternalErrorT message itself includes a Debug-format of the kind; replace at the error-construction site with a humanize_kind call and re-capture.
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:1:1:
+    r#"At test:0.vale:2:1:
 exported func main() int {
-At test:0.vale:3:10:
+At test:0.vale:4:10:
   return x.foo;
 Internal error: Can't apply .foo to Int(IntT { bits: 32 })
 "#,
@@ -4106,14 +4116,14 @@ fn reports_when_rsa_dot_member_is_not_digit() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.drop.*;\n",
-    "exported func main() int {\n",
-    "  a = Array<int>(3);\n",
-    "  return a.foo;\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+exported func main() int {
+  a = Array<int>(3);
+  return a.foo;
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arrays(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -4136,9 +4146,9 @@ fn reports_when_rsa_dot_member_is_not_digit() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:3:1:
+    r#"At test:0.vale:4:1:
 exported func main() int {
-At test:0.vale:5:10:
+At test:0.vale:6:10:
   return a.foo;
 Internal error: Array has no member named foo
 "#,
@@ -4155,7 +4165,12 @@ fn reports_when_ssa_dot_member_is_not_digit() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code =
-    concat!("exported func main() int {\n", "  a = [#](1, 2, 3);\n", "  return a.foo;\n", "}\n",);
+    r#"
+exported func main() int {
+  a = [#](1, 2, 3);
+  return a.foo;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -4174,9 +4189,9 @@ fn reports_when_ssa_dot_member_is_not_digit() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:1:1:
+    r#"At test:0.vale:2:1:
 exported func main() int {
-At test:0.vale:3:10:
+At test:0.vale:4:10:
   return a.foo;
 Internal error: Sequence has no member named foo
 "#,
@@ -4192,12 +4207,12 @@ fn reports_when_if_branches_have_different_kinds() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "exported func main() int {\n",
-    "  x = if true { 5 } else { 6.0 };\n",
-    "  return 7;\n",
-    "}\n",
-  );
+  let code = r#"
+exported func main() int {
+  x = if true { 5 } else { 6.0 };
+  return 7;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -4215,9 +4230,9 @@ fn reports_when_if_branches_have_different_kinds() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:1:1:
+    r#"At test:0.vale:2:1:
 exported func main() int {
-At test:0.vale:2:7:
+At test:0.vale:3:7:
   x = if true { 5 } else { 6.0 };
 If branches return different types: i32 and float
 "#,
@@ -4302,17 +4317,17 @@ fn reports_when_mutating_after_moving() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Weapon { ammo int; }\n",
-    "struct Marine { weapon Weapon; }\n",
-    "exported func main() int {\n",
-    "  m = Marine(Weapon(7));\n",
-    "  newWeapon = Weapon(10);\n",
-    "  set m.weapon = ^newWeapon;\n",
-    "  set newWeapon.ammo = 11;\n",
-    "  return 42;\n",
-    "}\n",
-  );
+  let code = r#"
+struct Weapon { ammo int; }
+struct Marine { weapon Weapon; }
+exported func main() int {
+  m = Marine(Weapon(7));
+  newWeapon = Weapon(10);
+  set m.weapon = ^newWeapon;
+  set newWeapon.ammo = 11;
+  return 42;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -4333,7 +4348,7 @@ fn reports_when_mutating_after_moving() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:7:7:
+    r#"At test:0.vale:8:7:
   set newWeapon.ammo = 11;
 Can't use local that was already moved: newWeapon
 "#,
@@ -4349,7 +4364,10 @@ fn tests_export_struct_twice() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!("exported struct Moo { }\n", "export Moo as Bork;\n",);
+  let code = r#"
+exported struct Moo { }
+export Moo as Bork;
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -4369,11 +4387,11 @@ fn tests_export_struct_twice() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:1:1:
+    r#"At test:0.vale:2:1:
 exported struct Moo { }
 Type exported multiple times:
-  test:0.vale:1:1: exported struct Moo { }
-  test:0.vale:2:1: export Moo as Bork;
+  test:0.vale:2:1: exported struct Moo { }
+  test:0.vale:3:1: export Moo as Bork;
 "#,
   );
 }
@@ -4387,17 +4405,17 @@ fn reports_when_reading_after_moving() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Weapon { ammo int; }\n",
-    "struct Marine { weapon Weapon; }\n",
-    "exported func main() int {\n",
-    "  m = Marine(Weapon(7));\n",
-    "  newWeapon = Weapon(10);\n",
-    "  set m.weapon = ^newWeapon;\n",
-    "  println(newWeapon.ammo);\n",
-    "  return 42;\n",
-    "}\n",
-  );
+  let code = r#"
+struct Weapon { ammo int; }
+struct Marine { weapon Weapon; }
+exported func main() int {
+  m = Marine(Weapon(7));
+  newWeapon = Weapon(10);
+  set m.weapon = ^newWeapon;
+  println(newWeapon.ammo);
+  return 42;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -4418,7 +4436,7 @@ fn reports_when_reading_after_moving() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:7:11:
+    r#"At test:0.vale:8:11:
   println(newWeapon.ammo);
 Can't use local that was already moved: newWeapon
 "#,
@@ -4434,16 +4452,16 @@ fn reports_when_moving_from_inside_a_while() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Marine { ammo int; }\n",
-    "exported func main() int {\n",
-    "  m = Marine(7);\n",
-    "  while (false) {\n",
-    "    drop(^m);\n",
-    "  }\n",
-    "  return 42;\n",
-    "}\n",
-  );
+  let code = r#"
+struct Marine { ammo int; }
+exported func main() int {
+  m = Marine(7);
+  while (false) {
+    drop(^m);
+  }
+  return 42;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -4464,9 +4482,9 @@ fn reports_when_moving_from_inside_a_while() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r##"At test:0.vale:2:1:
+    r##"At test:0.vale:3:1:
 exported func main() int {
-At test:0.vale:4:3:
+At test:0.vale:5:3:
   while (false) {
 Can't move a local (m) from inside a while loop.
 "##,
@@ -4490,17 +4508,17 @@ fn reports_when_moving_from_inside_a_while_that_never_falls_through() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Marine { ammo int; }\n",
-    "exported func main() int {\n",
-    "  m = Marine(7);\n",
-    "  while (false) {\n",
-    "    drop(^m);\n",
-    "    break;\n",
-    "  }\n",
-    "  return 42;\n",
-    "}\n",
-  );
+  let code = r#"
+struct Marine { ammo int; }
+exported func main() int {
+  m = Marine(7);
+  while (false) {
+    drop(^m);
+    break;
+  }
+  return 42;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -4530,13 +4548,13 @@ fn cant_subscript_non_subscriptable_type() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Weapon { ammo int; }\n",
-    "exported func main() int {\n",
-    "  weapon = Weapon(10);\n",
-    "  return weapon[42];\n",
-    "}\n",
-  );
+  let code = r#"
+struct Weapon { ammo int; }
+exported func main() int {
+  weapon = Weapon(10);
+  return weapon[42];
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -4578,9 +4596,9 @@ fn cant_subscript_non_subscriptable_type() {
   }
   assert_humanized_eq(
     &humanize_compile_error(&mut compile, err),
-    r#"At test:0.vale:2:1:
+    r#"At test:0.vale:3:1:
 exported func main() int {
-At test:0.vale:4:10:
+At test:0.vale:5:10:
   return weapon[42];
 Cannot subscript type: &Weapon
 "#,
@@ -5225,16 +5243,16 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.panicutils.*;\n",
-    "import v.builtins.drop.*;\n",
-    "import panicutils.*;\n",
-    "sealed interface MyOption<T> where func drop(T)void { }\n",
-    "struct MySome<T> where func drop(T)void { value T; }\n",
-    "impl<T> MyOption<T> for MySome<T> where func drop(T)void;\n",
-    "func moo(a MySome<int>) { }\n",
-    "exported func main() { moo(__pretend<MySome<int>>()); }\n",
-  );
+  let code = r#"
+import v.builtins.panicutils.*;
+import v.builtins.drop.*;
+import panicutils.*;
+sealed interface MyOption<T> where func drop(T)void { }
+struct MySome<T> where func drop(T)void { value T; }
+impl<T> MyOption<T> for MySome<T> where func drop(T)void;
+func moo(a MySome<int>) { }
+exported func main() { moo(__pretend<MySome<int>>()); }
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_panicutils(&parse_arena, &parser_keywords),
     Source::builtin_module(&parse_arena, &parser_keywords, "logic"),
@@ -5320,12 +5338,12 @@ fn test_struct_default_generic_argument_in_type() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct MyHashSet<K, H Int = 5> { }\n",
-    "struct MyStruct {\n",
-    "  x MyHashSet<bool>();\n",
-    "}\n",
-  );
+  let code = r#"
+struct MyHashSet<K, H Int = 5> { }
+struct MyStruct {
+  x MyHashSet<bool>();
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -5375,39 +5393,39 @@ fn lock_weak_member() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.opt.*;\n",
-    "import v.builtins.weak.*;\n",
-    "import v.builtins.logic.*;\n",
-    "import v.builtins.drop.*;\n",
-    "import panicutils.*;\n",
-    "import printutils.*;\n",
-    "\n",
-    "struct Base {\n",
-    "  name str;\n",
-    "}\n",
-    "struct Spaceship {\n",
-    "  name str;\n",
-    "  origin &&Base;\n",
-    "}\n",
-    "func printShipBase(ship &Spaceship) {\n",
-    "  maybeOrigin = lock(ship.origin);\n",
-    // TSUGAR: line below was: "  if (not maybeOrigin.isEmpty()) {\n",
-    "  if (not &maybeOrigin.isEmpty()) {\n",
-    "    o = maybeOrigin.get();\n",
-    "    println(\"Ship base: \" + o.name);\n",
-    "  } else {\n",
-    "    println(\"Ship base unknown!\");\n",
-    "  }\n",
-    "}\n",
-    "exported func main() {\n",
-    "  base = Base(\"Zion\");\n",
-    "  ship = Spaceship(\"Neb\", &&base);\n",
-    "  printShipBase(&ship);\n",
-    "  (^base).drop();\n",
-    "  printShipBase(&ship);\n",
-    "}\n",
-  );
+  // TSUGAR: the `if (not &maybeOrigin.isEmpty()) {` line in the fixture below was `  if (not maybeOrigin.isEmpty()) {` pre-sugar.
+  let code = r#"
+import v.builtins.opt.*;
+import v.builtins.weak.*;
+import v.builtins.logic.*;
+import v.builtins.drop.*;
+import panicutils.*;
+import printutils.*;
+
+struct Base {
+  name str;
+}
+struct Spaceship {
+  name str;
+  origin &&Base;
+}
+func printShipBase(ship &Spaceship) {
+  maybeOrigin = lock(ship.origin);
+  if (not &maybeOrigin.isEmpty()) {
+    o = maybeOrigin.get();
+    println("Ship base: " + o.name);
+  } else {
+    println("Ship base unknown!");
+  }
+}
+exported func main() {
+  base = Base("Zion");
+  ship = Spaceship("Neb", &&base);
+  printShipBase(&ship);
+  (^base).drop();
+  printShipBase(&ship);
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_weak(&parse_arena, &parser_keywords),
     Source::builtin_module(&parse_arena, &parser_keywords, "logic"),
@@ -5442,19 +5460,18 @@ fn tests_destructuring_shared_doesnt_compile_to_destroy() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: line below was: "  return y;\n"
-  let code = concat!(
-    "\n",
-    "struct Vec3i share {\n",
-    "  x int;\n",
-    "  y int;\n",
-    "  z int;\n",
-    "}\n",
-    "\n",
-    "exported func main() int {\n",
-    "\t Vec3i[x, y, z] = Vec3i(3, 4, 5);\n",
-    "  return __copy_prim(&y);\n",
-    "}\n",
-  );
+  let code = r#"
+struct Vec3i share {
+  x int;
+  y int;
+  z int;
+}
+
+exported func main() int {
+	 Vec3i[x, y, z] = Vec3i(3, 4, 5);
+  return __copy_prim(&y);
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -5623,20 +5640,20 @@ fn test_array_push_pop_len_capacity_drop() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.drop.*;\n",
-    "\n",
-    "exported func main() void {\n",
-    "  arr = Array<int>(9);\n",
-    "  arr.push(420);\n",
-    "  arr.push(421);\n",
-    "  arr.push(422);\n",
-    "  arr.len();\n",
-    "  arr.capacity();\n",
-    "  // implicit drop with pops\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+
+exported func main() void {
+  arr = Array<int>(9);
+  arr.push(420);
+  arr.push(421);
+  arr.push(422);
+  arr.len();
+  arr.capacity();
+  // implicit drop with pops
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arrays(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -5663,24 +5680,24 @@ fn upcast_generic() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.drop.*;\n",
-    "\n",
-    "interface IShip {}\n",
-    "\n",
-    "struct Raza { fuel int; }\n",
-    "impl IShip for Raza;\n",
-    "\n",
-    "func doUpcast<T>(x T) IShip\n",
-    "where implements(T, IShip) {\n",
-    "  i IShip = ^x;\n",
-    "  return ^i;\n",
-    "}\n",
-    "\n",
-    "exported func main() {\n",
-    "  doUpcast(Raza(42));\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.drop.*;
+
+interface IShip {}
+
+struct Raza { fuel int; }
+impl IShip for Raza;
+
+func doUpcast<T>(x T) IShip
+where implements(T, IShip) {
+  i IShip = ^x;
+  return ^i;
+}
+
+exported func main() {
+  doUpcast(Raza(42));
+}
+"#;
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
@@ -5743,26 +5760,25 @@ fn downcast_function_rrbfs() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "\n",
-    "#!DeriveInterfaceDrop\n",
-    "sealed interface Result<OkType, ErrType> { }\n",
-    "\n",
-    "#!DeriveStructDrop\n",
-    "struct Ok<OkType, ErrType> { value OkType; }\n",
-    "\n",
-    "impl<OkType, ErrType> Result<OkType, ErrType> for Ok<OkType, ErrType>;\n",
-    "\n",
-    "#!DeriveStructDrop\n",
-    "struct Err<OkType, ErrType> { value ErrType; }\n",
-    "\n",
-    "impl<OkType, ErrType> Result<OkType, ErrType> for Err<OkType, ErrType>;\n",
-    "\n",
-    "\n",
-    "extern(\"vale_as_subtype\")\n",
-    "func try_as<SubType, SuperType>(left &SuperType) Result<&SubType, &SuperType>\n",
-    "where implements(SubType, SuperType);\n",
-  );
+  let code = r#"
+#!DeriveInterfaceDrop
+sealed interface Result<OkType, ErrType> { }
+
+#!DeriveStructDrop
+struct Ok<OkType, ErrType> { value OkType; }
+
+impl<OkType, ErrType> Result<OkType, ErrType> for Ok<OkType, ErrType>;
+
+#!DeriveStructDrop
+struct Err<OkType, ErrType> { value ErrType; }
+
+impl<OkType, ErrType> Result<OkType, ErrType> for Err<OkType, ErrType>;
+
+
+extern("vale_as_subtype")
+func try_as<SubType, SuperType>(left &SuperType) Result<&SubType, &SuperType>
+where implements(SubType, SuperType);
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -5950,21 +5966,21 @@ fn downcast_with_as() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.as.*;\n",
-    "import v.builtins.logic.*;\n",
-    "import v.builtins.drop.*;\n",
-    "\n",
-    "interface IShip {}\n",
-    "\n",
-    "struct Raza { fuel int; }\n",
-    "impl IShip for Raza;\n",
-    "\n",
-    "exported func main() {\n",
-    "  ship IShip = Raza(42);\n",
-    "  ship.try_as<Raza>();\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.as.*;
+import v.builtins.logic.*;
+import v.builtins.drop.*;
+
+interface IShip {}
+
+struct Raza { fuel int; }
+impl IShip for Raza;
+
+exported func main() {
+  ship IShip = Raza(42);
+  ship.try_as<Raza>();
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_as(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -6315,17 +6331,17 @@ fn closure_using_parent_function_s_bound() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: line below was: "  genFunc(7)\n"
-  let code = concat!(
-    "import v.builtins.arith.*;\n",
-    "\n",
-    "func genFunc<T>(a &T) T\n",
-    "where func +(&T, &T)T {\n",
-    "  { a + a }()\n",
-    "}\n",
-    "exported func main() int {\n",
-    "  genFunc(&7)\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arith.*;
+
+func genFunc<T>(a &T) T
+where func +(&T, &T)T {
+  { a + a }()
+}
+exported func main() int {
+  genFunc(&7)
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arith(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -6352,12 +6368,12 @@ fn test_struct_default_generic_argument_in_call() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct MyHashSet<K, H Int = 5> { }\n",
-    "func moo() {\n",
-    "  x = MyHashSet<bool>();\n",
-    "}\n",
-  );
+  let code = r#"
+struct MyHashSet<K, H Int = 5> { }
+func moo() {
+  x = MyHashSet<bool>();
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -6414,18 +6430,18 @@ fn structs_can_resolve_other_structs_instantiation_bound_arguments() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.drop.*;\n",
-    "\n",
-    "struct XNone<T> where func drop(T)void { }\n",
-    "\n",
-    "// This function will try to do a resolve for func drop(int)void.\n",
-    "struct Marine { weapon XNone<int>; }\n",
-    "\n",
-    "exported func main() {\n",
-    "  m = Marine(XNone<int>());\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.drop.*;
+
+struct XNone<T> where func drop(T)void { }
+
+// This function will try to do a resolve for func drop(int)void.
+struct Marine { weapon XNone<int>; }
+
+exported func main() {
+  m = Marine(XNone<int>());
+}
+"#;
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
@@ -6461,13 +6477,13 @@ fn drop_bound_on_a_generic_struct_ignores_the_borrow_blanket() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.drop.*;\n",
-    "\n",
-    "struct XNone<T> where func drop(T)void { }\n",
-    "\n",
-    "exported func main() { }\n",
-  );
+  let code = r#"
+import v.builtins.drop.*;
+
+struct XNone<T> where func drop(T)void { }
+
+exported func main() { }
+"#;
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
@@ -6498,13 +6514,13 @@ fn copy_prim_arith_probe() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.arith.*;\n",
-    "exported func main() int {\n",
-    "  x = 4;\n",
-    "  return __copy_prim(&x) + 7;\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.arith.*;
+exported func main() int {
+  x = 4;
+  return __copy_prim(&x) + 7;
+}
+"#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_arith(&parse_arena, &parser_keywords),
     new_test_code_map(&parse_arena, code),
@@ -6535,13 +6551,13 @@ fn bare_use_without_implicit_clone_errors() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // Deliberately no `import v.builtins.implicit_clone.*;`.
-  let code = concat!(
-    "struct MyStruct { }\n",
-    "exported func main() {\n",
-    "  x = MyStruct();\n",
-    "  a MyStruct = x;\n",
-    "}\n",
-  );
+  let code = r#"
+struct MyStruct { }
+exported func main() {
+  x = MyStruct();
+  a MyStruct = x;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -6577,18 +6593,18 @@ fn user_defined_implicit_clone_allows_bare_use_of_struct() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // VCOORD: doublecheck this logic, s2 = s; might be making a ref instead
   // when we might want it to copy? not sure yet.
-  let code = concat!(
-    "import v.builtins.implicit_clone.*;\n",
-    "struct Ship { hp int; }\n",
-    "func implicit_clone(s &Ship) Ship { return Ship(__copy_prim(&s.hp)); }\n",
-    "func consume(s Ship) int { [hp] = ^s; return hp; }\n",
-    "exported func main() int {\n",
-    "  s = Ship(7);\n",
-    "  s2 = s;\n",
-    "  consume(^s);\n",
-    "  return consume(^s2);\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.implicit_clone.*;
+struct Ship { hp int; }
+func implicit_clone(s &Ship) Ship { return Ship(__copy_prim(&s.hp)); }
+func consume(s Ship) int { [hp] = ^s; return hp; }
+exported func main() int {
+  s = Ship(7);
+  s2 = s;
+  consume(^s);
+  return consume(^s2);
+}
+"#;
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
@@ -6636,14 +6652,14 @@ fn caret_bypasses_implicit_clone() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Ship {}\n",
-    "func consume(s Ship) int { [] = ^s; return 7; }\n",
-    "exported func main() int {\n",
-    "  s = Ship();\n",
-    "  return consume(^s);\n",
-    "}\n",
-  );
+  let code = r#"
+struct Ship {}
+func consume(s Ship) int { [] = ^s; return 7; }
+exported func main() int {
+  s = Ship();
+  return consume(^s);
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -6669,16 +6685,16 @@ fn amp_bypasses_implicit_clone() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Ship {}\n",
-    "func consume(s &Ship) int { return 7; }\n",
-    "exported func main() int {\n",
-    "  s = Ship();\n",
-    "  a = consume(&s);\n",
-    "  [] = ^s;\n",
-    "  return ^a;\n",
-    "}\n",
-  );
+  let code = r#"
+struct Ship {}
+func consume(s &Ship) int { return 7; }
+exported func main() int {
+  s = Ship();
+  a = consume(&s);
+  [] = ^s;
+  return ^a;
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -6705,17 +6721,17 @@ fn bare_member_access_auto_clones() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.implicit_clone.*;\n",
-    "struct MyBox { value int; }\n",
-    "func read(b &MyBox) int { return b.value; }\n",
-    "exported func main() int {\n",
-    "  b = MyBox(7);\n",
-    "  a = read(&b);\n",
-    "  [_] = ^b;\n",
-    "  return a;\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.implicit_clone.*;
+struct MyBox { value int; }
+func read(b &MyBox) int { return b.value; }
+exported func main() int {
+  b = MyBox(7);
+  a = read(&b);
+  [_] = ^b;
+  return a;
+}
+"#;
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
@@ -6750,15 +6766,15 @@ fn copy_prim_probe() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "import v.builtins.implicit_clone.*;\n",
-    "struct MyBox { value int; }\n",
-    "func consume(i int) int { return ^i; }\n",
-    "exported func main() int {\n",
-    "  b = MyBox(7);\n",
-    "  return consume(__copy_prim(&b.value));\n",
-    "}\n",
-  );
+  let code = r#"
+import v.builtins.implicit_clone.*;
+struct MyBox { value int; }
+func consume(i int) int { return ^i; }
+exported func main() int {
+  b = MyBox(7);
+  return consume(__copy_prim(&b.value));
+}
+"#;
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
@@ -6787,14 +6803,14 @@ fn borrow_share_as_arg_to_generic_func_that_takes_borrowed_things() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = concat!(
-    "struct Ship share { }\n",
-    "func drop<T>(x &T) {}\n",
-    "exported func main() {\n",
-    "  s = Ship();\n",
-    "  drop(&s);\n",
-    "}\n",
-  );
+  let code = r#"
+struct Ship share { }
+func drop<T>(x &T) {}
+exported func main() {
+  s = Ship();
+  drop(&s);
+}
+"#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(

@@ -2128,12 +2128,11 @@ fn test_impl_where_implements_becomes_an_impl_bound() {
     &scout_arena,
     &keywords,
     &parse_arena,
-    concat!(
-      "interface IShip { }\n",
-      "interface IFleet { }\n",
-      "struct Fleet<T> { }\n",
-      "impl<T> IFleet for Fleet<T> where implements(T, IShip);",
-    ),
+    r#"
+interface IShip { }
+interface IFleet { }
+struct Fleet<T> { }
+impl<T> IFleet for Fleet<T> where implements(T, IShip);"#,
   );
   let impl_ = expect_1(program.impls);
   let bound = expect_1(impl_.impl_bounds);

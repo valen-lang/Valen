@@ -8,21 +8,21 @@ use super::util::{assert_borrow_error_renders_with_arrays, assert_compiles_clean
 #[test]
 fn test_use_ellipsis_return_after_churn_rejected() {
   assert_borrow_error_renders_with_arrays(
-    concat!(
-      "import v.builtins.arrays.*;\n",
-      "import v.builtins.drop.*;\n",
-      "func churn<r'>(a &[]int in r) mut(r) { }\n",
-      "func peek<r'>(a &[]int in r) &int in r... { return &a[0]; }\n",
-      "func observe<T>(x &T) { }\n",
-      "exported func main() int {\n",
-      "  arr = Array<int>(3);\n",
-      "  ref = peek(&arr);\n",
-      "  churn(&arr);\n",
-      "  observe(ref);\n",
-      "  return 0;\n",
-      "}\n",
-    ),
-    r#"At test:0.vale:10:11:
+    r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+func churn<r'>(a &[]int in r) mut(r) { }
+func peek<r'>(a &[]int in r) &int in r... { return &a[0]; }
+func observe<T>(x &T) { }
+exported func main() int {
+  arr = Array<int>(3);
+  ref = peek(&arr);
+  churn(&arr);
+  observe(ref);
+  return 0;
+}
+"#,
+    r#"At test:0.vale:11:11:
   observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
@@ -32,21 +32,21 @@ ref references an array element, which a preceding churn of its group may have m
 // A `&int in r...` reference survives a churn of a *different* group — the churn never touched r.
 #[test]
 fn test_ellipsis_ref_into_untouched_group_is_clean() {
-  assert_compiles_clean_with_arrays(concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.drop.*;\n",
-    "func churn<r'>(a &[]int in r) mut(r) { }\n",
-    "func peek<r'>(a &[]int in r) &int in r... { return &a[0]; }\n",
-    "func observe<T>(x &T) { }\n",
-    "exported func main() int {\n",
-    "  arr = Array<int>(3);\n",
-    "  other = Array<int>(3);\n",
-    "  ref = peek(&arr);\n",
-    "  churn(&other);\n",
-    "  observe(ref);\n",
-    "  return 0;\n",
-    "}\n",
-  ));
+  assert_compiles_clean_with_arrays(r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+func churn<r'>(a &[]int in r) mut(r) { }
+func peek<r'>(a &[]int in r) &int in r... { return &a[0]; }
+func observe<T>(x &T) { }
+exported func main() int {
+  arr = Array<int>(3);
+  other = Array<int>(3);
+  ref = peek(&arr);
+  churn(&other);
+  observe(ref);
+  return 0;
+}
+"#);
 }
 
 // A `&int in r...` reference is invalidated by a churn *below* its base — `mut(r[])` churns r's
@@ -54,21 +54,21 @@ fn test_ellipsis_ref_into_untouched_group_is_clean() {
 #[test]
 fn test_ellipsis_ref_invalidated_by_element_churn() {
   assert_borrow_error_renders_with_arrays(
-    concat!(
-      "import v.builtins.arrays.*;\n",
-      "import v.builtins.drop.*;\n",
-      "func churn_elems<r'>(a &[]int in r) mut(r[]) { }\n",
-      "func peek<r'>(a &[]int in r) &int in r... { return &a[0]; }\n",
-      "func observe<T>(x &T) { }\n",
-      "exported func main() int {\n",
-      "  arr = Array<int>(3);\n",
-      "  ref = peek(&arr);\n",
-      "  churn_elems(&arr);\n",
-      "  observe(ref);\n",
-      "  return 0;\n",
-      "}\n",
-    ),
-    r#"At test:0.vale:10:11:
+    r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+func churn_elems<r'>(a &[]int in r) mut(r[]) { }
+func peek<r'>(a &[]int in r) &int in r... { return &a[0]; }
+func observe<T>(x &T) { }
+exported func main() int {
+  arr = Array<int>(3);
+  ref = peek(&arr);
+  churn_elems(&arr);
+  observe(ref);
+  return 0;
+}
+"#,
+    r#"At test:0.vale:11:11:
   observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
@@ -79,20 +79,20 @@ ref references an array element, which a preceding churn of its group may have m
 #[test]
 fn test_ellipsis_effect_invalidates_child_element() {
   assert_borrow_error_renders_with_arrays(
-    concat!(
-      "import v.builtins.arrays.*;\n",
-      "import v.builtins.drop.*;\n",
-      "func churn_ellipsis<r'>(a &[]int in r) mut(r...) { }\n",
-      "func observe<T>(x &T) { }\n",
-      "exported func main() int {\n",
-      "  arr = Array<int>(3);\n",
-      "  ref = &arr[0];\n",
-      "  churn_ellipsis(&arr);\n",
-      "  observe(ref);\n",
-      "  return 0;\n",
-      "}\n",
-    ),
-    r#"At test:0.vale:9:11:
+    r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+func churn_ellipsis<r'>(a &[]int in r) mut(r...) { }
+func observe<T>(x &T) { }
+exported func main() int {
+  arr = Array<int>(3);
+  ref = &arr[0];
+  churn_ellipsis(&arr);
+  observe(ref);
+  return 0;
+}
+"#,
+    r#"At test:0.vale:10:11:
   observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,
@@ -102,19 +102,19 @@ ref references an array element, which a preceding churn of its group may have m
 // `mut(r...)` churns exactly `mut(r)`: a reference to the whole array (group r itself) survives.
 #[test]
 fn test_ellipsis_effect_spares_whole_array() {
-  assert_compiles_clean_with_arrays(concat!(
-    "import v.builtins.arrays.*;\n",
-    "import v.builtins.drop.*;\n",
-    "func churn_ellipsis<r'>(a &[]int in r) mut(r...) { }\n",
-    "func observe<T>(x &T) { }\n",
-    "exported func main() int {\n",
-    "  arr = Array<int>(3);\n",
-    "  whole = &arr;\n",
-    "  churn_ellipsis(&arr);\n",
-    "  observe(whole);\n",
-    "  return 0;\n",
-    "}\n",
-  ));
+  assert_compiles_clean_with_arrays(r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+func churn_ellipsis<r'>(a &[]int in r) mut(r...) { }
+func observe<T>(x &T) { }
+exported func main() int {
+  arr = Array<int>(3);
+  whole = &arr;
+  churn_ellipsis(&arr);
+  observe(whole);
+  return 0;
+}
+"#);
 }
 
 // S1: a churn of an *ancestor* group invalidates a deeper ellipsis reference. `&int in r[]...` points
@@ -122,21 +122,21 @@ fn test_ellipsis_effect_spares_whole_array() {
 #[test]
 fn test_ancestor_churn_invalidates_nested_ellipsis() {
   assert_borrow_error_renders_with_arrays(
-    concat!(
-      "import v.builtins.arrays.*;\n",
-      "import v.builtins.drop.*;\n",
-      "func churn<r'>(a &[]int in r) mut(r) { }\n",
-      "func peek_deep<r'>(a &[]int in r) &int in r[]... { return &a[0]; }\n",
-      "func observe<T>(x &T) { }\n",
-      "exported func main() int {\n",
-      "  arr = Array<int>(3);\n",
-      "  ref = peek_deep(&arr);\n",
-      "  churn(&arr);\n",
-      "  observe(ref);\n",
-      "  return 0;\n",
-      "}\n",
-    ),
-    r#"At test:0.vale:10:11:
+    r#"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+func churn<r'>(a &[]int in r) mut(r) { }
+func peek_deep<r'>(a &[]int in r) &int in r[]... { return &a[0]; }
+func observe<T>(x &T) { }
+exported func main() int {
+  arr = Array<int>(3);
+  ref = peek_deep(&arr);
+  churn(&arr);
+  observe(ref);
+  return 0;
+}
+"#,
+    r#"At test:0.vale:11:11:
   observe(ref);
 ref references an array element, which a preceding churn of its group may have moved or deleted, so it can't be used here.
 "#,

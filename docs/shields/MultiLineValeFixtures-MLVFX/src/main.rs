@@ -14,6 +14,30 @@ const VALE_KEYWORDS: &[&str] = &[
 const VIOLATION_MSG: &str =
     "One-line raw string with embedded Vale source; break the fixture into a multi-line raw string.";
 
+const CONCAT_VIOLATION_MSG: &str =
+    "Vale fixture built with `concat!(\"...\\n\", ...)`; use a multi-line raw string instead.";
+
+/// True when `line` invokes the `concat!` macro (a word-boundary `concat!` token).
+fn line_invokes_concat(line: &str) -> bool {
+    let bytes = line.as_bytes();
+    let needle = b"concat!";
+    let mut i = 0;
+    while i + needle.len() <= bytes.len() {
+        if &bytes[i..i + needle.len()] == needle && (i == 0 || !is_ident_char(bytes[i - 1])) {
+            return true;
+        }
+        i += 1;
+    }
+    false
+}
+
+/// True when `line` is a Rust string-literal fragment carrying Vale source — the shape of a
+/// `concat!` fixture's arguments, e.g. `    "func main() { }\n",`.
+fn is_vale_fragment_line(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    trimmed.starts_with('"') && body_contains_vale_keyword(trimmed)
+}
+
 /// Scan `line` for raw-string literals whose opening and closing delimiters both
 /// appear on this line. For each such literal, yields the string body (the text
 /// between the delimiters, exclusive).
@@ -137,6 +161,10 @@ fn body_has_nonempty_block(body: &str) -> bool {
 fn run(input: &ProgramInput) -> Vec<String> {
     let lines = parse_diff(&input.diff);
     let mut violations = Vec::new();
+    // A `concat!` fixture and its Vale string fragments land on different added lines, so
+    // detecting it means gathering these two flags across the scan rather than per-line.
+    let mut saw_concat = false;
+    let mut saw_vale_fragment = false;
     for (i, line) in lines.iter().enumerate() {
         let DiffLine::Added(content) = line else { continue };
         let trimmed = content.trim_start();
@@ -151,7 +179,17 @@ fn run(input: &ProgramInput) -> Vec<String> {
                 violations.push(VIOLATION_MSG.to_string());
             }
         }
+        if line_invokes_concat(content) {
+            saw_concat = true;
+        }
+        if is_vale_fragment_line(content) {
+            saw_vale_fragment = true;
+        }
     }
+    if saw_concat && saw_vale_fragment {
+        violations.push(CONCAT_VIOLATION_MSG.to_string());
+    }
+
     violations
 }
 
@@ -235,5 +273,31 @@ mod tests {
             "-let code = r#\"exported func main() int { return 42; }\"#;\n",
         ));
         assert!(violations.is_empty(), "Removed lines produced {:?}", violations);
+    }
+
+    #[test]
+    fn concat_vale_fixture_fires() {
+        assert_deny(concat!(
+            "+  let code = concat!(\n",
+            "+    \"import v.builtins.tup0.*;\\n\",\n",
+            "+    \"func main() { }\\n\",\n",
+            "+  );\n",
+        ));
+    }
+
+    #[test]
+    fn concat_without_vale_source_is_allowed() {
+        assert_allow("+  let path = concat!(env!(\"OUT_DIR\"), \"/generated.rs\");\n");
+    }
+
+    #[test]
+    fn concat_in_block_comment_is_ignored() {
+        assert_allow(concat!(
+            "+/*\n",
+            "+  let code = concat!(\n",
+            "+    \"func main() { }\\n\",\n",
+            "+  );\n",
+            "+*/\n",
+        ));
     }
 }
