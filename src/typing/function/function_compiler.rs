@@ -179,7 +179,7 @@ where
         self.typing_interner,
       );
       let closure_struct_ref: StructTT<'s, 't> = match lookup_result {
-        Some(ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(s) })) => **s,
+        Some(ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(s) })) => *s,
         _ => {
           panic!("Unimplemented: evaluateTemplatedFunctionFromCallForPrototype lookup failed");
           // vassertSome(...) — pattern that would vfail on absence

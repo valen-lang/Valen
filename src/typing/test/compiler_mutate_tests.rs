@@ -810,7 +810,7 @@ fn humanize_errors() {
     &line_containing,
     ICompileErrorT::CantImplNonInterface {
       range: tz_slice,
-      templata: ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: firefly_kind }))
+      templata: ITemplataT::Kind(KindTemplataT { kind: firefly_kind })
     }
   )
   .is_empty());

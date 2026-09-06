@@ -270,7 +270,7 @@ where
       entries.push((
         e_rune_name_t,
         IEnvEntryT::Templata(ITemplataT::Kind(
-          self.typing_interner.alloc(KindTemplataT { kind: element_type }),
+          KindTemplataT { kind: element_type },
         )),
       ));
     }
@@ -601,7 +601,7 @@ where
     );
 
     let element_placeholder_templata =
-      ITemplataT::Kind(self.typing_interner.alloc(element_placeholder));
+      ITemplataT::Kind(element_placeholder);
     let placeholders = [size_placeholder, element_placeholder_templata];
     // val id = templateId.copy(localName = templateId.localName.makeCitizenName(interner, placeholders))
     let local_name = template_name.make_citizen_name(self.typing_interner, &placeholders);
@@ -729,7 +729,7 @@ where
 
     // val placeholders = Vector(elementPlaceholder)
     let element_placeholder_templata =
-      ITemplataT::Kind(self.typing_interner.alloc(element_placeholder));
+      ITemplataT::Kind(element_placeholder);
     let placeholders = [element_placeholder_templata];
     // val id = templateId.copy(localName = templateId.localName.makeCitizenName(interner, placeholders))
     let local_name = template_name.make_citizen_name(self.typing_interner, &placeholders);

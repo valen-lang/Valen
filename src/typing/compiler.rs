@@ -149,7 +149,7 @@ where
     templata: ITemplataT<'s, 't>,
   ) {
     match templata {
-      ITemplataT::Kind(KindTemplataT { kind }) => self.get_placeholders_in_kind(accum, *kind),
+      ITemplataT::Kind(KindTemplataT { kind }) => self.get_placeholders_in_kind(accum, kind),
       ITemplataT::Placeholder(PlaceholderTemplataT { id, .. }) => accum.push(*id),
       ITemplataT::Integer(_) => {}
       ITemplataT::Boolean(_) => {}
@@ -832,7 +832,7 @@ where
       let prim = INameT::Primitive(
         self.typing_interner.intern_primitive_name(PrimitiveNameT { human_name: *human_name }),
       );
-      let kind_t = ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *kind }));
+      let kind_t = ITemplataT::Kind(KindTemplataT { kind: *kind });
       builtins_builder.name_to_entry.push((prim, IEnvEntryT::Templata(kind_t)));
       if let Some(imprecise) = get_imprecise_name(self.scout_arena, prim) {
         builtins_builder

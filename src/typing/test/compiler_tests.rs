@@ -1,3 +1,4 @@
+use std::mem::size_of;
 use super::compiler_test_compilation::compiler_test_compilation;
 use crate::builtins::builtins::{
   builtin_source_bundle, builtin_source_for_arith, builtin_source_for_arrays, builtin_source_for_as,
@@ -1633,7 +1634,7 @@ func main(a &MyOption<int>) { }
       human_namee: scout_arena.intern_str("MyOption"),
     });
   let template_args_vec = vec![ITemplataT::Kind(
-    compile.typing_interner.alloc(KindTemplataT { kind: KindT::Int(IntT { bits: 32 }) }),
+    KindTemplataT { kind: KindT::Int(IntT { bits: 32 }) },
   )];
   let interface_name = compile.typing_interner.intern_interface_name(InterfaceNameValT {
     template: interface_template_name,
@@ -4991,7 +4992,7 @@ fn humanize_errors() {
     &line_containing,
     ICompileErrorT::CantImplNonInterface {
       range: tz_slice,
-      templata: ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: firefly_kind }))
+      templata: ITemplataT::Kind(KindTemplataT { kind: firefly_kind })
     }
   )
   .is_empty());
@@ -5110,7 +5111,7 @@ fn humanize_errors() {
     scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: scout_arena.intern_str("X") }));
   let mut step_conclusions = HashMap::default();
   step_conclusions
-    .insert(x_rune, ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: firefly_kind })));
+    .insert(x_rune, ITemplataT::Kind(KindTemplataT { kind: firefly_kind }));
   assert!(!humanize(
     &scout_arena,
     &typing_interner,
@@ -6822,4 +6823,10 @@ exported func main() {
     &code_source,
   );
   let _coutputs = compile.expect_compiler_outputs();
+}
+
+#[test]
+fn guard_itemplata_size() {
+  assert_eq!(size_of::<KindTemplataT>(), 16, "KindTemplataT size changed");
+  assert_eq!(size_of::<ITemplataT>(), 24, "ITemplataT size changed");
 }

@@ -2326,7 +2326,7 @@ where
       call_range_t,
       call_location,
       interface_templata,
-      &[ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_coord }))],
+      &[ITemplataT::Kind(KindTemplataT { kind: contained_coord })],
     ) {
       IResolveOutcome::ResolveSuccess(s) => s.kind,
       _ => panic!("vfail"),
@@ -2353,7 +2353,7 @@ where
       call_location,
       IInDenizenEnvironmentT::from(nenv),
       some_constructor_templata,
-      &[ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_coord }))],
+      &[ITemplataT::Kind(KindTemplataT { kind: contained_coord })],
       context_region,
       &[contained_coord],
       &[],
@@ -2382,7 +2382,7 @@ where
       call_location,
       IInDenizenEnvironmentT::from(nenv),
       none_constructor_templata,
-      &[ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_coord }))],
+      &[ITemplataT::Kind(KindTemplataT { kind: contained_coord })],
       context_region,
       &[],
       &[],
@@ -2454,10 +2454,8 @@ where
       call_location,
       interface_templata,
       &[
-        ITemplataT::Kind(
-          self.typing_interner.alloc(KindTemplataT { kind: contained_success_coord }),
-        ),
-        ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_fail_coord })),
+        ITemplataT::Kind(KindTemplataT { kind: contained_success_coord }),
+        ITemplataT::Kind(KindTemplataT { kind: contained_fail_coord }),
       ],
     ) {
       IResolveOutcome::ResolveSuccess(s) => s.kind,
@@ -2486,10 +2484,8 @@ where
       IInDenizenEnvironmentT::from(nenv),
       ok_constructor_templata,
       &[
-        ITemplataT::Kind(
-          self.typing_interner.alloc(KindTemplataT { kind: contained_success_coord }),
-        ),
-        ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_fail_coord })),
+        ITemplataT::Kind(KindTemplataT { kind: contained_success_coord }),
+        ITemplataT::Kind(KindTemplataT { kind: contained_fail_coord }),
       ],
       region,
       &[contained_success_coord],
@@ -2535,10 +2531,8 @@ where
       IInDenizenEnvironmentT::from(nenv),
       err_constructor_templata,
       &[
-        ITemplataT::Kind(
-          self.typing_interner.alloc(KindTemplataT { kind: contained_success_coord }),
-        ),
-        ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: contained_fail_coord })),
+        ITemplataT::Kind(KindTemplataT { kind: contained_success_coord }),
+        ITemplataT::Kind(KindTemplataT { kind: contained_fail_coord }),
       ],
       region,
       &[contained_fail_coord],

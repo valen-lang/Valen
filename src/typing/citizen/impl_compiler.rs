@@ -525,9 +525,7 @@ where
     let initial_knowns = vec![InitialKnown {
       rune: impl_a.interface_kind_rune,
       templata: ITemplataT::Kind(
-        self
-          .typing_interner
-          .alloc(KindTemplataT { kind: KindT::Interface(self.typing_interner.alloc(interface)) }),
+        KindTemplataT { kind: KindT::Interface(self.typing_interner.alloc(interface)) },
       ),
     }];
     let partial_case_conclusions = match self.partial_resolve_impl(
@@ -595,7 +593,7 @@ where
     let initial_knowns = vec![InitialKnown {
       rune: impl_a.struct_kind_rune,
       templata: ITemplataT::Kind(
-        self.typing_interner.alloc(KindTemplataT { kind: KindT::from(child) }),
+        KindTemplataT { kind: KindT::from(child) },
       ),
     }];
     let _child_env =
@@ -802,13 +800,13 @@ where
           InitialKnown {
             rune: impl_a.struct_kind_rune,
             templata: ITemplataT::Kind(
-              self.typing_interner.alloc(KindTemplataT { kind: KindT::from(sub_kind_tt) }),
+              KindTemplataT { kind: KindT::from(sub_kind_tt) },
             ),
           },
           InitialKnown {
             rune: impl_a.interface_kind_rune,
             templata: ITemplataT::Kind(
-              self.typing_interner.alloc(KindTemplataT { kind: KindT::from(super_kind_tt) }),
+              KindTemplataT { kind: KindT::from(super_kind_tt) },
             ),
           },
         ];

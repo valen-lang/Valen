@@ -76,7 +76,7 @@ where
       .collect();
     let uncoerced_template_args: Vec<ITemplataT<'s, 't>> = types
       .iter()
-      .map(|c| ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *c })))
+      .map(|c| ITemplataT::Kind(KindTemplataT { kind: *c }))
       .collect();
     match self.resolve_struct(
       coutputs,

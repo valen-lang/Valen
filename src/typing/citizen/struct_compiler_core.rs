@@ -451,9 +451,7 @@ where
         (
           understruct_instantiated_name_t,
           IEnvEntryT::Templata(ITemplataT::Kind(
-            self
-              .typing_interner
-              .alloc(KindTemplataT { kind: KindT::Struct(understruct_struct_tt) }),
+            KindTemplataT { kind: KindT::Struct(understruct_struct_tt) },
           )),
         ),
         (
@@ -461,9 +459,7 @@ where
             loct: closure_life.add(self.typing_interner, 0),
           })),
           IEnvEntryT::Templata(ITemplataT::Kind(
-            self
-              .typing_interner
-              .alloc(KindTemplataT { kind: KindT::Struct(understruct_struct_tt) }),
+            KindTemplataT { kind: KindT::Struct(understruct_struct_tt) },
           )),
         ),
       ],

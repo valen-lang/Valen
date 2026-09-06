@@ -260,11 +260,11 @@ where
         self.typing_interner.alloc(PlaceholderTemplataT { id: placeholder_id, tyype: pt.tyype }),
       ),
       ITemplataT::Kind(kt) => match kt.kind {
-        KindT::KindPlaceholder(_) => ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
+        KindT::KindPlaceholder(_) => ITemplataT::Kind(KindTemplataT {
           kind: KindT::KindPlaceholder(
             self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id }),
           ),
-        })),
+        }),
         _ => panic!("vwat: create_override_placeholder_mimicking unexpected kind"),
       },
       other => {
@@ -440,7 +440,7 @@ where
       .iter()
       .filter_map(|gp| {
         dispatcher_inner_inferences.get(&gp.rune.rune).and_then(|templata| match *templata {
-          ITemplataT::Kind(&KindTemplataT {
+          ITemplataT::Kind(KindTemplataT {
             kind: KindT::KindPlaceholder(&KindPlaceholderT { id }),
             ..
           }) => {
@@ -537,9 +537,9 @@ where
           let mut knowns =
             vec![InitialKnown {
               rune: RuneUsage { range, rune: impl_a.interface_kind_rune.rune },
-              templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
+              templata: ITemplataT::Kind(KindTemplataT {
                 kind: KindT::Interface(dispatcher_placeholdered_interface),
-              })),
+              }),
             }];
           for (rune, templata) in impl_independent_rune_to_case_placeholder.iter() {
             knowns
@@ -682,9 +682,7 @@ where
         let mut knowns = vec![InitialKnown {
           rune: RuneUsage { range, rune: impl_a.interface_kind_rune.rune },
           templata: ITemplataT::Kind(
-            self
-              .typing_interner
-              .alloc(KindTemplataT { kind: KindT::Interface(dispatcher_placeholdered_interface) }),
+            KindTemplataT { kind: KindT::Interface(dispatcher_placeholdered_interface) },
           ),
         }];
         for (rune, templata) in impl_independent_rune_to_case_placeholder.iter() {

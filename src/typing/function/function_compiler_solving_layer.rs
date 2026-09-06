@@ -1146,7 +1146,7 @@ where
               sender_rune,
               receiver_rune: param_full_type_rune,
               send_templata: ITemplataT::Kind(
-                self.typing_interner.alloc(KindTemplataT { kind: peeled_arg }),
+                KindTemplataT { kind: peeled_arg },
               ),
             })
           }
@@ -1214,7 +1214,7 @@ where
         sender_rune,
         receiver_rune: param.value_type_rune,
         send_templata: ITemplataT::Kind(
-          self.typing_interner.alloc(KindTemplataT { kind: send_kind }),
+          KindTemplataT { kind: send_kind },
         ),
       });
     }

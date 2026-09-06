@@ -368,7 +368,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
     let template_args: Vec<ITemplataT<'s, 't>> = args
       .types()
       .map(|arg| {
-        Ok(ITemplataT::Kind(interner.alloc(KindTemplataT { kind: self.lower_ty(arg, interner)? })))
+        Ok(ITemplataT::Kind(KindTemplataT { kind: self.lower_ty(arg, interner)? }))
       })
       .collect::<Result<Vec<_>, CouldNotPostparseReason>>()?;
     let template_args = interner.alloc_slice_from_vec(template_args);

@@ -353,9 +353,9 @@ where
       .collect();
     let entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = vec![(
       closure_struct_ref.id.local_name,
-      IEnvEntryT::Templata(ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
+      IEnvEntryT::Templata(ITemplataT::Kind(KindTemplataT {
         kind: KindT::Struct(self.typing_interner.alloc(closure_struct_ref)),
-      }))),
+      })),
     )];
     (variables, entries)
   }

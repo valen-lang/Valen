@@ -1043,7 +1043,7 @@ where
     templata: ITemplataT<'s, 't>,
   ) -> ITemplataT<'s, 't> {
     match templata {
-      ITemplataT::Kind(c) => ITemplataT::Kind(interner.alloc(KindTemplataT {
+      ITemplataT::Kind(c) => ITemplataT::Kind(KindTemplataT {
         kind: Compiler::substitute_templatas_in_kind(
           coutputs,
           sanity_check,
@@ -1055,7 +1055,7 @@ where
           bound_arguments_source,
           c.kind,
         ),
-      })),
+      }),
       ITemplataT::Placeholder(p) => {
         let pn = IPlaceholderNameT::try_from(p.id.local_name).unwrap();
         if p.id.init_id(interner) == needle_template_name {
@@ -1822,14 +1822,14 @@ where
     let rune = generic_param.rune.rune;
     match rune_type {
       ITemplataType::KindTemplataType(_) => {
-        ITemplataT::Kind(self.typing_interner.alloc(self.create_kind_placeholder_inner(
+        ITemplataT::Kind(self.create_kind_placeholder_inner(
           coutputs,
           env,
           name_prefix,
           index,
           rune,
           register_with_compiler_outputs,
-        )))
+        ))
       }
       // Per BCHATZ, generate an empty group templata, because typing pass doesn't know about
       // borrowing.

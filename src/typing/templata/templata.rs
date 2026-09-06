@@ -60,7 +60,7 @@ fn expect_kind<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
 
 pub fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'s, 't> {
   match templata {
-    ITemplataT::Kind(t) => *t,
+    ITemplataT::Kind(t) => t,
     other => panic!("vfail: {:?}", other),
   }
 }
@@ -68,7 +68,7 @@ pub fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplat
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplataT<'s, 't> {
-  Kind(&'t KindTemplataT<'s, 't>),
+  Kind(KindTemplataT<'s, 't>),
   Placeholder(&'t PlaceholderTemplataT<'s, 't>),
   Integer(i64),
   Boolean(bool),

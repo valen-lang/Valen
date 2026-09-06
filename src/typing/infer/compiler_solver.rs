@@ -524,7 +524,7 @@ where
                         // };
                         // let mut conclusions = IndexMap::default();
                         // conclusions.insert(cc.ownership_rune.rune, ITemplataT::Ownership(OwnershipTemplataT { ownership: coord.ownership }));
-                        // conclusions.insert(cc.kind_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: coord.kind })));
+                        // conclusions.insert(cc.kind_rune.rune, ITemplataT::Kind(KindTemplataT { kind: coord.kind }));
                         // match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             // Ok(_) => Ok(()),
                             // Err(e) => {
@@ -634,7 +634,7 @@ where
                                 let return_type = stamp_result.prototype.return_type;
                                 let mut conclusions = IndexMap::default();
                                 conclusions.insert(resolve.result_rune.rune, ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: stamp_result.prototype })));
-                                conclusions.insert(resolve.return_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: return_type })));
+                                conclusions.insert(resolve.return_rune.rune, ITemplataT::Kind(KindTemplataT { kind: return_type }));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => Ok(()),
                                     Err(e) => {
@@ -658,7 +658,7 @@ where
                         let prototype = proto_templata.prototype;
                         let mut conclusions = IndexMap::default();
                         conclusions.insert(csf.params_list_rune.rune, ITemplataT::CoordList(self.typing_interner.alloc(KindListTemplataT { kinds: prototype.param_types() })));
-                        conclusions.insert(csf.return_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: prototype.return_type })));
+                        conclusions.insert(csf.return_rune.rune, ITemplataT::Kind(KindTemplataT { kind: prototype.return_type }));
                         match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
@@ -1027,7 +1027,7 @@ where
                         // match coord.ownership {
                             // OwnershipT::Own | OwnershipT::Share => {
                                 // let mut conclusions = IndexMap::default();
-                                // conclusions.insert(r.kind_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: coord.kind })));
+                                // conclusions.insert(r.kind_rune.rune, ITemplataT::Kind(KindTemplataT { kind: coord.kind }));
                                 // let ranges: Vec<RangeS<'s>> = once(r.range).chain(env.parent_ranges.iter().copied()).collect();
                                 // let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 // match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
@@ -1246,14 +1246,14 @@ where
                         (Some(ITemplataT::Kind(KindTemplataT { kind: result_kind })), _) => {
                             match result_kind {
                                 KindT::BorrowRef(BorrowRefT { inner: result_inner_rune }) => {
-                                    conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT{ kind: *result_inner_rune})));
+                                    conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(KindTemplataT{ kind: *result_inner_rune}));
                                 }
-                                _ => return Err(ITypingPassSolverError::KindIsNotBorrowRef { kind: *result_kind }),
+                                _ => return Err(ITypingPassSolverError::KindIsNotBorrowRef { kind: result_kind }),
                             }
                         },
                         (_, Some(ITemplataT::Kind(KindTemplataT { kind: inner }))) => {
-                            let wrap = KindT::BorrowRef(self.typing_interner.alloc(BorrowRefT { inner: *inner}));
-                            conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: wrap })));
+                            let wrap = KindT::BorrowRef(self.typing_interner.alloc(BorrowRefT { inner }));
+                            conclusions.insert(r.result_rune.rune, ITemplataT::Kind(KindTemplataT { kind: wrap }));
                         },
                         _ => panic!("Neither result nor inner rune solved in BorrowRef"),
                     }
@@ -1273,14 +1273,14 @@ where
                       (Some(ITemplataT::Kind(KindTemplataT { kind: result_kind })), _) => {
                           match result_kind {
                               KindT::WeakRef(WeakRefT { inner: result_inner }) => {
-                                  conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *result_inner })));
+                                  conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(KindTemplataT { kind: *result_inner }));
                               }
-                              _ => return Err(ITypingPassSolverError::KindIsNotWeakRef { kind: *result_kind }),
+                              _ => return Err(ITypingPassSolverError::KindIsNotWeakRef { kind: result_kind }),
                           }
                       },
                       (_, Some(ITemplataT::Kind(KindTemplataT { kind: inner }))) => {
-                          let wrap = KindT::WeakRef(self.typing_interner.alloc(WeakRefT { inner: *inner }));
-                          conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: wrap })));
+                          let wrap = KindT::WeakRef(self.typing_interner.alloc(WeakRefT { inner }));
+                          conclusions.insert(r.result_rune.rune, ITemplataT::Kind(KindTemplataT { kind: wrap }));
                       },
                       _ => panic!("Neither result nor inner rune solved in WeakRef"),
                   }
@@ -1300,14 +1300,14 @@ where
                       (Some(ITemplataT::Kind(KindTemplataT { kind: result_kind })), _) => {
                           match result_kind {
                               KindT::OwnRef(OwnRefT { inner: result_inner }) => {
-                                  conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *result_inner })));
+                                  conclusions.insert(r.inner_rune.rune, ITemplataT::Kind(KindTemplataT { kind: *result_inner }));
                               }
-                              _ => return Err(ITypingPassSolverError::KindIsNotOwnRef { kind: *result_kind }),
+                              _ => return Err(ITypingPassSolverError::KindIsNotOwnRef { kind: result_kind }),
                           }
                       },
                       (_, Some(ITemplataT::Kind(KindTemplataT { kind: inner }))) => {
-                          let wrap = KindT::OwnRef(self.typing_interner.alloc(OwnRefT { inner: *inner }));
-                          conclusions.insert(r.result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: wrap })));
+                          let wrap = KindT::OwnRef(self.typing_interner.alloc(OwnRefT { inner }));
+                          conclusions.insert(r.result_rune.rune, ITemplataT::Kind(KindTemplataT { kind: wrap }));
                       },
                       _ => panic!("Neither result nor inner rune solved in OwnRef"),
                   }
@@ -1331,7 +1331,7 @@ where
                             r.members.iter().zip(list.kinds.iter())
                                 .map(|(member_rune, kind)| (
                                     member_rune.rune,
-                                    ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *kind }))))
+                                    ITemplataT::Kind(KindTemplataT { kind: *kind })))
                                 .collect()
                         }
                         Some(other) => panic!("KindList result concluded {:?}, expected a kind list", other),
@@ -1339,7 +1339,7 @@ where
                             let members: Vec<KindT<'s, 't>> =
                                 r.members.iter()
                                     .map(|member_rune| match solver_state.get_conclusion(&member_rune.rune) {
-                                        Some(ITemplataT::Kind(KindTemplataT { kind })) => *kind,
+                                        Some(ITemplataT::Kind(KindTemplataT { kind })) => kind,
                                         Some(other) => panic!("KindList member concluded {:?}, expected a kind", other),
                                         None => panic!("Neither the list nor all its members are solved in KindList"),
                                     })
@@ -1453,7 +1453,7 @@ where
                                 }
                                 let element_rune = arg_runes[0];
                                 let mut conclusions = IndexMap::default();
-                                conclusions.insert(element_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: rsa_tt.element_type() })));
+                                conclusions.insert(element_rune.rune, ITemplataT::Kind(KindTemplataT { kind: rsa_tt.element_type() }));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
@@ -1480,7 +1480,7 @@ where
                                 let element_rune = arg_runes[1];
                                 let mut conclusions = IndexMap::default();
                                 conclusions.insert(size_rune.rune, ssa_tt.size());
-                                conclusions.insert(element_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: ssa_tt.element_type() })));
+                                conclusions.insert(element_rune.rune, ITemplataT::Kind(KindTemplataT { kind: ssa_tt.element_type() }));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
@@ -1521,14 +1521,14 @@ where
             let mut conclusions = IndexMap::default();
             conclusions.insert(
               result_rune.rune,
-              ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
+              ITemplataT::Kind(KindTemplataT {
                 kind:
                   KindT::RuntimeSizedArray(
                     self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT {
                       name: rsa_kind.name,
                     }),
                   ),
-              })),
+              }),
             );
             match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
               false,
@@ -1570,7 +1570,7 @@ where
             let mut conclusions = IndexMap::default();
             conclusions.insert(
               result_rune.rune,
-              ITemplataT::Kind(self.typing_interner.alloc(
+              ITemplataT::Kind(
                 KindTemplataT {
                   kind:
                     KindT::StaticSizedArray(
@@ -1579,7 +1579,7 @@ where
                       }),
                     ),
                 },
-              )),
+              ),
             );
             let ranges: Vec<RangeS<'s>> =
               once(range).chain(env.parent_ranges.iter().copied()).collect();
@@ -1618,11 +1618,11 @@ where
             let mut conclusions = IndexMap::default();
             conclusions.insert(
               result_rune.rune,
-              ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
+              ITemplataT::Kind(KindTemplataT {
                 kind: KindT::Struct(
                   self.typing_interner.intern_struct_tt(StructTTValT { id: *kind.id }),
                 ),
-              })),
+              }),
             );
             match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
               false,
@@ -1662,11 +1662,11 @@ where
             let mut conclusions = IndexMap::default();
             conclusions.insert(
               result_rune.rune,
-              ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
+              ITemplataT::Kind(KindTemplataT {
                 kind: KindT::Interface(
                   self.typing_interner.intern_interface_tt(InterfaceTTValT { id: *kind.id }),
                 ),
-              })),
+              }),
             );
             match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
               false,

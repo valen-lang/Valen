@@ -636,7 +636,7 @@ fn humanize_errors() {
     let mut conclusions = HashMap::default();
     conclusions.insert(
       rune_a,
-      ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: firefly_kind })),
+      ITemplataT::Kind(KindTemplataT { kind: firefly_kind }),
     );
     Step { complex: false, solved_rules: vec![], added_rules: vec![], conclusions }
   };
@@ -1310,7 +1310,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
           error:
             ISolverError::SolverConflict(SolverConflict {
               previous_conclusion:
-                ITemplataT::Kind(&KindTemplataT {
+                ITemplataT::Kind(KindTemplataT {
                   kind:
                     KindT::Struct(StructTT {
                       id:
@@ -1330,7 +1330,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
                     }),
                 }),
               new_conclusion:
-                ITemplataT::Kind(&KindTemplataT {
+                ITemplataT::Kind(KindTemplataT {
                   kind:
                     KindT::Struct(StructTT {
                       id:
@@ -1361,7 +1361,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
           error:
             ISolverError::SolverConflict(SolverConflict {
               previous_conclusion:
-                ITemplataT::Kind(&KindTemplataT {
+                ITemplataT::Kind(KindTemplataT {
                   kind:
                     KindT::Struct(StructTT {
                       id:
@@ -1381,7 +1381,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
                     }),
                 }),
               new_conclusion:
-                ITemplataT::Kind(&KindTemplataT {
+                ITemplataT::Kind(KindTemplataT {
                   kind:
                     KindT::Struct(StructTT {
                       id:
@@ -1414,7 +1414,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
               err:
                 ITypingPassSolverError::CallResultWasntExpectedType {
                   actual:
-                    ITemplataT::Kind(&KindTemplataT {
+                    ITemplataT::Kind(KindTemplataT {
                       kind:
                         KindT::Struct(StructTT {
                           id:
@@ -1449,7 +1449,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
               err:
                 ITypingPassSolverError::CallResultWasntExpectedType {
                   actual:
-                    ITemplataT::Kind(&KindTemplataT {
+                    ITemplataT::Kind(KindTemplataT {
                       kind:
                         KindT::Struct(StructTT {
                           id:
@@ -1486,7 +1486,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
                   err:
                     ISolverError::SolverConflict(SolverConflict {
                       previous_conclusion:
-                        ITemplataT::Kind(&KindTemplataT {
+                        ITemplataT::Kind(KindTemplataT {
                           kind:
                             KindT::Struct(StructTT {
                               id:
@@ -1506,7 +1506,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
                             }),
                         }),
                       new_conclusion:
-                        ITemplataT::Kind(&KindTemplataT {
+                        ITemplataT::Kind(KindTemplataT {
                           kind:
                             KindT::Struct(StructTT {
                               id:
@@ -1545,7 +1545,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
                   err:
                     ISolverError::SolverConflict(SolverConflict {
                       previous_conclusion:
-                        ITemplataT::Kind(&KindTemplataT {
+                        ITemplataT::Kind(KindTemplataT {
                           kind:
                             KindT::Struct(StructTT {
                               id:
@@ -1565,7 +1565,7 @@ exported func main<N>() where N = ShipA, N = ShipB {
                             }),
                         }),
                       new_conclusion:
-                        ITemplataT::Kind(&KindTemplataT {
+                        ITemplataT::Kind(KindTemplataT {
                           kind:
                             KindT::Struct(StructTT {
                               id:
@@ -1676,7 +1676,7 @@ exported func main() int {
   let last = *template_args.last().unwrap();
   assert_eq!(
     last,
-    ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: KindT::Int(IntT::I32) }))
+    ITemplataT::Kind(KindTemplataT { kind: KindT::Int(IntT::I32) })
   );
 }
 
