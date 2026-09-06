@@ -160,12 +160,6 @@ pub struct FloatT;
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct USizeT;
 
-fn unapply_contents_static_sized_array_tt() {
-  panic!("Unimplemented: unapply_contents_static_sized_array_tt");
-  // val IdT(_, _, StaticSizedArrayNameT(_, size, variability, RawArrayNameT(mutability, coord, selfRegion))) = ssa.name
-  // Some((size, mutability, variability, coord, selfRegion))
-}
-
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayTT<'s, 't> {
@@ -190,12 +184,6 @@ where
       _ => panic!("vwat"),
     }
   }
-}
-
-fn unapply_contents_runtime_sized_array_tt() {
-  panic!("Unimplemented: unapply_contents_runtime_sized_array_tt");
-  // val IdT(_, _, RuntimeSizedArrayNameT(_, RawArrayNameT(mutability, coord, selfRegion))) = rsa.name
-  // Some((mutability, coord, selfRegion))
 }
 
 /// Interning transient (see @TFITCX)

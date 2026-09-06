@@ -119,6 +119,12 @@ IRegion* GlobalState::getRegion(Kind* typeM) {
     return getRegion(never->regionId);
   } else if (auto str = dynamic_cast<Str*>(valueTypeM)) {
     return getRegion(str->regionId);
+  } else if (dynamic_cast<StaticSizedArrayT*>(valueTypeM) ||
+             dynamic_cast<RuntimeSizedArrayT*>(valueTypeM)) {
+    // SSAs/RSAs are always in the mut region (no immutable array kind exists),
+    // so resolve directly instead of requiring a per-kind registration that the
+    // owned-array-across-FFI path never performs.
+    return getRegion(metalCache->mutRegionId);
   } else {
     auto iter = regionIdByKind.find(valueTypeM);
     if (iter == regionIdByKind.end()) {

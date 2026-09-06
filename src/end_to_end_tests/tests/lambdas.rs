@@ -5,8 +5,7 @@ fn p(rel: &str) -> std::path::PathBuf {
 }
 
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn lambda()    { assert_compile_and_run(&p("programs/lambdas/lambda.vale"), 42); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: group-generic-closures — borrow checker can't derive a group for a closure-captured reference (borrow_types.rs:347)"]
 fn lambdamut() { assert_compile_and_run(&p("programs/lambdas/lambdamut.vale"), 42); }

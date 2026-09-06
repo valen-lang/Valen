@@ -264,9 +264,6 @@ pub fn humanize_rune<'s>(rune: IRuneS<'s>) -> String {
       panic!("implement: humanize_rune ExportDefaultRegionRune")
     }
     IRuneS::ArraySizeImplicitRune(_) => panic!("implement: humanize_rune ArraySizeImplicitRune"),
-    IRuneS::ArrayMutabilityImplicitRune(_) => {
-      panic!("implement: humanize_rune ArrayMutabilityImplicitRune")
-    }
     IRuneS::InterfaceNameRune(_) => panic!("implement: humanize_rune InterfaceNameRune"),
     IRuneS::LetImplicitRune(_) => panic!("implement: humanize_rune LetImplicitRune"),
     IRuneS::ExplicitTemplateArgRune(_) => {

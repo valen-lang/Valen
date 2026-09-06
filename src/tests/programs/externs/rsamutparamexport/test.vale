@@ -7,6 +7,6 @@ exported func getMutIntArrayLen(arr &[]int) int { __copy_prim(len(&arr)) }
 exported func getMutIntArrayElem(arr &[]int, i int) int { __copy_prim(arr[__copy_prim(i)]) }
 
 exported func main() int {
-  a = Array<int>(5, {_});
+  a = Array<int>(5, {^_});
   return sumBytes(&a);
 }

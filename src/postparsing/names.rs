@@ -917,7 +917,6 @@ pub enum IRuneS<'s> {
   ExternDefaultRegionRune(&'s ExternDefaultRegionRuneS<'s>),
   ImplicitCoercionTemplateRune(&'s ImplicitCoercionTemplateRuneS<'s>),
   ArraySizeImplicitRune(&'s ArraySizeImplicitRuneS),
-  ArrayMutabilityImplicitRune(&'s ArrayMutabilityImplicitRuneS),
   ReturnRune(&'s ReturnRuneS),
   StructNameRune(&'s StructNameRuneS<'s>),
   InterfaceNameRune(&'s InterfaceNameRuneS<'s>),
@@ -984,7 +983,6 @@ impl<'s> IRuneS<'s> {
       IRuneS::ExternDefaultRegionRune(r) => *r as *const _ as *const (),
       IRuneS::ImplicitCoercionTemplateRune(r) => *r as *const _ as *const (),
       IRuneS::ArraySizeImplicitRune(r) => *r as *const _ as *const (),
-      IRuneS::ArrayMutabilityImplicitRune(r) => *r as *const _ as *const (),
       IRuneS::ReturnRune(r) => *r as *const _ as *const (),
       IRuneS::StructNameRune(r) => *r as *const _ as *const (),
       IRuneS::InterfaceNameRune(r) => *r as *const _ as *const (),
@@ -1168,7 +1166,6 @@ pub enum IRuneValS<'s, 'tmp> {
   ExternDefaultRegionRune(ExternDefaultRegionRuneS<'s>),
   ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS<'s>),
   ArraySizeImplicitRune(ArraySizeImplicitRuneS),
-  ArrayMutabilityImplicitRune(ArrayMutabilityImplicitRuneS),
   ReturnRune(ReturnRuneS),
   StructNameRune(StructNameRuneS<'s>),
   InterfaceNameRune(InterfaceNameRuneS<'s>),
@@ -1255,7 +1252,6 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
       (ExternDefaultRegionRune(a), ExternDefaultRegionRune(b)) => a == b,
       (ImplicitCoercionTemplateRune(a), ImplicitCoercionTemplateRune(b)) => a == b,
       (ArraySizeImplicitRune(a), ArraySizeImplicitRune(b)) => a == b,
-      (ArrayMutabilityImplicitRune(a), ArrayMutabilityImplicitRune(b)) => a == b,
       (ReturnRune(a), ReturnRune(b)) => a == b,
       (StructNameRune(a), StructNameRune(b)) => a == b,
       (InterfaceNameRune(a), InterfaceNameRune(b)) => a == b,
@@ -1412,9 +1408,6 @@ pub struct ImplicitCoercionTemplateRuneS<'s> {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ArraySizeImplicitRuneS {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ArrayMutabilityImplicitRuneS {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ReturnRuneS {}

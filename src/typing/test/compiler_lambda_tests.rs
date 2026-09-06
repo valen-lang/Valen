@@ -135,6 +135,39 @@ exported func main() int { a = 7; return { a }(); }
   );
 }
 
+// Repro of the end_to_end `arrays::ssamutdestroyintocallable` failure, reduced to the
+// typing pass: mutating a closure-captured variable (`set sum` inside a lambda that
+// captured `sum`) should compile. The typing pass now lowers the mutation (mirroring the
+// read path in `evaluate_addressible_lookup_for_mutate`), but the borrow checker cannot yet
+// derive a group for a closure-captured reference — the deferred group-generic-closures
+// feature (docs/plans/group-generic-closures-plan.md, borrow_types.rs ~347). This is a live
+// repro: it panics in the borrow checker until that feature lands, at which point
+// `expect_compiler_outputs` should succeed and this becomes a passing regression test.
+// Ignored for now (the feature is a large deferred piece); un-ignore when it lands.
+#[test]
+#[ignore = "deferred: group-generic-closures — borrow checker can't derive a group for a closure-captured reference (borrow_types.rs:347)"]
+fn mutate_captured_variable_compiles() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "\nexported func main() int {\n  sum = 0;\n  { set sum = 5; }();\n  return sum;\n}\n";
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let _ = compile.expect_compiler_outputs();
+}
+
 // VCOORD: enable this
 #[test]
 fn lambda_is_reused() {

@@ -7,14 +7,14 @@ fn p(rel: &str) -> std::path::PathBuf {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: interface/upcast/downcast"]
 fn downcastBorrowSuccessful() { assert_compile_and_run(&p("programs/downcast/downcastBorrowSuccessful.vale"), 42); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: interface/upcast/downcast"]
 fn downcastBorrowFailed()     { assert_compile_and_run(&p("programs/downcast/downcastBorrowFailed.vale"), 42); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: interface/upcast/downcast"]
 fn downcastOwningSuccessful() { assert_compile_and_run(&p("programs/downcast/downcastOwningSuccessful.vale"), 42); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: interface/upcast/downcast"]
 fn downcastOwningFailed()     { assert_compile_and_run(&p("programs/downcast/downcastOwningFailed.vale"), 42); }

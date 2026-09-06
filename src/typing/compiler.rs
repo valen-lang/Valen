@@ -2031,7 +2031,9 @@ where
       [] => panic!("Shouldn't have zero-element consecutors!"),
       [only] => *only,
       _ => {
-        let flattened: Vec<ExpressionTE<'s, 't>> = exprs
+        // An "init void" is a void that appears somewhere as the non-last expression.
+        // A "post-never" is an expression that appears after a never.
+        let flattened_with_init_voids_and_post_nevers: Vec<ExpressionTE<'s, 't>> = exprs
           .iter()
           .flat_map(|e| match e {
             ExpressionTE::Consecutor(c) => c.exprs.to_vec(),
@@ -2039,19 +2041,28 @@ where
           })
           .collect();
 
-        let without_init_voids: Vec<ExpressionTE<'s, 't>> = {
-          let (init, last) = flattened.split_at(flattened.len() - 1);
+        let flattened_with_post_nevers: Vec<ExpressionTE<'s, 't>> = {
+          let (init, last) = flattened_with_init_voids_and_post_nevers.split_at(flattened_with_init_voids_and_post_nevers.len() - 1);
           let mut filtered: Vec<ExpressionTE<'s, 't>> =
             init.iter().filter(|e| !matches!(e, ExpressionTE::VoidLiteral(_))).copied().collect();
           filtered.push(last[0]);
           filtered
         };
 
-        match without_init_voids.as_slice() {
+        let flattened: Vec<ExpressionTE<'s, 't>> = {
+          let last_expr =
+            match flattened_with_post_nevers.iter().position(|e| matches!(e.result(), KindT::Never(_))) {
+              Some(never_idx) => never_idx, // Last expr should be the never.
+              None => flattened_with_post_nevers.len() - 1, // Last expr should be the existing last expr.
+            };
+          flattened_with_post_nevers[..=last_expr].to_vec()
+        };
+
+        match flattened.as_slice() {
           [] => panic!("Shouldn't have zero-element consecutors!"),
           [only] => *only,
           _ => {
-            let exprs_slice = self.typing_interner.alloc_slice_copy(&without_init_voids);
+            let exprs_slice = self.typing_interner.alloc_slice_copy(&flattened);
             ExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE::new(range, exprs_slice)))
           }
         }

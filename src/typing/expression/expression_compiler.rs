@@ -135,10 +135,7 @@ where
         Ok(Some(lookup_te_decayed))
       }
       Some(IVariableT::Capture(rcv)) => {
-        // A captured variable lives in the closure struct, reached through the closure `self` param.
-        // Borrow `self` (LocalLookup -> `&Closure`), then member-access the capture (MemberLookup ->
-        // `&<member kind>`). The member is itself a borrow, so this is a genuine `&&`, decayed back
-        // to a single borrow the same way the local-load path above does.
+        // VCOORD: dedup the below, we do the same thing for mutate
         let closure_param_imprecise = IImpreciseNameS::ClosureParamImpreciseName(
           self.scout_arena.intern_closure_param_imprecise_name(),
         );
@@ -238,52 +235,27 @@ where
         self.typing_interner.alloc(LocalLookupTE::new(self.typing_interner, load_range, rlv)),
       )),
       Some(IVariableT::Capture(acv)) => {
-        // let closured_vars_struct_ref = *acv.closured_vars_struct_type;
-        // let closured_vars_struct_template_id = self.get_struct_template(closured_vars_struct_ref.id);
-        // let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
-        //     INameT::LambdaCitizenTemplate(n) => n,
-        //     _ => panic!("evaluate_addressible_lookup_for_mutate AddressibleClosure: expected LambdaCitizenTemplateNameT"),
-        // };
-        // // VCOORD: this might need to go away
-        // let closured_vars_struct_ref_coord = KindT::BorrowRef(BorrowRefT{ region: RegionT::Default, inner: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) });
-        // let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location}));
-        // let borrow_expr = self.borrow_soft_load(coutputs, ExpressionTE::LocalLookup(self.typing_interner.alloc(
-        //     LocalLookupTE::new(self.typing_interner, load_range, LocalVariable { name: closure_param_var_name_2, tyype: closured_vars_struct_ref_coord }))));
-        // let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
-        // assert!(closured_vars_struct_def.members.iter().any(|m| m.name == acv.name));
-        // Some(ExpressionTE::AddressMemberLookup(self.typing_interner.alloc(
-        //     AddressMemberLookupTE::new(self.typing_interner, load_range, borrow_expr, acv.name, acv.coord))))
-        panic!("unimplemented!");
-      }
-      Some(IVariableT::Capture(_)) => {
-        panic!("implement: evaluate_addressible_lookup_for_mutate — ReferenceClosureVariableT");
-        // val closuredVarsStructId = closuredVarsStructRef.id
-        // val closuredVarsStructTemplateId =
-        //   TemplataCompiler.getStructTemplate(closuredVarsStructId)
-        // val closuredVarsStructTemplateName =
-        //   closuredVarsStructTemplateId.localName match {
-        //     case n @ LambdaCitizenTemplateNameT(_) => n
-        //     case _ => vwat()
-        //   }
-        //
-        // val mutability = Compiler.getMutability(coutputs, closuredVarsStructRef)
-        // val ownership =
-        //   mutability match {
-        //     case MutabilityTemplataT(MutableT) => BorrowT
-        //     case MutabilityTemplataT(ImmutableT) => ShareT
-        //     case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
-        //   }
-        // val closuredVarsStructRefCoord = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
-        // val borrowExpr =
-        //   localHelper.borrowSoftLoad(
-        //     coutputs,
-        //     LocalLookupTE(
-        //       loadRange,
-        //       ReferenceLocalVariableT(interner.intern(ClosureParamNameT(closuredVarsStructTemplateName.codeLocation)), FinalT, closuredVarsStructRefCoord)))
-        //
-        // val lookup =
-        //   ast.MemberLookupTE(loadRange, borrowExpr, varName, tyype, variability)
-        // Some(lookup)
+        // VCOORD: dedup the below, we do the same thing for read
+        let closure_param_imprecise = IImpreciseNameS::ClosureParamImpreciseName(
+          self.scout_arena.intern_closure_param_imprecise_name(),
+        );
+        let self_local = match nenv.get_variable(closure_param_imprecise, self.typing_interner) {
+          Some(IVariableT::Local(local)) => local,
+          _ => panic!("closure self param not found while mutating capture {:?}", acv.name),
+        };
+        let self_lookup = ExpressionTE::LocalLookup(
+          self.typing_interner.alloc(LocalLookupTE::new(self.typing_interner, load_range, self_local)),
+        );
+        let member_lookup = ExpressionTE::MemberLookup(self.typing_interner.alloc(
+          MemberLookupTE::new(self.typing_interner, load_range, self_lookup, acv.name, acv.kind),
+        ));
+        let member_lookup_decayed = match member_lookup.result() {
+          KindT::BorrowRef(BorrowRefT { inner: KindT::BorrowRef(_) }) => ExpressionTE::Deref(
+            self.typing_interner.alloc(DerefTE::new(self.typing_interner, load_range, member_lookup)),
+          ),
+          _ => member_lookup,
+        };
+        Some(member_lookup_decayed)
       }
       None => None,
     }

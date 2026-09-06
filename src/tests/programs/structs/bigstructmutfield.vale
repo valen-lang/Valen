@@ -1,4 +1,4 @@
-struct UnitSnapshot share {
+struct UnitSnapshot {
   hp int;
   mp int;
   armor int;

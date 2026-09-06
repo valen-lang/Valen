@@ -5,20 +5,15 @@ fn p(rel: &str) -> std::path::PathBuf {
 }
 
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
-fn structimm()           { assert_compile_and_run(&p("programs/structs/structimm.vale"), 5); }
+fn structmutfield()      { assert_compile_and_run(&p("programs/structs/structmutfield.vale"), 5); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: share (RC of a share member inside a mut struct)"]
 fn memberrefcount()      { assert_compile_and_run(&p("programs/structs/memberrefcount.vale"), 5); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
-fn bigstructimm()        { assert_compile_and_run(&p("programs/structs/bigstructimm.vale"), 42); }
+fn bigstructmutfield()   { assert_compile_and_run(&p("programs/structs/bigstructmutfield.vale"), 42); }
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn structmut()           { assert_compile_and_run(&p("programs/structs/structmut.vale"), 8); }
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn structmutstore()      { assert_compile_and_run(&p("programs/structs/structmutstore.vale"), 42); }
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn structmutstoreinner() { assert_compile_and_run(&p("programs/structs/structmutstoreinner.vale"), 42); }

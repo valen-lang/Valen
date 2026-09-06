@@ -101,6 +101,12 @@ where
     for it in monouts.interfaces.iter() {
         note(it.instantiated_interface.id.package_coord, &mut package_coords);
     }
+    for a in monouts.static_sized_arrays.iter() {
+        note(a.name.package_coord, &mut package_coords);
+    }
+    for a in monouts.runtime_sized_arrays.iter() {
+        note(a.name.package_coord, &mut package_coords);
+    }
 
     let pb = cache.new_program_builder();
     for pc in package_coords {

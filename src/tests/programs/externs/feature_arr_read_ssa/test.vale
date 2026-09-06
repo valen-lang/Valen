@@ -1,9 +1,11 @@
-// Isolates the auto-gen'd Arr_at + _SIZE constant for a static-sized array.
-export [#3]<imm>int as MyIntArray;
+// A static-sized array can't cross the C boundary by value, so wrap it in an
+// exported struct and hand C a borrow (pointer) to that. C reads the array field
+// out of the struct's known layout.
+exported struct IntTriple { values StaticArray<3, int>; }
 
-extern func testArrRead(arr [#3]<imm>int) int;
+extern func testArrRead(triple &IntTriple) int;
 
 exported func main() int {
-  a = #[#](6, 14, 22);
-  return testArrRead(a);
+  t = IntTriple([#](6, 14, 22));
+  return testArrRead(&t);
 }

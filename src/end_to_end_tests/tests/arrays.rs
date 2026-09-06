@@ -5,29 +5,27 @@ fn p(rel: &str) -> std::path::PathBuf {
 }
 
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn ssamutfromcallable()        { assert_compile_and_run(&p("programs/arrays/ssamutfromcallable.vale"), 42); }
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn ssamutfromvalues()          { assert_compile_and_run(&p("programs/arrays/ssamutfromvalues.vale"), 42); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: runtime-sized array (RSA) — standing order to defer RSA"]
 fn rsaimm()                    { assert_compile_and_run(&p("programs/arrays/rsaimm.vale"), 3); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: runtime-sized array (RSA) — standing order to defer RSA"]
 fn rsamut()                    { assert_compile_and_run(&p("programs/arrays/rsamut.vale"), 3); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: runtime-sized array (RSA) — standing order to defer RSA"]
 fn rsamutdestroyintocallable() { assert_compile_and_run(&p("programs/arrays/rsamutdestroyintocallable.vale"), 42); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: group-generic-closures — borrow checker can't derive a group for a closure-captured reference (borrow_types.rs:347)"]
 fn ssamutdestroyintocallable() { assert_compile_and_run(&p("programs/arrays/ssamutdestroyintocallable.vale"), 42); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: runtime-sized array (RSA) — standing order to defer RSA"]
 fn rsamutlen()                 { assert_compile_and_run(&p("programs/arrays/rsamutlen.vale"), 5); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: runtime-sized array (RSA) — standing order to defer RSA"]
 fn rsamutcapacity()            { assert_compile_and_run(&p("programs/arrays/rsamutcapacity.vale"), 42); }
 #[test]
-#[ignore = "deferred at experimental-2 squash baseline"]
+#[ignore = "deferred: runtime-sized array (RSA) — standing order to defer RSA"]
 fn swaprsamutdestroy()         { assert_compile_and_run(&p("programs/arrays/swaprsamutdestroy.vale"), 42); }

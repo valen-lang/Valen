@@ -4,12 +4,12 @@ fn p(rel: &str) -> std::path::PathBuf {
     programs_dir().join(rel)
 }
 
-#[test] #[ignore] // VCOORD: re enable w borrowing
+#[test]
 fn ifelse()   { assert_compile_and_run(&p("programs/if/if.vale"), 42); }
 #[test]
-#[ignore] // ZCOORD: re-enable with onion
+#[ignore = "deferred: interface/upcast/downcast"]
 fn upcastif() { assert_compile_and_run(&p("programs/if/upcastif.vale"), 42); }
-#[test] #[ignore] // VCOORD: re enable w borrowing
+#[test]
 fn ifnevers() { assert_compile_and_run(&p("programs/if/ifnevers.vale"), 42); }
-#[test] #[ignore] // VCOORD: re enable w borrowing
+#[test]
 fn nestedif() { assert_compile_and_run(&p("programs/if/nestedif.vale"), 42); }

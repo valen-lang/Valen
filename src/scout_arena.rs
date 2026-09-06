@@ -740,10 +740,6 @@ impl<'s> ScoutArena<'s> {
         let c = IRuneS::ArraySizeImplicitRune(self.bump.alloc(p.clone()));
         (IRuneValS::ArraySizeImplicitRune(p), c)
       }
-      ArrayMutabilityImplicitRune(p) => {
-        let c = IRuneS::ArrayMutabilityImplicitRune(self.bump.alloc(p.clone()));
-        (IRuneValS::ArrayMutabilityImplicitRune(p), c)
-      }
       ReturnRune(p) => {
         let c = IRuneS::ReturnRune(self.bump.alloc(p.clone()));
         (IRuneValS::ReturnRune(p), c)

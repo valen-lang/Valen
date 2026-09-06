@@ -379,15 +379,3 @@ pub fn assert_inline_compile_and_run(code: &str, expected: i32) {
         r.stdout, r.stderr
     );
 }
-
-#[cfg(test)]
-mod smoke {
-    use super::*;
-
-    #[test]
-    #[ignore = "deferred at experimental-2 squash baseline"]
-    fn smoke_structimm() {
-        let p = programs_dir().join("programs/structs/structimm.vale");
-        assert_compile_and_run(&p, 5);
-    }
-}
