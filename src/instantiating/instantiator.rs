@@ -204,6 +204,10 @@ impl<'s, 't, 'i> DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> where 's: 't, 
 /// Temporary state
 pub struct InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
     pub functions: IndexMap<IdI<'s, 'i>, &'i FunctionDefinitionI<'s, 'i>>,
+    // The borrow checker's aliasing info, carried from HinputsT (keyed by the pre-monomorphization
+    // SignatureT) to each instantiated function's IdI, so the backend can look it up by the same id it
+    // lowers. Monomorph-invariant, so all monos of one template share it. Presence = analyzed.
+    pub aliasing_info_by_id: IndexMap<IdI<'s, 'i>, FunctionAliasingInfoI>,
     pub structs: IndexMap<IdI<'s, 'i>, &'i StructDefinitionI<'s, 'i>>,
     pub static_sized_arrays: IndexMap<IdI<'s, 'i>, &'i StaticSizedArrayIT<'s, 'i>>,
     pub runtime_sized_arrays: IndexMap<IdI<'s, 'i>, &'i RuntimeSizedArrayIT<'s, 'i>>,
@@ -243,6 +247,7 @@ impl<'s, 't, 'i> InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
   pub fn new() -> Self {
     InstantiatedOutputsI {
       functions: IndexMap::default(),
+      aliasing_info_by_id: IndexMap::default(),
       structs: IndexMap::default(),
       static_sized_arrays: IndexMap::default(),
       runtime_sized_arrays: IndexMap::default(),
@@ -499,6 +504,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 static_sized_arrays: self.interner.alloc_slice_from_vec(monouts.static_sized_arrays.values().copied().collect()),
                 runtime_sized_arrays: self.interner.alloc_slice_from_vec(monouts.runtime_sized_arrays.values().copied().collect()),
                 functions: self.interner.alloc_slice_from_vec(monouts.functions.values().copied().collect()),
+                id_to_aliasing_info: monouts.aliasing_info_by_id.clone(),
                 interface_to_edge_blueprints: interface_edge_blueprints,
                 interface_to_sub_citizen_to_edge,
                 kind_exports: self.interner.alloc_slice_from_vec(kind_exports),
@@ -1287,6 +1293,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             });
 
         monouts.functions.insert(result.header.id, result);
+
+        // Carry the borrow checker's aliasing info from the template signature to this instantiated
+        // function's id, for the backend to read at lowering. Presence marks the function as analyzed.
+        if let Some(info) = self.hinputs.signature_to_aliasing_info.get(&function_t.header.to_signature()) {
+            monouts.aliasing_info_by_id.insert(
+                result.header.id,
+                FunctionAliasingInfoI { param_noalias: info.param_noalias.clone() },
+            );
+        }
+
         result
     }
 

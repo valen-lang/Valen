@@ -21,6 +21,7 @@ BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* pr
 // The ABI descriptor a producer attached to this extern (on its metal Package), or nullptr for a
 // descriptor-less C extern. Keyed by the prototype name, like GlobalState.externFunctions.
 const ExternAbi* lookupExternAbi(GlobalState* globalState, Prototype* prototypeM);
+const std::vector<bool>* lookupParamNoalias(GlobalState* globalState, Prototype* prototypeM);
 
 Ref receiveHostObjectIntoVale(
     GlobalState* globalState,

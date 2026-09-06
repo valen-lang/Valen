@@ -525,6 +525,7 @@ struct PackageBuilder {
   std::unordered_map<std::string, Kind*> externNameToKind;
   std::unordered_map<std::string, OpaqueStructLayout> structLayouts;
   std::unordered_map<std::string, ExternAbi> externAbis;
+  std::unordered_map<std::string, std::vector<bool>> paramNoaliasByName;
 };
 
 extern "C" VIS PackageBuilderHandle* metal_package_builder_new(
@@ -612,6 +613,14 @@ extern "C" VIS void metal_package_builder_add_extern_abi(
   }
   PB(h)->externAbis[str(p, n)] = std::move(abi);
 }
+// One function's per-parameter noalias verdict, keyed by humanized name (matching add_function). Its
+// presence marks the function as borrow-checker-analyzed.
+extern "C" VIS void metal_package_builder_add_param_noalias(
+    PackageBuilderHandle* h, const char* p, size_t n,
+    const bool* param_noalias, size_t param_noalias_len) {
+  PB(h)->paramNoaliasByName[str(p, n)] =
+      std::vector<bool>(param_noalias, param_noalias + param_noalias_len);
+}
 
 extern "C" VIS PackageHandle* metal_package_builder_finish(PackageBuilderHandle* h) {
   auto* b = PB(h);
@@ -628,7 +637,8 @@ extern "C" VIS PackageHandle* metal_package_builder_finish(PackageBuilderHandle*
       std::move(b->externNameToFunction),
       std::move(b->externNameToKind),
       std::move(b->structLayouts),
-      std::move(b->externAbis));
+      std::move(b->externAbis),
+      std::move(b->paramNoaliasByName));
   delete b;
   return reinterpret_cast<PackageHandle*>(pkg);
 }

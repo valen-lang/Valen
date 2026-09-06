@@ -27,6 +27,27 @@ ValeFuncPtrLE declareFunction(
   auto valeFunctionL =
       addValeFunction(globalState, valeFunctionNameL.c_str(), valeReturnTypeL, valeParamTypesL);
 
+  // Mark each parameter the borrow checker proved is the sole reference into its group as `noalias`
+  // (LLVM's `restrict`). lookupParamNoalias returns null when the function was not analyzed (generated,
+  // extern, or checker disabled) — nothing is marked then. When present it is one bool per parameter,
+  // so a length mismatch is a carrier bug, not a case to tolerate. Only pointer args are eligible; a
+  // non-pointer would fail the verifier.
+  if (const std::vector<bool>* paramNoalias =
+          lookupParamNoalias(globalState, functionM->prototype)) {
+    assert(paramNoalias->size() == functionM->prototype->params.size());
+    unsigned noaliasKind = LLVMGetEnumAttributeKindForName("noalias", 7);
+    for (size_t i = 0; i < paramNoalias->size(); i++) {
+      if (!(*paramNoalias)[i]) {
+        continue;
+      }
+      if (LLVMGetTypeKind(valeParamTypesL[i]) != LLVMPointerTypeKind) {
+        continue;
+      }
+      auto noaliasAttr = LLVMCreateEnumAttribute(globalState->context, noaliasKind, 0);
+      LLVMAddAttributeAtIndex(valeFunctionL.inner.ptrLE, (unsigned)(i + 1), noaliasAttr);
+    }
+  }
+
   assert(globalState->functions.count(functionM->prototype->name->name) == 0);
   globalState->functions.emplace(functionM->prototype->name->name, valeFunctionL);
 

@@ -82,6 +82,18 @@ const ExternAbi* lookupExternAbi(GlobalState* globalState, Prototype* prototypeM
   return iter == externAbis.end() ? nullptr : &iter->second;
 }
 
+// The borrow checker's per-parameter noalias verdict for this function, or nullptr if the function was
+// not analyzed (generated, extern, or the checker was disabled). Presence — not a bool — is the signal.
+const std::vector<bool>* lookupParamNoalias(GlobalState* globalState, Prototype* prototypeM) {
+  auto pkgIter = globalState->program->packages.find(prototypeM->name->packageCoord);
+  if (pkgIter == globalState->program->packages.end()) {
+    return nullptr;
+  }
+  auto& paramNoaliasByName = pkgIter->second->paramNoaliasByName;
+  auto iter = paramNoaliasByName.find(prototypeM->name->name);
+  return iter == paramNoaliasByName.end() ? nullptr : &iter->second;
+}
+
 // VCOORD: revisit this
 BoundarySignature buildBoundarySignature(GlobalState* globalState, Prototype* prototypeM) {
   if (const ExternAbi* abi = lookupExternAbi(globalState, prototypeM)) {

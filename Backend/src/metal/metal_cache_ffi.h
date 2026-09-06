@@ -304,6 +304,9 @@ void metal_package_builder_add_struct_layout(
 void metal_package_builder_add_extern_abi(
     PackageBuilderHandle*, const char* symbol_ptr, size_t symbol_len,
     CoercionFFI ret, const CoercionFFI* args, size_t args_len);
+void metal_package_builder_add_param_noalias(
+    PackageBuilderHandle*, const char* name_ptr, size_t name_len,
+    const bool* param_noalias, size_t param_noalias_len);
 
 PackageHandle* metal_package_builder_finish(PackageBuilderHandle*);
 

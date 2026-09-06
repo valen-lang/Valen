@@ -11,6 +11,7 @@ use crate::instantiating::ast::ast::{
 use crate::instantiating::ast::citizens::{ICitizenDefinitionI, InterfaceDefinitionI, StructDefinitionI};
 use crate::instantiating::ast::names::INameI;
 use crate::instantiating::ast::names::StructNameI;
+use crate::utils::fx::IndexMap;
 
 
 
@@ -25,6 +26,16 @@ pub struct InstantiationBoundArgumentsI<'s, 'i> where 's: 'i {
 
 
 
+/// The borrow checker's aliasing info for one instantiated function — the I-side mirror of
+/// `FunctionAliasingInfoT`. Holds the per-parameter `noalias` verdict now, and grows to carry the
+/// block-scoped restrict regions.
+#[derive(Clone, Debug)]
+pub struct FunctionAliasingInfoI {
+    /// One entry per parameter, in signature order: true where the parameter is the sole reference into
+    /// a group no other parameter aliases, so the backend may emit `noalias`.
+    pub param_noalias: Vec<bool>,
+}
+
 /// Temporary state (see @TFITCX) — top-level container for instantiated output.
 pub struct HinputsI<'s, 'i> where 's: 'i {
     pub interfaces: &'i [InterfaceDefinitionI<'s, 'i>],
@@ -35,6 +46,10 @@ pub struct HinputsI<'s, 'i> where 's: 'i {
     pub static_sized_arrays: &'i [&'i StaticSizedArrayIT<'s, 'i>],
     pub runtime_sized_arrays: &'i [&'i RuntimeSizedArrayIT<'s, 'i>],
     pub functions: &'i [&'i FunctionDefinitionI<'s, 'i>],
+    // The borrow checker's aliasing info per function, keyed by the instantiated id (the same key the
+    // backend humanizes when lowering). Presence means the function was analyzed; absence (generated,
+    // extern, or checker disabled) means the backend marks nothing for it.
+    pub id_to_aliasing_info: IndexMap<IdI<'s, 'i>, FunctionAliasingInfoI>,
     pub interface_to_edge_blueprints:
         ArenaIndexMap<'i, IdI<'s, 'i>, InterfaceEdgeBlueprintI<'s, 'i>>,
     pub interface_to_sub_citizen_to_edge:

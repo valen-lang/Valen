@@ -68,6 +68,10 @@ public:
   // Per-extern ABI descriptors, keyed by the extern symbol (like externNameToFunction). Empty for
   // descriptor-less C externs; buildCallOrSideCall reads it to coerce each crossing.
   std::unordered_map<std::string, ExternAbi> externAbis;
+  // The borrow checker's per-parameter `noalias` verdict, keyed by humanized function name. An entry's
+  // presence means the function was analyzed; declareFunction reads it via lookupParamNoalias to mark
+  // the sole-reference pointer params `noalias`. A function with no entry is left unmarked.
+  std::unordered_map<std::string, std::vector<bool>> paramNoaliasByName;
   // These are inverses of the above maps
   std::unordered_map<Prototype*, std::string, AddressHasher<Prototype*>> functionToExportName;
   std::unordered_map<Kind*, std::string, AddressHasher<Kind*>> kindToExportName;
@@ -88,7 +92,8 @@ public:
     std::unordered_map<std::string, Prototype*> externNameToFunction_,
     std::unordered_map<std::string, Kind*> externNameToKind_,
     std::unordered_map<std::string, OpaqueStructLayout> structLayouts_,
-    std::unordered_map<std::string, ExternAbi> externAbis_) :
+    std::unordered_map<std::string, ExternAbi> externAbis_,
+    std::unordered_map<std::string, std::vector<bool>> paramNoaliasByName_) :
       packageCoordinate(packageCoordinate_),
       interfaces(std::move(interfaces_)),
       structs(std::move(structs_)),
@@ -102,6 +107,7 @@ public:
       externNameToKind(std::move(externNameToKind_)),
       structLayouts(std::move(structLayouts_)),
       externAbis(std::move(externAbis_)),
+      paramNoaliasByName(std::move(paramNoaliasByName_)),
       functionToExportName(0, addressNumberer->makeHasher<Prototype*>()),
       kindToExportName(0, addressNumberer->makeHasher<Kind*>()),
       functionToExternName(0, addressNumberer->makeHasher<Prototype*>()),

@@ -208,6 +208,12 @@ impl<'cache> Lowerer<'cache> {
             }
             let func = self.lower_function(f);
             let fname = humanize_id(&code_map, &f.header.id, None);
+            // Presence of an entry means the borrow checker analyzed this function; record its
+            // per-parameter noalias verdict on the package. A function with no entry (generated,
+            // extern, or checker disabled) records nothing, and the backend marks nothing for it.
+            if let Some(info) = monouts.id_to_aliasing_info.get(&f.header.id) {
+                pb.add_param_noalias(&fname, &info.param_noalias);
+            }
             pb.add_function(&fname, func);
             // A Rust→Vale callback's body is an ordinary function here, but it also carries an inbound
             // ABI (how Rust hands args to it), keyed by this same humanized name — the name its metal

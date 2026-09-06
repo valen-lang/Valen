@@ -304,6 +304,9 @@ extern "C" {
     fn metal_package_builder_add_extern_abi(
         _: *mut c_void, symbol_ptr: *const c_char, symbol_len: usize,
         ret: CoercionFFI, args: *const CoercionFFI, args_len: usize);
+    fn metal_package_builder_add_param_noalias(
+        _: *mut c_void, name_ptr: *const c_char, name_len: usize,
+        param_noalias: *const bool, param_noalias_len: usize);
     fn metal_package_builder_finish(_: *mut c_void) -> *mut c_void;
 
     fn metal_program_builder_new(_: *mut MetalCacheHandleRaw) -> *mut c_void;
@@ -867,6 +870,17 @@ impl<'cache> PackageBuilder<'cache> {
             metal_package_builder_add_extern_abi(
                 self.raw, symbol.as_ptr() as *const c_char, symbol.len(),
                 ret, args.as_ptr(), args.len())
+        }
+    }
+
+    /// Record a function's per-parameter `noalias` verdict on the package, keyed by humanized name.
+    /// Its presence means the borrow checker analyzed the function (the backend marks nothing for a
+    /// function with no entry).
+    pub fn add_param_noalias(&self, name: &str, param_noalias: &[bool]) {
+        unsafe {
+            metal_package_builder_add_param_noalias(
+                self.raw, name.as_ptr() as *const c_char, name.len(),
+                param_noalias.as_ptr(), param_noalias.len())
         }
     }
 
