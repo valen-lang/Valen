@@ -674,7 +674,7 @@ where
         self.func_bounds_of(state, envs.original_calling_env.denizen_template_id());
     for (rune_usage, func_bound) in own_func_bounds {
       if let Some(ITemplataT::Prototype(pt)) = conclusions.get(&rune_usage.rune) {
-        self.register_bound_prototype(state, func_bound, pt.prototype);
+        Compiler::register_bound_function_s(state, self.typing_interner, pt.prototype.id, func_bound);
       }
     }
     let reachable_bounds: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> =
@@ -693,78 +693,29 @@ where
               Some(_) => None,
               None => None,
             };
-          // An imported Rust citizen is opaque: it carries no Vale-side `where` bounds, so it
-          // contributes no reachable bounds. It is also compiled only on demand (unlike a native
-          // citizen, which the eager compiling phase always compiles), so its inner env may not even
-          // exist. Drop it to the empty-map branch below rather than fetch an inner env it hasn't got.
-          // VCOORD: do the lazy compilation refactor to get rid of this
-          #[cfg(feature = "rust_interop")]
-          let maybe_id_and_template_id =
-            maybe_id_and_template_id.filter(|(id, _)| !crate::typing::rust_interop::is_rust_backed(id));
           let citizen_rune_to_reachable_prototype = match maybe_id_and_template_id {
             None => self.typing_interner.alloc_index_map(),
             Some((id, template_id)) => {
-              let inner_env = state.get_inner_env_for_type(template_id);
-              let citizen_rune_to_func_bound = self.func_bounds_of(state, template_id);
-              let substituter = self.get_placeholder_substituter(
-                self.opts.global_options.sanity_check,
-                envs.original_calling_env.denizen_template_id(),
-                id,
-                IBoundArgumentsSource::InheritBoundsFromTypeItself,
-              );
-              let entries: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> = inner_env
-                .templatas()
-                .name_to_entry
-                .iter()
-                .filter_map(|(name, entry)| match (name, entry) {
-                  (
-                    INameT::Rune(rune_name),
-                    IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata)),
-                  ) if matches!(
-                    proto_templata.prototype.id.local_name,
-                    INameT::FunctionBound(_)
-                  ) =>
-                  {
-                    match proto_templata.prototype.id.local_name {
-                      INameT::FunctionBound(fb) => {
-                        let bound_name =
-                          self.typing_interner.intern_function_bound_name(FunctionBoundNameValT {
-                            template: fb.template,
-                            template_args: fb.template_args,
-                            parameters: fb.parameters,
-                          });
-                        let new_id = self.typing_interner.intern_id(IdValT {
-                          package_coord: proto_templata.prototype.id.package_coord,
-                          init_steps: proto_templata.prototype.id.init_steps,
-                          local_name: INameT::FunctionBound(bound_name),
-                        });
-                        let prototype = self.typing_interner.intern_prototype(PrototypeValT {
-                          id: IdValT {
-                            package_coord: new_id.package_coord,
-                            init_steps: new_id.init_steps,
-                            local_name: new_id.local_name,
-                          },
-                          return_type: proto_templata.prototype.return_type,
-                        });
-                        let subst_prototype =
-                          substituter.substitute_for_prototype(state, prototype);
-                        // Now that we have the prototype in terms of this compiling denizen, let's
-                        // register the FunctionS for this function bound.
-                        // VLAZY: turn citizen_rune_to_func_bound into a map
-                        if let Some((_, func_bound)) = citizen_rune_to_func_bound
-                          .iter()
-                          .find(|(ru, _)| ru.rune == rune_name.rune)
-                        {
-                          self.register_bound_prototype(state, func_bound, subst_prototype);
-                        } else {
-                          panic!("vcurious");
-                        }
-                        Some((rune_name.rune, *subst_prototype))
-                      }
-                      _ => unreachable!(),
-                    }
-                  }
-                  _ => None,
+              // The generic args this citizen instance was resolved with.
+              let args = self.instantiation_template_args(*id);
+              // Use the above generic args to translate the below bounds into this compiling denizen's
+              // terms, so we can import htem in
+              let entries: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> = self
+                .resolve_citizen_bounds(state, template_id, args)
+                .into_iter()
+                .map(|(rune, (func_bound, bound_name, return_type))| {
+                  // Import re-anchors the bound under this compiling denizen and registers its
+                  // FunctionS there (Some(func_bound)).
+                  let subst_prototype = Compiler::import_function_bound(
+                    state,
+                    self.opts.global_options.sanity_check,
+                    self.typing_interner,
+                    *envs.original_calling_env.denizen_template_id(),
+                    bound_name,
+                    return_type,
+                    Some(func_bound),
+                  );
+                  (rune, *subst_prototype)
                 })
                 .collect();
               self.typing_interner.alloc_index_map_from_iter(entries.into_iter())
@@ -819,57 +770,6 @@ where
       // Lambdas (and anything else) declare no where-clause bounds.
       _ => &[],
     }
-  }
-
-  // Register the `func_bound` identified by `rune` (each bound's result rune) at the id the borrow
-  // checker looks up (`get_function_template(proto.id)`).
-  // VLAZY: this is a bit of a mess
-  fn register_bound_prototype(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    func_bound: &'s FunctionS<'s>,
-    prototype: &PrototypeT<'s, 't>,
-  ) {
-    if !matches!(prototype.id.local_name, INameT::FunctionBound(_)) {
-      panic!("vcurious");
-    }
-    let key = Compiler::get_function_template(self.typing_interner, prototype.id);
-    if coutputs.peek_postparsed_function(key).is_some() {
-      // VLAZY: investigate this
-      //
-      // Analysis from claude, verify before trusting:
-      //
-      // Why does a key sometimes come back already-registered here?
-      //
-      // NOT because the bound is citizen-anchored (an earlier belief). A function bound's prototype
-      // is re-anchored away from the citizen it was copied from: when a reachable bound is
-      // substituted, `substitute_templatas_in_prototype` (templata_compiler.rs, the `FunctionBound`
-      // arm marked MFBFDP) rebuilds the id as `original_calling_denizen_id.add_step(FunctionBound)`.
-      // The reachable path above passes F's *template* id as that anchor (the
-      // `get_placeholder_substituter` call uses `denizen_template_id()`). F's OWN where-clause bounds
-      // are instead anchored at F's *full* denizen id (`assemble_prototype`, compiler.rs, uses
-      // `denizen_id()`). `get_function_template` copies `init_steps` verbatim, so:
-      //     own bound key       = F_full_id      + FunctionBoundTemplate(name)
-      //     reachable bound key = F_template_id  + FunctionBoundTemplate(name)
-      // They differ in F's own name step (full vs template), so an own bound and a reachable bound
-      // never collide with each other.
-      //
-      // A hit here therefore means the SAME key is registered twice, from one of:
-      //   (a) `check_defining_conclusions_and_resolve` running more than once for the same F (it has
-      //       three callers) — re-registers an identical (key, FunctionS); harmless in isolation.
-      //   (b) F reaching the same-signature bound from two DIFFERENT sources — two citizen runes,
-      //       possibly two different citizens that each require e.g. `drop(T)`. Both substitute to the
-      //       same `F_template + FunctionBound(drop, [T])`, so they land on the same key, yet the
-      //       `func_bound` FunctionS resolved per-rune is each citizen's own bound object — DIFFERENT
-      //       FunctionS. This is the real defect the guard catches: the key (F-template, name only,
-      //       args stripped by `get_function_template`) is too coarse to keep two distinct reachable
-      //       bounds apart. It is signature-equivalent for the borrow checker (a bound carries only
-      //       params/effects), but it is a genuine identity collapse — so a silent early-return here
-      //       would paper over (b), not fix it. The fix is to give each bound a distinct, this-
-      //       function-anchored id so distinct bounds get distinct keys.
-      return;
-    }
-    coutputs.register_postparsed_function(key, func_bound);
   }
 
   pub fn import_reachable_bounds(

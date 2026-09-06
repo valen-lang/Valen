@@ -609,7 +609,7 @@ where
                                     KindT::Interface(ir) => rune_value_envs.push(
                                         state.get_outer_env_for_type(self.get_interface_template(*ir.id))),
                                     KindT::KindPlaceholder(kp) => rune_value_envs.push(
-                                        state.get_outer_env_for_type(self.get_placeholder_template(kp.id))),
+                                        state.get_outer_env_for_type(*self.get_placeholder_template(&kp.id))),
                                     _ => {}
                                 }
                             }

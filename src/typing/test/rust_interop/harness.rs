@@ -304,6 +304,7 @@ where
         global_options: global_options.clone(),
         debug_out: Arc::new(|x: &str| println!("{}", x)),
         tree_shaking_enabled: true,
+        borrow_checker_enabled: true,
       },
       Oracles::with_rust(&logging),
     );
@@ -571,6 +572,7 @@ impl<'ctx, 's, 't, 'p> Callbacks for DrivenCallbacks<'ctx, 's, 't, 'p> {
       global_options: self.global_options.clone(),
       debug_out: Arc::new(|x: &str| println!("{}", x)),
       tree_shaking_enabled: true,
+      borrow_checker_enabled: true,
     };
 
     let code_map = scout.get_code_map().expect("getCodeMap failed");

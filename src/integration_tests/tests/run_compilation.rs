@@ -47,6 +47,46 @@ pub fn test_no_builtins<'s, 'ctx, 't, 'i, 'p>(
 ) -> RunCompilation<'s, 'ctx, 't, 'i, 'p>
 where 's: 't, 's: 'i, 'p: 'ctx,
 {
+    build_no_builtins(
+        compilation_bump, typing_interner, scout_arena, keywords, parser_keywords, parse_arena,
+        instantiating_bump, code, true,
+    )
+}
+
+/// Like `test_no_builtins`, but with the group borrow checker disabled — for a test that
+/// deliberately exercises a later pass past a not-yet-supported borrow-checker case.
+/// VCOORD: delete this
+pub fn test_no_builtins_without_borrow_check<'s, 'ctx, 't, 'i, 'p>(
+    compilation_bump: &'ctx Bump,
+    typing_interner: &'ctx TypingInterner<'s, 't>,
+    scout_arena: &'ctx ScoutArena<'s>,
+    keywords: &'ctx Keywords<'s>,
+    parser_keywords: &'ctx Keywords<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
+    instantiating_bump: &'i Bump,
+    code: &str,
+) -> RunCompilation<'s, 'ctx, 't, 'i, 'p>
+where 's: 't, 's: 'i, 'p: 'ctx,
+{
+    build_no_builtins(
+        compilation_bump, typing_interner, scout_arena, keywords, parser_keywords, parse_arena,
+        instantiating_bump, code, false,
+    )
+}
+
+fn build_no_builtins<'s, 'ctx, 't, 'i, 'p>(
+    compilation_bump: &'ctx Bump,
+    typing_interner: &'ctx TypingInterner<'s, 't>,
+    scout_arena: &'ctx ScoutArena<'s>,
+    keywords: &'ctx Keywords<'s>,
+    parser_keywords: &'ctx Keywords<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
+    instantiating_bump: &'i Bump,
+    code: &str,
+    borrow_checker_enabled: bool,
+) -> RunCompilation<'s, 'ctx, 't, 'i, 'p>
+where 's: 't, 's: 'i, 'p: 'ctx,
+{
     let packages_to_build: Vec<&'p PackageCoordinate<'p>> =
         vec![PackageCoordinate::test_tld(parse_arena, parser_keywords)];
     let code_source: &'ctx CodeSource<'p> = compilation_bump.alloc(CodeSource::new(vec![
@@ -55,7 +95,8 @@ where 's: 't, 's: 'i, 'p: 'ctx,
     ]));
     let compilation = InstantiatedCompilation::new(
         typing_interner, scout_arena, keywords, parser_keywords, parse_arena,
-        packages_to_build, code_source, global_options(), instantiator_options(), instantiating_bump,
+        packages_to_build, code_source, global_options(), instantiator_options(),
+        borrow_checker_enabled, instantiating_bump,
     );
     RunCompilation { compilation, scout_arena }
 }

@@ -74,12 +74,14 @@ where
     code_source: &'ctx CodeSource<'p>,
     global_options: GlobalOptions,
     options: InstantiatorCompilationOptions,
+    borrow_checker_enabled: bool,
     instantiating_bump: &'i Bump,
   ) -> Self {
     let typing_options = TypingPassOptions {
       global_options: global_options.clone(),
       debug_out: options.debug_out.clone(),
       tree_shaking_enabled: true,
+      borrow_checker_enabled,
     };
 
     let typing_pass_compilation = TypingPassCompilation::new(

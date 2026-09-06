@@ -60,6 +60,7 @@ where 's: 't, 's: 'i, 'p: 'ctx,
         code_source,
         global_options,
         instantiator_options,
+        true, // borrow_checker_enabled
         instantiating_bump,
     )
 }
@@ -106,6 +107,7 @@ where 's: 't, 's: 'i, 'p: 'ctx,
         code_source,
         global_options,
         instantiator_options,
+        true, // borrow_checker_enabled
         instantiating_bump,
     )
 }

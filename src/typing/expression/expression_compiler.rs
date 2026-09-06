@@ -149,8 +149,24 @@ where
         let self_lookup = ExpressionTE::LocalLookup(
           self.typing_interner.alloc(LocalLookupTE::new(self.typing_interner, ranges[0], self_local)),
         );
+        let capture_imprecise = match rcv.name {
+          IVarNameT::Local(local) => local.imprecise_name,
+          other => panic!("closure capture name must be a code-named Local, got {:?}", other),
+        };
+        let closure_struct_def = coutputs.lookup_struct(*rcv.closured_vars_struct_type.id, self);
+        let (struct_member, _member_index) = closure_struct_def
+          .get_member_and_index(IImpreciseNameS::CodeName(capture_imprecise))
+          .unwrap_or_else(|| {
+            panic!("closure capture {:?} not found as a member of its closure struct", rcv.name)
+          });
         let member_lookup = ExpressionTE::MemberLookup(self.typing_interner.alloc(
-          MemberLookupTE::new(self.typing_interner, ranges[0], self_lookup, rcv.name, rcv.kind),
+          MemberLookupTE::new(
+            self.typing_interner,
+            ranges[0],
+            self_lookup,
+            IVarNameT::Member(struct_member.name),
+            rcv.kind,
+          ),
         ));
         // VCOORD: do we really want to decay this like this here? i think so, but unsure.
         let member_lookup_decayed = match member_lookup.result() {

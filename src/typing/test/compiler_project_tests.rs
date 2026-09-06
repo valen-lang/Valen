@@ -251,6 +251,7 @@ exported func main() {
     global_options,
     debug_out: Arc::new(|_x: &str| {}),
     tree_shaking_enabled: true,
+    borrow_checker_enabled: true,
   };
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = typing_pass_compilation_for_test(
@@ -307,6 +308,7 @@ exported func main() bool {
     global_options,
     debug_out: Arc::new(|_x: &str| {}),
     tree_shaking_enabled: true,
+    borrow_checker_enabled: true,
   };
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = typing_pass_compilation_for_test(
@@ -362,6 +364,7 @@ exported func main() int {
     global_options,
     debug_out: Arc::new(|_x: &str| {}),
     tree_shaking_enabled: true,
+    borrow_checker_enabled: true,
   };
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = typing_pass_compilation_for_test(
@@ -421,6 +424,7 @@ exported func main() {
     global_options,
     debug_out: Arc::new(|_x: &str| {}),
     tree_shaking_enabled: true,
+    borrow_checker_enabled: true,
   };
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = typing_pass_compilation_for_test(
@@ -473,6 +477,7 @@ exported func main() {
     global_options,
     debug_out: Arc::new(|_x: &str| {}),
     tree_shaking_enabled: true,
+    borrow_checker_enabled: true,
   };
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = typing_pass_compilation_for_test(
@@ -527,6 +532,7 @@ exported func main() {
     global_options,
     debug_out: Arc::new(|_x: &str| {}),
     tree_shaking_enabled: true,
+    borrow_checker_enabled: true,
   };
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = typing_pass_compilation_for_test(
@@ -576,6 +582,7 @@ fn typing_pass_on_roguelike() {
     global_options,
     debug_out: Arc::new(|x: &str| println!("{}", x)),
     tree_shaking_enabled: true,
+    borrow_checker_enabled: true,
   };
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = typing_pass_compilation_for_test(

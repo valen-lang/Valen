@@ -33,6 +33,9 @@ pub struct TypingPassOptions {
   pub global_options: GlobalOptions,
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
   pub tree_shaking_enabled: bool,
+  /// Whether the group borrow checker runs. Always `true` outside of a few tests that deliberately
+  /// exercise later passes past a not-yet-supported borrow-checker case.
+  pub borrow_checker_enabled: bool,
 }
 
 /// Miscellaneous (see @TFITCX)

@@ -232,10 +232,9 @@ where
           .typing_interner
           .intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT { index, rune }),
       });
-    let placeholder_id_ref = dispatcher_outer_env
+    let placeholder_id = dispatcher_outer_env
       .id()
       .add_step(self.typing_interner, INameT::KindPlaceholder(placeholder_name));
-    let placeholder_id = *placeholder_id_ref;
     let placeholder_template_id = self.get_placeholder_template(placeholder_id);
     let placeholder_template_id_ref = self.typing_interner.intern_id(IdValT {
       package_coord: placeholder_template_id.package_coord,
@@ -257,12 +256,12 @@ where
 
     match original_templata_to_mimic {
       ITemplataT::Placeholder(pt) => ITemplataT::Placeholder(
-        self.typing_interner.alloc(PlaceholderTemplataT { id: placeholder_id, tyype: pt.tyype }),
+        self.typing_interner.alloc(PlaceholderTemplataT { id: *placeholder_id, tyype: pt.tyype }),
       ),
       ITemplataT::Kind(kt) => match kt.kind {
         KindT::KindPlaceholder(_) => ITemplataT::Kind(KindTemplataT {
           kind: KindT::KindPlaceholder(
-            self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id }),
+            self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: *placeholder_id }),
           ),
         }),
         _ => panic!("vwat: create_override_placeholder_mimicking unexpected kind"),
@@ -567,75 +566,24 @@ where
       .flat_map(|(rune_in_impl, c)| {
         let citizen_id = c.id();
         let citizen_template_id = self.get_citizen_template(&citizen_id);
-        let substituter = self.get_placeholder_substituter(
-          self.opts.global_options.sanity_check,
-          dispatcher_template_id_ref,
-          &citizen_id,
-          IBoundArgumentsSource::InheritBoundsFromTypeItself,
-        );
-        let raw_entries: Vec<(
-          IRuneS<'s>,
-          &'t FunctionBoundTemplateNameT<'s>,
-          &'t [ITemplataT<'s, 't>],
-          &'t [KindT<'s, 't>],
-          KindT<'s, 't>,
-        )> = {
-          let citizen_inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
-          citizen_inner_env
-            .templatas()
-            .name_to_entry
-            .iter()
-            .filter_map(|(name, entry)| {
-              let rune_in_citizen = match name {
-                INameT::Rune(r) => r,
-                _ => return None,
-              };
-              let proto_templata = match entry {
-                IEnvEntryT::Templata(ITemplataT::Prototype(pt)) => pt,
-                _ => return None,
-              };
-              let function_bound = match proto_templata.prototype.id.local_name {
-                INameT::FunctionBound(fb) => fb,
-                _ => return None,
-              };
-              Some((
-                rune_in_citizen.rune,
-                function_bound.template,
-                function_bound.template_args,
-                function_bound.parameters,
-                proto_templata.prototype.return_type,
-              ))
-            })
-            .collect()
-        }; // citizen_inner_env borrow released here
-           // Phase 2: apply mutation, building substituted prototypes
-        raw_entries
+        // The args this sub-citizen instance was resolved with.
+        let args = self.instantiation_template_args(citizen_id);
+        // Use the above args to translate the below sub-citizen bounds to the dispatcher's terms.
+        self
+          .resolve_citizen_bounds(coutputs, citizen_template_id, args)
           .into_iter()
-          .map(|(rune_in_citizen, human_name, template_args, params, return_type)| {
-            let function_bound_template_name =
-              self.typing_interner.intern_function_bound_template_name(
-                FunctionBoundTemplateNameT { human_name: human_name.human_name },
-              );
-            let function_bound_name =
-              self.typing_interner.intern_function_bound_name(FunctionBoundNameValT {
-                template: function_bound_template_name,
-                template_args,
-                parameters: params,
-              });
-            let sub_citizen_placeholdered_prototype =
-              self.typing_interner.intern_prototype(PrototypeValT {
-                id: IdValT {
-                  package_coord: dispatcher_id_ref.package_coord,
-                  init_steps: dispatcher_id_ref.init_steps,
-                  local_name: INameT::FunctionBound(function_bound_name),
-                },
-                return_type,
-              });
-            let dispatcher_placeholdered_prototype =
-              substituter.substitute_for_prototype(coutputs, sub_citizen_placeholdered_prototype);
-            let prototype_templata = self
-              .typing_interner
-              .alloc(PrototypeTemplataT { prototype: dispatcher_placeholdered_prototype });
+          .map(|(rune_in_citizen, (func_bound, bound_name, return_type))| {
+            let dispatcher_prototype = Compiler::import_function_bound(
+              coutputs,
+              self.opts.global_options.sanity_check,
+              self.typing_interner,
+              *dispatcher_template_id_ref,
+              bound_name,
+              return_type,
+              Some(func_bound),
+            );
+            let prototype_templata =
+              self.typing_interner.alloc(PrototypeTemplataT { prototype: dispatcher_prototype });
             (rune_in_impl, rune_in_citizen, *prototype_templata)
           })
           .collect::<Vec<_>>()

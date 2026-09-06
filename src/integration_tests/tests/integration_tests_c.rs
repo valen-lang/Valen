@@ -3,6 +3,7 @@ use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
+use crate::integration_tests::tests::run_compilation::test_no_builtins;
 use crate::tests::tests::load_expected;
 use crate::testvm::vivem::VmRuntimeErrorV;
 use crate::typing::typing_interner::TypingInterner;
@@ -686,28 +687,25 @@ exported func main() int {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn supplying_bounded_struct_to_struct_accepting() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_no_builtins(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: Spork(...).a.a is &int
         r"
+func drop(x int) void { }
+
 struct Bork<T> where func drop(T)void { a T; }
 
 struct Spork<T> where func drop(T)void { a T; }
@@ -721,7 +719,6 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
-    */
 }
 
 #[test]

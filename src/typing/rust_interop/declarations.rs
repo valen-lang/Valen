@@ -941,6 +941,7 @@ mod tests {
       },
       debug_out: Arc::new(|_: &str| {}),
       tree_shaking_enabled: true,
+      borrow_checker_enabled: true,
     }
   }
 

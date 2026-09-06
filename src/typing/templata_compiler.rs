@@ -2,11 +2,12 @@ use crate::keywords::Keywords;
 use crate::parsing::SharednessP;
 use crate::postparsing::ast::IGenericParameterTypeS;
 use crate::postparsing::ast::KindGenericParameterTypeS;
-use crate::postparsing::ast::{GenericParameterS, LocationInDenizen};
+use crate::postparsing::ast::{FunctionS, GenericParameterS, ICitizenDenizenS, LocationInDenizen};
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::itemplatatype::KindTemplataType;
-use crate::postparsing::names::{IImpreciseNameS, IRuneS};
+use crate::postparsing::names::{IFunctionDeclarationNameS, IImpreciseNameS, IRuneS};
 use crate::postparsing::rules::rules::{EqualsSR, IRulexSR, ResolveSR, RuneUsage};
+use crate::postparsing::rules::types::ITypeST;
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::ast::PrototypeValT;
 use crate::typing::ast::ast::*;
@@ -356,14 +357,14 @@ where
     })
   }
 
-  pub fn get_placeholder_template(&self, id: IdT<'s, 't>) -> IdT<'s, 't> {
+  pub fn get_placeholder_template(&self, id: &'t IdT<'s, 't>) -> &'t IdT<'s, 't> {
     // val IdT(packageCoord, initSteps, last) = id
     // IdT(packageCoord, initSteps, last.template)
     let template_name = match id.local_name {
       INameT::KindPlaceholder(kp) => INameT::KindPlaceholderTemplate(kp.template),
       _ => panic!("get_placeholder_template: unexpected local_name"),
     };
-    *self.typing_interner.intern_id(IdValT {
+    self.typing_interner.intern_id(IdValT {
       package_coord: id.package_coord,
       init_steps: id.init_steps,
       local_name: template_name,
@@ -1144,64 +1145,118 @@ where
     );
     let tentative_id =
       *interner.intern_id(IdValT { package_coord, init_steps, local_name: substituted_func_name });
-    let perhaps_imported_id = match tentative_id.local_name {
+    match tentative_id.local_name {
       INameT::FunctionBound(n) => {
-        // Always import a seen function bound into our own environment, see MFBFDP.
-        let imported_id = *original_calling_denizen_id.add_step(interner, INameT::FunctionBound(n));
-        // It's a function bound, it has no function bounds of its own.
-        coutputs.add_instantiation_bounds(
+        // Always import a seen function bound into our own environment, see MFBFDP. We're
+        // substituting an already-built prototype and have no postparsed FunctionS in hand, so we
+        // register none (None).
+        Compiler::import_function_bound(
+          coutputs,
           sanity_check,
           interner,
           original_calling_denizen_id,
-          imported_id,
-          interner.alloc(InstantiationBoundArgumentsT {
-            rune_to_bound_prototype: interner.alloc_index_map_from_iter(empty()),
-            rune_to_citizen_rune_to_reachable_prototype: interner
-              .alloc_index_map_from_iter(empty()),
-            rune_to_bound_impl: interner.alloc_index_map_from_iter(empty()),
-          }),
-        );
-        imported_id
+          n,
+          substituted_return_type,
+          None,
+        )
       }
       _ => {
         // Not really sure if we're supposed to add bounds or something here.
         assert!(coutputs.get_instantiation_bounds(interner, tentative_id).is_some());
-        tentative_id
+        interner.intern_prototype(PrototypeValT {
+          id: IdValT {
+            package_coord: tentative_id.package_coord,
+            init_steps: tentative_id.init_steps,
+            local_name: tentative_id.local_name,
+          },
+          return_type: substituted_return_type,
+        })
       }
-    };
-    interner.intern_prototype(PrototypeValT {
-      id: IdValT {
-        package_coord: perhaps_imported_id.package_coord,
-        init_steps: perhaps_imported_id.init_steps,
-        local_name: perhaps_imported_id.local_name,
-      },
-      return_type: substituted_return_type,
-    })
+    }
   }
 
-  pub fn substitute_templatas_in_function_bound_id(
+  /// Import an already-substituted function bound into `calling_denizen_id`: re-anchor its name
+  /// under the caller, register empty instantiation bounds (a bound has no bounds of its own), and —
+  /// when `maybe_func_bound` is present — register the bound's postparsed `FunctionS` under the
+  /// re-anchored id so the callee lookup for it is a total hit. See MFBFDP. This is the anchor+register
+  /// half of what a placeholder substitution used to do for a bound prototype, factored out so a
+  /// caller that already has the bound in its own terms can import it without a substitution pass.
+  /// The MFBFDP substitution path has no postparsed `FunctionS` in hand and passes `None`.
+  pub fn import_function_bound(
     coutputs: &mut CompilerOutputs<'s, 't>,
     sanity_check: bool,
     interner: &'ctx TypingInterner<'s, 't>,
-    keywords: &'ctx Keywords<'s>,
-    original_calling_denizen_id: IdT<'s, 't>,
-    needle_template_name: IdT<'s, 't>,
-    new_substituting_templatas: &[ITemplataT<'s, 't>],
-    bound_arguments_source: IBoundArgumentsSource<'s, 't>,
-    original: IdT<'s, 't>,
-  ) -> IdT<'s, 't> {
-    panic!("Unimplemented: Slab 10");
-    // val IdT(packageCoord, initSteps, funcName) = original
-    // val substitutedTemplateArgs =
-    //   funcName.templateArgs.map((templata: ITemplataT[ITemplataType]) => substituteTemplatasInTemplata(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, templata))
-    // val substitutedParams =
-    //   funcName.parameters.map((coord: CoordT) => substituteTemplatasInCoord(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, coord))
-    // val substitutedFuncName = funcName.template.makeFunctionName(interner, keywords, substitutedTemplateArgs, substitutedParams)
-    // val newId = IdT(packageCoord, initSteps, substitutedFuncName)
-    // coutputs.addInstantiationBounds(
-    //   sanityCheck, interner, originalCallingDenizenId, newId,
-    //   InstantiationBoundArgumentsT.make(Map(), Map(), Map()))
-    // newId
+    calling_denizen_id: IdT<'s, 't>,
+    bound_name: &'t FunctionBoundNameT<'s, 't>,
+    return_type: KindT<'s, 't>,
+    maybe_func_bound: Option<&'s FunctionS<'s>>,
+  ) -> &'t PrototypeT<'s, 't> {
+    let imported_id =
+      *calling_denizen_id.add_step(interner, INameT::FunctionBound(bound_name));
+    coutputs.add_instantiation_bounds(
+      sanity_check,
+      interner,
+      calling_denizen_id,
+      imported_id,
+      interner.alloc(InstantiationBoundArgumentsT {
+        rune_to_bound_prototype: interner.alloc_index_map_from_iter(empty()),
+        rune_to_citizen_rune_to_reachable_prototype: interner.alloc_index_map_from_iter(empty()),
+        rune_to_bound_impl: interner.alloc_index_map_from_iter(empty()),
+      }),
+    );
+    let prototype = interner.intern_prototype(PrototypeValT {
+      id: IdValT {
+        package_coord: imported_id.package_coord,
+        init_steps: imported_id.init_steps,
+        local_name: imported_id.local_name,
+      },
+      return_type,
+    });
+    if let Some(func_bound) = maybe_func_bound {
+      Compiler::register_bound_function_s(coutputs, interner, prototype.id, func_bound);
+    }
+    prototype
+  }
+
+  pub fn register_bound_function_s(
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    interner: &'ctx TypingInterner<'s, 't>,
+    bound_id: IdT<'s, 't>,
+    func_bound: &'s FunctionS<'s>,
+  ) {
+    if !matches!(bound_id.local_name, INameT::FunctionBound(_)) {
+      panic!("register_bound_function_s: not a FunctionBound id: {:?}", bound_id.local_name);
+    }
+    let key = Compiler::get_function_template(interner, bound_id);
+    if coutputs.peek_postparsed_function(key).is_some() {
+      // VLAZY: investigate this
+      //
+      // Analysis from claude, verify before trusting:
+      //
+      // Why does a key sometimes come back already-registered here?
+      //
+      // NOT because the bound is citizen-anchored (an earlier belief). A function bound's prototype is
+      // re-anchored away from the citizen it was copied from (the MFBFDP arm / `import_function_bound`
+      // rebuild the id as `original_calling_denizen_id.add_step(FunctionBound)`). The reachable path
+      // passes F's *template* id as that anchor; F's OWN where-clause bounds are anchored at F's *full*
+      // denizen id (`assemble_prototype`). `get_function_template` copies `init_steps` verbatim, so:
+      //     own bound key       = F_full_id      + FunctionBoundTemplate(name)
+      //     reachable bound key = F_template_id  + FunctionBoundTemplate(name)
+      // They differ in F's own name step (full vs template), so an own bound and a reachable bound never
+      // collide with each other.
+      //
+      // A hit here therefore means the SAME key is registered twice, from one of:
+      //   (a) the same F processed more than once — re-registers an identical (key, FunctionS); harmless.
+      //   (b) F reaching the same-signature bound from two DIFFERENT sources (two citizen runes, possibly
+      //       two citizens that each require e.g. `drop(T)`). Both re-anchor to the same
+      //       `F_template + FunctionBound(drop, [T])`, so they land on the same key, yet the per-source
+      //       `FunctionS` is each citizen's own bound object — a genuine identity collapse the coarse key
+      //       (name only, args stripped by `get_function_template`) can't keep apart. Signature-equivalent
+      //       for a callee lookup (a bound carries only params/effects), so the early-return is safe here,
+      //       but the real fix is a distinct, this-function-anchored id per bound.
+      return;
+    }
+    coutputs.register_postparsed_function(key, func_bound);
   }
 }
 
@@ -1252,24 +1307,6 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
       templata,
     )
   }
-
-  pub fn substitute_for_prototype(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    proto: &'t PrototypeT<'s, 't>,
-  ) -> &'t PrototypeT<'s, 't> {
-    Compiler::substitute_templatas_in_prototype(
-      coutputs,
-      self.sanity_check,
-      self.interner,
-      self.keywords,
-      self.original_calling_denizen_id,
-      self.needle_template_name,
-      self.new_substituting_templatas,
-      self.bound_arguments_source,
-      proto,
-    )
-  }
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -1302,6 +1339,57 @@ where
     }
   }
 
+  /// Evaluate a templata from an ITypeST.
+  pub fn evaluate_templex(
+    &self,
+    env: IEnvironmentT<'s, 't>,
+    rune_to_kind: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    templex: &ITypeST<'s>,
+  ) -> ITemplataT<'s, 't> {
+    match templex {
+      ITypeST::Rune(r) => rune_to_kind.get(&r.rune.rune).unwrap_or_else(|| {
+        panic!("evaluate_bound_templex: can't substitute {:?}", r.rune.rune)
+      }).clone(),
+      ITypeST::BorrowRef(b) =>
+        ITemplataT::Kind(KindTemplataT {
+          kind: KindT::BorrowRef(
+            self.typing_interner.alloc(BorrowRefT {
+              inner: self.evaluate_templex(env, rune_to_kind, b.inner).expect_kind()
+            }),
+          ).clone()
+        }),
+      ITypeST::OwnRef(b) =>
+        ITemplataT::Kind(KindTemplataT {
+          kind: KindT::OwnRef(
+            self.typing_interner.alloc(OwnRefT {
+              inner: self.evaluate_templex(env, rune_to_kind, b.inner).expect_kind()
+            }),
+          ).clone()
+        }),
+      ITypeST::WeakRef(b) =>
+        ITemplataT::Kind(KindTemplataT {
+          kind: KindT::WeakRef(
+            self.typing_interner.alloc(WeakRefT {
+              inner: self.evaluate_templex(env, rune_to_kind, b.inner).expect_kind()
+            }),
+          ).clone()
+        }),
+      ITypeST::Name(n) => {
+        let mut lookup_filter = HashSet::default();
+        lookup_filter.insert(ILookupContext::TemplataLookupContext);
+        match lookup_nearest_with_path(env, &[n.name], lookup_filter, self.typing_interner) {
+          Some(t) => t,
+          None => panic!(
+            "evaluate_bound_templex: bound type name {:?} did not resolve to anything",
+            n.name,
+          ),
+        }
+      }
+      other => panic!("evaluate_bound_templex: unsupported bound type templex {:?}", other),
+    }
+  }
+
+  // VCOORD: i want to rename this to import_reachable_bounds but that function already exists?
   pub fn get_reachable_bounds(
     &self,
     sanity_check: bool,
@@ -1313,27 +1401,9 @@ where
       ICitizenTT::Struct(s) => s.id,
       ICitizenTT::Interface(i) => i.id,
     };
-    // An imported Rust citizen is opaque: it carries no Vale-side `where` bounds to harvest, and its
-    // inner env may not exist (compiled only on demand, unlike an eagerly-compiled native citizen).
-    // Return empty reachable bounds rather than fetch an inner env it hasn't got — the full harvest
-    // below would produce the same empty result for an opaque type anyway.
-    // VCOORD: do the lazy compilation refactor to get rid of this
-    #[cfg(feature = "rust_interop")]
-    if crate::typing::rust_interop::is_rust_backed(&citizen_id) {
-      return (
-        InstantiationReachableBoundArgumentsT {
-          citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map(),
-        },
-        IndexMap::default(),
-      );
-    }
-    let substituter = self.get_placeholder_substituter(
-      sanity_check,
-      original_calling_denizen_id,
-      citizen_id,
-      IBoundArgumentsSource::InheritBoundsFromTypeItself,
-    );
     let citizen_template_id = self.get_citizen_template(citizen_id);
+
+    let args = self.instantiation_template_args(*citizen_id);
 
     // VCOORD: turn this into a helper
     let (foreign_generic_runes, foreign_citizen_header_rules) = match citizen {
@@ -1355,10 +1425,7 @@ where
     // indices though. We should either make a new ByNameSusbtituter, or augment Substituter,
     // or do something here.
     let foreign_rune_to_conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> =
-      foreign_generic_runes
-        .into_iter()
-        .zip(substituter.new_substituting_templatas.iter().map(|t| *t))
-        .collect();
+      foreign_generic_runes.into_iter().zip(args.iter().copied()).collect();
     // This map contains, for each foreign resolve rule (well, its result_rune which identifies it)
     // which local conclusions its type uses.
     let foreign_resolve_rule_rune_to_mentioned_conclusions = foreign_citizen_header_rules
@@ -1374,22 +1441,20 @@ where
       })
       .collect();
 
-    let inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
-    let citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> = inner_env
-      .templatas()
-      .name_to_entry
-      .iter()
-      .filter_map(|(name, entry)| match (name, entry) {
-        (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_tt))) => {
-          match proto_tt.prototype.id.local_name {
-            INameT::FunctionBound(_) => {
-              let substituted = substituter.substitute_for_prototype(coutputs, proto_tt.prototype);
-              Some((rune_name.rune, *substituted))
-            }
-            _ => None,
-          }
-        }
-        _ => None,
+    let citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> = self
+      .resolve_citizen_bounds(coutputs, citizen_template_id, args)
+      .into_iter()
+      .map(|(rune, (func_bound, bound_name, return_type))| {
+        let proto = Compiler::import_function_bound(
+          coutputs,
+          sanity_check,
+          self.typing_interner,
+          *original_calling_denizen_id,
+          bound_name,
+          return_type,
+          Some(func_bound),
+        );
+        (rune, *proto)
       })
       .collect();
 
@@ -1849,31 +1914,15 @@ where
     rune: IRuneS<'s>,
     register_with_compiler_outputs: bool,
   ) -> KindTemplataT<'s, 't> {
-    // val kindPlaceholderId =
-    //   namePrefix.addStep(
-    //     interner.intern(KindPlaceholderNameT(
-    //       interner.intern(KindPlaceholderTemplateNameT(index, rune)))))
-    let template_name = self
-      .typing_interner
+    let template_name = self.typing_interner
       .intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT { index, rune });
-    let placeholder_name = self
-      .typing_interner
+    let placeholder_name = self.typing_interner
       .intern_kind_placeholder_name(KindPlaceholderNameT { template: template_name });
     let kind_placeholder_id =
       name_prefix.add_step(self.typing_interner, INameT::KindPlaceholder(placeholder_name));
+    let kind_placeholder_template_id = self.get_placeholder_template(kind_placeholder_id);
 
-    // val kindPlaceholderTemplateId =
-    //   TemplataCompiler.getPlaceholderTemplate(kindPlaceholderId)
-    let kind_placeholder_template_id_val = self.get_placeholder_template(*kind_placeholder_id);
-    let kind_placeholder_template_id = self.typing_interner.intern_id(IdValT {
-      package_coord: kind_placeholder_template_id_val.package_coord,
-      init_steps: kind_placeholder_template_id_val.init_steps,
-      local_name: kind_placeholder_template_id_val.local_name,
-    });
-
-    // if (registerWithCompilerOutputs) {
     if register_with_compiler_outputs {
-      // coutputs.declareType(kindPlaceholderTemplateId)
       coutputs.declare_type(kind_placeholder_template_id);
 
       // Per @BDPFWDZ: the placeholder env stays empty. Bound declarations
@@ -1890,13 +1939,10 @@ where
       );
       let placeholder_env_ref: IInDenizenEnvironmentT<'s, 't> =
         IInDenizenEnvironmentT::General(placeholder_env);
-      // coutputs.declareTypeOuterEnv(kindPlaceholderTemplateId, placeholderEnv)
       coutputs.declare_type_outer_env(kind_placeholder_template_id, placeholder_env_ref);
-      // coutputs.declareTypeInnerEnv(kindPlaceholderTemplateId, placeholderEnv)
       coutputs.declare_type_inner_env(kind_placeholder_template_id, placeholder_env_ref);
     }
 
-    // KindTemplataT(KindPlaceholderT(kindPlaceholderId))
     let kind_placeholder =
       self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: *kind_placeholder_id });
     KindTemplataT { kind: KindT::KindPlaceholder(kind_placeholder) }

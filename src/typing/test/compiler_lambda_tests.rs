@@ -11,10 +11,12 @@ use crate::tests::tests::new_test_package_source;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::ast::expressions::MemberLookupTE;
 use crate::typing::names::names::LocalNameT;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::names::names::{FunctionNameT, FunctionTemplateNameT, INameT, IdT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::compiler_test_compilation::compiler_test_compilation_without_borrow_check;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::{IntT, KindT};
 use crate::typing::typing_interner::TypingInterner;
@@ -91,6 +93,46 @@ fn lambda_with_one_magic_arg() {
       ) => Some(())
   );
   assert_eq!(coutputs.lookup_lambda_in("main").header.return_type, KindT::Int(IntT { bits: 32 }),);
+}
+
+// Regression for 24338999 (struct members got their own MemberNameT, distinct from variable
+// names). A closure that captures a local and reads it lowers to a MemberLookup on the closure
+// struct. That MemberLookup must name its member by the struct's member name (IVarNameT::Member),
+// not the capture's original Local name — otherwise instantiation's member match
+// (`IVarNameT::Member(m.name) == member_name`, instantiator.rs) never hits and it panics
+// "member name not found in struct". See tests_generic_s_lambda_calling_parent_function_s_bound.
+#[test]
+fn closure_capture_read_names_its_member() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r#"
+exported func main() int { a = 7; return { a }(); }
+"#;
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  // Borrow checker off: a closure capturing a reference is a deferred borrow-checker case that
+  // panics before typing output is available, and this test is about the typed MemberLookup's name.
+  let mut compile = compiler_test_compilation_without_borrow_check(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let lambda = coutputs.lookup_lambda_in("main");
+  // Reading captured `a` lowers to a MemberLookup on the closure struct; its member must be named
+  // by the struct's member name (IVarNameT::Member), not the capture's original Local name.
+  collect_only_tnode!(
+    NodeRefT::FunctionDefinition(lambda),
+    NodeRefT::MemberLookup(MemberLookupTE { member_name: IVarNameT::Member(_), .. }) => Some(())
+  );
 }
 
 // VCOORD: enable this

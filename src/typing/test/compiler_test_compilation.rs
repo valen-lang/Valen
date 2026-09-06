@@ -25,6 +25,7 @@ fn test_typing_pass_options() -> TypingPassOptions {
     global_options,
     debug_out: Arc::new(|x: &str| println!("{}", x)),
     tree_shaking_enabled: true,
+    borrow_checker_enabled: true,
   }
 }
 
@@ -81,6 +82,38 @@ where
     vec![test_tld],
     code_source,
     test_typing_pass_options(),
+  )
+}
+
+/// Like `compiler_test_compilation`, but with the borrow checker off — for typing-pass tests whose
+/// fixture exercises a feature the group-based borrow checker doesn't handle yet (e.g. a closure
+/// capturing a reference), so the test can assert on typing output without tripping a deferred
+/// borrow-checker panic.
+/// VCOORD: remove this
+pub fn compiler_test_compilation_without_borrow_check<'s, 'ctx, 't, 'p>(
+  typing_interner: &'ctx TypingInterner<'s, 't>,
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parser_keywords: &'ctx Keywords<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
+  code_source: &'ctx CodeSource<'p>,
+) -> TypingPassCompilation<'s, 'ctx, 't, 'p>
+where
+  's: 't,
+{
+  let test_module = parse_arena.intern_str("test");
+  let test_tld = parse_arena.intern_package_coordinate(test_module, &[]);
+  let mut options = test_typing_pass_options();
+  options.borrow_checker_enabled = false;
+  typing_pass_compilation_for_test(
+    typing_interner,
+    scout_arena,
+    keywords,
+    parser_keywords,
+    parse_arena,
+    vec![test_tld],
+    code_source,
+    options,
   )
 }
 

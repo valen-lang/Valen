@@ -68,6 +68,7 @@ fn run_vale(code: &str, with_builtins: bool) -> IVonData {
         code_source,
         global_options,
         instantiator_options,
+        true, // borrow_checker_enabled
         &instantiating_bump,
     );
 

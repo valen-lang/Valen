@@ -71,6 +71,7 @@ where
       code_source,
       options.global_options,
       instantiator_options,
+      true, // borrow_checker_enabled
       instantiating_bump,
     );
     FullCompilation { instantiated_compilation }

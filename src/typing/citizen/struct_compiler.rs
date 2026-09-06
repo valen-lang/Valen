@@ -337,4 +337,83 @@ where
     // Sharedness is parse-time-known and not template-parametric, so no substitution needed.
     coutputs.lookup_struct(*struct_tt.id, self).sharedness
   }
+
+  /// Each of the citizen's own `where func` bounds, evaluated with its generic runes bound DIRECTLY
+  /// to `substituting_args` (the citizen instance's template args, already in the caller's terms), so
+  /// the produced name + return are already in the caller's terms — no citizen placeholders are ever
+  /// conjured. Anchor-free: it hands back each bound's identity name and return type, keyed by the
+  /// bound's result rune; `import_function_bound` anchors and registers it into a denizen. Derived
+  /// purely from the postparsed `func_bounds` (no compiled inner env); recomputed per call.
+  pub fn resolve_citizen_bounds(
+    &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    citizen_template_id: &'t IdT<'s, 't>,
+    substituting_args: &[ITemplataT<'s, 't>],
+  ) -> IndexMap<IRuneS<'s>, (&'s FunctionS<'s>, &'t FunctionBoundNameT<'s, 't>, KindT<'s, 't>)> {
+    let mut out: IndexMap<
+      IRuneS<'s>,
+      (&'s FunctionS<'s>, &'t FunctionBoundNameT<'s, 't>, KindT<'s, 't>),
+    > = IndexMap::default();
+    // A citizen with no postparsed AHT reachable here — a lambda/anonymous closure struct, or an
+    // un-illuminated Rust citizen — declares no `where func` bounds, so it contributes none.
+    let (generic_params, func_bounds): (
+      &'s [&'s GenericParameterS<'s>],
+      &'s [(RuneUsage<'s>, FunctionS<'s>)],
+    ) = match coutputs.peek_postparsed_type(citizen_template_id) {
+      Some(ICitizenDenizenS::TopLevelStruct(s)) => (s.generic_params, s.func_bounds),
+      Some(ICitizenDenizenS::TopLevelInterface(i)) => (i.generic_params, i.func_bounds),
+      None => return out,
+    };
+    // The citizen's generic runes bound directly to the use-site args (same positional order the
+    // resolve/instantiation machinery pairs them by). Its outer env is only for evaluate_templex's
+    // primitive Name lookups, never for a citizen placeholder.
+    let env = IEnvironmentT::from(coutputs.get_outer_env_for_type(*citizen_template_id));
+    let rune_to_substitution_templata: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = generic_params
+        .iter()
+        .zip(substituting_args.iter())
+        .map(|(gp, arg)| (gp.rune.rune, *arg))
+        .collect();
+    for (result_rune, func_bound) in func_bounds {
+      let human_name = match func_bound.name {
+        IFunctionDeclarationNameS::FunctionName(fns) => fns.imprecise_name.name,
+        other => panic!("substitute_citizen_own_bounds: unexpected bound name {:?}", other),
+      };
+      let param_coords: Vec<KindT<'s, 't>> = func_bound
+          .params
+          .iter()
+          .map(|p| self.evaluate_templex(env, &rune_to_substitution_templata, &p.tyype).expect_kind())
+          .collect();
+      let return_type = self
+          .evaluate_templex(
+            env,
+            &rune_to_substitution_templata,
+            &func_bound.maybe_return_type.expect("function bound has no return type"),
+          )
+          .expect_kind();
+      let template_name = self
+          .typing_interner
+          .intern_function_bound_template_name(FunctionBoundTemplateNameT { human_name });
+      let bound_name = self.typing_interner.intern_function_bound_name(FunctionBoundNameValT {
+        template: template_name,
+        template_args: &[],
+        parameters: self.typing_interner.alloc_slice_from_vec(param_coords),
+      });
+      out.insert(result_rune.rune, (func_bound, bound_name, return_type));
+    }
+    out
+  }
+
+  pub fn instantiation_template_args(
+    &self,
+    citizen_instance_id: IdT<'s, 't>,
+  ) -> &'t [ITemplataT<'s, 't>] {
+    let local_name: IInstantiationNameT<'s, 't> =
+      citizen_instance_id.local_name.try_into().unwrap_or_else(|_| {
+        panic!(
+          "citizen_instance_template_args: localName must be IInstantiationNameT, got {:?}",
+          citizen_instance_id.local_name
+        )
+      });
+    local_name.template_args()
+  }
 }

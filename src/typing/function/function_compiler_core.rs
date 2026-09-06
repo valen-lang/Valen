@@ -353,8 +353,10 @@ where
     coutputs.add_function(header_sig, function2);
 
     // Borrow-check this finished body. The check arena holds the transient grouped AST.
-    let check_arena = Bump::new();
-    self.check_function(coutputs, full_env_snapshot.function, function2, &check_arena)?;
+    if self.opts.borrow_checker_enabled {
+      let check_arena = Bump::new();
+      self.check_function(coutputs, full_env_snapshot.function, function2, &check_arena)?;
+    }
 
     Ok(function2.header)
   }

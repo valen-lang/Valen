@@ -1,5 +1,6 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
+use crate::integration_tests::tests::run_compilation::test_no_builtins_without_borrow_check;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
@@ -295,38 +296,40 @@ exported func main() int {
 
 // See LCCPGB for explanation.
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn tests_generic_s_lambda_calling_parent_function_s_bound() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    // The onion harness loads no builtins, so a user `foo` stands in for the original `print`
+    // bound and the program stands on its own. Still the LCCPGB shape: `genFunc<T>` declares a
+    // `where func foo(&T)int` bound, and a nested lambda calls that imported bound. Returning 7
+    // proves the bound was resolved and called through instantiation.
+    let mut compile = test_no_builtins_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r#"
-func genFunc<T>(a &T)
-where func print(&T)void {
-  { print(a); }()
+func foo(a &int) int { return 7; }
+func genFunc<T>(a &T) int
+where func foo(&T)int {
+  return { foo(a) }();
 }
-exported func main() {
-  genFunc(&"hello");
+exported func main() int {
+  return genFunc(&7);
 }
 "#,
     );
-    compile.run_primitive_args(Vec::new()).unwrap();
-    */
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        IVonData::Int(VonInt { value: 7 }) => {}
+        other => panic!("expected VonInt(7), got {:?}", other),
+    }
 }
 
 // This lambda has an implicit <Y> template param
