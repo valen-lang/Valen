@@ -1,6 +1,22 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::collect_only_snode;
+use crate::collect_only_tnode;
+use crate::collect_where_tnode;
+use crate::integration_tests::tests::run_compilation::test;
+use crate::postparsing::expressions::ConstantBoolSE;
+use crate::postparsing::expressions::ConstantIntSE;
+use crate::postparsing::expressions::IExpressionSE;
+use crate::postparsing::expressions::IfSE;
+use crate::postparsing::expressions::ReturnSE;
+use crate::postparsing::test::traverse::NodeRefS;
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
 use crate::keywords::Keywords;
+use crate::typing::ast::expressions::IfTE;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::types::types::IntT;
+use crate::typing::types::types::KindT;
+use crate::typing::types::types::ShareRefT;
+use crate::typing::types::types::StrT;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::load_expected;
@@ -12,25 +28,20 @@ use crate::testvm::von::VonStr;
 pub struct IfTests;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn simple_true_branch_returning_an_int() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -78,29 +89,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn simple_false_branch_returning_an_int() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -112,29 +117,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn ladder() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test_no_builtins(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -150,18 +149,14 @@ exported func main() int {
             NodeRefT::If(if2) => Some(if2)
         );
         for iff in &ifs {
-            assert_eq!(iff.result(), CoordT::new(
-                OwnershipT::Own,
-                RegionT { region: IRegionT::Default },
-                KindT::Int(IntT::I32),
-            ));
+            assert_eq!(iff.result, KindT::Int(IntT::I32));
         }
         assert_eq!(ifs.len(), 2);
         let user_funcs = coutputs.get_all_user_functions();
         for func in &user_funcs {
             match func.header.return_type {
-                CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
-                CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
+                KindT::Int(IntT { bits: 32 }) => {}
+                KindT::Bool(_) => {}
                 other => panic!("vwat: {:?}", other),
             }
         }
@@ -170,29 +165,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn moving_from_inside_if() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test_no_builtins(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 struct Marine { x int; }
@@ -216,17 +205,13 @@ exported func main() int {
             NodeRefT::If(if2) => Some(if2)
         );
         for iff in &ifs {
-            assert_eq!(iff.result(), CoordT::new(
-                OwnershipT::Own,
-                RegionT { region: IRegionT::Default },
-                KindT::Int(IntT::I32),
-            ));
+            assert_eq!(iff.result, KindT::Int(IntT::I32));
         }
         let user_funcs = coutputs.get_all_user_functions();
         for func in &user_funcs {
             match func.header.return_type {
-                CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
-                CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
+                KindT::Int(IntT { bits: 32 }) => {}
+                KindT::Bool(_) => {}
                 other => panic!("vwat: {:?}", other),
             }
         }
@@ -235,29 +220,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn if_with_complex_condition() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r##"
 struct Marine { x int; }
@@ -277,40 +256,33 @@ exported func main() str {
             NodeRefT::If(if2) => Some(if2)
         );
         for iff in &ifs {
-            assert_eq!(iff.result(), CoordT::new(
-                OwnershipT::Share,
-                RegionT { region: IRegionT::Default },
-                KindT::Str(StrT),
-            ));
+            match iff.result {
+                KindT::ShareRef(ShareRefT { inner: KindT::Str(StrT) }) => {}
+                other => panic!("expected a shared str, got {:?}", other),
+            }
         }
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Str(VonStr { value }) if value == "#" => {}
         other => panic!("expected VonStr(\"#\"), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn if_with_condition_declaration() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: x used after comparison; needs copy
         r"
@@ -324,29 +296,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn ret_from_inside_if_will_destroy_locals() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: m.hp is &int
         r#"
@@ -373,29 +340,24 @@ exported func main() int {
 "#,
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "In then!\nDestroying marine!\n");
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn can_continue_if_other_branch_would_have_returned() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: m.hp is &int
         r#"
@@ -422,37 +384,28 @@ exported func main() int {
 }
 "#,
     );
-    {
-        let coutputs = compile.expect_compiler_outputs();
-        let _main = coutputs.lookup_function_by_str("main");
-    }
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), r"In else!
 In rest!
 Destroying marine!
 ");
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn destructure_inside_if() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: bork.num is &int
         r"
@@ -479,39 +432,29 @@ exported func main() {
 }
 ",
     );
-    {
-        let coutputs = compile.expect_compiler_outputs();
-        let _main = coutputs.lookup_function_by_str("main");
-    }
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), r"5
 5
 5
 5
 ");
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn if_nevers() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/if/ifnevers.vale");
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -519,29 +462,24 @@ fn if_nevers() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn if_with_panics_and_rets() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r#"
 exported func main() int {
@@ -561,29 +499,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn toast() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -598,14 +530,9 @@ exported func main() int {
 }
 ",
     );
-    {
-        let coutputs = compile.expect_compiler_outputs();
-        let _main = coutputs.lookup_function_by_str("main");
-    }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 

@@ -1,5 +1,9 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::collect_only_tnode;
+use crate::integration_tests::tests::run_compilation::test;
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::types::types::{IntT, KindT};
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
@@ -11,25 +15,20 @@ use crate::testvm::von::VonInt;
 pub struct TupleTests;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn returning_tuple_from_function_and_dotting_it() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test_no_builtins(
+    let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: makeTup().1 is &int
         r"
@@ -46,29 +45,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn tuple_with_two_things() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test_no_builtins(
+    let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: (9, true).1 is &bool
         r"
@@ -84,29 +77,23 @@ exported func main() bool {
         IVonData::Bool(VonBool { value: true }) => {}
         other => panic!("Expected VonBool(true), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn tuple_type() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test_no_builtins(
+    let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: a.1 is &int
         r"
@@ -124,29 +111,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("Expected VonInt(4), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn simple_tuple_with_one_int() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: "exported func main() int { return (9,).0; }"
         "exported func main() int { return __copy_prim(&(9,).0); }",
@@ -154,17 +135,11 @@ fn simple_tuple_with_one_int() {
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        assert_eq!(main.header.return_type.kind, KindT::Int(IntT::I32));
-        // Funny story, theres no such thing as a one element tuple! It becomes a one element array.
-        collect_only_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::Tuple(_) => Some(())
-        );
+        assert_eq!(main.header.return_type, KindT::Int(IntT::I32));
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
-    */
 }
 

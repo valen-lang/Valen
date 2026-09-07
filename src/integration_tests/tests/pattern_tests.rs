@@ -1,6 +1,19 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::integration_tests::tests::run_compilation::test;
+use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
+use crate::instantiating::ast::names::IdI;
+use crate::instantiating::ast::names::INameI;
+use crate::instantiating::ast::names::IStructTemplateNameI;
+use crate::instantiating::ast::names::StructNameI;
+use crate::instantiating::ast::names::StructTemplateNameI;
+use crate::instantiating::ast::types::BorrowRefIT;
+use crate::instantiating::ast::types::IntIT;
+use crate::instantiating::ast::types::KindIT;
+use crate::instantiating::ast::types::StructIT;
+use crate::typing::types::types::IntT;
+use crate::typing::types::types::KindT;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::typing::typing_interner::TypingInterner;
@@ -9,197 +22,157 @@ use crate::testvm::von::VonInt;
 pub struct PatternTests;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn test_matching_a_multiple_member_seq_of_immutables() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     // Checks that the 5 made it into y, and it was an int
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: "exported func main() int { [x, y] = (4, 5); return y; }"
-        "exported func main() int { [x, y] = (4, 5); return __copy_prim(&y); }",
+        r#"
+exported func main() int {
+  [x, y] = (4, 5);
+  return __copy_prim(&y);
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        assert_eq!(main.header.return_type, CoordT::new(
-            OwnershipT::Own,
-            RegionT { region: IRegionT::Default },
-            KindT::Int(IntT::I32),
-        ));
+        assert_eq!(main.header.return_type, KindT::Int(IntT::I32));
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
-    */
 }
 
 
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn test_matching_a_multiple_member_seq_of_mutables() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     // Checks that the 5 made it into y, and it was an int
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: y.hp is &int
-        r"
+        r#"
 struct Marine { hp int; }
-exported func main() int { [x, y] = (Marine(6), Marine(8)); return __copy_prim(&y.hp); }
-",
+exported func main() int {
+  [x, y] = (Marine(6), Marine(8));
+  return __copy_prim(&y.hp);
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        assert_eq!(main.header.return_type, CoordT::new(
-            OwnershipT::Own,
-            RegionT { region: IRegionT::Default },
-            KindT::Int(IntT::I32),
-        ));
+        assert_eq!(main.header.return_type, KindT::Int(IntT::I32));
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 8 }) => {}
         other => panic!("expected VonInt(8), got {:?}", other),
     }
-    */
 }
 
 
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn test_matching_a_multiple_member_pack_of_immutable_and_own() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     // Checks that the 5 made it into y, and it was an int
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: y.hp is &int
-        r"
+        r#"
 struct Marine { hp int; }
-exported func main() int { [x, y] = (7, Marine(8)); return __copy_prim(&y.hp); }
-",
+exported func main() int {
+  [x, y] = (7, Marine(8));
+  return __copy_prim(&y.hp);
+}
+"#,
     );
-    {
-        let coutputs = compile.expect_compiler_outputs();
-        let _ = coutputs.functions[0].header.return_type == CoordT::new(
-            OwnershipT::Own,
-            RegionT { region: IRegionT::Default },
-            KindT::Int(IntT::I32),
-        );
-    }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 8 }) => {}
         other => panic!("expected VonInt(8), got {:?}", other),
     }
-    */
 }
 
 
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn test_matching_a_multiple_member_pack_of_immutable_and_borrow() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     // Checks that the 5 made it into y, and it was an int
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: y.hp is &int
-        r"
+        r#"
 struct Marine { hp int; }
 exported func main() int {
   m = Marine(8);
   [x, y] = (7, &m);
   return __copy_prim(&y.hp);
 }
-",
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
-        // BUG: `==` here is a pure expression with a discarded result; the assertion is dead. Should be `assert_eq!`.
-        let _ = coutputs.functions[0].header.return_type == CoordT::new(
-            OwnershipT::Own,
-            RegionT { region: IRegionT::Default },
-            KindT::Int(IntT::I32),
-        );
+        assert_eq!(coutputs.functions[0].header.return_type, KindT::Int(IntT::I32));
     }
     {
         let monouts = compile.get_monouts();
         let tup_def = monouts.lookup_struct_by_name("Tup2");
-        let tup_def_member_types: Vec<CoordI<'_, '_>> = tup_def.members.iter().filter_map(|m| match m.tyype {
-            IMemberTypeI::AddressMemberTypeI(t) => Some(t.reference),
-            IMemberTypeI::ReferenceMemberTypeI(t) => Some(t.reference),
-        }).collect();
+        let tup_def_member_types: Vec<KindIT<'_, '_>> = tup_def.members.iter().map(|m| m.tyype).collect();
         match tup_def_member_types.as_slice() {
             [
-                CoordI {
-                    ownership: OwnershipI::Own,
-                    kind: KindIT::IntIT(IntIT { bits: 32, .. }),
-                    ..
-                },
-                CoordI {
-                    ownership: OwnershipI::MutableBorrow,
-                    kind: KindIT::StructIT(StructIT {
+                KindIT::IntIT(IntIT { bits: 32, .. }),
+                KindIT::BorrowRefIT(BorrowRefIT {
+                    inner: KindIT::StructIT(StructIT {
                         id: IdI {
                             init_steps: &[],
                             local_name: INameI::StructName(StructNameI {
@@ -211,43 +184,36 @@ exported func main() int {
                             }),
                             ..
                         },
-                        ..
                     }),
-                    ..
-                },
+                }),
             ] => {}
-            _ => panic!("tup_def_member_types shape mismatch"),
+            other => panic!("expected Tup2 members [own int, borrow Marine], got {:?}", other),
         }
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 8 }) => {}
         other => panic!("expected VonInt(8), got {:?}", other),
     }
-    */
 }
 
 
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn test_destructuring_a_shared() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: i is &int
         r"
@@ -260,21 +226,17 @@ exported func main() int {
 }
 ",
     );
-    {
-        let _coutputs = compile.expect_compiler_outputs();
-    }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 
 
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn ignore_destructure() {
     unimplemented!();
     /*

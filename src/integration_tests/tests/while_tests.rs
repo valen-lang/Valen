@@ -1,4 +1,6 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::integration_tests::tests::run_compilation::test;
+use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
@@ -9,25 +11,20 @@ use crate::testvm::von::VonInt;
 pub struct WhileTests;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn simple_while_loop_that_doesnt_execute() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -40,29 +37,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn test_a_for_ish_while_loop() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -78,29 +69,26 @@ exported func main() int {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn tests_a_while_loop_with_a_complex_condition() {
-    unimplemented!();
+    unimplemented!(); // ZONION-deferred: needs eval_for_kind_primitive_args_with_stdin harness method
     /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: key reused after print
         r"
@@ -123,25 +111,23 @@ exported func main() int {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn tests_a_while_loop_with_a_set_in_it() {
-    unimplemented!();
+    unimplemented!(); // ZONION-deferred: needs eval_for_kind_primitive_args_with_stdin harness method
     /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: key reused after print
         r"
@@ -166,25 +152,23 @@ exported func main() int {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn tests_a_while_loop_with_a_declaration_in_it() {
-    unimplemented!();
+    unimplemented!(); // ZONION-deferred: needs eval_for_kind_primitive_args_with_stdin harness method
     /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: key reused after print
         r"
@@ -204,25 +188,20 @@ exported func main() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn return_from_infinite_while_loop() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -237,29 +216,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_conditional_break() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -277,29 +250,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_unconditional_break() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -314,29 +281,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_conditional_break_from_both_sides() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -355,29 +316,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_conditional_return() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -395,29 +350,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_unconditional_return() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -432,29 +381,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn infinite_while_loop_conditional_return_from_both_sides() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -473,29 +416,23 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn while_with_condition_declaration() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -508,29 +445,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn each_on_int_range() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 import intrange.*;
@@ -548,29 +480,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 45 }) => {}
         other => panic!("expected VonInt(45), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn parallel_foreach() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 import intrange.*;
@@ -590,29 +517,24 @@ exported func main() {
 ",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap().trim(), "[1, 2, 3, 4, 5]");
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn mutable_foreach() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: list.ship.fuel is &int
         r"
@@ -650,29 +572,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn each_on_int_range_with_conditional_break() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 import intrange.*;
@@ -695,29 +612,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn each_on_int_range_with_unconditional_break() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 import intrange.*;
@@ -735,29 +647,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn each_on_int_range_with_conditional_break_from_both_branches() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 import intrange.*;
@@ -779,6 +686,5 @@ exported func main() int {
         IVonData::Int(VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
-    */
 }
 

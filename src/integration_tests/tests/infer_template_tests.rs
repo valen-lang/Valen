@@ -1,6 +1,27 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::integration_tests::tests::run_compilation::test;
+use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
+use crate::collect_only_tnode;
+use crate::postparsing::names::CodeNameS;
+use crate::typing::ast::ast::ParameterT;
+use crate::typing::ast::ast::PrototypeT;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::names::names::FunctionNameT;
+use crate::typing::names::names::IdT;
+use crate::typing::names::names::FunctionTemplateNameT;
+use crate::typing::names::names::INameT;
+use crate::typing::names::names::IStructTemplateNameT;
+use crate::typing::names::names::IVarNameT;
+use crate::typing::names::names::LocalNameT;
+use crate::typing::names::names::StructNameT;
+use crate::typing::names::names::StructTemplateNameT;
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::templata::templata::KindTemplataT;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::types::types::KindT;
+use crate::typing::types::types::StructTT;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::typing::typing_interner::TypingInterner;
@@ -10,25 +31,20 @@ use crate::testvm::von::VonInt;
 pub struct InferTemplateTests;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 pub fn test_inferring_a_borrowed_argument() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: moo(&x).hp is &int
         r"
@@ -45,11 +61,11 @@ exported func main() int {
         let moo = coutputs.lookup_function_by_str("moo");
         match moo.header.params {
             [ParameterT {
-                name: IVarNameT::Member(MemberNameT { name: StrI("m"), .. }),
-                tyype: CoordT { ownership: OwnershipT::Borrow, .. },
+                name: IVarNameT::Local(LocalNameT { imprecise_name: CodeNameS { name: StrI("m"), .. }, .. }),
+                tyype: KindT::BorrowRef(_),
                 ..
             }] => {}
-            _ => panic!("moo.header.params didn't match expected pattern"),
+            _ => panic!("moo.header.params didn't match: expected one borrow-ref param `m`"),
         }
         let main = coutputs.lookup_function_by_str("main");
         collect_only_tnode!(
@@ -60,24 +76,19 @@ exported func main() int {
                         local_name: INameT::Function(FunctionNameT {
                             template: FunctionTemplateNameT { human_name: StrI("moo"), .. },
                             template_args: &[ITemplataT::Kind(KindTemplataT {
-                                coord: CoordT {
-                                    ownership: OwnershipT::Own,
-                                    kind: KindT::Struct(StructTT {
-                                        id: IdT {
-                                            package_coord: x_package_coord,
-                                            init_steps: &[],
-                                            local_name: INameT::Struct(StructNameT {
-                                                template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Muta"), .. }),
-                                                template_args: &[],
-                                                ..
-                                            }),
+                                kind: KindT::Struct(StructTT {
+                                    id: IdT {
+                                        package_coord: x_package_coord,
+                                        init_steps: &[],
+                                        local_name: INameT::Struct(StructNameT {
+                                            template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Muta"), .. }),
+                                            template_args: &[],
                                             ..
-                                        },
+                                        }),
                                         ..
-                                    }),
+                                    },
                                     ..
-                                },
-                                ..
+                                }),
                             })],
                             ..
                         }),
@@ -93,29 +104,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 pub fn test_inferring_a_borrowed_static_sized_array() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: m[0].hp is &int
         r"
@@ -131,29 +137,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 pub fn test_inferring_an_owning_static_sized_array() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: m[0].hp is &int
         r"
@@ -169,6 +170,5 @@ exported func main() int {
         IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
-    */
 }
 

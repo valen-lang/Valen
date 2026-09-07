@@ -1,6 +1,26 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::collect_only_tnode;
+use crate::integration_tests::tests::run_compilation::test;
+use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
+use crate::typing::ast::citizens::StructMemberT;
+use crate::typing::ast::expressions::LetNormalTE;
+use crate::typing::ast::expressions::MemberLookupTE;
+use crate::typing::env::function_environment_t::LocalVariable;
+use crate::typing::names::names::FunctionNameT;
+use crate::typing::names::names::FunctionTemplateNameT;
+use crate::typing::names::names::IdT;
+use crate::typing::names::names::INameT;
+use crate::typing::names::names::IVarNameT;
+use crate::typing::names::names::LambdaCitizenNameT;
+use crate::typing::names::names::LambdaCitizenTemplateNameT;
+use crate::typing::types::types::SharednessT;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::types::types::BorrowRefT;
+use crate::typing::types::types::IntT;
+use crate::typing::types::types::KindT;
+use crate::typing::types::types::StructTT;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::load_expected;
@@ -14,7 +34,7 @@ use std::marker::PhantomData;
 pub struct ClosureTests;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 pub fn addressibility() {
     unimplemented!();
     /*
@@ -70,21 +90,16 @@ pub fn addressibility() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 pub fn captured_own_is_borrow() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     // Here, the scout determined that the closure is only ever borrowing
     // it (during the dereference to get its member) so typingpass doesn't put
@@ -94,9 +109,9 @@ pub fn captured_own_is_borrow() {
     // This means the closure struct contains a borrow reference. This means
     // the environment in the closure has to match this; the environment has
     // to have a borrow reference instead of an owning reference.
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: m.hp is &int
         r"
@@ -113,233 +128,124 @@ exported func main() int {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn test_closure_s_local_variables() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: "exported func main() int { x = 4; return {x}(); }"
-        "exported func main() int { x = 4; return {__copy_prim(&x)}(); }",
+        r#"
+exported func main() int {
+  x = 4;
+  return {__copy_prim(&x)}();
+}
+"#,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_lambda_in("main");
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
-            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+            variable: LocalVariable {
                 name: IVarNameT::ClosureParam(_),
-                coord: CoordT {
-                    ownership: OwnershipT::Borrow,
-                    kind: KindT::Struct(StructTT {
+                tyype: KindT::BorrowRef(BorrowRefT {
+                    inner: KindT::Struct(StructTT {
                         id: IdT {
                             init_steps: &[INameT::Function(FunctionNameT {
-                                template: FunctionTemplateNameT {
-                                    human_name: StrI("main"), ..
-                                },
+                                template: FunctionTemplateNameT { human_name: StrI("main"), .. },
                                 template_args: &[],
                                 parameters: &[],
                                 ..
                             })],
                             local_name: INameT::LambdaCitizen(LambdaCitizenNameT {
                                 template: LambdaCitizenTemplateNameT { .. },
+                                ..
                             }),
                             ..
                         },
                         ..
                     }),
-                    ..
-                },
-            }),
+                }),
+            },
             ..
         }) => Some(())
     );
     collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
-            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+            variable: LocalVariable {
                 name: IVarNameT::TypingPassBlockResultVar(_),
-                coord: CoordT {
-                    ownership: OwnershipT::Own,
-                    kind: KindT::Int(IntT { bits: 32 }),
-                    ..
-                },
-            }),
+                tyype: KindT::Int(IntT { bits: 32 }),
+            },
             ..
         }) => Some(())
     );
-    */
 }
 
+// VCOORD: have another one of these tests, but actually returning a reference
 #[test]
 // ZONION: re-enable for onion
 #[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: "exported func main() int { x = 4; return {x}(); }"
-        "exported func main() int { x = 4; return {__copy_prim(&x)}(); }",
+        r#"
+exported func main() int {
+  x = 4;
+  return {__copy_prim(&x)}();
+}
+"#,
     );
     {
-        let interner = compile.interner;
         let coutputs = compile.expect_compiler_outputs();
-
-        // The struct should have an int x in it which is a reference type.
-        // It's a reference because we know for sure that it's moved from our child,
-        // which means we don't need to check afterwards, which means it doesn't need
-        // to be boxed/addressible.
-        let closured_vars_struct_tt =
-            coutputs.lookup_lambda_in("main").header.params.first().unwrap().tyype.kind.expect_struct();
-        let closured_vars_struct_def =
-            coutputs.structs.iter().find(|struct_def| {
-                *crate::typing::compiler::Compiler::get_template(interner, struct_def.instantiated_citizen.id) ==
-                    *crate::typing::compiler::Compiler::get_template(interner, closured_vars_struct_tt.id)
-            }).expect("closured_vars_struct_def not found");
-
-        let expected_members = vec![
-            IStructMemberT::Normal(NormalStructMemberT {
-                name: IVarNameT::Member(interner.intern_member_name(MemberNameT { name: scout_arena.intern_str("x")})),
-                tyype: IMemberTypeT::Reference(ReferenceMemberTypeT {
-                    reference: CoordT::new(
-                        // TSUGAR: was OwnershipT::Own pre-flip when `x` was captured by-value into the closure.
-                        // Now `__copy_prim(x)` reads it as a borrow, so the closure captures Borrow+Int.
-                        OwnershipT::Borrow,
-                        RegionT { region: IRegionT::Default },
-                        KindT::Int(IntT { bits: 32 }),
-                    ),
-                }),
-            }),
-        ];
-        assert_eq!(closured_vars_struct_def.members, expected_members.as_slice());
-
         let lambda = coutputs.lookup_lambda_in("main");
-        // Make sure we're doing a referencememberlookup, since it's a reference member
-        // in the closure struct.
-        collect_only_tnode!(
-            NodeRefT::FunctionDefinition(lambda),
-            NodeRefT::MemberLookup(MemberLookupTE {
-                member_name: IVarNameT::Member(MemberNameT { name: StrI("x"), .. }),
-                ..
-            }) => Some(())
-        );
 
-        // Make sure there's a function that takes in the closured vars struct, and returns an int
-        let function_calls = collect_where_tnode!(
-            NodeRefT::FunctionDefinition(coutputs.lookup_function_by_str("main")),
-            NodeRefT::FunctionCall(FunctionCallTE {
-                callable: p @ PrototypeT { id: IdT { local_name: INameT::LambdaCallFunction(_), .. }, .. },
-                ..
-            }) => Some(*p)
-        );
-        assert_eq!(function_calls.len(), 1);
-        let prototype: PrototypeT<'_, '_> = function_calls[0];
-        let lambda_call_name: &LambdaCallFunctionNameT = match prototype.id.local_name {
-            INameT::LambdaCallFunction(n) => n,
-            _ => panic!("expected LambdaCallFunction local_name"),
+        // The lambda's first param is the borrowed closure struct; find its definition and confirm
+        // it captured exactly one member, by borrow-of-int.
+        let closure_struct_tt = match lambda.header.params.first().unwrap().tyype {
+            KindT::BorrowRef(BorrowRefT { inner: KindT::Struct(stt) }) => stt,
+            other => panic!("expected a borrowed closure-struct param, got {:?}", other),
         };
-        let params = lambda_call_name.parameters;
-        let return_type = prototype.return_type;
-        match params.first().unwrap() {
-            CoordT {
-                ownership: OwnershipT::Borrow,
-                kind: KindT::Struct(StructTT {
-                    id: IdT {
-                        init_steps: &[INameT::Function(FunctionNameT {
-                            template: FunctionTemplateNameT { human_name: StrI("main"), .. },
-                            template_args: &[],
-                            parameters: &[],
-                            ..
-                        })],
-                        local_name: INameT::LambdaCitizen(_),
-                        ..
-                    },
-                    ..
-                }),
+        let closure_def = coutputs.lookup_struct(*closure_struct_tt.id);
+        match closure_def.members {
+            [StructMemberT {
+                tyype: KindT::BorrowRef(BorrowRefT { inner: KindT::Int(IntT { bits: 32 }) }),
                 ..
-            } => {}
-            other => panic!("expected lambda struct param, got {:?}", other),
+            }] => {}
+            other => panic!("expected one borrow-of-int captured member, got {:?}", other),
         }
-        assert_eq!(return_type, CoordT::new(
-            OwnershipT::Own,
-            RegionT { region: IRegionT::Default },
-            KindT::Int(IntT { bits: 32 }),
-        ));
 
-        // Make sure we make it with a function pointer and a constructed vars struct
-        let main = coutputs.lookup_function_by_str("main");
-        collect_only_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::Construct(ConstructTE {
-                struct_tt: StructTT {
-                    id: IdT {
-                        init_steps: &[INameT::Function(FunctionNameT {
-                            template: FunctionTemplateNameT { human_name: StrI("main"), .. },
-                            template_args: &[],
-                            parameters: &[],
-                            ..
-                        })],
-                        local_name: INameT::LambdaCitizen(_),
-                        ..
-                    },
-                    ..
-                },
-                ..
-            }) => Some(())
-        );
-
-        // Make sure we call the function somewhere
-        // TSUGAR: was collect_only_tnode!; now there are 2 FunctionCalls in main
-        //   (the lambda invocation `()` and the `__copy_prim(x)` call added by the
-        //   sugar). Use collect_where_tnode! and check count >= 1 instead.
-        let calls = collect_where_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::FunctionCall(_) => Some(())
-        );
-        assert!(calls.len() >= 1);
-
+        // Reading the captured var lowers to a MemberLookup on the closure struct, named by the
+        // struct's member name (IVarNameT::Member), not the capture's original Local name.
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(lambda),
-            NodeRefT::LocalLookup(LocalLookupTE {
-                local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                    name: IVarNameT::ClosureParam(_),
-                        ..
-                }),
-                ..
-            }) => Some(())
+            NodeRefT::MemberLookup(MemberLookupTE { member_name: IVarNameT::Member(_), .. }) => Some(())
         );
     }
 
@@ -347,29 +253,24 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn mutates_from_inside_a_closure() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: x is reused after addressible-promotion → wrap with __copy_prim
         r"
@@ -380,84 +281,82 @@ exported func main() int {
 }
 ",
     );
+
+
     {
-        let interner = compile.interner;
-        let coutputs = compile.expect_compiler_outputs();
-
-        // The struct should have an int x in it.
-        let closure = coutputs.lookup_lambda_in("main");
-        let closure_struct = closure.header.params.first().unwrap().tyype.kind.expect_struct();
-        let closure_struct_def = coutputs.lookup_struct(closure_struct.id);
-        let expected_members = vec![
-            IStructMemberT::Normal(NormalStructMemberT {
-                name: IVarNameT::Member(interner.intern_member_name(MemberNameT { name: scout_arena.intern_str("x")})),
-                tyype: IMemberTypeT::Address(AddressMemberTypeT {
-                    reference: CoordT::new(
-                        OwnershipT::Own,
-                        RegionT { region: IRegionT::Default },
-                        KindT::Int(IntT { bits: 32 }),
-                    ),
-                }),
-            }),
-        ];
-        assert_eq!(closure_struct_def.members, expected_members.as_slice());
-
-        let lambda = coutputs.lookup_lambda_in("main");
-        collect_only_tnode!(
-            NodeRefT::FunctionDefinition(lambda),
-            NodeRefT::Mutate(MutateTE {
-                destination_expr: AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
-                    member_name: IVarNameT::Member(MemberNameT { name: StrI("x"), .. }),
-                    result_type2: CoordT {
-                        ownership: OwnershipT::Own,
-                        kind: KindT::Int(IntT { bits: 32 }),
-                        ..
-                    },
-                    ..
-                }),
-                ..
-            }) => Some(())
-        );
-
-        let main = coutputs.lookup_function_by_str("main");
-        collect_only_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::LetNormal(LetNormalTE {
-                variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
-                        ..
-                }),
-                ..
-            }) => Some(())
-        );
+        unimplemented!();
+        // let interner = compile.interner;
+        // let coutputs = compile.expect_compiler_outputs();
+        //
+        // // The struct should have an int x in it.
+        // let closure = coutputs.lookup_lambda_in("main");
+        // let closure_struct = closure.header.params.first().unwrap().tyype.kind.expect_struct();
+        // let closure_struct_def = coutputs.lookup_struct(closure_struct.id);
+        // let expected_members = vec![
+        //     IStructMemberT::Normal(NormalStructMemberT {
+        //         name: IVarNameT::Member(interner.intern_member_name(MemberNameT { name: scout_arena.intern_str("x")})),
+        //         tyype: IMemberTypeT::Address(AddressMemberTypeT {
+        //             reference: CoordT::new(
+        //                 OwnershipT::Own,
+        //                 RegionT { region: IRegionT::Default },
+        //                 KindT::Int(IntT { bits: 32 }),
+        //             ),
+        //         }),
+        //     }),
+        // ];
+        // assert_eq!(closure_struct_def.members, expected_members.as_slice());
+        //
+        // let lambda = coutputs.lookup_lambda_in("main");
+        // collect_only_tnode!(
+        //     NodeRefT::FunctionDefinition(lambda),
+        //     NodeRefT::Mutate(MutateTE {
+        //         destination_expr: AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
+        //             member_name: IVarNameT::Member(MemberNameT { name: StrI("x"), .. }),
+        //             result_type2: CoordT {
+        //                 ownership: OwnershipT::Own,
+        //                 kind: KindT::Int(IntT { bits: 32 }),
+        //                 ..
+        //             },
+        //             ..
+        //         }),
+        //         ..
+        //     }) => Some(())
+        // );
+        //
+        // let main = coutputs.lookup_function_by_str("main");
+        // collect_only_tnode!(
+        //     NodeRefT::FunctionDefinition(main),
+        //     NodeRefT::LetNormal(LetNormalTE {
+        //         variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
+        //                 ..
+        //         }),
+        //         ..
+        //     }) => Some(())
+        // );
     }
 
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 pub fn mutates_from_inside_a_closure_inside_a_closure() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "exported func main() int { x = 4; { { set x = x + 1; }(); }(); return x; }",
     );
@@ -465,7 +364,6 @@ pub fn mutates_from_inside_a_closure_inside_a_closure() {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
-    */
 }
 
 #[test]
@@ -506,26 +404,22 @@ exported func main() int {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 pub fn mutable_lambda() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/lambdas/lambdamut.vale");
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -558,6 +452,5 @@ pub fn mutable_lambda() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 

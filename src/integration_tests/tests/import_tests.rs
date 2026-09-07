@@ -15,7 +15,7 @@ use crate::testvm::von::VonInt;
 pub struct ImportTests;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn tests_import() {
     unimplemented!();
     /*
@@ -90,7 +90,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn tests_non_imported_module_isnt_brought_in() {
     unimplemented!();
     /*
@@ -163,7 +163,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn tests_import_with_paackage() {
     unimplemented!();
     /*
@@ -236,7 +236,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn tests_import_of_directory_with_no_vale_files() {
     unimplemented!();
     /*

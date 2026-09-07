@@ -1,6 +1,18 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::integration_tests::tests::run_compilation::test;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
+use crate::postparsing::ast::CodeBodyS;
+use crate::postparsing::ast::IBodyS;
+use crate::postparsing::expressions::BlockSE;
+use crate::postparsing::expressions::BodySE;
+use crate::postparsing::expressions::ConsecutorSE;
+use crate::postparsing::expressions::IExpressionSE;
+use crate::postparsing::expressions::IVariableUseCertainty;
+use crate::postparsing::expressions::LocalS;
+use crate::postparsing::names::CodeNameS;
+use crate::postparsing::names::CodeVarNameS;
+use crate::postparsing::names::IVarDeclarationNameS;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::typing::typing_interner::TypingInterner;
@@ -10,25 +22,20 @@ use crate::testvm::von::VonInt;
 pub struct BlockTests;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn empty_block() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -62,30 +69,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
-    */
 }
 
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn simple_block_with_a_variable() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -121,7 +122,9 @@ exported func main() int {
         assert_eq!(block.locals.len(), 1);
         match block.locals[0] {
             LocalS {
-                var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS { name: StrI("y"), .. }),
+                var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS {
+                    imprecise_name: CodeNameS { name: StrI("y"), .. }, ..
+                }),
                 self_borrowed: IVariableUseCertainty::NotUsed,
                 self_moved: IVariableUseCertainty::NotUsed,
                 self_mutated: IVariableUseCertainty::NotUsed,
@@ -136,30 +139,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
-    */
 }
 
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn simple_block_with_a_variable_another_variable_outside_with_same_name() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -171,12 +168,10 @@ exported func main() int {
 }
 ",
     );
-    let _scoutput = compile.get_scoutput().expect("get_scoutput failed");
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
-    */
 }
 
 

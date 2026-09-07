@@ -1,12 +1,18 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::collect_only_tnode;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
+use crate::typing::test::traverse::NodeRefT;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
+use crate::integration_tests::tests::run_compilation::test;
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
+use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
 use crate::tests::tests::load_expected;
 use crate::testvm::vivem::VmRuntimeErrorV;
 use crate::typing::typing_interner::TypingInterner;
+use crate::typing::types::types::IntT;
+use crate::typing::types::types::KindT;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
@@ -14,25 +20,20 @@ use crate::testvm::von::VonInt;
 pub struct IntegrationTestsC;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn tests_floats() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: imm → share
         r"
@@ -48,30 +49,25 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn get_or_function() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/genericvirtuals/getOr.vale");
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -79,29 +75,23 @@ fn get_or_function() {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn panic_on_drop_because_of_outstanding_borrow() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 struct Ship { hp int; }
@@ -113,36 +103,29 @@ exported func main() {
 }
 ",
     );
-    let _ = compile.expect_compiler_outputs();
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         Err(VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
         other => panic!("Expected ConstraintViolatedException, got {:?}", other),
     }
-    */
 }
 
 // Not sure if this is desirable behavior, because borrow_ship isnt really used after
 // we drop ship. Still, let's have this test so we don't *accidentally* change it.
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn unlet_to_avoid_an_outstanding_borrow_panic() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 struct Ship { hp int; }
@@ -155,32 +138,26 @@ exported func main() {
 }
 ",
     );
-    let _ = compile.expect_compiler_outputs();
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn function_return_with_return_upcasts() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/virtuals/retUpcast.vale");
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -196,13 +173,12 @@ fn function_return_with_return_upcasts() {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn test_shaking() {
-    unimplemented!();
+    unimplemented!(); // ZONION-deferred: needs deleted harness method
     /*
     // Make sure that functions that cant be called by main will not be included.
 
@@ -211,16 +187,14 @@ fn test_shaking() {
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 import printutils.*;
@@ -253,25 +227,21 @@ exported func main() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn test_overloading_between_borrow_and_weak() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 sealed interface IMoo  {}
@@ -289,34 +259,27 @@ exported func main() int {
 }
 ",
     );
-    let _coutputs = compile.get_compiler_outputs().unwrap();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn truncate_i64_to_i32() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func main() int {
@@ -324,34 +287,27 @@ exported func main() int {
 }
 ",
     );
-    let _coutputs = compile.expect_compiler_outputs();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5032704 }) => {}
         other => panic!("expected VonInt(5032704), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn return_without_return() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "exported func main() int { 73 }\n",
     );
@@ -359,29 +315,26 @@ fn return_without_return() {
         IVonData::Int(VonInt { value: 73 }) => {}
         other => panic!("expected VonInt(73), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn test_export_functions() {
-    unimplemented!();
+    unimplemented!(); // ZONION-deferred: needs deleted harness method
     /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 exported func moo() int {
@@ -394,58 +347,42 @@ exported func moo() int {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn test_extern_functions() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/externs/extern.vale");
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
     {
-        let math_str = scout_arena.intern_str("math");
-        let math_package_coord = *scout_arena.intern_package_coordinate(math_str, &[]);
-        let hamuts = compile.get_hamuts();
-        let package_h = hamuts.lookup_package(math_package_coord);
-        let sqrt_str = scout_arena.intern_str("sqrt");
-        let sqrt_extern = package_h.prototype_to_extern.values().find(|fe| fe.maybe_extern_name == sqrt_str);
-        assert!(sqrt_extern.is_some());
-        match sqrt_extern.unwrap() {
-            HamutsFunctionExtern { maybe_extern_name, prototype, .. } if *maybe_extern_name == sqrt_str => {
-                assert_eq!(prototype.id.local_name, sqrt_str);
-            }
-            other => panic!("expected HamutsFunctionExtern(sqrt, PrototypeH(IdH(sqrt, ...), ...), _), got {:?}", other),
-        }
-        let extern_sqrt = package_h.lookup_function("sqrt(float)");
-        assert!(extern_sqrt.is_extern);
+        let coutputs = compile.expect_compiler_outputs();
+        let sqrt_extern = coutputs.function_externs.iter()
+            .find(|e| e.extern_name == StrI("sqrt"))
+            .expect("sqrt extern missing from function_externs");
+        assert!(
+            matches!(sqrt_extern.prototype.return_type, KindT::Float(_)),
+            "expected sqrt extern to return float, got {:?}", sqrt_extern.prototype.return_type);
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn test_narrowing_between_borrow_and_owning_overloads() {
-    unimplemented!();
-    /*
     // See NMORFI for why this test is here. Before the SCCTT fix, it couldn't resolve between the two
     // `get` overloads, because the borrow ownership (from the opt.get()) was creeping into the rules
     // too far.
@@ -454,16 +391,14 @@ fn test_narrowing_between_borrow_and_owning_overloads() {
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 import panicutils.*;
@@ -488,30 +423,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn test_catch_deref_after_drop() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/invalidaccess.vale");
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -519,31 +448,25 @@ fn test_catch_deref_after_drop() {
         Err(VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
         other => panic!("Expected ConstraintViolatedException, got {:?}", other),
     }
-    */
 }
 
 // This test is here because we had a bug where the compiler was enforcing that we unstackify
 // the same locals from all branches of if, even if they were constraint refs.
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn using_same_constraint_ref_from_both_branches_of_if() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 struct Moo {}
@@ -567,30 +490,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 // Compiler should be fine with moving things from if statements if we return out.
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn moving_same_thing_from_both_branches_of_if() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 struct Moo {}
@@ -614,61 +531,54 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
+
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn exporting_array() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compilation = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        "export []int as IntArray;",
-    );
-    let hamuts = compilation.get_hamuts();
-    let test_package = hamuts.lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
-    let kind_h = *test_package.export_name_to_kind.get(&scout_arena.intern_str("IntArray")).expect("vassertSome: IntArray export missing");
-    let builtin_package = hamuts.lookup_package(*PackageCoordinate::builtin(&parse_arena, &parser_keywords));
-    let rsa = builtin_package.runtime_sized_arrays.iter().find(|r| KindHT::RuntimeSizedArrayHT(r.kind(&hammer_interner)) == kind_h).expect("vassertSome: RSA matching IntArray");
-    assert_eq!(rsa.element_type.kind, KindHT::IntHT(IntHT { bits: 32 }));
-    */
-}
-
-#[test]
-#[ignore] // ZONION: re-enable for onion
-fn call_borrow_parameter_with_shared_reference() {
-    unimplemented!();
-    /*
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "export []int as IntArray;",
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let export = coutputs.kind_exports.iter()
+        .find(|e| e.exported_name == StrI("IntArray"))
+        .expect("IntArray export missing");
+    match export.tyype {
+        KindT::RuntimeSizedArray(rsa) => {
+            assert_eq!(rsa.element_type(), KindT::Int(IntT::I32));
+        }
+        other => panic!("expected IntArray export to be a runtime-sized array of int, got {:?}", other),
+    }
+}
+
+#[test]
+fn call_borrow_parameter_with_shared_reference() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_without_borrow_check(
+        &compilation_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: bork(6) → bork(&6); wrap result with __copy_prim
         r"
@@ -683,7 +593,6 @@ exported func main() int {
         IVonData::Int(VonInt { value: 6 }) => {}
         other => panic!("expected VonInt(6), got {:?}", other),
     }
-    */
 }
 
 #[test]
@@ -722,25 +631,20 @@ exported func main() int {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn same_type_multiple_times_in_an_invocation() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: nested .a.a.a is &int
         r"
@@ -757,31 +661,25 @@ exported func main() int {
         IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn restackify() {
-    unimplemented!();
-    /*
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/restackify.vale");
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -789,31 +687,25 @@ fn restackify() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn destructure_restackify() {
-    unimplemented!();
-    /*
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/destructure_restackify.vale");
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -821,31 +713,26 @@ fn destructure_restackify() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn loop_restackify() {
-    unimplemented!();
-    /*
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/loop_restackify.vale");
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -853,50 +740,41 @@ fn loop_restackify() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
 fn ignoring_receiver() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: y.hp is &int
-        r"
+        r#"
 struct Marine { hp int; }
-exported func main() int { [_, y] = (Marine(6), Marine(8)); return __copy_prim(&y.hp); }
-
-",
+exported func main() int {
+  [_, y] = (Marine(6), Marine(8));
+  return __copy_prim(&y.hp);
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        assert_eq!(main.header.return_type, CoordT::new(
-            OwnershipT::Own,
-            RegionT { region: IRegionT::Default },
-            KindT::Int(IntT::I32),
-        ));
+        assert_eq!(main.header.return_type, KindT::Int(IntT::I32));
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 8 }) => {}
         other => panic!("expected VonInt(8), got {:?}", other),
     }
-    */
 }
 

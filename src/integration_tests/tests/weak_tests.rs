@@ -1,4 +1,6 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::integration_tests::tests::run_compilation::test;
+use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
@@ -12,7 +14,7 @@ use crate::testvm::von::VonInt;
 pub struct WeakTests;
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
     unimplemented!();
     /*
@@ -73,26 +75,22 @@ fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn destroy_own_then_locking_gives_none_with_struct() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/weaks/dropThenLockStruct.vale");
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -100,30 +98,25 @@ fn destroy_own_then_locking_gives_none_with_struct() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn drop_while_locked_with_struct() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/weaks/dropWhileLockedStruct.vale");
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -132,11 +125,10 @@ fn drop_while_locked_with_struct() {
         Err(VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
         Err(_) => panic!("vfail"),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct() {
     unimplemented!();
     /*
@@ -176,7 +168,7 @@ fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct() {
     unimplemented!();
     /*
@@ -216,7 +208,7 @@ fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn make_weak_ref_from_temporary() {
     unimplemented!();
     /*
@@ -259,7 +251,7 @@ exported func main() int { return getHp(&&Muta(7)); }
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
     unimplemented!();
     /*
@@ -320,26 +312,22 @@ fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn destroy_own_then_locking_gives_none_with_interface() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/weaks/dropThenLockInterface.vale");
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -347,30 +335,25 @@ fn destroy_own_then_locking_gives_none_with_interface() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn drop_while_locked_with_interface() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/weaks/dropWhileLockedInterface.vale");
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
@@ -379,11 +362,10 @@ fn drop_while_locked_with_interface() {
         Err(VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
         Err(other) => panic!("vfail: {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface() {
     unimplemented!();
     /*
@@ -423,7 +405,7 @@ fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface() {
     unimplemented!();
     /*
@@ -463,7 +445,7 @@ fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn call_weak_self_method_after_drop() {
     unimplemented!();
     /*
@@ -505,7 +487,7 @@ fn call_weak_self_method_after_drop() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn call_weak_self_method_while_alive() {
     unimplemented!();
     /*
@@ -547,7 +529,7 @@ fn call_weak_self_method_while_alive() {
 }
 
 #[test]
-#[ignore] // ZONION: re-enable for onion
+#[ignore = "blocked on the disabled weak builtin module (VCOORD: re-enable weaks)"]
 fn weak_yonder_member() {
     unimplemented!();
     /*

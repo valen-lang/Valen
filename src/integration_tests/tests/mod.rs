@@ -6,7 +6,6 @@ mod block_tests;
 mod closure_tests;
 mod conjunction_tests;
 mod float_tests;
-mod hammer_tests;
 mod hash_map_tests;
 mod if_tests;
 mod import_tests;
