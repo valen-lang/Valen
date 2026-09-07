@@ -521,19 +521,22 @@ reference; the per-argument source range comes from `FunctionCallTE.range`.
 
 ### Noalias output (from Noalias)
 
-`check_function` returns the per-parameter booleans and the restrict regions alongside its `Result`.
-They are owned data, because they must outlive `check_arena`, which the caller drops the moment
-checking finishes.
+`check_function` returns a `FunctionAliasingInfoT` — owned data (it must outlive `check_arena`, dropped
+the moment checking finishes) holding the per-parameter `noalias` booleans, and, once Phase B lands, the
+restrict regions. Computed once on the generic function; group structure doesn't vary per
+monomorphization, so every instantiation carries the same facts.
 
-The per-parameter output keys by parameter index, which reaches the backend unchanged. The restrict
-regions key their access sites by `Loc` (see Open Questions).
+The facts ride in side maps keyed by function id — never on `ParameterT`/`ParameterI` or the metal AST:
+`CompilerOutputs.signature_to_aliasing_info` (by `SignatureT`) → `HinputsT` → instantiation copies it,
+keyed by the instantiated `IdI`, into `HinputsI.id_to_aliasing_info` (`FunctionAliasingInfoI`) → the
+metal `Package.paramNoaliasByName` side map → C++ `declareFunction` reads it via `lookupParamNoalias`.
+A map entry's presence is the "analyzed" signal (absent = generated/extern/checker-off, marked nothing);
+`declareFunction` asserts a present entry's length equals the parameter count.
 
-Both are computed once on the generic function. Group structure doesn't vary per monomorphization, so
-every instantiation carries the same facts.
-
-Neither survives to the backend today: the grouped AST dies with `check_arena`, and instantiation
-erases groups (BCHATZ), so `ParameterT` carries only `KindT`. A durable carrier from `check_function`
-through `HinputsT` to the backend is needed — a core change.
+The **per-parameter attribute** keys by parameter index and is landed. The **restrict regions** (Phase B)
+key their access sites by `LocT` (mirrored as `LocI` past instantiation); the value-access nodes
+(`Deref`/`CopyPrim`/`Mutate`) must gain a `LocT` for this, since they carry only `RangeS` today (which is
+not unique enough — a decayed `Deref` and its inner `LocalLookup` share one).
 
 ## Test cases
 
@@ -602,11 +605,6 @@ unnamed temporary.
 ### Undocumented
 
 ## Open Questions
-
- * **How a restrict region names its access sites so they survive to the backend instruction.** The
-   metadata lands on the `load`/`store`/`call` that dereferences the reference. `FunctionCallTE`,
-   `IfTE`, and `WhileTE` carry a `Loc`, but a member `load` does not yet, so a per-access key needs one
-   (or a substitute). The per-parameter `noalias` output sidesteps this — it keys by parameter index.
 
 ## Required Reading
 

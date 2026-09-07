@@ -133,7 +133,7 @@ target:
       (KindT::BorrowRef(source_borrow), target) if source_borrow.inner == target => {
         match source_borrow.inner {
           x if self.kind_is_implicitly_cloneable(coutputs, x) => {
-            let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(range[0], source_expr, target));
+            let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(range[0], loct, source_expr, target));
             Ok(ExpressionTE::CopyPrim(copy_prim_te))
           }
           _ => self.convert_via_implicit_clone(
@@ -157,7 +157,7 @@ target:
         // Ok(ExpressionTE::Defer(defer))
       }
       (KindT::ShareRef(source_share), target) if source_share.inner == target => {
-        let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(range[0], source_expr, target));
+        let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(range[0], loct, source_expr, target));
         Ok(ExpressionTE::CopyPrim(copy_prim_te))
       }
       (KindT::ShareRef(source_share), KindT::BorrowRef(target_borrow))

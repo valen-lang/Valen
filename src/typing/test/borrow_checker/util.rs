@@ -76,6 +76,51 @@ pub fn assert_param_noalias(code: &str, function_human_name: &str, expected: &[b
   assert_eq!(hinputs.param_noalias(function_human_name), expected);
 }
 
+/// Compile `code` and assert one restrict region of `function_human_name`: the one carrying the bare
+/// integer landmark `marker` in its span. A restrict region is a span where one reference is the sole
+/// live reference into its group (so the backend may emit `!alias.scope`/`!noalias` on the accesses
+/// inside it). Pinning by `marker` — a bare `<marker>;` statement placed inside the region — keeps the
+/// test stable against node renumbering. Asserts the region's scope group name, its disjoint group
+/// names, and its access and call counts.
+pub fn assert_restrict_region(
+  code: &str,
+  function_human_name: &str,
+  marker: i32,
+  expected_scope_group: &str,
+  expected_disjoint_groups: &[&str],
+  expected_access_count: usize,
+  expected_call_count: usize,
+) {
+  let (parse_bump, scout_bump, typing_bump) = (Bump::new(), Bump::new(), Bump::new());
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let hinputs = compile.expect_compiler_outputs();
+  let region = hinputs
+    .restrict_regions(function_human_name)
+    .iter()
+    .find(|r| r.markers.contains(&marker))
+    .unwrap_or_else(|| panic!("no restrict region carrying marker {marker} in {function_human_name}"));
+  assert_eq!(region.scope_group_name().as_str(), expected_scope_group);
+  assert_eq!(
+    region.disjoint_group_names(),
+    expected_disjoint_groups.iter().map(|s| s.to_string()).collect::<Vec<_>>()
+  );
+  assert_eq!(region.accesses.len(), expected_access_count);
+  assert_eq!(region.calls.len(), expected_call_count);
+}
+
 /// Like `assert_borrow_error_renders`, but the code source also carries the array builtins, so a
 /// fixture may use runtime-sized arrays (`Array<int>(n)`, `a[i]`). The fixture must `import
 /// v.builtins.arrays.*;` (and any other builtins it needs).

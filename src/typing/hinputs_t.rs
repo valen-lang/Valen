@@ -3,6 +3,7 @@ use crate::typing::ast::ast::{
   EdgeT, FunctionAliasingInfoT, FunctionDefinitionT, FunctionExportT, FunctionExternT,
   InterfaceEdgeBlueprintT, KindExportT, KindExternT, PrototypeT, SignatureT,
 };
+use crate::typing::ast::borrowing_ast::RestrictRegionT;
 use crate::typing::ast::citizens::{CitizenDefinitionT, InterfaceDefinitionT, StructDefinitionT};
 use crate::typing::names::names::{
   FunctionTemplateNameT, INameT, IdT, ImplTemplateNameT, InterfaceTemplateNameT,
@@ -221,6 +222,17 @@ impl<'s, 't> HinputsT<'s, 't> {
       .signature_to_aliasing_info
       .get(&function.header.to_signature())
       .map(|info| info.param_noalias.as_slice())
+      .expect("no aliasing info recorded for function")
+  }
+
+  /// The borrow checker's restrict regions for the function named `human_name` — spans where one
+  /// reference is the sole live reference into its group.
+  pub fn restrict_regions(&self, human_name: &str) -> &[RestrictRegionT] {
+    let function = self.lookup_function_by_str(human_name);
+    self
+      .signature_to_aliasing_info
+      .get(&function.header.to_signature())
+      .map(|info| info.restrict_regions.as_slice())
       .expect("no aliasing info recorded for function")
   }
 

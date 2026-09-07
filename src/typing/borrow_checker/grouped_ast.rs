@@ -38,6 +38,30 @@ pub struct MutEffectPath<'s, 't> {
   pub steps: Vec<GroupStep<'s, 't>>,
 }
 
+/// A memory access recorded during `groupify_function`, in walk order, so `calculate_aliasing_info` can
+/// derive restrict regions without a second tree walk.
+///
+/// A load/store carries the reference it goes through (`base_ref`, the root local of the access chain,
+/// so two references into one group can be told apart) and the group that access touches (`group`,
+/// member-qualified). A call carries the groups it churns, so a region can require its calls not touch
+/// its group. A marker carries a bare-integer landmark placed at statement position, so a test can pin a
+/// region by value.
+pub enum AccessEventG<'s, 't> {
+  Access {
+    is_store: bool,
+    base_ref: IVarNameT<'s, 't>,
+    group: Vec<GroupStep<'s, 't>>,
+    loct: LocT<'t>,
+  },
+  Call {
+    touched: Vec<Vec<GroupStep<'s, 't>>>,
+    loct: LocT<'t>,
+  },
+  Marker {
+    value: i32,
+  },
+}
+
 /// One joint-argument violation candidate at a call, in the two shapes the checker reports.
 #[derive(Clone)]
 pub enum JointFact<'s, 't> {

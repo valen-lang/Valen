@@ -7,6 +7,7 @@ mod joint_argument_move_tests;
 mod joint_argument_tests;
 mod noalias_facts_tests;
 mod producer_gate_tests;
+mod restrict_region_tests;
 mod robustness_tests;
 mod same_group_aliasing_tests;
 mod use_after_churn_tests;

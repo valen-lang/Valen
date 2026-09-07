@@ -16,8 +16,9 @@ use crate::typing::borrow_checker::borrow_types::{
 };
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::borrow_checker::grouped_ast::{
-  split_unions, IExpressionGE, MutEffectPath,
+  flatten, split_unions, AccessEventG, GroupStep, IExpressionGE, MutEffectPath,
 };
+use crate::typing::templata::templata::ITemplataT;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::names::names::{IVarNameT, IdT, IdValT, INameT};
@@ -34,6 +35,9 @@ struct GCtx<'s, 't> {
   locals: Vec<(IVarNameT<'s, 't>, KindGT<'s, 't>)>,
   function_s: &'s FunctionS<'s>,
   function_t: &'t FunctionDefinitionT<'s, 't>,
+  /// Every load/store/call/marker seen so far, in walk order, for `calculate_aliasing_info` to derive
+  /// restrict regions.
+  access_log: Vec<AccessEventG<'s, 't>>,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
@@ -44,10 +48,10 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
     function_s: &'s FunctionS<'s>,
     function_t: &'t FunctionDefinitionT<'s, 't>,
     arena: &'g Bump,
-  ) -> Result<IExpressionGE<'s, 't, 'g>, ICompileErrorT<'s, 't>> {
-    let mut ctx = GCtx { locals: vec![], function_s, function_t };
+  ) -> Result<(IExpressionGE<'s, 't, 'g>, Vec<AccessEventG<'s, 't>>), ICompileErrorT<'s, 't>> {
+    let mut ctx = GCtx { locals: vec![], function_s, function_t, access_log: vec![] };
     let body = self.groupify(coutputs, &function_t.body, &mut ctx, arena);
-    Ok(body)
+    Ok((body, ctx.access_log))
   }
 
   /// Rebuild one typed expression as its grouped mirror, allocating children in `arena`. The result
@@ -120,11 +124,14 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         collect_subtree_churns(body, &mut mut_effects);
         IExpressionGE::While { result: self.make_kind_g_groupless(expr.result()), body, mut_effects }
       }
-      ExpressionTE::Mutate(m) => IExpressionGE::Mutate {
-        result: void_kind_g(),
-        destination_expr: arena.alloc(self.groupify(coutputs, &m.destination_expr, ctx, arena)),
-        source_expr: arena.alloc(self.groupify(coutputs, &m.source_expr, ctx, arena)),
-      },
+      ExpressionTE::Mutate(m) => {
+        let destination_expr = arena.alloc(self.groupify(coutputs, &m.destination_expr, ctx, arena));
+        let source_expr = arena.alloc(self.groupify(coutputs, &m.source_expr, ctx, arena));
+        if let Some((base_ref, group)) = self.base_ref_and_group(ctx, &m.destination_expr) {
+          ctx.access_log.push(AccessEventG::Access { is_store: true, base_ref, group, loct: m.loct });
+        }
+        IExpressionGE::Mutate { result: void_kind_g(), destination_expr, source_expr }
+      }
       ExpressionTE::Restackify(e) => IExpressionGE::Restackify {
         result: void_kind_g(),
         source_expr: arena.alloc(self.groupify(coutputs, &e.source_expr, ctx, arena)),
@@ -140,7 +147,17 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         IExpressionGE::Block { result, inner }
       }
       ExpressionTE::Consecutor(c) => {
-        let exprs = arena.alloc_slice_fill_iter(c.exprs.iter().map(|e| self.groupify(coutputs, e, ctx, arena)));
+        // Group each statement, recording a bare-integer statement as a marker between its neighbors'
+        // accesses so a restrict region can be pinned by value.
+        let mut grouped = Vec::with_capacity(c.exprs.len());
+        for e in c.exprs.iter() {
+          let g = self.groupify(coutputs, e, ctx, arena);
+          if let Some(value) = statement_marker(e) {
+            ctx.access_log.push(AccessEventG::Marker { value });
+          }
+          grouped.push(g);
+        }
+        let exprs = arena.alloc_slice_fill_iter(grouped.into_iter());
         let result = exprs.last().expect("consecutor with no expressions").result().clone();
         IExpressionGE::Consecutor { result, exprs }
       }
@@ -198,6 +215,8 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
           // and trips the totality panic; a non-borrow return is fine.
           None => (self.make_kind_g_groupless(call.callable.return_type), vec![]),
         };
+        let touched: Vec<Vec<GroupStep<'s, 't>>> = mut_effects.iter().map(|m| m.steps.clone()).collect();
+        ctx.access_log.push(AccessEventG::Call { touched, loct: call.loct });
         IExpressionGE::FunctionCall { result, args, mut_effects, call }
       }
       ExpressionTE::Reinterpret(e) => {
@@ -261,7 +280,12 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         IExpressionGE::Destroy { result: void_kind_g(), expr: arena.alloc(self.groupify(coutputs, &e.expr, ctx, arena)) }
       }
       ExpressionTE::CopyPrim(e) => {
-        IExpressionGE::CopyPrim { result: self.make_kind_g_groupless(expr.result()), inner: arena.alloc(self.groupify(coutputs, &e.inner, ctx, arena)) }
+        let inner = arena.alloc(self.groupify(coutputs, &e.inner, ctx, arena));
+        // A primitive copy reads a value through its reference — a real load into the base's group.
+        if let Some((base_ref, group)) = self.base_ref_and_group(ctx, &e.inner) {
+          ctx.access_log.push(AccessEventG::Access { is_store: false, base_ref, group, loct: e.loct });
+        }
+        IExpressionGE::CopyPrim { result: self.make_kind_g_groupless(expr.result()), inner }
       }
       ExpressionTE::LocalLookup(l) => {
         // `x` yields a borrow of the local's storage, pointing at group `Local(x)`; its referent is the
@@ -291,6 +315,13 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         // Dereferencing peels one borrow: the result is the referent of the inner grouped borrow, with
         // its nested groups intact.
         let result = deref_kind_g(inner.result());
+        // Only a deref that yields a value is a real load into a group; one that yields another borrow is
+        // pointer plumbing (peeling a `&&` down to `&`), which touches the slot, not the object group.
+        if !matches!(result, KindGT::BorrowRef(_)) {
+          if let Some((base_ref, group)) = self.base_ref_and_group(ctx, &d.inner) {
+            ctx.access_log.push(AccessEventG::Access { is_store: false, base_ref, group, loct: d.loct });
+          }
+        }
         IExpressionGE::Deref { result, inner }
       }
     };
@@ -418,6 +449,60 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
       local_name: template_local,
     });
     coutputs.peek_postparsed_function(template_id)
+  }
+
+  /// The root reference an access chain goes through, and the group that reference points into. Walks
+  /// the `member`/`deref`/`lookup` wrappers down to the `LocalLookup` or `ArgLookup` at the bottom and
+  /// returns its name plus its referent group — so `a.fuel` and `b.fuel` for `a`/`b &Ship in g` both
+  /// report group `g` (the shared group), told apart only by the reference. `None` for a chain rooted in
+  /// something unnamed (a temporary, a call result) or a non-borrow, which forms no restrict region.
+  fn base_ref_and_group(
+    &self,
+    ctx: &GCtx<'s, 't>,
+    expr: &ExpressionTE<'s, 't>,
+  ) -> Option<(IVarNameT<'s, 't>, Vec<GroupStep<'s, 't>>)> {
+    match expr {
+      ExpressionTE::LocalLookup(l) => {
+        let ty = self.local_type(ctx, l.local_variable.name, l.local_variable.tyype);
+        Some((l.local_variable.name, borrowref_group(&ty)?))
+      }
+      ExpressionTE::ArgLookup(a) => {
+        let name = ctx.function_t.header.params.get(a.param_index as usize)?.name;
+        Some((name, borrowref_group(&self.arg_type(a.param_index as usize, ctx))?))
+      }
+      ExpressionTE::Deref(d) => self.base_ref_and_group(ctx, &d.inner),
+      ExpressionTE::CopyPrim(e) => self.base_ref_and_group(ctx, &e.inner),
+      ExpressionTE::MemberLookup(e) => self.base_ref_and_group(ctx, &e.struct_expr),
+      ExpressionTE::StaticSizedArrayLookup(e) => self.base_ref_and_group(ctx, &e.array_expr),
+      ExpressionTE::RuntimeSizedArrayLookup(e) => self.base_ref_and_group(ctx, &e.array_expr),
+      _ => None,
+    }
+  }
+}
+
+/// The flattened group a borrow result points into, or `None` for a non-borrow.
+fn borrowref_group<'s, 't>(k: &KindGT<'s, 't>) -> Option<Vec<GroupStep<'s, 't>>> {
+  match k {
+    KindGT::BorrowRef(b) => Some(flatten(&b.group)),
+    _ => None,
+  }
+}
+
+/// A statement-position bare integer landmark (`103;`), for tests to pin a restrict region by value.
+/// Matches a `ConstantInt` standing on its own — with or without the `Discard` the typing pass wraps a
+/// dropped value in. Operand constants (the `1` in `set a.fuel = 1`) never reach here, since only whole
+/// statements (consecutor elements) are checked.
+fn statement_marker<'s, 't>(expr: &ExpressionTE<'s, 't>) -> Option<i32> {
+  let inner = match expr {
+    ExpressionTE::Discard(d) => &d.expr,
+    other => other,
+  };
+  match inner {
+    ExpressionTE::ConstantInt(c) => match &c.value {
+      ITemplataT::Integer(n) => Some(*n as i32),
+      _ => None,
+    },
+    _ => None,
   }
 }
 

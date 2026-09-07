@@ -104,6 +104,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
+    loct: LocT<'t>,
     ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     region: RegionT,
@@ -128,6 +129,7 @@ where
           }) => ExpressionTE::Deref(self.typing_interner.alloc(DerefTE::new(
             self.typing_interner,
             ranges[0],
+            loct,
             lookup_te_undecayed,
           ))),
           _ => lookup_te_undecayed,
@@ -168,7 +170,7 @@ where
         // VCOORD: do we really want to decay this like this here? i think so, but unsure.
         let member_lookup_decayed = match member_lookup.result() {
           KindT::BorrowRef(BorrowRefT { inner: KindT::BorrowRef(_) }) => ExpressionTE::Deref(
-            self.typing_interner.alloc(DerefTE::new(self.typing_interner, ranges[0], member_lookup)),
+            self.typing_interner.alloc(DerefTE::new(self.typing_interner, ranges[0], loct, member_lookup)),
           ),
           _ => member_lookup,
         };
@@ -225,6 +227,7 @@ where
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
     nenv: &mut NodeEnvironmentBox<'s, 't>,
+    loct: LocT<'t>,
     parent_ranges: &'t [RangeS<'s>],
     region: RegionT,
     load_range: RangeS<'s>,
@@ -251,7 +254,7 @@ where
         ));
         let member_lookup_decayed = match member_lookup.result() {
           KindT::BorrowRef(BorrowRefT { inner: KindT::BorrowRef(_) }) => ExpressionTE::Deref(
-            self.typing_interner.alloc(DerefTE::new(self.typing_interner, load_range, member_lookup)),
+            self.typing_interner.alloc(DerefTE::new(self.typing_interner, load_range, loct, member_lookup)),
           ),
           _ => member_lookup,
         };
@@ -281,11 +284,14 @@ where
     let lookup_expressions2: Vec<ExpressionTE<'s, 't>> = closure_struct_def
       .members
       .iter()
-      .map(|member| {
+      .enumerate()
+      .map(|(member_index, member)| {
         let StructMemberT { name: member_name, tyype, .. } = member;
         let member_imprecise = IImpreciseNameS::CodeName(member_name.imprecise_name);
+        let member_loct =
+          LocT::from_lid(self.typing_interner, call_location).add(self.typing_interner, member_index as i32);
         let lookup = self
-            .evaluate_lookup_for_load(coutputs, nenv, range, call_location, region, member_imprecise)
+            .evaluate_lookup_for_load(coutputs, nenv, member_loct, range, call_location, region, member_imprecise)
             .unwrap_or_else(|_| panic!("evaluate_lookup_for_load error"))
             .unwrap_or_else(|| panic!("Couldn't find {:?}", member_name));
         let coord = substituter.substitute_for_kind(coutputs, *tyype);
@@ -638,6 +644,7 @@ where
         let lookup_expr_1 = self.evaluate_lookup_for_load(
           coutputs,
           nenv,
+          loct,
           &range_list,
           outer_call_location,
           region,
@@ -853,7 +860,7 @@ where
           Some(inner) if inner.is_primitive() => inner,
           _ => panic!("__copy_prim expects &primitive, got {:?}", inner_coord),
         };
-        let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(cp.range, inner_te, result_coord));
+        let copy_prim_te = self.typing_interner.alloc(CopyPrimTE::new(cp.range, loct, inner_te, result_coord));
         Ok((ExpressionTE::CopyPrim(copy_prim_te), returns_from_inner, pending_from_inner))
       }
       IExpressionSE::Ownershipped(ownershipped) => {
@@ -1202,7 +1209,7 @@ where
           KindT::BorrowRef(BorrowRefT { inner: KindT::Bool(_), .. }) => ExpressionTE::CopyPrim(
             self
               .typing_interner
-              .alloc(CopyPrimTE::new(if_se.condition.range(), uncoerced_condition_expr, KindT::Bool(BoolT {}))),
+              .alloc(CopyPrimTE::new(if_se.condition.range(), loct, uncoerced_condition_expr, KindT::Bool(BoolT {}))),
           ),
           actual_type => {
             let range_with_parent: Vec<RangeS<'s>> =
@@ -1733,7 +1740,7 @@ where
         };
         // VCOORD: lets rename all the _2 to _te etc.
         let mutate_2 = ExpressionTE::Mutate(
-          self.typing_interner.alloc(MutateTE::new(em.range, destination_expr_2, converted_source_expr_2)),
+          self.typing_interner.alloc(MutateTE::new(em.range, loct, destination_expr_2, converted_source_expr_2)),
         );
         let mut returns = returns_from_source;
         returns.extend(returns_from_destination);
@@ -1760,6 +1767,7 @@ where
           .evaluate_addressible_lookup_for_mutate(
             coutputs,
             nenv,
+            loct.add(self.typing_interner, 1),
             parent_ranges,
             region,
             lm.range,
@@ -1815,7 +1823,7 @@ where
             )
           }
           _ => ExpressionTE::Mutate(
-            self.typing_interner.alloc(MutateTE::new(lm.range, destination_expr_2, converted_source_expr_2)),
+            self.typing_interner.alloc(MutateTE::new(lm.range, loct, destination_expr_2, converted_source_expr_2)),
           ),
         };
         Ok((expr_te, returns_from_source, pending_from_source))

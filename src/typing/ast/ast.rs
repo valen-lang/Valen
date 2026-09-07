@@ -5,6 +5,7 @@ use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
 
+use crate::typing::ast::borrowing_ast::RestrictRegionT;
 use crate::typing::ast::expressions::*;
 use crate::typing::hinputs_t::*;
 use crate::typing::names::names::IdValQuery;
@@ -216,12 +217,15 @@ pub struct PrototypeTemplataCalleeCandidate<'s, 't> {
 impl<'s, 't> PrototypeTemplataCalleeCandidate<'s, 't> {}
 
 /// The borrow checker's aliasing facts for one function, carried to the backend. Holds the
-/// per-parameter `noalias` verdict now, and will grow to carry the block-scoped restrict regions.
+/// per-parameter `noalias` verdict and the block-scoped restrict regions.
 #[derive(Clone, Debug)]
 pub struct FunctionAliasingInfoT {
   /// One entry per parameter, in signature order: true when the parameter is the sole reference into a
   /// group no other parameter aliases, so the backend may emit `noalias`.
   pub param_noalias: Vec<bool>,
+  /// Spans where one reference is the sole live reference into its group, so the backend may emit
+  /// `!alias.scope`/`!noalias` metadata on the accesses inside them.
+  pub restrict_regions: Vec<RestrictRegionT>,
 }
 
 /// Value-type (see @TFITCX)

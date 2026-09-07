@@ -380,6 +380,7 @@ where
   's: 't,
 {
   pub range: RangeS<'s>,
+  pub loct: LocT<'t>,
   pub destination_expr: ExpressionTE<'s, 't>,
   pub source_expr: ExpressionTE<'s, 't>,
   // VCOORD: the old value that was replaced; onion old-value semantics to confirm.
@@ -393,6 +394,7 @@ where
 {
   pub fn new(
     range: RangeS<'s>,
+    loct: LocT<'t>,
     destination_expr: ExpressionTE<'s, 't>,
     source_expr: ExpressionTE<'s, 't>,
   ) -> MutateTE<'s, 't> {
@@ -408,7 +410,7 @@ where
     };
     assert_eq!(destination_inner_type, source_expr.result());
     let result = destination_inner_type;
-    MutateTE { range, destination_expr, source_expr, result, _sealed: () }
+    MutateTE { range, loct, destination_expr, source_expr, result, _sealed: () }
   }
 }
 /// Arena-allocated (see @TFITCX)
@@ -895,6 +897,7 @@ where
   's: 't,
 {
   pub range: RangeS<'s>,
+  pub loct: LocT<'t>,
   pub inner: ExpressionTE<'s, 't>,
   pub result: KindT<'s, 't>,
   _sealed: (),
@@ -907,6 +910,7 @@ where
   pub fn new(
     interner: &TypingInterner<'s, 't>,
     range: RangeS<'s>,
+    loct: LocT<'t>,
     inner: ExpressionTE<'s, 't>,
   ) -> DerefTE<'s, 't> {
     let result = if let Some(result) = peel_one_reference(&inner.result()) {
@@ -914,7 +918,7 @@ where
     } else {
       panic!("DerefTE inner isnt a reference");
     };
-    DerefTE { range, inner, result, _sealed: () }
+    DerefTE { range, loct, inner, result, _sealed: () }
   }
 }
 /// Arena-allocated (see @TFITCX)
@@ -1040,6 +1044,8 @@ where
 #[derive(Debug)]
 pub struct CopyPrimTE<'s, 't> {
   pub range: RangeS<'s>,
+  /// This load's location, so the borrow checker can name it as a restrict-region access site.
+  pub loct: LocT<'t>,
   pub inner: ExpressionTE<'s, 't>,
   pub result: KindT<'s, 't>,
   _sealed: (),
@@ -1048,8 +1054,13 @@ impl<'s, 't> CopyPrimTE<'s, 't>
 where
   's: 't,
 {
-  pub fn new(range: RangeS<'s>, inner: ExpressionTE<'s, 't>, result: KindT<'s, 't>) -> CopyPrimTE<'s, 't> {
-    CopyPrimTE { range, inner, result, _sealed: () }
+  pub fn new(
+    range: RangeS<'s>,
+    loct: LocT<'t>,
+    inner: ExpressionTE<'s, 't>,
+    result: KindT<'s, 't>,
+  ) -> CopyPrimTE<'s, 't> {
+    CopyPrimTE { range, loct, inner, result, _sealed: () }
   }
 }
 /// Arena-allocated (see @TFITCX)

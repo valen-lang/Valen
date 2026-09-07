@@ -82,6 +82,19 @@ calls under a re-enable-when-borrowing-ok VCOORD and fall through to `__vbi_pani
 closures land — so `migrate` currently panics rather than draining its source. (The closure-free
 `DropFunctor<T>` that lets the arrays builtin drop cleanly lives in `arrays.vale`, not here.)
 
+## Noalias / restrict codegen (separate endeavor)
+
+Turns the checker's aliasing facts into LLVM `restrict`; full RFIGA plan in
+`~/.claude/plans/please-plan-out-implementing-fancy-hanrahan.md`, design in `borrowing-design.md`'s
+`calculate_aliasing_info` / `Noalias` sections. **Landed on `main`:** the per-parameter `noalias`
+attribute, end to end — `calculate_aliasing_info` (`aliasing_info.rs`) computes it, carried in side maps
+(`FunctionAliasingInfoT` keyed by signature, then `FunctionAliasingInfoI` keyed by instantiated `IdI` —
+never on AST nodes), emitted by C++ `declareFunction` (`function.cpp`) via the `Package.paramNoaliasByName`
+side map read by `lookupParamNoalias` (`boundary.cpp`); test `end_to_end_tests/tests/noalias.rs`. **Next
+— Phase B:** block-scoped `!alias.scope`/`!noalias` metadata on the `load`/`store`/`call` in a region
+where one reference is the sole user of its group, keyed by `LocT`/`LocI` (which `Deref`/`CopyPrim`/`Mutate`
+must gain — they carry only `RangeS` today); RFIGA (B1 checker regions, B2 codegen) in the plan file.
+
 ## Region and effect decisions (landed)
 
 The region/effect rulings live in `docs/plans/path-to-borrowing.md`: groups live only on the declaration
@@ -180,3 +193,11 @@ for **our** input on the `&x`-at-a-claim-place question above.
 - **Do not mirror a foreign reference implementation's structure as a template.** Copying Polonius's
   file/struct layout would import loans/origins/constraints — abstractions for jobs (region inference,
   exclusivity) group borrowing does not have; write a small own-shape layering doc instead.
+- **`noalias` is only violated on modification, so read-only aliasing into distinct groups stays legal.**
+  The existing mutation-gated aliasing check is already exactly the precondition `noalias` needs; do not
+  tighten it to reject read-only aliasing.
+- **Carry per-function backend facts in side maps keyed by function id, never as fields on the typing/
+  instantiated AST or the metal AST.** Mirror `extern_abi`/`struct_layouts` (signature → `IdI` →
+  `Package.paramNoaliasByName`); presence in the map is the "analyzed" signal (absent = not analyzed),
+  and codegen asserts a present entry's length matches the param count rather than silently tolerating a
+  short/empty one.
