@@ -78,6 +78,7 @@ include_shields = [
     { name = "OwedQuestionReminder-OQRX.md" },
     { name = "WorktreeRootReminder-WRRX.md" },
     { name = "CommitPreflightWorkflow-CPWX.md" },
+    { name = "PhoenixHarness-PHXX.md" },
 ]
 
 [review_mode]
