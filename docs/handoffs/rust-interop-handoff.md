@@ -56,18 +56,21 @@ names and lacks two of its pieces. Tracked here so neither doc has to carry the 
   entry is the only inbound Rust→Valen crossing today. The general form — every export emitted under its
   rustc-mangled name, the inbound mirror of `FunctionExternI.link_name` — is unbuilt.
 
-## Borrow groups on Rust returns (design requirement the importer must meet)
+## Borrow groups on Rust imports (built; reverse-direction `mut(g)` is inert until enforced)
 
-The borrowing design (`src/typing/docs/architecture/borrowing-design.md`, ratified) now forbids a
-groupless borrow: after `groupify_function` every borrow reference carries a group, and a function
-whose return type is a borrow with no group (`&T`, not `&T in g`) is a compile error. A Rust import
-that returns a borrow (`&Glyph`, `&V`) is synthesized with no group (`declarations.rs`/`corpus.rs`
-emit empty effects + no return group), so the **importer must synthesize an `&T in g` return group**
-(and `mut(g)` effects) for Rust borrow-returning methods; until it does, those returns are underivable
-and rejected. This is the concrete form of the "awaiting importer group facts" the RED borrow cases
-(`use_after_churn_through_a_rust_borrow_return_is_rejected`, `a_real_vec_element_accessor_is_importable`
-in `src/typing/test/rust_interop/cases.rs`) are blocked on. Design-vs-code: the ruling and the checker
-enforcement are landing on the borrow-checker branch; the importer-side group synthesis is unbuilt.
+The borrowing design (`src/typing/docs/architecture/borrowing-design.md`, ratified) forbids a groupless
+borrow: after `groupify_function` every borrow reference carries a group, and a borrow return with no
+group is a compile error. `synthesize_extern_function` (`declarations.rs`) meets this for the forward
+direction — every imported borrow parameter carries an `in g` group, a `&mut` parameter marks its group
+`mut(g)`, and a `&self`-tied borrow return carries the descendant `in g...` form. The reverse direction
+mirrors `&mut` too: a callback override's `&mut` parameter/receiver renders `&mut`/`&mut self` in the
+generated stub (`stub_gen.rs`, read from the override's `mut(g)` effect clause + each borrow's `in g`
+region), and `synthesize_abstract_interface_method` (`declarations.rs`) carries `mut(g)` on the abstract
+method. **Design-vs-code gap:** that abstract-method `mut(g)` is not yet *enforced* — override matching
+(`params_match` in `overload_resolver.rs`) compares group-erased kinds and ignores effects, and the
+borrow checker never groupifies an abstract method (`check_function` runs only for a `CodeBody`), so it is
+inert until the cross-abstract/override enforcement (exp-2 owns it, core) reads it. The override's own
+`in r`/`mut(r)` still borrow-checks its body normally.
 
 ## State (regenerate, don't trust stale)
 
@@ -316,29 +319,30 @@ N times →10). A void return and a multi-arg wrapper are implemented, but only 
 &FrameInput)` — two imported-type borrow params, void return, invoked through a generic *method* caller
 (`w.main_loop::<C>(&cb)`) — compiles and runs end to end. NobiliaV's real `driver.vale` (windowed, winit +
 wgpu) and its bounded twin `driver_check.vale` (auto-exits after 30 frames → 7) both build through `valen
-build` against the real multi-crate `nobiliav` graph and run. Two things this took, both **interim**:
+build` against the real multi-crate `nobiliav` graph and run. Two things make it work:
 
-- **The stub generator projects the Vale struct + its trait impl.** `generate_stub_source` now emits a `pub
+- **The stub generator projects the Vale struct + its trait impl.** `generate_stub_source` emits a `pub
   struct <S> {}` + `impl <ImportedTrait> for <S> { #[vale::emit_consumer_body] fn <m>(...) { unreachable!() } }`
   per Vale struct that implements an imported trait (see the `valen build` section). Without it,
   `resolve_local_type(<S>)` finds nothing → the outbound `main_loop::<S>` leaf is ARGS-UNCONVERTIBLE → no
   `FunctionExternI` is materialized → the backend aborts on an undeclared extern (`buildCallOrSideCall` in
   `externs.cpp`). Do not read that backend assert as a backend bug — it faithfully reports a leaf the stub
-  never let resolve. The earlier-feared `toRef` codegen assert did **not** fire for this shape once the
-  projection landed.
-- **A DO-NOT-SUBMIT typing patch.** The reachable-bounds gather skips an imported (`is_rust_backed`) citizen
-  rather than calling `get_inner_env_for_type` on its unregistered inner env — the branch in
-  `check_defining_conclusions_and_resolve` (`infer_compiler.rs`) and the harvest in `templata_compiler.rs`,
-  both `#[cfg(feature = "rust_interop")]`-guarded and marked `V: DO NOT SUBMIT`. Without it, that gather
-  `None`.unwrap()s at `compiler_outputs.rs` compiling the synthesized interface's abstract-method header (it
-  surfaces only with **builtins present** — the `valen build` path — since builtins pull the imported
-  param-type runes into the reachable set; the bare `--lib` harness never hits it). The real fix is for
-  `get_inner_env_for_type` to lazily compile an imported type's (empty) inner env on demand. Core typing.
+  never let resolve.
+- **The reachable-bounds gather takes no inner env for an imported citizen.** Compiling the synthesized
+  interface's abstract-method header, `check_defining_conclusions_and_resolve` (`infer_compiler.rs`) and the
+  harvest in `templata_compiler.rs` derive a citizen's function bounds via `resolve_citizen_bounds`
+  (`struct_compiler.rs`) — from the postparsed declaration, never `get_inner_env_for_type`. An imported
+  opaque citizen used only as a parameter type (e.g. `FrameInput`, never constructed, so never compiled and
+  never given an inner env) contributes no bounds instead of `None`.unwrap()ing at `get_inner_env_for_type`.
+  Do not reintroduce an inner-env fetch on that path.
 
-Staged: `fixtures_two_imported_params/` + `A_TRAIT_METHOD_WITH_TWO_IMPORTED_PARAMS` (its test reverted to keep
-the suite green) — a minimal in-tree callback via a generic *method* caller. Note the corpus drives
-hand-written fixture stubs, so it does **not** exercise `generate_stub_source`; the projection is guarded by
-the `stub_gen_projects_a_valen_struct_that_implements_a_rust_trait` unit test and the `run_wrapper` path.
+Covered by the wired `a_trait_method_with_two_imported_params` (`cases.rs`, →7) — the two-imported-borrow-param
+callback via a generic *method* caller. Note the corpus drives hand-written fixture stubs, so it does **not**
+exercise `generate_stub_source`; the projection is guarded by the
+`stub_gen_projects_a_valen_struct_that_implements_a_rust_trait` / `stub_gen_projects_mut_borrows_as_mut_references`
+unit tests and the `run_wrapper` E2E `wrapper_drives_a_reverse_and_forward_mut_callback_to_exit_seven`
+(a Vale struct impls a `&mut self`/`&mut T` trait, and forward `&mut C`/`&mut self` calls — both directions
+compile, link, run → 7), all in `drive_tests.rs`.
 
 ## The `valen build` pipeline
 
@@ -366,7 +370,8 @@ AI-editable, in `src/typing/rust_interop/`:
   `pub use` per `import rust.X.Y`, a `#[vale::emit_consumer_body]` `__vale_<export>` root per exported func,
   the marker, the `__vale_drop` shim, and — for the reverse direction — a `pub struct <S> {}` + `impl
   <ImportedTrait> for <S>` per Vale struct that implements an imported trait, each override rendered from the
-  Vale `func <m>(self &<S>, ...)` (a `self &<S>` receiver → `&self`, a `&T` param → `&T`, `int` → `i32`) with
+  Vale `func <m>(self &<S>, ...)` (a `self &<S>` receiver → `&self`, or `&mut self` when its region is in the
+  override's `mut(g)` set; a `&T` param → `&T`/`&mut T` by its region's mutability; `int` → `i32`) with
   a `#[vale::emit_consumer_body]` body. This projection is what lets `resolve_local_type` find the struct so a
   generic Rust caller monomorphized over it resolves; scope is a ZST callback struct with borrow/scalar-param
   overrides (a data-carrying struct or an unrenderable param type is a loud `StubGenError`, not a wrong stub).
@@ -388,7 +393,12 @@ AI-editable, in `src/typing/rust_interop/`:
 
 Integer-scalar `Pair` (a small struct crossing as two register scalars, e.g. `{i32,i32}`) is built, as an
 argument and a return, in both directions (a `Coercion::Pair(bits0, bits1)` threaded through the metal FFI to
-`buildBoundarySignature`/`buildCallOrSideCall` and the inbound wrapper). Still deferred (loud `panic!`/assert,
+`buildBoundarySignature`/`buildCallOrSideCall` and the inbound wrapper). A **zero-sized** imported struct
+crossing by value (`Coercion::Ignore`) is handled as an argument and a return, both directions: nothing
+crosses the ABI, so each side synthesizes the empty value locally (`LLVMGetUndef` of its translated type in
+`buildCallOrSideCall`'s return arm and the inbound wrapper's arg/return arms) rather than moving bits — this
+is interop only; a by-value struct across the **standalone C-ABI export** boundary is separate and unbuilt
+(see Next). Still deferred (loud `panic!`/assert,
 confirmed no NobiliaV consumer): a `Pair` whose component is a pointer/float (fat pointer/slice, HFA),
 multi-piece `Cast` (`[N x i64]`), and on-stack byval (`Indirect { on_stack: true }`).
 
@@ -406,9 +416,12 @@ for `driver`/`driver_check`, `[rust-dependencies] nobiliav = { path = "../../.."
 roots under `valen/src/`.
 
 **Immediate next — import methods reached through `Deref`.** Rust parameter mutation (`&mut` → `mut(g)`)
-and borrow-return regions (a `&self`-tied return → `&T in g...`, the descendant form) are now mirrored into
-synthesized functions by `synthesize_extern_function` (`declarations.rs`), so the group borrow checker
-accepts and churns imported borrows. The next gap a real program hits is `Deref`: `Vec::get`/`first`/`last`/
+and borrow-return regions (a `&self`-tied return → `&T in g...`, the descendant form) are mirrored into
+synthesized functions by `synthesize_extern_function` (`declarations.rs`), and the reverse direction
+mirrors `&mut` too (stub `&mut`/`&mut self` + abstract-method `mut(g)`, inert until enforced — see "Borrow
+groups on Rust imports"), so the group borrow checker accepts and churns imported borrows. NobiliaV's real
+driver builds and runs on the `&mut` trait shape (`on_tick(&mut self, w: &mut NobiliaWindow, …)`, override
+on `mut(r) mut(s)`). The next gap a real program hits is `Deref`: `Vec::get`/`first`/`last`/
 indexing are slice (`[T]`) methods reached from `Vec<T>` only through `Deref<Target=[T]>`, but method
 discovery walks only `tcx.inherent_impls` (`TyCtxtOracle::methods` in `tyctxt_oracle.rs`), so `get` is never
 synthesized and `v.get(0)` fails to resolve (`CouldntFindFunctionToCallT`, empty rejected list). The work:
@@ -427,18 +440,59 @@ arg, plus its return group). Tracked by the ignored `a_real_vec_element_accessor
    `__vale_drop::<T>`). Want a way to make the extra-module output participate in incremental tracking (or
    otherwise invalidate just the driven crate's cache) **preferably without a fork patch** — keep the fork's
    interop surface to the two existing hooks.
-2. **Land the real typing fix for imported-type reachable bounds**, retiring the DO-NOT-SUBMIT patch in
-   `infer_compiler.rs` + `templata_compiler.rs` (see "Reverse direction"): `get_inner_env_for_type` should
-   lazily compile an imported type's (empty) inner env, so the reachable-bounds gather needs no
-   `is_rust_backed` special-case. Core typing.
-3. **Unify the `#[cfg(test)] drive_rustc` harness onto `run_driven_rustc`.** `harness.rs`'s `drive_rustc`
+2. **Unify the `#[cfg(test)] drive_rustc` harness onto `run_driven_rustc`.** `harness.rs`'s `drive_rustc`
    duplicates the engine; the whole interop corpus runs through it, so this is a real cleanup but a risky one
    — do it deliberately with the corpus watched. (Also folds in the builtins the bare harness lacks, so a
    `valen build`-path bug can be reproduced in-suite.)
-4. **Pull the stdlib into the interop compilation.** Today only the compiler builtins are compiled in
+3. **Pull the stdlib into the interop compilation.** Today only the compiler builtins are compiled in
    (`run_driven_rustc`), so a Valen program can use operators but not stdlib collections (`Option`, `Vec`,
    `str`, …). A feature, not a cleanup: needs the stdlib's per-import tree-shaking and native-impl
    interop-compat (mirror `pass_manager.rs`'s stdlib handling).
+4. **Restore the by-value-struct C-ABI export test before calling the endeavor done.** A **by-value
+   (owned) struct** passed or returned across the standalone C-ABI export boundary is unimplemented —
+   two gaps, both empty-struct-triggered but general to by-value owned structs (all existing struct
+   exports cross by `&` borrow or as a `share` handle, so this was never exercised): (a) an owned
+   by-value struct **arg** crosses as a pointer C-param (`hostBoundaryType` `OwnRef` → pointer,
+   `boundary.cpp`) but `exportFunction`'s `receiveHostObjectIntoVale` never loads through it → a `toRef`
+   type mismatch (SIGABRT); (b) `generateExports` emits invalid C for an empty-struct **return**
+   ("initializer for aggregate with no elements requires explicit braces"). This is the standalone
+   export path, distinct from the interop `Ignore`/`Pair` coercion work (which is complete). The
+   `zst_struct_exported_by_value` test (`src/end_to_end_tests/tests/externs.rs`) captures both shapes
+   and is `#[ignore]`d pending this; un-ignore it once by-value struct export is implemented (fix the
+   owned-arg receive to load through the pointer, and the generated-C empty-aggregate initializer).
+
+**Debugging under interop (source-level DWARF for Valen code in a rustc build).** Standalone Valen
+binaries emit real DWARF — function/statement/local DIEs, and (new) a real `DW_AT_comp_dir` so lldb
+can `list`/show source and source-pattern breakpoints (`br s -p`) resolve. Interop Valen code emits
+**none**: `collect_new_rust_requests` lowers with an **empty** code map
+(`rust_interop/mod.rs`, the `empty_code_map` at the `populate_metal_cache` call — "interop debugging
+out of scope"), so every node's `SourceLocation` resolves to a no-op and no Vale DWARF is produced;
+the interop `compile(BackendInputs { … })` call passes `absolute_source_paths: vec![]` to match.
+
+The **backend is already mode-agnostic** — no `Backend/` work needed. `compileIntoModuleFromRustc`
+already calls `loadSourcePaths` and `finalizeCompile` (→ `finalizeDebugInfo`), and
+`getOrCreateDIFile`/`getOrCreateCompileUnit` resolve each file's directory from
+`GlobalState::sourcePaths` (the standalone comp_dir fix: a `basename → abspath` map conveyed on
+`BackendInputs.absolute_source_paths`, with the CU anchored to a user source file). So turning it on
+is all frontend (`rust_interop/`, AI-editable) plus one real unknown:
+
+1. **Spike the coexistence question FIRST — it decides easy-vs-rabbit-hole.** Interop emits Vale IR
+   into rustc's *borrowed* `LLVMModule`, which already carries rustc's own `DICompileUnit`/debug info,
+   and rustc owns optimization + object emission + dsymutil. Whether a second (Vale) CU + its DIFiles
+   survive in that module and are consumed by the debugger is untested. Prove or disprove this with a
+   throwaway `--debug` interop build before doing the threading; if Vale DWARF is dropped or corrupts
+   rustc's, that's the blocker to solve first.
+2. **Give the interop lowering a real code map + source paths.** Capture the Vale source code map the
+   typing compilation already builds (standalone taps `compilation.get_code_map()`) and the `.valen`
+   source file absolute paths, stash them on `DriverState`, and thread them to `populate_metal_cache`
+   (replacing `empty_code_map`) and into the interop `BackendInputs.absolute_source_paths`. That alone
+   makes `SourceLocation`s resolve and `sourcePaths` non-empty.
+3. **Plumb `--debug` into the interop options.** Interop opts come from cargo/`valen build`, not
+   `valec -g`; today nothing sets `opt->debug` on the interop path — pick the trigger (a `valen build`
+   flag / cargo profile).
+4. **A new debug test harness.** Every debugger gate is standalone (`compile_inline_debug` → lldb);
+   interop debugging needs a rustc-driven build + lldb gate (extend the interop harness). Keep interop
+   debugging parked until the step-1 spike is green.
 
 **Then:** **Phase 3 libraries** — a Valen library exports types/funcs consumed by another crate: the pass-2
 typing-driven `lib.rs` (exported declarations from `HinputsT`), two rustc passes, and per-export symbol
@@ -482,13 +536,17 @@ Lessons entry).
 
 The single backend entry `backend_compile` (`vale.cpp`) dispatches by mode to two `static` internals of
 `vale.cpp`: `compileStandalone` (owns context/machine/module + object emission) and the **borrowed-mode**
-`compileIntoModuleFromRustc`. `Backend/src/rust_interop/rust_interop.cpp` — once the borrowed-mode entry,
-now an empty placeholder kept for future interop-specific C++ — is the one AI-editable corner of the
-otherwise-core `Backend/`. The borrowed mode takes rustc's lent `LLVMContext` + `LLVMModule` as opaque
+`compileIntoModuleFromRustc`. `Backend/src/rust_interop/rust_interop.cpp` — which holds
+`emitInboundCallbackWrapper` (the Rust→Vale reverse-callback wrappers; see "Reverse direction") — is the one
+AI-editable corner of the otherwise-core `Backend/`. The borrowed mode takes rustc's lent `LLVMContext` + `LLVMModule` as opaque
 `void*` (from `ModuleLlvm::llcx_raw_mut()` / `llmod_raw()` on the fork — **not** the TargetMachine, which
 the fork never exposes), emits Vale IR into that module, and returns. rustc owns optimization, object emission, and disposal, so this path does
 **not** optimize, `generateOutput`, dispose the handles, or call `generateExports`. `GlobalState`
-sources its data layout from the module (`LLVMGetModuleDataLayout`), which rustc pre-set. Shared with
+sources its data layout from the module (`LLVMGetModuleDataLayout`), which rustc pre-set. Both paths run
+the shared `finalizeCompile` tail, which `LLVMVerifyModule`s the emitted module when `verify` is set and
+returns a `VerifyFailed` rc rather than `exit`ing (so a driven in-process test fails cleanly, not a
+whole-binary abort); every test compile sets `verify` (interop in `emit_vale_into_borrowed_module`,
+standalone e2e in `end_to_end_tests/mod.rs`), so malformed emitted IR fails the suite. Shared with
 the standalone path: `compileValeCode` emits the Vale functions and, when the program exports a `main`,
 the region setup/cleanup + `__Vale_Main` wrapper, returning its prototype (or `nullptr` for a library
 with no `main`); the caller then emits an entry via one parameterized `makeEntryFunction(name,
@@ -545,6 +603,17 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
 
 ## Lessons learned
 
+- The interop `--lib` gate runs only when a commit touches `rust_interop/**` (the host
+  `fire-commit-config.toml` gates it), so a typing- or instantiating-pass landing that doesn't can reach
+  `main` with the interop suite untested. Re-run `+rustc-fork` interop after rebasing onto any such landing:
+  a group-param-flow change once left three instantiator sites without a group-templata arm, a latent panic
+  only a driven generic-region-param test (the reverse+forward `&mut` E2E) surfaces.
+- A group generic parameter now reaches the instantiator (the postparser no longer strips it); it is the
+  ceremonial empty `GroupTemplataI` (mirrors typing's `GroupTemplataT`), never read — `translate_templata`
+  yields it, `assemble_placeholder_map_inner` adds no mapping for it, `instantiated_humanizer` renders
+  `"Group"`. Do not look for a payload.
+- `mut(a, b)` (two groups in one effect clause) is a parse error (`parse_group_in_parens`, `parser.rs`) —
+  each clause takes one group, so write `mut(a) mut(b)`; the old parser silently kept only the first group.
 - The borrow checker no longer accepts a groupless borrow: a Rust import's borrow return (`&Glyph`,
   `&V`) needs an importer-synthesized `&T in g` group and `mut(g)` effects, or it is rejected as
   underivable — the old silently-untracked `Empty` group is gone.
@@ -744,3 +813,13 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   switches rustc to a merged-CGU layout that then drops the reified Rust leaves the Valen body calls
   (`main_loop::<MyCb>`, `__vale_drop::<T>`), a *different* link failure. The working point is incremental's
   per-item CGU layout with a *fresh* (unreused) cache.
+- Emitting a boundary wrapper/thunk, make each `ret`/param LLVM type *equal* the declared signature type,
+  not merely layout-match it. `LLVMVerifyModule` (the shared `finalizeCompile` tail, on for every test
+  compile) rejects a named struct returned into an `{iN,iM}`-typed function or a value `ret` into a void
+  function even when the bytes line up — bugs codegen silently tolerated until verify was enabled (a reverse
+  `Pair`-return wrapper and a ZST-return wrapper both hid this way). When verify flags one, reinterpret the
+  value through a slot to the exact declared type before returning.
+- A zero-sized imported struct crosses an interop extern as `PassMode::Ignore`: nothing is on the ABI (the
+  boundary signature emits no param / a void return), so a Vale-side value must be *synthesized*
+  (`LLVMGetUndef` of its translated type), never received from a C param or returned as a value. Do not read
+  an `Ignore` arg's absent C-param as a bug — advancing the param index past it is the bug.

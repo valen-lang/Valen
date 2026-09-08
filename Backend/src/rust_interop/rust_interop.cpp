@@ -91,6 +91,11 @@ void emitInboundCallbackWrapper(
           "pairStruct");
       argsToBody.push_back(toRef(globalState->getRegion(structKind), valeParamRefMT, valeStructLE));
       cParamIndex += 2;
+    } else if (c.kind == CoercionKind::Ignore) {
+      // A zero-sized arg is ignored. Consume none, conjure an undef for the value.
+      auto structKind = peel_all_references(valeParamRefMT);
+      auto valeStructLE = LLVMGetUndef(globalState->getRegion(structKind)->translateType(structKind));
+      argsToBody.push_back(toRef(globalState->getRegion(structKind), valeParamRefMT, valeStructLE));
     } else {
       auto cArgLE = LLVMGetParam(wrapperL, cParamIndex);
       argsToBody.push_back(
@@ -102,7 +107,9 @@ void emitInboundCallbackWrapper(
   auto valeReturnRefOrVoid =
       buildCallV(globalState, &functionState, builder, prototypeM, argsToBody);
 
-  if (prototypeM->returnType == globalState->metalCache->voidType) {
+  if (prototypeM->returnType == globalState->metalCache->voidType
+      || abi->ret.kind == CoercionKind::Ignore) {
+    // Vale void, or a zero-sized struct return. Either way, ret void.
     LLVMBuildRetVoid(builder);
   } else {
     auto hostReturnRefLE =
@@ -111,6 +118,16 @@ void emitInboundCallbackWrapper(
     if (usingReturnOutParam) {
       LLVMBuildStore(builder, hostReturnRefLE, LLVMGetParam(wrapperL, 0));
       LLVMBuildRetVoid(builder);
+    } else if (abi->ret.kind == CoercionKind::Pair) {
+      // A Pair return crosses as an {iN,iM} aggregate, but the Vale body
+      // produced it as a whole struct. Bitcast the struct value into an aggregate, and return that.
+      auto slot = makeBackendLocal(
+          &functionState, builder, LLVMTypeOf(hostReturnRefLE), "retPairSlot", hostReturnRefLE);
+      auto aggLE = LLVMBuildLoad2(
+          builder, wrapperReturnLT,
+          LLVMBuildBitCast(builder, slot, LLVMPointerType(wrapperReturnLT, 0), "retPairAsAgg"),
+          "retPairAgg");
+      LLVMBuildRet(builder, aggLE);
     } else {
       LLVMBuildRet(builder, hostReturnRefLE);
     }

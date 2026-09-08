@@ -868,7 +868,7 @@ fn emit_vale_into_borrowed_module<'tcx>(
   let llcx = module.llcx_raw_mut();
   let llmod = module.llmod_raw();
 
-  let opts = BackendCompileOptions::default();
+  let opts = BackendCompileOptions { verify: true, ..BackendCompileOptions::default() };
   let entry_symbol = state.entry_symbol.borrow();
   // The Rust→Vale callbacks, sorted deterministically by their rustc symbol (which encodes
   // self/args/trait/method) so the emitted module is byte-stable regardless of collector walk order.

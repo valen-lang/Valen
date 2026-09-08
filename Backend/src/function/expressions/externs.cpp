@@ -212,6 +212,12 @@ Ref buildCallOrSideCall(
         LLVMBuildBitCast(builder, slot, LLVMPointerType(valeStructLT, 0), "retPairPtr"), "retPairStruct");
   }
 
+  if (hasAbi && abi->ret.kind == CoercionKind::Ignore && dynamic_cast<StructKind*>(returnKind)) {
+    // A zero-sized struct returned by value: nothing crosses (the extern returns void, so hostReturnLE
+    // is a void value), just conjure an undef for ut.
+    hostReturnLE = LLVMGetUndef(globalState->getRegion(returnKind)->translateType(returnKind));
+  }
+
   auto valeReturnRef =
       receiveHostObjectIntoVale(
           globalState, functionState, builder, valeReturnRefMT, hostReturnLE);

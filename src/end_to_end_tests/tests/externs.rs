@@ -1,10 +1,35 @@
-use crate::end_to_end_tests::{assert_compile_and_run_with_c, compile_program, programs_dir};
+use crate::end_to_end_tests::{
+    assert_compile_and_run_with_c, assert_inline_compile_and_run, compile_program, programs_dir,
+};
 
 fn run(dir_rel: &str, expected: i32) {
     let dir = programs_dir().join(dir_rel);
     // `native/test.c` is auto-discovered by the Frontend-driven walker in
     // pass_manager::build; no need to pass it via extra_c.
     assert_compile_and_run_with_c(&dir, &[], expected);
+}
+
+/// A zero-sized (empty) struct exported by value, both as a return (`makeZst`) and as an argument
+/// (`takeZst`). This is the untested by-value-struct export shape (all other struct exports cross by
+/// `&` borrow or as a `share` handle). It currently fails two ways, both in the standalone C-ABI export
+/// path (not the interop `Ignore` classes): the by-value owned-struct **arg** crosses as a pointer
+/// C-param (`hostBoundaryType` `OwnRef` → pointer) but `exportFunction`'s `receiveHostObjectIntoVale`
+/// doesn't load through it (a `toRef` type mismatch → SIGABRT), and `generateExports` emits invalid C
+/// for the empty-struct **return** ("initializer for aggregate with no elements requires explicit
+/// braces"). Restore this (un-ignore) once by-value struct C-ABI export is implemented — see
+/// docs/handoffs/rust-interop-handoff.md.
+#[test]
+#[ignore = "deferred: by-value struct across the C export boundary is unimplemented (owned-arg receive + generated-C empty-aggregate init); see rust-interop-handoff.md"]
+fn zst_struct_exported_by_value() {
+    assert_inline_compile_and_run(
+        r#"
+exported struct Zst { }
+exported func makeZst() Zst { Zst() }
+exported func takeZst(z Zst) int { 7 }
+exported func main() int { 7 }
+"#,
+        7,
+    );
 }
 
 // --- Non-shared FFI ---

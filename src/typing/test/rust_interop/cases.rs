@@ -350,6 +350,47 @@ fn rust_owns_a_loop_calling_the_callback() {
   );
 }
 
+/// An imported trait whose method takes TWO imported-type borrow params and returns
+/// void, invoked through a generic *method* caller (`a.run_cb::<MyCb>(&cb)`).
+#[test]
+fn a_trait_method_with_two_imported_params() {
+  let run = run_case_rustc_driven_and_run(&A_TRAIT_METHOD_WITH_TWO_IMPORTED_PARAMS);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven two-imported-params callback bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// A callback receives a zero-sized imported struct by value (`on(self, z Zst, n
+/// int)`), an `Ignore` inbound arg that crosses with no C param. The inbound wrapper must synthesize
+/// an empty Vale value for `z` while not messing up the following scalar `n`.
+#[test]
+fn a_valen_callback_receives_a_zst_by_value() {
+  let run = run_case_rustc_driven_and_run(&A_CALLBACK_RECEIVES_A_ZST_BY_VALUE);
+  assert_eq!(
+    run.process_exit,
+    Some(42),
+    "the driven zst-callback-arg bin did not exit 42 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// A callback returns a zero-sized imported struct by value (`make(self) Zst`), an
+/// `Ignore` return that crosses nothing. The inbound wrapper's LLVM return type is void, so it must
+/// return void and let the ZST value evaporate.
+#[test]
+fn a_valen_callback_returns_a_zst() {
+  let run = run_case_rustc_driven_and_run(&A_CALLBACK_RETURNS_A_ZST);
+  assert_eq!(
+    run.process_exit,
+    Some(8),
+    "the driven zst-callback-return bin did not exit 8 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
 /// Laziness, proven positively: importing three representable free functions and calling one queries
 /// `fn_sig` for the called function and for neither uncalled one. This is the whole point of the slice
 /// — importing a type with a hundred methods must not pay `fn_sig` for the ones never called.
@@ -993,6 +1034,20 @@ fn rustc_driven_bin_borrow_self_method_returns_seven() {
     run.process_exit,
     Some(7),
     "the driven bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Zero-sized struct return: `a = Alpha.new(); return 7;` where `struct Alpha {}` is
+/// empty. rustc classifies the by-value ZST return as `PassMode::Ignore`, so the interop extern return
+/// path must synthesize a fresh empty Vale value rather than feed the void call result to `toRef`.
+#[test]
+fn constructs_a_zst_imported_struct() {
+  let run = run_case_rustc_driven_and_run(&CONSTRUCTS_A_ZST_IMPORTED_STRUCT);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven zst-return bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
     run.rustc_exit, run.process_exit, run.firings
   );
 }

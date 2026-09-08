@@ -265,6 +265,7 @@ fn compile_inputs(
     if std::env::var("VALE_TEST_CENSUS").is_ok() {
         backend_opts.census = true;
     }
+    backend_opts.verify = true;
     configure_backend(&mut backend_opts);
     // When the backend emits DWARF (--debug), link clang with -g so the debug
     // info survives the link, and (on macOS) so a sibling .dSYM is produced by

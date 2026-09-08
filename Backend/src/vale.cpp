@@ -1262,7 +1262,11 @@ void optimize(LLVMModuleRef mod, ValeOptimizationLevel optLevel) {
 
 // Print the LLVM IR (if requested) and verify the module. Shared tail of both the
 // standalone and borrowed compile paths, run once a module's Vale IR is fully emitted.
-void finalizeCompile(GlobalState* globalState) {
+// Returns 0 on success, or ExitCode::VerifyFailed if verification is enabled and fails.
+// A failure is returned as an rc (not errorExit/exit'd): the borrowed/interop path runs
+// in-process inside the driving test binary, where an exit() would abort the whole suite
+// rather than fail one test — the caller propagates the rc so it surfaces cleanly.
+int32_t finalizeCompile(GlobalState* globalState) {
   finalizeDebugInfo(globalState);
 
   char *err;
@@ -1279,11 +1283,18 @@ void finalizeCompile(GlobalState* globalState) {
     char *error = NULL;
     LLVMVerifyModule(globalState->mod, LLVMReturnStatusAction, &error);
     if (error) {
-      if (*error)
-        errorExit(ExitCode::VerifyFailed, "Module verification failed:\n", error);
+      bool failed = (*error != '\0');
+      if (failed) {
+        // Print the diagnostic so it's visible, then return a failure rc instead of exiting.
+        std::cerr << "Module verification failed:\n" << error << std::endl;
+      }
       LLVMDisposeMessage(error);
+      if (failed) {
+        return (int32_t)ExitCode::VerifyFailed;
+      }
     }
   }
+  return 0;
 }
 
 // Copy the frontend's (basename -> absolute path) source-file map onto the Program, so DWARF
@@ -1332,7 +1343,12 @@ static int32_t compileStandalone(
   // segfaulted the emitted programs).
   generateExports(&globalState);
 
-  finalizeCompile(&globalState);
+  if (int32_t rc = finalizeCompile(&globalState)) {
+    // Verification failed — don't optimize/emit an object from invalid IR.
+    LLVMDisposeModule(mod);
+    LLVMDisposeTargetMachine(machine);
+    return rc;
+  }
 
   if (opt->optLevel != ValeOptimizationLevel::O0) {
     if (opt->flares) {
@@ -1421,8 +1437,7 @@ static int32_t compileIntoModuleFromRustc(
   // is the standalone-valec C-FFI boundary, it requires an outputDir and writes files to
   // disk, and interop exports go through single-symbol instead (Vale bodies emitted under
   // rustc-mangled names). So the interop path emits IR into the module only.
-  finalizeCompile(&globalState);
-  return 0;
+  return finalizeCompile(&globalState);
 }
 
 // The single unified backend entry: takes one BackendInputsFFI and dispatches by

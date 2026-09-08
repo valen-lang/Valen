@@ -306,10 +306,8 @@ exported func main() int {
   expect: Expect::Returns(10),
 };
 
-/// Repro (reverse direction): an imported trait whose method takes TWO imported-type borrow params and
-/// returns void. Compiling the synthesized `Cb` interface's abstract `go` header panics in
-/// `get_inner_env_for_type` for one of the imported param types. Proven single-param callbacks
-/// (`&Counter`) work; this pins down the two-imported-param / void shape Pearl's `on_tick` needs.
+/// An imported trait whose method takes TWO imported-type borrow params and returns
+/// void, invoked through a generic *method* caller (`a.run_cb(&cb)`).
 pub const A_TRAIT_METHOD_WITH_TWO_IMPORTED_PARAMS: Case = Case {
   fixture: "fixtures_two_imported_params",
   name: "two-imported-params",
@@ -329,6 +327,48 @@ exported func main() int {
 }
 "#,
   expect: Expect::Returns(7),
+};
+
+/// A callback receives a **zero-sized** imported struct BY VALUE as an argument.
+/// `Zst {}` is empty, so it crosses inbound as `PassMode::Ignore`, no C parameter. The trait method
+/// puts the ZST arg before a real scalar arg `n`.
+pub const A_CALLBACK_RECEIVES_A_ZST_BY_VALUE: Case = Case {
+  fixture: "fixtures_zst_callback_arg",
+  name: "zst-callback-arg",
+  vale: r#"
+import rust.mycrate.Zst;
+import rust.mycrate.Cb;
+import rust.mycrate.run_cb;
+struct MyCb { }
+impl Cb for MyCb;
+func on(self &MyCb, z Zst, n int) int { return n; }
+exported func main() int {
+  cb = MyCb();
+  return run_cb(&cb);
+}
+"#,
+  expect: Expect::Returns(42),
+};
+
+/// A callback RETURNS a **zero-sized** struct by value. `make` builds a
+/// `Zst` (via `Zst.new()`) and returns it; the struct is empty, so the return crosses as
+/// `PassMode::Ignore` and the inbound wrapper's LLVM return type is void.
+pub const A_CALLBACK_RETURNS_A_ZST: Case = Case {
+  fixture: "fixtures_zst_callback_return",
+  name: "zst-callback-return",
+  vale: r#"
+import rust.mycrate.Zst;
+import rust.mycrate.Maker;
+import rust.mycrate.run_maker;
+struct MyMaker { }
+impl Maker for MyMaker;
+func make(self &MyMaker) Zst { return Zst.new(); }
+exported func main() int {
+  m = MyMaker();
+  return run_maker(&m);
+}
+"#,
+  expect: Expect::Returns(8),
 };
 
 /// Laziness, proven positively: three representable free functions are imported and exactly one is
@@ -900,6 +940,23 @@ exported func main() int {
   // receiver) is named type-prefixed and resolves through the type's outer environment.
   // `Counter::new` builds `Counter { value: 5 }`.
   expect: Expect::Returns(5),
+};
+
+/// A **zero-sized** imported struct returned by value: `Alpha.new()` where
+/// `struct Alpha {}` is empty. rustc classifies the by-value ZST return as `PassMode::Ignore`,
+/// nothing crosses the ABI, and the interop extern return path must reconstitute into a fresh
+/// empty Vale value instead of reading the void call result.
+pub const CONSTRUCTS_A_ZST_IMPORTED_STRUCT: Case = Case {
+  fixture: "fixtures_zst_return",
+  name: "zst-return",
+  vale: r#"
+import rust.mycrate.Alpha;
+exported func main() int {
+  a = Alpha.new();
+  return 7;
+}
+"#,
+  expect: Expect::Returns(7),
 };
 
 /// An associated function whose impl **fixes** one of the type's parameters — `impl<T> Boxed<T, Fixed>`,
