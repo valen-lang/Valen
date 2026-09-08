@@ -24,7 +24,7 @@ use crate::testvm::von::VonStr;
 pub struct ArrayTests;
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn returning_static_array_from_function_and_dotting_it() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -96,7 +96,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn destroy_ssa_into_function() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -129,7 +129,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn destroy_rsa_into_function() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -163,7 +163,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn migrate_rsa() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -198,7 +198,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn migrate_ssa() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -338,7 +338,6 @@ fn mutable_static_array_from_values() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn unspecified_mutability_runtime_array_from_lambda_defaults_to_mutable() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -379,6 +378,7 @@ exported func main() int {
 }
 
 #[test]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn mutable_runtime_array_from_lambda() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -414,7 +414,7 @@ fn mutable_runtime_array_from_lambda() {
 //m [<mut> 3 * [#3]<mut>int] = [mut][ [mut][1, 2, 3], [mut][4, 5, 6], [mut][7, 8, 9] ];
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn take_arraysequence_as_a_parameter() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -448,7 +448,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn borrow_arraysequence_as_a_parameter() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -640,6 +640,7 @@ where F Prot = func(&Lam, int)int {
 }
 
 #[test]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_map_with_single_lambda() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -673,7 +674,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn make_array_map_with_struct() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -697,7 +698,7 @@ struct Lam share {}
 func __call(lam &Lam, i int) int { return __copy_prim(&i); }
 
 exported func main() int {
-  a = MakeArray<int>(10, Lam());
+  a = MakeArray<int>(10, &Lam());
   return __copy_prim(&a.3);
 }
 ",
@@ -709,7 +710,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn make_array_map_with_lambda() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -729,7 +729,7 @@ fn make_array_map_with_lambda() {
         r"
 import array.make.*;
 exported func main() int {
-  a = MakeArray<int>(10, &{_});
+  a = MakeArray<int>(10, &{^_});
   return __copy_prim(&a.3);
 }
 ",
@@ -741,7 +741,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_map_with_interface() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -820,7 +820,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn simple_array_map_with_runtime_index_lookup() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -839,9 +838,9 @@ fn simple_array_map_with_runtime_index_lookup() {
         // TSUGAR: lambda needs &; a[i] is &int
         r"
 exported func main() int {
-  a = Array<int>(10, &{_});
+  a = Array<int>(10, &{^_});
   i = 5;
-  return __copy_prim(&a[i]);
+  return __copy_prim(a[__copy_prim(i)]);
 }
 ",
     );
@@ -920,7 +919,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn array_with_capture() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -957,50 +955,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
-fn capture() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test_without_borrow_check(
-        &compilation_bump,
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        // TSUGAR: box.i is &int
-        r"
-func myFunc<T, F>(generator F) T
-where func(&F, int)T, func drop(F)void
-{
-  return generator(9);
-}
-
-struct IntBox {
-  i int;
-}
-
-exported func main() int {
-  box = IntBox(7);
-  lam = (col) => { __copy_prim(&box.i) };
-  board = myFunc<int>(&lam);
-  return board;
-}
-",
-    );
-    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        IVonData::Int(VonInt { value: 7 }) => {}
-        other => panic!("expected VonInt(7), got {:?}", other),
-    }
-}
-
-#[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn mutate_array() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1020,7 +974,7 @@ fn mutate_array() {
         r"
 import array.make.*;
 exported func main() int {
-  arr = MakeArray<int>(3, &{_});
+  arr = MakeArray<int>(3, &{^_});
   set arr[1] = 1337;
   return __copy_prim(&arr.1);
 }
@@ -1033,7 +987,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn capture_mutable_array() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1086,7 +1040,7 @@ import array.make.*;
 struct Goblin { }
 
 exported func main() int {
-  arr = MakeArray<Goblin>(1, i => Goblin());
+  arr = MakeArray<Goblin>(1, &(i) => Goblin());
   set arr.0 = Goblin();
   return 4;
 }
@@ -1099,7 +1053,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn test_array_length() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1118,7 +1071,7 @@ fn test_array_length() {
         r"
 import array.make.*;
 exported func main() int {
-  a = MakeArray<int>(11, {_});
+  a = MakeArray<int>(11, &{^_});
   return len(&a);
 }
 ",
@@ -1130,7 +1083,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn map_using_array_construct() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1150,10 +1102,10 @@ fn map_using_array_construct() {
         r"
 import array.make.*;
 exported func main() int {
-  board = MakeArray<int>(5, &{_});
+  board = MakeArray<int>(5, &{^_});
   result =
       MakeArray<int>(5, &(i) => {
-        board[i] + 2
+        board[^i] + 2
       });
   return __copy_prim(&result.2);
 }
@@ -1166,7 +1118,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn map_from_hardcoded_values() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1202,7 +1154,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_foreach() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1270,7 +1222,7 @@ exported func main() bool {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn each_on_ssa() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

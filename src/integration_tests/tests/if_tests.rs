@@ -299,7 +299,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn ret_from_inside_if_will_destroy_locals() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -343,7 +343,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn can_continue_if_other_branch_would_have_returned() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -391,7 +391,7 @@ Destroying marine!
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn destructure_inside_if() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -465,7 +465,7 @@ fn if_nevers() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn if_with_panics_and_rets() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

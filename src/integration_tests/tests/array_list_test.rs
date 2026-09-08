@@ -11,7 +11,7 @@ use crate::testvm::von::VonInt;
 pub struct ArrayListTest;
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn simple_array_list_no_optionals() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -66,7 +66,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn doubling_array_list() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -103,7 +103,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_list_zero_constructor() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -140,7 +140,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_list_len() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -175,7 +175,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_list_set() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -212,7 +212,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_list_with_optionals_with_mutable_element() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -238,7 +238,7 @@ exported func main() int {
       List<Marine>(
           Array<Marine>(
               0,
-              (index) => { Marine(index) }));
+              &(index) => { Marine(index) }));
   add(&l, Marine(5));
   add(&l, Marine(9));
   add(&l, Marine(7));
@@ -253,7 +253,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn mutate_mutable_from_in_lambda() {
     unimplemented!();
     /*
@@ -312,7 +312,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn move_mutable_from_in_lambda() {
     unimplemented!();
     /*
@@ -370,7 +370,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn remove_from_middle() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -410,7 +410,7 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn remove_from_beginning() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

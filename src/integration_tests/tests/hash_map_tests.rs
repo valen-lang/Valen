@@ -56,7 +56,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
 fn supply_bounds_to_child_functions() {
     // We need to supply our bounds to our lambdas and drop functions, see LCCPGB and LCNBAFA.
     // This test's `add` function will try to call
@@ -93,7 +92,7 @@ where func(&H, &K)int {
 }
 
 func add<K, V, H>(map &HashMap<K, V, H>) void {
-  Array<int>(2, {_});
+  Array<int>(2, &{^_});
 }
 
 exported func main() int {
@@ -111,7 +110,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_update() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -148,7 +147,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_collisions() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -206,7 +205,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_with_functors() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -303,7 +302,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_has() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -347,7 +346,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
@@ -408,7 +407,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
@@ -467,7 +466,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_values() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -510,7 +509,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_with_mutable_values() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -555,7 +554,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_remove() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -600,7 +599,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_remove_2() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

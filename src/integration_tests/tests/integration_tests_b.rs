@@ -143,7 +143,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_upcasting_from_a_struct_to_an_interface() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -166,7 +166,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_upcasting_from_if() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -427,7 +427,7 @@ exported func main() int { bork() }
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_calling_a_virtual_function() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -453,7 +453,7 @@ fn tests_calling_a_virtual_function() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_making_a_variable_with_a_pattern() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -478,7 +478,7 @@ fn tests_making_a_variable_with_a_pattern() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_a_linked_list() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -501,7 +501,7 @@ fn tests_a_linked_list() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_a_templated_linked_list() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -549,7 +549,7 @@ fn tests_calling_an_abstract_function() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn template_overrides_are_stamped() {
     // See TIBANFC: Translate Impl Bound Argument Names For Case
     let compilation_bump = bumpalo::Bump::new();
@@ -576,7 +576,7 @@ fn template_overrides_are_stamped() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_a_foreach_for_a_linked_list() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

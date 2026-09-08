@@ -52,7 +52,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn get_or_function() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -142,7 +142,7 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn function_return_with_return_upcasts() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -176,7 +176,7 @@ fn function_return_with_return_upcasts() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_shaking() {
     unimplemented!(); // ZONION-deferred: needs deleted harness method
     /*
@@ -227,7 +227,7 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_overloading_between_borrow_and_weak() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -318,7 +318,7 @@ fn return_without_return() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_export_functions() {
     unimplemented!(); // ZONION-deferred: needs deleted harness method
     /*
@@ -381,7 +381,7 @@ fn test_extern_functions() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_narrowing_between_borrow_and_owning_overloads() {
     // See NMORFI for why this test is here. Before the SCCTT fix, it couldn't resolve between the two
     // `get` overloads, because the borrow ownership (from the opt.get()) was creeping into the rules
@@ -716,7 +716,7 @@ fn destructure_restackify() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn loop_restackify() {
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();

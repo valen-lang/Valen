@@ -34,7 +34,7 @@ use std::marker::PhantomData;
 pub struct ClosureTests;
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 pub fn addressibility() {
     unimplemented!();
     /*
@@ -256,7 +256,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn mutates_from_inside_a_closure() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -342,7 +342,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 pub fn mutates_from_inside_a_closure_inside_a_closure() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -404,7 +404,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 pub fn mutable_lambda() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -451,6 +451,48 @@ pub fn mutable_lambda() {
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
+    }
+}
+
+#[test]
+fn capture() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_without_borrow_check(
+        &compilation_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        // TSUGAR: box.i is &int
+        r"
+func myFunc<T, F>(generator &F) T
+where func(&F, int)T, func drop(F)void
+{
+  return generator(9);
+}
+
+struct IntBox {
+  i int;
+}
+
+exported func main() int {
+  box = IntBox(7);
+  lam = (col) => { __copy_prim(&box.i) };
+  board = myFunc<int>(&lam);
+  return board;
+}
+",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        IVonData::Int(VonInt { value: 7 }) => {}
+        other => panic!("expected VonInt(7), got {:?}", other),
     }
 }
 

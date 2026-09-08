@@ -10,7 +10,7 @@ func List<E>() List<E> {
   return List<E>(
     Array<E>(
       0,
-      (i) => { __pretend<E>() }));
+      &(i) => { __pretend<E>() }));
 }
 func drop<E>(self List<E>)
 where func drop(E)void {

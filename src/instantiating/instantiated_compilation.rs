@@ -145,7 +145,7 @@ where
     self.typing_pass_compilation.expect_compiler_outputs()
   }
 
-
+  // VTRACE: hide
   pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
     if self.monouts_cache.is_some() {
       return self.monouts_cache.as_ref().unwrap();

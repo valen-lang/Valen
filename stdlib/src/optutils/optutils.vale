@@ -42,7 +42,7 @@ where func(&F, &T)R {
   }
 }
 
-func or<F, T>(self Opt<T>, func F) T
+func or<F, T>(self Opt<T>, func &F) T
 where func(&F)T, func drop(F)void {
   if self.isEmpty() {
     [ ] = (self).try_take_as<None<T>>().expect("zork f");
@@ -52,7 +52,7 @@ where func(&F)T, func drop(F)void {
   }
 }
 
-func or<F, T>(self &Opt<T>, func F) &T
+func or<F, T>(self &Opt<T>, func &F) &T
 where func(&F)&T, func drop(F)void {
   if self.isEmpty() {
     [ ] = self.try_take_as<None<T>>().expect("zork g");

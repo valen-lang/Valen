@@ -16,7 +16,7 @@ func finish(suite TestSuite) {
   }
 }
 
-func test<F>(suite &TestSuite, name str, lambda F) where func drop(F)void, func(&F)void {
+func test<F>(suite &TestSuite, name str, lambda &F) where func drop(F)void, func(&F)void {
   if name.contains(suite.filter) {
     set suite.num_tests_ran = suite.num_tests_ran + 1;
     println("Test: " + name);
@@ -43,11 +43,12 @@ struct SubTestSuite {
   suite &TestSuite;
   prefix str;
 }
-func test<F>(subSuite &SubTestSuite, name str, func F) where func drop(F)void, func(&F)void {
+
+func test<F>(subSuite &SubTestSuite, name str, func &F) where func drop(F)void, func(&F)void {
   (subSuite.suite).test(subSuite.prefix + " / " + name, func);
 }
 
-func sub<F>(suite &TestSuite, prefix str, body F) where func drop(F)void, func(&F, SubTestSuite)void {
+func sub<F>(suite &TestSuite, prefix str, body &F) where func drop(F)void, func(&F, SubTestSuite)void {
   subSuite = SubTestSuite(&suite, prefix);
   body(subSuite);
 }

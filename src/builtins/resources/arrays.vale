@@ -50,7 +50,7 @@ where func drop(E)void {
   drop_into(^arr, &DropFunctor<E>());
 }
 
-func Array<E, G>(n int, generator G) []E
+func Array<E, G>(n int, generator &G) []E
 where
   func(&G, int)E,
   func drop(G)void

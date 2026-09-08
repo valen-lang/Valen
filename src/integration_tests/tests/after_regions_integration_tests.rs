@@ -62,7 +62,7 @@ fn imm_tuple_access() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() {
     // The scenario: genericGetFuel<T> takes &T with a `where implements(T, IShip)` bound
     // and calls x.getFuel() in its body. The user expects this to find IShip's abstract
@@ -136,7 +136,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn call_array_without_element_type() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -154,7 +154,7 @@ fn call_array_without_element_type() {
         &instantiating_bump,
         r"
 exported func main() int {
-  a = Array(3, {13 + _});
+  a = Array(3, &{13 + _});
   sum = 0;
   drop_into(^a, &(e) => { set sum = sum + e; });
   return sum;
@@ -168,7 +168,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn make_array_without_type() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -199,7 +199,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn borrowing_to_array() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

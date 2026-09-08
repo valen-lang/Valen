@@ -2,11 +2,11 @@
 
 ## Start here next session
 
-The `expect_compiler_outputs` AST-migration is largely done (policy: reconstruct essential structural
-assertions from intent against the onion AST; drop-with-comment when incidental and eval-covered; leave
-**parked** when the assertion's concept was deleted from the AST). `src/integration_tests` suite is at
-`cargo test --lib integration_tests::` (measure; was 85 at the start of that work). The remaining
-integration-test work, in priority order:
+The ZONION integration-test migration is landed on `main` (see State / verification for the
+trunk-green / working-tree-red split — the un-ignored working tree is where you keep going). The
+migration policy was: reconstruct essential structural assertions from intent against the onion AST;
+drop-with-comment when incidental and eval-covered; leave **parked** when the assertion's concept was
+deleted. What's left is making the red guides green, in priority order:
 
 - **The real onion-compiler failures the migrated eval/structural tests now surface** — these need
   "fire core edits" (see the failure map in `tmp/zonion-categories.md`): R1 borrow-group
@@ -15,14 +15,21 @@ integration-test work, in priority order:
   (`parse_and_explore.rs:33`), the mutable-lambda capture path (`expression_compiler.rs:256`), and the
   interface-dispatch/R2 family.
 - **Parked because their assertion's concept was deleted** (revive when the concept returns): the
-  Addressible-local tests (`array_list_test::mutate_mutable_from_in_lambda`, `move_mutable_from_in_lambda`),
-  the Address-member closure test (`closure_tests::mutates_from_inside_a_closure`), and the nested-tuple
-  shape tests (`pack_tests::nested_seqs`, `nested_tuples` — the `NodeRefT::Tuple`/`TupleTE` node is gone).
+  Addressible-local tests (`array_list_test::mutate_mutable_from_in_lambda`, `move_mutable_from_in_lambda`,
+  still `unimplemented!()`) and the Address-member closure test (`closure_tests::mutates_from_inside_a_closure`,
+  an eval-only red guide with the old structural block commented out) — mutable capture and the
+  boxed/addressible member concept aren't in the onion AST yet. (The nested-tuple tests are *not* parked —
+  `pack_tests::{extract_seq, nested_seqs, nested_tuples}` are reconstructed as `Construct`-of-`Tup<N>`.)
 - **weak cluster (`weak_tests.rs`) still parked** — blocked on the disabled `weak` builtin module
   (`VCOORD: re-enable weaks`), not on AST shape.
 
 `tmp/zonion-categories.md` has the full per-cluster log. Traps and the onion AST shape facts learned
 during this migration are in Lessons Learned below.
+
+The **lambda functor-passing cluster is resolved at the source level** (functor params take `&F`,
+call sites pass `&`, lambda bodies/indices `__copy_prim` their references) — see the Lessons Learned
+entry. The `stdlib` `each`/`or`/`test`/`map` copies still carry bare-`F` sites (VHORK-marked) if you
+run stdlib programs. The remaining lambda *core* gap is mutable capture only.
 
 ## Impl-bounds plan (core lazy work, pending)
 
@@ -76,31 +83,47 @@ delegations to `InstantiatedCompilation`, plus `eval_for_kind_and_stdout` (retur
 `src/end_to_end_tests` is still ZONION-parked. Suite state: `cargo test --lib integration_tests::`
 (was 3 passing pre-migration; measure).
 
-The `expect_compiler_outputs` tests are migrated: incidental structural checks dropped-with-comment
-keeping the eval; essential ones reconstructed against the onion AST. Remaining integration-test work is
-listed under "Start here" — the two `get_monouts` tests, the real onion-compiler gaps (need "fire core
-edits"), the parked-because-concept-deleted tests, and the weak cluster.
+All `expect_compiler_outputs` / `get_scoutput` / `get_monouts` tests are migrated: incidental structural
+checks dropped-with-comment keeping the eval; essential ones (including the instantiated-AST `get_monouts`
+ones) reconstructed against the onion AST. Remaining integration-test work is under "Start here" — the
+real onion-compiler gaps (need "fire core edits"), the parked-because-concept-deleted tests, and the
+weak cluster.
 
-Still parked on a deleted harness method: **`get_hamuts` tests** reference the deleted Hammer IR —
-decide rewrite-vs-retire.
+`hammer_tests.rs` is deleted (the Hammer pass is gone). A handful of other tests still carry
+commented-out `get_hamuts` bodies and stay `unimplemented!()` — in `virtual_tests.rs` (the two
+`open_interface_constructor*` and `interface_with_method_with_param_of_substruct`), `integration_tests_c.rs`,
+and `weak_tests.rs` — decide rewrite-against-the-onion-IR vs retire.
 
 ## borrow_checker toggle
 
 `TypingPassOptions.borrow_checker_enabled` (`src/typing/compilation.rs`, default **true** in every
 constructor) gates the sole `fn check_function` call in `src/typing/function/function_compiler_core.rs`.
-Exactly one test opts out — `tests_generic_s_lambda_calling_parent_function_s_bound` via
-`test_no_builtins_without_borrow_check` — so it reaches the instantiator past a deferred
-closure-capture group-check in main's group borrow checker. `fn compiler_test_compilation_without_borrow_check`
+`run_compilation.rs` exposes two borrow-check-off integration harness entry points —
+`test_without_borrow_check` (builtins loaded) and `test_no_builtins_without_borrow_check` (bare); the
+integration tests that fail *only* inside the group borrow checker call them to reach later passes.
+`fn compiler_test_compilation_without_borrow_check` (the typing-pass unit-test helper)
 is marked `// VCOORD: remove this`: a one-test escape hatch, not a general API.
+Note the toggle does **not** silence the typing-pass "returns a borrow reference with no group" error
+(emitted before the checker at `typing/compilation.rs`), so a test can still be red there with the
+checker off.
 
 ## State / verification
 
-The func-bound substitution/import refactor, the closure-member fix, and the `borrow_checker_enabled`
-toggle are **landed on `main`** (and pushed to `origin/main`). The ZONION integration-test migration and
-the `run_compilation.rs` harness additions (`fn test` + the five delegations) are **uncommitted** on
-this branch — `git status`. This branch was rebased onto main's inline-`Kind`-by-value change, so `fn evaluate_templex`
-builds `ITemplataT::Kind(KindTemplataT { .. })` by value (no `interner.alloc`). Gates, all green (re-run
-to refresh):
+The func-bound refactor, the closure-member fix, the `borrow_checker_enabled` toggle, and the whole
+ZONION integration-test migration (incl. the `run_compilation.rs` harness) are **landed on `main`** at
+HEAD, rebased onto main's Phase B block-scoped-restrict borrow-checker work and pushed to `origin/main`.
+
+**Trunk-green / tree-red split — the live TDD state.** The landed commit carries every failing
+test under a temporary `#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]`,
+so `cargo nextest run` on a clean checkout is green (1029 passed / 0 failed / 288 ignored). The
+**working tree has those ignores removed** (uncommitted — `git status` shows ~24 modified `*.rs`,
+mostly under `src/integration_tests/tests/` plus `typing/test/compiler_tests.rs` and
+`instantiating/tests/instantiated_tests.rs`), so running the suite locally shows the ~137 red TDD
+guides. That un-ignored state is the thing to keep working from; re-applying the ignores is only for
+the next green-trunk commit. To reproduce the ignore/un-ignore, grep the marker string above — every
+temp ignore carries it verbatim, so a one-line sweep reverses the set exactly.
+
+Gates, all green on the landed (ignored) tip; re-run to refresh:
 - native: `cargo nextest run --manifest-path ./Cargo.toml`
 - wasi: `VALE_TEST_BACKEND=wasi cargo nextest run --manifest-path ./Cargo.toml`
 - rust_interop: `cargo +rustc-fork test --manifest-path ./Cargo.toml --lib --features rust_interop`
@@ -171,3 +194,38 @@ to refresh):
   rest of the file. Edit whole-body (fn signature through the closing brace), and after a bulk pass check
   `/*` count == `*/` count. (Vale `}` at column 0 inside `r"…"` strings also breaks `^}`-based fn-end
   finding — anchor on the next `#[test]`.)
+- **More onion AST-reconstruction facts.** A tuple has no node of its own — `(a, b)` lowers to a
+  `NodeRefT::Construct(ConstructTE { struct_tt: <Tup2>, args: [..] })`; nest `ExpressionTE::Construct` for
+  nested tuples. Exports and externs live on `HinputsT.kind_exports` / `HinputsT.function_externs`
+  (`coutputs.kind_exports.find(exported_name == "…")`), not behind a Hammer pass. The pointer downcast
+  function is named `try_as` (not `as`), and a pointer downcast returns an **owned** `Result` interface
+  (`KindT::Interface(itt)`, not a borrow) whose two template args are each `ITemplataT::Kind(KindTemplataT
+  { kind: KindT::BorrowRef(_) })`.
+- **Trap — a bulk harness-call swap can silently regress a green test.** The borrow-disable sweep turned a
+  `test_no_builtins` call into `test_without_borrow_check`, which *loads builtins*; that broke the one green
+  test that self-provides `func drop(int)` (now a duplicate-drop conflict). A `no_builtins` test must map
+  to the `no_builtins` variant. After any bulk test edit, check for regressions: a test that was live
+  (not `unimplemented!()`, not `#[ignore]`) at the base commit and fails now is a candidate — the compiler
+  is unchanged when only test files moved, so it should still pass.
+- **Some integration tests share process state (a real isolation bug, determinism-P0).** A test's pass/fail
+  can depend on which *other* tests ran first: `array_with_capture` passes only when others run before it;
+  `roguelike_typing_pass` (`#[ignore]`'d) is the opposite — passes in isolation, fails in the full suite.
+  So ignoring/reordering tests can shift the pass-set. Fix the shared mutable state rather than paper over it.
+- **`safe-script-runner review` must be run bare** — Guardian denies any pipe/redirect/`2>&1` on it, by
+  design, so the whole diff lands in the transcript; read that full diff before writing the required
+  `Issues I see in the diff:` line, never a `grep -c` count of it.
+- **A bulk-ignore script keyed on leaf fn names silently over-ignores across files.** Test names like
+  `tests_a_linked_list` / `calls_destructor_on_local_var` exist in BOTH the integration tests (failing)
+  and `typing/test/compiler_tests.rs` (passing), so a global leaf-name match ignores the passing copies
+  too. Guard: check the per-file insertion count against the file's expected failing count, and after the
+  sweep confirm the *passing* total is unchanged (a drop means a passing test got ignored). Handle the
+  colliding file (compiler_tests.rs) with path-specific edits, not the global script.
+- **The lambda functor-passing cluster is fixed at the source level, not in core.** A generic functor
+  param must be declared `&F` (borrow), not bare `F` — a bare kind rune absorbs the argument's borrow
+  under the onion ownership-fold, so `where func(&F,...)` then needs a double-borrow `__call(&&λ)` that no
+  lambda provides. Fix pattern, all in `.vale`/fixtures: (1) declare functor params `&F`/`&G` (done in
+  `builtins/resources/arrays.vale` `Array`, `tests/array/make/make.vale` `MakeArray`; `stdlib` copies —
+  `List`/`optutils`/`testsuite`/`hashset` `each`/`or`/`test` — still carry bare-`F` sites); (2) pass the
+  lambda by borrow at call sites (`&{...}`); (3) `__copy_prim` any lambda body that returns a reference
+  (`{_}` yields `&int`) and any array index that is a reference (`a[__copy_prim(i)]`). The still-genuine
+  lambda *core* gap is mutable capture (`expression_compiler.rs` `IVariableT::Capture` `unimplemented!`).

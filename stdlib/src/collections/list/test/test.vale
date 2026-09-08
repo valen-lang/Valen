@@ -6,7 +6,7 @@ struct Ship {
   fuel int;
 }
 
-func doThing<F>(f F) void where func(&F, int)void, func drop(F)void {
+func doThing<F>(f &F) void where func(&F, int)void, func drop(F)void {
   f(42);
 }
 

@@ -429,7 +429,7 @@ fn simple_program_with_sameinstance() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn simple_program_with_weak() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -776,7 +776,7 @@ fn test_block() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_generic() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -879,8 +879,12 @@ fn test_returning_a_local_mutable_var() {
     }
 }
 
+#[ignore = "waiting on auto-borrow or not decision"]
 #[test]
-fn test_taking_a_callable_param() {
+fn test_taking_callable_arg_value_into_ref_param() {
+    // One day we want this to work, because it would be nice and convenient. Right now it
+    // doesn't work because we're handing a lambda (non-ref) into an argument that expects a
+    // reference. We probably want to auto-borrow here.
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -1150,7 +1154,7 @@ fn set_swapping_locals() {
 }
 
 #[test]
-#[ignore = "zonion-temp-fire-commit: red TDD guide / real onion gap; un-ignored right after landing"]
+#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn simple_extern_function() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

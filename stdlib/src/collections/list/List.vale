@@ -60,7 +60,7 @@ func get<E>(list &List<E>, index int) &E {
   a[index]
 }
 
-func each<E, F>(list &List<E>, func F) void
+func each<E, F>(list &List<E>, func &F) void
 where func drop(F)void, func(&F, &E)void {
   i = 0;
   l = len(list);
@@ -115,7 +115,7 @@ where func ==(&E, &E)bool {
   return None<int>();
 }
 
-func indexWhere<E, F>(list &List<E>, func F) Opt<int>
+func indexWhere<E, F>(list &List<E>, func &F) Opt<int>
 where func(&F, &E)bool, func drop(F)void {
   i = 0;
   l = len(&list);
@@ -149,7 +149,7 @@ func reverse<E>(list List<E>) List<E> {
 }
 
 
-func exists<E, F>(list &List<E>, func F) bool
+func exists<E, F>(list &List<E>, func &F) bool
 where func(&F, &E)bool, func drop(F)void {
   i = 0;
   while i < list.len() {

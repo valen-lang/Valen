@@ -24,7 +24,7 @@ func next<K Ref>(iter &HashSetIter<K>) Opt<&K> {
 
 func each<K Ref, H, E, F>(
   self &HashSet<K, H, E>,
-  func F)
+  func &F)
 void
 where func drop(F)void, func(&F, &K)void {
   index = 0;
