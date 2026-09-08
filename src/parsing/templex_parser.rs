@@ -239,6 +239,16 @@ where
       })));
     }
 
+    // `dyn X` → ITemplexPT::DynInterface. Reachable bare (a `Box<dyn X>` type-arg) and behind `&`
+    // (the `&` arm below recurses through here), so `&dyn X` = BorrowRef(DynInterface(X)).
+    if iter.try_skip_word(self.keywords.r#dyn).is_some() {
+      let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
+      return Ok(Some(ITemplexPT::DynInterface(DynInterfacePT {
+        range: RangeL::new(begin, iter.get_prev_end_pos()),
+        inner: &*self.parse_arena.alloc(inner),
+      })));
+    }
+
     // `&T` → ITemplexPT::BorrowRef. `&&T` parses as nested BorrowRef via the
     // recursive parse_templex_atom_and_call_and_prefixes call — double-borrow.
     if iter.try_skip_symbol('&') {

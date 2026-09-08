@@ -177,7 +177,7 @@ where
     // whether it's allowed to be virtual on this interface.
     coutputs.declare_type_sealed(
       *interface_template_id,
-      interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Sealed(_))),
+      !interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Open(_))),
     );
     // Build internal method entries for the outer env
     let internal_method_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = interface_a

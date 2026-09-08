@@ -16,6 +16,7 @@ pub enum ITemplexPT<'p> {
   BorrowRef(BorrowRefPT<'p>),
   WeakRef(WeakRefPT<'p>),
   OwnRef(OwnRefPT<'p>),
+  DynInterface(DynInterfacePT<'p>),
   Pack(PackPT<'p>),
   Func(FuncPT<'p>),
   RuntimeSizedArray(RuntimeSizedArrayPT<'p>),
@@ -36,6 +37,7 @@ impl ITemplexPT<'_> {
       ITemplexPT::BorrowRef(r) => r.range,
       ITemplexPT::WeakRef(r) => r.range,
       ITemplexPT::OwnRef(r) => r.range,
+      ITemplexPT::DynInterface(r) => r.range,
       ITemplexPT::Pack(p) => p.range,
       ITemplexPT::Func(r) => r.range,
       ITemplexPT::RuntimeSizedArray(r) => r.range,
@@ -154,6 +156,14 @@ pub struct WeakRefPT<'p> {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OwnRefPT<'p> {
+  pub range: RangeL,
+  pub inner: &'p ITemplexPT<'p>,
+}
+
+/// `dyn X` — erases interface X to its fat-pointer (vtable) representation. Reachable bare (a
+/// `Box<dyn X>` type-arg) and behind `&` (`&dyn X`, parsed by the `&` arm recursing into this).
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct DynInterfacePT<'p> {
   pub range: RangeL,
   pub inner: &'p ITemplexPT<'p>,
 }

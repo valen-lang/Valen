@@ -54,6 +54,7 @@ pub fn humanize_kind<'s, 'i>(
         KindIT::FloatIT(_) => "float".to_string(),
         KindIT::USizeIT(_) => "usize".to_string(),
         KindIT::InterfaceIT(i) => humanize_id(code_map, &i.id, None),
+        KindIT::DynInterfaceIT(i) => "dyn ".to_string() + &humanize_id(code_map, &i.id, None),
         KindIT::StructIT(s) => humanize_id(code_map, &s.id, None),
         KindIT::RuntimeSizedArrayIT(rsa) => humanize_id(code_map, &rsa.name, None),
         KindIT::StaticSizedArrayIT(ssa) => humanize_id(code_map, &ssa.name, None),

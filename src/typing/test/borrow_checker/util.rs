@@ -1,4 +1,4 @@
-use super::super::compiler_test_compilation::compiler_test_compilation;
+use super::super::compiler_test_compilation::compiler_test_compilation_with_borrow_check;
 use crate::builtins::builtins::{builtin_source_for_arrays, empty_v_builtins_stub};
 use crate::code_source::{CodeSource, Source};
 use crate::keywords::Keywords;
@@ -20,7 +20,7 @@ pub fn assert_borrow_error_renders(code: &str, expected: &str) {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_with_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -42,7 +42,7 @@ pub fn assert_compiles_clean(code: &str) {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_with_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -64,7 +64,7 @@ pub fn assert_param_noalias(code: &str, function_human_name: &str, expected: &[b
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_with_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -98,7 +98,7 @@ pub fn assert_restrict_region(
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_with_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -136,7 +136,7 @@ pub fn assert_borrow_error_renders_with_arrays(code: &str, expected: &str) {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_with_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -161,7 +161,7 @@ pub fn assert_compiles_clean_with_arrays(code: &str) {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_with_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,

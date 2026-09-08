@@ -11,10 +11,10 @@ use crate::typing::ast::expressions::{
   DestroyStaticSizedArrayIntoFunctionTE, DestroyStaticSizedArrayIntoLocalsTE, DestroyTE, DiscardTE,
   ExpressionTE, ExternFunctionCallTE, FunctionCallTE, IfTE, InterfaceFunctionCallTE,
   InterfaceToInterfaceUpcastTE, IsSameInstanceTE, LetAndLendTE, LetNormalTE, LocalLookupTE,
-  LockWeakTE, MutateTE, NewRuntimeSizedArrayTE, PopRuntimeSizedArrayTE, PushRuntimeSizedArrayTE,
+  LockWeakTE, MutateTE, NarrowInterfaceTE, NewRuntimeSizedArrayTE, PopRuntimeSizedArrayTE, PushRuntimeSizedArrayTE,
   MemberLookupTE, ReinterpretTE, RestackifyTE, ReturnTE, RuntimeSizedArrayCapacityTE,
   RuntimeSizedArrayLookupTE, StaticArrayFromCallableTE, StaticArrayFromValuesTE,
-  StaticSizedArrayLookupTE, UnletTE, UpcastTE, VoidLiteralTE, WhileTE,
+  StaticSizedArrayLookupTE, UnletTE, UpcastInterfaceTE, VoidLiteralTE, WhileTE,
 };
 use crate::typing::env::environment::IEnvironmentT;
 use crate::typing::env::function_environment_t::LocalVariable;
@@ -88,7 +88,8 @@ pub enum NodeRefT<'s, 't> {
   PushRuntimeSizedArray(&'t PushRuntimeSizedArrayTE<'s, 't>),
   PopRuntimeSizedArray(&'t PopRuntimeSizedArrayTE<'s, 't>),
   InterfaceToInterfaceUpcast(&'t InterfaceToInterfaceUpcastTE<'s, 't>),
-  Upcast(&'t UpcastTE<'s, 't>),
+  UpcastInterface(&'t UpcastInterfaceTE<'s, 't>),
+  NarrowInterface(&'t NarrowInterfaceTE<'s, 't>),
   Destroy(&'t DestroyTE<'s, 't>),
 
   // 5 address expression variants
@@ -506,7 +507,8 @@ where
     ExpressionTE::InterfaceToInterfaceUpcast(x) => {
       visit_interface_to_interface_upcast(pred, out, x)
     }
-    ExpressionTE::Upcast(x) => visit_upcast(pred, out, x),
+    ExpressionTE::UpcastInterface(x) => visit_upcast_interface(pred, out, x),
+    ExpressionTE::NarrowInterface(x) => visit_narrow_interface(pred, out, x),
     ExpressionTE::Destroy(x) => visit_destroy(pred, out, x),
     ExpressionTE::CopyPrim(x) => visit_expression_te(pred, out, x.inner),
     ExpressionTE::LocalLookup(x) => visit_local_lookup(pred, out, x),
@@ -961,15 +963,25 @@ fn visit_interface_to_interface_upcast<'s, 't, T, F>(
   visit_interface_tt(pred, out, x.target_interface);
 }
 
-fn visit_upcast<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t UpcastTE<'s, 't>)
+fn visit_upcast_interface<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t UpcastInterfaceTE<'s, 't>)
 where
   F: Fn(NodeRefT<'s, 't>) -> Option<T>,
   's: 't,
 {
-  collect_if(pred, out, NodeRefT::Upcast(x));
+  collect_if(pred, out, NodeRefT::UpcastInterface(x));
   visit_expression_te(pred, out, x.inner_expr);
   visit_super_kind(pred, out, &x.target_super_kind);
   visit_id(pred, out, &x.impl_name);
+}
+
+fn visit_narrow_interface<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t NarrowInterfaceTE<'s, 't>)
+where
+  F: Fn(NodeRefT<'s, 't>) -> Option<T>,
+  's: 't,
+{
+  collect_if(pred, out, NodeRefT::NarrowInterface(x));
+  visit_expression_te(pred, out, x.inner_expr);
+  visit_kind(pred, out, x.result);
 }
 
 fn visit_super_kind<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, s: &'t ISuperKindTT<'s, 't>)
@@ -1214,6 +1226,7 @@ where
     KindT::USize(_) => {}
     KindT::Struct(s) => visit_struct_tt(pred, out, s),
     KindT::Interface(i) => visit_interface_tt(pred, out, i),
+    KindT::DynInterface(i) => visit_interface_tt(pred, out, i.inner),
     KindT::StaticSizedArray(a) => visit_static_sized_array_tt(pred, out, a),
     KindT::RuntimeSizedArray(a) => visit_runtime_sized_array_tt(pred, out, a),
     KindT::KindPlaceholder(p) => visit_kind_placeholder(pred, out, p),

@@ -247,6 +247,11 @@ LLVMTypeRef Unsafe::translateType(Kind* typeM) {
     } else if (auto interfaceKind = dynamic_cast<InterfaceKind *>(valueType)) {
       auto interfaceRefStructL = kindStructs.getInterfaceRefStruct(interfaceKind);
       return interfaceRefStructL;
+    } else if (auto dynInterfaceKind = dynamic_cast<DynInterfaceKind *>(valueType)) {
+      // `dyn X` maps to the plain interface reference struct for now; the fat-pointer layout is the
+      // backend follow-up (see the frontend dyn-conversion plan).
+      auto interfaceKind = globalState->metalCache->getInterfaceKind(dynInterfaceKind->fullName);
+      return kindStructs.getInterfaceRefStruct(interfaceKind);
     } else {
       { assert(false); throw 1337; }
     }

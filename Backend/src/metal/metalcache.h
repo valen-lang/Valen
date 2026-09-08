@@ -59,6 +59,7 @@ public:
       addressNumberer(addressNumberer_),
       structKinds(0, addressNumberer->makeHasher<Name*>()),
       interfaceKinds(0, addressNumberer->makeHasher<Name*>()),
+      dynInterfaceKinds(0, addressNumberer->makeHasher<Name*>()),
       names(0, addressNumberer->makeHasher<PackageCoordinate*>()),
       ints(0, addressNumberer->makeHasher<RegionId*>()),
       bools(0, addressNumberer->makeHasher<RegionId*>()),
@@ -159,6 +160,13 @@ public:
         [&]() { return new InterfaceKind(structName); });
   }
 
+  DynInterfaceKind* getDynInterfaceKind(Name* interfaceName) {
+    return makeIfNotPresent(
+        &dynInterfaceKinds,
+        interfaceName,
+        [&]() { return new DynInterfaceKind(interfaceName); });
+  }
+
   RuntimeSizedArrayT* getRuntimeSizedArray(Name* name) {
     return makeIfNotPresent(
         &runtimeSizedArrays,
@@ -234,6 +242,7 @@ public:
   std::unordered_map<std::string, RegionId*> regionIds;
   std::unordered_map<Name*, StructKind*, AddressHasher<Name*>> structKinds;
   std::unordered_map<Name*, InterfaceKind*, AddressHasher<Name*>> interfaceKinds;
+  std::unordered_map<Name*, DynInterfaceKind*, AddressHasher<Name*>> dynInterfaceKinds;
   std::unordered_map<PackageCoordinate*, std::unordered_map<std::string, Name*>, AddressHasher<PackageCoordinate*>> names;
 
   std::unordered_map<std::string, std::unordered_map<std::vector<std::string>, PackageCoordinate*, PackageCoordinate::StringVectorHasher, PackageCoordinate::StringVectorEquator>> packageCoords;

@@ -153,7 +153,8 @@ pub fn execute_node<'v, 'i, 's>(program_h: &'i HinputsI<'s, 'i>, interner: &Inst
         ExpressionIE::PushRuntimeSizedArray(_) => "PushRuntimeSizedArray",
         ExpressionIE::PopRuntimeSizedArray(_) => "PopRuntimeSizedArray",
         ExpressionIE::InterfaceToInterfaceUpcast(_) => "InterfaceToInterfaceUpcast",
-        ExpressionIE::Upcast(_) => "Upcast",
+        ExpressionIE::UpcastInterface(_) => "UpcastInterface",
+        ExpressionIE::NarrowInterface(_) => "NarrowInterface",
         ExpressionIE::Destroy(_) => "Destroy",
         ExpressionIE::CopyPrim(_) => "CopyPrim",
         ExpressionIE::LocalLookup(_) => "LocalLookup",
@@ -822,7 +823,7 @@ pub fn execute_node_inner<'v, 'i, 's>(program_h: &'i HinputsI<'s, 'i>, interner:
             };
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: upcast(return_ref, target_interface_ref) })
         }
-        ExpressionIE::Upcast(u) => {
+        ExpressionIE::UpcastInterface(u) => {
             let source_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &u.inner_expr) {
                 r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
                 INodeExecuteResultV::Continue(c) => c.result_ref,
@@ -837,6 +838,15 @@ pub fn execute_node_inner<'v, 'i, 's>(program_h: &'i HinputsI<'s, 'i>, interner:
             };
             let target_reference = upcast(source_reference, &i2i.target_interface);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: target_reference })
+        }
+        ExpressionIE::NarrowInterface(n) => {
+            // Fat -> fat pass-through today: `dyn X` and `X` share a repr, so narrowing keeps the
+            // same value reference. (Becomes an obj-ptr extract once Interface goes thin.)
+            let source_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &n.inner_expr) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: source_reference })
         }
         ExpressionIE::RuntimeSizedArrayLookup(rsal) => {
             let array_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &rsal.array_expr) {
@@ -1160,7 +1170,8 @@ pub fn cleanup<'v, 'i, 's>(program_h: &'i HinputsI<'s, 'i>, interner: &Instantia
                         cleanup(program_h, interner, heap, stdout, stdin, call_id, *member_expected_type, *member_ref)?;
                     }
                 }
-                KindIT::InterfaceIT(_ir) => {
+                // A `dyn X` value cleans up exactly like an interface — dispatch on the concrete struct.
+                KindIT::InterfaceIT(_) | KindIT::DynInterfaceIT(_) => {
                     let actual_concrete_type = match actual_reference.actual_kind.hamut {
                         KindIT::StructIT(sr) => sr,
                         _ => panic!("cleanup: InterfaceIT actual_kind not StructIT"),

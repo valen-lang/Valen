@@ -144,6 +144,11 @@ where
       return Ok(Some(IAttributeL::SealedAttribute(RangeL::new(attribute_begin, end))));
     }
 
+    if iter.try_skip_complete_word("open") {
+      let end = iter.get_pos();
+      return Ok(Some(IAttributeL::OpenAttribute(RangeL::new(attribute_begin, end))));
+    }
+
     Ok(None)
   }
 

@@ -32,7 +32,7 @@ use crate::typing::ast::expressions::ConstantIntTE;
 use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::ast::expressions::ReturnTE;
-use crate::typing::ast::expressions::UpcastTE;
+use crate::typing::ast::expressions::UpcastInterfaceTE;
 use crate::typing::ast::expressions::VoidLiteralTE;
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -973,9 +973,9 @@ exported func main() {
           c
       })
   );
-  let upcasts: Vec<&UpcastTE> = collect_where_tnode!(
+  let upcasts: Vec<&UpcastInterfaceTE> = collect_where_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::Upcast(u) => Some(u)
+      NodeRefT::UpcastInterface(u) => Some(u)
   );
   assert_eq!(upcasts.len(), 2);
 }
@@ -1042,7 +1042,7 @@ exported func main() {
         return false;
       }
       let upcast = match c.args[0] {
-        ExpressionTE::Upcast(u) => u,
+        ExpressionTE::UpcastInterface(u) => u,
         _ => return false,
       };
       match upcast.target_super_kind {
@@ -1059,7 +1059,7 @@ exported func main() {
         _ => false,
       }
     })
-    .expect("expected FunctionCallTE moo(UpcastTE(_, IShip<int>, _))");
+    .expect("expected FunctionCallTE moo(UpcastInterfaceTE(_, IShip<int>, _))");
 }
 
 // VCOORD: enable this. A where-clause rune like `N Int` is now placeholdered as a generic param, so

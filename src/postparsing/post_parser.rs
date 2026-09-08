@@ -25,6 +25,7 @@ use crate::parsing::parser::ParserCompilation;
 use crate::postparsing::ast::ExportS;
 use crate::postparsing::ast::ExternS;
 use crate::postparsing::ast::FunctionS;
+use crate::postparsing::ast::OpenS;
 use crate::postparsing::ast::SealedS;
 use crate::postparsing::ast::{
   ExportAsS, GenericParameterDefaultS, GenericParameterS, IBodyS, ICitizenAttributeS,
@@ -1191,6 +1192,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx> {
           ICitizenAttributeS::Extern(ExternS { package_coord: file.package_coord })
         }
         IAttributeP::SealedAttribute(_) => ICitizenAttributeS::Sealed(SealedS),
+        IAttributeP::OpenAttribute(_) => ICitizenAttributeS::Open(OpenS),
         IAttributeP::MacroCall(macro_call_p) => ICitizenAttributeS::MacroCall(MacroCallS {
           range: PostParser::eval_range(file, macro_call_p.range),
           include: macro_call_p.inclusion,

@@ -21,8 +21,8 @@ fn generic_struct_type_param_member_auto_drops() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r#"
 import v.builtins.drop.*;
-struct Box<T> { val T; }
-exported func main() { b = Box<int>(5); }
+struct Wrapper<T> { val T; }
+exported func main() { b = Wrapper<int>(5); }
 "#;
   let code_source = CodeSource::new(vec![
     builtin_source_bundle(&parse_arena, &parser_keywords, &["drop", "implicit_clone"]),

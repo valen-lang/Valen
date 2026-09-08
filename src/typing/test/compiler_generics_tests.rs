@@ -26,6 +26,7 @@ fn upcasting_with_generic_bounds() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   // TSUGAR: the `return (^m).harvest();` line below was `  return (m).harvest();` pre-sugar.
   let code = r#"
+import v.builtins.box.*;
 import v.builtins.panic.*;
 import v.builtins.drop.*;
 
@@ -44,12 +45,13 @@ func harvest<T>(opt XNone<T>) T {
 }
 
 exported func main() int {
-  m XOpt<int> = XNone<int>();
+  m Box<dyn XOpt<int>> = Box<XNone<int>>(XNone<int>());
   return (^m).harvest();
 }
 
 "#;
   let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
     Source::builtin_module(&parse_arena, &parser_keywords, "panic"),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     new_test_code_map(&parse_arena, code),

@@ -43,6 +43,7 @@ pub enum IRulexSR<'s> {
   BorrowRef(BorrowRefSR<'s>),
   WeakRef(WeakRefSR<'s>),
   OwnRef(OwnRefSR<'s>),
+  DynInterface(DynInterfaceSR<'s>),
 }
 
 impl<'s> IRulexSR<'s> {
@@ -60,6 +61,7 @@ impl<'s> IRulexSR<'s> {
       IRulexSR::BorrowRef(x) => &x.range,
       IRulexSR::WeakRef(x) => &x.range,
       IRulexSR::OwnRef(x) => &x.range,
+      IRulexSR::DynInterface(x) => &x.range,
     }
   }
 }
@@ -155,6 +157,16 @@ pub struct WeakRefSR<'s> {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OwnRefSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub inner_rune: RuneUsage<'s>,
+}
+
+/// `dyn X` — the solver concludes `result_rune` = the erased (fat-pointer) kind of the interface
+/// that `inner_rune` resolves to. A unary rune transform like OwnRef, but the result is a
+/// DynInterface kind and the solver requires the inner to be an interface.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct DynInterfaceSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
   pub inner_rune: RuneUsage<'s>,

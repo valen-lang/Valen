@@ -166,7 +166,7 @@ fn function_return_with_return_upcasts() {
         let do_it = coutputs.lookup_function_by_str("doIt");
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(do_it),
-            NodeRefT::Upcast(_) => Some(())
+            NodeRefT::UpcastInterface(_) => Some(())
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {

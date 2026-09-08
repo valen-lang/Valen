@@ -177,7 +177,7 @@ exported func main() {
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
       NodeRefT::Mutate(MutateTE {
-          source_expr: ExpressionTE::Upcast(_),
+          source_expr: ExpressionTE::UpcastInterface(_),
           ..
       }) => Some(())
   );
@@ -234,7 +234,7 @@ func foo(m Marine) {
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(foo),
       NodeRefT::Mutate(MutateTE {
-          source_expr: ExpressionTE::Upcast(_),
+          source_expr: ExpressionTE::UpcastInterface(_),
           ..
       }) => Some(())
   );

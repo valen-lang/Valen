@@ -28,6 +28,7 @@ pub const ENTRIES: &[(&str, &str, &str)] = &[
   ("panicutils", "panicutils.vale", include_str!("resources/panicutils.vale")),
   ("opt", "opt.vale", include_str!("resources/opt.vale")),
   ("result", "result.vale", include_str!("resources/result.vale")),
+  ("box", "box.vale", include_str!("resources/box.vale")),
   ("sameinstance", "sameinstance.vale", include_str!("resources/sameinstance.vale")),
   // VCOORD: re-enable weaks
   //("weak",                           "weak.vale",                           include_str!("resources/weak.vale")),

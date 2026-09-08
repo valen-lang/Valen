@@ -59,6 +59,7 @@ pub enum KindT<'s, 't> {
   USize(USizeT),
   Struct(&'t StructTT<'s, 't>),
   Interface(&'t InterfaceTT<'s, 't>),
+  DynInterface(&'t DynInterfaceTT<'s, 't>),
   StaticSizedArray(&'t StaticSizedArrayTT<'s, 't>),
   RuntimeSizedArray(&'t RuntimeSizedArrayTT<'s, 't>),
   KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
@@ -85,6 +86,16 @@ impl<'s, 't> KindT<'s, 't> {
     }
   }
 
+  // The interface this kind names, whether written bare (`Interface`) or erased (`DynInterface`).
+  // VCOORD: rename to underlying_interface perhaps
+  pub fn interface_tt(&self) -> Option<&'t InterfaceTT<'s, 't>> {
+    match self {
+      KindT::Interface(c) => Some(c),
+      KindT::DynInterface(d) => Some(d.inner),
+      _ => None,
+    }
+  }
+
   pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
     match self {
       KindT::Struct(c) => c,
@@ -103,6 +114,7 @@ impl<'s, 't> KindT<'s, 't> {
       KindT::USize(_) => true,
       KindT::Struct(_) => false,
       KindT::Interface(_) => false,
+      KindT::DynInterface(_) => false,
       KindT::StaticSizedArray(_) => false,
       KindT::RuntimeSizedArray(_) => false,
       KindT::KindPlaceholder(_) => false,
@@ -383,6 +395,20 @@ pub struct InterfaceTTValT<'s, 't> {
 }
 
 /// Interned (see @TFITCX)
+/// The erased-interface value kind `dyn X`.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct DynInterfaceTT<'s, 't> {
+  pub inner: &'t InterfaceTT<'s, 't>,
+  pub _must_intern: MustIntern,
+}
+
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct DynInterfaceTTValT<'s, 't> {
+  pub inner: &'t InterfaceTT<'s, 't>,
+}
+
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverloadSetT<'s, 't> {
   pub env: IInDenizenEnvironmentT<'s, 't>,
@@ -427,6 +453,7 @@ where
 {
   StructTT(StructTTValT<'s, 't>),
   InterfaceTT(InterfaceTTValT<'s, 't>),
+  DynInterfaceTT(DynInterfaceTTValT<'s, 't>),
   StaticSizedArrayTT(StaticSizedArrayTTValT<'s, 't>),
   RuntimeSizedArrayTT(RuntimeSizedArrayTTValT<'s, 't>),
   KindPlaceholder(KindPlaceholderT<'s, 't>),
@@ -441,6 +468,7 @@ where
 {
   StructTT(&'t StructTT<'s, 't>),
   InterfaceTT(&'t InterfaceTT<'s, 't>),
+  DynInterfaceTT(&'t DynInterfaceTT<'s, 't>),
   StaticSizedArrayTT(&'t StaticSizedArrayTT<'s, 't>),
   RuntimeSizedArrayTT(&'t RuntimeSizedArrayTT<'s, 't>),
   KindPlaceholder(&'t KindPlaceholderT<'s, 't>),

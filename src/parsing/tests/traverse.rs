@@ -542,6 +542,9 @@ where
     }
     ITemplexPT::WeakRef(WeakRefPT { range: _range, inner }) => visit_templex(pred, out, inner),
     ITemplexPT::OwnRef(OwnRefPT { range: _range, inner }) => visit_templex(pred, out, inner),
+    ITemplexPT::DynInterface(DynInterfacePT { range: _range, inner }) => {
+      visit_templex(pred, out, inner)
+    }
     ITemplexPT::Pack(pack) => {
       visit_pack(pred, out, pack);
     }

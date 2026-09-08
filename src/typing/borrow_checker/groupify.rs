@@ -271,10 +271,15 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         let result = self.cast_result(expr.result(), inner_expr.result());
         IExpressionGE::InterfaceToInterfaceUpcast { result, inner_expr }
       }
-      ExpressionTE::Upcast(e) => {
+      ExpressionTE::UpcastInterface(e) => {
         let inner_expr = arena.alloc(self.groupify(coutputs, &e.inner_expr, ctx, arena));
         let result = self.cast_result(expr.result(), inner_expr.result());
-        IExpressionGE::Upcast { result, inner_expr }
+        IExpressionGE::UpcastInterface { result, inner_expr }
+      }
+      ExpressionTE::NarrowInterface(e) => {
+        let inner_expr = arena.alloc(self.groupify(coutputs, &e.inner_expr, ctx, arena));
+        let result = self.cast_result(expr.result(), inner_expr.result());
+        IExpressionGE::NarrowInterface { result, inner_expr }
       }
       ExpressionTE::Destroy(e) => {
         IExpressionGE::Destroy { result: void_kind_g(), expr: arena.alloc(self.groupify(coutputs, &e.expr, ctx, arena)) }

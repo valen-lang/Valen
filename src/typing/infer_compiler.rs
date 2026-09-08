@@ -563,7 +563,15 @@ where
           .expect("vassertSome: implements() super operand not in conclusions"),
       )
       .kind;
-      let sub_kind_tt = match ISubKindTT::try_from(sub_kind) {
+      let sub_kind_without_dyn = match sub_kind.interface_tt() {
+        Some(i) => KindT::Interface(i),
+        None => sub_kind,
+      };
+      let super_kind_without_dyn = match super_kind.interface_tt() {
+        Some(i) => KindT::Interface(i),
+        None => super_kind,
+      };
+      let sub_kind_tt = match ISubKindTT::try_from(sub_kind_without_dyn) {
         Ok(k) => k,
         Err(()) => {
           return Ok(Err(self.resolving_rule_error(
@@ -572,7 +580,7 @@ where
           )))
         }
       };
-      let super_kind_tt = match ISuperKindTT::try_from(super_kind) {
+      let super_kind_tt = match ISuperKindTT::try_from(super_kind_without_dyn) {
         Ok(k) => k,
         Err(()) => {
           return Ok(Err(self.resolving_rule_error(

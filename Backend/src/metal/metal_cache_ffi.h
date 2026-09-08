@@ -104,6 +104,7 @@ KindHandle* metal_cache_get_usize(MetalCacheHandle*, RegionIdHandle* region);
 
 KindHandle* metal_cache_get_struct_kind(MetalCacheHandle*, NameHandle* name);
 KindHandle* metal_cache_get_interface_kind(MetalCacheHandle*, NameHandle* name);
+KindHandle* metal_cache_get_dyn_interface_kind(MetalCacheHandle*, NameHandle* name);
 KindHandle* metal_cache_get_static_sized_array(MetalCacheHandle*, NameHandle* name);
 KindHandle* metal_cache_get_runtime_sized_array(MetalCacheHandle*, NameHandle* name);
 
@@ -221,6 +222,8 @@ ExpressionHandle* metal_expr_struct_to_interface_upcast(
     ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* target_interface, NameHandle* impl_name, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_interface_to_interface_upcast(
     ExpressionHandle* inner_expr, KindHandle* target_interface, KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_narrow_interface(
+    ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_as_subtype(
     ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* target_type,
     PrototypeHandle* ok_constructor, PrototypeHandle* err_constructor,

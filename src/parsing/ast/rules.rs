@@ -130,6 +130,9 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
     ITemplexPT::OwnRef(own_ref) => {
       get_ordered_rune_declarations_from_templex_with_duplicates(own_ref.inner)
     }
+    ITemplexPT::DynInterface(dyn_interface) => {
+      get_ordered_rune_declarations_from_templex_with_duplicates(dyn_interface.inner)
+    }
     ITemplexPT::String(_)
     | ITemplexPT::Int(_)
     | ITemplexPT::Bool(_)

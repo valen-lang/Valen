@@ -153,6 +153,7 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
         KindIT::RuntimeSizedArrayIT(a) => visit_id(pred, out, a.name),
         KindIT::StructIT(s) => visit_id(pred, out, s.id),
         KindIT::InterfaceIT(i) => visit_id(pred, out, i.id),
+        KindIT::DynInterfaceIT(i) => visit_id(pred, out, i.id),
         KindIT::BorrowRefIT(r) => visit_kind(pred, out, r.inner),
         KindIT::OwnRefIT(r) => visit_kind(pred, out, r.inner),
         KindIT::ShareRefIT(r) => visit_kind(pred, out, r.inner),
@@ -384,7 +385,8 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
         }
         ExpressionIE::PopRuntimeSizedArray(x) => visit_expression_ie(pred, out, x.array_expr),
         ExpressionIE::InterfaceToInterfaceUpcast(x) => visit_expression_ie(pred, out, x.inner_expr),
-        ExpressionIE::Upcast(x) => visit_expression_ie(pred, out, x.inner_expr),
+        ExpressionIE::UpcastInterface(x) => visit_expression_ie(pred, out, x.inner_expr),
+        ExpressionIE::NarrowInterface(x) => visit_expression_ie(pred, out, x.inner_expr),
         ExpressionIE::Destroy(x) => visit_expression_ie(pred, out, x.expr),
         ExpressionIE::CopyPrim(x) => visit_expression_ie(pred, out, x.inner),
         ExpressionIE::LocalLookup(_) => {}

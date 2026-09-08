@@ -1084,6 +1084,11 @@ Ref translateExpressionInner(
 //             });
 //
 //     return resultOptLE;
+  } else if (auto narrowInterface = dynamic_cast<NarrowInterface*>(expr)) {
+    buildFlare(FL(), globalState, functionState, builder, typeid(*expr).name());
+    auto sourceRef =
+        translateExpression(globalState, functionState, blockState, builder, narrowInterface->innerExpr);
+    return sourceRef;
   } else {
     std::string name = typeid(*expr).name();
     std::cout << name << std::endl;

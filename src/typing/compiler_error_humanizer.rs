@@ -865,6 +865,10 @@ pub fn humanize_rule_error<'s, 't>(
       "Expected an own, but was: ".to_string()
         + &humanize_kind(scout_arena, typing_interner, code_map, kind)
     }
+    ITypingPassSolverError::KindIsNotDynInterface { kind } => {
+      "Expected a dyn interface, but was: ".to_string()
+        + &humanize_kind(scout_arena, typing_interner, code_map, kind)
+    }
     ITypingPassSolverError::KindIsNotFromATemplate { kind } => {
       "Expected a type built from a template, but was: ".to_string()
         + &humanize_kind(scout_arena, typing_interner, code_map, kind)
@@ -1119,6 +1123,9 @@ fn humanize_kind<'s, 't>(
     KindT::OverloadSet(s) => format!("(overloads: {})", humanize_imprecise_name(*s.name)),
     KindT::Interface(name) => {
       humanize_id(scout_arena, typing_interner, code_map, *name.id)
+    }
+    KindT::DynInterface(name) => {
+      format!("dyn {}", humanize_id(scout_arena, typing_interner, code_map, *name.inner.id))
     }
     KindT::Struct(name) => {
       humanize_id(scout_arena, typing_interner, code_map, *name.id)

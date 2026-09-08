@@ -19,6 +19,7 @@ pub enum ITypeST<'s> {
   BorrowRef(&'s BorrowRefST<'s>),
   WeakRef(&'s WeakRefST<'s>),
   OwnRef(&'s OwnRefST<'s>),
+  DynInterface(&'s DynInterfaceST<'s>),
   Pack(&'s PackST<'s>),
   // Func(&'s FuncST<'s>),
   RuntimeSizedArray(&'s RuntimeSizedArrayST<'s>),
@@ -38,6 +39,7 @@ impl<'s> ITypeST<'s> {
       ITypeST::BorrowRef(r) => r.range,
       ITypeST::WeakRef(r) => r.range,
       ITypeST::OwnRef(r) => r.range,
+      ITypeST::DynInterface(r) => r.range,
       ITypeST::Pack(p) => p.range,
       ITypeST::RuntimeSizedArray(r) => r.range,
       ITypeST::String(r) => r.range,
@@ -52,6 +54,7 @@ impl<'s> ITypeST<'s> {
       ITypeST::BorrowRef(r) => r.inner.collect_rune_mentions(out),
       ITypeST::WeakRef(r) => r.inner.collect_rune_mentions(out),
       ITypeST::OwnRef(r) => r.inner.collect_rune_mentions(out),
+      ITypeST::DynInterface(r) => r.inner.collect_rune_mentions(out),
       ITypeST::RuntimeSizedArray(r) => r.element.collect_rune_mentions(out),
       ITypeST::Call(r) => {
         r.template.collect_rune_mentions(out);
@@ -188,6 +191,13 @@ pub struct WeakRefST<'s> {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OwnRefST<'s> {
+  pub range: RangeS<'s>,
+  pub inner: &'s ITypeST<'s>,
+}
+
+/// `dyn X` — the read-only type-tree mirror of the DynInterface rule. `inner` is the interface X.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct DynInterfaceST<'s> {
   pub range: RangeS<'s>,
   pub inner: &'s ITypeST<'s>,
 }

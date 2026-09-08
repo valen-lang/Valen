@@ -70,7 +70,9 @@ pub enum ExpressionTE<'s, 't> {
   PushRuntimeSizedArray(&'t PushRuntimeSizedArrayTE<'s, 't>),
   PopRuntimeSizedArray(&'t PopRuntimeSizedArrayTE<'s, 't>),
   InterfaceToInterfaceUpcast(&'t InterfaceToInterfaceUpcastTE<'s, 't>),
-  Upcast(&'t UpcastTE<'s, 't>),
+  UpcastInterface(&'t UpcastInterfaceTE<'s, 't>),
+  // UpcastEnum(&'t UpcastEnumTE<'s, 't>),
+  NarrowInterface(&'t NarrowInterfaceTE<'s, 't>),
   Destroy(&'t DestroyTE<'s, 't>),
   CopyPrim(&'t CopyPrimTE<'s, 't>),
   LocalLookup(&'t LocalLookupTE<'s, 't>),
@@ -125,7 +127,9 @@ where
       ExpressionTE::PushRuntimeSizedArray(e) => e.result,
       ExpressionTE::PopRuntimeSizedArray(e) => e.result,
       ExpressionTE::InterfaceToInterfaceUpcast(e) => e.result,
-      ExpressionTE::Upcast(e) => e.result,
+      ExpressionTE::UpcastInterface(e) => e.result,
+      // ExpressionTE::UpcastEnum(e) => e.result,
+      ExpressionTE::NarrowInterface(e) => e.result,
       ExpressionTE::Destroy(e) => e.result,
       ExpressionTE::CopyPrim(e) => e.result,
       ExpressionTE::LocalLookup(e) => KindT::BorrowRef(e.result),
@@ -1041,6 +1045,32 @@ where
   }
 }
 /// Arena-allocated (see @TFITCX)
+/// Narrows a `DynInterface` value or `EnumInterface` to plain `Interface`
+/// form, which doesn't carry information at runtime about what it's pointing at.
+#[derive(Debug)]
+pub struct NarrowInterfaceTE<'s, 't>
+where
+  's: 't,
+{
+  pub range: RangeS<'s>,
+  pub inner_expr: ExpressionTE<'s, 't>,
+  pub result: KindT<'s, 't>,
+  _sealed: (),
+}
+impl<'s, 't> NarrowInterfaceTE<'s, 't>
+where
+  's: 't,
+{
+  pub fn new(
+    range: RangeS<'s>,
+    inner_expr: ExpressionTE<'s, 't>,
+    result: KindT<'s, 't>,
+  ) -> NarrowInterfaceTE<'s, 't> {
+    NarrowInterfaceTE { range, inner_expr, result, _sealed: () }
+  }
+}
+
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct CopyPrimTE<'s, 't> {
   pub range: RangeS<'s>,
@@ -1355,8 +1385,13 @@ where
   }
 }
 /// Arena-allocated (see @TFITCX)
+/// Widens a reference to a concrete (`&MyBoat`) into a reference to the erased `dyn` interface
+/// (`&dyn MySailing`). The object stays where it lives; this builds a pointer to it paired with the
+/// impl. Reference-shaped by nature — see UpcastEnumTE for the value-shaped enum injection. The
+/// result is always the `dyn` form: bare interface write-forms don't exist (every `X` is spelled
+/// `dyn X`), so an interface upcast can only produce `dyn X`.
 #[derive(Debug)]
-pub struct UpcastTE<'s, 't>
+pub struct UpcastInterfaceTE<'s, 't>
 where
   's: 't,
 {
@@ -1368,7 +1403,7 @@ where
   _sealed: (),
 }
 
-impl<'s, 't> UpcastTE<'s, 't>
+impl<'s, 't> UpcastInterfaceTE<'s, 't>
 where
   's: 't,
 {
@@ -1378,11 +1413,36 @@ where
     inner_expr: ExpressionTE<'s, 't>,
     target_super_kind: ISuperKindTT<'s, 't>,
     impl_name: IdT<'s, 't>,
-  ) -> UpcastTE<'s, 't> {
-    let result = replace_value_type_in_ref(interner, inner_expr.result(), target_super_kind.into());
-    UpcastTE { range, inner_expr, target_super_kind, impl_name, result, _sealed: () }
+  ) -> UpcastInterfaceTE<'s, 't> {
+    let value_kind = match target_super_kind {
+      ISuperKindTT::Interface(i) => {
+        KindT::DynInterface(interner.intern_dyn_interface_tt(DynInterfaceTTValT { inner: i }))
+      }
+      other => panic!("Non-interface target_super_kind in UpcastInterfaceTE: {:?}", other),
+    };
+    let result = replace_value_type_in_ref(interner, inner_expr.result(), value_kind);
+    UpcastInterfaceTE { range, inner_expr, target_super_kind, impl_name, result, _sealed: () }
   }
 }
+
+// FUTURE: the value-shaped counterpart of UpcastInterfaceTE. Injects an OWNED concrete (`MyBoat`)
+// into a tagged-enum interface (`MySailing`, an EnumInterfaceTT) by moving the value into the enum's
+// payload. Owned-only by nature: there's no enum value to point at until one is built, so it can't
+// widen a `&MyBoat` into a `&MySailing` the way UpcastInterfaceTE widens into `&dyn`.
+// /// Arena-allocated (see @TFITCX)
+// #[derive(Debug)]
+// pub struct UpcastEnumTE<'s, 't>
+// where
+//   's: 't,
+// {
+//   pub range: RangeS<'s>,
+//   pub inner_expr: ExpressionTE<'s, 't>,
+//   pub target_enum_kind: ISuperKindTT<'s, 't>,
+//   pub impl_name: IdT<'s, 't>,
+//   pub result: KindT<'s, 't>,
+//   _sealed: (),
+// }
+
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct DestroyTE<'s, 't>

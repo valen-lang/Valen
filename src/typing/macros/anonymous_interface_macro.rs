@@ -36,7 +36,7 @@ use crate::postparsing::names::{
     SelfKindTemplateRuneS,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
-use crate::postparsing::rules::rules::{BorrowRefSR, CallSR, CallSiteFuncSR, DefinitionFuncSR, EqualsSR, IRulexSR, KindListSR, LiteralSR, LookupSR, OwnRefSR, RegionSR, ResolveSR, RuneParentEnvLookupSR, RuneUsage, WeakRefSR};
+use crate::postparsing::rules::rules::{BorrowRefSR, CallSR, CallSiteFuncSR, DefinitionFuncSR, DynInterfaceSR, EqualsSR, IRulexSR, KindListSR, LiteralSR, LookupSR, OwnRefSR, RegionSR, ResolveSR, RuneParentEnvLookupSR, RuneUsage, WeakRefSR};
 use crate::parsing::ast::ast::LoadAsP;
 use crate::typing::compiler::Compiler;
 use crate::typing::macros::macros::GeneratedAhtDenizen;
@@ -53,7 +53,7 @@ where 's: 't,
         interface_a: &'s InterfaceS<'s>,
     ) -> Vec<GeneratedAhtDenizen<'s, 't>> {
 
-        if interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Sealed(_))) {
+        if !interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Open(_))) {
             return vec![];
         }
 
@@ -334,6 +334,11 @@ where 's: 't,
                 inner_rune: RuneUsage { range: x.inner_rune.range, rune: func(x.inner_rune.rune) },
             }),
             IRulexSR::OwnRef(x) => IRulexSR::OwnRef(OwnRefSR {
+                range: x.range,
+                result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
+                inner_rune: RuneUsage { range: x.inner_rune.range, rune: func(x.inner_rune.rune) },
+            }),
+            IRulexSR::DynInterface(x) => IRulexSR::DynInterface(DynInterfaceSR {
                 range: x.range,
                 result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
                 inner_rune: RuneUsage { range: x.inner_rune.range, rune: func(x.inner_rune.rune) },

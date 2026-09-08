@@ -2,7 +2,7 @@ use crate::postparsing::ast::{
   AbstractBodyS, BuiltinS, CodeBodyS, ExportAsS, ExportS, ExternBodyS, ExternS, FileS, FunctionS,
   GeneratedBodyS, GenericParameterDefaultS, GenericParameterS, IBodyS, ICitizenAttributeS,
   ICitizenDenizenS, ICitizenS, IDenizenS, IFunctionAttributeS, IGenericParameterTypeS,
-  IStructMemberS, ImplS, ImportS, InterfaceS, MacroCallS, NormalStructMemberS, ParameterS,
+  IStructMemberS, ImplS, ImportS, InterfaceS, MacroCallS, NormalStructMemberS, OpenS, ParameterS,
   ProgramS, SealedS, StructS, UserFunctionS, VariadicStructMemberS,
 };
 use crate::postparsing::expressions::{
@@ -43,6 +43,7 @@ pub enum NodeRefS<'s> {
   MacroCallAttribute(&'s MacroCallS<'s>),
   ExportAttribute(&'s ExportS<'s>),
   SealedAttribute(&'s SealedS),
+  OpenAttribute(&'s OpenS),
   UserFunctionAttribute(&'s UserFunctionS),
 
   StructMember(&'s IStructMemberS<'s>),
@@ -714,6 +715,7 @@ fn visit_citizen_attribute<'s, T, F>(
   match attribute {
     ICitizenAttributeS::Extern(x) => collect_if(pred, out, NodeRefS::ExternAttribute(x)),
     ICitizenAttributeS::Sealed(x) => collect_if(pred, out, NodeRefS::SealedAttribute(x)),
+    ICitizenAttributeS::Open(x) => collect_if(pred, out, NodeRefS::OpenAttribute(x)),
     ICitizenAttributeS::Builtin(x) => collect_if(pred, out, NodeRefS::BuiltinAttribute(x)),
     ICitizenAttributeS::MacroCall(x) => collect_if(pred, out, NodeRefS::MacroCallAttribute(x)),
     ICitizenAttributeS::Export(x) => collect_if(pred, out, NodeRefS::ExportAttribute(x)),
@@ -805,6 +807,10 @@ where
       visit_rune_usage(pred, out, &x.inner_rune);
     }
     IRulexSR::OwnRef(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.inner_rune);
+    }
+    IRulexSR::DynInterface(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
       visit_rune_usage(pred, out, &x.inner_rune);
     }

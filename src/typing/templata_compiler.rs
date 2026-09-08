@@ -541,6 +541,21 @@ where
         );
         KindT::Interface(new_interface)
       }
+      KindT::DynInterface(i) => {
+        // `dyn X` substitutes exactly like the interface it erases, then re-wraps as DynInterface.
+        let new_interface = Compiler::substitute_templatas_in_interface(
+          coutputs,
+          sanity_check,
+          interner,
+          keywords,
+          original_calling_denizen_id,
+          needle_template_name,
+          new_substituting_templatas,
+          bound_arguments_source,
+          i.inner,
+        );
+        KindT::DynInterface(interner.intern_dyn_interface_tt(DynInterfaceTTValT { inner: new_interface }))
+      }
       KindT::OverloadSet(_) => {
         unreachable!("an OverloadSet cannot appear as a substantive kind here")
       }
@@ -1374,6 +1389,18 @@ where
             }),
           ).clone()
         }),
+      ITypeST::DynInterface(b) => {
+        // `dyn X` erases interface X; the inner must resolve to an interface kind.
+        match self.evaluate_templex(env, rune_to_kind, b.inner).expect_kind() {
+          KindT::Interface(iface) =>
+            ITemplataT::Kind(KindTemplataT {
+              kind: KindT::DynInterface(
+                self.typing_interner.intern_dyn_interface_tt(DynInterfaceTTValT { inner: iface }),
+              ),
+            }),
+          other => panic!("evaluate_templex: dyn requires an interface, got {:?}", other),
+        }
+      }
       ITypeST::Name(n) => {
         let mut lookup_filter = HashSet::default();
         lookup_filter.insert(ILookupContext::TemplataLookupContext);
@@ -1644,6 +1671,7 @@ where
     match (&source_type, &target_type) {
       (KindT::Never(_), _) => return true,
       (a, b) if a == b => {}
+      (KindT::DynInterface(a), KindT::Interface(b)) if a.inner == *b => {}
       (
         KindT::Void(_)
         | KindT::Int(_)
@@ -1669,27 +1697,29 @@ where
         return false;
       }
       (_, KindT::Struct(_)) => return false,
-      (a, b) if ISubKindTT::try_from(*a).is_ok() && ISuperKindTT::try_from(*b).is_ok() => {
-        let source_sub_kind = ISubKindTT::try_from(source_type).unwrap();
-        let target_super_kind = ISuperKindTT::try_from(target_type).unwrap();
-        match self.is_parent(
-          coutputs,
-          calling_env,
-          parent_ranges,
-          call_location,
-          source_sub_kind,
-          target_super_kind,
-        ) {
-          IsParentResult::IsParent(_) => {}
-          IsParentResult::IsntParent(_) => return false,
+      (a, b) => {
+        let b_without_dyn = match b.interface_tt() {
+          Some(i) => KindT::Interface(i),
+          None => *b,
+        };
+        match (ISubKindTT::try_from(*a), ISuperKindTT::try_from(b_without_dyn)) {
+          (Ok(source_sub_kind), Ok(target_super_kind)) => {
+            match self.is_parent(
+              coutputs,
+              calling_env,
+              parent_ranges,
+              call_location,
+              source_sub_kind,
+              target_super_kind,
+            ) {
+              IsParentResult::IsParent(_) => {}
+              IsParentResult::IsntParent(_) => return false,
+            }
+          }
+          _ => {
+            panic!("vfail: Dont know if we can convert from {:?} to {:?}", source_type, target_type);
+          }
         }
-      }
-
-      // if source_region != target_region {
-      //     return false;
-      // }
-      _ => {
-        panic!("vfail: Dont know if we can convert from {:?} to {:?}", source_type, target_type);
       }
     }
 

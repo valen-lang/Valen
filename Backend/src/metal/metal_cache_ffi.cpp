@@ -166,6 +166,9 @@ extern "C" VIS KindHandle* metal_cache_get_struct_kind(MetalCacheHandle* h, Name
 extern "C" VIS KindHandle* metal_cache_get_interface_kind(MetalCacheHandle* h, NameHandle* name) {
   return reinterpret_cast<KindHandle*>(cache(h)->getInterfaceKind(nm(name)));
 }
+extern "C" VIS KindHandle* metal_cache_get_dyn_interface_kind(MetalCacheHandle* h, NameHandle* name) {
+  return reinterpret_cast<KindHandle*>(cache(h)->getDynInterfaceKind(nm(name)));
+}
 extern "C" VIS KindHandle* metal_cache_get_static_sized_array(MetalCacheHandle* h, NameHandle* name) {
   return reinterpret_cast<KindHandle*>(cache(h)->getStaticSizedArray(nm(name)));
 }
@@ -413,6 +416,11 @@ extern "C" VIS ExpressionHandle* metal_expr_interface_to_interface_upcast(
     ExpressionHandle* inner_expr, KindHandle* target_interface, KindHandle* result, SourceLocationHandle* source_loc) {
   return reinterpret_cast<ExpressionHandle*>(new InterfaceToInterfaceUpcast(srcloc(source_loc),
       ex(inner_expr), reinterpret_cast<InterfaceKind*>(knd(target_interface)), knd(result)));
+}
+extern "C" VIS ExpressionHandle* metal_expr_narrow_interface(
+    ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new NarrowInterface(srcloc(source_loc),
+      ex(inner_expr), knd(source_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_as_subtype(
     ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* target_type,

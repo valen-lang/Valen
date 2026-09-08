@@ -15,7 +15,7 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::collect_only_inode;
 use crate::collect_where_inode;
 use crate::instantiating::collector::NodeRefI;
-use crate::instantiating::ast::expressions::{ExpressionIE, LocalLookupIE, ConstructIE, ConstantStrIE, MemberLookupIE, DerefIE, ConstantIntIE, FunctionCallIE, InterfaceFunctionCallIE, UpcastIE, RuntimeSizedArrayLookupIE};
+use crate::instantiating::ast::expressions::{ExpressionIE, LocalLookupIE, ConstructIE, ConstantStrIE, MemberLookupIE, DerefIE, ConstantIntIE, FunctionCallIE, InterfaceFunctionCallIE, UpcastInterfaceIE, RuntimeSizedArrayLookupIE};
 use crate::builtins::builtins::{builtin_source_for_arrays, empty_v_builtins_stub};
 use crate::instantiating::ast::types::{KindIT, IntIT, BorrowRefIT, ShareRefIT};
 use crate::instantiating::ast::ast::PrototypeI;
@@ -542,7 +542,7 @@ func doCivicDance(toyota Toyota) int {
   return 7;
 }
 exported func main() int {
-  x Car = Toyota();
+  x Box<dyn Car> = Box<Toyota>(Toyota());
   return doCivicDance(^x);
 }
 "#;
@@ -562,7 +562,7 @@ exported func main() int {
     assert_eq!(virtual_dispatches.len(), 1, "expected exactly one virtual dispatch (the abstract doCivicDance dispatcher)");
 }
 
-/// Assigning a concrete struct to an interface-typed local instantiates to an UpcastIE: the
+/// Assigning a concrete struct to an interface-typed local instantiates to an UpcastInterfaceIE: the
 /// concrete `Toyota` construction is upcast to an interface result.
 #[test]
 fn upcast_to_interface() {
@@ -591,7 +591,7 @@ func doCivicDance(toyota Toyota) int {
   return 7;
 }
 exported func main() int {
-  x Car = Toyota();
+  x Box<dyn Car> = Box<Toyota>(Toyota());
   return doCivicDance(^x);
 }
 "#;
@@ -600,7 +600,7 @@ exported func main() int {
     let main = monouts.lookup_function_by_str("main");
     collect_only_inode!(
         NodeRefI::FunctionDefinition(main),
-        NodeRefI::Expression(ExpressionIE::Upcast(UpcastIE {
+        NodeRefI::Expression(ExpressionIE::UpcastInterface(UpcastInterfaceIE {
             inner_expr: ExpressionIE::FunctionCall(FunctionCallIE {
                 callable: PrototypeI {
                     id: IdI {

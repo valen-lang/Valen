@@ -103,6 +103,7 @@ pub enum IAttributeL<'p> {
   ExportAttribute(RangeL),
   ExternAttribute { range: RangeL, maybe_custom_name: Option<ParendLE<'p>> },
   SealedAttribute(RangeL),
+  OpenAttribute(RangeL),
   MacroCall { range: RangeL, inclusion: IMacroInclusionL, name: WordLE<'p> },
 }
 

@@ -23,13 +23,14 @@ use crate::postparsing::names::{
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
 use crate::postparsing::rules::rules::IRulexSR::{Call, Lookup};
 use crate::postparsing::rules::rules::{
-  BoolLiteralSL, BorrowRefSR, CallSR, ILiteralSL, IRulexSR, IntLiteralSL, KindListSR, LiteralSR,
-  LookupSR, OwnRefSR, RegionSR, RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, WeakRefSR,
+  BoolLiteralSL, BorrowRefSR, CallSR, DynInterfaceSR, ILiteralSL, IRulexSR, IntLiteralSL, KindListSR,
+  LiteralSR, LookupSR, OwnRefSR, RegionSR, RuneParentEnvLookupSR, RuneUsage, StringLiteralSL,
+  WeakRefSR,
 };
 use crate::postparsing::rules::rules::{CallSiteFuncSR, DefinitionFuncSR, ResolveSR};
 use crate::postparsing::rules::types::{
-  AnonymousRuneST, BoolST, BorrowRefST, CallST, EffectS, GroupS, ITypeST, IntST, NameST, OwnRefST,
-  PackST, RegionS, RuneUsageST, RuntimeSizedArrayST, StringST, TupleST, WeakRefST,
+  AnonymousRuneST, BoolST, BorrowRefST, CallST, DynInterfaceST, EffectS, GroupS, ITypeST, IntST,
+  NameST, OwnRefST, PackST, RegionS, RuneUsageST, RuntimeSizedArrayST, StringST, TupleST, WeakRefST,
 };
 use crate::scout_arena::ScoutArena;
 use crate::utils::range::RangeS;
@@ -200,6 +201,25 @@ fn translate_own_ref_templex<'s>(
   result_rune
 }
 
+fn translate_dyn_interface_templex<'s>(
+  scout_arena: &ScoutArena<'s>,
+  lidb: &mut LocationInDenizenBuilder,
+  builder: &mut Vec<IRulexSR<'s>>,
+  range_s: RangeS<'s>,
+  inner_rune: RuneUsage<'s>,
+) -> RuneUsage<'s> {
+  let result_rune = RuneUsage {
+    range: range_s.clone(),
+    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
+  };
+  builder.push(IRulexSR::DynInterface(DynInterfaceSR {
+    range: range_s,
+    result_rune: result_rune.clone(),
+    inner_rune,
+  }));
+  result_rune
+}
+
 // Translates a type expression into rules and returns its rune. Every rule goes into
 // `rule_builder`. To split the outer reference wrapping (&/weak) from the named
 // type it wraps (as a function parameter needs), call translate_signature_templex instead.
@@ -335,6 +355,15 @@ pub fn translate_templex_into_type_st<'s, 'p>(
       let inner: &'s ITypeST<'s> =
         scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), own_ref.inner));
       ITypeST::OwnRef(scout_arena.alloc(OwnRefST { range: range_s, inner }))
+    }
+
+    ITemplexPT::DynInterface(dyn_interface) => {
+      let inner: &'s ITypeST<'s> = scout_arena.alloc(translate_templex_into_type_st(
+        scout_arena,
+        env.clone(),
+        dyn_interface.inner,
+      ));
+      ITypeST::DynInterface(scout_arena.alloc(DynInterfaceST { range: range_s, inner }))
     }
 
     ITemplexPT::Pack(pack) => {
@@ -553,6 +582,19 @@ pub fn translate_type_st_into_rune<'s>(
         or.inner,
       );
       translate_own_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
+    }
+
+    ITypeST::DynInterface(di) => {
+      let inner_rune = translate_type_st_into_rune(
+        scout_arena,
+        keywords,
+        env.clone(),
+        &mut lidb.child(),
+        rule_builder,
+        context_region,
+        di.inner,
+      );
+      translate_dyn_interface_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
     }
 
     ITypeST::Tuple(tuple) => {
@@ -951,6 +993,12 @@ where
       ITypeST::OwnRef(scout_arena.alloc(OwnRefST { range: or.range, inner }))
     }
 
+    ITypeST::DynInterface(di) => {
+      let inner: &'s ITypeST<'s> =
+        scout_arena.alloc(map_runes_in_type_st(scout_arena, func, di.inner));
+      ITypeST::DynInterface(scout_arena.alloc(DynInterfaceST { range: di.range, inner }))
+    }
+
     ITypeST::Pack(p) => {
       let mut members = Vec::<&'s ITypeST<'s>>::new();
       for member in p.members {
@@ -1313,6 +1361,20 @@ pub fn translate_templex<'s, 'p>(
           own_ref.inner,
         );
         translate_own_ref_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
+      }
+
+      ITemplexPT::DynInterface(dyn_interface) => {
+        let range_s = PostParser::eval_range(file, dyn_interface.range);
+        let inner_rune = translate_templex(
+          scout_arena,
+          keywords,
+          env.clone(),
+          &mut lidb.child(),
+          rule_builder,
+          context_region.clone(),
+          dyn_interface.inner,
+        );
+        translate_dyn_interface_templex(scout_arena, lidb, rule_builder, range_s, inner_rune)
       }
 
       ITemplexPT::Call(call) => {

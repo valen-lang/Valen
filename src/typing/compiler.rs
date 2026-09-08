@@ -211,6 +211,13 @@ where
           self.get_placeholders_in_templata(accum, *arg);
         }
       }
+      KindT::DynInterface(i) => {
+        let inst_name = IInstantiationNameT::try_from(i.inner.id.local_name)
+          .expect("InterfaceTT id local_name must be an IInstantiationNameT");
+        for arg in inst_name.template_args() {
+          self.get_placeholders_in_templata(accum, *arg);
+        }
+      }
       KindT::KindPlaceholder(p) => accum.push(p.id),
       KindT::OverloadSet(_) => {}
       KindT::BorrowRef(BorrowRefT { inner }) => {
@@ -273,16 +280,16 @@ where
   // any ref-wrapped kind; peel references first.
   pub fn is_descendant_kind(
     &self,
-    _envs: &InferEnv<'s, 't>,
-    _coutputs: &mut CompilerOutputs<'s, 't>,
+    envs: &InferEnv<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
     kind: KindT<'s, 't>,
   ) -> bool {
     match kind {
       KindT::KindPlaceholder(kp) => self.is_descendant(
-        _coutputs,
-        _envs.parent_ranges,
-        _envs.call_location,
-        _envs.original_calling_env,
+        coutputs,
+        envs.parent_ranges,
+        envs.call_location,
+        envs.original_calling_env,
         ISubKindTT::KindPlaceholder(kp),
       ),
       KindT::RuntimeSizedArray(_) => false,
@@ -290,18 +297,25 @@ where
       KindT::Never(_) => true,
       KindT::StaticSizedArray(_) => false,
       KindT::Struct(s) => self.is_descendant(
-        _coutputs,
-        _envs.parent_ranges,
-        _envs.call_location,
-        _envs.original_calling_env,
+        coutputs,
+        envs.parent_ranges,
+        envs.call_location,
+        envs.original_calling_env,
         ISubKindTT::Struct(s),
       ),
       KindT::Interface(i) => self.is_descendant(
-        _coutputs,
-        _envs.parent_ranges,
-        _envs.call_location,
-        _envs.original_calling_env,
+        coutputs,
+        envs.parent_ranges,
+        envs.call_location,
+        envs.original_calling_env,
         ISubKindTT::Interface(i),
+      ),
+      KindT::DynInterface(i) => self.is_descendant(
+        coutputs,
+        envs.parent_ranges,
+        envs.call_location,
+        envs.original_calling_env,
+        ISubKindTT::Interface(i.inner),
       ),
       KindT::Int(_)
       | KindT::Bool(_)
@@ -1982,6 +1996,7 @@ where
           // ~86.5% struct-tier, and the struct tier does project. Decide the tier question
           // before filling this in.
           KindT::Interface(_) => {}
+          KindT::DynInterface(_) => {}
           KindT::KindPlaceholder(_)
           | KindT::OverloadSet(_)
           | KindT::Void(_)
@@ -2082,6 +2097,7 @@ where
       KindT::KindPlaceholder(_) => false,
       KindT::Struct(_) => false,
       KindT::Interface(_) => false,
+      KindT::DynInterface(_) => false,
       KindT::StaticSizedArray(_) => false,
       KindT::RuntimeSizedArray(_) => false,
       KindT::OverloadSet(_) => false,

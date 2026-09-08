@@ -164,7 +164,8 @@ pub enum IExpressionGE<'s, 't, 'g> {
   },
   PopRuntimeSizedArray { result: KindGT<'s, 't>, array_expr: &'g IExpressionGE<'s, 't, 'g> },
   InterfaceToInterfaceUpcast { result: KindGT<'s, 't>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
-  Upcast { result: KindGT<'s, 't>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
+  UpcastInterface { result: KindGT<'s, 't>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
+  NarrowInterface { result: KindGT<'s, 't>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
   Destroy { result: KindGT<'s, 't>, expr: &'g IExpressionGE<'s, 't, 'g> },
   CopyPrim { result: KindGT<'s, 't>, inner: &'g IExpressionGE<'s, 't, 'g> },
   LocalLookup { result: KindGT<'s, 't> },
@@ -225,7 +226,8 @@ impl<'s, 't, 'g> IExpressionGE<'s, 't, 'g> {
       | IExpressionGE::PushRuntimeSizedArray { result, .. }
       | IExpressionGE::PopRuntimeSizedArray { result, .. }
       | IExpressionGE::InterfaceToInterfaceUpcast { result, .. }
-      | IExpressionGE::Upcast { result, .. }
+      | IExpressionGE::UpcastInterface { result, .. }
+      | IExpressionGE::NarrowInterface { result, .. }
       | IExpressionGE::Destroy { result, .. }
       | IExpressionGE::CopyPrim { result, .. }
       | IExpressionGE::LocalLookup { result }
@@ -250,7 +252,8 @@ impl<'s, 't, 'g> IExpressionGE<'s, 't, 'g> {
       IExpressionGE::LockWeak { inner_expr, .. }
       | IExpressionGE::BorrowToWeak { inner_expr, .. }
       | IExpressionGE::InterfaceToInterfaceUpcast { inner_expr, .. }
-      | IExpressionGE::Upcast { inner_expr, .. } => vec![inner_expr],
+      | IExpressionGE::UpcastInterface { inner_expr, .. }
+      | IExpressionGE::NarrowInterface { inner_expr, .. } => vec![inner_expr],
       IExpressionGE::Block { inner, .. } | IExpressionGE::CopyPrim { inner, .. } => vec![inner],
       IExpressionGE::Deref { inner, .. } => vec![inner],
       IExpressionGE::Restackify { source_expr, .. }

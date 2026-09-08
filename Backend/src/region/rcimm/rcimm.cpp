@@ -879,6 +879,12 @@ LLVMTypeRef RCImm::translateType(Kind* referenceM) {
       auto interfaceRefStructL =
           kindStructs.getInterfaceRefStruct(interfaceKind);
       return interfaceRefStructL;
+    } else if (auto dynInterfaceKind = dynamic_cast<DynInterfaceKind *>(valueType)) {
+      // `dyn X` maps to the plain interface reference struct for now; fat-pointer layout is the
+      // backend follow-up (see the frontend dyn-conversion plan).
+      assert(dynamic_cast<ShareRef*>(referenceM) != nullptr);
+      auto interfaceKind = globalState->metalCache->getInterfaceKind(dynInterfaceKind->fullName);
+      return kindStructs.getInterfaceRefStruct(interfaceKind);
     } else if (dynamic_cast<Never*>(valueType)) {
       auto result = LLVMPointerType(makeNeverType(globalState), 0);
       assert(LLVMTypeOf(globalState->neverLE) == result);

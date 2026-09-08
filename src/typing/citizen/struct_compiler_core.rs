@@ -183,11 +183,12 @@ where
   ) -> Vec<ICitizenAttributeT<'s>> {
     attrs
       .iter()
-      .map(|attr| match attr {
-        ICitizenAttributeS::Sealed(_) => ICitizenAttributeT::Sealed,
+      .filter_map(|attr| match attr {
+        ICitizenAttributeS::Sealed(_) => Some(ICitizenAttributeT::Sealed),
         ICitizenAttributeS::Extern(ExternS { package_coord: p }) => {
-          ICitizenAttributeT::Extern(ExternT { package_coord: **p })
+          Some(ICitizenAttributeT::Extern(ExternT { package_coord: **p }))
         }
+        ICitizenAttributeS::Open(_) => None,
         ICitizenAttributeS::MacroCall(_) => panic!("vwat: MacroCallS should have been processed"),
         x => panic!("vimpl: {:?}", x),
       })

@@ -22,6 +22,7 @@ class Void;
 class Float;
 class Never;
 class InterfaceKind;
+class DynInterfaceKind;
 class StructKind;
 class RawArrayT;
 class StaticSizedArrayT;
@@ -132,6 +133,20 @@ public:
     Name* fullName;
 
   InterfaceKind(Name* fullName_) :
+      fullName(fullName_) {}
+
+  PackageCoordinate* getPackageCoordinate() const override { return fullName->packageCoord; }
+
+};
+
+// The erased (fat-pointer / vtable-dispatch) form of an interface, spelled `dyn X` in the frontend.
+// A distinct kind from InterfaceKind so the backend can eventually give it a fat-pointer layout; for
+// now translateType maps it to the interface reference struct (see the frontend dyn-conversion plan).
+class DynInterfaceKind : public ValueKind {
+public:
+    Name* fullName;
+
+  DynInterfaceKind(Name* fullName_) :
       fullName(fullName_) {}
 
   PackageCoordinate* getPackageCoordinate() const override { return fullName->packageCoord; }

@@ -57,7 +57,8 @@ pub enum ExpressionIE<'s, 'i> {
     PushRuntimeSizedArray(&'i PushRuntimeSizedArrayIE<'s, 'i>),
     PopRuntimeSizedArray(&'i PopRuntimeSizedArrayIE<'s, 'i>),
     InterfaceToInterfaceUpcast(&'i InterfaceToInterfaceUpcastIE<'s, 'i>),
-    Upcast(&'i UpcastIE<'s, 'i>),
+    UpcastInterface(&'i UpcastInterfaceIE<'s, 'i>),
+    NarrowInterface(&'i NarrowInterfaceIE<'s, 'i>),
     Destroy(&'i DestroyIE<'s, 'i>),
     CopyPrim(&'i CopyPrimIE<'s, 'i>),
     LocalLookup(&'i LocalLookupIE<'s, 'i>),
@@ -109,7 +110,8 @@ impl<'s, 'i> ExpressionIE<'s, 'i> {
             ExpressionIE::PushRuntimeSizedArray(x) => x.result(),
             ExpressionIE::PopRuntimeSizedArray(p) => p.result,
             ExpressionIE::InterfaceToInterfaceUpcast(i) => i.result,
-            ExpressionIE::Upcast(u) => u.result,
+            ExpressionIE::UpcastInterface(u) => u.result,
+            ExpressionIE::NarrowInterface(n) => n.result,
             ExpressionIE::Destroy(x) => x.result(),
             ExpressionIE::CopyPrim(c) => c.result,
             ExpressionIE::LocalLookup(x) => KindIT::BorrowRefIT(x.result),
@@ -162,7 +164,8 @@ impl<'s, 'i> ExpressionIE<'s, 'i> {
             ExpressionIE::PushRuntimeSizedArray(x) => x.range,
             ExpressionIE::PopRuntimeSizedArray(x) => x.range,
             ExpressionIE::InterfaceToInterfaceUpcast(x) => x.range,
-            ExpressionIE::Upcast(x) => x.range,
+            ExpressionIE::UpcastInterface(x) => x.range,
+            ExpressionIE::NarrowInterface(x) => x.range,
             ExpressionIE::Destroy(x) => x.range,
             ExpressionIE::CopyPrim(x) => x.range,
             ExpressionIE::LocalLookup(x) => x.range,
@@ -771,12 +774,23 @@ pub struct InterfaceToInterfaceUpcastIE<'s, 'i> {
 
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
-pub struct UpcastIE<'s, 'i> {
+pub struct UpcastInterfaceIE<'s, 'i> {
 	pub range: RangeS<'s>,
 	pub inner_expr: ExpressionIE<'s, 'i>,
 	pub source_type: KindIT<'s, 'i>,
 	pub target_interface: InterfaceIT<'s, 'i>,
 	pub impl_name: IdI<'s, 'i>,
+	pub result: KindIT<'s, 'i>,
+}
+
+
+
+/// Narrows a `DynInterfaceIT` (and, soon, an `EnumInterfaceIT`) to `InterfaceIT`.
+#[derive(Copy, Clone, Debug)]
+pub struct NarrowInterfaceIE<'s, 'i> {
+	pub range: RangeS<'s>,
+	pub inner_expr: ExpressionIE<'s, 'i>,
+	pub source_type: KindIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
 

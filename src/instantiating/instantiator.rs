@@ -65,7 +65,8 @@ use crate::instantiating::ast::expressions::RuntimeSizedArrayLookupIE;
 use crate::instantiating::ast::expressions::StaticArrayFromCallableIE;
 use crate::instantiating::ast::expressions::StaticArrayFromValuesIE;
 use crate::instantiating::ast::expressions::StaticSizedArrayLookupIE;
-use crate::instantiating::ast::expressions::UpcastIE;
+use crate::instantiating::ast::expressions::UpcastInterfaceIE;
+use crate::instantiating::ast::expressions::NarrowInterfaceIE;
 use crate::instantiating::ast::names::AnonymousSubstructConstructorNameI;
 use crate::instantiating::ast::names::AnonymousSubstructConstructorTemplateNameI;
 use crate::instantiating::ast::names::AnonymousSubstructImplNameI;
@@ -106,6 +107,7 @@ use crate::instantiating::ast::types::IntIT;
 use crate::instantiating::ast::types::KindIT;
 use crate::instantiating::ast::types::StrIT;
 use crate::instantiating::ast::types::BorrowRefIT;
+use crate::instantiating::ast::types::DynInterfaceIT;
 use crate::instantiating::ast::types::OwnRefIT;
 use crate::instantiating::ast::types::ShareRefIT;
 use crate::instantiating::ast::types::WeakRefIT;
@@ -140,7 +142,7 @@ use crate::typing::ast::expressions::DerefTE;
 use crate::typing::ast::expressions::StaticArrayFromCallableTE;
 use crate::typing::ast::expressions::StaticArrayFromValuesTE;
 use crate::typing::ast::expressions::StaticSizedArrayLookupTE;
-use crate::typing::ast::expressions::UpcastTE;
+use crate::typing::ast::expressions::UpcastInterfaceTE;
 use crate::typing::names::names::AnonymousSubstructConstructorNameT;
 use crate::typing::names::names::AnonymousSubstructConstructorTemplateNameT;
 use crate::typing::names::names::AnonymousSubstructImplNameT;
@@ -1912,17 +1914,26 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ExpressionTE::InterfaceToInterfaceUpcast(_) => {
                 panic!("Unimplemented: translate_ref_expr InterfaceToInterfaceUpcast");
             }
-            ExpressionTE::Upcast(u) => {
-                let UpcastTE { inner_expr: inner_expr_unsubstituted, target_super_kind, impl_name: untranslated_impl_id, .. } = *u;
+            ExpressionTE::UpcastInterface(u) => {
+                let UpcastInterfaceTE { inner_expr: inner_expr_unsubstituted, target_super_kind, impl_name: untranslated_impl_id, .. } = *u;
                 let impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &untranslated_impl_id);
                 let (inner_it, inner_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr_unsubstituted);
                 let super_kind = self.translate_super_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &target_super_kind);
-                ExpressionIE::Upcast(self.interner.bump().alloc(UpcastIE {
+                ExpressionIE::UpcastInterface(self.interner.bump().alloc(UpcastInterfaceIE {
                     range: u.range,
                     inner_expr: inner_ce,
                     source_type: inner_it,
                     target_interface: super_kind,
                     impl_name: impl_id,
+                    result: result_it,
+                }))
+            }
+            ExpressionTE::NarrowInterface(n) => {
+                let (inner_it, inner_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &n.inner_expr);
+                ExpressionIE::NarrowInterface(self.interner.bump().alloc(NarrowInterfaceIE {
+                    range: n.range,
+                    inner_expr: inner_ce,
+                    source_type: inner_it,
                     result: result_it,
                 }))
             }
@@ -2224,6 +2235,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(*s.id));
                 let interface_it = self.translate_interface(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, s, &bound_args);
                 KindIT::InterfaceIT(self.interner.alloc(interface_it))
+            }
+            // `dyn X` translates its interface exactly like Interface, then wraps in DynInterfaceIT.
+            KindT::DynInterface(s) => {
+                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(*s.inner.id));
+                let interface_it = self.translate_interface(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, s.inner, &bound_args);
+                KindIT::DynInterfaceIT(self.interner.alloc(DynInterfaceIT { id: interface_it.id }))
             }
             KindT::StaticSizedArray(a) => KindIT::StaticSizedArrayIT(self.interner.alloc(self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, a))),
             KindT::RuntimeSizedArray(a) => KindIT::RuntimeSizedArrayIT(self.interner.alloc(self.translate_runtime_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, a))),

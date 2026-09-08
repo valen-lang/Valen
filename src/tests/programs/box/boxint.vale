@@ -1,0 +1,6 @@
+import v.builtins.box.*;
+
+exported func main() int {
+  b = Box<int>(42);
+  return __copy_prim(b.inner);
+}

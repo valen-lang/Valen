@@ -56,6 +56,7 @@ pub enum KindIT<'s, 'i> where 's: 'i {
   RuntimeSizedArrayIT(&'i RuntimeSizedArrayIT<'s, 'i>),
   StructIT(&'i StructIT<'s, 'i>),
   InterfaceIT(&'i InterfaceIT<'s, 'i>),
+  DynInterfaceIT(&'i DynInterfaceIT<'s, 'i>),
   BorrowRefIT(&'i BorrowRefIT<'s, 'i>),
   OwnRefIT(&'i OwnRefIT<'s, 'i>),
   ShareRefIT(&'i ShareRefIT<'s, 'i>),
@@ -245,5 +246,12 @@ pub struct StructIT<'s, 'i> where 's: 'i {
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceIT<'s, 'i> where 's: 'i {
+  pub id: IdI<'s, 'i>,
+}
+
+/// The erased (fat-pointer) form of an interface, spelled `dyn X`.
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct DynInterfaceIT<'s, 'i> where 's: 'i {
   pub id: IdI<'s, 'i>,
 }

@@ -258,6 +258,8 @@ fn opt_with_undroppable_contents() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
+import v.builtins.box.*;
+
 #!DeriveInterfaceDrop
 sealed interface Opt<T> { }
 
@@ -285,12 +287,17 @@ func get<T>(opt Some<T>) T {
 struct Spaceship { }
 
 exported func main() {
-  s Opt<Spaceship> = Some<Spaceship>(Spaceship());
+  s Box<dyn Opt<Spaceship>> = Box<Some<Spaceship>>(Some<Spaceship>(Spaceship()));
   // Drops the ship manually
   [ ] = (^s).get();
 }
 ";
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,

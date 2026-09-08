@@ -133,6 +133,7 @@ extern "C" {
 
     fn metal_cache_get_struct_kind(_: *mut MetalCacheHandleRaw, name: *mut c_void) -> *mut c_void;
     fn metal_cache_get_interface_kind(_: *mut MetalCacheHandleRaw, name: *mut c_void) -> *mut c_void;
+    fn metal_cache_get_dyn_interface_kind(_: *mut MetalCacheHandleRaw, name: *mut c_void) -> *mut c_void;
     fn metal_cache_get_static_sized_array(_: *mut MetalCacheHandleRaw, name: *mut c_void) -> *mut c_void;
     fn metal_cache_get_runtime_sized_array(_: *mut MetalCacheHandleRaw, name: *mut c_void) -> *mut c_void;
 
@@ -242,6 +243,9 @@ extern "C" {
     ) -> *mut c_void;
     fn metal_expr_interface_to_interface_upcast(
         inner_expr: *mut c_void, target_interface: *mut c_void, result: *mut c_void, loc: *mut c_void,
+    ) -> *mut c_void;
+    fn metal_expr_narrow_interface(
+        inner_expr: *mut c_void, source_type: *mut c_void, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_as_subtype(
         source_expr: *mut c_void, source_type: *mut c_void, target_type: *mut c_void,
@@ -455,6 +459,9 @@ impl MetalCache {
     }
     pub fn get_interface_kind(&self, name: Name<'_>) -> Kind<'_> {
         unsafe { Kind(NonNull::new(metal_cache_get_interface_kind(self.raw, name.0.as_ptr())).unwrap(), PhantomData) }
+    }
+    pub fn get_dyn_interface_kind(&self, name: Name<'_>) -> Kind<'_> {
+        unsafe { Kind(NonNull::new(metal_cache_get_dyn_interface_kind(self.raw, name.0.as_ptr())).unwrap(), PhantomData) }
     }
     pub fn get_static_sized_array(&self, name: Name<'_>) -> Kind<'_> {
         unsafe { Kind(NonNull::new(metal_cache_get_static_sized_array(self.raw, name.0.as_ptr())).unwrap(), PhantomData) }
@@ -738,6 +745,9 @@ impl MetalCache {
     }
     pub fn expr_interface_to_interface_upcast<'c>(&'c self, inner_expr: Expression<'c>, target_interface: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
         unsafe { Expression(NonNull::new(metal_expr_interface_to_interface_upcast(inner_expr.0.as_ptr(), target_interface.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
+    }
+    pub fn expr_narrow_interface<'c>(&'c self, inner_expr: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_narrow_interface(inner_expr.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
     pub fn expr_as_subtype<'c>(
         &'c self, source_expr: Expression<'c>, source_type: Kind<'c>, target_type: Kind<'c>,

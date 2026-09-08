@@ -668,6 +668,9 @@ where
           KindT::Interface(ir) => {
             vec![coutputs.get_outer_env_for_type(self.get_interface_template(*ir.id))]
           }
+          KindT::DynInterface(ir) => {
+            vec![coutputs.get_outer_env_for_type(self.get_interface_template(*ir.inner.id))]
+          }
           KindT::KindPlaceholder(kp) => {
             vec![coutputs.get_outer_env_for_type(*self.get_placeholder_template(&kp.id))]
           }

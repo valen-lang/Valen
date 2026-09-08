@@ -1,3 +1,5 @@
+import v.builtins.box.*;
+import v.builtins.drop.*;
 
 sealed interface Car {
   func doCivicDance(virtual this Car) int;
@@ -16,6 +18,6 @@ func doCivicDance(toyota Toyota) int {
 }
 
 exported func main() int {
-  x Car = Toyota();
+  x Box<dyn Car> = Box<Toyota>(Toyota());
   return doCivicDance(^x);
 }

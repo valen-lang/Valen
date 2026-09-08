@@ -1,0 +1,8 @@
+// A dumb inline wrapper: `Box<T>` holds one `T` by value. It exists so owned interface positions can
+// be spelled `Box<dyn X>` and type-check while the frontend is decoupled from the heap. Box's
+// representation changes to actually heap-allocate later, with no frontend change.
+
+#!DeriveStructDrop
+struct Box<T> { inner T; }
+func drop<T>(box Box<T>)
+where func drop(T)void { [x] = ^box; }

@@ -42,6 +42,7 @@ where
     let arg_sub_kind = match peeled_arg {
       KindT::Struct(s) => ISubKindTT::Struct(s),
       KindT::Interface(i) => ISubKindTT::Interface(i),
+      KindT::DynInterface(i) => ISubKindTT::Interface(i.inner),
       KindT::KindPlaceholder(kp) => ISubKindTT::KindPlaceholder(kp),
       _ => return None,
     };
@@ -56,16 +57,32 @@ where
       param,
     )?;
 
-    if let KindT::Struct(_) | KindT::Interface(_) = peeled_arg {
-      if *self.get_citizen_template(&arg_sub_kind.id()) == expected_template_id {
-        return None;
+    // VCOORD: clean this up once we get rid of rules
+    // The coerced send-kind always takes the PARAM's form (`dyn X` for a dyn param, bare `X`
+    // otherwise), so the send's Equals matches the param's rune. The arg *expression* keeps its own
+    // form; convert() then narrows a `&dyn X` arg to a bare `&X` param via a NarrowInterfaceTE.
+    let param_is_dyn = value_type_is_dyn(param.value_type_rules, param.value_type_rune.rune);
+    let in_param_form = |interface: &'t InterfaceTT<'s, 't>| {
+      if param_is_dyn {
+        KindT::DynInterface(self.typing_interner.intern_dyn_interface_tt(DynInterfaceTTValT { inner: interface }))
+      } else {
+        KindT::Interface(interface)
+      }
+    };
+
+    // The arg already names the param's own interface (in either form) — this is dispatch: a
+    // `dyn X` arg reaching an abstract `&X` self (or the reverse). An interface is not its own
+    // parent, so this resolves here, not via get_parents; only the form is reconciled.
+    if let Some(arg_interface) = peeled_arg.interface_tt() {
+      if *self.get_citizen_template(arg_interface.id) == expected_template_id {
+        return Some(in_param_form(arg_interface));
       }
     }
 
-    // Pick the arg's interface super whose template is the param's expected interface. Skip a
-    // KindPlaceholder super (a generic bound's parent), which has no citizen template to name.
-    // (No matching super means None, preserving the existing reject for unrelated types; more
-    // than one takes the first, with as<> disambiguation deferred.)
+    // Otherwise the arg upcasts to reach the param's interface. Pick the arg's interface super whose
+    // template is the param's expected interface. Skip a KindPlaceholder super (a generic bound's
+    // parent), which has no citizen template to name. (No matching super means None, preserving the
+    // reject for unrelated types; more than one takes the first, with as<> disambiguation deferred.)
     self
       .get_parents(coutputs, call_range_t, call_location, calling_env, arg_sub_kind)
       .into_iter()
@@ -73,7 +90,11 @@ where
         matches!(s, ISuperKindTT::Interface(_))
           && *self.get_citizen_template(&s.id()) == expected_template_id
       })
-      .map(KindT::from)
+      .map(|s| match KindT::from(s).interface_tt() {
+        Some(interface) => in_param_form(interface),
+        None => KindT::from(s),
+      })
+    // /VCOORD
   }
 
   /// The imprecise citizen name heading the param's value type, resolved to a template id.
@@ -106,13 +127,22 @@ where
 
 /// Pure: if a Call produces value_type_rune, follow its template_rune; then take the imprecise name
 /// from the Lookup that binds that rune.
+// VCOORD: clean this up when we get rid of rules
 fn value_type_root_name<'s>(
   rules: &[IRulexSR<'s>],
   value_type_rune: IRuneS<'s>,
 ) -> Option<IImpreciseNameS<'s>> {
   let mut target = value_type_rune;
+  // `dyn X`: the DynInterface rule produces the value type; follow its inner rune, which names the
+  // interface itself (bare, or a Call for `dyn X<...>`), so the interface template is found.
+  if let Some(d) = rules.iter().find_map(|r| match r {
+    IRulexSR::DynInterface(d) if d.result_rune.rune == target => Some(d),
+    _ => None,
+  }) {
+    target = d.inner_rune.rune;
+  }
   if let Some(c) = rules.iter().find_map(|r| match r {
-    IRulexSR::Call(c) if c.result_rune.rune == value_type_rune => Some(c),
+    IRulexSR::Call(c) if c.result_rune.rune == target => Some(c),
     _ => None,
   }) {
     target = c.template_rune.rune;
@@ -121,4 +151,12 @@ fn value_type_root_name<'s>(
     IRulexSR::Lookup(l) if l.rune.rune == target => l.parts.first().copied(),
     _ => None,
   })
+}
+
+/// True when the value type is written `dyn X` — i.e. a DynInterface rule produces value_type_rune.
+// VCOORD: clean this up when we get rid of rules
+fn value_type_is_dyn<'s>(rules: &[IRulexSR<'s>], value_type_rune: IRuneS<'s>) -> bool {
+  rules
+    .iter()
+    .any(|r| matches!(r, IRulexSR::DynInterface(d) if d.result_rune.rune == value_type_rune))
 }

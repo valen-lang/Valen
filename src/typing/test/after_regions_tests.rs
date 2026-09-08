@@ -104,7 +104,7 @@ exported func main() {
   let main = coutputs.lookup_function_by_str("main");
   let upcasts: Vec<_> = collect_where_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::Upcast(u) => Some(u)
+      NodeRefT::UpcastInterface(u) => Some(u)
   );
   assert_eq!(upcasts.len(), 0);
   collect_only_tnode!(

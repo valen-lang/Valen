@@ -175,10 +175,14 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         id: *s.id,
         template_args: self.make_citizen_args(self.citizen_template_args(*s.id), tyype, param_name),
       }),
-      KindT::Interface(i) => KindGT::Interface(InterfaceGT {
-        id: *i.id,
-        template_args: self.make_citizen_args(self.citizen_template_args(*i.id), tyype, param_name),
-      }),
+      KindT::Interface(i) => self.interface_kind_g(*i.id, tyype, param_name),
+
+      KindT::DynInterface(i) => {
+        let ITypeST::DynInterface(di) = tyype else {
+          panic!("DynInterface kind with non-`dyn` written type: {:?}", tyype)
+        };
+        self.interface_kind_g(*i.inner.id, di.inner, param_name)
+      }
 
       // A static-sized array is written `StaticArray<N, T>` — a `Call` whose second arg is the element.
       KindT::StaticSizedArray(a) => match tyype {
@@ -241,6 +245,21 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
       INameT::Interface(n) => n.template_args,
       _ => &[],
     }
+  }
+
+  /// The `KindGT::Interface` group for interface `id`, its citizen args walked from the written type
+  /// `written`. Shared by `make_kind_g`'s `Interface` and `DynInterface` arms — the sole difference
+  /// between them is that `DynInterface` peels its written `dyn` wrapper before calling this.
+  fn interface_kind_g(
+    &self,
+    id: IdT<'s, 't>,
+    written: &'s ITypeST<'s>,
+    param_name: Option<IVarNameT<'s, 't>>,
+  ) -> KindGT<'s, 't> {
+    KindGT::Interface(InterfaceGT {
+      id,
+      template_args: self.make_citizen_args(self.citizen_template_args(id), written, param_name),
+    })
   }
 
   /// Build a citizen's `KindGT` generic args. Each `Kind` templata's group comes from the
@@ -330,6 +349,10 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
       KindT::Interface(i) => KindGT::Interface(InterfaceGT {
         id: *i.id,
         template_args: self.citizen_args_groupless(self.citizen_template_args(*i.id)),
+      }),
+      KindT::DynInterface(i) => KindGT::Interface(InterfaceGT {
+        id: *i.inner.id,
+        template_args: self.citizen_args_groupless(self.citizen_template_args(*i.inner.id)),
       }),
       KindT::StaticSizedArray(a) => KindGT::StaticSizedArray(StaticSizedArrayGT {
         id: a.name,

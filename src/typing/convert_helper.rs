@@ -3,7 +3,7 @@ use crate::utils::range::RangeS;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::{CodeNameS, CodeNameValS, IImpreciseNameValS};
 use crate::typing::ast::ast::LocT;
-use crate::typing::ast::expressions::UpcastTE;
+use crate::typing::ast::expressions::UpcastInterfaceTE;
 use crate::typing::ast::expressions::*;
 use crate::typing::citizen::impl_compiler::IsParentResult;
 use crate::typing::compiler::Compiler;
@@ -13,7 +13,6 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::NodeEnvironmentBox;
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
 use crate::typing::types::types::*;
-// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where
@@ -84,6 +83,7 @@ target:
     if source_kind == target_pointer_type {
       return Ok(source_expr);
     }
+
     // `Never` converts to anything.
     if matches!(source_kind, KindT::Never(_)) {
       return Ok(source_expr);
@@ -94,6 +94,17 @@ target:
 
     match (source_kind, target_pointer_type) {
       (KindT::BorrowRef(source_borrow), KindT::BorrowRef(target_borrow)) => {
+        // When calling virtual methods, we cast a argument &dyn MyInterface to a param &MyInterface.
+        match (source_borrow.inner, target_borrow.inner) {
+          (KindT::DynInterface(DynInterfaceTT{ inner: di, ..}), KindT::Interface(i))
+          if *di == i => {
+            return Ok(ExpressionTE::NarrowInterface(
+              self.typing_interner.alloc(NarrowInterfaceTE::new(range[0], source_expr, target_pointer_type)),
+            ));
+          }
+          _ => {}
+        }
+
         if source_borrow.inner == target_borrow.inner {
           // Same pointee, so only the regions differ, e.g. `&r1'Ship` to `&r2'Ship`.
           // Unreachable while every borrow carries RegionT::Default, since a matching
@@ -203,8 +214,15 @@ target:
     target_kind: KindT<'s, 't>,
   ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
     let range_alloc = self.typing_interner.alloc_slice_copy(range);
+    // Resolve the impl by the target's interface identity: a `dyn X` target resolves through the
+    // bare `X`, since impls are declared against the bare interface. The Upcast's result keeps the
+    // written target's form (`dyn X` stays `dyn X`) — passed as result_value_kind below.
+    let target_kind_without_dyn = match target_kind.interface_tt() {
+      Some(i) => KindT::Interface(i),
+      None => target_kind,
+    };
     let (source_sub_kind, target_super_kind) =
-      match (ISubKindTT::try_from(source_kind), ISuperKindTT::try_from(target_kind)) {
+      match (ISubKindTT::try_from(source_kind), ISuperKindTT::try_from(target_kind_without_dyn)) {
         (Ok(source_sub_kind), Ok(target_super_kind)) => (source_sub_kind, target_super_kind),
         _ => {
           // One of them isn't a citizen, e.g. converting an `int` to a `bool`. No impl could
@@ -239,7 +257,7 @@ target:
         assert!(coutputs
           .get_instantiation_bounds(self.typing_interner, is_parent.impl_id)
           .is_some());
-        Ok(ExpressionTE::Upcast(self.typing_interner.alloc(UpcastTE::new(
+        Ok(ExpressionTE::UpcastInterface(self.typing_interner.alloc(UpcastInterfaceTE::new(
           self.typing_interner,
           range[0],
           source_expr,

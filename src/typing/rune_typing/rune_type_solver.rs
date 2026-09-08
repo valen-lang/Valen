@@ -6,7 +6,7 @@ use crate::postparsing::itemplatatype::*;
 use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType};
 use crate::postparsing::names::{IImpreciseNameS, IImpreciseNameValS, IRuneS, RuneNameValS};
 use crate::postparsing::rules::rules::{
-  BorrowRefSR, IRulexSR, KindListSR, OwnRefSR, RegionSR, RuneUsage, WeakRefSR,
+  BorrowRefSR, DynInterfaceSR, IRulexSR, KindListSR, OwnRefSR, RegionSR, RuneUsage, WeakRefSR,
 };
 use crate::scout_arena::ScoutArena;
 use crate::solver::{
@@ -287,6 +287,9 @@ fn get_rune_typing_puzzles<'s>(rule: &IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
       vec![vec![result_rune.rune.clone()], vec![inner_rune.rune.clone()]]
     }
     IRulexSR::OwnRef(OwnRefSR { result_rune, inner_rune, .. }) => {
+      vec![vec![result_rune.rune.clone()], vec![inner_rune.rune.clone()]]
+    }
+    IRulexSR::DynInterface(DynInterfaceSR { result_rune, inner_rune, .. }) => {
       vec![vec![result_rune.rune.clone()], vec![inner_rune.rune.clone()]]
     }
   }
@@ -656,6 +659,19 @@ fn solve_rule<'s, 't, E: IRuneTypeSolverEnv<'s, 't>>(
     //     IndexSet::default())
     // }
     IRulexSR::WeakRef(WeakRefSR { result_rune, inner_rune, .. }) => solver_state
+      .commit_step::<IRuneTypeRuleError<'s>>(
+        false,
+        vec![rule_index],
+        [
+          (result_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+          (inner_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        ]
+        .into_iter()
+        .collect(),
+        vec![],
+        IndexSet::default(),
+      ),
+    IRulexSR::DynInterface(DynInterfaceSR { result_rune, inner_rune, .. }) => solver_state
       .commit_step::<IRuneTypeRuleError<'s>>(
         false,
         vec![rule_index],

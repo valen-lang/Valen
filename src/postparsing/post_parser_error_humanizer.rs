@@ -303,6 +303,7 @@ pub fn humanize_rule<'s>(rule: &IRulexSR<'s>) -> String {
     IRulexSR::BorrowRef(r) => "&".to_string() + &humanize_rune(r.inner_rune.rune),
     IRulexSR::WeakRef(r) => "weak ".to_string() + &humanize_rune(r.inner_rune.rune),
     IRulexSR::OwnRef(r) => "own ".to_string() + &humanize_rune(r.inner_rune.rune),
+    IRulexSR::DynInterface(r) => "dyn ".to_string() + &humanize_rune(r.inner_rune.rune),
     IRulexSR::Call(r) => {
       humanize_rune(r.result_rune.rune)
         + " = "

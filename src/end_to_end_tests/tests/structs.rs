@@ -54,3 +54,5 @@ fn structmutstoreinner() {
         expect("frame variable o.inner.x", &["= 42"]),
     ]);
 }
+#[test]
+fn boxint()              { assert_compile_and_run(&p("programs/box/boxint.vale"), 42); }

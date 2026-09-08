@@ -610,6 +610,9 @@ where
       IAttributeL::SealedAttribute(range) => {
         Ok(IAttributeP::SealedAttribute(SealedAttributeP { range }))
       }
+      IAttributeL::OpenAttribute(range) => {
+        Ok(IAttributeP::OpenAttribute(OpenAttributeP { range }))
+      }
       IAttributeL::MacroCall { range, inclusion, name } => Ok(IAttributeP::MacroCall(MacroCallP {
         range,
         inclusion: match inclusion {

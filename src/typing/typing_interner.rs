@@ -18,9 +18,9 @@ use crate::typing::ast::ast::{
 };
 use crate::typing::names::names::*;
 use crate::typing::types::types::{
-  InterfaceTT, InterfaceTTValT, InternedKindPayloadT, InternedKindPayloadValT, KindPlaceholderT,
-  OverloadSetT, OverloadSetTValT, RuntimeSizedArrayTT, RuntimeSizedArrayTTValT, StaticSizedArrayTT,
-  StaticSizedArrayTTValT, StructTT, StructTTValT,
+  DynInterfaceTT, DynInterfaceTTValT, InterfaceTT, InterfaceTTValT, InternedKindPayloadT,
+  InternedKindPayloadValT, KindPlaceholderT, OverloadSetT, OverloadSetTValT, RuntimeSizedArrayTT,
+  RuntimeSizedArrayTTValT, StaticSizedArrayTT, StaticSizedArrayTTValT, StructTT, StructTTValT,
 };
 use crate::utils::arena_index_map::ArenaIndexMap;
 use std::hash::Hash;
@@ -585,6 +585,10 @@ where
         };
         T::InterfaceTT(self.bump.alloc(c))
       }
+      V::DynInterfaceTT(v) => {
+        let c = DynInterfaceTT { inner: v.inner, _must_intern: MustIntern(()) };
+        T::DynInterfaceTT(self.bump.alloc(c))
+      }
       V::StaticSizedArrayTT(v) => {
         let c = StaticSizedArrayTT { name: v.name, _must_intern: MustIntern(()) };
         T::StaticSizedArrayTT(self.bump.alloc(c))
@@ -907,6 +911,12 @@ where
   // KindPlaceholderT is Value-type per @WVSBIZ — its "Val" is the canonical itself.
   impl_intern_kind_wrapper!(intern_struct_tt, StructTT, StructTTValT, StructTT);
   impl_intern_kind_wrapper!(intern_interface_tt, InterfaceTT, InterfaceTTValT, InterfaceTT);
+  impl_intern_kind_wrapper!(
+    intern_dyn_interface_tt,
+    DynInterfaceTT,
+    DynInterfaceTTValT,
+    DynInterfaceTT
+  );
   impl_intern_kind_wrapper!(
     intern_static_sized_array_tt,
     StaticSizedArrayTT,

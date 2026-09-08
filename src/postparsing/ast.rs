@@ -69,6 +69,7 @@ impl<'s> ProgramS<'s> {
 pub enum ICitizenAttributeS<'s> {
   Extern(ExternS<'s>),
   Sealed(SealedS),
+  Open(OpenS),
   Builtin(BuiltinS<'s>),
   MacroCall(MacroCallS<'s>),
   Export(ExportS<'s>),
@@ -89,6 +90,11 @@ pub struct ExternS<'s> {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SealedS;
+
+/// `open interface X` — opts the interface out of the sealed default (external crates may impl it,
+/// so abstract methods must live inside the interface body).
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct OpenS;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BuiltinS<'s> {

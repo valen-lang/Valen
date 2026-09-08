@@ -81,6 +81,11 @@ pub struct SealedAttributeP {
   pub range: RangeL,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct OpenAttributeP {
+  pub range: RangeL,
+}
+
 impl IRuneAttributeP {
   pub fn range(&self) -> RangeL {
     match self {
@@ -160,6 +165,7 @@ pub struct InterfaceP<'p> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IAttributeP<'p> {
   SealedAttribute(SealedAttributeP),
+  OpenAttribute(OpenAttributeP),
   MacroCall(MacroCallP<'p>),
   AbstractAttribute(AbstractAttributeP),
   ExternAttribute(ExternAttributeP),

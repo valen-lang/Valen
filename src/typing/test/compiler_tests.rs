@@ -35,7 +35,7 @@ use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::ast::expressions::LetAndLendTE;
 use crate::typing::ast::expressions::MemberLookupTE;
-use crate::typing::ast::expressions::UpcastTE;
+use crate::typing::ast::expressions::UpcastInterfaceTE;
 use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
 use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -2091,9 +2091,9 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
       }) => Some(())
   );
 
-  let upcast: &UpcastTE = collect_only_tnode!(
+  let upcast: &UpcastInterfaceTE = collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::Upcast(u) => Some(u)
+      NodeRefT::UpcastInterface(u) => Some(u)
   );
 
   match upcast.result {
@@ -2148,7 +2148,12 @@ fn tests_calling_a_virtual_function() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = include_str!("../../tests/programs/virtuals/calling.vale");
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -2164,7 +2169,7 @@ fn tests_calling_a_virtual_function() {
 
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::Upcast(u @ UpcastTE {
+      NodeRefT::UpcastInterface(u @ UpcastInterfaceTE {
           target_super_kind: ISuperKindTT::Interface(InterfaceTT {
               id: IdT {
                   local_name: INameT::Interface(InterfaceNameT {
@@ -2223,7 +2228,12 @@ fn tests_upcasting_has_the_right_stuff() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = include_str!("../../tests/programs/virtuals/calling.vale");
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -2237,9 +2247,9 @@ fn tests_upcasting_has_the_right_stuff() {
 
   let main = coutputs.lookup_function_by_str("main");
 
-  let upcast: &UpcastTE = collect_only_tnode!(
+  let upcast: &UpcastInterfaceTE = collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::Upcast(u @ UpcastTE {
+      NodeRefT::UpcastInterface(u @ UpcastInterfaceTE {
           target_super_kind: ISuperKindTT::Interface(InterfaceTT {
               id: IdT {
                   local_name: INameT::Interface(InterfaceNameT {
@@ -2439,21 +2449,29 @@ fn tests_making_a_variable_with_a_pattern() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r#"
+import v.builtins.box.*;
+import v.builtins.drop.*;
+
 sealed interface MyOption<T> { }
 
 struct MySome<T> {}
 impl<T> MyOption<T> for MySome<T>;
 
-func doSomething(opt MyOption<int>) int {
+func doSomething(opt Box<dyn MyOption<int>>) int {
   return 9;
 }
 
 exported func main() int {
-	x MyOption<int> = MySome<int>();
+	x Box<dyn MyOption<int>> = Box<MySome<int>>(MySome<int>());
 	return doSomething(^x);
 }
 "#;
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -2818,7 +2836,7 @@ func main() {
 
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::Upcast(UpcastTE {
+      NodeRefT::UpcastInterface(UpcastInterfaceTE {
           target_super_kind: ISuperKindTT::Interface(InterfaceTT {
               id: IdT {
                   local_name: INameT::Interface(InterfaceNameT {
@@ -2868,7 +2886,7 @@ func main() {
 
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::Upcast(UpcastTE {
+      NodeRefT::UpcastInterface(UpcastInterfaceTE {
           target_super_kind: ISuperKindTT::Interface(InterfaceTT {
               id: IdT {
                   local_name: INameT::Interface(InterfaceNameT {
@@ -2918,7 +2936,7 @@ func main() {
 
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(main),
-      NodeRefT::Upcast(UpcastTE {
+      NodeRefT::UpcastInterface(UpcastInterfaceTE {
           target_super_kind: ISuperKindTT::Interface(InterfaceTT {
               id: IdT {
                   local_name: INameT::Interface(InterfaceNameT {
@@ -5232,7 +5250,7 @@ fn report_when_abstract_method_defined_outside_open_interface() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
 import v.builtins.panic.*;
-interface IBlah { }
+open interface IBlah { }
 abstract func bork(virtual moo &IBlah);
 exported func main() {
   bork(__vbi_panic());
@@ -5719,6 +5737,7 @@ fn upcast_generic() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r#"
+import v.builtins.box.*;
 import v.builtins.drop.*;
 
 interface IShip {}
@@ -5726,9 +5745,9 @@ interface IShip {}
 struct Raza { fuel int; }
 impl IShip for Raza;
 
-func doUpcast<T>(x T) IShip
+func doUpcast<T>(x T) Box<dyn IShip>
 where implements(T, IShip) {
-  i IShip = ^x;
+  i Box<dyn IShip> = Box<T>(^x);
   return ^i;
 }
 
@@ -5737,6 +5756,7 @@ exported func main() {
 }
 "#;
   let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
     new_test_code_map(&parse_arena, code),
@@ -5757,7 +5777,7 @@ exported func main() {
 
   collect_only_tnode!(
       NodeRefT::FunctionDefinition(do_upcast),
-      NodeRefT::Upcast(u) => {
+      NodeRefT::UpcastInterface(u) => {
           match u.inner_expr.result() {
               KindT::KindPlaceholder(_) => {}
               other => panic!("sourceExpr.result.coord.kind: {:?}", other),

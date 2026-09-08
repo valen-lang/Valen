@@ -115,6 +115,7 @@ where
       // `where func drop(T)void` bound conjured.
       KindT::Struct(_)
       | KindT::Interface(_)
+      | KindT::DynInterface(_)
       | KindT::StaticSizedArray(_)
       | KindT::RuntimeSizedArray(_)
       | KindT::KindPlaceholder(_) => {

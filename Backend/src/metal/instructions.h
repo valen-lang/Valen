@@ -219,6 +219,27 @@ public:
       result(result_) {}
 };
 
+// Narrows a DynInterfaceKind (and, soon, an EnumInterfaceKind) value to the canonical InterfaceKind
+// form, so it can reach an abstract method's bare interface self. Today Interface is a fat pointer
+// sharing DynInterface's repr, so lowering is a pass-through; when Interface becomes thin this
+// extracts the object pointer.
+class NarrowInterface : public Expression {
+public:
+  Expression* innerExpr;
+  Kind* sourceType;
+  Kind* result;
+
+  NarrowInterface(
+      SourceLocation* sourceLocation_,
+      Expression* innerExpr_,
+      Kind* sourceType_,
+      Kind* result_) :
+      Expression(sourceLocation_),
+      innerExpr(innerExpr_),
+      sourceType(sourceType_),
+      result(result_) {}
+};
+
 class IsSameInstance : public Expression {
 public:
   Expression* left;
