@@ -1,7 +1,9 @@
 
 exported func main() int {
   if (false) {
+    0; // lldb breakpoint: panicnot-dead
     __vbi_panic();
   }
+  0; // lldb breakpoint: panicnot-return
   return 42;
 }

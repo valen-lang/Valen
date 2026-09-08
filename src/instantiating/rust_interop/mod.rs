@@ -39,6 +39,7 @@ use std::sync::OnceLock;
 
 use crate::backend_ffi::metal_cache::MetalCache;
 use crate::backend_ffi::metal_lowerer::populate_metal_cache;
+use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::backend_ffi::backend_inputs::{BackendInputs, BackendMode, Callback, InteropInputs};
 use crate::backend_ffi::metal_lowerer::{Coercion, ExternAbi, StructLayout};
 use crate::backend_ffi::{compile, BackendCompileOptions};
@@ -849,7 +850,11 @@ fn emit_vale_into_borrowed_module<'tcx>(
   let struct_layouts = compute_struct_layouts(tcx, &hinputs_i);
   let extern_abis = state.extern_abis.borrow();
   let cache = MetalCache::new();
-  let program = populate_metal_cache(&cache, &hinputs_i, &struct_layouts, &extern_abis);
+  // The rust-interop (cargo-driven) path has no source code map on hand, and interop debugging is
+  // out of scope for the debugger arc, so lower with an empty map (source ranges resolve to a
+  // no-op location, which Backend discards anyway).
+  let empty_code_map: FileCoordinateMap<String> = FileCoordinateMap::new();
+  let program = populate_metal_cache(&cache, &hinputs_i, &empty_code_map, &struct_layouts, &extern_abis);
 
   // Ask rustc for one fresh module (a fresh LLVMContext + LLVMModule) and take its raw handles. Only
   // one CGU for now; the realloc caveat (fill before requesting the next) is moot with a single call.
@@ -885,6 +890,8 @@ fn emit_vale_into_borrowed_module<'tcx>(
       entry_symbol: entry_symbol.as_deref(),
       callbacks,
     }),
+    // Interop (rustc) debugging is out of scope; the rust-interop lowerer passes an empty code map.
+    absolute_source_paths: vec![],
   })
 }
 

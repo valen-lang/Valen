@@ -2,6 +2,7 @@
 // TesterRust grouping (one #[test] per program × region pair).
 
 pub mod arrays;
+pub mod debugger;
 pub mod downcast;
 pub mod extern_header_goldens;
 pub mod externs;

@@ -5,6 +5,7 @@ struct Vec3i {
 }
 
 exported func main() int {
+  0; // lldb breakpoint: structmutfield-at
   // TSUGAR:   return Vec3i(4, 5, 6).y;
   return __copy_prim(Vec3i(4, 5, 6).y);
 }

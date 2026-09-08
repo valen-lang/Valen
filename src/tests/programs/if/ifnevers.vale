@@ -1,7 +1,9 @@
 exported func main() int {
   if (true) {
+    0; // lldb breakpoint: ifnevers-then
     return 42;
   } else {
+    0; // lldb breakpoint: ifnevers-else
     return 73;
   }
 }

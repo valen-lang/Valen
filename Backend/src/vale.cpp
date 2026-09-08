@@ -25,6 +25,7 @@
 #include "metal/instructions.h"
 
 #include "function/function.h"
+#include "function/debugging.h"
 #include "function/boundary.h"
 #include "error.h"
 #include "translatetype.h"
@@ -598,6 +599,8 @@ Prototype* compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, 
   auto& metalCache = *metalCachePtr;
   auto& program = *programPtr;
   globalState->metalCache = metalCachePtr; // VCOORD: supply this into constructor
+
+  initDebugInfo(globalState);
 
   auto voidLT = LLVMVoidTypeInContext(globalState->context);
   auto int8LT = LLVMInt8TypeInContext(globalState->context);
@@ -1260,6 +1263,8 @@ void optimize(LLVMModuleRef mod, ValeOptimizationLevel optLevel) {
 // Print the LLVM IR (if requested) and verify the module. Shared tail of both the
 // standalone and borrowed compile paths, run once a module's Vale IR is fully emitted.
 void finalizeCompile(GlobalState* globalState) {
+  finalizeDebugInfo(globalState);
+
   char *err;
   // Serialize the LLVM IR, if requested
   if (globalState->opt->print_llvmir) {
@@ -1281,13 +1286,24 @@ void finalizeCompile(GlobalState* globalState) {
   }
 }
 
+// Copy the frontend's (basename -> absolute path) source-file map onto the Program, so DWARF
+// emission (getOrCreateDIFile) can record a real DW_AT_comp_dir. No-op when the frontend supplied
+// none (interop, or inputs with no on-disk file).
+static void loadSourcePaths(
+    Program* program, const SourceFilePathFFI* sourcePaths, size_t numSourcePaths) {
+  for (size_t i = 0; i < numSourcePaths; i++) {
+    program->sourcePaths.emplace(sourcePaths[i].basename, sourcePaths[i].abspath);
+  }
+}
+
 // Full standalone (valec) pipeline: copy the FFI options into ValeOptions, create the
 // owned LLVM handles, emit all of the program's Vale IR (including the libc `main` entry),
 // then optimize, emit the object, and dispose. The FFI entry in ffi.cpp is a one-line
 // `extern "C"` wrapper.
 static int32_t compileStandalone(
     MetalCache* metalCache, Program* program,
-    const BackendCompileOptionsFFI* ffi_opts) {
+    const BackendCompileOptionsFFI* ffi_opts,
+    const SourceFilePathFFI* sourcePaths, size_t numSourcePaths) {
   ValeOptions valeOptions;
   int ok = loadFromFfi(&valeOptions, ffi_opts);
   if (ok <= 0) {
@@ -1303,6 +1319,7 @@ static int32_t compileStandalone(
 
   LLVMTargetDataRef dataLayout = LLVMCreateTargetDataLayout(machine);
   GlobalState globalState(opt, context, mod, machine, dataLayout);
+  loadSourcePaths(program, sourcePaths, numSourcePaths);
   // Standalone valec: a `main` export makes this a binary — emit the libc `main` entry;
   // no `main` is a library, so no entry (compileValeCode returns nullptr).
   Prototype* valeMainPrototype = compileValeCode(&globalState, metalCache, program);
@@ -1362,7 +1379,8 @@ static int32_t compileIntoModuleFromRustc(
     MetalCache* metalCache, Program* program,
     const BackendCompileOptionsFFI* ffi_opts,
     void* context, void* mod, const char* entrySymbol,
-    const CallbackFFI* callbacks, size_t numCallbacks) {
+    const CallbackFFI* callbacks, size_t numCallbacks,
+    const SourceFilePathFFI* sourcePaths, size_t numSourcePaths) {
   ValeOptions valeOptions;
   int ok = loadFromFfi(&valeOptions, ffi_opts);
   if (ok <= 0) {
@@ -1378,6 +1396,7 @@ static int32_t compileIntoModuleFromRustc(
       modRef,
       /*machine=*/nullptr,
       dataLayout);
+  loadSourcePaths(program, sourcePaths, numSourcePaths);
   // A `main` export makes this a Vale binary — emit `__vale_main` for the stub's Rust
   // `fn main` to call (rustc's libstd owns the real libc `main`, so no libc shim). No
   // `main` is a Vale library: exported functions only, no entry.
@@ -1418,12 +1437,14 @@ int32_t backend_compile(const BackendInputsFFI* in) {
   Program* program = reinterpret_cast<Program*>(in->program);
   switch (in->mode) {
     case BACKEND_MODE_STANDALONE:
-      return compileStandalone(cache, program, &in->options);
+      return compileStandalone(
+          cache, program, &in->options, in->source_paths, in->num_source_paths);
     case BACKEND_MODE_INTEROP:
       return compileIntoModuleFromRustc(
           cache, program, &in->options,
           in->interop.context, in->interop.module, in->interop.entry_symbol,
-          in->interop.callbacks, in->interop.num_callbacks);
+          in->interop.callbacks, in->interop.num_callbacks,
+          in->source_paths, in->num_source_paths);
     default:
       return -1;
   }

@@ -14,6 +14,8 @@ use std::marker::PhantomData;
 
 /// One flat expression IR — the pre-onion Reference/Address two-sort split is gone (every local is
 /// storage; a lookup yields a borrow of that storage). Mirrors typing's flat `ExpressionTE`.
+/// Every variant carries a `range: RangeS<'s>` (see `range()`) for per-instruction DWARF; the
+/// instantiator copies it from the source TE node. Backend currently discards it.
 /// Arena-allocated (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub enum ExpressionIE<'s, 'i> {
@@ -28,18 +30,18 @@ pub enum ExpressionIE<'s, 'i> {
     While(&'i WhileIE<'s, 'i>),
     Mutate(&'i MutateIE<'s, 'i>),
     Return(&'i ReturnIE<'s, 'i>),
-    Break(&'i BreakIE),
+    Break(&'i BreakIE<'s>),
     Block(&'i BlockIE<'s, 'i>),
     Consecutor(&'i ConsecutorIE<'s, 'i>),
     StaticArrayFromValues(&'i StaticArrayFromValuesIE<'s, 'i>),
     ArraySize(&'i ArraySizeIE<'s, 'i>),
     IsSameInstance(&'i IsSameInstanceIE<'s, 'i>),
     AsSubtype(&'i AsSubtypeIE<'s, 'i>),
-    VoidLiteral(&'i VoidLiteralIE),
-    ConstantInt(&'i ConstantIntIE),
-    ConstantBool(&'i ConstantBoolIE),
+    VoidLiteral(&'i VoidLiteralIE<'s>),
+    ConstantInt(&'i ConstantIntIE<'s>),
+    ConstantBool(&'i ConstantBoolIE<'s>),
     ConstantStr(&'i ConstantStrIE<'s, 'i>),
-    ConstantFloat(&'i ConstantFloatIE),
+    ConstantFloat(&'i ConstantFloatIE<'s>),
     ArgLookup(&'i ArgLookupIE<'s, 'i>),
     ArrayLength(&'i ArrayLengthIE<'s, 'i>),
     InterfaceFunctionCall(&'i InterfaceFunctionCallIE<'s, 'i>),
@@ -117,12 +119,66 @@ impl<'s, 'i> ExpressionIE<'s, 'i> {
             ExpressionIE::Deref(x) => x.result,
         }
     }
+
+    /// The source range of this expression, for per-instruction DWARF. Populated by the
+    /// instantiator from the source TE node.
+    pub fn range(&self) -> RangeS<'s> {
+        match self {
+            ExpressionIE::LetAndLend(x) => x.range,
+            ExpressionIE::LockWeak(x) => x.range,
+            ExpressionIE::BorrowToWeak(x) => x.range,
+            ExpressionIE::LetNormal(x) => x.range,
+            ExpressionIE::Restackify(x) => x.range,
+            ExpressionIE::Unlet(x) => x.range,
+            ExpressionIE::Discard(x) => x.range,
+            ExpressionIE::If(x) => x.range,
+            ExpressionIE::While(x) => x.range,
+            ExpressionIE::Mutate(x) => x.range,
+            ExpressionIE::Return(x) => x.range,
+            ExpressionIE::Break(x) => x.range,
+            ExpressionIE::Block(x) => x.range,
+            ExpressionIE::Consecutor(x) => x.range,
+            ExpressionIE::StaticArrayFromValues(x) => x.range,
+            ExpressionIE::ArraySize(x) => x.range,
+            ExpressionIE::IsSameInstance(x) => x.range,
+            ExpressionIE::AsSubtype(x) => x.range,
+            ExpressionIE::VoidLiteral(x) => x.range,
+            ExpressionIE::ConstantInt(x) => x.range,
+            ExpressionIE::ConstantBool(x) => x.range,
+            ExpressionIE::ConstantStr(x) => x.range,
+            ExpressionIE::ConstantFloat(x) => x.range,
+            ExpressionIE::ArgLookup(x) => x.range,
+            ExpressionIE::ArrayLength(x) => x.range,
+            ExpressionIE::InterfaceFunctionCall(x) => x.range,
+            ExpressionIE::ExternFunctionCall(x) => x.range,
+            ExpressionIE::FunctionCall(x) => x.range,
+            ExpressionIE::Construct(x) => x.range,
+            ExpressionIE::NewRuntimeSizedArray(x) => x.range,
+            ExpressionIE::StaticArrayFromCallable(x) => x.range,
+            ExpressionIE::DestroyStaticSizedArrayIntoFunction(x) => x.range,
+            ExpressionIE::DestroyStaticSizedArrayIntoLocals(x) => x.range,
+            ExpressionIE::DestroyRuntimeSizedArray(x) => x.range,
+            ExpressionIE::RuntimeSizedArrayCapacity(x) => x.range,
+            ExpressionIE::PushRuntimeSizedArray(x) => x.range,
+            ExpressionIE::PopRuntimeSizedArray(x) => x.range,
+            ExpressionIE::InterfaceToInterfaceUpcast(x) => x.range,
+            ExpressionIE::Upcast(x) => x.range,
+            ExpressionIE::Destroy(x) => x.range,
+            ExpressionIE::CopyPrim(x) => x.range,
+            ExpressionIE::LocalLookup(x) => x.range,
+            ExpressionIE::StaticSizedArrayLookup(x) => x.range,
+            ExpressionIE::RuntimeSizedArrayLookup(x) => x.range,
+            ExpressionIE::MemberLookup(x) => x.range,
+            ExpressionIE::Deref(x) => x.range,
+        }
+    }
 }
 
 
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct LetAndLendIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub variable: &'i LocalVariableI<'s, 'i>,
 	pub expr: ExpressionIE<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
@@ -133,6 +189,7 @@ pub struct LetAndLendIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct LockWeakIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub inner_expr: ExpressionIE<'s, 'i>,
 	pub source_type: KindIT<'s, 'i>,
 	pub some_constructor: PrototypeI<'s, 'i>,
@@ -147,6 +204,7 @@ pub struct LockWeakIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct BorrowToWeakIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub inner_expr: ExpressionIE<'s, 'i>,
 	pub source_type: KindIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
@@ -157,6 +215,7 @@ pub struct BorrowToWeakIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct LetNormalIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub variable: &'i LocalVariableI<'s, 'i>,
 	pub expr: ExpressionIE<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
@@ -167,6 +226,7 @@ pub struct LetNormalIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct RestackifyIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub variable: &'i LocalVariableI<'s, 'i>,
 	pub source_expr: ExpressionIE<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
@@ -177,6 +237,7 @@ pub struct RestackifyIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct UnletIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub variable: &'i LocalVariableI<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
@@ -186,6 +247,7 @@ pub struct UnletIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DiscardIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub expr: ExpressionIE<'s, 'i>,
 	pub source_type: KindIT<'s, 'i>,
 }
@@ -202,6 +264,7 @@ impl<'s, 'i> DiscardIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct IfIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub condition: ExpressionIE<'s, 'i>,
 	pub then_call: ExpressionIE<'s, 'i>,
 	pub else_call: ExpressionIE<'s, 'i>,
@@ -215,6 +278,7 @@ pub struct IfIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct WhileIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub block: BlockIE<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 }
@@ -224,6 +288,7 @@ pub struct WhileIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct MutateIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub destination_expr: ExpressionIE<'s, 'i>,
 	pub destination_type: &'i BorrowRefIT<'s, 'i>,
 	pub source_expr: ExpressionIE<'s, 'i>,
@@ -236,6 +301,7 @@ pub struct MutateIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ReturnIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub source_expr: ExpressionIE<'s, 'i>,
 	pub source_type: KindIT<'s, 'i>,
 }
@@ -251,12 +317,14 @@ impl<'s, 'i> ReturnIE<'s, 'i> {
 
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
-pub struct BreakIE;
+pub struct BreakIE<'s> {
+	pub range: RangeS<'s>,
+}
 
 
 
-impl BreakIE {
-	pub fn result<'s, 'i>(&self) -> KindIT<'s, 'i> {
+impl<'s> BreakIE<'s> {
+	pub fn result<'i>(&self) -> KindIT<'s, 'i> {
 		KindIT::NeverIT(NeverIT { from_break: true })
 	}
 }
@@ -265,6 +333,7 @@ impl BreakIE {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct BlockIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub inner: ExpressionIE<'s, 'i>,
 	pub inner_type: KindIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
@@ -275,6 +344,7 @@ pub struct BlockIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ConsecutorIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub exprs: &'i[ExpressionIE<'s, 'i>],
 	pub result: KindIT<'s, 'i>,
 }
@@ -283,6 +353,7 @@ pub struct ConsecutorIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct StaticArrayFromValuesIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub elements: &'i[ExpressionIE<'s, 'i>],
 	pub result: KindIT<'s, 'i>,
 	pub array_type: &'i StaticSizedArrayIT<'s, 'i>,
@@ -293,6 +364,7 @@ pub struct StaticArrayFromValuesIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ArraySizeIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub array: ExpressionIE<'s, 'i>,
 	pub array_type: &'i BorrowRefIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
@@ -303,6 +375,7 @@ pub struct ArraySizeIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct IsSameInstanceIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub left: ExpressionIE<'s, 'i>,
 	pub left_type: KindIT<'s, 'i>,
 	pub right: ExpressionIE<'s, 'i>,
@@ -321,6 +394,7 @@ impl<'s, 'i> IsSameInstanceIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct AsSubtypeIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub source_expr: ExpressionIE<'s, 'i>,
 	pub source_type: KindIT<'s, 'i>,
 	pub target_type: KindIT<'s, 'i>,
@@ -336,12 +410,14 @@ pub struct AsSubtypeIE<'s, 'i> {
 
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
-pub struct VoidLiteralIE;
+pub struct VoidLiteralIE<'s> {
+	pub range: RangeS<'s>,
+}
 
 
 
-impl VoidLiteralIE {
-	pub fn result<'s, 'i>(&self) -> KindIT<'s, 'i> {
+impl<'s> VoidLiteralIE<'s> {
+	pub fn result<'i>(&self) -> KindIT<'s, 'i> {
 		KindIT::VoidIT(VoidIT {  })
 	}
 }
@@ -349,15 +425,16 @@ impl VoidLiteralIE {
 
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
-pub struct ConstantIntIE {
+pub struct ConstantIntIE<'s> {
+	pub range: RangeS<'s>,
 	pub value: i64,
 	pub bits: i32,
 }
 
 
 
-impl ConstantIntIE {
-	pub fn result<'s, 'i>(&self) -> KindIT<'s, 'i> {
+impl<'s> ConstantIntIE<'s> {
+	pub fn result<'i>(&self) -> KindIT<'s, 'i> {
 		KindIT::IntIT(IntIT { bits: self.bits })
 	}
 }
@@ -365,14 +442,15 @@ impl ConstantIntIE {
 
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
-pub struct ConstantBoolIE {
+pub struct ConstantBoolIE<'s> {
+	pub range: RangeS<'s>,
 	pub value: bool,
 }
 
 
 
-impl ConstantBoolIE {
-	pub fn result<'s, 'i>(&self) -> KindIT<'s, 'i> {
+impl<'s> ConstantBoolIE<'s> {
+	pub fn result<'i>(&self) -> KindIT<'s, 'i> {
 		KindIT::BoolIT(BoolIT {  })
 	}
 }
@@ -383,6 +461,7 @@ impl ConstantBoolIE {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantStrIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub _marker: PhantomData<(&'s (),)>,
 	pub value: &'s str,
 	pub result: KindIT<'s, 'i>,
@@ -399,14 +478,15 @@ impl<'s, 'i> ConstantStrIE<'s, 'i> {
 
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
-pub struct ConstantFloatIE {
+pub struct ConstantFloatIE<'s> {
+	pub range: RangeS<'s>,
 	pub value: f64,
 }
 
 
 
-impl ConstantFloatIE {
-	pub fn result<'s, 'i>(&self) -> KindIT<'s, 'i> {
+impl<'s> ConstantFloatIE<'s> {
+	pub fn result<'i>(&self) -> KindIT<'s, 'i> {
 		KindIT::FloatIT(FloatIT {  })
 	}
 }
@@ -426,6 +506,7 @@ pub struct LocalLookupIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ArgLookupIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub param_index: i32,
 	pub tyype: KindIT<'s, 'i>,
 }
@@ -468,6 +549,7 @@ pub struct RuntimeSizedArrayLookupIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ArrayLengthIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub array_expr: ExpressionIE<'s, 'i>,
 	pub array_type: &'i BorrowRefIT<'s, 'i>,
 }
@@ -499,6 +581,7 @@ pub struct MemberLookupIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceFunctionCallIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub super_function_prototype: &'i PrototypeI<'s, 'i>,
 	pub virtual_param_index: i32,
 	// Vtable slot of the called method within its interface — the position of this method
@@ -513,6 +596,7 @@ pub struct InterfaceFunctionCallIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ExternFunctionCallIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub prototype2: PrototypeI<'s, 'i>,
 	pub args: &'i[ExpressionIE<'s, 'i>],
 	pub result: KindIT<'s, 'i>,
@@ -523,6 +607,7 @@ pub struct ExternFunctionCallIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct FunctionCallIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub callable: PrototypeI<'s, 'i>,
 	pub args: &'i[ExpressionIE<'s, 'i>],
 	pub result: KindIT<'s, 'i>,
@@ -532,6 +617,7 @@ pub struct FunctionCallIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct CopyPrimIE<'s, 'i> {
+	pub range: RangeS<'s>,
     pub inner: ExpressionIE<'s, 'i>,
     pub source_type: KindIT<'s, 'i>,
     pub result: KindIT<'s, 'i>,
@@ -541,6 +627,7 @@ pub struct CopyPrimIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstructIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub struct_tt: StructIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
 	pub args: &'i[ExpressionIE<'s, 'i>],
@@ -551,6 +638,7 @@ pub struct ConstructIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct NewRuntimeSizedArrayIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub array_type: RuntimeSizedArrayIT<'s, 'i>,
 	pub capacity_expr: ExpressionIE<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
@@ -561,6 +649,7 @@ pub struct NewRuntimeSizedArrayIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct StaticArrayFromCallableIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub array_type: StaticSizedArrayIT<'s, 'i>,
 	pub generator: ExpressionIE<'s, 'i>,
 	pub generator_method: PrototypeI<'s, 'i>,
@@ -572,6 +661,7 @@ pub struct StaticArrayFromCallableIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyStaticSizedArrayIntoFunctionIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub array_expr: ExpressionIE<'s, 'i>,
 	pub array_type: StaticSizedArrayIT<'s, 'i>,
 	pub consumer: ExpressionIE<'s, 'i>,
@@ -590,6 +680,7 @@ impl<'s, 'i> DestroyStaticSizedArrayIntoFunctionIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyStaticSizedArrayIntoLocalsIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub expr: ExpressionIE<'s, 'i>,
 	pub static_sized_array: StaticSizedArrayIT<'s, 'i>,
 	pub destination_reference_variables: &'i[&'i LocalVariableI<'s, 'i>],
@@ -607,6 +698,7 @@ impl<'s, 'i> DestroyStaticSizedArrayIntoLocalsIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyRuntimeSizedArrayIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub array_expr: ExpressionIE<'s, 'i>,
 	pub array_type: KindIT<'s, 'i>,
 }
@@ -621,6 +713,7 @@ impl<'s, 'i> DestroyRuntimeSizedArrayIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct RuntimeSizedArrayCapacityIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub array_expr: ExpressionIE<'s, 'i>,
 	pub array_type: &'i BorrowRefIT<'s, 'i>,
 }
@@ -637,6 +730,7 @@ impl<'s, 'i> RuntimeSizedArrayCapacityIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct PushRuntimeSizedArrayIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub array_expr: ExpressionIE<'s, 'i>,
 	pub array_type: &'i BorrowRefIT<'s, 'i>,
 	pub new_element_expr: ExpressionIE<'s, 'i>,
@@ -655,6 +749,7 @@ impl<'s, 'i> PushRuntimeSizedArrayIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct PopRuntimeSizedArrayIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub array_expr: ExpressionIE<'s, 'i>,
 	pub array_type: &'i BorrowRefIT<'s, 'i>,
 	pub result: KindIT<'s, 'i>,
@@ -665,6 +760,7 @@ pub struct PopRuntimeSizedArrayIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceToInterfaceUpcastIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub inner_expr: ExpressionIE<'s, 'i>,
 	pub source_type: KindIT<'s, 'i>,
 	pub target_interface: InterfaceIT<'s, 'i>,
@@ -676,6 +772,7 @@ pub struct InterfaceToInterfaceUpcastIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct UpcastIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub inner_expr: ExpressionIE<'s, 'i>,
 	pub source_type: KindIT<'s, 'i>,
 	pub target_interface: InterfaceIT<'s, 'i>,
@@ -700,6 +797,7 @@ pub struct DerefIE<'s, 'i> {
 /// Arena-allocated (see @TFITCX) — no equality.
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyIE<'s, 'i> {
+	pub range: RangeS<'s>,
 	pub expr: ExpressionIE<'s, 'i>,
 	pub struct_tt: StructIT<'s, 'i>,
 	pub destination_reference_variables: &'i[&'i LocalVariableI<'s, 'i>],

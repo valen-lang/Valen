@@ -13,6 +13,10 @@
 #include "expressions/shared/shared.h"
 #include "expressions/shared/members.h"
 #include "expression.h"
+#include "function.h"
+#include "debugging.h"
+#include <llvm-c/DebugInfo.h>
+#include "metal/instructions.h"
 
 Ref translateExpressionInner(
     GlobalState* globalState,
@@ -43,6 +47,7 @@ Ref translateExpression(
     LLVMBuilderRef builder,
     Expression* expr) {
   functionState->instructionDepthInAst++;
+  ScopedDebugLoc dbgLocGuard(builder);
   auto resultLE = translateExpressionInner(globalState, functionState, blockState, builder, expr);
   functionState->instructionDepthInAst--;
   return resultLE;
@@ -54,6 +59,14 @@ Ref translateExpressionInner(
     BlockState* blockState,
     LLVMBuilderRef builder,
     Expression* expr) {
+  if (globalState->opt->debug && expr->sourceLocation != nullptr) {
+    if (auto subprogram = LLVMGetSubprogram(functionState->containingFuncL)) {
+      auto loc = LLVMDIBuilderCreateDebugLocation(
+          globalState->context, expr->sourceLocation->line, expr->sourceLocation->col,
+          subprogram, /*inlinedAt*/ nullptr);
+      LLVMSetCurrentDebugLocation2(builder, loc);
+    }
+  }
   if (auto constantInt = dynamic_cast<ConstantInt*>(expr)) {
     // See ULTMCIE for why we load and store here.
     auto resultLE = makeConstIntExpr(functionState, builder, LLVMIntTypeInContext(globalState->context, constantInt->bits), constantInt->value);

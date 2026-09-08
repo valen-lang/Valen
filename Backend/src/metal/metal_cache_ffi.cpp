@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "addresshasher.h"
@@ -36,6 +37,7 @@ inline BorrowRef*         brf(KindHandle* h)             { auto b = dynamic_cast
 inline Prototype*         proto(PrototypeHandle* h)      { return reinterpret_cast<Prototype*>(h); }
 inline Local*             loc(LocalHandle* h)            { return reinterpret_cast<Local*>(h); }
 inline Expression*        ex(ExpressionHandle* h)        { return reinterpret_cast<Expression*>(h); }
+inline SourceLocation*    srcloc(SourceLocationHandle* h) { return reinterpret_cast<SourceLocation*>(h); }
 
 inline std::string str(const char* p, size_t n) { return std::string(p, n); }
 
@@ -204,11 +206,17 @@ extern "C" VIS InterfaceMethodHandle* metal_cache_get_interface_method(
 
 extern "C" VIS LocalHandle* metal_cache_get_local(
     MetalCacheHandle* h, const char* id_ptr, size_t id_len,
-    const char* name_ptr, size_t name_len, KindHandle* kind) {
+    const char* name_ptr, size_t name_len, KindHandle* kind, SourceLocationHandle* source_loc) {
   (void)h;  // Locals are constructed per-mention; identity is the `id` string (BlockState keys
             // on it), so multiple handles for one source local are fine.
   return reinterpret_cast<LocalHandle*>(
-      new Local(VarNameM{str(id_ptr, id_len)}, str(name_ptr, name_len), knd(kind)));
+      new Local(VarNameM{str(id_ptr, id_len)}, str(name_ptr, name_len), knd(kind), srcloc(source_loc)));
+}
+
+extern "C" VIS SourceLocationHandle* metal_cache_get_source_location(
+    MetalCacheHandle* h, const char* file_ptr, size_t file_len, int32_t line, int32_t col) {
+  return reinterpret_cast<SourceLocationHandle*>(
+      cache(h)->getSourceLocation(str(file_ptr, file_len), line, col));
 }
 
 // --- Non-interned constructors ---
@@ -294,219 +302,220 @@ extern "C" VIS InterfaceDefHandle* metal_interface_def_new(
 }
 
 extern "C" VIS FunctionHandle* metal_function_new(
-    PrototypeHandle* prototype, ExpressionHandle* body) {
-  return reinterpret_cast<FunctionHandle*>(new Function(proto(prototype), ex(body)));
+    PrototypeHandle* prototype, ExpressionHandle* body, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<FunctionHandle*>(
+      new Function(proto(prototype), ex(body), srcloc(source_loc)));
 }
 
 // --- Expression constructors (onion nodes, 1:1) ---
 
-extern "C" VIS ExpressionHandle* metal_expr_constant_void(void) {
-  return reinterpret_cast<ExpressionHandle*>(new ConstantVoid());
+extern "C" VIS ExpressionHandle* metal_expr_constant_void(SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new ConstantVoid(srcloc(source_loc)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_constant_int(int64_t value, int32_t bits) {
-  return reinterpret_cast<ExpressionHandle*>(new ConstantInt(value, bits));
+extern "C" VIS ExpressionHandle* metal_expr_constant_int(int64_t value, int32_t bits, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new ConstantInt(srcloc(source_loc), value, bits));
 }
-extern "C" VIS ExpressionHandle* metal_expr_constant_bool(int32_t value) {
-  return reinterpret_cast<ExpressionHandle*>(new ConstantBool(value != 0));
+extern "C" VIS ExpressionHandle* metal_expr_constant_bool(int32_t value, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new ConstantBool(srcloc(source_loc), value != 0));
 }
-extern "C" VIS ExpressionHandle* metal_expr_constant_f64(double value) {
-  return reinterpret_cast<ExpressionHandle*>(new ConstantF64(value));
+extern "C" VIS ExpressionHandle* metal_expr_constant_f64(double value, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new ConstantF64(srcloc(source_loc), value));
 }
-extern "C" VIS ExpressionHandle* metal_expr_constant_str(const char* p, size_t n, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new ConstantStr(str(p, n), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_constant_str(const char* p, size_t n, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new ConstantStr(srcloc(source_loc), str(p, n), knd(result)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_break(void) {
-  return reinterpret_cast<ExpressionHandle*>(new Break());
+extern "C" VIS ExpressionHandle* metal_expr_break(SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Break(srcloc(source_loc)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_return(ExpressionHandle* source_expr, KindHandle* source_type) {
-  return reinterpret_cast<ExpressionHandle*>(new Return(ex(source_expr), knd(source_type)));
+extern "C" VIS ExpressionHandle* metal_expr_return(ExpressionHandle* source_expr, KindHandle* source_type, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Return(srcloc(source_loc), ex(source_expr), knd(source_type)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_discard(ExpressionHandle* expr, KindHandle* source_type) {
-  return reinterpret_cast<ExpressionHandle*>(new Discard(ex(expr), knd(source_type)));
+extern "C" VIS ExpressionHandle* metal_expr_discard(ExpressionHandle* expr, KindHandle* source_type, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Discard(srcloc(source_loc), ex(expr), knd(source_type)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_block(ExpressionHandle* inner, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new Block(ex(inner), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_block(ExpressionHandle* inner, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Block(srcloc(source_loc), ex(inner), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_consecutor(
-    ExpressionHandle* const* es, size_t expr_count, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new Consecutor(exprs(es, expr_count), knd(result)));
+    ExpressionHandle* const* es, size_t expr_count, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Consecutor(srcloc(source_loc), exprs(es, expr_count), knd(result)));
 }
 
-extern "C" VIS ExpressionHandle* metal_expr_argument(int32_t param_index, KindHandle* tyype) {
-  return reinterpret_cast<ExpressionHandle*>(new Argument(param_index, knd(tyype)));
+extern "C" VIS ExpressionHandle* metal_expr_argument(int32_t param_index, KindHandle* tyype, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Argument(srcloc(source_loc), param_index, knd(tyype)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_stackify(
-    LocalHandle* variable, ExpressionHandle* expr, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new Stackify(loc(variable), ex(expr), knd(result)));
+    LocalHandle* variable, ExpressionHandle* expr, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Stackify(srcloc(source_loc), loc(variable), ex(expr), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_let_and_lend(
-    LocalHandle* variable, ExpressionHandle* expr, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new LetAndLend(loc(variable), ex(expr), knd(result)));
+    LocalHandle* variable, ExpressionHandle* expr, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new LetAndLend(srcloc(source_loc), loc(variable), ex(expr), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_restackify(
-    LocalHandle* variable, ExpressionHandle* source_expr, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new Restackify(loc(variable), ex(source_expr), knd(result)));
+    LocalHandle* variable, ExpressionHandle* source_expr, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Restackify(srcloc(source_loc), loc(variable), ex(source_expr), knd(result)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_unstackify(LocalHandle* variable, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new Unstackify(loc(variable), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_unstackify(LocalHandle* variable, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Unstackify(srcloc(source_loc), loc(variable), knd(result)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_local_lookup(LocalHandle* local_variable, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new LocalLookup(loc(local_variable), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_local_lookup(LocalHandle* local_variable, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new LocalLookup(srcloc(source_loc), loc(local_variable), knd(result)));
 }
 
-extern "C" VIS ExpressionHandle* metal_expr_deref(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new Deref(ex(inner), knd(source_type), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_deref(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Deref(srcloc(source_loc), ex(inner), knd(source_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_member_lookup(
-    ExpressionHandle* struct_expr, KindHandle* struct_type, int32_t member_index, const char* member_name_ptr, size_t member_name_len, KindHandle* member_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new MemberLookup(
+    ExpressionHandle* struct_expr, KindHandle* struct_type, int32_t member_index, const char* member_name_ptr, size_t member_name_len, KindHandle* member_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new MemberLookup(srcloc(source_loc),
       ex(struct_expr), brf(struct_type), member_index, str(member_name_ptr, member_name_len), knd(member_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_static_sized_array_lookup(
-    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new StaticSizedArrayLookup(
+    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new StaticSizedArrayLookup(srcloc(source_loc),
       ex(array_expr), brf(array_type), ex(index_expr), knd(index_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_runtime_sized_array_lookup(
-    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new RuntimeSizedArrayLookup(
+    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new RuntimeSizedArrayLookup(srcloc(source_loc),
       ex(array_expr), brf(array_type), ex(index_expr), knd(index_type), knd(result)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_mutate(
-    ExpressionHandle* destination_expr, KindHandle* destination_type, ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new Mutate(ex(destination_expr), brf(destination_type), ex(source_expr), knd(source_type), knd(result)));
+    ExpressionHandle* destination_expr, KindHandle* destination_type, ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Mutate(srcloc(source_loc), ex(destination_expr), brf(destination_type), ex(source_expr), knd(source_type), knd(result)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_new_struct(
     KindHandle* struct_kind, KindHandle* result,
-    ExpressionHandle* const* args, size_t arg_count) {
-  return reinterpret_cast<ExpressionHandle*>(new NewStruct(
+    ExpressionHandle* const* args, size_t arg_count, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new NewStruct(srcloc(source_loc),
       reinterpret_cast<StructKind*>(knd(struct_kind)), knd(result), exprs(args, arg_count)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_destroy(
     ExpressionHandle* expr, KindHandle* struct_kind,
-    LocalHandle* const* destination_locals, size_t local_count) {
-  return reinterpret_cast<ExpressionHandle*>(new Destroy(
+    LocalHandle* const* destination_locals, size_t local_count, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Destroy(srcloc(source_loc),
       ex(expr), reinterpret_cast<StructKind*>(knd(struct_kind)), locals(destination_locals, local_count)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_copy_prim(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new CopyPrim(ex(inner), knd(source_type), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_copy_prim(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new CopyPrim(srcloc(source_loc), ex(inner), knd(source_type), knd(result)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_struct_to_interface_upcast(
-    ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* target_interface, NameHandle* impl_name, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new StructToInterfaceUpcast(
+    ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* target_interface, NameHandle* impl_name, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new StructToInterfaceUpcast(srcloc(source_loc),
       ex(inner_expr), knd(source_type), reinterpret_cast<InterfaceKind*>(knd(target_interface)), nm(impl_name), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_interface_to_interface_upcast(
-    ExpressionHandle* inner_expr, KindHandle* target_interface, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new InterfaceToInterfaceUpcast(
+    ExpressionHandle* inner_expr, KindHandle* target_interface, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new InterfaceToInterfaceUpcast(srcloc(source_loc),
       ex(inner_expr), reinterpret_cast<InterfaceKind*>(knd(target_interface)), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_as_subtype(
     ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* target_type,
     PrototypeHandle* ok_constructor, PrototypeHandle* err_constructor,
     NameHandle* impl_name, NameHandle* ok_impl_name, NameHandle* err_impl_name,
-    KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new AsSubtype(
+    KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new AsSubtype(srcloc(source_loc),
       ex(source_expr), knd(source_type), knd(target_type),
       proto(ok_constructor), proto(err_constructor),
       nm(impl_name), nm(ok_impl_name), nm(err_impl_name), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_is_same_instance(
-    ExpressionHandle* left, KindHandle* left_type, ExpressionHandle* right, KindHandle* right_type) {
-  return reinterpret_cast<ExpressionHandle*>(new IsSameInstance(ex(left), knd(left_type), ex(right), knd(right_type)));
+    ExpressionHandle* left, KindHandle* left_type, ExpressionHandle* right, KindHandle* right_type, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new IsSameInstance(srcloc(source_loc), ex(left), knd(left_type), ex(right), knd(right_type)));
 }
 
-extern "C" VIS ExpressionHandle* metal_expr_weak_alias(ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new WeakAlias(ex(inner_expr), knd(source_type), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_weak_alias(ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new WeakAlias(srcloc(source_loc), ex(inner_expr), knd(source_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_lock_weak(
     ExpressionHandle* inner_expr, KindHandle* source_type,
     PrototypeHandle* some_constructor, PrototypeHandle* none_constructor,
     NameHandle* some_impl_name, NameHandle* none_impl_name,
-    KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new LockWeak(
+    KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new LockWeak(srcloc(source_loc),
       ex(inner_expr), knd(source_type), proto(some_constructor), proto(none_constructor),
       nm(some_impl_name), nm(none_impl_name), knd(result)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_call(
-    PrototypeHandle* callable, ExpressionHandle* const* args, size_t arg_count, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new Call(proto(callable), exprs(args, arg_count), knd(result)));
+    PrototypeHandle* callable, ExpressionHandle* const* args, size_t arg_count, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new Call(srcloc(source_loc), proto(callable), exprs(args, arg_count), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_extern_call(
-    PrototypeHandle* prototype, ExpressionHandle* const* args, size_t arg_count, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new ExternCall(proto(prototype), exprs(args, arg_count), knd(result)));
+    PrototypeHandle* prototype, ExpressionHandle* const* args, size_t arg_count, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new ExternCall(srcloc(source_loc), proto(prototype), exprs(args, arg_count), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_interface_call(
     PrototypeHandle* super_function_prototype, int32_t virtual_param_index, int32_t index_in_edge,
-    ExpressionHandle* const* args, size_t arg_count, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new InterfaceCall(
+    ExpressionHandle* const* args, size_t arg_count, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new InterfaceCall(srcloc(source_loc),
       proto(super_function_prototype), virtual_param_index, index_in_edge, exprs(args, arg_count), knd(result)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_if(
     ExpressionHandle* condition, ExpressionHandle* then_call, ExpressionHandle* else_call,
-    KindHandle* then_result_type, KindHandle* else_result_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new If(
+    KindHandle* then_result_type, KindHandle* else_result_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new If(srcloc(source_loc),
       ex(condition), ex(then_call), ex(else_call), knd(then_result_type), knd(else_result_type), knd(result)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_while(ExpressionHandle* block, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new While(ex(block), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_while(ExpressionHandle* block, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new While(srcloc(source_loc), ex(block), knd(result)));
 }
 
 // --- Arrays ---
 
 extern "C" VIS ExpressionHandle* metal_expr_new_array_from_values(
-    ExpressionHandle* const* elements, size_t element_count, KindHandle* result, KindHandle* array_type) {
-  return reinterpret_cast<ExpressionHandle*>(new NewArrayFromValues(
+    ExpressionHandle* const* elements, size_t element_count, KindHandle* result, KindHandle* array_type, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new NewArrayFromValues(srcloc(source_loc),
       exprs(elements, element_count), knd(result),
       reinterpret_cast<StaticSizedArrayT*>(knd(array_type))));
 }
 extern "C" VIS ExpressionHandle* metal_expr_new_mut_runtime_sized_array(
-    KindHandle* array_type, ExpressionHandle* capacity_expr, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new NewRuntimeSizedArray(
+    KindHandle* array_type, ExpressionHandle* capacity_expr, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new NewRuntimeSizedArray(srcloc(source_loc),
       reinterpret_cast<RuntimeSizedArrayT*>(knd(array_type)), ex(capacity_expr), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_static_array_from_callable(
-    KindHandle* array_type, ExpressionHandle* generator, PrototypeHandle* generator_method, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new StaticArrayFromCallable(
+    KindHandle* array_type, ExpressionHandle* generator, PrototypeHandle* generator_method, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new StaticArrayFromCallable(srcloc(source_loc),
       reinterpret_cast<StaticSizedArrayT*>(knd(array_type)), ex(generator), proto(generator_method), knd(result)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_array_length(ExpressionHandle* array_expr, KindHandle* array_type) {
-  return reinterpret_cast<ExpressionHandle*>(new ArrayLength(ex(array_expr), brf(array_type)));
+extern "C" VIS ExpressionHandle* metal_expr_array_length(ExpressionHandle* array_expr, KindHandle* array_type, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new ArrayLength(srcloc(source_loc), ex(array_expr), brf(array_type)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_array_capacity(ExpressionHandle* array_expr, KindHandle* array_type) {
-  return reinterpret_cast<ExpressionHandle*>(new ArrayCapacity(ex(array_expr), brf(array_type)));
+extern "C" VIS ExpressionHandle* metal_expr_array_capacity(ExpressionHandle* array_expr, KindHandle* array_type, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new ArrayCapacity(srcloc(source_loc), ex(array_expr), brf(array_type)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_array_size(ExpressionHandle* array, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new ArraySize(ex(array), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_array_size(ExpressionHandle* array, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new ArraySize(srcloc(source_loc), ex(array), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_push_runtime_sized_array(
-    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* new_element_expr, KindHandle* element_type) {
-  return reinterpret_cast<ExpressionHandle*>(new PushRuntimeSizedArray(ex(array_expr), brf(array_type), ex(new_element_expr), knd(element_type)));
+    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* new_element_expr, KindHandle* element_type, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new PushRuntimeSizedArray(srcloc(source_loc), ex(array_expr), brf(array_type), ex(new_element_expr), knd(element_type)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_pop_runtime_sized_array(ExpressionHandle* array_expr, KindHandle* array_type, KindHandle* result) {
-  return reinterpret_cast<ExpressionHandle*>(new PopRuntimeSizedArray(ex(array_expr), brf(array_type), knd(result)));
+extern "C" VIS ExpressionHandle* metal_expr_pop_runtime_sized_array(ExpressionHandle* array_expr, KindHandle* array_type, KindHandle* result, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new PopRuntimeSizedArray(srcloc(source_loc), ex(array_expr), brf(array_type), knd(result)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_destroy_static_sized_array_into_function(
     ExpressionHandle* array_expr, KindHandle* array_type,
-    ExpressionHandle* consumer, PrototypeHandle* consumer_method) {
-  return reinterpret_cast<ExpressionHandle*>(new DestroyStaticSizedArrayIntoFunction(
+    ExpressionHandle* consumer, PrototypeHandle* consumer_method, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new DestroyStaticSizedArrayIntoFunction(srcloc(source_loc),
       ex(array_expr), reinterpret_cast<StaticSizedArrayT*>(knd(array_type)), ex(consumer), proto(consumer_method)));
 }
 extern "C" VIS ExpressionHandle* metal_expr_destroy_static_sized_array_into_locals(
     ExpressionHandle* expr, KindHandle* static_sized_array,
-    LocalHandle* const* destination_locals, size_t local_count) {
-  return reinterpret_cast<ExpressionHandle*>(new DestroyStaticSizedArrayIntoLocals(
+    LocalHandle* const* destination_locals, size_t local_count, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new DestroyStaticSizedArrayIntoLocals(srcloc(source_loc),
       ex(expr), reinterpret_cast<StaticSizedArrayT*>(knd(static_sized_array)),
       locals(destination_locals, local_count)));
 }
-extern "C" VIS ExpressionHandle* metal_expr_destroy_mut_runtime_sized_array(ExpressionHandle* array_expr) {
-  return reinterpret_cast<ExpressionHandle*>(new DestroyRuntimeSizedArray(ex(array_expr)));
+extern "C" VIS ExpressionHandle* metal_expr_destroy_mut_runtime_sized_array(ExpressionHandle* array_expr, SourceLocationHandle* source_loc) {
+  return reinterpret_cast<ExpressionHandle*>(new DestroyRuntimeSizedArray(srcloc(source_loc), ex(array_expr)));
 }
 
 // --- Package builder ---

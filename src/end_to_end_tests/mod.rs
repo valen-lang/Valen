@@ -9,6 +9,9 @@
 //! `backend_ffi/metal_lowerer.rs` and `pass_manager/end_to_end_test.rs`.
 
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::fs;
+use crate::backend_ffi::BACKEND_OPT_LEVEL_O0;
 
 pub mod tests;
 
@@ -162,6 +165,27 @@ pub fn compile_inline(
     )
 }
 
+/// Like `compile_inline` but with DWARF debug info enabled (backend `--debug`,
+/// opt level O0 so the metadata survives). Returns the `CompiledProgram` plus
+/// the on-disk path of the `test.vale` source, so debugger tests can assert
+/// against the file lldb resolves frames to.
+pub fn compile_inline_debug(code: &str) -> (CompiledProgram, PathBuf) {
+    let src_dir = tempfile::tempdir().unwrap();
+    let src_file = src_dir.path().join("test.vale");
+    fs::write(&src_file, code).unwrap();
+    let src_file_path = src_file.clone();
+    let cp = compile_inputs(
+        vec![src_dir.path().to_path_buf()],
+        &[],
+        |opts| {
+            opts.debug = true;
+            opts.opt_level = BACKEND_OPT_LEVEL_O0;
+        },
+        vec![src_dir],
+    );
+    (cp, src_file_path)
+}
+
 fn compile_inputs(
     vale_inputs: Vec<PathBuf>,
     extra_c: &[&Path],
@@ -242,6 +266,10 @@ fn compile_inputs(
         backend_opts.census = true;
     }
     configure_backend(&mut backend_opts);
+    // When the backend emits DWARF (--debug), link clang with -g so the debug
+    // info survives the link, and (on macOS) so a sibling .dSYM is produced by
+    // the dsymutil step below.
+    let link_with_debug = backend_opts.debug;
 
     let builtins_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("Backend/builtins");
@@ -269,7 +297,7 @@ fn compile_inputs(
         libc_path: None,
         executable_name: backend.exe_name().to_string(),
         asan: asan_enabled,
-        debug_symbols: false,
+        debug_symbols: link_with_debug,
         pic: false,
         pie: false,
         windows: false,
@@ -286,6 +314,17 @@ fn compile_inputs(
     )
     .unwrap_or_else(|e| panic!("pass_manager::build failed:\n{}", e));
     assert_eq!(bp.rc, 0, "backend returned {}", bp.rc);
+
+    if link_with_debug && matches!(backend, Backend::Native) {
+        // On macOS the DWARF lives in the .o files after link; lldb finds it
+        // via a sibling .dSYM bundle that dsymutil materializes. Without this
+        // the binary has no resolvable line info even with --debug + -g.
+        let dsym_status = Command::new("dsymutil")
+            .arg(&bp.exe_path)
+            .status()
+            .expect("dsymutil spawn failed");
+        assert!(dsym_status.success(), "dsymutil failed");
+    }
 
     CompiledProgram {
         exe: bp.exe_path,
@@ -340,6 +379,97 @@ impl CompiledProgram {
             stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
         }
     }
+
+    /// Drive `lldb -b` against this program with the given command sequence
+    /// (one entry per `-o`), returning the combined stdout+stderr. Native only
+    /// (macOS lldb + the dsymutil'd binary from `compile_inline_debug`).
+    pub fn lldb_capture(&self, commands: &[&str]) -> String {
+        let mut cmd = Command::new("lldb");
+        cmd.arg("-b");
+        for c in commands {
+            cmd.arg("-o").arg(c);
+        }
+        cmd.arg(&self.exe);
+        let out = cmd.output().expect("lldb spawn failed");
+        format!(
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        )
+    }
+
+    /// Run an lldb session and assert each `expected_substrings` entry appears
+    /// somewhere in the combined output. Substring-based so tests don't couple
+    /// to exact lldb formatting, which drifts between lldb versions.
+    pub fn lldb_check(&self, commands: &[&str], expected_substrings: &[&str]) {
+        let combined = self.lldb_capture(commands);
+        for needle in expected_substrings {
+            assert!(
+                combined.contains(needle),
+                "lldb output missing expected substring {:?}\nlldb commands: {:?}\nfull output:\n{}",
+                needle, commands, combined,
+            );
+        }
+    }
+
+    /// Like `lldb_check`, but the expected substrings must appear **in order** —
+    /// each found after the previous one's match. For stepping tests this turns
+    /// "landed on 2, then 3, then 4" into a real sequence assertion rather than
+    /// unordered set membership (which would pass if the stops came out of order
+    /// or a line appeared incidentally).
+    pub fn lldb_check_ordered(&self, commands: &[&str], expected_in_order: &[&str]) {
+        let combined = self.lldb_capture(commands);
+        let mut cursor = 0usize;
+        for needle in expected_in_order {
+            match combined[cursor..].find(needle) {
+                Some(rel) => cursor += rel + needle.len(),
+                None => panic!(
+                    "lldb output missing {:?} in order (after offset {})\nlldb commands: {:?}\nfull output:\n{}",
+                    needle, cursor, commands, combined,
+                ),
+            }
+        }
+    }
+
+    /// Dump DWARF DIEs via `llvm-dwarfdump` and return the combined
+    /// stdout+stderr. Asserting on raw DIEs instead of lldb's rendered output
+    /// keeps structural gates decoupled from lldb-version formatting drift.
+    /// Resolves the binary from `$PATH`, then the homebrew llvm install; panics
+    /// if neither exists (no graceful skip — callers rely on the output).
+    /// Native only (targets the dsymutil'd `.dSYM`).
+    pub fn dwarfdump_capture(&self, args: &[&str]) -> String {
+        let on_path = Command::new("llvm-dwarfdump")
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        let bin = if on_path {
+            "llvm-dwarfdump".to_string()
+        } else {
+            let fallback = "/opt/homebrew/opt/llvm/bin/llvm-dwarfdump";
+            assert!(
+                Path::new(fallback).exists(),
+                "llvm-dwarfdump not on PATH and {fallback} doesn't exist"
+            );
+            fallback.to_string()
+        };
+        let dsym = format!("{}.dSYM", self.exe.display());
+        let target = if Path::new(&dsym).exists() {
+            dsym
+        } else {
+            self.exe.display().to_string()
+        };
+        let out = Command::new(&bin)
+            .args(args)
+            .arg(&target)
+            .output()
+            .expect("llvm-dwarfdump spawn failed");
+        format!(
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        )
+    }
 }
 
 pub fn programs_dir() -> PathBuf {
@@ -378,4 +508,179 @@ pub fn assert_inline_compile_and_run(code: &str, expected: i32) {
         "stdout={:?} stderr={:?}",
         r.stdout, r.stderr
     );
+}
+
+/// One step of a debugger session: an lldb command plus what its own output
+/// must (`expect`) and must not (`reject`) contain. Steps run in order; each
+/// step's checks are scoped to the output that command produced (see
+/// `run_dbg_session`), so a value can't accidentally match a breakpoint echo or
+/// another step's text.
+pub struct Step<'a> {
+    pub cmd: &'a str,
+    pub expect: &'a [&'a str],
+    pub reject: &'a [&'a str],
+}
+
+/// A step that just runs a command; its output isn't asserted on (`b`, `run`,
+/// `continue`, a bare `thread step-over`).
+pub fn cmd(c: &str) -> Step<'_> {
+    Step { cmd: c, expect: &[], reject: &[] }
+}
+
+/// A step whose output must contain every `present` substring.
+pub fn expect<'a>(c: &'a str, present: &'a [&'a str]) -> Step<'a> {
+    Step { cmd: c, expect: present, reject: &[] }
+}
+
+/// A step whose output must contain every `present` substring and none of the
+/// `absent` ones — for asserting an untaken branch / unreached line.
+pub fn reject<'a>(c: &'a str, present: &'a [&'a str], absent: &'a [&'a str]) -> Step<'a> {
+    Step { cmd: c, expect: present, reject: absent }
+}
+
+/// Split a combined `lldb -b` capture into one segment per command. lldb echoes
+/// each `-o` command as a `(lldb) <cmd>` line before its output, so we locate
+/// those echoes in order (commands may repeat — e.g. several `continue`s — so we
+/// scan forward past each match) and take the text between consecutive echoes.
+/// A command whose echo isn't found yields an empty segment (its `expect`s then
+/// fail with the full session embedded).
+fn split_lldb_session<'a>(out: &'a str, cmds: &[&str]) -> Vec<&'a str> {
+    let mut echo_start: Vec<Option<usize>> = Vec::with_capacity(cmds.len());
+    let mut echo_end: Vec<Option<usize>> = Vec::with_capacity(cmds.len());
+    let mut from = 0usize;
+    for c in cmds {
+        let needle = format!("(lldb) {}", c);
+        if let Some(rel) = out[from..].find(&needle) {
+            let start = from + rel;
+            let end = start + needle.len();
+            echo_start.push(Some(start));
+            echo_end.push(Some(end));
+            from = end;
+        } else {
+            echo_start.push(None);
+            echo_end.push(None);
+        }
+    }
+    let mut segs = Vec::with_capacity(cmds.len());
+    for i in 0..cmds.len() {
+        match echo_end[i] {
+            None => segs.push(""),
+            Some(start) => {
+                let mut next = out.len();
+                for j in (i + 1)..cmds.len() {
+                    if let Some(s) = echo_start[j] {
+                        next = s;
+                        break;
+                    }
+                }
+                segs.push(&out[start..next]);
+            }
+        }
+    }
+    segs
+}
+
+/// Run a step script against a compiled program and assert each step's scoped
+/// output. One `lldb -b` invocation drives all the commands.
+fn run_dbg_session(cp: &CompiledProgram, steps: &[Step]) {
+    let cmds: Vec<&str> = steps.iter().map(|s| s.cmd).collect();
+    let out = cp.lldb_capture(&cmds);
+    let segs = split_lldb_session(&out, &cmds);
+    for (i, step) in steps.iter().enumerate() {
+        let seg = segs[i];
+        for needle in step.expect {
+            assert!(
+                seg.contains(needle),
+                "lldb step {} `{}`: output missing {:?}\n--- this step's output ---\n{}\n--- full session ---\n{}",
+                i, step.cmd, needle, seg, out,
+            );
+        }
+        for needle in step.reject {
+            assert!(
+                !seg.contains(needle),
+                "lldb step {} `{}`: output unexpectedly contains {:?}\n--- this step's output ---\n{}\n--- full session ---\n{}",
+                i, step.cmd, needle, seg, out,
+            );
+        }
+    }
+}
+
+/// Copy a single-file fixture into a fresh temp dir (preserving its basename)
+/// and compile it from there. Per test-review #9 we never compile a repo path in
+/// place — and the temp dir becomes the program's `source_dir`, so lldb can
+/// resolve the source (DWARF's `comp_dir "."`) for source-anchored breakpoints.
+/// Debug info is emitted on Native only.
+fn compile_fixture_debug(vale_path: &Path, native: bool) -> CompiledProgram {
+    let src_dir = tempfile::tempdir().unwrap();
+    let base = vale_path.file_name().expect("fixture path has no file name");
+    let dest = src_dir.path().join(base);
+    fs::copy(vale_path, &dest)
+        .unwrap_or_else(|e| panic!("copying {:?} into temp dir failed: {}", vale_path, e));
+    compile_inputs(
+        vec![dest],
+        &[],
+        |opts| {
+            if native {
+                opts.debug = true;
+                opts.opt_level = BACKEND_OPT_LEVEL_O0;
+            }
+        },
+        vec![src_dir],
+    )
+}
+
+/// Like `assert_compile_and_run`, but on Native also drives a scoped lldb
+/// session (`steps`) against the program — so a normal behavior test doubles as
+/// a debug-info regression gate that asserts real debugger behavior.
+///
+/// The debug half is Native-only: lldb/dsymutil aren't in the wasi toolchain, so
+/// under wasi this compiles+runs and asserts the exit code exactly as
+/// `assert_compile_and_run` does (no `--debug`, no lldb), and logs a loud skip so
+/// a wasi pass isn't mistaken for validated debug coverage. On Native it compiles
+/// with `--debug`/O0 (so DWARF survives + a `.dSYM` is materialized) first.
+pub fn assert_compile_and_run_dbg(vale_path: &Path, expected: i32, steps: &[Step]) {
+    let native = matches!(target_backend(), Backend::Native);
+    let cp = compile_fixture_debug(vale_path, native);
+    let r = cp.run(&[]);
+    assert_eq!(
+        r.exit_code, expected,
+        "stdout={:?} stderr={:?}",
+        r.stdout, r.stderr
+    );
+    if native {
+        run_dbg_session(&cp, steps);
+    } else {
+        eprintln!(
+            "SKIP: debug gate for {:?} requires the Native backend (lldb/dSYM); \
+             ran exit-code check only under wasi.",
+            vale_path
+        );
+    }
+}
+
+/// Inline-source counterpart of `assert_compile_and_run_dbg`. The lldb session
+/// resolves frames to `test.vale` (the name `compile_inline` writes the source
+/// under). Native-only debug half, same as above.
+pub fn assert_inline_compile_and_run_dbg(code: &str, expected: i32, steps: &[Step]) {
+    let native = matches!(target_backend(), Backend::Native);
+    let cp = compile_inline(code, |opts| {
+        if native {
+            opts.debug = true;
+            opts.opt_level = BACKEND_OPT_LEVEL_O0;
+        }
+    });
+    let r = cp.run(&[]);
+    assert_eq!(
+        r.exit_code, expected,
+        "stdout={:?} stderr={:?}",
+        r.stdout, r.stderr
+    );
+    if native {
+        run_dbg_session(&cp, steps);
+    } else {
+        eprintln!(
+            "SKIP: inline debug gate requires the Native backend (lldb/dSYM); \
+             ran exit-code check only under wasi."
+        );
+    }
 }

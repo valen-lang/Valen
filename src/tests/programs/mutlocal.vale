@@ -1,5 +1,7 @@
 exported func main() int {
   x int = 73;
+  0; // lldb breakpoint: mutlocal-before
   set x = 42;
+  0; // lldb breakpoint: mutlocal-after
   return x;
 }

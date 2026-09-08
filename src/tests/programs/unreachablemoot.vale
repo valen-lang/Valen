@@ -2,9 +2,11 @@
 exported func main() int {
   while (true) {
     if (true) {
+      0; // lldb breakpoint: unreachablemoot-live
       return 42;
     }
     // Continue
   }
+  0; // lldb breakpoint: unreachablemoot-dead
   __vbi_panic();
 }

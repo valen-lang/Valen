@@ -8,6 +8,7 @@ struct UnitSnapshot {
 }
 
 exported func main() int {
+  0; // lldb breakpoint: bigstructmutfield-at
   // TSUGAR:   return UnitSnapshot(4, 5, 6, 7, 42, 9).agility;
   return __copy_prim(UnitSnapshot(4, 5, 6, 7, 42, 9).agility);
 }

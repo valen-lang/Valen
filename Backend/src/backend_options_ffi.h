@@ -36,6 +36,9 @@ typedef struct BackendCompileOptionsFFI {
   uint8_t include_bounds_checks;
   uint8_t use_atomic_rc;
   uint8_t print_mem_overhead;
+  // Emit DWARF debug info (`--debug`). Drives per-function/statement/local DWARF
+  // emission in codegen. See docs/architecture/debugging-architecture.md.
+  uint8_t debug;
 } BackendCompileOptionsFFI;
 
 // Compile mode selector for BackendInputsFFI.mode.
@@ -64,6 +67,15 @@ typedef struct InteropInputsFFI {
   size_t num_callbacks;
 } InteropInputsFFI;
 
+// One source file's `basename` (as it rides on a metal SourceLocation.filePath) paired with its
+// absolute on-disk `abspath`, so the DWARF emitter can record a resolvable DW_AT_comp_dir instead of
+// ".". Field order and types must stay in sync with SourceFilePathFFIRaw in
+// src/backend_ffi/backend_inputs.rs.
+typedef struct SourceFilePathFFI {
+  const char* basename;
+  const char* abspath;
+} SourceFilePathFFI;
+
 // The single unified backend entry payload. `mode` selects which fields are read:
 // standalone reads only cache/program/options; interop additionally reads `interop`.
 // Field order and types must stay in sync with the Rust mirror BackendInputsFFIRaw
@@ -74,6 +86,9 @@ typedef struct BackendInputsFFI {
   BackendCompileOptionsFFI options;
   int32_t mode;                    // BACKEND_MODE_*
   InteropInputsFFI interop;        // read only when mode == BACKEND_MODE_INTEROP
+  // (basename, abspath) for each source file, or null/0 when none. Used only for DWARF comp_dir.
+  const SourceFilePathFFI* source_paths;
+  size_t num_source_paths;
 } BackendInputsFFI;
 
 #ifdef __cplusplus

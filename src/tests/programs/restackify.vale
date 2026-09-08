@@ -7,7 +7,9 @@ func foo(ship Spaceship) Spaceship {
 }
 exported func main() int {
   ship = Spaceship(35);
+  0; // lldb breakpoint: restackify-before
   set ship = foo(^ship);
+  0; // lldb breakpoint: restackify-after
   [x] = ^ship;
   return ^x;
 }

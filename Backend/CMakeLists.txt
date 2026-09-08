@@ -61,6 +61,7 @@ set(BACKEND_LIB_SRCS
 		src/utils/structlt.cpp
 
 		src/function/function.cpp
+		src/function/debugging.cpp
 		src/function/boundary.cpp
 		src/function/expression.cpp
 

@@ -6,6 +6,7 @@ struct Carrier {
 exported func main() int {
   carrier = Carrier(400, 8);
   ref = &carrier;
+  0; // lldb breakpoint: constraintRef-ready
   // TSUGAR:   return ref.interceptors;
   return __copy_prim(ref.interceptors);
 }

@@ -1,7 +1,9 @@
 exported func main() int {
   return if (true) {
+      0; // lldb breakpoint: if-then
       42
     } else {
+      0; // lldb breakpoint: if-else
       73
     };
 }

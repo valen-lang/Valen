@@ -8,6 +8,7 @@ func foo(ship Spaceship) FooResult {
 exported func main() int {
   ship = Spaceship(42);
   [fuel, set ship] = foo(^ship);
+  0; // lldb breakpoint: destructure-restackify-ready
   [zzz] = ^ship;
   return ^fuel;
 }

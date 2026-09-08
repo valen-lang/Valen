@@ -239,6 +239,7 @@ pub fn build_stuff(compiler_dir: &Path, args: BuildArgs) {
     args.print_mem_overhead,
     args.use_atomic_rc,
     args.include_bounds_checks,
+    args.debug_symbols,
   );
 
   let extra_inputs: Vec<PathBuf> =

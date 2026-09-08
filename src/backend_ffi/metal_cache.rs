@@ -12,7 +12,7 @@
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::os::raw::c_char;
-use std::ptr::NonNull;
+use std::ptr::{null_mut, NonNull};
 
 #[repr(C)]
 pub struct MetalCacheHandleRaw {
@@ -60,6 +60,17 @@ pub struct Expression<'cache>(NonNull<c_void>, PhantomData<&'cache ()>);
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Local<'cache>(NonNull<c_void>, PhantomData<&'cache ()>);
+/// An interned DWARF source location (file:line:col). Carried on every `expr_*` builder for
+/// per-instruction debug info. Backend currently discards it (DWARF emission is a later step).
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct SourceLocation<'cache>(NonNull<c_void>, PhantomData<&'cache ()>);
+
+/// The raw handle pointer the FFI expects for a source location.
+#[inline]
+fn loc_ptr(loc: SourceLocation<'_>) -> *mut c_void {
+    loc.0.as_ptr()
+}
 
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -142,7 +153,12 @@ extern "C" {
     fn metal_cache_get_local(
         _: *mut MetalCacheHandleRaw,
         id_ptr: *const c_char, id_len: usize,
-        name_ptr: *const c_char, name_len: usize, kind: *mut c_void,
+        name_ptr: *const c_char, name_len: usize, kind: *mut c_void, loc: *mut c_void,
+    ) -> *mut c_void;
+
+    fn metal_cache_get_source_location(
+        _: *mut MetalCacheHandleRaw,
+        file_ptr: *const c_char, file_len: usize, line: i32, col: i32,
     ) -> *mut c_void;
 
     fn metal_struct_member_new(
@@ -174,111 +190,114 @@ extern "C" {
         weakability: u32,
     ) -> *mut c_void;
 
-    fn metal_function_new(prototype: *mut c_void, body: *mut c_void) -> *mut c_void;
+    fn metal_function_new(
+        prototype: *mut c_void, body: *mut c_void, loc: *mut c_void,
+    ) -> *mut c_void;
 
-    // Onion expression constructors.
-    fn metal_expr_constant_void() -> *mut c_void;
-    fn metal_expr_constant_int(value: i64, bits: i32) -> *mut c_void;
-    fn metal_expr_constant_bool(value: i32) -> *mut c_void;
-    fn metal_expr_constant_f64(value: f64) -> *mut c_void;
-    fn metal_expr_constant_str(value_ptr: *const c_char, value_len: usize, result: *mut c_void) -> *mut c_void;
-    fn metal_expr_break() -> *mut c_void;
-    fn metal_expr_return(source_expr: *mut c_void, source_type: *mut c_void) -> *mut c_void;
-    fn metal_expr_discard(expr: *mut c_void, source_type: *mut c_void) -> *mut c_void;
-    fn metal_expr_block(inner: *mut c_void, result: *mut c_void) -> *mut c_void;
-    fn metal_expr_consecutor(exprs: *const *mut c_void, expr_count: usize, result: *mut c_void) -> *mut c_void;
+    // Onion expression constructors. Every one takes a trailing `loc: *mut c_void`
+    // (SourceLocationHandle*, null = no source info) for DWARF; Backend ignores it for now.
+    fn metal_expr_constant_void(loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_constant_int(value: i64, bits: i32, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_constant_bool(value: i32, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_constant_f64(value: f64, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_constant_str(value_ptr: *const c_char, value_len: usize, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_break(loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_return(source_expr: *mut c_void, source_type: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_discard(expr: *mut c_void, source_type: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_block(inner: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_consecutor(exprs: *const *mut c_void, expr_count: usize, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
 
-    fn metal_expr_argument(param_index: i32, tyype: *mut c_void) -> *mut c_void;
-    fn metal_expr_stackify(variable: *mut c_void, expr: *mut c_void, result: *mut c_void) -> *mut c_void;
-    fn metal_expr_let_and_lend(variable: *mut c_void, expr: *mut c_void, result: *mut c_void) -> *mut c_void;
-    fn metal_expr_restackify(variable: *mut c_void, source_expr: *mut c_void, result: *mut c_void) -> *mut c_void;
-    fn metal_expr_unstackify(variable: *mut c_void, result: *mut c_void) -> *mut c_void;
-    fn metal_expr_local_lookup(local_variable: *mut c_void, result: *mut c_void) -> *mut c_void;
+    fn metal_expr_argument(param_index: i32, tyype: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_stackify(variable: *mut c_void, expr: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_let_and_lend(variable: *mut c_void, expr: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_restackify(variable: *mut c_void, source_expr: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_unstackify(variable: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_local_lookup(local_variable: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
 
-    fn metal_expr_deref(inner: *mut c_void, source_type: *mut c_void, result: *mut c_void) -> *mut c_void;
+    fn metal_expr_deref(inner: *mut c_void, source_type: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
     fn metal_expr_member_lookup(
-        struct_expr: *mut c_void, struct_type: *mut c_void, member_index: i32, member_name_ptr: *const c_char, member_name_len: usize, member_type: *mut c_void, result: *mut c_void,
+        struct_expr: *mut c_void, struct_type: *mut c_void, member_index: i32, member_name_ptr: *const c_char, member_name_len: usize, member_type: *mut c_void, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_static_sized_array_lookup(
-        array_expr: *mut c_void, array_type: *mut c_void, index_expr: *mut c_void, index_type: *mut c_void, result: *mut c_void,
+        array_expr: *mut c_void, array_type: *mut c_void, index_expr: *mut c_void, index_type: *mut c_void, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_runtime_sized_array_lookup(
-        array_expr: *mut c_void, array_type: *mut c_void, index_expr: *mut c_void, index_type: *mut c_void, result: *mut c_void,
+        array_expr: *mut c_void, array_type: *mut c_void, index_expr: *mut c_void, index_type: *mut c_void, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
 
-    fn metal_expr_mutate(destination_expr: *mut c_void, destination_type: *mut c_void, source_expr: *mut c_void, source_type: *mut c_void, result: *mut c_void) -> *mut c_void;
+    fn metal_expr_mutate(destination_expr: *mut c_void, destination_type: *mut c_void, source_expr: *mut c_void, source_type: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
 
     fn metal_expr_new_struct(
         struct_kind: *mut c_void, result: *mut c_void,
-        args: *const *mut c_void, arg_count: usize,
+        args: *const *mut c_void, arg_count: usize, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_destroy(
         expr: *mut c_void, struct_kind: *mut c_void,
-        destination_locals: *const *mut c_void, local_count: usize,
+        destination_locals: *const *mut c_void, local_count: usize, loc: *mut c_void,
     ) -> *mut c_void;
-    fn metal_expr_copy_prim(inner: *mut c_void, source_type: *mut c_void, result: *mut c_void) -> *mut c_void;
+    fn metal_expr_copy_prim(inner: *mut c_void, source_type: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
 
     fn metal_expr_struct_to_interface_upcast(
-        inner_expr: *mut c_void, source_type: *mut c_void, target_interface: *mut c_void, impl_name: *mut c_void, result: *mut c_void,
+        inner_expr: *mut c_void, source_type: *mut c_void, target_interface: *mut c_void, impl_name: *mut c_void, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_interface_to_interface_upcast(
-        inner_expr: *mut c_void, target_interface: *mut c_void, result: *mut c_void,
+        inner_expr: *mut c_void, target_interface: *mut c_void, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_as_subtype(
         source_expr: *mut c_void, source_type: *mut c_void, target_type: *mut c_void,
         ok_constructor: *mut c_void, err_constructor: *mut c_void,
         impl_name: *mut c_void, ok_impl_name: *mut c_void, err_impl_name: *mut c_void,
-        result: *mut c_void,
+        result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
-    fn metal_expr_is_same_instance(left: *mut c_void, left_type: *mut c_void, right: *mut c_void, right_type: *mut c_void) -> *mut c_void;
+    fn metal_expr_is_same_instance(left: *mut c_void, left_type: *mut c_void, right: *mut c_void, right_type: *mut c_void, loc: *mut c_void) -> *mut c_void;
 
-    fn metal_expr_weak_alias(inner_expr: *mut c_void, source_type: *mut c_void, result: *mut c_void) -> *mut c_void;
+    fn metal_expr_weak_alias(inner_expr: *mut c_void, source_type: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
     fn metal_expr_lock_weak(
         inner_expr: *mut c_void, source_type: *mut c_void,
         some_constructor: *mut c_void, none_constructor: *mut c_void,
         some_impl_name: *mut c_void, none_impl_name: *mut c_void,
-        result: *mut c_void,
+        result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
 
     fn metal_expr_call(
-        callable: *mut c_void, args: *const *mut c_void, arg_count: usize, result: *mut c_void,
+        callable: *mut c_void, args: *const *mut c_void, arg_count: usize, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_extern_call(
-        prototype: *mut c_void, args: *const *mut c_void, arg_count: usize, result: *mut c_void,
+        prototype: *mut c_void, args: *const *mut c_void, arg_count: usize, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_interface_call(
         super_function_prototype: *mut c_void, virtual_param_index: i32, index_in_edge: i32,
-        args: *const *mut c_void, arg_count: usize, result: *mut c_void,
+        args: *const *mut c_void, arg_count: usize, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
 
     fn metal_expr_if(
         condition: *mut c_void, then_call: *mut c_void, else_call: *mut c_void,
-        then_result_type: *mut c_void, else_result_type: *mut c_void, result: *mut c_void,
+        then_result_type: *mut c_void, else_result_type: *mut c_void, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
-    fn metal_expr_while(block: *mut c_void, result: *mut c_void) -> *mut c_void;
+    fn metal_expr_while(block: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
 
     fn metal_expr_new_array_from_values(
-        elements: *const *mut c_void, element_count: usize, result: *mut c_void, array_type: *mut c_void,
+        elements: *const *mut c_void, element_count: usize, result: *mut c_void, array_type: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_new_mut_runtime_sized_array(
-        array_type: *mut c_void, capacity_expr: *mut c_void, result: *mut c_void,
+        array_type: *mut c_void, capacity_expr: *mut c_void, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_static_array_from_callable(
-        array_type: *mut c_void, generator: *mut c_void, generator_method: *mut c_void, result: *mut c_void,
+        array_type: *mut c_void, generator: *mut c_void, generator_method: *mut c_void, result: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
-    fn metal_expr_array_length(array_expr: *mut c_void, array_type: *mut c_void) -> *mut c_void;
-    fn metal_expr_array_capacity(array_expr: *mut c_void, array_type: *mut c_void) -> *mut c_void;
-    fn metal_expr_array_size(array: *mut c_void, result: *mut c_void) -> *mut c_void;
-    fn metal_expr_push_runtime_sized_array(array_expr: *mut c_void, array_type: *mut c_void, new_element_expr: *mut c_void, element_type: *mut c_void) -> *mut c_void;
-    fn metal_expr_pop_runtime_sized_array(array_expr: *mut c_void, array_type: *mut c_void, result: *mut c_void) -> *mut c_void;
+    fn metal_expr_array_length(array_expr: *mut c_void, array_type: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_array_capacity(array_expr: *mut c_void, array_type: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_array_size(array: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_push_runtime_sized_array(array_expr: *mut c_void, array_type: *mut c_void, new_element_expr: *mut c_void, element_type: *mut c_void, loc: *mut c_void) -> *mut c_void;
+    fn metal_expr_pop_runtime_sized_array(array_expr: *mut c_void, array_type: *mut c_void, result: *mut c_void, loc: *mut c_void) -> *mut c_void;
     fn metal_expr_destroy_static_sized_array_into_function(
-        array_expr: *mut c_void, array_type: *mut c_void, consumer: *mut c_void, consumer_method: *mut c_void,
+        array_expr: *mut c_void, array_type: *mut c_void, consumer: *mut c_void, consumer_method: *mut c_void, loc: *mut c_void,
     ) -> *mut c_void;
     fn metal_expr_destroy_static_sized_array_into_locals(
         expr: *mut c_void, static_sized_array: *mut c_void,
-        destination_locals: *const *mut c_void, local_count: usize,
+        destination_locals: *const *mut c_void, local_count: usize, loc: *mut c_void,
     ) -> *mut c_void;
-    fn metal_expr_destroy_mut_runtime_sized_array(array_expr: *mut c_void) -> *mut c_void;
+    fn metal_expr_destroy_mut_runtime_sized_array(array_expr: *mut c_void, loc: *mut c_void) -> *mut c_void;
 
     fn metal_package_builder_new(_: *mut MetalCacheHandleRaw, package_coord: *mut c_void) -> *mut c_void;
     fn metal_package_builder_add_interface(_: *mut c_void, name_ptr: *const c_char, name_len: usize, v: *mut c_void);
@@ -482,13 +501,13 @@ impl MetalCache {
         }
     }
 
-    pub fn get_local(&self, id: &str, name: &str, kind: Kind<'_>) -> Local<'_> {
+    pub fn get_local<'c>(&'c self, id: &str, name: &str, kind: Kind<'c>, loc: SourceLocation<'c>) -> Local<'c> {
         unsafe {
             Local(
                 NonNull::new(metal_cache_get_local(
                     self.raw,
                     id.as_ptr() as *const c_char, id.len(),
-                    name.as_ptr() as *const c_char, name.len(), kind.0.as_ptr(),
+                    name.as_ptr() as *const c_char, name.len(), kind.0.as_ptr(), loc_ptr(loc),
                 )).unwrap(),
                 PhantomData,
             )
@@ -569,10 +588,29 @@ impl MetalCache {
         }
     }
 
-    pub fn new_function<'c>(&'c self, prototype: Prototype<'c>, body: Option<Expression<'c>>) -> Function<'c> {
-        let body_ptr = body.map(|e| e.0.as_ptr()).unwrap_or(std::ptr::null_mut());
+    pub fn new_function<'c>(
+        &'c self, prototype: Prototype<'c>, body: Option<Expression<'c>>,
+        loc: SourceLocation<'c>,
+    ) -> Function<'c> {
+        let body_ptr = body.map(|e| e.0.as_ptr()).unwrap_or(null_mut());
         unsafe {
-            Function(NonNull::new(metal_function_new(prototype.0.as_ptr(), body_ptr)).unwrap(), PhantomData)
+            Function(NonNull::new(metal_function_new(
+                prototype.0.as_ptr(), body_ptr, loc_ptr(loc),
+            )).unwrap(), PhantomData)
+        }
+    }
+
+    /// Interns a DWARF source location. An empty `file` is the "no source info" marker (the C
+    /// side treats an empty file path as absent); the interner always returns a valid handle.
+    pub fn get_source_location(&self, file: &str, line: i32, col: i32) -> SourceLocation<'_> {
+        unsafe {
+            SourceLocation(
+                NonNull::new(metal_cache_get_source_location(
+                    self.raw,
+                    file.as_ptr() as *const c_char, file.len(), line, col,
+                )).unwrap(),
+                PhantomData,
+            )
         }
     }
 
@@ -603,197 +641,199 @@ impl MetalCache {
 
     // --- Expression constructors (onion) ---
 
-    pub fn expr_constant_void(&self) -> Expression<'_> {
-        unsafe { Expression(NonNull::new(metal_expr_constant_void()).unwrap(), PhantomData) }
+    pub fn expr_constant_void<'c>(&'c self, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_constant_void(loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_constant_int(&self, value: i64, bits: i32) -> Expression<'_> {
-        unsafe { Expression(NonNull::new(metal_expr_constant_int(value, bits)).unwrap(), PhantomData) }
+    pub fn expr_constant_int<'c>(&'c self, value: i64, bits: i32, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_constant_int(value, bits, loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_constant_bool(&self, value: bool) -> Expression<'_> {
-        unsafe { Expression(NonNull::new(metal_expr_constant_bool(value as i32)).unwrap(), PhantomData) }
+    pub fn expr_constant_bool<'c>(&'c self, value: bool, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_constant_bool(value as i32, loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_constant_f64(&self, value: f64) -> Expression<'_> {
-        unsafe { Expression(NonNull::new(metal_expr_constant_f64(value)).unwrap(), PhantomData) }
+    pub fn expr_constant_f64<'c>(&'c self, value: f64, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_constant_f64(value, loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_constant_str<'c>(&'c self, value: &str, result: Kind<'c>) -> Expression<'c> {
+    pub fn expr_constant_str<'c>(&'c self, value: &str, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
         unsafe {
             Expression(
-                NonNull::new(metal_expr_constant_str(value.as_ptr() as *const c_char, value.len(), result.0.as_ptr())).unwrap(),
+                NonNull::new(metal_expr_constant_str(value.as_ptr() as *const c_char, value.len(), result.0.as_ptr(), loc_ptr(loc))).unwrap(),
                 PhantomData,
             )
         }
     }
-    pub fn expr_break(&self) -> Expression<'_> {
-        unsafe { Expression(NonNull::new(metal_expr_break()).unwrap(), PhantomData) }
+    pub fn expr_break<'c>(&'c self, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_break(loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_return<'c>(&'c self, source_expr: Expression<'c>, source_type: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_return(source_expr.0.as_ptr(), source_type.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_return<'c>(&'c self, source_expr: Expression<'c>, source_type: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_return(source_expr.0.as_ptr(), source_type.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_discard<'c>(&'c self, expr: Expression<'c>, source_type: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_discard(expr.0.as_ptr(), source_type.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_discard<'c>(&'c self, expr: Expression<'c>, source_type: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_discard(expr.0.as_ptr(), source_type.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_block<'c>(&'c self, inner: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_block(inner.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_block<'c>(&'c self, inner: Expression<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_block(inner.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_consecutor<'c>(&'c self, exprs: &[Expression<'c>], result: Kind<'c>) -> Expression<'c> {
+    pub fn expr_consecutor<'c>(&'c self, exprs: &[Expression<'c>], result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
         let ptrs = ptrs!(exprs);
-        unsafe { Expression(NonNull::new(metal_expr_consecutor(ptrs.as_ptr(), ptrs.len(), result.0.as_ptr())).unwrap(), PhantomData) }
+        unsafe { Expression(NonNull::new(metal_expr_consecutor(ptrs.as_ptr(), ptrs.len(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
 
-    pub fn expr_argument<'c>(&'c self, param_index: i32, tyype: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_argument(param_index, tyype.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_argument<'c>(&'c self, param_index: i32, tyype: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_argument(param_index, tyype.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_stackify<'c>(&'c self, variable: Local<'c>, expr: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_stackify(variable.0.as_ptr(), expr.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_stackify<'c>(&'c self, variable: Local<'c>, expr: Expression<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_stackify(variable.0.as_ptr(), expr.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_let_and_lend<'c>(&'c self, variable: Local<'c>, expr: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_let_and_lend(variable.0.as_ptr(), expr.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_let_and_lend<'c>(&'c self, variable: Local<'c>, expr: Expression<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_let_and_lend(variable.0.as_ptr(), expr.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_restackify<'c>(&'c self, variable: Local<'c>, source_expr: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_restackify(variable.0.as_ptr(), source_expr.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_restackify<'c>(&'c self, variable: Local<'c>, source_expr: Expression<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_restackify(variable.0.as_ptr(), source_expr.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_unstackify<'c>(&'c self, variable: Local<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_unstackify(variable.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_unstackify<'c>(&'c self, variable: Local<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_unstackify(variable.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_local_lookup<'c>(&'c self, local_variable: Local<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_local_lookup(local_variable.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_local_lookup<'c>(&'c self, local_variable: Local<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_local_lookup(local_variable.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
 
-    pub fn expr_deref<'c>(&'c self, inner: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_deref(inner.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_deref<'c>(&'c self, inner: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_deref(inner.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_member_lookup<'c>(&'c self, struct_expr: Expression<'c>, struct_type: Kind<'c>, member_index: i32, member_name: &str, member_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
+    pub fn expr_member_lookup<'c>(&'c self, struct_expr: Expression<'c>, struct_type: Kind<'c>, member_index: i32, member_name: &str, member_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
         unsafe {
             Expression(
                 NonNull::new(metal_expr_member_lookup(
-                    struct_expr.0.as_ptr(), struct_type.0.as_ptr(), member_index, member_name.as_ptr() as *const c_char, member_name.len(), member_type.0.as_ptr(), result.0.as_ptr(),
+                    struct_expr.0.as_ptr(), struct_type.0.as_ptr(), member_index, member_name.as_ptr() as *const c_char, member_name.len(), member_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc),
                 )).unwrap(),
                 PhantomData,
             )
         }
     }
-    pub fn expr_static_sized_array_lookup<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, index_expr: Expression<'c>, index_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_static_sized_array_lookup(array_expr.0.as_ptr(), array_type.0.as_ptr(), index_expr.0.as_ptr(), index_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_static_sized_array_lookup<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, index_expr: Expression<'c>, index_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_static_sized_array_lookup(array_expr.0.as_ptr(), array_type.0.as_ptr(), index_expr.0.as_ptr(), index_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_runtime_sized_array_lookup<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, index_expr: Expression<'c>, index_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_runtime_sized_array_lookup(array_expr.0.as_ptr(), array_type.0.as_ptr(), index_expr.0.as_ptr(), index_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
-    }
-
-    pub fn expr_mutate<'c>(&'c self, destination_expr: Expression<'c>, destination_type: Kind<'c>, source_expr: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_mutate(destination_expr.0.as_ptr(), destination_type.0.as_ptr(), source_expr.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_runtime_sized_array_lookup<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, index_expr: Expression<'c>, index_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_runtime_sized_array_lookup(array_expr.0.as_ptr(), array_type.0.as_ptr(), index_expr.0.as_ptr(), index_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
 
-    pub fn expr_new_struct<'c>(&'c self, struct_kind: Kind<'c>, result: Kind<'c>, args: &[Expression<'c>]) -> Expression<'c> {
+    pub fn expr_mutate<'c>(&'c self, destination_expr: Expression<'c>, destination_type: Kind<'c>, source_expr: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_mutate(destination_expr.0.as_ptr(), destination_type.0.as_ptr(), source_expr.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
+    }
+
+    pub fn expr_new_struct<'c>(&'c self, struct_kind: Kind<'c>, result: Kind<'c>, args: &[Expression<'c>], loc: SourceLocation<'c>) -> Expression<'c> {
         let ptrs = ptrs!(args);
-        unsafe { Expression(NonNull::new(metal_expr_new_struct(struct_kind.0.as_ptr(), result.0.as_ptr(), ptrs.as_ptr(), ptrs.len())).unwrap(), PhantomData) }
+        unsafe { Expression(NonNull::new(metal_expr_new_struct(struct_kind.0.as_ptr(), result.0.as_ptr(), ptrs.as_ptr(), ptrs.len(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_destroy<'c>(&'c self, expr: Expression<'c>, struct_kind: Kind<'c>, destination_locals: &[Local<'c>]) -> Expression<'c> {
+    pub fn expr_destroy<'c>(&'c self, expr: Expression<'c>, struct_kind: Kind<'c>, destination_locals: &[Local<'c>], loc: SourceLocation<'c>) -> Expression<'c> {
         let ptrs = ptrs!(destination_locals);
-        unsafe { Expression(NonNull::new(metal_expr_destroy(expr.0.as_ptr(), struct_kind.0.as_ptr(), ptrs.as_ptr(), ptrs.len())).unwrap(), PhantomData) }
+        unsafe { Expression(NonNull::new(metal_expr_destroy(expr.0.as_ptr(), struct_kind.0.as_ptr(), ptrs.as_ptr(), ptrs.len(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_copy_prim<'c>(&'c self, inner: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_copy_prim(inner.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_copy_prim<'c>(&'c self, inner: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_copy_prim(inner.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
 
-    pub fn expr_struct_to_interface_upcast<'c>(&'c self, inner_expr: Expression<'c>, source_type: Kind<'c>, target_interface: Kind<'c>, impl_name: Name<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_struct_to_interface_upcast(inner_expr.0.as_ptr(), source_type.0.as_ptr(), target_interface.0.as_ptr(), impl_name.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_struct_to_interface_upcast<'c>(&'c self, inner_expr: Expression<'c>, source_type: Kind<'c>, target_interface: Kind<'c>, impl_name: Name<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_struct_to_interface_upcast(inner_expr.0.as_ptr(), source_type.0.as_ptr(), target_interface.0.as_ptr(), impl_name.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_interface_to_interface_upcast<'c>(&'c self, inner_expr: Expression<'c>, target_interface: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_interface_to_interface_upcast(inner_expr.0.as_ptr(), target_interface.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_interface_to_interface_upcast<'c>(&'c self, inner_expr: Expression<'c>, target_interface: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_interface_to_interface_upcast(inner_expr.0.as_ptr(), target_interface.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
     pub fn expr_as_subtype<'c>(
         &'c self, source_expr: Expression<'c>, source_type: Kind<'c>, target_type: Kind<'c>,
         ok_constructor: Prototype<'c>, err_constructor: Prototype<'c>,
         impl_name: Name<'c>, ok_impl_name: Name<'c>, err_impl_name: Name<'c>, result: Kind<'c>,
+        loc: SourceLocation<'c>,
     ) -> Expression<'c> {
         unsafe {
             Expression(
                 NonNull::new(metal_expr_as_subtype(
                     source_expr.0.as_ptr(), source_type.0.as_ptr(), target_type.0.as_ptr(),
                     ok_constructor.0.as_ptr(), err_constructor.0.as_ptr(),
-                    impl_name.0.as_ptr(), ok_impl_name.0.as_ptr(), err_impl_name.0.as_ptr(), result.0.as_ptr(),
+                    impl_name.0.as_ptr(), ok_impl_name.0.as_ptr(), err_impl_name.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc),
                 )).unwrap(),
                 PhantomData,
             )
         }
     }
-    pub fn expr_is_same_instance<'c>(&'c self, left: Expression<'c>, left_type: Kind<'c>, right: Expression<'c>, right_type: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_is_same_instance(left.0.as_ptr(), left_type.0.as_ptr(), right.0.as_ptr(), right_type.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_is_same_instance<'c>(&'c self, left: Expression<'c>, left_type: Kind<'c>, right: Expression<'c>, right_type: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_is_same_instance(left.0.as_ptr(), left_type.0.as_ptr(), right.0.as_ptr(), right_type.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
 
-    pub fn expr_weak_alias<'c>(&'c self, inner_expr: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_weak_alias(inner_expr.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_weak_alias<'c>(&'c self, inner_expr: Expression<'c>, source_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_weak_alias(inner_expr.0.as_ptr(), source_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
     pub fn expr_lock_weak<'c>(
         &'c self, inner_expr: Expression<'c>, source_type: Kind<'c>,
         some_constructor: Prototype<'c>, none_constructor: Prototype<'c>,
         some_impl_name: Name<'c>, none_impl_name: Name<'c>, result: Kind<'c>,
+        loc: SourceLocation<'c>,
     ) -> Expression<'c> {
         unsafe {
             Expression(
                 NonNull::new(metal_expr_lock_weak(
                     inner_expr.0.as_ptr(), source_type.0.as_ptr(), some_constructor.0.as_ptr(), none_constructor.0.as_ptr(),
-                    some_impl_name.0.as_ptr(), none_impl_name.0.as_ptr(), result.0.as_ptr(),
+                    some_impl_name.0.as_ptr(), none_impl_name.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc),
                 )).unwrap(),
                 PhantomData,
             )
         }
     }
 
-    pub fn expr_call<'c>(&'c self, callable: Prototype<'c>, args: &[Expression<'c>], result: Kind<'c>) -> Expression<'c> {
+    pub fn expr_call<'c>(&'c self, callable: Prototype<'c>, args: &[Expression<'c>], result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
         let ptrs = ptrs!(args);
-        unsafe { Expression(NonNull::new(metal_expr_call(callable.0.as_ptr(), ptrs.as_ptr(), ptrs.len(), result.0.as_ptr())).unwrap(), PhantomData) }
+        unsafe { Expression(NonNull::new(metal_expr_call(callable.0.as_ptr(), ptrs.as_ptr(), ptrs.len(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_extern_call<'c>(&'c self, prototype: Prototype<'c>, args: &[Expression<'c>], result: Kind<'c>) -> Expression<'c> {
+    pub fn expr_extern_call<'c>(&'c self, prototype: Prototype<'c>, args: &[Expression<'c>], result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
         let ptrs = ptrs!(args);
-        unsafe { Expression(NonNull::new(metal_expr_extern_call(prototype.0.as_ptr(), ptrs.as_ptr(), ptrs.len(), result.0.as_ptr())).unwrap(), PhantomData) }
+        unsafe { Expression(NonNull::new(metal_expr_extern_call(prototype.0.as_ptr(), ptrs.as_ptr(), ptrs.len(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_interface_call<'c>(&'c self, super_function_prototype: Prototype<'c>, virtual_param_index: i32, index_in_edge: i32, args: &[Expression<'c>], result: Kind<'c>) -> Expression<'c> {
+    pub fn expr_interface_call<'c>(&'c self, super_function_prototype: Prototype<'c>, virtual_param_index: i32, index_in_edge: i32, args: &[Expression<'c>], result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
         let ptrs = ptrs!(args);
-        unsafe { Expression(NonNull::new(metal_expr_interface_call(super_function_prototype.0.as_ptr(), virtual_param_index, index_in_edge, ptrs.as_ptr(), ptrs.len(), result.0.as_ptr())).unwrap(), PhantomData) }
+        unsafe { Expression(NonNull::new(metal_expr_interface_call(super_function_prototype.0.as_ptr(), virtual_param_index, index_in_edge, ptrs.as_ptr(), ptrs.len(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
 
-    pub fn expr_if<'c>(&'c self, condition: Expression<'c>, then_call: Expression<'c>, else_call: Expression<'c>, then_result_type: Kind<'c>, else_result_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_if(condition.0.as_ptr(), then_call.0.as_ptr(), else_call.0.as_ptr(), then_result_type.0.as_ptr(), else_result_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_if<'c>(&'c self, condition: Expression<'c>, then_call: Expression<'c>, else_call: Expression<'c>, then_result_type: Kind<'c>, else_result_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_if(condition.0.as_ptr(), then_call.0.as_ptr(), else_call.0.as_ptr(), then_result_type.0.as_ptr(), else_result_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_while<'c>(&'c self, block: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_while(block.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_while<'c>(&'c self, block: Expression<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_while(block.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
 
-    pub fn expr_new_array_from_values<'c>(&'c self, elements: &[Expression<'c>], result: Kind<'c>, array_type: Kind<'c>) -> Expression<'c> {
+    pub fn expr_new_array_from_values<'c>(&'c self, elements: &[Expression<'c>], result: Kind<'c>, array_type: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
         let ptrs = ptrs!(elements);
-        unsafe { Expression(NonNull::new(metal_expr_new_array_from_values(ptrs.as_ptr(), ptrs.len(), result.0.as_ptr(), array_type.0.as_ptr())).unwrap(), PhantomData) }
+        unsafe { Expression(NonNull::new(metal_expr_new_array_from_values(ptrs.as_ptr(), ptrs.len(), result.0.as_ptr(), array_type.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_new_mut_runtime_sized_array<'c>(&'c self, array_type: Kind<'c>, capacity_expr: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_new_mut_runtime_sized_array(array_type.0.as_ptr(), capacity_expr.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_new_mut_runtime_sized_array<'c>(&'c self, array_type: Kind<'c>, capacity_expr: Expression<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_new_mut_runtime_sized_array(array_type.0.as_ptr(), capacity_expr.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_static_array_from_callable<'c>(&'c self, array_type: Kind<'c>, generator: Expression<'c>, generator_method: Prototype<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_static_array_from_callable(array_type.0.as_ptr(), generator.0.as_ptr(), generator_method.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_static_array_from_callable<'c>(&'c self, array_type: Kind<'c>, generator: Expression<'c>, generator_method: Prototype<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_static_array_from_callable(array_type.0.as_ptr(), generator.0.as_ptr(), generator_method.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_array_length<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_array_length(array_expr.0.as_ptr(), array_type.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_array_length<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_array_length(array_expr.0.as_ptr(), array_type.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_array_capacity<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_array_capacity(array_expr.0.as_ptr(), array_type.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_array_capacity<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_array_capacity(array_expr.0.as_ptr(), array_type.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_array_size<'c>(&'c self, array: Expression<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_array_size(array.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_array_size<'c>(&'c self, array: Expression<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_array_size(array.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_push_runtime_sized_array<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, new_element_expr: Expression<'c>, element_type: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_push_runtime_sized_array(array_expr.0.as_ptr(), array_type.0.as_ptr(), new_element_expr.0.as_ptr(), element_type.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_push_runtime_sized_array<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, new_element_expr: Expression<'c>, element_type: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_push_runtime_sized_array(array_expr.0.as_ptr(), array_type.0.as_ptr(), new_element_expr.0.as_ptr(), element_type.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_pop_runtime_sized_array<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, result: Kind<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_pop_runtime_sized_array(array_expr.0.as_ptr(), array_type.0.as_ptr(), result.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_pop_runtime_sized_array<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, result: Kind<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_pop_runtime_sized_array(array_expr.0.as_ptr(), array_type.0.as_ptr(), result.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_destroy_static_sized_array_into_function<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, consumer: Expression<'c>, consumer_method: Prototype<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_destroy_static_sized_array_into_function(array_expr.0.as_ptr(), array_type.0.as_ptr(), consumer.0.as_ptr(), consumer_method.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_destroy_static_sized_array_into_function<'c>(&'c self, array_expr: Expression<'c>, array_type: Kind<'c>, consumer: Expression<'c>, consumer_method: Prototype<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_destroy_static_sized_array_into_function(array_expr.0.as_ptr(), array_type.0.as_ptr(), consumer.0.as_ptr(), consumer_method.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_destroy_static_sized_array_into_locals<'c>(&'c self, expr: Expression<'c>, static_sized_array: Kind<'c>, destination_locals: &[Local<'c>]) -> Expression<'c> {
+    pub fn expr_destroy_static_sized_array_into_locals<'c>(&'c self, expr: Expression<'c>, static_sized_array: Kind<'c>, destination_locals: &[Local<'c>], loc: SourceLocation<'c>) -> Expression<'c> {
         let ptrs = ptrs!(destination_locals);
-        unsafe { Expression(NonNull::new(metal_expr_destroy_static_sized_array_into_locals(expr.0.as_ptr(), static_sized_array.0.as_ptr(), ptrs.as_ptr(), ptrs.len())).unwrap(), PhantomData) }
+        unsafe { Expression(NonNull::new(metal_expr_destroy_static_sized_array_into_locals(expr.0.as_ptr(), static_sized_array.0.as_ptr(), ptrs.as_ptr(), ptrs.len(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
-    pub fn expr_destroy_mut_runtime_sized_array<'c>(&'c self, array_expr: Expression<'c>) -> Expression<'c> {
-        unsafe { Expression(NonNull::new(metal_expr_destroy_mut_runtime_sized_array(array_expr.0.as_ptr())).unwrap(), PhantomData) }
+    pub fn expr_destroy_mut_runtime_sized_array<'c>(&'c self, array_expr: Expression<'c>, loc: SourceLocation<'c>) -> Expression<'c> {
+        unsafe { Expression(NonNull::new(metal_expr_destroy_mut_runtime_sized_array(array_expr.0.as_ptr(), loc_ptr(loc))).unwrap(), PhantomData) }
     }
 
     // --- Builders ---
@@ -1035,10 +1075,11 @@ mod tests {
         let main_name = cache.get_name(coord, "main");
         let proto = cache.get_prototype(main_name, cache.i32(), &[]);
 
-        let seven = cache.expr_constant_int(7, 32);
-        let ret = cache.expr_return(seven, cache.i32());
-        let body = cache.expr_block(ret, cache.i32());
-        let func = cache.new_function(proto, Some(body));
+        let no_loc = cache.get_source_location("", 0, 0);
+        let seven = cache.expr_constant_int(7, 32, no_loc);
+        let ret = cache.expr_return(seven, cache.i32(), no_loc);
+        let body = cache.expr_block(ret, cache.i32(), no_loc);
+        let func = cache.new_function(proto, Some(body), no_loc);
 
         let pb = cache.new_package_builder(coord);
         pb.add_function("main", func);
@@ -1056,7 +1097,7 @@ mod tests {
         let coord = cache.get_package_coordinate("test", &[]);
         let main_name = cache.get_name(coord, "main");
         let proto = cache.get_prototype(main_name, cache.i32(), &[]);
-        let func = cache.new_function(proto, None);
+        let func = cache.new_function(proto, None, cache.get_source_location("", 0, 0));
 
         let pb = cache.new_package_builder(coord);
         pb.add_function("main", func);

@@ -4,20 +4,30 @@ use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::code_hierarchy::{FileCoordinate, FileCoordinateMap};
 use crate::utils::range::{CodeLocationS, RangeS};
 
-pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> String {
-  let mut line = 0;
-  let mut line_begin = 0;
+// Compute the 1-based (line, column) of byte offset `pos` within `source`. `pos` is clamped to
+// the source length (a negative `pos` clamps to the end, preserving the historical behavior of
+// the callers that pass raw offsets). Newlines advance the line; the column counts bytes since
+// the last line start. This is the single line/column primitive — resolve_line_col and
+// humanize_pos_path both route through it.
+pub fn line_col_in(source: &str, pos: i32) -> (u32, u32) {
+  let end = (pos as usize).min(source.len());
+  let bytes = source.as_bytes();
+  let mut line: u32 = 0;
+  let mut line_begin: usize = 0;
   let mut i = 0;
-
-  while i < pos as usize && i < source.len() {
-    if source.chars().nth(i) == Some('\n') {
+  while i < end {
+    if bytes[i] == b'\n' {
       line_begin = i + 1;
       line += 1;
     }
     i += 1;
   }
+  (line + 1, (end - line_begin) as u32 + 1)
+}
 
-  format!("{}:{}:{}", humanized_file_path, line + 1, i - line_begin + 1)
+pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> String {
+  let (line, col) = line_col_in(source, pos);
+  format!("{}:{}:{}", humanized_file_path, line, col)
 }
 
 pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String {
@@ -48,6 +58,22 @@ pub fn humanize_pos_code_map<'a, 'b>(
 
 pub fn humanize_pos(file_path: &Path, source: &str, pos: i32) -> String {
   humanize_pos_path(&file_path.display().to_string(), source, pos)
+}
+
+// Resolve (line, col) for a CodeLocationS against its code map.
+// Returns 1-based line + column. For internal/synthetic locations
+// (offset < 0 or file not present in the map), returns (1, 1).
+pub fn resolve_line_col<'a, 'b>(
+  code_map: &FileCoordinateMap<'a, String>,
+  code_location_s: &CodeLocationS<'b>,
+) -> (u32, u32) {
+  if code_location_s.offset < 0 {
+    return (1, 1);
+  }
+  match code_map.get_by_value(code_location_s.file) {
+    Some(source) => line_col_in(source, code_location_s.offset),
+    None => (1, 1),
+  }
 }
 
 fn next_thing_and_rest_of_line_code_map<'a>(

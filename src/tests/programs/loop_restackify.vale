@@ -10,6 +10,7 @@ exported func main() int {
   i = 0;
   // TSUGAR:   while i < 3 {
   while __copy_prim(&i) < 3 {
+    0; // lldb breakpoint: loop-restackify-iter
     set ship = foo(^ship);
     // TSUGAR:     set i = i + 1;
     set i = __copy_prim(&i) + 1;

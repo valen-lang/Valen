@@ -1,5 +1,7 @@
 
 exported func main() int {
+  0; // lldb breakpoint: panic-site
   __vbi_panic();
+  0; // lldb breakpoint: panic-after
   return 73;
 }

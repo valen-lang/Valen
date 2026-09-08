@@ -30,6 +30,7 @@ LLVMValueRef makeBackendLocal(
     const std::string& name,
     LLVMValueRef valueToStore);
 
+// Stackifies a local, registers it, and emits its DILocalVariable (debug info).
 void makeHammerLocal(
     GlobalState* globalState,
     FunctionState* functionState,

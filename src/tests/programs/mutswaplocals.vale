@@ -1,11 +1,12 @@
-struct Ship { }
+struct Ship { fuel int; }
 
 exported func main() int {
-  a = Ship();
-  b = Ship();
-
-  Ship[ ] = (set b = (set a = (set b = Ship())));
-  Ship[ ] = ^a;
-  Ship[ ] = ^b;
+  a = Ship(1);
+  b = Ship(2);
+  0; // lldb breakpoint: mutswaplocals-before
+  [swapped] = (set b = (set a = (set b = Ship(3))));
+  0; // lldb breakpoint: mutswaplocals-after
+  [fa] = ^a;
+  [fb] = ^b;
   return 42;
 }

@@ -34,6 +34,10 @@ struct ValeOptions {
     bool includeBoundsChecks = true;
     bool useAtomicRc = false;
     bool printMemOverhead = false;
+    // DWARF debug-info emission (valec --debug / -g). When true, createModule
+    // spins up a DIBuilder and functions get DISubprograms + per-statement
+    // DILocations.
+    bool debug = false;
 };
 
 // Copy fields out of the FFI POD into a ValeOptions. Returns 1 on success,

@@ -9,6 +9,12 @@
 #include "boundary.h"
 #include <region/common/migration.h>
 #include <utils/counters.h>
+#include <llvm-c/DebugInfo.h>
+#include <llvm-c/Target.h>
+#include "metal/instructions.h"
+#include "metal/types.h"
+#include "metal/ast.h"
+#include "debugging.h"
 
 ValeFuncPtrLE declareFunction(
     GlobalState* globalState,
@@ -47,6 +53,8 @@ ValeFuncPtrLE declareFunction(
       LLVMAddAttributeAtIndex(valeFunctionL.inner.ptrLE, (unsigned)(i + 1), noaliasAttr);
     }
   }
+
+  attachDISubprogram(globalState, valeFunctionL.inner.ptrLE, valeFunctionNameL, functionM);
 
   assert(globalState->functions.count(functionM->prototype->name->name) == 0);
   globalState->functions.emplace(functionM->prototype->name->name, valeFunctionL);

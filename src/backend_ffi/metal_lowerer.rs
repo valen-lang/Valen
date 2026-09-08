@@ -14,9 +14,10 @@ use std::collections::HashMap;
 
 use crate::backend_ffi::metal_cache::{
     CoercionFFI, Edge, Expression, Function, InterfaceDef, InterfaceMethod, Kind, Local, MetalCache,
-    Mutability, Name, PackageCoord, Program, Prototype, StructDef, StructMember, Weakability,
+    Mutability, Name, PackageCoord, Program, Prototype, SourceLocation, StructDef, StructMember,
+    Weakability,
 };
-use crate::instantiating::ast::ast::{FunctionDefinitionI, PrototypeI};
+use crate::instantiating::ast::ast::{FunctionDefinitionI, LocalVariableI, PrototypeI};
 use crate::instantiating::ast::citizens::{InterfaceDefinitionI, StructDefinitionI};
 use crate::instantiating::ast::expressions::ExpressionIE;
 use crate::instantiating::ast::hinputs::HinputsI;
@@ -25,8 +26,9 @@ use crate::instantiating::ast::types::{
     BorrowRefIT, InterfaceIT, KindIT, SharednessI, StaticSizedArrayIT, StructIT,
 };
 use crate::instantiating::instantiated_humanizer::humanize_id;
-use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::utils::range::CodeLocationS;
+use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate};
+use crate::utils::range::{CodeLocationS, RangeS};
+use crate::utils::source_code_utils;
 
 /// One imported extern struct's layout, keyed in the map (see `populate_metal_cache`) by the
 /// struct's humanized name. General source-agnostic metadata: the interop provider fills it from
@@ -76,13 +78,14 @@ pub struct ExternAbi {
 pub fn populate_metal_cache<'cache, 's, 'i>(
     cache: &'cache MetalCache,
     monouts: &HinputsI<'s, 'i>,
+    code_map: &FileCoordinateMap<'s, String>,
     struct_layouts: &HashMap<String, StructLayout>,
     extern_abis: &HashMap<String, ExternAbi>,
 ) -> Program<'cache>
 where
     's: 'i,
 {
-    let lowerer = Lowerer { cache };
+    let lowerer = Lowerer { cache, code_map };
 
     // HinputsI is flat; group defs by their id's package coordinate (first-seen order).
     let mut package_coords: Vec<&'s PackageCoordinate<'s>> = Vec::new();
@@ -117,15 +120,31 @@ where
     pb.finish()
 }
 
-struct Lowerer<'cache> {
+struct Lowerer<'cache, 'cm, 'sm> {
     cache: &'cache MetalCache,
+    // Consulted to resolve source ranges (byte offsets) into (file, line, col) for DWARF.
+    // 'cm/'sm are independent of the per-method source lifetime 's; resolve_line_col accepts
+    // the map and the location under independent lifetimes.
+    code_map: &'cm FileCoordinateMap<'sm, String>,
 }
 
 fn code_map<'s>(loc: CodeLocationS<'s>) -> String {
     format!("{:?}", loc)
 }
 
-impl<'cache> Lowerer<'cache> {
+impl<'cache, 'cm, 'sm> Lowerer<'cache, 'cm, 'sm> {
+    // Resolve an expression's RangeS into an interned SourceLocation handle for DWARF. Every
+    // ExpressionIE carries a range (populated by the instantiator from the TE node); a synthetic
+    // range (offset < 0) interns the empty "no source info" location. Backend discards it for now.
+    fn loc_of<'s>(&self, range: &RangeS<'s>) -> SourceLocation<'cache> {
+        if range.begin.offset < 0 {
+            return self.cache.get_source_location("", 0, 0);
+        }
+        let path = range.begin.file.filepath.0;
+        let (line, col) = source_code_utils::resolve_line_col(self.code_map, &range.begin);
+        self.cache.get_source_location(path, line as i32, col as i32)
+    }
+
     fn lower_package_coord<'s>(&self, pc: &PackageCoordinate<'s>) -> PackageCoord<'cache> {
         // Empty module -> "__vale" (Backend's userFuncName convention).
         let project = if pc.module.0.is_empty() { "__vale" } else { pc.module.0 };
@@ -185,10 +204,14 @@ impl<'cache> Lowerer<'cache> {
     /// `LocalVariableI` per mention, so we don't dedup here — the `id` (the structurally-unique
     /// `IVarNameI`) is the identity, and the backend `BlockState` keys on it. `name` is the
     /// display/LLVM name only.
-    fn lower_local<'s, 'i>(&self, var: &crate::instantiating::ast::ast::LocalVariableI<'s, 'i>) -> Local<'cache> {
+    fn lower_local<'s, 'i>(
+        &self,
+        var: &LocalVariableI<'s, 'i>,
+        loc: SourceLocation<'cache>,
+    ) -> Local<'cache> {
         let id = format!("{:?}", var.name);
         let name_str = humanize_var_name(var.name);
-        self.cache.get_local(&id, &name_str, self.lower_kind(var.tyype))
+        self.cache.get_local(&id, &name_str, self.lower_kind(var.tyype), loc)
     }
 
     fn lower_package<'s, 'i>(
@@ -317,7 +340,12 @@ impl<'cache> Lowerer<'cache> {
     fn lower_function<'s, 'i>(&self, f: &FunctionDefinitionI<'s, 'i>) -> Function<'cache> {
         let proto = self.lower_prototype(&f.header.to_prototype());
         let body = self.lower_expression(&f.body);
-        self.cache.new_function(proto, Some(body))
+        // FunctionHeaderI carries no source range yet, so anchor the function's DWARF
+        // location (DISubprogram file + decl line) to its body's range: same source file,
+        // and a start line that coincides with the declaration line for the single-line-body
+        // functions M1 targets. A real header range would let us point at the `func` keyword.
+        let loc = self.loc_of(&f.body.range());
+        self.cache.new_function(proto, Some(body), loc)
     }
 
     fn lower_struct_def<'s, 'i>(&self, s: &StructDefinitionI<'s, 'i>) -> StructDef<'cache> {
@@ -388,42 +416,46 @@ impl<'cache> Lowerer<'cache> {
 
     fn lower_expression<'s, 'i>(&self, expr: &ExpressionIE<'s, 'i>) -> Expression<'cache> {
         let c = self.cache;
+        // Every ExpressionIE carries a source range (the instantiator copies it from the TE node),
+        // so resolve one DWARF loc for this node and pass it to the builder. Backend discards the
+        // loc for now (DWARF emission is a later step); this keeps the plumbing exercised end-to-end.
+        let loc = self.loc_of(&expr.range());
         match expr {
-            ExpressionIE::ConstantInt(x) => c.expr_constant_int(x.value, x.bits),
-            ExpressionIE::ConstantBool(x) => c.expr_constant_bool(x.value),
-            ExpressionIE::ConstantFloat(x) => c.expr_constant_f64(x.value),
-            ExpressionIE::ConstantStr(x) => c.expr_constant_str(x.value, self.lower_kind(x.result)),
-            ExpressionIE::VoidLiteral(_) => c.expr_constant_void(),
-            ExpressionIE::Break(_) => c.expr_break(),
+            ExpressionIE::ConstantInt(x) => c.expr_constant_int(x.value, x.bits, loc),
+            ExpressionIE::ConstantBool(x) => c.expr_constant_bool(x.value, loc),
+            ExpressionIE::ConstantFloat(x) => c.expr_constant_f64(x.value, loc),
+            ExpressionIE::ConstantStr(x) => c.expr_constant_str(x.value, self.lower_kind(x.result), loc),
+            ExpressionIE::VoidLiteral(_) => c.expr_constant_void(loc),
+            ExpressionIE::Break(_) => c.expr_break(loc),
 
-            ExpressionIE::Return(x) => c.expr_return(self.lower_expression(&x.source_expr), self.lower_kind(x.source_type)),
-            ExpressionIE::Discard(x) => c.expr_discard(self.lower_expression(&x.expr), self.lower_kind(x.source_type)),
-            ExpressionIE::Block(x) => c.expr_block(self.lower_expression(&x.inner), self.lower_kind(x.result)),
-            ExpressionIE::Consecutor(x) => c.expr_consecutor(&self.lower_exprs(x.exprs), self.lower_kind(x.result)),
+            ExpressionIE::Return(x) => c.expr_return(self.lower_expression(&x.source_expr), self.lower_kind(x.source_type), loc),
+            ExpressionIE::Discard(x) => c.expr_discard(self.lower_expression(&x.expr), self.lower_kind(x.source_type), loc),
+            ExpressionIE::Block(x) => c.expr_block(self.lower_expression(&x.inner), self.lower_kind(x.result), loc),
+            ExpressionIE::Consecutor(x) => c.expr_consecutor(&self.lower_exprs(x.exprs), self.lower_kind(x.result), loc),
 
-            ExpressionIE::ArgLookup(x) => c.expr_argument(x.param_index, self.lower_kind(x.tyype)),
+            ExpressionIE::ArgLookup(x) => c.expr_argument(x.param_index, self.lower_kind(x.tyype), loc),
             ExpressionIE::LetNormal(x) => {
-                let local = self.lower_local(x.variable);
-                c.expr_stackify(local, self.lower_expression(&x.expr), self.lower_kind(x.result))
+                let local = self.lower_local(x.variable, loc);
+                c.expr_stackify(local, self.lower_expression(&x.expr), self.lower_kind(x.result), loc)
             }
             ExpressionIE::LetAndLend(x) => {
-                let local = self.lower_local(x.variable);
-                c.expr_let_and_lend(local, self.lower_expression(&x.expr), self.lower_kind(x.result))
+                let local = self.lower_local(x.variable, loc);
+                c.expr_let_and_lend(local, self.lower_expression(&x.expr), self.lower_kind(x.result), loc)
             }
             ExpressionIE::Restackify(x) => {
-                let local = self.lower_local(x.variable);
-                c.expr_restackify(local, self.lower_expression(&x.source_expr), self.lower_kind(x.result))
+                let local = self.lower_local(x.variable, loc);
+                c.expr_restackify(local, self.lower_expression(&x.source_expr), self.lower_kind(x.result), loc)
             }
             ExpressionIE::Unlet(x) => {
-                let local = self.lower_local(x.variable);
-                c.expr_unstackify(local, self.lower_kind(x.result))
+                let local = self.lower_local(x.variable, loc);
+                c.expr_unstackify(local, self.lower_kind(x.result), loc)
             }
             ExpressionIE::LocalLookup(x) => {
-                let local = self.lower_local(x.local_variable);
-                c.expr_local_lookup(local, self.lower_borrow(x.result))
+                let local = self.lower_local(x.local_variable, loc);
+                c.expr_local_lookup(local, self.lower_borrow(x.result), loc)
             }
 
-            ExpressionIE::Deref(x) => c.expr_deref(self.lower_expression(&x.inner), self.lower_kind(x.source_type), self.lower_kind(x.result)),
+            ExpressionIE::Deref(x) => c.expr_deref(self.lower_expression(&x.inner), self.lower_kind(x.source_type), self.lower_kind(x.result), loc),
             ExpressionIE::MemberLookup(x) => c.expr_member_lookup(
                 self.lower_expression(&x.struct_expr),
                 self.lower_borrow(x.struct_type),
@@ -431,6 +463,7 @@ impl<'cache> Lowerer<'cache> {
                 &humanize_var_name(x.member_name),
                 self.lower_kind(x.member_type),
                 self.lower_borrow(x.result),
+                loc,
             ),
             ExpressionIE::StaticSizedArrayLookup(x) => c.expr_static_sized_array_lookup(
                 self.lower_expression(&x.array_expr),
@@ -438,6 +471,7 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_expression(&x.index_expr),
                 self.lower_kind(x.index_type),
                 self.lower_borrow(x.result),
+                loc,
             ),
             ExpressionIE::RuntimeSizedArrayLookup(x) => c.expr_runtime_sized_array_lookup(
                 self.lower_expression(&x.array_expr),
@@ -445,6 +479,7 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_expression(&x.index_expr),
                 self.lower_kind(x.index_type),
                 self.lower_borrow(x.result),
+                loc,
             ),
 
             ExpressionIE::Mutate(x) => c.expr_mutate(
@@ -453,19 +488,22 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_expression(&x.source_expr),
                 self.lower_kind(x.source_type),
                 self.lower_kind(x.result),
+                loc,
             ),
 
             ExpressionIE::Construct(x) => c.expr_new_struct(
                 self.lower_struct_kind(x.struct_tt),
                 self.lower_kind(x.result),
                 &self.lower_exprs(x.args),
+                loc,
             ),
             ExpressionIE::Destroy(x) => c.expr_destroy(
                 self.lower_expression(&x.expr),
                 self.lower_struct_kind(x.struct_tt),
-                &self.lower_locals(x.destination_reference_variables),
+                &self.lower_locals(x.destination_reference_variables, loc),
+                loc,
             ),
-            ExpressionIE::CopyPrim(x) => c.expr_copy_prim(self.lower_expression(&x.inner), self.lower_kind(x.source_type), self.lower_kind(x.result)),
+            ExpressionIE::CopyPrim(x) => c.expr_copy_prim(self.lower_expression(&x.inner), self.lower_kind(x.source_type), self.lower_kind(x.result), loc),
 
             ExpressionIE::Upcast(x) => c.expr_struct_to_interface_upcast(
                 self.lower_expression(&x.inner_expr),
@@ -473,11 +511,13 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_interface_kind(x.target_interface),
                 self.lower_id_to_name(&x.impl_name),
                 self.lower_kind(x.result),
+                loc,
             ),
             ExpressionIE::InterfaceToInterfaceUpcast(x) => c.expr_interface_to_interface_upcast(
                 self.lower_expression(&x.inner_expr),
                 self.lower_interface_kind(x.target_interface),
                 self.lower_kind(x.result),
+                loc,
             ),
             ExpressionIE::AsSubtype(x) => c.expr_as_subtype(
                 self.lower_expression(&x.source_expr),
@@ -489,12 +529,13 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_id_to_name(&x.ok_impl_name),
                 self.lower_id_to_name(&x.err_impl_name),
                 self.lower_kind(x.result),
+                loc,
             ),
             ExpressionIE::IsSameInstance(x) => {
-                c.expr_is_same_instance(self.lower_expression(&x.left), self.lower_kind(x.left_type), self.lower_expression(&x.right), self.lower_kind(x.right_type))
+                c.expr_is_same_instance(self.lower_expression(&x.left), self.lower_kind(x.left_type), self.lower_expression(&x.right), self.lower_kind(x.right_type), loc)
             }
 
-            ExpressionIE::BorrowToWeak(x) => c.expr_weak_alias(self.lower_expression(&x.inner_expr), self.lower_kind(x.source_type), self.lower_kind(x.result)),
+            ExpressionIE::BorrowToWeak(x) => c.expr_weak_alias(self.lower_expression(&x.inner_expr), self.lower_kind(x.source_type), self.lower_kind(x.result), loc),
             ExpressionIE::LockWeak(x) => c.expr_lock_weak(
                 self.lower_expression(&x.inner_expr),
                 self.lower_kind(x.source_type),
@@ -503,17 +544,20 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_id_to_name(&x.some_impl_name),
                 self.lower_id_to_name(&x.none_impl_name),
                 self.lower_kind(x.result),
+                loc,
             ),
 
             ExpressionIE::FunctionCall(x) => c.expr_call(
                 self.lower_prototype(&x.callable),
                 &self.lower_exprs(x.args),
                 self.lower_kind(x.result),
+                loc,
             ),
             ExpressionIE::ExternFunctionCall(x) => c.expr_extern_call(
                 self.lower_prototype(&x.prototype2),
                 &self.lower_exprs(x.args),
                 self.lower_kind(x.result),
+                loc,
             ),
             ExpressionIE::InterfaceFunctionCall(x) => c.expr_interface_call(
                 self.lower_prototype(x.super_function_prototype),
@@ -521,6 +565,7 @@ impl<'cache> Lowerer<'cache> {
                 x.index_in_edge,
                 &self.lower_exprs(x.args),
                 self.lower_kind(x.result),
+                loc,
             ),
 
             ExpressionIE::If(x) => c.expr_if(
@@ -530,64 +575,74 @@ impl<'cache> Lowerer<'cache> {
                 self.lower_kind(x.then_result_type),
                 self.lower_kind(x.else_result_type),
                 self.lower_kind(x.result),
+                loc,
             ),
             ExpressionIE::While(x) => {
-                let block = c.expr_block(self.lower_expression(&x.block.inner), self.lower_kind(x.block.result));
-                c.expr_while(block, self.lower_kind(x.result))
+                // The synthetic inner block reuses this While's loc (it has no distinct source range).
+                let block = c.expr_block(self.lower_expression(&x.block.inner), self.lower_kind(x.block.result), loc);
+                c.expr_while(block, self.lower_kind(x.result), loc)
             }
 
             ExpressionIE::StaticArrayFromValues(x) => c.expr_new_array_from_values(
                 &self.lower_exprs(x.elements),
                 self.lower_kind(x.result),
                 self.lower_static_array_kind(x.array_type),
+                loc,
             ),
             ExpressionIE::NewRuntimeSizedArray(x) => c.expr_new_mut_runtime_sized_array(
                 self.lower_kind(KindIT::RuntimeSizedArrayIT(&x.array_type)),
                 self.lower_expression(&x.capacity_expr),
                 self.lower_kind(x.result),
+                loc,
             ),
             ExpressionIE::StaticArrayFromCallable(x) => c.expr_static_array_from_callable(
                 self.lower_kind(KindIT::StaticSizedArrayIT(&x.array_type)),
                 self.lower_expression(&x.generator),
                 self.lower_prototype(&x.generator_method),
                 self.lower_kind(x.result),
+                loc,
             ),
-            ExpressionIE::ArrayLength(x) => c.expr_array_length(self.lower_expression(&x.array_expr), self.lower_borrow(x.array_type)),
-            ExpressionIE::RuntimeSizedArrayCapacity(x) => c.expr_array_capacity(self.lower_expression(&x.array_expr), self.lower_borrow(x.array_type)),
-            ExpressionIE::ArraySize(x) => c.expr_array_size(self.lower_expression(&x.array), self.lower_kind(x.result)),
+            ExpressionIE::ArrayLength(x) => c.expr_array_length(self.lower_expression(&x.array_expr), self.lower_borrow(x.array_type), loc),
+            ExpressionIE::RuntimeSizedArrayCapacity(x) => c.expr_array_capacity(self.lower_expression(&x.array_expr), self.lower_borrow(x.array_type), loc),
+            ExpressionIE::ArraySize(x) => c.expr_array_size(self.lower_expression(&x.array), self.lower_kind(x.result), loc),
             ExpressionIE::PushRuntimeSizedArray(x) => c.expr_push_runtime_sized_array(
                 self.lower_expression(&x.array_expr),
                 self.lower_borrow(x.array_type),
                 self.lower_expression(&x.new_element_expr),
                 self.lower_kind(x.element_type),
+                loc,
             ),
             ExpressionIE::PopRuntimeSizedArray(x) => c.expr_pop_runtime_sized_array(
                 self.lower_expression(&x.array_expr),
                 self.lower_borrow(x.array_type),
                 self.lower_kind(x.result),
+                loc,
             ),
             ExpressionIE::DestroyStaticSizedArrayIntoFunction(x) => c.expr_destroy_static_sized_array_into_function(
                 self.lower_expression(&x.array_expr),
                 self.lower_kind(KindIT::StaticSizedArrayIT(&x.array_type)),
                 self.lower_expression(&x.consumer),
                 self.lower_prototype(&x.consumer_method),
+                loc,
             ),
             ExpressionIE::DestroyStaticSizedArrayIntoLocals(x) => c.expr_destroy_static_sized_array_into_locals(
                 self.lower_expression(&x.expr),
                 self.lower_kind(KindIT::StaticSizedArrayIT(&x.static_sized_array)),
-                &self.lower_locals(x.destination_reference_variables),
+                &self.lower_locals(x.destination_reference_variables, loc),
+                loc,
             ),
             ExpressionIE::DestroyRuntimeSizedArray(x) => {
-                c.expr_destroy_mut_runtime_sized_array(self.lower_expression(&x.array_expr))
+                c.expr_destroy_mut_runtime_sized_array(self.lower_expression(&x.array_expr), loc)
             }
         }
     }
 
     fn lower_locals<'s, 'i>(
         &self,
-        vars: &[&crate::instantiating::ast::ast::LocalVariableI<'s, 'i>],
+        vars: &[&LocalVariableI<'s, 'i>],
+        loc: SourceLocation<'cache>,
     ) -> Vec<Local<'cache>> {
-        vars.iter().map(|v| self.lower_local(v)).collect()
+        vars.iter().map(|v| self.lower_local(v, loc)).collect()
     }
 }
 

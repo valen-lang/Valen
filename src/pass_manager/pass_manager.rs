@@ -1,6 +1,6 @@
 // Main entry point for the Vale compiler
 
-use crate::backend_ffi::backend_inputs::{BackendInputs, BackendMode, StandaloneInputs};
+use crate::backend_ffi::backend_inputs::{BackendInputs, BackendMode, SourceFilePath, StandaloneInputs};
 use crate::compile_options::GlobalOptions;
 use crate::utils::source_code_utils;
 use crate::interner::StrI;
@@ -25,11 +25,6 @@ use std::time::Instant;
 
 #[derive(Clone)]
 pub enum IFrontendInput<'a> {
-  SourceInput {
-    package_coord: &'a PackageCoordinate<'a>,
-    name: String,
-    code: String,
-  },
   ModulePathInput {
     module: StrI<'a>,
     module_path: String,
@@ -42,7 +37,6 @@ pub enum IFrontendInput<'a> {
 impl<'a> IFrontendInput<'a> {
   pub fn package_coord<'ctx>(&self, parse_arena: &'ctx ParseArena<'a>) -> &'a PackageCoordinate<'a> {
     match self {
-      IFrontendInput::SourceInput { package_coord, .. } => *package_coord,
       IFrontendInput::ModulePathInput { module, .. } => {
         parse_arena.intern_package_coordinate(*module, &[])
       }
@@ -51,31 +45,46 @@ impl<'a> IFrontendInput<'a> {
   }
 }
 
-/// Read the frontend inputs into a package-coord → filename → contents map. This is the removed
-/// `Source::Inputs`, rebuilt here so `code_source` needn't depend on `pass_manager`.
+/// Read the frontend inputs into a package-coord → filename → contents map.
+/// Also returns the `(basename, absolute path)` of every file read from disk, so the backend's DWARF
+/// emission can record a real `DW_AT_comp_dir` (see `resolve_source_abspath`).
 fn build_inputs_code_map<'p>(
   parse_arena: &ParseArena<'p>,
   inputs: &[IFrontendInput<'p>],
-) -> HashMap<&'p PackageCoordinate<'p>, HashMap<String, String>> {
+) -> (HashMap<&'p PackageCoordinate<'p>, HashMap<String, String>>, Vec<SourceFilePath>) {
   let mut map: HashMap<&'p PackageCoordinate<'p>, HashMap<String, String>> = HashMap::default();
+  let mut source_paths: Vec<SourceFilePath> = Vec::new();
   for input in inputs {
     match input {
-      IFrontendInput::SourceInput { package_coord, name, code } => {
-        map.entry(*package_coord).or_default().insert(name.clone(), code.clone());
-      }
       IFrontendInput::DirectFilePathInput { package_coord, path } => {
         if let Ok(contents) = fs::read_to_string(path) {
           let filename = Path::new(path)
             .file_name().and_then(|s| s.to_str()).unwrap_or(path.as_str()).to_string();
+          // VCOORD: figure out what we're doing with the filecoordinatemap. IIRC we're not
+          // letting any postparseds contain any line/col, so might as well make them not
+          // contain any absolute paths either. so maybe we would have a side absolute file
+          // path map, and have LIDs map to specific source locations in that map that has
+          // absolute filepaths. that sounds reasonable.
+          // VCOORD: dedup with below canonicalize code
+          let canonical = fs::canonicalize(path)
+            .unwrap_or_else(|e| panic!("canonicalize source path {:?} failed: {}", path, e));
+          source_paths.push(
+            SourceFilePath {
+              basename: filename.clone(),
+              abspath: canonical
+                .to_str()
+                .unwrap_or_else(|| panic!("source path {} is not valid UTF-8", canonical.display()))
+                .to_string()
+              });
           map.entry(*package_coord).or_default().insert(filename, contents);
         }
       }
       IFrontendInput::ModulePathInput { module, module_path } => {
-        read_module_dir(parse_arena, *module, Path::new(module_path), &[], &mut map);
+        read_module_dir(parse_arena, *module, Path::new(module_path), &[], &mut map, &mut source_paths);
       }
     }
   }
-  map
+  (map, source_paths)
 }
 
 /// Recursively read `.vale` files under a module directory; a file at `<dir>/a/b/c.vale`
@@ -86,6 +95,7 @@ fn read_module_dir<'p>(
   dir: &Path,
   steps: &[StrI<'p>],
   map: &mut HashMap<&'p PackageCoordinate<'p>, HashMap<String, String>>,
+  source_paths: &mut Vec<SourceFilePath>,
 ) {
   let entries = match fs::read_dir(dir) {
     Ok(e) => e,
@@ -97,12 +107,23 @@ fn read_module_dir<'p>(
       if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
         let mut new_steps = steps.to_vec();
         new_steps.push(parse_arena.intern_str(name));
-        read_module_dir(parse_arena, module, &path, &new_steps, map);
+        read_module_dir(parse_arena, module, &path, &new_steps, map, source_paths);
       }
     } else if path.extension().and_then(|s| s.to_str()) == Some("vale") {
       if let (Some(filename), Ok(contents)) =
         (path.file_name().and_then(|s| s.to_str()), fs::read_to_string(&path))
       {
+        // VCOORD: dedup with above canonicalize code
+        let path1 = path.to_string_lossy();
+        let canonical = fs::canonicalize(&*path1)
+          .unwrap_or_else(|e| panic!("canonicalize source path {:?} failed: {}", path1, e));
+        source_paths.push(crate::backend_ffi::backend_inputs::SourceFilePath {
+          basename: filename.to_string(),
+          abspath: canonical
+              .to_str()
+              .unwrap_or_else(|| panic!("source path {} is not valid UTF-8", canonical.display()))
+              .to_string(),
+        });
         let coord = parse_arena.intern_package_coordinate(module, steps);
         map.entry(coord).or_default().insert(filename.to_string(), contents);
       }
@@ -283,9 +304,8 @@ pub fn resolve_package_contents<'a>(
 
   let mut source_inputs: Vec<(String, String)> = Vec::new();
 
-  for (index, input) in inputs.iter().enumerate() {
+  for input in inputs.iter() {
     let input_module = match input {
-      IFrontendInput::SourceInput { package_coord, .. } => package_coord.module,
       IFrontendInput::ModulePathInput { module, .. } => *module,
       IFrontendInput::DirectFilePathInput { package_coord, .. } => package_coord.module,
     };
@@ -294,15 +314,6 @@ pub fn resolve_package_contents<'a>(
     }
 
     match input {
-      IFrontendInput::SourceInput {
-        package_coord: _,
-        name,
-        code,
-      } => {
-        if packages.is_empty() {
-          source_inputs.push((format!("{}({})", index, name), code.clone()));
-        }
-      }
       IFrontendInput::ModulePathInput {
         module: _,
         module_path,
@@ -422,9 +433,10 @@ where
   let mut packages_to_build = vec![PackageCoordinate::builtin(parse_arena, keywords)];
   packages_to_build.extend(package_coords);
 
+  let (inputs_code_map, absolute_source_paths) = build_inputs_code_map(parse_arena, all_inputs);
   let code_source = CodeSource::new(vec![
     Source::builtins(parse_arena, keywords),
-    Source::CodeMap(build_inputs_code_map(parse_arena, all_inputs)),
+    Source::CodeMap(inputs_code_map),
   ]);
 
   let options = FullCompilationOptions {
@@ -523,7 +535,7 @@ where
   // then sizes structs from members and takes the descriptor-less C-extern boundary path).
   let cache = crate::backend_ffi::metal_cache::MetalCache::new();
   let program = crate::backend_ffi::metal_lowerer::populate_metal_cache(
-    &cache, monouts, &std::collections::HashMap::new(), &std::collections::HashMap::new());
+    &cache, monouts, &vale_code_map, &std::collections::HashMap::new(), &std::collections::HashMap::new());
 
   // Inject --triple into the backend options when ClangConfig requests a
   // cross-target, so LLVM emits the correct data layout (e.g. 32-bit
@@ -539,6 +551,7 @@ where
     program: &program,
     options: backend_opts,
     mode: BackendMode::Standalone(StandaloneInputs {}),
+    absolute_source_paths,
   });
   if rc != 0 {
     return Ok(BuiltProgram {

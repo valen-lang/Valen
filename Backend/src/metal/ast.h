@@ -28,6 +28,7 @@ extern const std::string BUILTIN_PROJECT_NAME;
 // Defined elsewhere
 class Block;
 class Expression;
+class SourceLocation;
 
 // Defined in this file
 class Program;
@@ -289,6 +290,12 @@ class Program {
 public:
   std::unordered_map<PackageCoordinate*, Package*, AddressHasher<PackageCoordinate*>, std::equal_to<PackageCoordinate*>> packages;
 
+  // basename -> absolute source path, conveyed from the frontend so DWARF emission records a real
+  // DW_AT_comp_dir (see debugging.cpp getOrCreateDIFile). Empty for inputs with no on-disk file /
+  // interop.
+  // VCOORD: merge this with the LID/LIF -> source map
+  std::unordered_map<std::string, std::string> sourcePaths;
+
   Program(
       std::unordered_map<PackageCoordinate*, Package*, AddressHasher<PackageCoordinate*>, std::equal_to<PackageCoordinate*>> packages_) :
       packages(std::move(packages_)) {}
@@ -464,14 +471,17 @@ class Function {
 public:
     Prototype* prototype;
     Expression* block;
+    // Source declaration location for DWARF DISubprogram emission — required at
+    // construction. Null means no source info (synthetic / extern).
+    SourceLocation* sourceLocation;
 
     Function(
-
         Prototype* prototype_,
-    Expression* block_
-        ) :
+        Expression* block_,
+        SourceLocation* sourceLocation_) :
         prototype(prototype_),
-        block(block_) {}
+        block(block_),
+        sourceLocation(sourceLocation_) {}
 };
 
 // Interned
@@ -503,14 +513,17 @@ public:
   VarNameM id;
   std::string name;
   Kind* type;
+  SourceLocation* sourceLocation;
 
   Local(
       VarNameM id_,
       std::string name_,
-      Kind* type_) :
+      Kind* type_,
+      SourceLocation* sourceLocation_) :
       id(std::move(id_)),
       name(std::move(name_)),
-      type(type_) {}
+      type(type_),
+      sourceLocation(sourceLocation_) {}
 };
 
 // An imported extern struct's layout (e.g. from rustc's tcx.layout_of).

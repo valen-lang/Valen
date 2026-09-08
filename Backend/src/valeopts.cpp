@@ -34,6 +34,7 @@ int loadFromFfi(ValeOptions *opt, const BackendCompileOptionsFFI *ffi) {
   opt->includeBoundsChecks = ffi->include_bounds_checks != 0;
   opt->useAtomicRc = ffi->use_atomic_rc != 0;
   opt->printMemOverhead = ffi->print_mem_overhead != 0;
+  opt->debug = ffi->debug != 0;
 
   return 1;
 }

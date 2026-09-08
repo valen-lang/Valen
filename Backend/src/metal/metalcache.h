@@ -221,6 +221,14 @@ public:
         [&](){ return new InterfaceMethod(prototype, virtualParamIndex); });
   }
 
+  SourceLocation* getSourceLocation(const std::string& filePath, int32_t line, int32_t col) {
+    std::string key = filePath + ":" + std::to_string(line) + ":" + std::to_string(col);
+    return makeIfNotPresent(
+        &sourceLocations,
+        key,
+        [&](){ return new SourceLocation(filePath, line, col); });
+  }
+
   AddressNumberer* addressNumberer;
 
   std::unordered_map<std::string, RegionId*> regionIds;
@@ -255,6 +263,9 @@ public:
   PrototypeByParamListByReturnTypeByNameMap prototypes;
 
   std::unordered_map<Prototype*, std::unordered_map<int, InterfaceMethod*>, AddressHasher<Prototype*>> interfaceMethods;
+
+  // Source locations for DWARF, interned by "file:line:col".
+  std::unordered_map<std::string, SourceLocation*> sourceLocations;
 
   RegionId* rcImmRegionId = nullptr;
   RegionId* mutRegionId = nullptr;

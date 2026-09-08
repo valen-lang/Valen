@@ -10,7 +10,7 @@ use std::ptr;
 
 use self::backend_inputs::{
     BackendInputs, BackendInputsFFIRaw, BackendMode, CallbackFFIRaw, InteropInputsFFIRaw,
-    BACKEND_MODE_INTEROP, BACKEND_MODE_STANDALONE,
+    SourceFilePathFFIRaw, BACKEND_MODE_INTEROP, BACKEND_MODE_STANDALONE,
 };
 
 // Optimization level, matches BACKEND_OPT_LEVEL_* in Backend/src/backend_options_ffi.h.
@@ -37,6 +37,7 @@ pub(crate) struct BackendCompileOptionsFFIRaw {
     include_bounds_checks: u8,
     use_atomic_rc: u8,
     print_mem_overhead: u8,
+    debug: u8,
 }
 
 extern "C" {
@@ -63,6 +64,9 @@ pub struct BackendCompileOptions {
     pub include_bounds_checks: bool,
     pub use_atomic_rc: bool,
     pub print_mem_overhead: bool,
+    /// Emit DWARF debug info (`--debug`). The backend emits per-function/statement/local DWARF when
+    /// set; see docs/architecture/debugging-architecture.md.
+    pub debug: bool,
 }
 
 impl Default for BackendCompileOptions {
@@ -81,6 +85,7 @@ impl Default for BackendCompileOptions {
             include_bounds_checks: true,
             use_atomic_rc: false,
             print_mem_overhead: false,
+            debug: false,
         }
     }
 }
@@ -110,6 +115,7 @@ pub fn compile(inputs: BackendInputs) -> i32 {
         include_bounds_checks: opts.include_bounds_checks as u8,
         use_atomic_rc: opts.use_atomic_rc as u8,
         print_mem_overhead: opts.print_mem_overhead as u8,
+        debug: opts.debug as u8,
     };
 
     // Per-mode fields. The entry-symbol CString must outlive the FFI call, so bind it here
@@ -152,6 +158,26 @@ pub fn compile(inputs: BackendInputs) -> i32 {
         })
         .collect();
 
+    // Source-file (basename, abspath) pairs. The CStrings must outlive the FFI call, so bind them
+    // here before the raw array that points at them.
+    let source_path_cstrings: Vec<(CString, CString)> = inputs
+        .absolute_source_paths
+        .iter()
+        .map(|sp| {
+            (
+                CString::new(sp.basename.as_str()).expect("source basename contains NUL"),
+                CString::new(sp.abspath.as_str()).expect("source abspath contains NUL"),
+            )
+        })
+        .collect();
+    let source_paths_raw: Vec<SourceFilePathFFIRaw> = source_path_cstrings
+        .iter()
+        .map(|(basename, abspath)| SourceFilePathFFIRaw {
+            basename: basename.as_ptr(),
+            abspath: abspath.as_ptr(),
+        })
+        .collect();
+
     let raw = BackendInputsFFIRaw {
         cache: inputs.cache.raw() as *mut c_void,
         program: inputs.program.raw(),
@@ -164,6 +190,12 @@ pub fn compile(inputs: BackendInputs) -> i32 {
             callbacks: callbacks_raw.as_ptr(),
             num_callbacks: callbacks_raw.len(),
         },
+        source_paths: if source_paths_raw.is_empty() {
+            ptr::null()
+        } else {
+            source_paths_raw.as_ptr()
+        },
+        num_source_paths: source_paths_raw.len(),
     };
     unsafe { backend_compile(&raw) }
 }

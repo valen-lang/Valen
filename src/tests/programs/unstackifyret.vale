@@ -5,6 +5,7 @@
 
 exported func main() int {
   playerRow = 4;
+  0; // lldb breakpoint: unstackifyret-set
 
   if (false) {
     newPlayerRow = 0;

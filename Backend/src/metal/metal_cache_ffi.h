@@ -37,6 +37,7 @@ typedef struct StructDefHandle       StructDefHandle;
 typedef struct InterfaceDefHandle    InterfaceDefHandle;
 typedef struct FunctionHandle        FunctionHandle;
 typedef struct ExpressionHandle      ExpressionHandle;
+typedef struct SourceLocationHandle  SourceLocationHandle;  // DWARF source location (file:line:col)
 typedef struct PackageHandle         PackageHandle;
 typedef struct ProgramHandle         ProgramHandle;
 typedef struct StaticSizedArrayDefHandle StaticSizedArrayDefHandle;
@@ -124,7 +125,11 @@ InterfaceMethodHandle* metal_cache_get_interface_method(
 // A local is a name + its onion kind; the lowerer constructs each once and reuses the handle.
 LocalHandle* metal_cache_get_local(
     MetalCacheHandle*, const char* id_ptr, size_t id_len,
-    const char* name_ptr, size_t name_len, KindHandle* kind);
+    const char* name_ptr, size_t name_len, KindHandle* kind, SourceLocationHandle* source_loc);
+
+// Interns a DWARF source location (file:line:col). A NULL loc (or empty file) means "no source info".
+SourceLocationHandle* metal_cache_get_source_location(
+    MetalCacheHandle*, const char* file_ptr, size_t file_len, int32_t line, int32_t col);
 
 // --- Non-interned constructors (raw `new` on the C++ side) ---
 
@@ -160,111 +165,112 @@ InterfaceDefHandle* metal_interface_def_new(
     InterfaceMethodHandle* const* methods, size_t method_count,
     uint32_t weakability);
 
-FunctionHandle* metal_function_new(PrototypeHandle* prototype, ExpressionHandle* body);
+FunctionHandle* metal_function_new(
+    PrototypeHandle* prototype, ExpressionHandle* body, SourceLocationHandle* loc);
 
 // --- Expression constructors (one per onion ExpressionIE node) ---
 //
 // Each produces a freshly-allocated Expression*; no interning. Type fields are onion
 // KindHandle*; the `result` mirrors the IR node's result kind where it carries one.
 
-ExpressionHandle* metal_expr_constant_void(void);
-ExpressionHandle* metal_expr_constant_int(int64_t value, int32_t bits);
-ExpressionHandle* metal_expr_constant_bool(int32_t value /* 0 or 1 */);
-ExpressionHandle* metal_expr_constant_f64(double value);
-ExpressionHandle* metal_expr_constant_str(const char* value_ptr, size_t value_len, KindHandle* result);
-ExpressionHandle* metal_expr_break(void);
-ExpressionHandle* metal_expr_return(ExpressionHandle* source_expr, KindHandle* source_type);
-ExpressionHandle* metal_expr_discard(ExpressionHandle* expr, KindHandle* source_type);
-ExpressionHandle* metal_expr_block(ExpressionHandle* inner, KindHandle* result);
-ExpressionHandle* metal_expr_consecutor(ExpressionHandle* const* exprs, size_t expr_count, KindHandle* result);
+ExpressionHandle* metal_expr_constant_void(SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_constant_int(int64_t value, int32_t bits, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_constant_bool(int32_t value /* 0 or 1 */, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_constant_f64(double value, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_constant_str(const char* value_ptr, size_t value_len, KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_break(SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_return(ExpressionHandle* source_expr, KindHandle* source_type, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_discard(ExpressionHandle* expr, KindHandle* source_type, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_block(ExpressionHandle* inner, KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_consecutor(ExpressionHandle* const* exprs, size_t expr_count, KindHandle* result, SourceLocationHandle* loc);
 
 // ArgLookup { param_index, tyype }
-ExpressionHandle* metal_expr_argument(int32_t param_index, KindHandle* tyype);
+ExpressionHandle* metal_expr_argument(int32_t param_index, KindHandle* tyype, SourceLocationHandle* loc);
 
 // Locals / lets.
-ExpressionHandle* metal_expr_stackify(LocalHandle* variable, ExpressionHandle* expr, KindHandle* result);
-ExpressionHandle* metal_expr_let_and_lend(LocalHandle* variable, ExpressionHandle* expr, KindHandle* result);
-ExpressionHandle* metal_expr_restackify(LocalHandle* variable, ExpressionHandle* source_expr, KindHandle* result);
-ExpressionHandle* metal_expr_unstackify(LocalHandle* variable, KindHandle* result);
-ExpressionHandle* metal_expr_local_lookup(LocalHandle* local_variable, KindHandle* result);
+ExpressionHandle* metal_expr_stackify(LocalHandle* variable, ExpressionHandle* expr, KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_let_and_lend(LocalHandle* variable, ExpressionHandle* expr, KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_restackify(LocalHandle* variable, ExpressionHandle* source_expr, KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_unstackify(LocalHandle* variable, KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_local_lookup(LocalHandle* local_variable, KindHandle* result, SourceLocationHandle* loc);
 
 // Deref / member & array lookups.
-ExpressionHandle* metal_expr_deref(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result);
+ExpressionHandle* metal_expr_deref(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_member_lookup(
-    ExpressionHandle* struct_expr, KindHandle* struct_type, int32_t member_index, const char* member_name_ptr, size_t member_name_len, KindHandle* member_type, KindHandle* result);
+    ExpressionHandle* struct_expr, KindHandle* struct_type, int32_t member_index, const char* member_name_ptr, size_t member_name_len, KindHandle* member_type, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_static_sized_array_lookup(
-    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result);
+    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_runtime_sized_array_lookup(
-    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result);
+    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* index_expr, KindHandle* index_type, KindHandle* result, SourceLocationHandle* loc);
 
 // Mutate (unified store over a destination lvalue).
 ExpressionHandle* metal_expr_mutate(
-    ExpressionHandle* destination_expr, KindHandle* destination_type, ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* result);
+    ExpressionHandle* destination_expr, KindHandle* destination_type, ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* result, SourceLocationHandle* loc);
 
 // Construct / destroy.
 ExpressionHandle* metal_expr_new_struct(
     KindHandle* struct_kind, KindHandle* result,
-    ExpressionHandle* const* args, size_t arg_count);
+    ExpressionHandle* const* args, size_t arg_count, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_destroy(
     ExpressionHandle* expr, KindHandle* struct_kind,
-    LocalHandle* const* destination_locals, size_t local_count);
-ExpressionHandle* metal_expr_copy_prim(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result);
+    LocalHandle* const* destination_locals, size_t local_count, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_copy_prim(ExpressionHandle* inner, KindHandle* source_type, KindHandle* result, SourceLocationHandle* loc);
 
 // Upcast / subtype.
 ExpressionHandle* metal_expr_struct_to_interface_upcast(
-    ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* target_interface, NameHandle* impl_name, KindHandle* result);
+    ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* target_interface, NameHandle* impl_name, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_interface_to_interface_upcast(
-    ExpressionHandle* inner_expr, KindHandle* target_interface, KindHandle* result);
+    ExpressionHandle* inner_expr, KindHandle* target_interface, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_as_subtype(
     ExpressionHandle* source_expr, KindHandle* source_type, KindHandle* target_type,
     PrototypeHandle* ok_constructor, PrototypeHandle* err_constructor,
     NameHandle* impl_name, NameHandle* ok_impl_name, NameHandle* err_impl_name,
-    KindHandle* result);
-ExpressionHandle* metal_expr_is_same_instance(ExpressionHandle* left, KindHandle* left_type, ExpressionHandle* right, KindHandle* right_type);
+    KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_is_same_instance(ExpressionHandle* left, KindHandle* left_type, ExpressionHandle* right, KindHandle* right_type, SourceLocationHandle* loc);
 
 // Weak refs.
-ExpressionHandle* metal_expr_weak_alias(ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* result);
+ExpressionHandle* metal_expr_weak_alias(ExpressionHandle* inner_expr, KindHandle* source_type, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_lock_weak(
     ExpressionHandle* inner_expr, KindHandle* source_type,
     PrototypeHandle* some_constructor, PrototypeHandle* none_constructor,
     NameHandle* some_impl_name, NameHandle* none_impl_name,
-    KindHandle* result);
+    KindHandle* result, SourceLocationHandle* loc);
 
 // Calls.
 ExpressionHandle* metal_expr_call(
-    PrototypeHandle* callable, ExpressionHandle* const* args, size_t arg_count, KindHandle* result);
+    PrototypeHandle* callable, ExpressionHandle* const* args, size_t arg_count, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_extern_call(
-    PrototypeHandle* prototype, ExpressionHandle* const* args, size_t arg_count, KindHandle* result);
+    PrototypeHandle* prototype, ExpressionHandle* const* args, size_t arg_count, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_interface_call(
     PrototypeHandle* super_function_prototype, int32_t virtual_param_index, int32_t index_in_edge,
-    ExpressionHandle* const* args, size_t arg_count, KindHandle* result);
+    ExpressionHandle* const* args, size_t arg_count, KindHandle* result, SourceLocationHandle* loc);
 
 // Control flow.
 ExpressionHandle* metal_expr_if(
     ExpressionHandle* condition, ExpressionHandle* then_call, ExpressionHandle* else_call,
-    KindHandle* then_result_type, KindHandle* else_result_type, KindHandle* result);
-ExpressionHandle* metal_expr_while(ExpressionHandle* block, KindHandle* result);
+    KindHandle* then_result_type, KindHandle* else_result_type, KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_while(ExpressionHandle* block, KindHandle* result, SourceLocationHandle* loc);
 
 // Arrays.
 ExpressionHandle* metal_expr_new_array_from_values(
-    ExpressionHandle* const* elements, size_t element_count, KindHandle* result, KindHandle* array_type);
+    ExpressionHandle* const* elements, size_t element_count, KindHandle* result, KindHandle* array_type, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_new_mut_runtime_sized_array(
-    KindHandle* array_type, ExpressionHandle* capacity_expr, KindHandle* result);
+    KindHandle* array_type, ExpressionHandle* capacity_expr, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_static_array_from_callable(
-    KindHandle* array_type, ExpressionHandle* generator, PrototypeHandle* generator_method, KindHandle* result);
-ExpressionHandle* metal_expr_array_length(ExpressionHandle* array_expr, KindHandle* array_type);
-ExpressionHandle* metal_expr_array_capacity(ExpressionHandle* array_expr, KindHandle* array_type);
-ExpressionHandle* metal_expr_array_size(ExpressionHandle* array, KindHandle* result);
+    KindHandle* array_type, ExpressionHandle* generator, PrototypeHandle* generator_method, KindHandle* result, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_array_length(ExpressionHandle* array_expr, KindHandle* array_type, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_array_capacity(ExpressionHandle* array_expr, KindHandle* array_type, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_array_size(ExpressionHandle* array, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_push_runtime_sized_array(
-    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* new_element_expr, KindHandle* element_type);
-ExpressionHandle* metal_expr_pop_runtime_sized_array(ExpressionHandle* array_expr, KindHandle* array_type, KindHandle* result);
+    ExpressionHandle* array_expr, KindHandle* array_type, ExpressionHandle* new_element_expr, KindHandle* element_type, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_pop_runtime_sized_array(ExpressionHandle* array_expr, KindHandle* array_type, KindHandle* result, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_destroy_static_sized_array_into_function(
     ExpressionHandle* array_expr, KindHandle* array_type,
-    ExpressionHandle* consumer, PrototypeHandle* consumer_method);
+    ExpressionHandle* consumer, PrototypeHandle* consumer_method, SourceLocationHandle* loc);
 ExpressionHandle* metal_expr_destroy_static_sized_array_into_locals(
     ExpressionHandle* expr, KindHandle* static_sized_array,
-    LocalHandle* const* destination_locals, size_t local_count);
-ExpressionHandle* metal_expr_destroy_mut_runtime_sized_array(ExpressionHandle* array_expr);
+    LocalHandle* const* destination_locals, size_t local_count, SourceLocationHandle* loc);
+ExpressionHandle* metal_expr_destroy_mut_runtime_sized_array(ExpressionHandle* array_expr, SourceLocationHandle* loc);
 
 // --- Package builder ---
 

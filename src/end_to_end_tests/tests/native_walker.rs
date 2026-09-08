@@ -4,6 +4,7 @@ use crate::end_to_end_tests::{assert_compile_and_run_with_c, programs_dir};
 /// program declares an extern, calls it from main, and the impl lives in
 /// `native/test.c`, but we pass `extra_c=&[]` so the only way the impl
 /// reaches clang is via the Frontend-driven walker.
+// VDBG: no debugger gate yet — FFI/native-C debug path unproven
 #[test]
 fn native_walker_reached_package_included() {
     let dir = programs_dir().join("programs/native_walker/walks_reached");
@@ -16,6 +17,7 @@ fn native_walker_reached_package_included() {
 /// The `unused/native/broken.c` contains a `#error` that would fail clang
 /// immediately if compiled. Build must succeed, proving the walker
 /// skipped the unreached package.
+// VDBG: no debugger gate yet — FFI/native-C debug path unproven
 #[test]
 fn native_walker_unreached_package_excluded() {
     let dir = programs_dir().join("programs/native_walker/skips_unreached");

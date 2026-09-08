@@ -41,6 +41,15 @@ public:
   LLVMDIBuilderRef dibuilder = nullptr;
   LLVMMetadataRef compileUnit = nullptr;
   LLVMMetadataRef difile = nullptr;
+  // Per-source-path DIFile cache, populated lazily as Vale functions with a
+  // non-empty sourceFilePath are declared (see attachDISubprogram in
+  // debugging.cpp). Keys are the file path the frontend FFI passes in.
+  std::unordered_map<std::string, LLVMMetadataRef> diFileCache;
+  // Per-Kind DIType cache, populated lazily on the first dbg.declare for a local
+  // of that type (see getOrCreateDIType in debugging.cpp). Models Vale primitives
+  // (Int/Bool/Float) precisely; everything else gets a pointer-sized "ref"
+  // DIBasicType so the local still appears in lldb without walking its fields.
+  std::unordered_map<Kind*, LLVMMetadataRef> diTypeCache;
 
   ValeOptions *opt = nullptr;
 

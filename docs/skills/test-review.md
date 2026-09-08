@@ -159,3 +159,10 @@ match &block.expr {
     other => panic!("expected an untouched Void body head, got {:?}", other),
 }
 ```
+
+## 9. Compile from a temp dir, never a repo path
+
+Never hand the compiler a source path that lives in the repo tree (`src/tests/programs/foo.vale`).
+Copy the fixture into a `tempfile::tempdir()` and compile *that* copy, from that dir. Keeps the repo
+tree clean (@TMBFIZ) and makes the DWARF source dir (`DW_AT_comp_dir`) predictable so a debugger can
+find the source. `compile_inline*` already does this; file-based fixtures must too.

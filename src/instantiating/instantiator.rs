@@ -22,6 +22,7 @@ use crate::typing::rust_interop::reserved::is_rust_backed;
 use crate::postparsing::names::{IImpreciseNameS, IRuneS};
 use crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name;
 use crate::scout_arena::ScoutArena;
+use crate::utils::range::RangeS;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::keywords::Keywords;
 use crate::compile_options::GlobalOptions;
@@ -1424,6 +1425,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &variable);
                 ExpressionIE::LetAndLend(self.interner.bump().alloc(LetAndLendIE {
+                    range: lal.range,
                     variable: local_i,
                     expr: source_ce,
                     result: result_it,
@@ -1440,6 +1442,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let some_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &some_impl_name);
                 let none_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &none_impl_name);
                 ExpressionIE::LockWeak(self.interner.bump().alloc(LockWeakIE {
+                    range: lw.range,
                     inner_expr: inner_ce,
                     source_type: inner_it,
                     some_constructor: some_proto,
@@ -1453,7 +1456,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let BorrowToWeakTE { inner_expr, .. } = **b;
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
-                ExpressionIE::BorrowToWeak(self.interner.bump().alloc(BorrowToWeakIE { inner_expr: inner_ce, source_type: inner_it, result: result_it }))
+                ExpressionIE::BorrowToWeak(self.interner.bump().alloc(BorrowToWeakIE { range: b.range, inner_expr: inner_ce, source_type: inner_it, result: result_it }))
             }
             ExpressionTE::LetNormal(l) => {
                 let (_inner_it, inner_ce) =
@@ -1461,6 +1464,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &l.variable);
                 ExpressionIE::LetNormal(self.interner.alloc(LetNormalIE {
+                    range: l.range,
                     variable: local_i,
                     expr: inner_ce,
                     result: result_it,
@@ -1470,6 +1474,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &u.variable);
                 ExpressionIE::Unlet(self.interner.alloc(UnletIE {
+                    range: u.range,
                     variable: local_i,
                     result: result_it,
                 }))
@@ -1477,7 +1482,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ExpressionTE::Discard(d) => {
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &d.expr);
-                ExpressionIE::Discard(self.interner.alloc(DiscardIE { expr: inner_ce, source_type: inner_it }))
+                ExpressionIE::Discard(self.interner.alloc(DiscardIE { range: d.range, expr: inner_ce, source_type: inner_it }))
             }
             ExpressionTE::If(if_te) => {
                 let (_condition_it, condition_ce) =
@@ -1487,6 +1492,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (else_it, else_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &if_te.else_call);
                 ExpressionIE::If(self.interner.alloc(IfIE {
+                    range: if_te.range,
                     condition: condition_ce,
                     then_call: then_ce,
                     else_call: else_ce,
@@ -1499,7 +1505,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &w.block.inner);
                 ExpressionIE::While(self.interner.alloc(WhileIE {
-                    block: BlockIE { inner: inner_ce, inner_type: inner_it, result: inner_it },
+                    range: w.range,
+                    block: BlockIE { range: w.block.range, inner: inner_ce, inner_type: inner_it, result: inner_it },
                     result: result_it,
                 }))
             }
@@ -1512,6 +1519,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     other => panic!("Mutate destination_expr must produce a borrow, got {:?}", other),
                 };
                 ExpressionIE::Mutate(self.interner.bump().alloc(MutateIE {
+                    range: m.range,
                     destination_expr: destination_ce,
                     destination_type: destination_borrow,
                     source_expr: source_ce,
@@ -1525,6 +1533,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &r.variable);
                 ExpressionIE::Restackify(self.interner.alloc(RestackifyIE {
+                    range: r.range,
                     variable: local_i,
                     source_expr: inner_ce,
                     result: result_it,
@@ -1534,17 +1543,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &r.source_expr);
                 ExpressionIE::Return(self.interner.alloc(ReturnIE {
+                    range: r.range,
                     source_expr: inner_ce,
                     source_type: inner_it,
                 }))
             }
-            ExpressionTE::Break(_) => {
-                ExpressionIE::Break(self.interner.alloc(BreakIE))
+            ExpressionTE::Break(b) => {
+                ExpressionIE::Break(self.interner.alloc(BreakIE { range: b.range }))
             }
             ExpressionTE::Block(b) => {
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &b.inner);
                 ExpressionIE::Block(self.interner.alloc(BlockIE {
+                    range: b.range,
                     inner: inner_ce,
                     inner_type: inner_it,
                     result: result_it,
@@ -1556,6 +1567,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, inner_te).1
                     }).collect();
                 ExpressionIE::Consecutor(self.interner.alloc(ConsecutorIE {
+                    range: c.range,
                     exprs: self.interner.alloc_slice_from_vec(inners_ce),
                     result: result_it,
                 }))
@@ -1567,6 +1579,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }).collect();
                 let ssa_tt = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_type);
                 ExpressionIE::StaticArrayFromValues(self.interner.alloc(StaticArrayFromValuesIE {
+                    range: s.range,
                     elements: self.interner.alloc_slice_from_vec(elements_ce),
                     result: result_it,
                     array_type: self.interner.alloc(ssa_tt),
@@ -1582,6 +1595,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (right_it, right_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &right);
                 ExpressionIE::IsSameInstance(self.interner.alloc(IsSameInstanceIE {
+                    range: isi.range,
                     left: left_ce,
                     left_type: left_it,
                     right: right_ce,
@@ -1599,6 +1613,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let ok_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &ok_result_impl_id_t);
                 let err_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &err_result_impl_id_t);
                 ExpressionIE::AsSubtype(self.interner.bump().alloc(AsSubtypeIE {
+                    range: asx.range,
                     source_expr: source_ce,
                     source_type: source_it,
                     target_type: target_coord,
@@ -1610,27 +1625,28 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     result: result_it,
                 }))
             }
-            ExpressionTE::VoidLiteral(_) => {
-                ExpressionIE::VoidLiteral(self.interner.alloc(VoidLiteralIE))
+            ExpressionTE::VoidLiteral(v) => {
+                ExpressionIE::VoidLiteral(self.interner.alloc(VoidLiteralIE { range: v.range }))
             }
             ExpressionTE::ConstantInt(c) => {
                 ExpressionIE::ConstantInt(self.interner.alloc(ConstantIntIE {
+                    range: c.range,
                     value: expect_integer_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &c.value)).value,
                     bits: c.bits,
                 }))
             }
             ExpressionTE::ConstantBool(c) => {
-                ExpressionIE::ConstantBool(self.interner.alloc(ConstantBoolIE { value: c.value }))
+                ExpressionIE::ConstantBool(self.interner.alloc(ConstantBoolIE { range: c.range, value: c.value }))
             }
             ExpressionTE::ConstantStr(c) => {
-                ExpressionIE::ConstantStr(self.interner.alloc(ConstantStrIE { _marker: PhantomData, value: c.value.0, result: result_it }))
+                ExpressionIE::ConstantStr(self.interner.alloc(ConstantStrIE { range: c.range, _marker: PhantomData, value: c.value.0, result: result_it }))
             }
             ExpressionTE::ConstantFloat(c) => {
-                ExpressionIE::ConstantFloat(self.interner.alloc(ConstantFloatIE { value: c.value }))
+                ExpressionIE::ConstantFloat(self.interner.alloc(ConstantFloatIE { range: c.range, value: c.value }))
             }
             ExpressionTE::ArgLookup(al) => {
-                let ArgLookupTE { param_index, .. } = **al;
-                ExpressionIE::ArgLookup(self.interner.alloc(ArgLookupIE { param_index, tyype: result_it }))
+                let ArgLookupTE { range, param_index, .. } = **al;
+                ExpressionIE::ArgLookup(self.interner.alloc(ArgLookupIE { range, param_index, tyype: result_it }))
             }
             ExpressionTE::ArrayLength(al) => {
                 let ArrayLengthTE { array_expr, .. } = **al;
@@ -1640,6 +1656,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     other => panic!("ArrayLength array_expr must produce a borrow, got {:?}", other),
                 };
                 ExpressionIE::ArrayLength(self.interner.alloc(ArrayLengthIE {
+                    range: al.range,
                     array_expr: array_ce,
                     array_type: array_borrow,
                 }))
@@ -1666,6 +1683,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         .position(|(header_proto, _)| header_proto.id == super_function_prototype_t.id)
                         .expect("vassertSome: super_function_prototype not in interface blueprint") as i32;
                 let result_ce = ExpressionIE::InterfaceFunctionCall(self.interner.bump().alloc(InterfaceFunctionCallIE {
+                    range: ifc.range,
                     super_function_prototype: self.interner.bump().alloc(super_function_prototype),
                     virtual_param_index,
                     index_in_edge,
@@ -1681,7 +1699,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let ExternFunctionCallTE { prototype2, args, .. } = **efc;
                 let prototype = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype2);
                 let args_ce: Vec<ExpressionIE<'s, 'i>> = args.iter().map(|arg_te| self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te).1).collect();
-                let result_ce = ExpressionIE::ExternFunctionCall(self.interner.bump().alloc(ExternFunctionCallIE { prototype2: prototype, args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()), result: result_it }));
+                let result_ce = ExpressionIE::ExternFunctionCall(self.interner.bump().alloc(ExternFunctionCallIE { range: efc.range, prototype2: prototype, args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()), result: result_it }));
                 // Old code that handled generics:
                 // match prototype2.id.local_name {
                 //     INameT::ExternFunction(ExternFunctionNameT { human_name, template_args, .. }) if !template_args.is_empty() => {
@@ -1730,7 +1748,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     arg_ce
                 }).collect();
                 let prototype = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype_t);
+                // FunctionCallTE.range is a slice (call + arg ranges); take the call's own (first)
+                // as this node's scalar range, falling back to a synthetic range if absent.
+                let range = fc.range.first().copied().unwrap_or_else(|| RangeS::internal(self.scout_arena, -1));
                 ExpressionIE::FunctionCall(self.interner.alloc(FunctionCallIE {
+                    range,
                     callable: prototype,
                     args: self.interner.bump().alloc_slice_fill_iter(inners_ce.into_iter()),
                     result: result_it,
@@ -1751,6 +1773,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &cp.inner);
                 ExpressionIE::CopyPrim(self.interner.alloc(CopyPrimIE {
+                    range: cp.range,
                     inner: inner_ce,
                     source_type: inner_it,
                     result: result_it,
@@ -1764,6 +1787,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(*struct_tt.id));
                 let struct_it = self.translate_struct(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, struct_tt, &bound_args);
                 ExpressionIE::Construct(self.interner.bump().alloc(ConstructIE {
+                    range: c.range,
                     struct_tt: struct_it,
                     result: result_it,
                     args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()),
@@ -1774,6 +1798,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let array_it = self.translate_runtime_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_tt);
                 let (_capacity_it, capacity_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &capacity_expr);
                 ExpressionIE::NewRuntimeSizedArray(self.interner.alloc(NewRuntimeSizedArrayIE {
+                    range: nmrsa.range,
                     array_type: array_it,
                     capacity_expr: capacity_ce,
                     result: result_it,
@@ -1785,6 +1810,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_generator_it, generator_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &generator);
                 let generator_prototype = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, generator_method);
                 ExpressionIE::StaticArrayFromCallable(self.interner.alloc(StaticArrayFromCallableIE {
+                    range: s.range,
                     array_type: ssa_it,
                     generator: generator_ce,
                     generator_method: generator_prototype,
@@ -1801,6 +1827,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let consumer_prototype =
                     self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, consumer_method_t);
                 ExpressionIE::DestroyStaticSizedArrayIntoFunction(self.interner.alloc(DestroyStaticSizedArrayIntoFunctionIE {
+                    range: d.range,
                     array_expr: array_ce,
                     array_type: ssa_it,
                     consumer: consumer_ce,
@@ -1824,6 +1851,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, dest_ref_var_t).1
                 }).collect();
                 ExpressionIE::DestroyStaticSizedArrayIntoLocals(self.interner.alloc(DestroyStaticSizedArrayIntoLocalsIE {
+                    range: d.range,
                     expr: source_ce,
                     static_sized_array: ssa_it,
                     destination_reference_variables: self.interner.alloc_slice_from_vec(dest_vars_vec),
@@ -1833,6 +1861,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let DestroyRuntimeSizedArrayTE { array_expr, .. } = **d;
                 let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
                 ExpressionIE::DestroyRuntimeSizedArray(self.interner.alloc(DestroyRuntimeSizedArrayIE {
+                    range: d.range,
                     array_expr: array_ce,
                     array_type: array_it,
                 }))
@@ -1845,6 +1874,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     other => panic!("RuntimeSizedArrayCapacity array_expr must produce a borrow, got {:?}", other),
                 };
                 ExpressionIE::RuntimeSizedArrayCapacity(self.interner.alloc(RuntimeSizedArrayCapacityIE {
+                    range: r.range,
                     array_expr: array_ce,
                     array_type: array_borrow,
                 }))
@@ -1858,6 +1888,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     other => panic!("PushRuntimeSizedArray array_expr must produce a borrow, got {:?}", other),
                 };
                 ExpressionIE::PushRuntimeSizedArray(self.interner.alloc(PushRuntimeSizedArrayIE {
+                    range: prsa.range,
                     array_expr: array_ce,
                     array_type: array_borrow,
                     new_element_expr: element_ce,
@@ -1872,6 +1903,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     other => panic!("PopRuntimeSizedArray array_expr must produce a borrow, got {:?}", other),
                 };
                 ExpressionIE::PopRuntimeSizedArray(self.interner.alloc(PopRuntimeSizedArrayIE {
+                    range: p.range,
                     array_expr: array_ce,
                     array_type: array_borrow,
                     result: result_it,
@@ -1886,6 +1918,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (inner_it, inner_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr_unsubstituted);
                 let super_kind = self.translate_super_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &target_super_kind);
                 ExpressionIE::Upcast(self.interner.bump().alloc(UpcastIE {
+                    range: u.range,
                     inner_expr: inner_ce,
                     source_type: inner_it,
                     target_interface: super_kind,
@@ -1904,6 +1937,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, dest_ref_var_t).1
                     }).collect();
                 ExpressionIE::Destroy(self.interner.bump().alloc(DestroyIE {
+                    range: d.range,
                     expr: source_ce,
                     struct_tt: StructIT { id: struct_id },
                     destination_reference_variables: self.interner.bump().alloc_slice_copy(&dest_ref_vars),

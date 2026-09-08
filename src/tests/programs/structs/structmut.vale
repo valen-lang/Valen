@@ -4,6 +4,7 @@ struct Carrier {
 }
 
 exported func main() int {
+  0; // lldb breakpoint: structmut-at
   // TSUGAR:   return Carrier(400, 8).interceptors;
   return __copy_prim(Carrier(400, 8).interceptors);
 }

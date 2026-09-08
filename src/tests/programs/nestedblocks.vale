@@ -9,6 +9,7 @@ exported func main() int {
     neighborIndex = 10;
     bork = Bork();
     block {
+      0; // lldb breakpoint: nestedblocks-inner
       drop(bork);
     }
   }
