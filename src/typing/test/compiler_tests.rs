@@ -3134,13 +3134,15 @@ fn recursive_struct_with_opt() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r#"
 import v.builtins.opt.*;
+import v.builtins.box.*;
 struct ListNode {
-  tail Opt<ListNode>;
+  tail Box<dyn OptI<ListNode>>;
 }
 func main(a ListNode) {}
 "#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_opt(&parse_arena, &parser_keywords),
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
     new_test_code_map(&parse_arena, code),
     Source::Fn(empty_v_builtins_stub),
   ]);
@@ -5833,21 +5835,21 @@ fn downcast_function_rrbfs() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r#"
 #!DeriveInterfaceDrop
-interface Result<OkType, ErrType> { }
+interface ResultI<OkType, ErrType> { }
 
 #!DeriveStructDrop
-struct Ok<OkType, ErrType> { value OkType; }
+struct OkI<OkType, ErrType> { value OkType; }
 
-impl<OkType, ErrType> Result<OkType, ErrType> for Ok<OkType, ErrType>;
+impl<OkType, ErrType> ResultI<OkType, ErrType> for OkI<OkType, ErrType>;
 
 #!DeriveStructDrop
-struct Err<OkType, ErrType> { value ErrType; }
+struct ErrI<OkType, ErrType> { value ErrType; }
 
-impl<OkType, ErrType> Result<OkType, ErrType> for Err<OkType, ErrType>;
+impl<OkType, ErrType> ResultI<OkType, ErrType> for ErrI<OkType, ErrType>;
 
 
 extern("vale_as_subtype")
-func try_as<SubType, SuperType>(left &SuperType) Result<&SubType, &SuperType>
+func try_as<SubType, SuperType>(left &SuperType) ResultI<&SubType, &SuperType>
 where implements(SubType, SuperType);
 "#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
@@ -5958,7 +5960,7 @@ where implements(SubType, SuperType);
             init_steps: &[],
             local_name:
               INameT::Interface(InterfaceNameT {
-                template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
+                template: InterfaceTemplateNameT { human_namee: StrI("ResultI"), .. },
                 template_args: [first, second],
                 ..
               }),
@@ -6041,6 +6043,7 @@ fn downcast_with_as() {
 import v.builtins.as.*;
 import v.builtins.logic.*;
 import v.builtins.drop.*;
+import v.builtins.box.*;
 
 interface IShip {}
 
@@ -6048,12 +6051,13 @@ struct Raza { fuel int; }
 impl IShip for Raza;
 
 exported func main() {
-  ship IShip = Raza(42);
+  ship Box<dyn IShip> = Box<dyn IShip>(Box<Raza>(Raza(42)));
   ship.try_as<Raza>();
 }
 "#;
   let code_source = CodeSource::new(vec![
     builtin_source_for_as(&parse_arena, &parser_keywords),
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
     new_test_code_map(&parse_arena, code),
     Source::Fn(empty_v_builtins_stub),
   ]);
@@ -6165,7 +6169,7 @@ exported func main() {
             init_steps: &[],
             local_name:
               INameT::Interface(InterfaceNameT {
-                template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
+                template: InterfaceTemplateNameT { human_namee: StrI("ResultI"), .. },
                 template_args:
                   [ITemplataT::Kind(KindTemplataT {
                     kind:
@@ -6340,7 +6344,7 @@ exported func main() {
             init_steps: &[],
             local_name:
               INameT::Interface(InterfaceNameT {
-                template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
+                template: InterfaceTemplateNameT { human_namee: StrI("ResultI"), .. },
                 template_args:
                   [ITemplataT::Kind(KindTemplataT {
                     kind:

@@ -1,4 +1,5 @@
 import v.builtins.opt.*;
+import v.builtins.box.*;
 
 extern("vale_lock_weak")
-func lock<T>(w weak T) Opt<&T>;
+func lock<T>(w weak T) Box<dyn OptI<&T>>;

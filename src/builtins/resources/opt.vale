@@ -3,55 +3,55 @@ import v.builtins.panicutils.*;
 import v.builtins.drop.*;
 
 #!DeriveInterfaceDrop
-interface Opt<T> { }
+interface OptI<T> { }
 #!DeriveStructDrop
-struct Some<T> { value T; }
+struct SomeI<T> { value T; }
 
-impl<T> Opt<T> for Some<T>;
+impl<T> OptI<T> for SomeI<T>;
 #!DeriveStructDrop
-struct None<T> { }
+struct NoneI<T> { }
 
-impl<T> Opt<T> for None<T>;
+impl<T> OptI<T> for NoneI<T>;
 
-abstract func drop<T>(virtual opt Opt<T>)
+abstract func drop<T>(virtual opt OptI<T>)
 where func drop(T)void;
 
-func drop<T>(opt Some<T>)
+func drop<T>(opt SomeI<T>)
 where func drop(T)void
 {
   [x] = ^opt;
 }
 
-func drop<T>(opt None<T>) {
+func drop<T>(opt NoneI<T>) {
   [ ] = ^opt;
 }
 
-abstract func isEmpty<T>(virtual opt &Opt<T>) bool;
-func isEmpty<T>(opt &None<T>) bool { return true; }
-func isEmpty<T>(opt &Some<T>) bool { return false; }
+abstract func isEmpty<T>(virtual opt &OptI<T>) bool;
+func isEmpty<T>(opt &NoneI<T>) bool { return true; }
+func isEmpty<T>(opt &SomeI<T>) bool { return false; }
 
-abstract func isEmpty<T>(virtual opt Opt<T>) bool
+abstract func isEmpty<T>(virtual opt OptI<T>) bool
 where func drop(T)void;
-func isEmpty<T>(opt None<T>) bool
+func isEmpty<T>(opt NoneI<T>) bool
 where func drop(T)void
 { return true; }
 
-func isEmpty<T>(opt Some<T>) bool
+func isEmpty<T>(opt SomeI<T>) bool
 where func drop(T)void
 { return false; }
 
-abstract func get<T>(virtual opt Opt<T>) T;
-func get<T>(opt None<T>) T { panic("Called get() on a None!"); }
-func get<T>(opt Some<T>) T {
+abstract func get<T>(virtual opt OptI<T>) T;
+func get<T>(opt NoneI<T>) T { panic("Called get() on a NoneI!"); }
+func get<T>(opt SomeI<T>) T {
   [value] = ^opt;
   return ^value;
 }
 
-// TODO: figure out what to do instead of this g... perhaps an associated group inside Opt?
-abstract func get<T, g'>(virtual opt &Opt<T> in g) &T in g...;
-func get<T, g'>(opt &None<T> in g) &T in g... { panic("Called get() on a None!"); }
-func get<T, g'>(opt &Some<T> in g) &T in g... { return &opt.value; }
+// TODO: figure out what to do instead of this g... perhaps an associated group inside OptI?
+abstract func get<T, g'>(virtual opt &OptI<T> in g) &T in g...;
+func get<T, g'>(opt &NoneI<T> in g) &T in g... { panic("Called get() on a NoneI!"); }
+func get<T, g'>(opt &SomeI<T> in g) &T in g... { return &opt.value; }
 
-abstract func expect_none<T>(virtual opt Opt<T>) None<T>;
-func expect_none<T>(opt Some<T>) None<T> { panic("Called expect_none() on a Some!"); }
-func expect_none<T>(opt None<T>) None<T> { ^opt }
+abstract func expect_none<T>(virtual opt OptI<T>) NoneI<T>;
+func expect_none<T>(opt SomeI<T>) NoneI<T> { panic("Called expect_none() on a SomeI!"); }
+func expect_none<T>(opt NoneI<T>) NoneI<T> { ^opt }

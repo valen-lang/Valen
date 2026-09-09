@@ -1,6 +1,7 @@
 import array.make.*;
 import math.*;
 import list.*;
+import v.builtins.box.*;
 
 
 struct IntHasher { }
@@ -28,7 +29,7 @@ struct RHashMap<K, V, H, E>
 where pure func<'x>('x &H, 'x &K)int, func(&E, &K, &K)bool {
   hasher H;
   equator E;
-  table Array<Opt<RHashMapNode<K, V>>>;
+  table Array<Box<dyn OptI<RHashMapNode<K, V>>>>;
   size int;
 }
 
@@ -47,7 +48,7 @@ where func(&H, &K)int, func(&E, &K, &K)bool {
   return RHashMap<K, V>(
       hasher,
       equator,
-      Array<Opt<RHashMapNode<K, V>>>(capacity),
+      Array<Box<dyn OptI<RHashMapNode<K, V>>>>(capacity),
       0);
 }
 
@@ -60,7 +61,7 @@ func update<K, V, H, E>(self &RHashMap<K, V, H, E>, key K, value V) V {
   if (maybeIndex.isEmpty()) {
     panic("Map doesnt have given key!");
   }
-  optNode &Opt<RHashMapNode<K, V>> = self.table[maybeIndex.get()];
+  optNode &dyn OptI<RHashMapNode<K, V>> = self.table[maybeIndex.get()];
   node &RHashMapNode<K, V> = get(&optNode);
   return set node.value = value;
 }
@@ -74,10 +75,10 @@ func add<K, V, H, E>(map &RHashMap<K, V, H, E>, key K, value V) void {
         if (map.table.len() == 0) { 2 }
         else { map.table.len() * 2 };
     newTable =
-        Array<Opt<RHashMapNode<K, V>>>(
+        Array<Box<dyn OptI<RHashMapNode<K, V>>>>(
             newSize,
             &(index) => {
-              opt Opt<RHashMapNode<K, V>> = None<RHashMapNode<K, V>>();
+              opt Box<dyn OptI<RHashMapNode<K, V>>> = Box<dyn OptI<RHashMapNode<K, V>>>(Box<NoneI<RHashMapNode<K, V>>>(NoneI<RHashMapNode<K, V>>()));
               opt
             });
     i = 0;
@@ -85,7 +86,7 @@ func add<K, V, H, E>(map &RHashMap<K, V, H, E>, key K, value V) void {
       if (map.table[i].isEmpty()) {
         // do nothing
       } else {
-        maybeNode = (set map.table[i] = None<RHashMapNode<K, V>>());
+        maybeNode = (set map.table[i] = Box<dyn OptI<RHashMapNode<K, V>>>(Box<NoneI<RHashMapNode<K, V>>>(NoneI<RHashMapNode<K, V>>())));
         node = get(maybeNode);
         addNodeToTable(&newTable, map.hasher, node);
       }
@@ -105,7 +106,7 @@ func panicVoid<T>(x T) {
 }
 
 func addNodeToTable<K, V, H>(
-    table &Array<Opt<RHashMapNode<K, V>>>,
+    table &Array<Box<dyn OptI<RHashMapNode<K, V>>>>,
     hasher &H,
     node RHashMapNode<K, V>)
 where func(&H, &K)int
@@ -114,11 +115,11 @@ where func(&H, &K)int
   startIndex = abs(hash mod table.len());
   index = findEmptyIndexForKey(&table, startIndex, node.key);
 
-  opt Opt<RHashMapNode<K, V>> = Some(node);
+  opt Box<dyn OptI<RHashMapNode<K, V>>> = Box<dyn OptI<RHashMapNode<K, V>>>(Box<SomeI<RHashMapNode<K, V>>>(SomeI<RHashMapNode<K, V>>(node)));
   (set table[index] = opt).expect_none();
 }
 
-func findEmptyIndexForKey<K, V>(table &Array<Opt<RHashMapNode<K, V>>>, startIndex int, key &K) int {
+func findEmptyIndexForKey<K, V>(table &Array<Box<dyn OptI<RHashMapNode<K, V>>>>, startIndex int, key &K) int {
   i = 0;
   while (i < table.len()) {
     index = (startIndex + i) mod table.len();
@@ -132,19 +133,19 @@ func findEmptyIndexForKey<K, V>(table &Array<Opt<RHashMapNode<K, V>>>, startInde
   return panic("findEmptyIndexForKey went past end of table!");
 }
 
-func findIndexOfKey<K, V, E>(table &Array<Opt<RHashMapNode<K, V>>>, equator &E, startIndex int, key K)
-Opt<int>
+func findIndexOfKey<K, V, E>(table &Array<Box<dyn OptI<RHashMapNode<K, V>>>>, equator &E, startIndex int, key K)
+Box<dyn OptI<int>>
 where func(&E, &K, &K)bool {
   i = 0;
   while (i < table.len()) {
     index = (startIndex + i) mod table.len();
     something = table[index];
     if (something.isEmpty()) {
-      return None<int>();
+      return Box<dyn OptI<int>>(Box<NoneI<int>>(NoneI<int>()));
     }
     node = something.get();
     if ((&equator)(node.key, key)) {
-      return Some<int>(index);
+      return Box<dyn OptI<int>>(Box<SomeI<int>>(SomeI<int>(index)));
     }
     // continue to next node
     set i = i + 1;
@@ -152,19 +153,19 @@ where func(&E, &K, &K)bool {
   return panic("findIndexOfKey went past end of table! len " + str(table.len()) + " and i " + str(i));
 }
 
-func get<K, V, H, E>(self &RHashMap<K, V, H, E>, key &K) Opt<&V> {
+func get<K, V, H, E>(self &RHashMap<K, V, H, E>, key &K) Box<dyn OptI<&V>> {
   if (self.table.len() == 0) {
-    return None<&V>();
+    return Box<dyn OptI<&V>>(Box<NoneI<&V>>(NoneI<&V>()));
   }
   hash int = (&self.hasher)(key);
   startIndex = abs(hash mod self.table.len());
   maybeIndex = findIndexOfKey(self.table, self.equator, startIndex, key);
   if (maybeIndex.isEmpty()) {
-    opt Opt<&V> = None<&V>();
+    opt Box<dyn OptI<&V>> = Box<dyn OptI<&V>>(Box<NoneI<&V>>(NoneI<&V>()));
     return opt;
   }
   node = self.table[maybeIndex.get()].get();
-  opt Opt<&V> = Some<&V>(&node.value);
+  opt Box<dyn OptI<&V>> = Box<dyn OptI<&V>>(Box<SomeI<&V>>(SomeI<&V>(&node.value)));
   return opt;
 }
 
@@ -201,7 +202,7 @@ func values<K, V, H, E>(self &RHashMap<K, V, H, E>) []&V {
 }
 
 func innerRemove<K, V, H, E>(
-  table &Array<Opt<RHashMapNode<K, V>>>,
+  table &Array<Box<dyn OptI<RHashMapNode<K, V>>>>,
   hasher &H,
   equator &E,
   key K)
@@ -212,7 +213,7 @@ where func(&H, &K)int, func(&E, &K, &K)bool
   startIndex = abs(hash mod table.len());
   maybeIndex = findIndexOfKey(&table, equator, startIndex, key);
   index = maybeIndex.get();
-  [unused, oldElement] = (set table[index] = None<RHashMapNode<K, V>>()).get();
+  [unused, oldElement] = (set table[index] = Box<dyn OptI<RHashMapNode<K, V>>>(Box<NoneI<RHashMapNode<K, V>>>(NoneI<RHashMapNode<K, V>>()))).get();
   return (index, oldElement);
 }
 
@@ -226,7 +227,7 @@ V {
   i = 1;
   while (i < map.table.len()) {
     neighborIndex = (originalIndex + i) mod len(&map.table);
-    maybeNeighbor = (set map.table[neighborIndex] = None<RHashMapNode<K, V>>());
+    maybeNeighbor = (set map.table[neighborIndex] = Box<dyn OptI<RHashMapNode<K, V>>>(Box<NoneI<RHashMapNode<K, V>>>(NoneI<RHashMapNode<K, V>>())));
     if (not maybeNeighbor.isEmpty()) {
       [neighborKey, neighborValue] = (maybeNeighbor).get();
       addNodeToTable(map.table, map.hasher, RHashMapNode<K, V>(neighborKey, neighborValue));

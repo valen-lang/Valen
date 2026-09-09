@@ -8,11 +8,11 @@ import printutils.*;
 
 struct MyList<T> where func drop(T)void {
   value T;
-  next Box<dyn Opt<MyList<T>>>;
+  next Box<dyn OptI<MyList<T>>>;
 }
 
 func forEach<F, T>(
-  opt &dyn Opt<MyList<T>>,
+  opt &dyn OptI<MyList<T>>,
   func F)
 int
 where func drop(T)void, func(&F, &T)void, func drop(F)void {
@@ -34,7 +34,7 @@ where func drop(T)void, func(&F, &T)void, func drop(F)void
 }
 
 exported func main() int {
-  list = MyList<int>(10, Box<dyn Opt<MyList<int>>>(Box<Some<MyList<int>>>(Some<MyList<int>>(MyList<int>(20, Box<dyn Opt<MyList<int>>>(Box<Some<MyList<int>>>(Some<MyList<int>>(MyList<int>(30, Box<dyn Opt<MyList<int>>>(Box<None<MyList<int>>>(None<MyList<int>>())))))))))));
+  list = MyList<int>(10, Box<dyn OptI<MyList<int>>>(Box<SomeI<MyList<int>>>(SomeI<MyList<int>>(MyList<int>(20, Box<dyn OptI<MyList<int>>>(Box<SomeI<MyList<int>>>(SomeI<MyList<int>>(MyList<int>(30, Box<dyn OptI<MyList<int>>>(Box<NoneI<MyList<int>>>(NoneI<MyList<int>>())))))))))));
   // TSUGAR:   forEach(&list, { print(_); });
   forEach(&list, { print(__copy_prim(_)); });
   return 0;

@@ -1,9 +1,10 @@
 import v.builtins.result.*;
+import v.builtins.box.*;
 
 extern("vale_as_subtype")
-func try_as<SubType, SuperType>(left &SuperType) Result<&SubType, &SuperType>
+func try_as<SubType, SuperType>(left &SuperType) Box<dyn ResultI<&SubType, &SuperType>>
 where implements(SubType, SuperType);
 
 extern("vale_as_subtype")
-func try_take_as<SubType, SuperType>(left SuperType) Result<SubType, SuperType>
+func try_take_as<SubType, SuperType>(left SuperType) Box<dyn ResultI<SubType, SuperType>>
 where implements(SubType, SuperType);

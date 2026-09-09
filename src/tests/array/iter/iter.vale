@@ -1,3 +1,4 @@
+import v.builtins.box.*;
 
 struct StaticSizedArrayReadonlyIter<N Int, E> {
   arr &StaticArray<N, E>;
@@ -7,10 +8,10 @@ func begin<N Int, E>(arr &StaticArray<N, E>)
 StaticSizedArrayReadonlyIter<N, E> {
   StaticSizedArrayReadonlyIter<N, E>(arr, 0)
 }
-func next<N Int, E>(iter &StaticSizedArrayReadonlyIter<N, E>) Opt<&E> {
+func next<N Int, E>(iter &StaticSizedArrayReadonlyIter<N, E>) Box<dyn OptI<&E>> {
   if iter.pos < iter.arr.len() {
-    Some<&E>(&iter.arr[set iter.pos = iter.pos + 1])
+    Box<dyn OptI<&E>>(Box<SomeI<&E>>(SomeI<&E>(&iter.arr[set iter.pos = iter.pos + 1])))
   } else {
-    None<&E>()
+    Box<dyn OptI<&E>>(Box<NoneI<&E>>(NoneI<&E>()))
   }
 }

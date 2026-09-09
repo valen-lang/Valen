@@ -1,6 +1,7 @@
 import panicutils.*;
 import v.builtins.arrays.*;
 import v.builtins.migrate.*;
+import v.builtins.box.*;
 
 #!DeriveStructDrop
 struct List<E> {
@@ -57,11 +58,11 @@ func remove<E>(list &List<E>, removeAtIndex int) E {
     panic("Can't remove, index out of bounds!");
   }
 
-  temp Opt<E> = Some<E>((&list.array).pop());
+  temp Box<dyn OptI<E>> = Box<dyn OptI<E>>(Box<SomeI<E>>(SomeI<E>((&list.array).pop())));
   i = list.len() - 1;
   while (i >= removeAtIndex) {
-    // TSUGAR:     (set temp = Some(set list.array[i] = (set temp = None<E>()).get())).expect_none();
-    (set temp = Some(set list.array[__copy_prim(&i)] = (set temp = None<E>()).get())).expect_none();
+    // TSUGAR:     (set temp = SomeI(set list.array[i] = (set temp = NoneI<E>()).get())).expect_none();
+    (set temp = Box<dyn OptI<E>>(Box<SomeI<E>>(SomeI<E>(set list.array[__copy_prim(&i)] = (set temp = Box<dyn OptI<E>>(Box<NoneI<E>>(NoneI<E>()))).get())))).expect_none();
     set i = i - 1;
   }
 

@@ -1,20 +1,21 @@
+import v.builtins.box.*;
 
-abstract func getOr<T>(virtual opt &Opt<T>, default T) T;
-func getOr<T>(opt &None<T>, default T) T {
+abstract func getOr<T>(virtual opt &OptI<T>, default T) T;
+func getOr<T>(opt &NoneI<T>, default T) T {
   return default;
 }
-func getOr<T>(opt &Some<T>, default T) T {
+func getOr<T>(opt &SomeI<T>, default T) T {
   return opt.value;
 }
 
-abstract func map<T, R>(virtual opt &Opt<T>, func &IFunction1<&T, R>) Opt<R>;
-func map<T, R>(opt &None<T>, func &IFunction1<&T, R>) Opt<R> {
-  return None<R>();
+abstract func map<T, R>(virtual opt &OptI<T>, func &dyn IFunction1<&T, R>) Box<dyn OptI<R>>;
+func map<T, R>(opt &NoneI<T>, func &dyn IFunction1<&T, R>) Box<dyn OptI<R>> {
+  return Box<dyn OptI<R>>(Box<NoneI<R>>(NoneI<R>()));
 }
-func map<T, R>(opt &Some<T>, func &IFunction1<&T, R>) Opt<R> {
-  return Some<R>(func(opt.value));
+func map<T, R>(opt &SomeI<T>, func &dyn IFunction1<&T, R>) Box<dyn OptI<R>> {
+  return Box<dyn OptI<R>>(Box<SomeI<R>>(SomeI<R>(func(opt.value))));
 }
 
-abstract func len<T>(virtual opt &Opt<T>) int;
-func len<T>(opt &None<T>) int { return 0; }
-func len<T>(opt &Some<T>) int { return 1; }
+abstract func len<T>(virtual opt &OptI<T>) int;
+func len<T>(opt &NoneI<T>) int { return 0; }
+func len<T>(opt &SomeI<T>) int { return 1; }

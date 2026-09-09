@@ -9,7 +9,7 @@ struct Raza { fuel int; }
 impl IShip for Raza;
 
 func moo(ship Box<dyn IShip>) int {
-  maybeRaza Result<Raza, Box<dyn IShip>> = (^ship).try_take_as<Raza>();
+  maybeRaza Box<dyn ResultI<Raza, Box<dyn IShip>>> = (^ship).try_take_as<Raza>();
   return if (maybeRaza.is_ok()) {
       // TSUGAR:       maybeRaza.expect("wat").fuel
       __copy_prim(maybeRaza.expect("wat").fuel)

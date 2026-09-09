@@ -1,6 +1,7 @@
 import array.make.*;
 import math.*;
 import list.*;
+import v.builtins.box.*;
 
 
 struct IntHasher { }
@@ -26,7 +27,7 @@ struct HashMap<K, V, H, E>
 where func(&H, &K)int, func(&E, &K, &K)bool, func drop(K)void, func drop(V)void {
   hasher H;
   equator E;
-  table Array<Opt<HashMapNode<K, V>>>;
+  table Array<Box<dyn OptI<HashMapNode<K, V>>>>;
   size int;
 }
 
@@ -45,7 +46,7 @@ where func(&H, &K)int, func(&E, &K, &K)bool {
   return HashMap<K, V>(
       ^hasher,
       ^equator,
-      Array<Opt<HashMapNode<K, V>>>(capacity),
+      Array<Box<dyn OptI<HashMapNode<K, V>>>>(capacity),
       0);
 }
 
@@ -61,7 +62,7 @@ func update<K, V, H, E>(self &HashMap<K, V, H, E>, key K, value V) V {
   if ((&maybeIndex).isEmpty()) {
     panic("Map doesnt have given key!");
   }
-  optNode &Opt<HashMapNode<K, V>> = &self.table[(^maybeIndex).get()];
+  optNode &dyn OptI<HashMapNode<K, V>> = &self.table[(^maybeIndex).get()];
   node &HashMapNode<K, V> = get(&optNode);
   return set node.value = ^value;
 }
@@ -75,10 +76,10 @@ func add<K, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
         if ((&map.table).len() == 0) { 2 }
         else { (&map.table).len() * 2 };
     newTable =
-        Array<Opt<HashMapNode<K, V>>>(
+        Array<Box<dyn OptI<HashMapNode<K, V>>>>(
             newSize,
             &(index) => {
-              opt Opt<HashMapNode<K, V>> = None<HashMapNode<K, V>>();
+              opt Box<dyn OptI<HashMapNode<K, V>>> = Box<dyn OptI<HashMapNode<K, V>>>(Box<NoneI<HashMapNode<K, V>>>(NoneI<HashMapNode<K, V>>()));
               ^opt
             });
     i = 0;
@@ -87,8 +88,8 @@ func add<K, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
       if ((&(&map.table)[__copy_prim(&i)]).isEmpty()) {
         // do nothing
       } else {
-        // TSUGAR:         maybeNode = (set map.table[i] = None<HashMapNode<K, V>>());
-        maybeNode = (set map.table[__copy_prim(&i)] = None<HashMapNode<K, V>>());
+        // TSUGAR:         maybeNode = (set map.table[i] = NoneI<HashMapNode<K, V>>());
+        maybeNode = (set map.table[__copy_prim(&i)] = Box<dyn OptI<HashMapNode<K, V>>>(Box<NoneI<HashMapNode<K, V>>>(NoneI<HashMapNode<K, V>>())));
         node = get(^maybeNode);
         addNodeToTable(&newTable, &map.hasher, ^node);
       }
@@ -108,7 +109,7 @@ func panicVoid<T>(x T) {
 }
 
 func addNodeToTable<K, V, H>(
-    table &Array<Opt<HashMapNode<K, V>>>,
+    table &Array<Box<dyn OptI<HashMapNode<K, V>>>>,
     hasher &H,
     node HashMapNode<K, V>)
 where func(&H, &K)int, func drop(K)void, func drop(V)void
@@ -119,12 +120,12 @@ where func(&H, &K)int, func drop(K)void, func drop(V)void
   startIndex = abs(&(hash mod table.len()));
   index = findEmptyIndexForKey(&table, startIndex, &node.key);
 
-  opt Opt<HashMapNode<K, V>> = Some(^node);
+  opt Box<dyn OptI<HashMapNode<K, V>>> = Box<dyn OptI<HashMapNode<K, V>>>(Box<SomeI<HashMapNode<K, V>>>(SomeI<HashMapNode<K, V>>(^node)));
   // TSUGAR:   (set table[index] = opt).expect_none();
   (set table[__copy_prim(&index)] = ^opt).expect_none();
 }
 
-func findEmptyIndexForKey<K, V>(table &Array<Opt<HashMapNode<K, V>>>, startIndex int, key &K) int
+func findEmptyIndexForKey<K, V>(table &Array<Box<dyn OptI<HashMapNode<K, V>>>>, startIndex int, key &K) int
 where func drop(K)void, func drop(V)void {
   i = 0;
   while (i < table.len()) {
@@ -140,8 +141,8 @@ where func drop(K)void, func drop(V)void {
   return panic("findEmptyIndexForKey went past end of table!");
 }
 
-func findIndexOfKey<K, V, E>(table &Array<Opt<HashMapNode<K, V>>>, equator &E, startIndex int, key &K)
-Opt<int>
+func findIndexOfKey<K, V, E>(table &Array<Box<dyn OptI<HashMapNode<K, V>>>>, equator &E, startIndex int, key &K)
+Box<dyn OptI<int>>
 where func(&E, &K, &K)bool, func drop(K)void, func drop(V)void {
   i = 0;
   while (i < table.len()) {
@@ -149,12 +150,12 @@ where func(&E, &K, &K)bool, func drop(K)void, func drop(V)void {
     // TSUGAR:     something = table[index];
     something = &table[__copy_prim(&index)];
     if (something.isEmpty()) {
-      return None<int>();
+      return Box<dyn OptI<int>>(Box<NoneI<int>>(NoneI<int>()));
     }
     node = something.get();
     // TSUGAR:     if ((&equator)(node.key, key)) {
     if ((&equator)(&node.key, key)) {
-      return Some<int>(index);
+      return Box<dyn OptI<int>>(Box<SomeI<int>>(SomeI<int>(index)));
     }
     // continue to next node
     set i = i + 1;
@@ -162,21 +163,21 @@ where func(&E, &K, &K)bool, func drop(K)void, func drop(V)void {
   return panic("findIndexOfKey went past end of table! len " + str(table.len()) + " and i " + str(i));
 }
 
-func get<K, V, H, E>(self &HashMap<K, V, H, E>, key &K) Opt<&V> {
+func get<K, V, H, E>(self &HashMap<K, V, H, E>, key &K) Box<dyn OptI<&V>> {
   if ((&self.table).len() == 0) {
-    return None<&V>();
+    return Box<dyn OptI<&V>>(Box<NoneI<&V>>(NoneI<&V>()));
   }
   hash int = (&self.hasher)(key);
   // TSUGAR:   startIndex = abs(hash mod (&self.table).len());
   startIndex = abs(&(hash mod (&self.table).len()));
   maybeIndex = findIndexOfKey(&self.table, &self.equator, startIndex, key);
   if ((&maybeIndex).isEmpty()) {
-    opt Opt<&V> = None<&V>();
+    opt Box<dyn OptI<&V>> = Box<dyn OptI<&V>>(Box<NoneI<&V>>(NoneI<&V>()));
     return ^opt;
   }
   // TSUGAR:   node = self.table[maybeIndex.get()].get();
   node = (&(&self.table)[__copy_prim(&(^maybeIndex).get())]).get();
-  opt Opt<&V> = Some<&V>(&node.value);
+  opt Box<dyn OptI<&V>> = Box<dyn OptI<&V>>(Box<SomeI<&V>>(SomeI<&V>(&node.value)));
   return ^opt;
 }
 
@@ -217,7 +218,7 @@ func values<K, V, H, E>(self &HashMap<K, V, H, E>) []&V {
 }
 
 func innerRemove<K, V, H, E>(
-  table &Array<Opt<HashMapNode<K, V>>>,
+  table &Array<Box<dyn OptI<HashMapNode<K, V>>>>,
   hasher &H,
   equator &E,
   key K)
@@ -229,8 +230,8 @@ where func(&H, &K)int, func(&E, &K, &K)bool, func drop(K)void, func drop(V)void
   startIndex = abs(&(hash mod table.len()));
   maybeIndex = findIndexOfKey(&table, equator, startIndex, &key);
   index = (^maybeIndex).get();
-  // TSUGAR:   [unused, oldElement] = (set table[index] = None<HashMapNode<K, V>>()).get();
-  [unused, oldElement] = (set table[__copy_prim(&index)] = None<HashMapNode<K, V>>()).get();
+  // TSUGAR:   [unused, oldElement] = (set table[index] = NoneI<HashMapNode<K, V>>()).get();
+  [unused, oldElement] = (set table[__copy_prim(&index)] = Box<dyn OptI<HashMapNode<K, V>>>(Box<NoneI<HashMapNode<K, V>>>(NoneI<HashMapNode<K, V>>()))).get();
   // TSUGAR:   return (index, oldElement);
   return (__copy_prim(&index), ^oldElement);
 }
@@ -245,8 +246,8 @@ V {
   i = 1;
   while (i < (&map.table).len()) {
     neighborIndex = (originalIndex + i) mod len(&map.table);
-    // TSUGAR:     maybeNeighbor = (set map.table[neighborIndex] = None<HashMapNode<K, V>>());
-    maybeNeighbor = (set map.table[__copy_prim(&neighborIndex)] = None<HashMapNode<K, V>>());
+    // TSUGAR:     maybeNeighbor = (set map.table[neighborIndex] = NoneI<HashMapNode<K, V>>());
+    maybeNeighbor = (set map.table[__copy_prim(&neighborIndex)] = Box<dyn OptI<HashMapNode<K, V>>>(Box<NoneI<HashMapNode<K, V>>>(NoneI<HashMapNode<K, V>>())));
     if (not (&maybeNeighbor).isEmpty()) {
       [neighborKey, neighborValue] = ^(^maybeNeighbor).get();
       addNodeToTable(&map.table, &map.hasher, HashMapNode<K, V>(^neighborKey, ^neighborValue));
