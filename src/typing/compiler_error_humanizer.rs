@@ -118,6 +118,10 @@ pub fn humanize<'s, 't>(
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(KindTemplataT { kind: *target_type })),
         isnt_parent.candidates.len())
     }
+    ICompileErrorT::BareInterfaceUseInDynMigrationT { range: _, ty } => {
+      format!("dyn migration: bare interface type {} used at a non-virtual position. Write the `dyn` form (`&dyn X` or `Box<dyn X>`); a bare interface is reserved for the future enum representation.",
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(KindTemplataT { kind: *ty })))
+    }
     ICompileErrorT::CouldntConvertForMutateT { range: _, expected_type, actual_type } => {
       format!("Mutate couldn't convert {} to expected destination type {}",
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(KindTemplataT { kind: *actual_type })),

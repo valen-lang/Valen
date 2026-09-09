@@ -71,7 +71,7 @@ fn simple_program_containing_a_virtual_function() {
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
-sealed interface I  {}
+interface I  {}
 func doThing(virtual i I) int { return 4; }
 func main(i I) int {
   return doThing(^i);
@@ -114,7 +114,7 @@ fn can_call_virtual_function() {
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
-sealed interface I  {}
+interface I  {}
 func doThing(virtual i I) int { return 4; }
 func main(i I) int {
   return doThing(^i);
@@ -192,7 +192,7 @@ fn simple_override_with_param_and_bound() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E, F, G> { }
+interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
@@ -231,7 +231,7 @@ fn struct_with_different_ordered_runes() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E, F, G> { }
+interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
@@ -270,7 +270,7 @@ fn struct_with_less_generic_params_than_interface() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E, F, G> { }
+interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
@@ -308,7 +308,7 @@ fn struct_with_more_generic_params_than_interface() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E, F, G> { }
+interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
@@ -346,7 +346,7 @@ fn struct_repeating_generic_params_for_interface() {
         r"
 import v.builtins.drop.*;
 
-sealed interface ISpaceship<E, F, G> { }
+interface ISpaceship<E, F, G> { }
 abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
     where func drop(X)void;
 
@@ -406,7 +406,7 @@ fn can_call_interface_envs_function_from_outside() {
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
-sealed interface I {
+interface I {
   func doThing(virtual i I) int;
 }
 func main(i I) int {
@@ -455,7 +455,7 @@ fn interface_with_method_with_param_of_substruct() {
         r"
 struct List<T> { }
 
-sealed interface SectionMember {}
+interface SectionMember {}
 struct Header {}
 impl SectionMember for Header;
 abstract func collectHeaders2(header &List<&Header>, virtual this &SectionMember);
@@ -525,7 +525,7 @@ fn generic_interface_forwarder_with_bound() {
         &instantiating_bump,
         r"
 #!DeriveInterfaceDrop
-sealed interface Bork<T>
+interface Bork<T>
 where func threeify(T)T {
   func bork(virtual self &Bork<T>) int;
 }
@@ -573,7 +573,7 @@ fn generic_interface_forwarder_with_drop_bound() {
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
-sealed interface Bork<T>
+interface Bork<T>
 where func threeify(T)T {
   func bork(virtual self &Bork<T>) int;
 }

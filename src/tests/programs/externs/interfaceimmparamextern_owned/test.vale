@@ -3,16 +3,18 @@
 // ownership onward) before returning. This test exercises the C-side
 // `IShip_dealias(s)` call — the pattern that pre-slice-5 tests used before
 // the silent-boundary refactor forced BORROW-only.
-sealed exported interface IShip share { }
+import v.builtins.box.*;
+
+exported interface IShip share { }
 abstract func getFuel(virtual ship &IShip) int;
 
 exported struct Firefly share { fuel int; }
 impl IShip for Firefly;
 func getFuel(ship Firefly) int { ship.fuel }
 
-extern func cGetShipFuel(s IShip) int;
+extern func cGetShipFuel(s Box<dyn IShip>) int;
 
 exported func main() int {
-  x IShip = Firefly(7); // force the impl to be emitted
-  return cGetShipFuel(Firefly(42));
+  x Box<dyn IShip> = Box<dyn IShip>(Box<Firefly>(Firefly(7))); // force the impl to be emitted
+  return cGetShipFuel(Box<dyn IShip>(Box<Firefly>(Firefly(42))));
 }

@@ -1377,7 +1377,7 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r#"
-sealed interface MyInterface { }
+interface MyInterface { }
 struct MyStruct { }
 impl MyInterface for MyStruct;
 func main(a MyStruct) {}
@@ -1435,7 +1435,7 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r#"
-exported sealed interface MyInterface {
+exported interface MyInterface {
   func bork(virtual self &MyInterface);
 }
 exported struct MyStruct { }
@@ -1503,7 +1503,7 @@ fn stamps_an_interface_template_via_a_function_return() {
   let code = r#"
 import v.builtins.drop.*;
 
-sealed interface MyInterface<X> where func drop(X)void { }
+interface MyInterface<X> where func drop(X)void { }
 
 struct SomeStruct<X> where func drop(X)void { x X; }
 impl<X> MyInterface<X> for SomeStruct<X>;
@@ -1817,7 +1817,7 @@ fn tests_exporting_interface() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = "exported sealed interface IMoo { func hi(virtual this &IMoo) void; }\n";
+  let code = "exported interface IMoo { func hi(virtual this &IMoo) void; }\n";
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
@@ -2057,7 +2057,12 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = include_str!("../../tests/programs/virtuals/upcasting.vale");
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -2319,7 +2324,12 @@ fn tests_calling_a_virtual_function_through_a_borrow_ref() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = include_str!("../../tests/programs/virtuals/callingThroughBorrow.vale");
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -2452,7 +2462,7 @@ fn tests_making_a_variable_with_a_pattern() {
 import v.builtins.box.*;
 import v.builtins.drop.*;
 
-sealed interface MyOption<T> { }
+interface MyOption<T> { }
 
 struct MySome<T> {}
 impl<T> MyOption<T> for MySome<T>;
@@ -2500,6 +2510,7 @@ fn tests_a_linked_list() {
     Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
     new_test_code_map(&parse_arena, code),
     new_test_package_source(&parse_arena, "printutils"),
     new_test_package_source(&parse_arena, "castutils"),
@@ -2815,7 +2826,7 @@ fn tests_calling_a_function_with_an_upcast() {
 interface ISpaceship {}
 struct Firefly {}
 impl ISpaceship for Firefly;
-func launch(ship &ISpaceship) { }
+func launch(ship &dyn ISpaceship) { }
 func main() {
   launch(&Firefly());
 }
@@ -2865,7 +2876,7 @@ fn tests_calling_a_templated_function_with_an_upcast() {
 interface ISpaceship<T> {}
 struct Firefly<T> {}
 impl<T> ISpaceship<T> for Firefly<T>;
-func launch<T>(ship &ISpaceship<T>) { }
+func launch<T>(ship &dyn ISpaceship<T>) { }
 func main() {
   launch(&Firefly<int>());
 }
@@ -2915,7 +2926,7 @@ fn tests_upcast_with_generics_has_the_right_stuff() {
 interface ISpaceship<T> {}
 struct Firefly<T> {}
 impl<T> ISpaceship<T> for Firefly<T>;
-func launch<T>(ship &ISpaceship<T>) { }
+func launch<T>(ship &dyn ISpaceship<T>) { }
 func main() {
   launch(&Firefly<int>());
 }
@@ -2964,6 +2975,7 @@ fn tests_a_templated_linked_list() {
   let code = load_expected("programs/genericvirtuals/templatedlinkedlist.vale");
   let code_source = CodeSource::new(vec![
     builtin_source_for_opt(&parse_arena, &parser_keywords),
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
     Source::builtin_module(&parse_arena, &parser_keywords, "logic"),
     Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
     new_test_code_map(&parse_arena, code),
@@ -2998,6 +3010,7 @@ fn tests_a_foreach_for_a_linked_list() {
   let code = load_expected("programs/genericvirtuals/foreachlinkedlist.vale");
   let code_source = CodeSource::new(vec![
     builtin_source_for_opt(&parse_arena, &parser_keywords),
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
     Source::builtin_module(&parse_arena, &parser_keywords, "logic"),
     Source::builtin_module(&parse_arena, &parser_keywords, "arith"),
     new_test_code_map(&parse_arena, code),
@@ -5302,7 +5315,7 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
 import v.builtins.panicutils.*;
 import v.builtins.drop.*;
 import panicutils.*;
-sealed interface MyOption<T> where func drop(T)void { }
+interface MyOption<T> where func drop(T)void { }
 struct MySome<T> where func drop(T)void { value T; }
 impl<T> MyOption<T> for MySome<T> where func drop(T)void;
 func moo(a MySome<int>) { }
@@ -5820,7 +5833,7 @@ fn downcast_function_rrbfs() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r#"
 #!DeriveInterfaceDrop
-sealed interface Result<OkType, ErrType> { }
+interface Result<OkType, ErrType> { }
 
 #!DeriveStructDrop
 struct Ok<OkType, ErrType> { value OkType; }

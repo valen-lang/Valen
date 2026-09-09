@@ -1,14 +1,16 @@
-exported sealed interface IShip share { }
+import v.builtins.box.*;
+
+exported interface IShip share { }
 abstract func getFuel(virtual ship &IShip) int;
 
 exported struct Firefly share { fuel int; }
 impl IShip for Firefly;
 func getFuel(ship Firefly) int { ship.fuel }
 
-extern func cMakeShip() IShip;
+extern func cMakeShip() Box<dyn IShip>;
 
 exported func main() int {
-  x IShip = Firefly(7); // to force the above impl to happen
+  x Box<dyn IShip> = Box<dyn IShip>(Box<Firefly>(Firefly(7))); // to force the above impl to happen
   res = cMakeShip();
   return getFuel(&res);
 }

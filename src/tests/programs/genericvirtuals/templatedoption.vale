@@ -1,6 +1,7 @@
 import v.builtins.drop.*;
+import v.builtins.box.*;
 
-sealed interface MyOption<T> { }
+interface MyOption<T> { }
 
 struct MySome<T> where func drop(T)void {
   value T;
@@ -15,6 +16,6 @@ func len<T>(opt &MyNone<T>) int { return 0; }
 func len<T>(opt &MySome<T>) int { return 1; }
 
 exported func main() int {
-  myOpt MyOption<int> = MySome<int>(4);
+  myOpt Box<dyn MyOption<int>> = Box<dyn MyOption<int>>(Box<MySome<int>>(MySome<int>(4)));
   return len(&myOpt);
 }

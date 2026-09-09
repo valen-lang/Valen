@@ -1,6 +1,8 @@
 
+import v.builtins.box.*;
+
 #!DeriveInterfaceDrop
-sealed interface XOpt<T> { }
+interface XOpt<T> { }
 
 #!DeriveStructDrop
 struct XSome<T> { value T; }
@@ -22,7 +24,7 @@ func getOr<T>(opt &XSome<T>, default &T) &T {
 }
 
 exported func main() int {
-  a XOpt<int> = XSome(9);
+  a Box<dyn XOpt<int>> = Box<dyn XOpt<int>>(Box<XSome<int>>(XSome<int>(9)));
   // TSUGAR:   return a.getOr<int>(12);
   return __copy_prim((&a).getOr<int>(&12));
 }

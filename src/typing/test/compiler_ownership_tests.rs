@@ -261,7 +261,7 @@ fn opt_with_undroppable_contents() {
 import v.builtins.box.*;
 
 #!DeriveInterfaceDrop
-sealed interface Opt<T> { }
+interface Opt<T> { }
 
 #!DeriveStructDrop
 struct Some<T> { value T; }
@@ -324,7 +324,7 @@ fn opt_with_undroppable_mutable_ref_contents() {
 import v.builtins.drop.*;
 
 #!DeriveInterfaceDrop
-sealed interface Opt<T> { }
+interface Opt<T> { }
 
 #!DeriveStructDrop
 struct Some<T> { value T; }

@@ -1,6 +1,6 @@
 
 struct Muta share { hp int; }
-sealed interface IUnit share { func getHp(virtual self weak IUnit) int; }
+interface IUnit share { func getHp(virtual self weak IUnit) int; }
 impl IUnit for Muta;
 func getHp(self weak Muta) int {
   maybeBorrowSelf = lock(self);
@@ -15,7 +15,7 @@ func getHp(self weak Muta) int {
 
 exported func main() int {
   ownMuta = Muta(73);
-  weakUnit weak IUnit = weak ownMuta;
+  weakUnit weak dyn IUnit = weak ownMuta;
   drop(^ownMuta);
   return getHp(weakUnit);
 }

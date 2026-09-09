@@ -3,7 +3,7 @@ import v.builtins.panicutils.*;
 import v.builtins.logic.*;
 
 #!DeriveInterfaceDrop
-sealed interface Result<OkType, ErrType> { }
+interface Result<OkType, ErrType> { }
 
 #!DeriveStructDrop
 struct Ok<OkType, ErrType> { value OkType; }

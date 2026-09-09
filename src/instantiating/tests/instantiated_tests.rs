@@ -528,7 +528,7 @@ fn interface_call_is_virtual_dispatch() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = r#"
-sealed interface Car {
+interface Car {
   func doCivicDance(virtual this Car) int;
 }
 struct Civic {}
@@ -577,7 +577,7 @@ fn upcast_to_interface() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = r#"
-sealed interface Car {
+interface Car {
   func doCivicDance(virtual this Car) int;
 }
 struct Civic {}

@@ -1,3 +1,5 @@
+import v.builtins.box.*;
+
 interface I {
   func moo(virtual this &I) int;
 }
@@ -10,6 +12,6 @@ func moo(a &A) int { return 73; }
 func moo(b &B) int { return 42; }
 
 exported func main() int {
-  myVar I = if (false) { A() } else { B() };
+  myVar Box<dyn I> = if (false) { Box<dyn I>(Box<A>(A())) } else { Box<dyn I>(Box<B>(B())) };
   return moo(&myVar);
 }

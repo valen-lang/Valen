@@ -3,7 +3,7 @@ import v.builtins.panicutils.*;
 import v.builtins.drop.*;
 
 #!DeriveInterfaceDrop
-sealed interface Opt<T> { }
+interface Opt<T> { }
 #!DeriveStructDrop
 struct Some<T> { value T; }
 

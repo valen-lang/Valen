@@ -761,7 +761,7 @@ fn array_map_with_interface() {
         r"
 import array.make.*;
 
-sealed interface IThing {
+interface IThing {
   func __call(virtual self &IThing, i int) int;
 }
 

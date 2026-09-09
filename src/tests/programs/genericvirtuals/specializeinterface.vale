@@ -4,7 +4,7 @@ import v.builtins.arith.*;
 import v.builtins.drop.*;
 import printutils.*;
 
-sealed interface MyIFunction1<P1, R> {
+interface MyIFunction1<P1, R> {
   func myFunc(virtual this &MyIFunction1<P1, R>, param P1) R
     where func drop(P1)void;
 }
@@ -20,7 +20,7 @@ where func drop(T)void {
 
 exported func main() {
   m = MyToBool<int>();
-  i &MyIFunction1<int, bool> = &m;
+  i &dyn MyIFunction1<int, bool> = &m;
   println(i.myFunc(3));
   println(i.myFunc(7));
 }

@@ -112,7 +112,7 @@ fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() 
         &instantiating_bump,
         // TSUGAR: self.fuel is &int
         r"
-sealed interface IShip {
+interface IShip {
   func getFuel(virtual self &IShip) int;
 }
 struct Raza { fuel int; }

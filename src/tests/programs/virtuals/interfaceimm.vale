@@ -1,5 +1,6 @@
 
-sealed interface MyOption share { }
+import v.builtins.box.*;
+interface MyOption share { }
 
 struct MySome share {
   value MyList;
@@ -12,7 +13,7 @@ impl MyOption for MyNone;
 
 struct MyList share {
   value int;
-  next MyOption;
+  next Box<dyn MyOption>;
 }
 
 func sum(list MyList) int {
@@ -27,6 +28,6 @@ func sum(opt MySome) int {
 
 
 exported func main() int {
-  list = MyList(7, MySome(MyList(17, MySome(MyList(18, MyNone())))));
+  list = MyList(7, Box<dyn MyOption>(Box<MySome>(MySome(MyList(17, Box<dyn MyOption>(Box<MySome>(MySome(MyList(18, Box<dyn MyOption>(Box<MyNone>(MyNone())))))))))));
   return sum(list);
 }

@@ -214,6 +214,17 @@ target:
     target_kind: KindT<'s, 't>,
   ) -> Result<ExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
     let range_alloc = self.typing_interner.alloc_slice_copy(range);
+    // TEMPORARY TRIPWIRE (dyn migration): an interface upcast now targets `dyn X`
+    // (`DynInterface`). A bare `Interface` upcast target is old syntax — a use-site wrote `&X` /
+    // owned `X` where it must now write `&dyn X` / `Box<dyn X>`. Flag it loudly rather than
+    // silently producing a bare-interface upcast. This applies to every interface (mut and share)
+    // — no old syntax anywhere. Remove once the migration is complete.
+    if matches!(target_kind, KindT::Interface(_)) {
+      return Err(ICompileErrorT::BareInterfaceUseInDynMigrationT {
+        range: range_alloc,
+        ty: target_kind,
+      });
+    }
     // Resolve the impl by the target's interface identity: a `dyn X` target resolves through the
     // bare `X`, since impls are declared against the bare interface. The Upcast's result keeps the
     // written target's form (`dyn X` stays `dyn X`) — passed as result_value_kind below.

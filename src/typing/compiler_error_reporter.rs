@@ -196,6 +196,14 @@ pub enum ICompileErrorT<'s, 't> {
     target_type: KindT<'s, 't>,
     isnt_parent: IsntParent<'s, 't>,
   },
+  // TEMPORARY TRIPWIRE (dyn migration): a non-virtual position named a bare interface type
+  // (`&X` / owned `X`) instead of the `&dyn X` / `Box<dyn X>` form. Bare interface types are
+  // reserved for the future enum representation, so during the migration every non-virtual
+  // interface use-site must be `dyn`. Remove this variant once the migration is complete.
+  BareInterfaceUseInDynMigrationT {
+    range: &'t [RangeS<'s>],
+    ty: KindT<'s, 't>,
+  },
   CantMoveOutOfMemberT {
     range: &'t [RangeS<'s>],
     name: IVarNameT<'s, 't>,
@@ -363,6 +371,7 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
       Self::CouldntConvertForMutateT { range, .. } => *range,
       Self::CouldntConvertT { range, .. } => *range,
       Self::CouldntUpcastT { range, .. } => *range,
+      Self::BareInterfaceUseInDynMigrationT { range, .. } => *range,
       Self::CantMoveOutOfMemberT { range, .. } => *range,
       Self::CouldntFindFunctionToCallT { range, .. } => *range,
       Self::CouldntEvaluateFunction { range, .. } => *range,

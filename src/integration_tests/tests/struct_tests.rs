@@ -359,7 +359,7 @@ fn panic_function() {
 import v.builtins.panic.*;
 import v.builtins.drop.*;
 
-sealed interface XOpt<T>
+interface XOpt<T>
 where func drop(T)void {
   func get(virtual opt &XOpt<T>) &T;
 }

@@ -1,8 +1,9 @@
 
 
 import printutils.*;
+import v.builtins.box.*;
 
-sealed interface MyOption share { }
+interface MyOption share { }
 
 struct MySome share {
   value MyList;
@@ -15,7 +16,7 @@ impl MyOption for MyNone;
 
 struct MyList share {
   value int;
-  next MyOption;
+  next Box<dyn MyOption>;
 }
 
 func printValues(list MyList) void {
@@ -32,7 +33,7 @@ func printNextValue(opt MySome) void {
 
 
 exported func main() int {
-  list = MyList(10, MySome(MyList(20, MySome(MyList(30, MyNone())))));
+  list = MyList(10, Box<dyn MyOption>(Box<MySome>(MySome(MyList(20, Box<dyn MyOption>(Box<MySome>(MySome(MyList(30, Box<dyn MyOption>(Box<MyNone>(MyNone())))))))))));
   printValues(list);
   return 0;
 }

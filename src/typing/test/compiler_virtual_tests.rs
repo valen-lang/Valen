@@ -32,7 +32,7 @@ fn regular_interface_and_struct() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
-sealed interface Opt { }
+interface Opt { }
 
 struct Some { x int; }
 impl Opt for Some;
@@ -83,7 +83,7 @@ fn missing_interface_override_reports_a_compile_error() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
-sealed interface Handler { func handle(virtual self &Handler) int; }
+interface Handler { func handle(virtual self &Handler) int; }
 struct Impl { }
 impl Handler for Impl;
 exported func main() int { return 0; }
@@ -157,6 +157,7 @@ fn implementing_two_interfaces_causes_no_vdrop_conflict() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
+import v.builtins.box.*;
 struct MyStruct {}
 
 interface IA {}
@@ -165,14 +166,19 @@ impl IA for MyStruct;
 interface IB {}
 impl IB for MyStruct;
 
-func bork(a IA) {}
-func zork(b IB) {}
+func bork(a Box<dyn IA>) {}
+func zork(b Box<dyn IB>) {}
 exported func main() {
-  bork(MyStruct());
-  zork(MyStruct());
+  bork(Box<dyn IA>(Box<MyStruct>(MyStruct())));
+  zork(Box<dyn IB>(Box<MyStruct>(MyStruct())));
 }
 ";
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -195,15 +201,21 @@ fn upcast() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
+import v.builtins.box.*;
 interface IShip {}
 struct Raza { fuel int; }
 impl IShip for Raza;
 
 exported func main() {
-  ship IShip = Raza(42);
+  ship Box<dyn IShip> = Box<dyn IShip>(Box<Raza>(Raza(42)));
 }
 ";
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -257,7 +269,7 @@ fn templated_interface_and_struct() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
-sealed interface Opt<T>
+interface Opt<T>
 where func drop(T)void
 { }
 
@@ -309,7 +321,7 @@ fn custom_drop_with_concept_function() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
 #!DeriveInterfaceDrop
-sealed interface Opt<T> { }
+interface Opt<T> { }
 
 abstract func drop<T>(virtual opt Opt<T>)
 where func drop(T)void;
@@ -459,7 +471,7 @@ fn basic_interface_forwarder() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
 #!DeriveInterfaceDrop
-sealed interface Bork {
+interface Bork {
   func bork(virtual self &Bork) int;
 }
 
@@ -507,7 +519,7 @@ fn generic_interface_forwarder() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
 #!DeriveInterfaceDrop
-sealed interface Bork<T> {
+interface Bork<T> {
   func bork(virtual self &Bork<T>) int;
 }
 
@@ -556,7 +568,7 @@ fn generic_interface_forwarder_with_bound() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
 #!DeriveInterfaceDrop
-sealed interface Bork<T>
+interface Bork<T>
 where func threeify(T)T {
   func bork(virtual self &Bork<T>) int;
 }

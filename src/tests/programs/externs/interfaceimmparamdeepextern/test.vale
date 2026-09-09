@@ -1,9 +1,11 @@
 // VCOORD: at some point rename the filenames from imm to share or class
 
 
+import v.builtins.box.*;
+
 exported struct Engine share { leftFuel int; rightFuel int; }
 
-sealed exported interface IShip share { }
+exported interface IShip share { }
 
 exported struct Spaceship share { fuel int; }
 impl IShip for Spaceship;
@@ -11,9 +13,9 @@ impl IShip for Spaceship;
 exported struct Seaship share { engine Engine; }
 impl IShip for Seaship;
 
-extern func cGetShipFuel(s IShip) int;
+extern func cGetShipFuel(s Box<dyn IShip>) int;
 
 exported func main() int {
-  x IShip = Spaceship(7); // to force the above impl to happen
-  cGetShipFuel(Seaship(Engine(37, 5)))
+  x Box<dyn IShip> = Box<dyn IShip>(Box<Spaceship>(Spaceship(7))); // to force the above impl to happen
+  cGetShipFuel(Box<dyn IShip>(Box<Seaship>(Seaship(Engine(37, 5)))))
 }

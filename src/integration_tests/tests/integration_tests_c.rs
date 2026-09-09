@@ -244,7 +244,7 @@ fn test_overloading_between_borrow_and_weak() {
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
-sealed interface IMoo  {}
+interface IMoo  {}
 struct Moo {}
 impl IMoo for Moo;
 
@@ -403,7 +403,7 @@ fn test_narrowing_between_borrow_and_owning_overloads() {
         r"
 import panicutils.*;
 
-sealed interface XOpt<T> { }
+interface XOpt<T> { }
 struct XNone<T> { }
 impl<T> XOpt<T> for XNone<T>;
 

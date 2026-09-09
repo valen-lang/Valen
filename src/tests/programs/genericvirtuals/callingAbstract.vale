@@ -1,7 +1,7 @@
 
 
 
-sealed interface MyInterface<T> {
+interface MyInterface<T> {
   func doThing(virtual x MyInterface<T>) int;
 }
 

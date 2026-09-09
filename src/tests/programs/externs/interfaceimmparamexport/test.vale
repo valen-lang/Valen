@@ -1,4 +1,6 @@
-sealed exported interface IShip share { }
+import v.builtins.box.*;
+
+exported interface IShip share { }
 
 exported struct Spaceship share { fuel int; }
 impl IShip for Spaceship;
@@ -10,13 +12,13 @@ abstract func getFuel(virtual this IShip) int;
 func getFuel(this Spaceship) int { this.fuel }
 func getFuel(this Seaship) int { this.leftFuel + this.rightFuel }
 
-exported func valeGetShipFuel(s IShip) int {
+exported func valeGetShipFuel(s Box<dyn IShip>) int {
   return s.getFuel();
 }
 
-extern func cGetShipFuel(s IShip) int;
+extern func cGetShipFuel(s Box<dyn IShip>) int;
 
 exported func main() int {
-  x IShip = Spaceship(7); // to force the above impl to happen
-  cGetShipFuel(Seaship(37, 5))
+  x Box<dyn IShip> = Box<dyn IShip>(Box<Spaceship>(Spaceship(7))); // to force the above impl to happen
+  cGetShipFuel(Box<dyn IShip>(Box<Seaship>(Seaship(37, 5))))
 }

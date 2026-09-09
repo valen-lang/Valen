@@ -1,7 +1,9 @@
 // Isolates the auto-gen'd IFoo_typeTag + IFoo_asBar + TAG_* constants for
 // interface dispatch from C. Three-impl interface exercises all three
 // downcast primitives.
-sealed exported interface IShape share { }
+import v.builtins.box.*;
+
+exported interface IShape share { }
 
 exported struct Circle share { radius int; }
 impl IShape for Circle;
@@ -12,11 +14,11 @@ impl IShape for Square;
 exported struct Triangle share { base int; height int; }
 impl IShape for Triangle;
 
-extern func computeArea(s IShape) int;
+extern func computeArea(s Box<dyn IShape>) int;
 
 exported func main() int {
-  x IShape = Circle(1);
-  y IShape = Square(1);
-  z IShape = Triangle(1, 1);
-  return computeArea(Triangle(6, 14));
+  x Box<dyn IShape> = Box<dyn IShape>(Box<Circle>(Circle(1)));
+  y Box<dyn IShape> = Box<dyn IShape>(Box<Square>(Square(1)));
+  z Box<dyn IShape> = Box<dyn IShape>(Box<Triangle>(Triangle(1, 1)));
+  return computeArea(Box<dyn IShape>(Box<Triangle>(Triangle(6, 14))));
 }

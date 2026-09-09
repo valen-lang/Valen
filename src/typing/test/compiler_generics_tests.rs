@@ -31,7 +31,7 @@ import v.builtins.panic.*;
 import v.builtins.drop.*;
 
 #!DeriveInterfaceDrop
-sealed interface XOpt<T> where func drop(T)void {
+interface XOpt<T> where func drop(T)void {
   func harvest(virtual opt XOpt<T>) T;
 }
 

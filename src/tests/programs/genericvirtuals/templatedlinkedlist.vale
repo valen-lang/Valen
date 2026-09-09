@@ -1,12 +1,13 @@
 import v.builtins.opt.*;
 import v.builtins.logic.*;
 import v.builtins.drop.*;
+import v.builtins.box.*;
 import printutils.*;
 
 #!DeriveStructDrop
 struct MyList<T> {
   value T;
-  next Opt<MyList<T>>;
+  next Box<dyn Opt<MyList<T>>>;
 }
 
 func drop<T>(this MyList<T>)
@@ -20,7 +21,7 @@ func printValues(list &MyList<int>) void {
   printNextValue(&list.next);
 }
 
-func printNextValue(opt &Opt<MyList<int>>) void {
+func printNextValue(opt &dyn Opt<MyList<int>>) void {
   // TSUGAR:   if not opt.isEmpty() {
   if not opt.isEmpty() {
     printValues(opt.get());
@@ -29,7 +30,7 @@ func printNextValue(opt &Opt<MyList<int>>) void {
 
 
 exported func main() int {
-  list = MyList<int>(10, Some<MyList<int>>(MyList<int>(20, Some<MyList<int>>(MyList<int>(30, None<MyList<int>>())))));
+  list = MyList<int>(10, Box<dyn Opt<MyList<int>>>(Box<Some<MyList<int>>>(Some<MyList<int>>(MyList<int>(20, Box<dyn Opt<MyList<int>>>(Box<Some<MyList<int>>>(Some<MyList<int>>(MyList<int>(30, Box<dyn Opt<MyList<int>>>(Box<None<MyList<int>>>(None<MyList<int>>())))))))))));
   printValues(&list);
   return 0;
 }

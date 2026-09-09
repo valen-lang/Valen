@@ -860,15 +860,21 @@ fn send_struct_to_interface() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
+import v.builtins.box.*;
 struct MyStruct {}
 interface MyInterface {}
 impl MyInterface for MyStruct;
-func moo(m MyInterface) { }
+func moo(m Box<dyn MyInterface>) { }
 exported func main() {
-  moo(MyStruct())
+  moo(Box<dyn MyInterface>(Box<MyStruct>(MyStruct())))
 }
 ";
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,
@@ -990,15 +996,21 @@ fn descendant_satisfying_call() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
+import v.builtins.box.*;
 interface IShip<T> {}
 struct Firefly<T> {}
 impl<T> IShip<T> for Firefly<T>;
-func moo<T>(a IShip<T>) { }
+func moo<T>(a Box<dyn IShip<T>>) { }
 exported func main() {
-  moo(Firefly<int>())
+  moo(Box<dyn IShip<int>>(Box<Firefly<int>>(Firefly<int>())))
 }
 ";
-  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = compiler_test_compilation(
     &typing_interner,

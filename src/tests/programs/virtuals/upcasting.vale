@@ -1,8 +1,10 @@
 
 
+import v.builtins.box.*;
+
 interface MyInterface { }
 struct MyStruct { value int; }
 impl MyInterface for MyStruct;
 exported func main() {
-  x MyInterface = MyStruct(9);
+  x Box<dyn MyInterface> = Box<dyn MyInterface>(Box<MyStruct>(MyStruct(9)));
 }

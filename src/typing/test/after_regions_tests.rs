@@ -55,7 +55,7 @@ fn method_call_on_generic_data() {
   let code = r"
 import v.builtins.drop.*;
 
-sealed interface IShip {
+interface IShip {
   func launch(virtual self &IShip);
 }
 
@@ -338,8 +338,8 @@ import v.builtins.logic.*;
 import v.builtins.drop.*;
 import panicutils.*;
 
-sealed interface ISuper { }
-sealed interface ISub { }
+interface ISuper { }
+interface ISub { }
 impl ISuper for ISub;
 
 func tryDowncast(ship ISuper) bool {
@@ -439,7 +439,7 @@ fn test_interface_default_generic_argument_in_type() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
-sealed interface MyInterface<K, H Int = 5> { }
+interface MyInterface<K, H Int = 5> { }
 struct MyStruct {
   x MyInterface<bool>;
 }

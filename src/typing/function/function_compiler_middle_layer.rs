@@ -315,6 +315,14 @@ where
           param1.virtuality.as_ref(),
         )?;
 
+        // TEMPORARY TRIPWIRE (dyn migration): a non-virtual parameter must not be a bare interface
+        // — write `&dyn X` / `Box<dyn X>`. The virtual self is exempt (it's the canonical
+        // `Interface` receiver). Remove once the migration is complete.
+        if maybe_virtuality.is_none() && matches!(peel_all_references(coord), KindT::Interface(_)) {
+          let ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
+          return Err(ICompileErrorT::BareInterfaceUseInDynMigrationT { range: ranges_t, ty: coord });
+        }
+
         let name_t: IVarNameT<'s, 't> = self.translate_var_name_step(param1.name);
 
         //   ParameterT(nameT, maybeVirtuality, param1.preChecked, coord)

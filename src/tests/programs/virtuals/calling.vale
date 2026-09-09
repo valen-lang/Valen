@@ -1,7 +1,7 @@
 import v.builtins.box.*;
 import v.builtins.drop.*;
 
-sealed interface Car {
+interface Car {
   func doCivicDance(virtual this Car) int;
 }
 
@@ -18,6 +18,6 @@ func doCivicDance(toyota Toyota) int {
 }
 
 exported func main() int {
-  x Box<dyn Car> = Box<Toyota>(Toyota());
+  x Box<dyn Car> = Box<dyn Car>(Box<Toyota>(Toyota()));
   return doCivicDance(^x);
 }

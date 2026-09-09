@@ -1,4 +1,4 @@
-sealed exported interface IShip { }
+exported interface IShip { }
 
 exported struct Spaceship { fuel int; }
 impl IShip for Spaceship;
@@ -11,11 +11,11 @@ abstract func getShipFuelInner(virtual s &IShip) int;
 func getShipFuelInner(s &Spaceship) int { __copy_prim(s.fuel) }
 func getShipFuelInner(s &Seaship) int { s.leftFuel + s.rightFuel }
 
-exported func valeGetShipFuel(s &IShip) int {
+exported func valeGetShipFuel(s &dyn IShip) int {
   getShipFuelInner(s)
 }
 
-extern func cGetTripleShipFuel(s &IShip) int;
+extern func cGetTripleShipFuel(s &dyn IShip) int;
 
 exported func main() int {
   cGetTripleShipFuel(&Seaship(9, 5))
