@@ -1,5 +1,7 @@
 # Polyvalue Enums Are Closed-Set Fat Pointers (PVECFPZ)
 
+(This arcana has inaccuracies; see docs/arcana/reports/PolyvalueEnumsAreClosedFatPointers-PVECFPZ-report.md for corrections.)
+
 A *polyvalue* enum is a `Copy` wrapper enum, ~16 bytes (discriminant + payload word), whose variants hold **non-owning values**. The enum doesn't conceptually own its payload — it *names* something whose canonical home is elsewhere. Canonical examples: `IEnvironmentT`, `IInDenizenEnvironmentT`, `IEnvEntryT`, `ITemplataT`, `KindT`, `INameT`.
 
 ## The mental model: closed-set fat pointer

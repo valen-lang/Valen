@@ -1,5 +1,7 @@
 # Add Unreachable Moots After Panic (AUMAP)
 
+(This arcana has inaccuracies; see docs/arcana/reports/AddUnreachableMootsAfterPanic-AUMAP-report.md for corrections.)
+
 UnreachableMoot is a wrapper instruction to signal to Hammer that something won't actually ever be run. We still compile and output some AST so that we can highlight any errors, and so the user can ctrl+click on an item to see its definition, even if a panic blocks it.
 
 We have UnreachableMoots after return, break, and panic.
@@ -65,6 +67,8 @@ Decision:
 - To be consistent with that, and because we can't force the user to make destructors just for panics (where they might otherwise just have special other-arg constructors), we'll hand things into panic for every block.
 
 # Break and Return Can Only Be Statements (BRCOBS)
+
+(This arcana has inaccuracies; see docs/arcana/reports/BreakAndReturnCanOnlyBeStatements-BRCOBS-report.md for corrections.)
 
 Break and return can only be statements because of this awkward situation:
 
@@ -142,6 +146,8 @@ but do we ever not want that?
 
 Consecutor With Never Will Make Temporaries (CWNWMT)
 
+(This arcana has inaccuracies; see docs/arcana/reports/ConsecutorWithNeverWillMakeTemporaries-CWNWMT-report.md for corrections.)
+
 A never is the destroyer of worlds in hammer; it will stop evaluating anything after a never, and skip any instruction that depends on a never.
 
 # Break Never And The Other Never (BNATON)
@@ -149,6 +155,8 @@ A never is the destroyer of worlds in hammer; it will stop evaluating anything a
 There are two kinds of nevers, because While needs to know where the never came from.
 
 # Blocks Might Have Deferreds (BMHD)
+
+(This arcana has inaccuracies; see docs/arcana/reports/BlocksMightHaveDeferreds-BMHD-report.md for corrections.)
 
 // One would think that we would translate deferreds after each particular expression.
 

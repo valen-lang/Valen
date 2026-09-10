@@ -277,6 +277,8 @@ unless\... we put the ors into their own little subfunction. hmm\...
 
 IEUNDS
 
+(This arcana has inaccuracies; see docs/old/reports/UnknownNeedsDeeplySatisfied-IEUNDS-report.md for corrections.)
+
 (also ARCDS: Anonymous Runes Considered Deeply Satisfied)
 
 Let\'s say we have:
@@ -355,6 +357,8 @@ Open questions:
 
 # Send and Impl Rules For Upcasts (SAIRFU)
 
+(This arcana has inaccuracies; see docs/old/reports/SendAndImplRulesForUpcasts-SAIRFU-report.md for corrections. Its older name IRFU is audited separately in docs/old/reports/ImplRuleForUpcasts-IRFU-report.md.)
+
 Previously: Impl Rule For Upcasts (IRFU)
 
 a MyInterface = MyStruct(1337);
@@ -423,6 +427,8 @@ specific type, see SMCMST.
 
 # Some Rules Can Add More Puzzles (SRCAMP)
 
+(This arcana has inaccuracies; see docs/old/reports/SomeRulesCanAddMorePuzzles-SRCAMP-report.md for corrections.)
+
 Like explained in Impl Rule For Upcasts (IRFU), the impl rule doesn\'t
 really know if just its receiver rune is enough.
 
@@ -459,6 +465,8 @@ Also, both of these kind of mean we won\'t be planning any rule
 execution order beforehand. T_T
 
 # Whether To Merge Equal Rules Beforehand (WTMERB)
+
+(This arcana has inaccuracies; see docs/old/reports/WhetherToMergeEqualRulesBeforehand-WTMERB-report.md for corrections.)
 
 Let\'s say we have these two rules:
 
@@ -499,6 +507,8 @@ calling the \"List\" template with \"whatever\" arguments, and just
 conclude that it\'s template is List.
 
 # Solver Must Choose Most Specific Type (SMCMST)
+
+(This arcana has inaccuracies; see docs/old/reports/SolverMustChooseMostSpecificType-SMCMST-report.md for corrections.)
 
 #### Example 1
 
@@ -564,6 +574,8 @@ possible, so we\'ll go with approach B which makes that a little simpler
 and more explicit.
 
 # Complex Solve As Last Resort (CSALR)
+
+(This arcana has inaccuracies; see docs/old/reports/ComplexSolveAsLastResort-CSALR-report.md for corrections.)
 
 To accomplish SMCMST, the solver will ask its delegate to do a \"complex
 solve\", as a last resort if it can\'t figure out everything the normal

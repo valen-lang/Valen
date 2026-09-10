@@ -2,6 +2,8 @@
 
 ESNTA
 
+(This arcana has inaccuracies; see docs/old/reports/EachStepNeedsTemplateArgs-ESNTA-report.md for corrections.)
+
 A FullName is made of a list of NamePart, like this:
 
 > case class NamePart(
@@ -57,6 +59,8 @@ templateArgs in every step of the full name and not just the end.
 ## Need Optional Template Args in Name
 
 NOTAN
+
+(This arcana has inaccuracies; see docs/old/reports/NeedOptionalTemplateArgsInName-NOTAN-report.md for corrections.)
 
 A NameStep\'s templateArgs is an Option\[List\[ITemplata\]\], because
 for example we want to disambiguate:

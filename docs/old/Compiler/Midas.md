@@ -105,6 +105,8 @@ which depended on the actual structs being defined.
 
 (ECFKLOO)
 
+(This arcana has inaccuracies; see docs/old/reports/ElideChecksForKnownLiveOnOff-ECFKLOO-report.md for corrections.)
+
 If the \--ecfkl flag is on, then we\'ll trust Catalyst and do no
 generation checks where it says knownLive=true.
 
@@ -114,6 +116,8 @@ and exit with a certain error code (116) if it fails.
 # Messages Are Pre-Order, With Metadata
 
 (MAPOWM)
+
+(This arcana has inaccuracies; see docs/old/reports/MessagesArePreOrderWithMetadata-MAPOWM-report.md for corrections.)
 
 **REVISIT THIS, since MAP_GROWSDOWN is obsolete. perhaps we can do a
 better order.**
@@ -189,6 +193,8 @@ contains the start metadata and the root object.
 
 (MPESC)
 
+(This arcana has inaccuracies; see docs/old/reports/MidasProcessExitStatusCodes-MPESC-report.md for corrections.)
+
 For better testing, to make sure that midas is hitting the error we
 expect, we\'ll be using different process return codes.
 
@@ -214,6 +220,8 @@ doublecheck showed its not actually alive
 # Representing Scope Tethering In VAST
 
 (RSTIV)
+
+(This arcana has inaccuracies; see docs/old/reports/RepresentingScopeTetheringInVAST-RSTIV-report.md for corrections.)
 
 In HGM, constraint ref parameters will be borrow references, and a lot
 of constraint ref locals will be tethers.
@@ -285,6 +293,8 @@ To test, we\'ll have valestrom force keepAlive=true for locals ending in
 # Modules Must Export Dependencies Themselves
 
 (MMEDT)
+
+(This arcana has inaccuracies; see docs/old/reports/ModulesMustExportDependenciesThemselves-MMEDT-report.md for corrections.)
 
 Pretend we have these modules:
 
@@ -375,6 +385,8 @@ Rejected solution:
 # Suffix Adds Size Parameter
 
 (SASP)
+
+(This arcana has inaccuracies; see docs/old/reports/SuffixAddsSizeParameter-SASP-report.md for corrections.)
 
 When vale sees an extern name ending in \_sasp, it will add extra
 parameters to the C function, containing the sizes of everything that

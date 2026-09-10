@@ -1,5 +1,7 @@
 # Exact/Non-Exact Call Candidate Lookup (ENECCLZ)
 
+(This arcana has inaccuracies; see docs/arcana/reports/ExactNonExactCallCandidateLookup-ENECCLZ-report.md for corrections.)
+
 Overload lookup (`find_function`, `find_potential_function`) runs in one of two modes, chosen by an `exact: bool` that reaches both `get_param_environments` and `params_match`.
 
 **Non-exact** is a user call site, like `launch(ship)`. It peels the argument's references to pick which namespace to search, so a `&Ship` argument means searching `Ship`'s environment. It also considers subtypes/supertypes, so calling something on a &Ship should also look in IFlying's namespaces.

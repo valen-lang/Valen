@@ -2,6 +2,8 @@
 
 (TMRE)
 
+(This arcana has inaccuracies; see docs/old/reports/TemplatasMustRememberEnvironment-TMRE-report.md for corrections.)
+
 An environment will contain raw functions and structs and interfaces.
 When we pull things out of those environments, we need to remember the
 environment it came from, so we can ask it for various things.
@@ -55,6 +57,8 @@ Map:Entry is a template.
 ## Need To Know Parent Rules and Runes
 
 (NTKPRR)
+
+(This arcana has inaccuracies; see docs/old/reports/NeedToKnowParentRulesAndRunes-NTKPRR-report.md for corrections.)
 
 Let\'s say we have this:
 
@@ -163,6 +167,8 @@ So, we evaluate those parents all the way up to get each step.
 ## Parents and Environments Are Mutually Exclusive
 
 (PEAME)
+
+(This arcana has inaccuracies; see docs/old/reports/ParentsAndEnvironmentsAreMutuallyExclusive-PEAME-report.md for corrections.)
 
 Remember from TMRE and NTKPRR:
 
@@ -346,6 +352,8 @@ But we haven\'t yet.
 
 (LHRSP)
 
+(This arcana has inaccuracies; see docs/old/reports/LambdasHaveReadwriteSelfParameters-LHRSP-report.md for corrections.)
+
 Right now, lambdas\' \_\_call take &!self, not &self.
 
 In the future, we could automatically infer whether it can by a &self,
@@ -357,6 +365,8 @@ Just making all lambdas take &!self is a stepping stone.
 Also, later we\'ll remove permissions anyway.
 
 ## Adding Constructors To Environments (ACTE)
+
+(This arcana has inaccuracies; see docs/old/reports/AddingConstructorsToEnvironments-ACTE-report.md for corrections.)
 
 Some functions (drop, \_\_call) are put into the struct\'s environment
 itself. That way, when we use it as an argument, OverloadTemplar will

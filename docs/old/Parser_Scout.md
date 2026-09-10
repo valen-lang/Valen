@@ -279,6 +279,8 @@ better.
 
 ## Do Runes Capture Kinds or Coordinates? (RCKC)
 
+(This arcana has inaccuracies; see docs/old/reports/DoRunesCaptureKindsOrCoordinates-RCKC-report.md for corrections.)
+
 For a: #T, or for :Marine\[x:#X\], what do those runes capture? Kinds or
 coords?
 
@@ -453,6 +455,8 @@ used to doing any type constriction without a :.
 
 (MEDP)
 
+(This arcana has inaccuracies; see docs/old/reports/MustExplicitlyDestructurePacks-MEDP-report.md for corrections.)
+
 ### Requiring Runes for Templates
 
 We should require runes for params that end up templated. That\'s
@@ -519,6 +523,8 @@ Same for ownerships.
 
 (PVSBUFI)
 
+(This arcana has inaccuracies; see docs/old/reports/PossibleValuesShouldntBeUsedForInference-PVSBUFI-report.md for corrections.)
+
 We can specify possible values in a rule, like:
 
 > fn moo(thing: #E)
@@ -559,6 +565,8 @@ But hey, if there\'s only one thing, and no \|, then sure, infer away.
 
 (CHRCWRT)
 
+(This arcana has inaccuracies; see docs/old/reports/CantHaveRuleComponentsWithoutRuleType-CHRCWRT-report.md for corrections.)
+
 We can say Kind#K\[#M\] or #R: Ref\[#O, #P, #L, #K\] where the stuff in
 the square brackets are the \"components\". The question: do we always
 need to say Kind and Ref? Can we simplify R: Ref\[#O, #P, #L,
@@ -577,6 +585,8 @@ Probably best to require it though.
 ## User Must Specify Enough Identifying Runes
 
 (UMSEIR)
+
+(This arcana has inaccuracies; see docs/old/reports/UserMustSpecifyEnoughIdentifyingRunes-UMSEIR-report.md for corrections.)
 
 Previously: Compiler Cant Add to User\'s Identifying Runes (CCAUIR)
 
@@ -702,6 +712,8 @@ sequence do \[#N \* Int\] instead; it always has a \*.
 ### Rune With Kind Is Like Call
 
 (RWKILC)
+
+(This arcana has inaccuracies; see docs/old/reports/RuneWithKindIsLikeCall-RWKILC-report.md for corrections.)
 
 ~~K:Kind might be two things:~~
 
@@ -1153,6 +1165,8 @@ barely anyone will use this advanced kind of let form.
 **Impls Dont Need Ordered Runes**
 
 **IDNOR**
+
+(This arcana has inaccuracies; see docs/old/reports/ImplsDontNeedOrderedRunes-IDNOR-report.md for corrections.)
 
 Functions, structs, and interfaces have identifying tames. Impls don\'t
 because one cannot call an impl explicitly like that.

@@ -7,6 +7,8 @@ g_mention_in:
 
 # ID Shorthand Notation (ISNZ)
 
+(This arcana has inaccuracies; see docs/arcana/reports/IdShorthandNotation-ISNZ-report.md for corrections.)
+
 Throughout `docs/Generics.md`, investigation notes, and code comments, typed-AST ids are written in a compact shorthand instead of the verbose `IdT(packageCoord, Vector(...), ...)` dump. This doc is the reference for that notation.
 
 ## Tokens

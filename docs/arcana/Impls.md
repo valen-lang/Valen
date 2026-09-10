@@ -2,7 +2,11 @@
 
 (NMORFI)
 
+(This arcana has inaccuracies; see docs/arcana/reports/NeedMatchOnlyRuleForImpls-NMORFI-report.md for corrections.)
+
 Also: Matching Doesnt Evaluate Struct Or Interface (MDESOI)
+
+(This arcana has inaccuracies; see docs/arcana/reports/MatchingDoesntEvaluateStructOrInterface-MDESOI-report.md for corrections.)
 
 We kept hitting stack overflows when we had a *lot* of impls in our
 program. This is because:
@@ -117,6 +121,8 @@ non-calls (Serenity).
 
 (GAOFPS)
 
+(This arcana has inaccuracies; see docs/arcana/reports/GivingArgumentOwnershipForParamSubtypes-GAOFPS-report.md for corrections.)
+
 In InfererEvaluator (search for GAOFPS) we're trying a bunch of
 possibilities: the argument and all of its supertypes.
 
@@ -185,6 +191,8 @@ NMORFI)
 
 (SCCTT)
 
+(This arcana has inaccuracies; see docs/arcana/reports/ShouldChangeCoercingToToRef-SCCTT-report.md for corrections.)
+
 Right now we're doing coercing to make kinds into coords. Instead, we
 should just have astronomer insert toRef calls where it sees us trying
 to access a kind as a coord.
@@ -192,6 +200,8 @@ to access a kind as a coord.
 This will resolve a couple hacks, search for SCCTT.
 
 # Impl Goes By Many Names (IGBMN)
+
+(This arcana has inaccuracies; see docs/arcana/reports/ImplGoesByManyNames-IGBMN-report.md for corrections.)
 
 (previously INSHN)
 

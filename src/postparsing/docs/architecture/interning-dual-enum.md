@@ -6,6 +6,8 @@ g_auto_load_when_editing:
 
 # Postparser Interning: Dual-Enum Pattern For Lookups (IDEPFL)
 
+(This arcana has inaccuracies; see src/postparsing/docs/architecture/reports/PostparserInterningDualEnumPatternForLookups-IDEPFL-report.md for corrections.)
+
 Arena-backed interning on `ScoutArena<'s>` uses two parallel enums per type hierarchy: a **reference enum** (permanent, holds `&'s` pointers to arena data) and a **value enum** (transient, used as HashMap lookup keys). The transient Val exists only to check "does this already exist?" — then it's either discarded (hit) or promoted into permanent arena storage (miss).
 
 ---

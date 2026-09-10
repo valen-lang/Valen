@@ -1,5 +1,7 @@
 # When Values Should Be Interned (WVSBIZ)
 
+(This arcana has inaccuracies; see docs/arcana/reports/WhenValuesShouldBeInterned-WVSBIZ-report.md for corrections.)
+
 This doc answers two related questions: where does an immutable value live (arena vs inline), and if arena, should it be interned (deduplicated) or just allocated. The mutation-vs-not question is settled first by `docs/architecture/arenas.md` — arenas are immutable, so anything that mutates uses Box / non-arena container / by-value patterns and never reaches this framework.
 
 ## Arena vs Inline: Seven Principles

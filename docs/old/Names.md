@@ -2,6 +2,8 @@
 
 (MINAAN)
 
+(This arcana has inaccuracies; see docs/old/reports/MatchingImpreciseNamesAgainstAbsoluteNames-MINAAN-report.md for corrections.)
+
 Let\'s say im in \[foo, bar\], looking for imprecise needle \[moo,
 bork\].
 

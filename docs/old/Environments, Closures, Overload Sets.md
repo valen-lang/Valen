@@ -61,6 +61,8 @@
 
 CNE
 
+(This arcana has inaccuracies; see docs/old/reports/ClosuresNeedEnvironments-CNE-report.md for corrections.)
+
 Let\'s say we have a simple function which calls its argument:
 
 > fn huzzah(f: #F) {
@@ -447,6 +449,8 @@ though.
 # Representing Overload Sets
 
 ROS
+
+(This arcana has inaccuracies; see docs/old/reports/RepresentingOverloadSets-ROS-report.md for corrections.)
 
 This problems comes in two forms.
 

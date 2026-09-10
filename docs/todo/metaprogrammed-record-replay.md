@@ -670,6 +670,8 @@ lands. In this design's terms:
 
 ## Appendix: the prior scheme this replaces (PSBCBO / PRCBO)
 
+(This arcana has inaccuracies; see docs/todo/reports/PointersCanBeOffsets-PRCBO-PSBCBO-report.md for corrections.)
+
 This is the offset-pointer marshaling the retired Linear region used to
 serialize imm values — for C consumption and for recording files. It is
 preserved here as the design this metaprogrammed scheme replaces; the

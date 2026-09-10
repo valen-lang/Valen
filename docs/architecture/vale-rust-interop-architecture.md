@@ -3361,6 +3361,8 @@ If Vale uses a global mutex for any mutable consumer state, the mutex must not b
 
 ### 26.3 DPSFDOZ (DefPathStr Is For Diagnostics Only)
 
+(This arcana has inaccuracies; see docs/architecture/reports/DefPathStrIsForDiagnosticsOnly-DPSFDOZ-report.md for corrections.)
+
 `tcx.def_path_str(def_id)` ICEs outside diagnostic contexts. Vale's path-based matching uses `tcx.def_path(def_id).data` walks or `tcx.crate_name(def_id.krate)` checks. `is_from_vale_stubs(tcx, def_id)` uses marker-detection.
 
 ### 26.4 ELASZ (Early-bound Lifetime Args Synthesized)
@@ -3405,6 +3407,8 @@ For Rust trait method calls, build rustc Instance from **trait def's** method De
 
 ### 26.13.5 ATAFLBZ (All-impls Walks Need Vale-Stubs Filter)
 
+(This arcana has inaccuracies; see docs/architecture/reports/AllImplsWalksNeedValeStubsFilter-ATAFLBZ-report.md for corrections.)
+
 Walks of `tcx.all_impls(trait_def_id)` return impls from every crate including std. Self-type-name check is ambiguous because std and Vale could both define a type named (e.g.) `Box`. Add `is_from_vale_stubs(tcx, adt_def.did())` filter inside impl walks. Under single-symbol architecture, wrong DefId produces wrong rustc-mangled name when Vale's bitcode emits a body.
 
 ### 26.14 ETASTZ (Extra Type Args Silently Truncated)
@@ -3424,6 +3428,8 @@ Any Vale-emitted symbol whose only callers live in OTHER compile units' machine 
 Detection: `vale-rustc-glue/tests/integration_projects/opt_level_3_fat_lto_smoke/`.
 
 ### 26.17 CMWAR (Cache-Must-Write-At-Rust-analysis)
+
+(This arcana has inaccuracies; see docs/architecture/reports/CacheMustWriteAtRustAnalysis-CMWAR-report.md for corrections.)
 
 **Vale-specific.** Cache writes route through `after_rust_analysis` only. Never from inside codegen-time callbacks. Sky's empirical history (two-write-sites cleanup) validates this as real deadlock-prevention discipline against @GCMLZ re-entry.
 

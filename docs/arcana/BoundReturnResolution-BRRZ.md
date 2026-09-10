@@ -1,5 +1,7 @@
 # Bound Return Resolution (BRRZ)
 
+(This arcana has inaccuracies; see docs/arcana/reports/BoundReturnResolution-BRRZ-report.md for corrections.)
+
 When a generic function has a `where func(…)R` bound and the caller has supplied values that determine the bound's parameter runes, the compiler resolves the bound function at call-site solve time and takes its return type as R. This restores a capability that was lost in the 2022 templates-to-generics transition (see MSAE at `docs/Generics.md:862`).
 
 For example, `callAndReturn<E, G>(g &G) E where func(&G)E` called with a concrete closure lets the compiler discover E by resolving `__call(&closure)` and reading its return type. Before BRRZ, the solver would stall on E because no rule shape could infer it.

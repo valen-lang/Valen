@@ -1,5 +1,7 @@
 # Identity Equality On Identity-Bearing Types (IEOIBZ)
 
+(This arcana has inaccuracies; see docs/arcana/reports/IdentityEqualityOnIdentityBearingTypes-IEOIBZ-report.md for corrections.)
+
 Types that have identity — arena-allocated, accessed by reference, where two distinct allocations are distinct things — implement their own `PartialEq`/`Eq`/`Hash` directly via `std::ptr::eq` and `std::ptr::hash` on `&self`. Wrappers that hold references to those types just `#[derive(PartialEq, Eq, Hash)]` — the derived impl deref-calls the inner type's pointer-equality impl, with the same semantics and no copy-paste.
 
 This pushes the "this type has identity" knowledge to the type that actually has identity. A new wrapper holding `&'t IEnvironmentT` doesn't need to know about identity — it derives, and identity propagates correctly. The alternative — manual ptr-eq impls on every wrapper — forces every new wrapper to repeat the dance and leaves the inner type silent about its own identity.

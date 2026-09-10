@@ -1,6 +1,8 @@
 
 ## Interfaces Must Remember Functions Declared Inside (IMRFDI)
 
+(This arcana has inaccuracies; see docs/arcana/reports/InterfacesMustRememberFunctionsDeclaredInside-IMRFDI-report.md for corrections.)
+
 For the like rule, we need to know, at rule-time, all of the functions
 for a given interface. This is difficult because we also want to be able
 to declare abstract functions outside the interface, such as:

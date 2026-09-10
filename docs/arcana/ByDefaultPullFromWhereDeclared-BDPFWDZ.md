@@ -1,5 +1,7 @@
 # By Default Pull From Where Declared (BDPFWDZ)
 
+(This arcana has inaccuracies; see docs/arcana/reports/ByDefaultPullFromWhereDeclared-BDPFWDZ-report.md for corrections.)
+
 Vale's environments are pull-style. A declaration lives in the scope that introduced it; consumers reach it by walking parent chains and following declared links (impls, parameter types, citizen relationships). We try not to eagerly copy things from one scope into another.
 
 Two pillars:

@@ -1,5 +1,7 @@
 # Parameter Full-Type / Value-Type Split (PFVSZ)
 
+(This arcana has inaccuracies; see src/postparsing/docs/arcana/reports/ParameterFullTypeValueTypeSplit-PFVSZ-report.md for corrections.)
+
 A function parameter's type is stored on `ParameterS` in two halves: the outer reference wraps, and the value those wraps enclose.
 
 Take `func foo(x &Ship)`. The **value type** is `Ship`, the citizen being referred to. The **full type** is `&Ship`, that citizen inside one borrow wrap. `&&Ship` has the same value type `Ship` and a full type of two wraps. A bare `func foo(x Ship)` has no wraps at all, so its full type and value type are the same.

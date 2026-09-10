@@ -1,5 +1,7 @@
 # PostParser Synthesizes Parser AST Nodes (PPSPASTNZ)
 
+(This arcana has inaccuracies; see src/postparsing/docs/arcana/reports/PostParserSynthesizesParserASTNodes-PPSPASTNZ-report.md for corrections.)
+
 The postparser creates synthetic `IExpressionPE<'p>` nodes (parser-typed AST) during expression scouting. These are not produced by the parser — they are fabricated by the postparser to represent implicit operations like struct constructor calls at the end of function bodies.
 
 ## Where

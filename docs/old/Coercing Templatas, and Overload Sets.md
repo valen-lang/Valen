@@ -87,6 +87,8 @@ I suspect we\'ll very rarely need to specify the type for something.
 
 ## Need Types on Every Rule and Templex (NTERT)
 
+(This arcana has inaccuracies; see docs/old/reports/NeedTypesOnEveryRuleAndTemplex-NTERT-report.md for corrections.)
+
 For the evaluation part of the inferer, we need to know what type is
 expected when we hand it in to a call.
 

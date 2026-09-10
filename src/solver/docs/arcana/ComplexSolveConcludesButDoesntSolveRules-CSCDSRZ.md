@@ -1,5 +1,7 @@
 # Complex Solve Concludes But Doesn't Solve Rules (CSCDSRZ)
 
+(This arcana has inaccuracies; see src/solver/docs/arcana/reports/ComplexSolveConcludesButDoesntSolveRules-CSCDSRZ-report.md for corrections.)
+
 Complex solve infers conclusions (e.g., receiver types from sender patterns) by examining multiple unsolved rules, but it does **not** mark any of those rules as solved. The rules remain unsolved until the next simple solve pass, which picks them up now that the conclusions they need are available.
 
 ## Where

@@ -75,6 +75,8 @@ Note from later: What if, when we see a type from the outside, just assume it's 
 
 # Must Forward Declare Before Rules Evaluated (MFDBRE)
 
+(This arcana has inaccuracies; see docs/reports/MustForwardDeclareBeforeRulesEvaluated-MFDBRE-report.md for corrections.)
+
 Let's say we have this struct:
 ```
 struct MyList<Ref#T> imm {
@@ -103,6 +105,8 @@ It gets more complicated though. We might need the mutability of the incoming #T
 
 
 # Recursive Types Must Have Types Predicted (RTMHTP)
+
+(This arcana has inaccuracies; see docs/reports/RecursiveTypesMustHaveTypesPredicted-RTMHTP-report.md for corrections.)
 
 Previously: Recursive Types Must Have Types Predicted In Scout (RTMHTPS)
 

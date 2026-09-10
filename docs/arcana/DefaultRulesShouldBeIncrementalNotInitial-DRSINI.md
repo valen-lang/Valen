@@ -1,5 +1,7 @@
 # Default Rules Should Be Incremental Not Initial (DRSINI)
 
+(This arcana has inaccuracies; see docs/arcana/reports/DefaultRulesShouldBeIncrementalNotInitial-DRSINI-report.md for corrections.)
+
 Default generic parameter rules (`LiteralSR(_211, 5)` from `GenericParameterDefaultS.rules`)
 must not be in the solver's initial rule set. They are added incrementally — only for runes
 that remain unsolved after argument inference — via the `solveForResolving` and

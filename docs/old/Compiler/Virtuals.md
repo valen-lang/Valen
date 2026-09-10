@@ -729,6 +729,8 @@ until it\'s stamped. lets mention this somewhere in this doc.
 
 (MLIOET)
 
+(This arcana has inaccuracies; see docs/old/reports/MustLookInOverrideEnvToo-MLIOET-report.md for corrections.)
+
 When we call a method like fly(spaceship, 4, 5), we look in spaceship\'s
 env.
 

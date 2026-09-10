@@ -194,6 +194,8 @@ Now, our Spaceship struct has one less i64:
 
 # Use Type Stability for Less Inner Generations (UTSLIG)
 
+(This arcana has inaccuracies; see docs/old/reports/UseTypeStabilityForLessInnerGenerations-UTSLIG-report.md for corrections.)
+
 There are cases where if we use-after-free, we don\'t incur any risk.
 For those, we need no inner generations.
 
@@ -274,6 +276,8 @@ There are two things the user could do here:
 -   Make the contained final owning pointers be varying instead.
 
 # Inline Struct Generationed FFOP (ISGFFOP)
+
+(This arcana has inaccuracies; see docs/old/reports/InlineStructGenerationedFFOP-ISGFFOP-report.md for corrections.)
 
 (slightly adjusted from GFFOP)
 

@@ -1,5 +1,7 @@
 # Each Call-Site Is Its Own Solve (ECSIIOSZ)
 
+(This arcana has inaccuracies; see docs/arcana/reports/EachCallSiteIsItsOwnSolve-ECSIIOSZ-report.md for corrections.)
+
 Every call-site in source code — every `Some<T>(x)`, every `[]&E(size, callable)`, every `add(list, 7)` — is lowered by the postparser into its own self-contained vector of solver rules, and the typing pass spins up a fresh `InferCompiler` solver instance per call-site to resolve them.
 
 Call-site solves don't share state. Each gets its own rule vector, its own rune-to-type map, its own initial-knowns, and its own conclusion map.

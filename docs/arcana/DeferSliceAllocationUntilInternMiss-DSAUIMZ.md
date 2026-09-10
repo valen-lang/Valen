@@ -1,5 +1,7 @@
 # Defer Slice Allocation Until Intern Miss (DSAUIMZ)
 
+(This arcana has inaccuracies; see docs/arcana/reports/DeferSliceAllocationUntilInternMiss-DSAUIMZ-report.md for corrections.)
+
 Val types are **transient** — they exist only long enough to check "does this already exist in the arena?" and are then either discarded (hit) or promoted into permanent arena storage (miss). When a transient Val contains a slice, that slice must also be transient: borrowed from the stack, not pre-allocated in the arena. If the slice were arena-allocated before the intern check, a hit would leave dead arena space that can never be freed.
 
 The `'tmp` lifetime encodes transience. It's tied to a local builder's `Vec` on the stack, which dies when the function returns. The transient Val can't escape, can't be stored, can't outlive its purpose. The intern method is the gateway between transient and permanent — it either finds an existing permanent form or promotes the transient into one.
