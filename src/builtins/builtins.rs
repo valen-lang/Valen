@@ -149,7 +149,7 @@ where
 }
 
 /// Cluster helper: `weak` and its full chain — `weak.vale`'s single export
-/// `lock<T>(...) Opt<&T>` needs everything the `opt` cluster needs.
+/// `lock<T>(...) OptI<&T>` needs everything the `opt` cluster needs.
 pub fn builtin_source_for_weak<'a, 'ctx>(
   parse_arena: &'ctx ParseArena<'a>,
   keywords: &'ctx Keywords<'a>,
@@ -196,7 +196,7 @@ where
 // This lets tests import only certain kinds of builtins.
 // The more basic foundational tests will choose not to import any builtins, so they can test the
 // bare minimum. For example, the most basic test is `func main() int { return 42; }`, and we don't want it
-// to fail just because the builtin-yet-unused `func as<T, X>(x X) Opt<T> { ... }` doesn't want to
+// to fail just because the builtin-yet-unused `func as<T, X>(x X) OptI<T> { ... }` doesn't want to
 // work right now.
 // This gives us a FileCoordinateMap where each file is its own module, so that we can
 // pull in only files modules a certain test needs.

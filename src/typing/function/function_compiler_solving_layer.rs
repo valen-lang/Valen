@@ -1173,7 +1173,7 @@ where
       };
       // Peel the arg to match the parameter's value slot before seeding its value_type_rune.
       // Ask whether the value slot is a rune (a generic like `T`, perhaps under the param's own
-      // ref wraps) rather than a concrete type produced by a Call (e.g. `int` or `Opt<T>`). A
+      // ref wraps) rather than a concrete type produced by a Call (e.g. `int` or `OptI<T>`). A
       // rune slot binds whatever the arg is, references and all, so we peel only the param's own
       // written wraps and keep the rest. That is how an explicitly-bound `T = &Spaceship` keeps
       // its `&`. A concrete slot instead reads out the arg's outer reference, a spurious mention

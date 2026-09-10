@@ -269,15 +269,15 @@ fn templated_interface_and_struct() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
-interface Opt<T>
+interface OptI<T>
 where func drop(T)void
 { }
 
-struct Some<T>
+struct SomeI<T>
 where func drop(T)void
 { x T; }
 
-impl<T> Opt<T> for Some<T>
+impl<T> OptI<T> for SomeI<T>
 where func drop(T)void;
 ";
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
@@ -321,16 +321,16 @@ fn custom_drop_with_concept_function() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
 #!DeriveInterfaceDrop
-interface Opt<T> { }
+interface OptI<T> { }
 
-abstract func drop<T>(virtual opt Opt<T>)
+abstract func drop<T>(virtual opt OptI<T>)
 where func drop(T)void;
 
 #!DeriveStructDrop
-struct Some<T> { x T; }
-impl<T> Opt<T> for Some<T>;
+struct SomeI<T> { x T; }
+impl<T> OptI<T> for SomeI<T>;
 
-func drop<T>(opt Some<T>)
+func drop<T>(opt SomeI<T>)
 where func drop(T)void
 {
   [x] = ^opt;

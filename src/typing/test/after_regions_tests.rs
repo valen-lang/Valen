@@ -336,19 +336,20 @@ import v.builtins.as.*;
 import v.builtins.result.*;
 import v.builtins.logic.*;
 import v.builtins.drop.*;
+import v.builtins.box.*;
 import panicutils.*;
 
 interface ISuper { }
 interface ISub { }
 impl ISuper for ISub;
 
-func tryDowncast(ship ISuper) bool {
-  result Result<&ISub, &ISuper> = (&ship).try_as<ISub>();
+func tryDowncast(ship Box<dyn ISuper>) bool {
+  result Box<dyn ResultI<&dyn ISub, &dyn ISuper>> = (&ship).try_as<dyn ISub>();
   return result.is_ok();
 }
 
 exported func main() bool {
-  return tryDowncast(__pretend<ISuper>());
+  return tryDowncast(__pretend<Box<dyn ISuper>>());
 }
 ";
   let code_source = CodeSource::new(vec![

@@ -261,24 +261,24 @@ fn opt_with_undroppable_contents() {
 import v.builtins.box.*;
 
 #!DeriveInterfaceDrop
-interface Opt<T> { }
+interface OptI<T> { }
 
 #!DeriveStructDrop
-struct Some<T> { value T; }
+struct SomeI<T> { value T; }
 
-impl<T> Opt<T> for Some<T>;
+impl<T> OptI<T> for SomeI<T>;
 
-abstract func drop<T>(virtual opt Opt<T>)
+abstract func drop<T>(virtual opt OptI<T>)
 where func drop(T)void;
 
-func drop<T>(opt Some<T>)
+func drop<T>(opt SomeI<T>)
 where func drop(T)void
 {
   [x] = ^opt;
 }
 
-abstract func get<T>(virtual opt Opt<T>) T;
-func get<T>(opt Some<T>) T {
+abstract func get<T>(virtual opt OptI<T>) T;
+func get<T>(opt SomeI<T>) T {
   [value] = ^opt;
   return ^value;
 }
@@ -287,7 +287,7 @@ func get<T>(opt Some<T>) T {
 struct Spaceship { }
 
 exported func main() {
-  s Box<dyn Opt<Spaceship>> = Box<Some<Spaceship>>(Some<Spaceship>(Spaceship()));
+  s Box<dyn OptI<Spaceship>> = Box<dyn OptI<Spaceship>>(Box<SomeI<Spaceship>>(SomeI<Spaceship>(Spaceship())));
   // Drops the ship manually
   [ ] = (^s).get();
 }
@@ -322,19 +322,20 @@ fn opt_with_undroppable_mutable_ref_contents() {
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
   let code = r"
 import v.builtins.drop.*;
+import v.builtins.box.*;
 
 #!DeriveInterfaceDrop
-interface Opt<T> { }
+interface OptI<T> { }
 
 #!DeriveStructDrop
-struct Some<T> { value T; }
+struct SomeI<T> { value T; }
 
-impl<T> Opt<T> for Some<T>;
+impl<T> OptI<T> for SomeI<T>;
 
-abstract func drop<T>(virtual opt Opt<T>)
+abstract func drop<T>(virtual opt OptI<T>)
 where func drop(T)void;
 
-func drop<T>(opt Some<T>)
+func drop<T>(opt SomeI<T>)
 where func drop(T)void
 {
   [x] = ^opt;
@@ -344,17 +345,18 @@ where func drop(T)void
 struct Spaceship { }
 
 struct ContainerWithDerivedDrop {
-  maybeThing Opt<&Spaceship>;
+  maybeThing Box<dyn OptI<&Spaceship>>;
 }
 
 exported func main() {
   ship = Spaceship();
-  c = ContainerWithDerivedDrop(Some<&Spaceship>(&ship));
+  c = ContainerWithDerivedDrop(Box<dyn OptI<&Spaceship>>(Box<SomeI<&Spaceship>>(SomeI<&Spaceship>(&ship))));
   [ ] = ^ship;
 }
 ";
   let code_source = CodeSource::new(vec![
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
+    Source::builtin_module(&parse_arena, &parser_keywords, "box"),
     new_test_code_map(&parse_arena, code),
     Source::Fn(empty_v_builtins_stub),
   ]);

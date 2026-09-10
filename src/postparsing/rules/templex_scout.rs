@@ -223,7 +223,7 @@ fn translate_dyn_interface_templex<'s>(
 // Translates a type expression into rules and returns its rune. Every rule goes into
 // `rule_builder`. To split the outer reference wrapping (&/weak) from the named
 // type it wraps (as a function parameter needs), call translate_signature_templex instead.
-/// Translates the template half of an application — the `Opt` of `Opt<int>`.
+/// Translates the template half of an application — the `OptI` of `OptI<int>`.
 ///
 /// A name here yields the `Lookup` alone, never the bare-name lowering that @TNLTZACZ describes.
 /// That lowering applies the template to no arguments, which collapses it to its own return type;
@@ -840,7 +840,7 @@ fn split_type_st_into<'s>(
       (full, value)
     }
     // The value root, past the outer wraps: translate it flat into the value list (nested wraps, e.g.
-    // the `&` inside `Opt<&Spaceship>`, correctly stay in value position). full == value here.
+    // the `&` inside `OptI<&Spaceship>`, correctly stay in value position). full == value here.
     _ => {
       let value = translate_type_st_into_rune(
         scout_arena,

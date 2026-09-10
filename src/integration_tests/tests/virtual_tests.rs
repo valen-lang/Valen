@@ -159,8 +159,9 @@ fn owning_interface() {
         &instantiating_bump,
         r"
 import v.builtins.opt.*;
+import v.builtins.box.*;
 exported func main() int {
-  x Opt<int> = Some(7);
+  x Box<dyn OptI<int>> = Box<dyn OptI<int>>(Box<SomeI<int>>(SomeI<int>(7)));
   return 7;
 }
 ",

@@ -126,7 +126,7 @@ fn hash_map_update() {
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        // TSUGAR: m.get(8) → m.get(&8); return __copy_prim(...) because get returns Opt<&V>
+        // TSUGAR: m.get(8) → m.get(&8); return __copy_prim(...) because get returns OptI<&V>
         r"
 import hashmap.*;
 exported func main() int {
@@ -427,6 +427,7 @@ fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() 
         &instantiating_bump,
         r#"
 import v.builtins.arith.*;
+import v.builtins.box.*;
 
 extern func __vbi_panic() __Never;
 
@@ -443,7 +444,7 @@ interface HashMapNode<K> { }
 
 #!DeriveStructDrop
 struct HashMap<K> {
-  table Array<HashMapNode<K>>;
+  table Array<Box<dyn HashMapNode<K>>>;
 }
 
 func keys<K>(self &HashMap<K>) {
@@ -451,7 +452,7 @@ func keys<K>(self &HashMap<K>) {
 }
 
 exported func main() int {
-  m = HashMap<int>([]HashMapNode<int>(0));
+  m = HashMap<int>([]Box<dyn HashMapNode<int>>(0));
   m.keys();
   [arr] = ^m;
   [] = ^arr;

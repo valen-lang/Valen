@@ -1431,7 +1431,7 @@ fn test_param_no_outer_wrap_routing() {
 fn test_template_part_in_call_stays_a_template() {
   // Ensures an applied generic takes its template straight from the name's Lookup.
   //
-  // `Opt` in `Opt<int>` must not get the zero-arg Call that a bare name gets, per @TNLTZACZ.
+  // `OptI` in `OptI<int>` must not get the zero-arg Call that a bare name gets, per @TNLTZACZ.
   // Applying a template to no arguments collapses it to its own return type, so the outer
   // application would be handed a finished kind with nothing left to apply `int` to. The argument
   // `int` does take the full bare-name lowering — only the template position skips it.
@@ -1441,24 +1441,24 @@ fn test_template_part_in_call_stays_a_template() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let program =
-    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x Opt<int>) void { }");
+    compile(&scout_arena, &keywords, &parse_arena, "exported func foo(x OptI<int>) void { }");
   let foo = program.lookup_function("foo");
   match foo.params {
     [ParameterS {
         type_outer_ref_rules: [],
         value_type_rules: [
-          IRulexSR::Lookup(LookupSR { rune: opt_lookup, parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("Opt"), .. })], .. }),
+          IRulexSR::Lookup(LookupSR { rune: opt_lookup, parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("OptI"), .. })], .. }),
           IRulexSR::Lookup(LookupSR { rune: int_lookup, parts: [IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. })], .. }),
           IRulexSR::Call(CallSR { result_rune: int_result, template_rune: int_template, args: [], .. }),
           IRulexSR::Call(CallSR { result_rune: opt_result, template_rune: opt_template, args: [opt_arg], .. }),
         ],
         value_type_rune, .. }] => {
       assert_eq!(int_template.rune, int_lookup.rune, "the argument `int` takes the bare-name lowering");
-      assert_eq!(opt_template.rune, opt_lookup.rune, "`Opt` is applied from its Lookup, with no zero-arg Call between");
+      assert_eq!(opt_template.rune, opt_lookup.rune, "`OptI` is applied from its Lookup, with no zero-arg Call between");
       assert_eq!(opt_arg.rune, int_result.rune, "the argument is int's Call result");
       assert_eq!(value_type_rune.rune, opt_result.rune, "the param's type is the outer Call's result");
     }
-    other => panic!("expected `x Opt<int>` to lower to [Lookup(Opt), Lookup(int), Call([]), Call([int])]; got {:?}", other),
+    other => panic!("expected `x OptI<int>` to lower to [Lookup(OptI), Lookup(int), Call([]), Call([int])]; got {:?}", other),
   }
 }
 

@@ -538,6 +538,7 @@ fn mutable_foreach() {
         &instantiating_bump,
         // TSUGAR: list.ship.fuel is &int
         r"
+import v.builtins.box.*;
 // A fake 1-element list
 struct Ship {
   fuel int;
@@ -551,11 +552,11 @@ struct ListIter {
   pos int;
 }
 func begin(self &List) ListIter { ListIter(&self.ship, 0) }
-func next(iter &ListIter) Opt<&Ship> {
+func next(iter &ListIter) Box<dyn OptI<&Ship>> {
   if pos = set iter.pos = iter.pos + 1; pos < 1 {
-    Some<&Ship>(iter.ship)
+    Box<dyn OptI<&Ship>>(Box<SomeI<&Ship>>(SomeI<&Ship>(iter.ship)))
   } else {
-    None<&Ship>()
+    Box<dyn OptI<&Ship>>(Box<NoneI<&Ship>>(NoneI<&Ship>()))
   }
 }
 

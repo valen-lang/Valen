@@ -335,12 +335,13 @@ fn move_mutable_from_in_lambda() {
         // TSUGAR: m2.hp is &int
         r"
 import list.*;
+import v.builtins.box.*;
 struct Marine { hp int; }
 
 exported func main() int {
-  m Opt<Marine> = Some(Marine(6));
+  m Box<dyn OptI<Marine>> = Box<dyn OptI<Marine>>(Box<SomeI<Marine>>(SomeI<Marine>(Marine(6))));
   lam = {
-    m2 = (set m = None<Marine>()).get();
+    m2 = (set m = Box<dyn OptI<Marine>>(Box<NoneI<Marine>>(NoneI<Marine>()))).get();
     __copy_prim(&m2.hp)
   };
   return lam();

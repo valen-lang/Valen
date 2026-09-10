@@ -430,7 +430,7 @@ where
     // Collect those so they appear in the dispatcher's templateArgs — the Instantiator's
     // assemble_placeholder_map zips templateArgs with concrete args at monomorphization, so any
     // placeholder that doesn't appear here can't be substituted and trips a vassertSome later.
-    // Example: map<T, R>(&Opt<T>, &IFunction1<mut,&T,R>) Opt<R> with impl<I> Opt<I> for Some<I> —
+    // Example: map<T, R>(&OptI<T>, &IFunction1<mut,&T,R>) OptI<R> with impl<I> OptI<I> for SomeI<I> —
     // T is mimicked from I, but R has no impl-side counterpart and is a fresh placeholder.
     let existing_dispatcher_placeholder_ids: HashSet<IdT<'s, 't>> =
       dispatcher_placeholders.iter().map(|p| Compiler::get_placeholder_templata_id(*p)).collect();

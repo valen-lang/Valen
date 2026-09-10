@@ -3,7 +3,7 @@
 //! For every reference-typed local it records the group its referent lives in; at every call it
 //! records the groups the call churns and its joint-argument facts; each loop node carries its body's
 //! aggregated churns. Parameter groups come from `make_kind_g`, which reads a group at every depth of
-//! the written type — so a nested `&Opt<&Thing in g> in d` is read once, here.
+//! the written type — so a nested `&OptI<&Thing in g> in d` is read once, here.
 
 use crate::interner::StrI;
 use crate::postparsing::ast::{FunctionS, ParameterS};
@@ -77,7 +77,7 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
       }
       ExpressionTE::LockWeak(e) => {
         let inner_expr = arena.alloc(self.groupify(coutputs, &e.inner_expr, ctx, arena));
-        // A weak lock yields `Opt<&T>`; the nested borrow's group is a deferred (weak) feature, so the
+        // A weak lock yields `OptI<&T>`; the nested borrow's group is a deferred (weak) feature, so the
         // groupless structure trips the `has_empty_group` panic in `node_result`.
         let result = self.make_kind_g_groupless(expr.result());
         IExpressionGE::LockWeak { result, inner_expr }

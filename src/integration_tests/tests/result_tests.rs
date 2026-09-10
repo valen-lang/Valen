@@ -32,9 +32,10 @@ fn test_borrow_is_ok_and_expect_for_ok() {
         r#"
 import v.builtins.panicutils.*;
 import v.builtins.result.*;
+import v.builtins.box.*;
 
 exported func main() int {
-  result Result<int, str> = Ok<int, str>(42);
+  result Box<dyn ResultI<int, str>> = Box<dyn ResultI<int, str>>(Box<OkI<int, str>>(OkI<int, str>(42)));
   return if (result.is_ok()) { __copy_prim(&result.expect("eh")) }
     else { panic("wat") };
 }
@@ -68,9 +69,10 @@ fn test_is_err_and_borrow_expect_err_for_err() {
         r#"
 import v.builtins.panicutils.*;
 import v.builtins.result.*;
+import v.builtins.box.*;
 
 exported func main() str {
-  result Result<int, str> = Err<int, str>("file not found!");
+  result Box<dyn ResultI<int, str>> = Box<dyn ResultI<int, str>>(Box<ErrI<int, str>>(ErrI<int, str>("file not found!")));
   return if (result.is_err()) { result.expect_err("eh") }
     else { panic("fail!") };
 }
@@ -104,9 +106,10 @@ fn test_owning_expect() {
         r#"
 import v.builtins.panicutils.*;
 import v.builtins.result.*;
+import v.builtins.box.*;
 
 exported func main() int {
-  result Result<int, str> = Ok<int, str>(42);
+  result Box<dyn ResultI<int, str>> = Box<dyn ResultI<int, str>>(Box<OkI<int, str>>(OkI<int, str>(42)));
   return (^result).expect("eh");
 }
 "#,
@@ -139,9 +142,10 @@ fn test_owning_expect_err() {
         r#"
 import v.builtins.panicutils.*;
 import v.builtins.result.*;
+import v.builtins.box.*;
 
 exported func main() str {
-  result Result<int, str> = Err<int, str>("file not found!");
+  result Box<dyn ResultI<int, str>> = Box<dyn ResultI<int, str>>(Box<ErrI<int, str>>(ErrI<int, str>("file not found!")));
   return (^result).expect_err("eh");
 }
 "#,
@@ -175,9 +179,10 @@ fn test_expect_panics_for_err() {
         r#"
 import v.builtins.panicutils.*;
 import v.builtins.result.*;
+import v.builtins.box.*;
 
 exported func main() int {
-  result Result<int, str> = Err<int, str>("file not found!");
+  result Box<dyn ResultI<int, str>> = Box<dyn ResultI<int, str>>(Box<ErrI<int, str>>(ErrI<int, str>("file not found!")));
   return __copy_prim(&result.expect("eh"));
 }
 "#,
@@ -210,9 +215,10 @@ fn test_expect_err_panics_for_ok() {
         r#"
 import v.builtins.panicutils.*;
 import v.builtins.result.*;
+import v.builtins.box.*;
 
 exported func main() str {
-  result Result<int, str> = Ok<int, str>(73);
+  result Box<dyn ResultI<int, str>> = Box<dyn ResultI<int, str>>(Box<OkI<int, str>>(OkI<int, str>(73)));
   return result.expect_err("eh");
 }
 "#,

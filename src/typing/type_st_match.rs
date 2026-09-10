@@ -25,7 +25,7 @@ where
   /// value-type template AND the arg implements that expected interface; else None. Reuses
   /// get_parents (the same super-finding the compiler already uses for upcasts elsewhere) rather
   /// than re-matching impls by hand: it solves each relating impl and hands back the concrete
-  /// super, e.g. Opt<int> for a Some<int> arg.
+  /// super, e.g. OptI<int> for a SomeI<int> arg.
   pub fn compute_upcast_coerced_arg(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,

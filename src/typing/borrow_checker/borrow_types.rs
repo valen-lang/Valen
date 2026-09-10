@@ -4,7 +4,7 @@
 //! `KindGT` mirrors the typing pass's `KindT` variant-for-variant, and `ITemplataG` mirrors
 //! `ITemplataT`, so no structure is lost. The only additions are a `GroupExprG` on each borrow and
 //! `KindGT` in place of every nested `KindT`. Groups are read from the written `ITypeST` at every
-//! depth — including borrows nested inside generic type arguments, as in `&Opt<&Thing in g> in d`.
+//! depth — including borrows nested inside generic type arguments, as in `&OptI<&Thing in g> in d`.
 //! See docs/architecture/borrowing-design.md.
 //!
 //! The mirror stops at the solver's group-free domain: the signature/definition templatas
@@ -364,7 +364,7 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         element: Box::new(self.make_kind_g_groupless(a.element_type())),
       }),
       // A borrow reached here has no written type to read a group from and no place-path source to
-      // derive one — a deferred case (a closure-captured reference, a weak lock's `Opt<&T>`, or another
+      // derive one — a deferred case (a closure-captured reference, a weak lock's `OptI<&T>`, or another
       // nested borrow in a not-yet-supported feature). No groupless borrow may exist, so panic loudly.
       // See docs/plans/group-generic-closures-plan.md.
       KindT::BorrowRef(_) => panic!(
