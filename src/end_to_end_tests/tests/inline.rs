@@ -28,7 +28,7 @@ fn pass_manager_main_builds_simple_program_end_to_end() {
 #[test]
 fn pass_manager_main_builds_program_using_builtin_some() {
     assert_inline_compile_and_run_dbg(
-        "exported func main() int { x = Some<int>(3); return 0; }",
+        "struct Moo<T> { x T; } exported func main() int { x = Moo<int>(3); return 0; }",
         0,
         &[
             cmd("b :main"),

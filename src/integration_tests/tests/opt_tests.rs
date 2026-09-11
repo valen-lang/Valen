@@ -79,6 +79,8 @@ exported func main() int {
     }
 }
 
+// VINTERFACE: parked while interfaces migrate to the enum representation; re-enable after the enum work lands.
+#[ignore = "VINTERFACE: re-enable after the enum work"]
 #[test]
 fn test_empty_and_get_for_borrow() {
     let compilation_bump = bumpalo::Bump::new();

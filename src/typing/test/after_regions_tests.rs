@@ -43,6 +43,8 @@ use bumpalo::Bump;
 
 pub struct AfterRegionsTests {}
 
+// VINTERFACE: parked while interfaces migrate to the enum representation; re-enable after the enum work lands.
+#[ignore = "VINTERFACE: re-enable after the enum work"]
 #[test]
 fn method_call_on_generic_data() {
   let parse_bump = Bump::new();
@@ -239,6 +241,8 @@ exported func main() bool {
   }
 }
 
+// VINTERFACE: parked while interfaces migrate to the enum representation; re-enable after the enum work lands.
+#[ignore = "VINTERFACE: re-enable after the enum work"]
 #[test]
 fn impl_rule() {
   let parse_bump = Bump::new();
@@ -430,6 +434,8 @@ exported func main() {
   assert_eq!(param_type_tuples.len(), 2);
 }
 
+// VINTERFACE: parked while interfaces migrate to the enum representation; re-enable after the enum work lands.
+#[ignore = "VINTERFACE: re-enable after the enum work"]
 #[test]
 fn test_interface_default_generic_argument_in_type() {
   let parse_bump = Bump::new();

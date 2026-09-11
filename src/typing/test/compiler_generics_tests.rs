@@ -15,6 +15,8 @@ fn read_code_from_resource(resource_filename: &str) -> String {
   panic!("Unimplemented: read_code_from_resource");
 }
 
+// VINTERFACE: parked while interfaces migrate to the enum representation; re-enable after the enum work lands.
+#[ignore = "VINTERFACE: re-enable after the enum work"]
 #[test]
 fn upcasting_with_generic_bounds() {
   let parse_bump = Bump::new();

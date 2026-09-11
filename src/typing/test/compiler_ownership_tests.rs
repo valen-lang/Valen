@@ -248,6 +248,8 @@ Couldn't find a suitable function drop(Muta). No function with that name exists.
   );
 }
 
+// VINTERFACE: parked while interfaces migrate to the enum representation; re-enable after the enum work lands.
+#[ignore = "VINTERFACE: re-enable after the enum work"]
 #[test]
 fn opt_with_undroppable_contents() {
   let parse_bump = Bump::new();

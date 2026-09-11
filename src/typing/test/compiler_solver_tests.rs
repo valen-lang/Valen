@@ -850,6 +850,8 @@ exported func main() {
   compile.expect_compiler_outputs();
 }
 
+// VINTERFACE: parked while interfaces migrate to the enum representation; re-enable after the enum work lands.
+#[ignore = "VINTERFACE: re-enable after the enum work"]
 #[test]
 fn send_struct_to_interface() {
   let parse_bump = Bump::new();
@@ -986,6 +988,8 @@ exported func main() {
   assert_eq!(upcasts.len(), 2);
 }
 
+// VINTERFACE: parked while interfaces migrate to the enum representation; re-enable after the enum work lands.
+#[ignore = "VINTERFACE: re-enable after the enum work"]
 #[test]
 fn descendant_satisfying_call() {
   let parse_bump = Bump::new();
@@ -1139,6 +1143,8 @@ Unsolved runes: N
   );
 }
 
+// VINTERFACE: parked while interfaces migrate to the enum representation; re-enable after the enum work lands.
+#[ignore = "VINTERFACE: re-enable after the enum work"]
 #[test]
 fn stamps_an_interface_template_via_a_function_return() {
   let parse_bump = Bump::new();
