@@ -25,12 +25,7 @@ fn test_typing_pass_options() -> TypingPassOptions {
     global_options,
     debug_out: Arc::new(|x: &str| println!("{}", x)),
     tree_shaking_enabled: true,
-    // TEMPORARY: borrow checking is globally disabled pending revisit — dyn downcast is blocked on
-    // the pre-existing borrow-checker `group_anon` gap (see group-generic-closures-plan.md). The
-    // borrow checker's own tests re-enable it via `compiler_test_compilation_with_borrow_check`.
-    // Flip this back to `true` before committing.
-    // DO NOT SUBMIT
-    borrow_checker_enabled: false,
+    borrow_checker_enabled: true,
   }
 }
 
@@ -90,10 +85,9 @@ where
   )
 }
 
-/// Like `compiler_test_compilation`, but with the borrow checker explicitly ON — for the borrow
-/// checker's own tests, which must exercise it even while it is globally disabled by default (see
-/// the TEMPORARY note in `test_typing_pass_options`).
-// DO NOT SUBMIT
+/// Like `compiler_test_compilation`, but forces the borrow checker on. Borrow checking is on by
+/// default, so this matches `compiler_test_compilation`; it stays as the explicit entry point for the
+/// borrow checker's own tests.
 pub fn compiler_test_compilation_with_borrow_check<'s, 'ctx, 't, 'p>(
   typing_interner: &'ctx TypingInterner<'s, 't>,
   scout_arena: &'ctx ScoutArena<'s>,

@@ -71,9 +71,7 @@ where
       code_source,
       options.global_options,
       instantiator_options,
-      false, // borrow_checker_enabled — TEMPORARY: globally disabled pending revisit (see the note
-             // in test_typing_pass_options); flip back to true before committing.
-             // DO NOT SUBMIT
+      true,
       instantiating_bump,
     );
     FullCompilation { instantiated_compilation }

@@ -17,7 +17,6 @@ pub const ENTRIES: &[(&str, &str, &str)] = &[
   ("implicit_clone", "implicit_clone.vale", include_str!("resources/implicit_clone.vale")),
   ("arrays", "arrays.vale", include_str!("resources/arrays.vale")),
   ("mainargs", "mainargs.vale", include_str!("resources/mainargs.vale")),
-  ("as", "as.vale", include_str!("resources/as.vale")),
   ("print", "print.vale", include_str!("resources/print.vale")),
   ("tup0", "tup0.vale", include_str!("resources/tup0.vale")),
   ("tup1", "tup1.vale", include_str!("resources/tup1.vale")),
@@ -26,8 +25,10 @@ pub const ENTRIES: &[(&str, &str, &str)] = &[
   ("streq", "streq.vale", include_str!("resources/streq.vale")),
   ("panic", "panic.vale", include_str!("resources/panic.vale")),
   ("panicutils", "panicutils.vale", include_str!("resources/panicutils.vale")),
-  ("opt", "opt.vale", include_str!("resources/opt.vale")),
-  ("result", "result.vale", include_str!("resources/result.vale")),
+  // VCOORD: re-enable interfaces
+  // ("as", "as.vale", include_str!("resources/as.vale")),
+  // ("opt", "opt.vale", include_str!("resources/opt.vale")),
+  // ("result", "result.vale", include_str!("resources/result.vale")),
   ("box", "box.vale", include_str!("resources/box.vale")),
   ("sameinstance", "sameinstance.vale", include_str!("resources/sameinstance.vale")),
   // VCOORD: re-enable weaks

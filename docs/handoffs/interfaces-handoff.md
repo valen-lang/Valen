@@ -1,199 +1,187 @@
 # Interfaces — master handoff
 
-This is the top-level handoff for the **interface rework**: moving Vale interfaces from one representation
-(everything is a fat pointer) to a **two-representation model** — a *closed* interface used inline lowers to a
-**tagged enum** (thin pointer, tag-dispatch), while `dyn` erases it to a **fat pointer** (vtable) — and then
-building downcast/`try_as`, heap `Box`, and the rest of the Valen open/closed-trait model on top. A next
-session with none of this context should read this whole doc first, then start on the **cupcake plan**
-(linked below). Written 2026-09-08; the endeavor spans many sessions.
+The **interface rework**: moving Vale interfaces from one representation (everything is a fat pointer)
+to a **two-representation model** — a *closed* interface used inline will lower to a **tagged enum**
+(thin pointer, tag-dispatch), while `dyn` erases it to a **fat pointer** (vtable) — then building
+downcast/`try_as`, heap `Box`, and the rest of the open/closed-trait model on top. Read this whole doc
+before touching interface code. The endeavor spans many sessions; everything here is the mut region
+(`Backend/src/region/unsafe/`), orthogonal to `share`/RC.
 
-## The immediate plan to start on
+## Where the migration stands — the three questions
 
-**`~/.claude/plans/principled-but-please-plan-atomic-cupcake.md`** — the current, authoritative implementation
-plan for finishing the `dyn` conversion's dispatch. Start there. (An earlier, higher-level frontend-conversion
-plan, `~/.claude/plans/please-plan-out-slice-clever-hinton.md`, is largely **superseded** by cupcake but has
-extra context on the Result/Opt rename and the full test-conversion catalog if useful.)
+**Is the frontend moved to the new syntax?** Yes, fully. All `.vale` fixtures, the builtins, and every
+test — running *and* `#[ignore]`d — are on `dyn`/`Box<dyn>` syntax. `try_as`/`try_take_as` return
+`Box<dyn ResultI<…>>`.
 
-## Phase ordering (the whole endeavor)
+**No trace of old syntax?** Yes, everywhere — proven two ways. In running code the tripwire *proves* it
+(every remaining suite failure is downstream of a deferred blocker, not an unmigrated user site). In the
+ignored tests and comments — which the tripwire can't see (it only type-checks compiled code, and virtual
+selves are exempt) — grep proves it: `grep -rn "sealed interface" src/ | grep -vE "rust_interop|docs/"`
+and the Vale-source `\b(Opt|Result|Some|None|Ok|Err)<` sweep over `.vale` + `.rs` return only lowercase
+module names and Rust's own `Result`. The only bare-interface spellings left are by design: the
+`interface Foo` declaration and the `virtual self &Foo` receiver (the convergence-point ruling), never a
+user value.
 
-1. **`dyn` conversion — IN PROGRESS.** Make the fat-pointer representation explicit via `dyn`/`open`/`Box`,
-   and move every interface test onto the `dyn` spelling, so the *bare* spellings (`X`, `&X`, default
-   `interface`) are freed for enums. Slices: (1) `dyn` keyword + `DynInterface` kind; (2) `Box<T>` dumb
-   builtin; (3) `open` attribute + flip default to sealed; (4) honest `dyn` dispatch + convert the tests;
-   (5) rename `Result`/`Opt` → `ResultI`/`OptI`. Slices 1–3 and slice-4 **dispatch** (cupcake Part 1) are
-   built; what remains is slice-4b (migrate every owned-interface fixture to `Box<dyn X>`, blocked on owned
-   `Box<dyn X>` construction) and slice 5.
-2. **Tagged enums.** Build the enum representation for bare (closed) interfaces: `{tag, max-payload}` layout,
-   construction (branch the struct→interface upcast), `&Foo` thin-ptr, tag-dispatch (`LLVMBuildSwitch`), enum
-   drop (switch on tag → drop live variant), and the `isa`/`downcast` metal primitives with the `try_as`
-   rewrite. Then **flip bare `Interface` from fat to the enum path** (it's a thin pointer, `EnumInterface` is
-   a new kind). Create enum copies of the interface *behavior* tests (borrow/dispatch/downcast/generics/
-   linked-lists/drop) using bare-sealed interfaces + `&Foo`/value spellings.
-3. **Downcast / `try_as` → `Result`.** `try_as` returns `Result<&Sub,&Super>` **by value** — an owned
-   interface value — and `Result` is a *closed* sum type, so it must be a **tagged enum**. This is why enums
-   come before real downcast. Decide what canonical `Result`/`Opt` become (the enum sum types, now that
-   `ResultI`/`OptI` hold the dyn versions).
-4. **Heap `Box` + owned interfaces.** Make `Box<T>` actually heap-allocate (today it's a dumb inline wrapper).
-   Then `Box<dyn X>` owns a heap object; `Box<Concrete>` → `Box<dyn Trait>` cast; the vtable carries a
-   consuming `drop`(`Box<Self>`) so a `Box<dyn>` self-destructs without static size. Owned-interface tests go
-   green here.
-5. **RSA + the deferred buckets.** Runtime-sized arrays as a thin/unsafe owning pointer (drop length); then
-   the standing deferred buckets (`share`/RC-imm interfaces, imm-interface override dispatch, etc.).
+**No trace of coming enum syntax?** No enum syntax exists yet (enums are unbuilt), so nothing enum-shaped
+to remove. The enum-reserved *names* (`Opt`/`Result`/`Some`/`None`/`Ok`/`Err`) are now freed **everywhere**
+— renamed to `OptI`/`ResultI`/… (the `dyn` fat-path versions) across all Vale source, tests, and comments.
+The bare `interface Foo` declaration and `&Foo` receiver *are* the future enum's eventual spellings, but
+today exist only as the canonical virtual receiver, never as user enum values.
 
-Everything here is the **mut region** (`Backend/src/region/unsafe/`), single-owner, non-refcounted —
-orthogonal to `share`/RC, which is a separate deferred axis.
+## The `dyn` migration rules (canonical reference)
 
-## The representation model (architect rulings this session)
+| Old | New |
+|---|---|
+| `sealed interface Foo` | `interface Foo` (`sealed` is the default) |
+| `interface Foo` external crates impl | `open interface Foo` |
+| borrow `&Foo` | `&dyn Foo` |
+| weak `&&Foo` / `weak Foo` | `&&dyn Foo` / `weak dyn Foo` |
+| owned `Foo` (local/param/return/member/type-arg) | `Box<dyn Foo>` |
+| construct owned interface value from concrete `C` | `Box<dyn Foo>(Box<C>(C(...)))` — **double-Box** |
 
-- **Declaration default flips to sealed.** `interface Foo` is **sealed/closed by default** — its variants are
-  the same-crate types that `impl` it (no *external crate* can). `open interface Foo` opts into non-sealed
-  (external crates can impl → unbounded). Today's default is the opposite (unsealed = open); the flip is a
-  one-line change at `struct_compiler.rs` (see file map). The `sealed` keyword is then redundant and dropped.
-- **Use site picks representation:**
-  - `Foo` / `&Foo` → **tagged enum** `{tag, max-payload}`, thin ptr, tag-dispatch. Legal only for a sealed
-    (bounded) interface. (Built in Phase 2.)
-  - `dyn Foo` / `&dyn Foo` / `Box<dyn Foo>` → **fat pointer** `{contents, itable}`, vtable-dispatch. Legal on
-    **any** interface (sealed or open). `open` just *forbids* the enum form.
-- **Three kinds, not two.** `Interface(X)` is the canonical receiver of an abstract/virtual method (fat today,
-  **thin later**). `DynInterface(X)` = fat pointer. `EnumInterface(X)` (future) = tagged enum. `Interface`,
-  `DynInterface`, `EnumInterface` are **distinct kinds that only happen to share a fat representation today**
-  and will diverge — never treat them as equal (see Lessons).
-- **Dispatch is by narrowing to `Interface`.** A `DynInterface`/`EnumInterface` value is **narrowed to
-  `Interface`** — a *real conversion* (`NarrowInterfaceTE`), not an equality. Today, since both are the same
-  fat repr, that narrow is a fat→fat pass-through; when `Interface` becomes thin it becomes an obj-ptr
-  extract, and `EnumInterface → Interface` is added as a second source form.
-- **`dyn X` is a whole type, usable bare.** `&dyn X` = `BorrowRef(DynInterface(X))`; `Box<dyn X>` = the `Box`
-  struct wrapping a bare `DynInterface(X)`. So `dyn X` must parse as a plain type (a `Box` type-arg), not only
-  behind `&`.
-- **`Box<T>` is a dumb builtin for now** (`struct Box<T> { inner T; }`, like `opt.vale`) — it makes the
-  frontend straight (`Box<dyn X>` type-checks) and **decouples the frontend from the heap**. It becomes a real
-  heap allocation in Phase 4, with no frontend change. Owned interface positions convert to `Box<dyn X>` now
-  but stay `#[ignore]`d at runtime until Box heaps.
-- **`isa`/`downcast` are compiler-internal** (not user-facing); `try_as` composes them
-  (`isa ? Ok(downcast) : Err`). Each dispatches on representation: enum → tag-compare / payload-read; dyn →
-  itable-compare / pointer-bitcast.
+**The one exception:** an abstract/virtual method's **self** stays bare — `virtual self &Foo` /
+`virtual self Foo` / `virtual self weak Foo`. Never add `dyn` to a virtual self. A fixture that gains a
+`Box` needs `import v.builtins.box.*;` and the loading Rust test needs
+`Source::builtin_module(&parse_arena, &parser_keywords, "box")` in its `code_source`.
 
-## Current tree state (verify — it shifts under concurrent sessions)
+## The tripwire (enumeration + enforcement; TEMPORARY)
 
-Run `git status` and read the cupcake plan for the live state; don't trust a file list here. The dyn slices
-1–3 + slice-4 dispatch (Part 1) are **uncommitted** in this worktree — the `dyn` keyword, the `DynInterface`
-kind, `open`/sealed, the `Box` builtin, and the honest-dispatch machinery (`NarrowInterfaceTE`,
-`DynInterfaceTT`, `UpcastInterfaceTE`). **A concurrent session may be working here** — coordinate before large
-edits.
+`ICompileErrorT::BareInterfaceUseInDynMigrationT` fires when a bare (non-`dyn`) interface appears where
+old syntax lived. It is the driver and the guarantee that no old user syntax survives. It lives in four
+files (all tagged `TEMPORARY TRIPWIRE (dyn migration)`): the variant + `range()` arm in
+`compiler_error_reporter.rs`, the message in `compiler_error_humanizer.rs`, the **upcast** check at the
+top of `convert_via_upcast` in `convert_helper.rs` (catches interface values created by coercion —
+construction/return/arg/annotated-local), and the **param** check in `assemble_function_params`
+(`function_compiler_middle_layer.rs`, after `evaluate_maybe_virtuality` — non-virtual param whose
+`peel_all_references(coord)` is `KindT::Interface`).
 
-The suite is **intentionally red** — run `cargo nextest run --manifest-path Cargo.toml --no-fail-fast`; the
-failures are all the deferred owned-`dyn`/box-construction bucket (slice-4b fixtures migrated to `Box<dyn X>`
-plus other owned-interface tests). **Borrow checking is globally disabled** (a `// DO NOT SUBMIT` marker in
-`test_typing_pass_options` in `compiler_test_compilation.rs` and in `full_compilation.rs`) — it must be
-re-enabled before a real commit; the borrow checker's own tests re-enable it via
-`compiler_test_compilation_with_borrow_check`.
+**Do NOT remove it yet.** The remaining ~214 hits are all real deferred-blocker fallout, proven by
+investigation: 100% of param hits are the generic `drop<T>(x &T)` (drop.vale) monomorphized with
+`T`=interface (blocker [2]); the single upcast hit is bound dispatch (blocker [3]); there are **zero**
+`struct→interface` upcasts left. "Zero hits → remove tripwire" (Step C) is only reachable once blockers
+[1] and [2] land. The return/member/local declaration checks were deliberately **not** added (invasive
+for a rare pass-through catch); the ignored-test/comment stragglers they'd have caught were instead
+cleared by grep, and that mop-up is complete.
 
-**Set-aside exploration (NOT the current implementation):** `git stash` entry
-`f42e906751b0d8fd88c04dc7e3a3a0bfd2b04788` (tag `wip-ilook-slice1-clever-hinton`) holds an *earlier* attempt
-from a parallel planning line — `// ILOOK`/`// ILOOK DUP` markers on every interface test (147 plain / 40
-DUP, meant to tag which tests get enum copies in **Phase 2**), an early fat-pointer backend slice, and
-`dyn-handoff.md`/`dyn-findings.md` notes. It **predates and conflicts** with the current dyn implementation on
-the shared test files — treat it as reference/salvage (esp. the ILOOK enum-duplication catalog for Phase 2),
-not something to `apply` blindly. Recover with `git stash apply f42e906751b0d8fd88c04dc7e3a3a0bfd2b04788`
-(never `pop` — the stack has other worktrees' entries).
+## Current tree state (verify with `git log`/`git status`; shifts under concurrent sessions)
 
-## The cupcake plan (slice 4) — dispatch landed; what's left
+Several `TEMP CHECKPOINT:` commits on `exp-3-wipbx` (pushed; `main` not advanced) carry the migration —
+list them with `git log --oneline | grep 'TEMP CHECKPOINT'`; the latest moves the last ignored-test
+stragglers off old syntax and frees the reserved names everywhere. Suite is **intentionally red** — run
+`cargo nextest run --manifest-path Cargo.toml --no-fail-fast`; the reds are all deferred blockers, and
+match the pre-migration baseline count (no net regression). **Borrow-checking is globally disabled** —
+three `// DO NOT SUBMIT` markers (`src/pass_manager/full_compilation.rs`, two in
+`src/typing/test/compiler_test_compilation.rs`); must be re-enabled before a real (non-temp) commit.
 
-Full detail in the plan. Status:
-- **Phase 0 (done):** the `same_interface` equality no-op is gone; `Interface(X)` and `DynInterface(X)` are
-  never treated as equal.
-- **Part 1 (done):** honest `dyn X` dispatch for the current fat-`Interface` phase. `NarrowInterfaceTE`
-  (`DynInterface → Interface`, its own instruction, fat→fat pass-through today) is threaded through
-  typing/instantiating/groupify/collector/metal/testvm/backend. Resolution recognizes the directional
-  `dyn X → X` conversion in `convert` (`convert_helper.rs`), `is_type_convertible`, `compute_upcast_coerced_arg`,
-  and the `implements()` isa rule (`infer_compiler.rs`). Probes `dyn_borrow_upcast`, `dyn_dispatch`,
-  `dyn_downcast` in `compiler_virtual_tests.rs` are green.
-- **Part 2 (deferred):** when `Interface` goes thin / `EnumInterface` arrives, dispatch can't ride the self
-  value alone — add `vtable_source_kind: KindT` to `InterfaceFunctionCallTE`/`IE` and **hoist dispatch to the
-  call site** (per-call-site source: dyn word #1 vs enum tag). The abstract/super prototype's self stays
-  `Interface`.
-- **Slice 4b (blocked):** every owned-interface position must become `Box<dyn X>`. Blocked on owned
-  `Box<dyn X>` construction — `Box<dyn IShip>(Raza())` fails (`Box`'s constructor param is a bare generic `T`
-  and the arg-upcast pass ignores explicit template args, a pre-existing `Box<IShip>(Raza())` limitation), and
-  `drop(Box<dyn X>)` isn't found. Migrated fixtures fail here (accepted). `convert` **panics**
-  (`update the fixture please`) on a bare `dyn X → X` narrow, so any un-migrated owned-interface fixture is
-  caught rather than silently narrowed.
+## Plans from here
 
-## File map (baseline anchors — cite symbols, verify line numbers)
+The frontend `dyn` syntax migration (the sweep) is **done** — every use-site is on `&dyn`/`Box<dyn>`, and
+the tripwire proves it. Two threads remain: **A** finishes `dyn`'s deferred blockers (which clears the
+intentionally-red suite); **B** is the **paused enum thread**, the natural next pickup now that the sweep
+that displaced it is complete. They're independent — A can be finished first, or B resumed directly.
 
-- **`dyn` parsing (non-core):** `parse_ref_prefix` in `src/parsing/templex_parser.rs` (add a `dyn` word-prefix
-  arm beside `own`/`weak`); `ITemplexPT::DynInterface` in `src/parsing/ast/templex.rs`; a `dyn` keyword in
-  `src/keywords.rs` (both `new_for_parse` and `new_for_scout` arenas).
-- **`DynInterface` kind (core):** three mirrored enums — `KindT` (`src/typing/types/types.rs`), `KindIT`
-  (`src/instantiating/ast/types.rs`), metal `Kind` (`Backend/src/metal/types.h`). Ownership is which wrap
-  (`OwnRef`/`BorrowRef`) surrounds a bare kind — no separate field — so `&dyn X` and `Box<dyn X>` fall out of
-  the existing wraps.
-- **`open`/sealed (core for the typing half):** `sealed` plumbs `lexer.rs` (`IAttributeL::SealedAttribute`) →
-  `parser.rs` (`IAttributeP::SealedAttribute`) → `post_parser.rs` (`ICitizenAttributeS::Sealed`) →
-  `struct_compiler.rs` (computes the bool) → `interface_name_to_sealed` in `compiler_outputs.rs`. `open` is
-  the inverse arm at each stage; the default flips at `struct_compiler.rs`. The one policy consumer is
-  `compiler_error_humanizer.rs` ("Open (non-sealed) interfaces can't have abstract methods defined outside
-  the interface").
-- **Dispatch trampoline (verified):** the vtable is fetched only from the self arg's fat-ptr word #1
-  (`Backend/src/region/common/common.cpp`, `interfacecall.cpp`); `InterfaceFunctionCallTE`
-  (`src/typing/ast/expressions.rs`) is generated inside the abstract method's shared trampoline body
-  (`abstract_body_macro.rs`); the caller emits a plain `FunctionCall` to the abstract prototype
-  (`call_compiler.rs`). `get_abstract_interface` and the `instantiator.rs` dispatch sites read the
-  abstract/super prototype's self and **stay `Interface`-only** (an abstract method is declared on
-  `Interface`, never `DynInterface`).
-- **`Box` builtin:** `src/builtins/resources/box.vale` (`struct Box<T> { inner T; }`) + registration in
-  `src/builtins/builtins.rs`. NB the test-local `struct Box<T>{val T;}` at `compiler_drop_tests.rs` collides
-  and must be renamed.
-- **Result/Opt rename (slice 5):** definitions in `result.vale`/`opt.vale`; the only compiler string coupling
-  is six `intern_str` literals ×2 arenas in `src/keywords.rs` (`opt/some/none/result/ok/err`) —
-  `get_result`/`get_option` (`expression_compiler.rs`) resolve via those keyword *fields*, so renaming the
-  literals suffices there. Also rename in `.vale` fixtures (~11 under `src/tests/`), embedded-Vale Rust tests,
-  and hard-coded `StrI("Result")`/`StrI("Opt")` / `lookup_interface_by_human_name("Opt")` assertions. Suffix
-  the variants too (`OkI`/`ErrI`/`SomeI`/`NoneI`) to fully free the enum namespace (architect-approved).
+### A. Finish `dyn` (interface support) — unblocks the red suite
+1. **Owned `Box<dyn X>` construction** — `Box<dyn X>(Box<C>(C()))` fails "Couldn't find function
+   `Box(Box<C>)`". Teach the arg-upcast pass to read explicit template-arg bindings —
+   `compute_upcast_coerced_arg` in `src/typing/type_st_match.rs` deliberately ignores them. Canary: the
+   `#[ignore]`d probe `dyn_construct_upcast` in `compiler_virtual_tests.rs` (un-ignore when it passes).
+2. **Owned-`dyn` drop** — `drop(Box<dyn X>)` isn't found; the owned-drop self-kind rune conflicts. This
+   is the vtable consuming-drop (`func drop(self: Box<Self>)` per the design). Clears 100% of the param
+   tripwire hits.
+3. **Bound dispatch — `BoundCallTE`** (a distinct, principled endeavor). `impl_rule` and
+   `method_call_on_generic_data` (`after_regions_tests.rs`): `implements(T, IShip)` + `x.getFuel()`
+   internally upcasts `&T → &IShip` (bare). The honest fix is a new `BoundCallTE` node **plus** making
+   bounds supply a per-`T` specialized prototype (`&T`-self) instead of the abstract `&IShip` dispatcher
+   — so bound dispatch is static/devirtualized, no interface upcast. Load-bearing change spans
+   `struct_compiler.rs`/`templata_compiler.rs`/`infer_compiler.rs`/`instantiator.rs`.
+4. **Re-enable borrow-checking** — remove the three `// DO NOT SUBMIT` markers. Also needs the
+   `group_anon` "borrow with no group and no parameter context" fix
+   (`docs/plans/group-generic-closures-plan.md`) — borrow/`dyn` `try_as` trips it; that's *why* the
+   checker was globally switched off. Re-enabling also fixes
+   `noalias::sole_borrow_param_gets_noalias_same_group_does_not`.
+5. **Step C — remove the tripwire** once hits are zero (after 1+2): delete the variant + its two
+   accessor/humanizer arms + the two check sites (search `TEMPORARY TRIPWIRE (dyn migration)`).
+6. **Heap `Box`** — `Box<T>` is currently a dumb inline builtin (`struct Box<T>{inner T;}`,
+   `src/builtins/resources/box.vale`). Make it actually heap-allocate; wire `Box<Concrete> → Box<dyn X>`
+   unsizing and the vtable-driven free.
 
-## Design-doc reconciliation (do when convenient)
+### B. Enums (the future representation) — the paused thread, the next pickup
+This is the work that was paused to run the `dyn` migration first. **Resume from** the enum plan
+`~/.claude/plans/please-plan-out-slice-clever-hinton.md` (tagged-enum design + slice breakdown) plus the
+`// ILOOK`/`ILOOK DUP` inventory in stash `f42e9067` (B.6). The design is already settled — two-representation
+model, `isa`/`downcast` primitives, the `@CVOZ` crate-boundary ruling, sealed-by-default; the steps below
+are what building it entails.
+1. **Tagged-enum representation** for a bare/closed interface: `{tag, max-payload}` layout, construction
+   (branch the struct→interface upcast into a tag+payload write), `&Foo` = thin pointer, tag-dispatch via
+   `LLVMBuildSwitch`, enum drop (switch on tag → drop the live variant).
+2. **`isa` / `downcast` metal primitives** (compiler-internal); rewrite `try_as` as
+   `isa ? OkI(downcast) : ErrI`.
+3. **Flip bare `Interface` from fat to the enum path** — introduce an `EnumInterface` kind; a
+   non-virtual `&MyInterface` goes **thin**: a pointer to the whole enum `{tag, payload}`, dispatched by
+   loading the tag and switching. A `virtual self &MyInterface` is different — it receives a **plain
+   pointer to the concrete variant struct** that lived inside the enum (an ordinary `&Concrete`), not the
+   whole enum and not the tag. That's why the bare `&Foo` receiver is the convergence point: the enum
+   caller switches on the tag then passes a pointer to the inner struct, and the `&dyn` caller passes its
+   `contents_ptr` — both hand the callee the same plain pointer-to-concrete. This is where
+   `NarrowInterfaceTE` stops being a fat→fat pass-through and becomes a real narrow, and where the
+   enum-source form is added.
+4. **Cupcake Part 2 (deferred)** — add `vtable_source_kind: KindT` to `InterfaceFunctionCallTE`/`IE` and
+   hoist dispatch to the call site (needed once `Interface` goes thin / `EnumInterface` arrives, because
+   the shared abstract-method trampoline can't carry the per-call-site source). Plan:
+   `~/.claude/plans/principled-but-please-plan-atomic-cupcake.md`.
+5. **Decide canonical `Result`/`Opt`** — they're now free names; make them the enum sum types (the
+   `OptI`/`ResultI` `dyn` versions stay for the fat path). Repoint builtins/tests as chosen.
+6. **Enum behavior tests** — copies of the interface behavior tests using bare-sealed interfaces. The
+   `// ILOOK`/`ILOOK DUP` markers (147 plain / 40 DUP) catalog which tests get enum twins; they live in
+   `git stash` `f42e906751b0d8fd88c04dc7e3a3a0bfd2b04788` (tag `wip-ilook-slice1-clever-hinton`). **Do NOT
+   `git stash apply` it to resume** — the `dyn`/slice-1 work it also carries was redone independently and is
+   already committed, so applying it conflicts. Mine it read-only for the ILOOK inventory
+   (`git stash show -p f42e9067…`).
 
-`valen-design-1.md:1139` (`@CVOZ`) currently says a closed trait's variants are "declared inside; no external
-types can implement." The architect's actual rule is "declared inside **the crate**; no external **crates**
-can implement" — same-crate `impl`s are the variants — and `dyn` is usable on a sealed interface too. Update
-`@CVOZ` and any paraphrase to match.
+### C. Deferred buckets (broader, standing)
+RSA (runtime-sized arrays) as a thin/unsafe owning pointer; `share`/RC-imm interfaces; imm-interface
+override dispatch; the other `deferred:` e2e buckets (`grep -rn 'deferred:' src/end_to_end_tests/`).
+
+## Key design rulings (do not re-litigate)
+- **A bare interface can't be an owned user value.** The user holds `Box<dyn X>` or `&dyn X`. Bare
+  `Interface` exists only as the canonical virtual receiver.
+- **The bare `&Foo` receiver is the CONVERGENCE POINT** both a future enum caller and a `&dyn` caller
+  narrow into. A `virtual self &Foo` receives a **plain pointer to the concrete variant struct** (an
+  ordinary `&Concrete`) — not the whole enum, not the tag. The enum caller switches on the tag then
+  passes a pointer to the inner struct; the `&dyn` caller passes its `contents_ptr`; both hand over the
+  same plain pointer-to-concrete. So the override-dispatcher self and `drop<T=interface>` must **stay
+  bare** — do not exempt them or make them `&dyn`; that would sever the enum path. The tripwire firing on
+  them is correct (they're blocked on [1]/[2], not old syntax).
+- **`Interface`, `DynInterface`, `EnumInterface` are distinct kinds** that share a fat representation
+  today and will diverge. The relationship is a directional conversion (`NarrowInterfaceTE`), never `==`.
+- **`dyn X` = `BorrowRef(DynInterface(X))` / `Box<Dyn(X)>`**, wrapping a distinct interned `DynInterfaceTT`
+  (holds an `InterfaceTT`), not a bare `InterfaceTT`.
+- **Design-doc fix owed:** `valen-design-1.md` `@CVOZ` says a closed trait's variants are "declared
+  inside; no external types can implement" — the rule is "declared inside **the crate**; no external
+  **crates** can implement" (same-crate impls are the variants), and `dyn` is usable on a sealed
+  interface too.
+
+## File map (cite symbols; verify lines)
+- Tripwire: `convert_helper.rs` (`convert_via_upcast`), `function_compiler_middle_layer.rs`
+  (`assemble_function_params`), `compiler_error_reporter.rs`, `compiler_error_humanizer.rs`.
+- `dyn` kind: `KindT` (`src/typing/types/types.rs`), `KindIT` (`src/instantiating/ast/types.rs`), metal
+  `Kind` (`Backend/src/metal/types.h`); `DynInterfaceTT`, `NarrowInterfaceTE`, `UpcastInterfaceTE`.
+- Rename coupling: six `intern_str` literals ×2 arenas in `src/keywords.rs`; `get_result`/`get_option`
+  in `src/typing/expression/expression_compiler.rs` resolve via keyword fields. Builtins:
+  `src/builtins/resources/{opt,result,as,weak,box}.vale`.
+- Blocker [1]: `compute_upcast_coerced_arg` in `src/typing/type_st_match.rs`.
 
 ## Lessons learned
-
-- **Never treat `Interface(X)` and `DynInterface(X)` (or `EnumInterface(X)`) as equal**, even while they share
-  a fat representation. They are distinct kinds that will diverge (Interface → thin, one variant → enum). The
-  relationship is a **directional conversion** (`dyn X` narrows to `X`), expressed as its own node
-  (`NarrowInterfaceTE`), never an `==`/`same_interface` shortcut. An equality no-op passes today and becomes a
-  silent miscompile the moment the reps diverge.
-- **A dumb builtin `Box<T>` decouples the frontend from the heap.** Introducing `Box` as `struct Box<T>{inner
-  T;}` lets `Box<dyn X>` type-check and all frontend `dyn` work land now; the heap allocation is a later,
-  frontend-invisible representation change. General pattern: when a hard runtime feature blocks frontend
-  progress, a transparent placeholder type unblocks the frontend and defers the runtime.
-- **Typing/instantiating are representation-agnostic; only the LLVM backend cares** about enum-vs-fat. So a
-  frontend `dyn` conversion can land and keep the suite green without the backend dispatch — the converted
-  `&dyn` e2e tests type-check but stay `#[ignore]`d until the backend fat-ptr work lands.
-- **`try_as`'s `Result` return is an owned interface value**, which is why downcast depends on enums (a closed
-  sum type used inline is a tagged enum). Don't plan downcast before enums.
-- **The abstract-method trampoline dispatches on its `Interface` self param**, and the source form
-  (dyn/enum) is **per-call-site** — the shared trampoline can't carry it, so once `Interface` goes thin the
-  dispatch node must move to the call site with a `vtable_source_kind`.
-- **This worktree runs concurrent sessions** and the shared git stash stack holds other worktrees' entries —
-  never bare `git stash`/`pop`; use `git stash push -u -m <tag>` + `apply <sha>`, and coordinate before large
-  edits. (Stash `f42e9067` is set-aside exploration; see Current tree state.)
-- **Interface tests span every tier** (e2e / typing / integration / parse / postparse / instantiating /
-  solver). The enum phase only needs *behavior*-test copies (e2e + integration scenarios); parse/postparse/
-  typing tests are representation-agnostic and get *modified in place*, not duplicated. The stashed ILOOK/DUP
-  markers (stash `f42e9067`) encode which is which, if wanted for Phase 2.
-- **An owned interface is always `Box<dyn X>`, never a bare owned interface** — the bare owned/value form is
-  reserved for the future enum. `UpcastInterfaceTE` always produces the `dyn` form (its result is derived from
-  the target interface — there is no `result_value_kind`), so every owned bare-interface position is a
-  migration target. `convert` **panics** on a bare `dyn X → X` narrow so un-migrated fixtures surface loudly.
-- **No speculative fallbacks or catch-all arms — panic on the case that shouldn't occur.** Several `_ =>`/`||`
-  gates this endeavor were guesses for cases that can't happen yet (a placeholder super in `make_kind_g`, an
-  ad-hoc `|| interface_tt().is_some()` in `is_type_convertible`); each should be a `panic!` naming the
-  unimplemented case, not a silent guess, so it fails loudly if reached.
-- **`DynInterfaceTT` is a distinct interned wrapper around `InterfaceTT`**, not a bare `InterfaceTT`, so the
-  `dyn` form can carry more than the interface later. `UpcastTE` is split into `UpcastInterfaceTE` (reference →
-  `dyn` fat pointer) and a commented-out future `UpcastEnumTE` (owned concrete → tagged enum).
-- **In tests, look a denizen up with `lookup_*` methods** (`lookup_function_by_str`, `lookup_interface_by_human_name`,
-  `lookup_impl`), not `coutputs.functions.iter().filter(...)` (architect preference).
+- **Owned-interface construction is double-Box:** `Box<dyn Foo>(Box<Concrete>(Concrete()))`, not
+  `Box<dyn Foo>(Concrete())`. This is the form blocker [1] is written to accept.
+- **The tripwire enumerates by kind, not name — trust it, not grep.** The same name is a struct in one
+  test and an interface in another (`Bork`), so text-sweeping across files corrupts the struct sites.
+- **The tripwire only sees compiled code.** Ignored tests and virtual-self-only declarations slip it;
+  a closing grep is required for true "no trace" — the enum phase's new tests will slip it the same way.
+- **Never exempt the dispatcher-self / `drop<T=interface>` to silence the tripwire** — they are the
+  enum/dyn convergence point and must stay bare. Silencing them severs the future enum path.
+- **`sealed interface `→`interface` must keep the space** — a no-trailing-space sweep produced glued
+  `interfaceOpt`; corrective `\binterface([A-Z])` → `interface \1` (leaves `interface_def`/`interfaces`).
+- **`rust_interop`/`docs` `sealed interface` mentions are prose** describing a Rust concept — leave them.
+- **Print-and-continue defeats first-error masking** when auditing which tripwire hits are genuine vs
+  deferred-blocker fallout (used to prove zero genuine sites remain).
