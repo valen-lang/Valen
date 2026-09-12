@@ -82,8 +82,6 @@ fn wrapper_run_binary(out_dir: &Path, vale_source: &str, extra: Vec<String>) -> 
     "--edition=2021".to_string(),
     format!("--sysroot={}", default_sysroot()),
     format!("--out-dir={}", out_dir.display()),
-    // Root every local item so the collector walks the (otherwise-uncalled) `__vale_*` stub fns.
-    "-Clink-dead-code".to_string(),
   ];
   rustc_args.extend(extra);
 

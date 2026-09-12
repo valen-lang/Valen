@@ -23,7 +23,8 @@ use rustc_middle::mir::{
   StatementKind, Terminator, TerminatorKind,
 };
 use rustc_middle::middle::deduced_param_attrs::DeducedParamAttrs;
-use rustc_middle::mir::mono::{CodegenUnit, MonoItemPartitions};
+use rustc_hir::attrs::Linkage;
+use rustc_middle::mir::mono::{CodegenUnit, MonoItemPartitions, Visibility};
 use rustc_abi::{BackendRepr, Primitive, RegKind};
 use rustc_middle::ty::adjustment::PointerCoercion;
 use rustc_middle::ty::{self, Instance, Ty, TyCtxt};
@@ -631,15 +632,17 @@ static DEFAULT_DEDUCED_PARAM_ATTRS: OnceLock<
 /// from the driver's `config()`.
 ///
 /// - `per_instance_mir` → our provider (drives Vale's instantiator).
-/// - `collect_and_partition_mono_items` → strips Vale's `#[vale::emit_consumer_body]` stub bodies from
-///   rustc's codegen, because Vale emits the real bodies under the *same* rustc-mangled names via
-///   `fill_extra_modules` (single-symbol, arch §5.2); without this, rustc's `unreachable!()` placeholder
-///   and Vale's body collide as a duplicate symbol at link.
+/// - `collect_and_partition_mono_items` → two interop fixups: (a) strips Vale's
+///   `#[vale::emit_consumer_body]` stub bodies from rustc's codegen, because Vale emits the real bodies
+///   under the *same* rustc-mangled names via `fill_extra_modules` (single-symbol, arch §5.2) —
+///   without this, rustc's `unreachable!()` placeholder and Vale's body collide as a duplicate symbol
+///   at link; and (b) force-promotes each reified Rust leaf to `External` linkage so rustc's release
+///   `internalize_symbols` pass can't strand Vale's out-of-band `vale_cgu` reference to it (see the fn).
 /// - `deduced_param_attrs` → `&[]` for those same items, so rustc infers no `readonly`/`captures(none)`
 ///   from the `unreachable!()` body (which would be silent UB against Vale's real body; arch §22.4).
 ///
-/// A non-Vale crate is byte-identical: the overrides only diverge for `is_vale_codegen_target` items,
-/// which exist solely in stub crates.
+/// A non-Vale crate is byte-identical: the pure-Rust passthrough (`NoopCallbacks`) installs no
+/// overrides at all, and each override diverges only for Vale's own stub items / reified leaves.
 pub fn vale_override_queries(_session: &rustc_session::Session, providers: &mut Providers) {
   providers.queries.per_instance_mir = lang_per_instance_mir;
   let _ = DEFAULT_COLLECT_AND_PARTITION.set(providers.queries.collect_and_partition_mono_items);
@@ -648,10 +651,20 @@ pub fn vale_override_queries(_session: &rustc_session::Session, providers: &mut 
   providers.queries.deduced_param_attrs = lang_deduced_param_attrs;
 }
 
-/// Rebuild rustc's CGUs with Vale's stub-body items removed, so rustc emits no `.o` symbol for a body
-/// Vale itself emits under the same mangled name. Delegates to the saved default partitioner, then
-/// drops `is_vale_codegen_target` items from each CGU (leaving `all_mono_items` untouched — downstream
-/// queries inspect it). Mirrors Harmonious's `lang_collect_and_partition_mono_items` (arch §5.3).
+/// Rebuild rustc's CGUs with two interop fixups. (1) Drop Vale's `#[vale::emit_consumer_body]` stub
+/// items, so rustc emits no `.o` for a body Vale itself emits under the same mangled name. (2) Force
+/// each surviving reified Rust leaf to `External` linkage.
+///
+/// Why (2): rustc's release partitioner internalizes those leaves — for an `Executable` crate
+/// `local_crate_exports_generics()` is false, so the item is `Hidden`/`can_be_internalized`, and
+/// `internalize_symbols` demotes it to `Internal` because its only *apparent* user shares its CGU. But
+/// the real user is Vale's out-of-band `vale_cgu` object, which references the leaf as an external
+/// symbol, so `Internal` (object-local) strands it as an undefined symbol at link. Debug leaves them
+/// `External` and links; we reproduce that. Setting `(External, Default)` here — after the delegated
+/// `upstream()` already ran internalize — wins because the LLVM backend reads `data.linkage` directly.
+/// The leaves are exactly the `FunctionExternI` the provider materialized, so we match each item's
+/// `symbol_name` against their `link_name`s (never `def_path_str`, which ICEs in this non-diagnostic
+/// context). Mirrors Harmonious's fork-free "Outcome A" (arch §5.3).
 fn lang_collect_and_partition_mono_items<'tcx>(
   tcx: TyCtxt<'tcx>,
   key: (),
@@ -662,12 +675,33 @@ fn lang_collect_and_partition_mono_items<'tcx>(
   let MonoItemPartitions { codegen_units: upstream_cgus, all_mono_items: reachable, .. } =
     upstream(tcx, key);
 
+  // The reified Rust leaves' mangled symbols, from the `FunctionExternI` the provider materialized as
+  // each leaf resolved. Empty when no driven run is active (the override is installed only on the
+  // driven path), which leaves the partition a pure stub-body filter.
+  let leaf_symbols: HashSet<String> = {
+    let state_ptr = DRIVER_STATE.with(|c| c.get());
+    if state_ptr.is_null() {
+      HashSet::new()
+    } else {
+      // SAFETY: same scoped-pointer contract as `lang_per_instance_mir` — `DriverState` outlives every
+      // provider call on this thread, and we only borrow it for this read.
+      let state: &DriverState = unsafe { &*(state_ptr as *const DriverState) };
+      state.monouts.borrow().function_externs.iter().map(|e| e.link_name.to_string()).collect()
+    }
+  };
+
   let mut filtered_cgus: Vec<CodegenUnit<'tcx>> = Vec::with_capacity(upstream_cgus.len());
   for cgu in upstream_cgus.iter() {
     let mut new_cgu = CodegenUnit::new(cgu.name());
     for (&mono_item, &data) in cgu.items() {
       if is_vale_codegen_target(tcx, mono_item.def_id()) {
         continue;
+      }
+      let mut data = data;
+      if leaf_symbols.contains(mono_item.symbol_name(tcx).name) {
+        // Undo the release internalize so Vale's out-of-band `vale_cgu` reference resolves at link.
+        data.linkage = Linkage::External;
+        data.visibility = Visibility::Default;
       }
       new_cgu.items_mut().insert(mono_item, data);
     }

@@ -656,8 +656,6 @@ fn drive_rustc(case: &Case, emit_backend: bool, crate_type: &str, run_exe: bool)
     format!("--sysroot={}", sysroot()),
     format!("-L{}", out_dir.display()),
     format!("--out-dir={}", out_dir.display()),
-    // Root every local item so the collector walks the (otherwise-uncalled) `__vale_*` stub fns.
-    "-Clink-dead-code".to_string(),
   ];
   for (crate_name, _) in &deps {
     rustc_args.push(format!(
