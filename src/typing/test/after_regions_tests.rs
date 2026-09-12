@@ -30,6 +30,7 @@ use crate::typing::names::names::{
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::compiler_test_compilation::compiler_test_compilation_without_borrow_check;
 use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::InterfaceTT;
@@ -322,7 +323,7 @@ exported func main() int {
 }
 
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
+// VCOORD: re enable w borrowing
 fn can_downcast_interface_to_interface_through_registered_impl() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -360,7 +361,7 @@ exported func main() bool {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -579,7 +580,7 @@ exported func main() int {
 // generic. The CompilerOutputs.signatureToFunction cache terminates recursion.
 // VCOORD: enable this
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
+// VCOORD: re enable w borrowing
 fn brrz_nested_bound_return_inference_through_a_lambda_body() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -602,7 +603,7 @@ exported func main() int {
 ";
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,

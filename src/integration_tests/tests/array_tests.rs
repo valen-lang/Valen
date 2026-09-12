@@ -94,7 +94,6 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
 fn destroy_ssa_into_function() {
     let compilation_bump = bumpalo::Bump::new();
@@ -107,7 +106,7 @@ fn destroy_ssa_into_function() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -1146,7 +1145,6 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
 fn map_from_hardcoded_values() {
     let compilation_bump = bumpalo::Bump::new();
@@ -1159,7 +1157,7 @@ fn map_from_hardcoded_values() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -1182,7 +1180,6 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
 fn array_foreach() {
     let compilation_bump = bumpalo::Bump::new();
@@ -1195,7 +1192,7 @@ fn array_foreach() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,

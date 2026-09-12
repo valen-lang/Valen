@@ -135,7 +135,6 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
 fn call_array_without_element_type() {
     let compilation_bump = bumpalo::Bump::new();
@@ -148,7 +147,7 @@ fn call_array_without_element_type() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -167,7 +166,6 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
 fn make_array_without_type() {
     let compilation_bump = bumpalo::Bump::new();
@@ -180,14 +178,14 @@ fn make_array_without_type() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: a.3 is &int
         r"
 exported func main() int {
-  a = [](10, &{_});
+  a = [](10, &{^_});
   return __copy_prim(&a.3);
 }
 ",

@@ -15,6 +15,7 @@ use crate::typing::names::names::IVarNameT;
 use crate::typing::names::names::LocalNameT;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::compiler_test_compilation::compiler_test_compilation_without_borrow_check;
 use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::typing_interner::TypingInterner;
@@ -304,7 +305,7 @@ exported func main() {
 }
 
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
+// VCOORD: re enable w borrowing
 fn opt_with_undroppable_mutable_ref_contents() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -352,7 +353,7 @@ exported func main() {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,

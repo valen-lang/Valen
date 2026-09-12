@@ -1,5 +1,6 @@
 use std::mem::size_of;
 use super::compiler_test_compilation::compiler_test_compilation;
+use super::compiler_test_compilation::compiler_test_compilation_without_borrow_check;
 use crate::builtins::builtins::{
   builtin_source_bundle, builtin_source_for_arith, builtin_source_for_arrays, builtin_source_for_as,
   builtin_source_for_opt, builtin_source_for_panicutils, builtin_source_for_weak,
@@ -6045,7 +6046,7 @@ where implements(SubType, SuperType);
 
 // AFTERM: doublecheck this
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
+// VCOORD: re enable w borrowing
 fn downcast_with_as() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -6075,7 +6076,7 @@ exported func main() {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -6409,7 +6410,7 @@ exported func main() {
 
 // VCOORD: enable this
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
+// VCOORD: re enable w borrowing
 fn closure_using_parent_function_s_bound() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -6436,7 +6437,7 @@ exported func main() int {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,

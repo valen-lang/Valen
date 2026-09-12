@@ -145,7 +145,6 @@ exported func main() int { a = 7; return { a }(); }
 // `expect_compiler_outputs` should succeed and this becomes a passing regression test.
 // Ignored for now (the feature is a large deferred piece); un-ignore when it lands.
 #[test]
-#[ignore = "deferred: group-generic-closures — borrow checker can't derive a group for a closure-captured reference (borrow_types.rs:347)"]
 fn mutate_captured_variable_compiles() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -157,7 +156,7 @@ fn mutate_captured_variable_compiles() {
   let code = "\nexported func main() int {\n  sum = 0;\n  { set sum = 5; }();\n  return sum;\n}\n";
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -410,7 +409,7 @@ exported func main() {
 
 // VCOORD: enable this
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
+// VCOORD: re enable w borrowing
 fn lambda_inside_different_function_with_same_name() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -446,7 +445,7 @@ exported func main() {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -458,7 +457,7 @@ exported func main() {
 }
 
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
+// VCOORD: re enable w borrowing
 fn lambda_inside_template() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -494,7 +493,7 @@ exported func main() {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -507,7 +506,7 @@ exported func main() {
 
 // VCOORD: enable this
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
+// VCOORD: re enable w borrowing
 fn curried_lambda_inside_template() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -534,7 +533,7 @@ exported func main() {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,
@@ -552,7 +551,7 @@ exported func main() {
 // already supports `&` on rvalue literals as the auto-borrow workaround.
 // VCOORD: enable this
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
+// VCOORD: re enable w borrowing
 fn curried_lambda_inside_template_explicit_borrow_probe() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -568,7 +567,7 @@ fn curried_lambda_inside_template_explicit_borrow_probe() {
     Source::Fn(empty_v_builtins_stub),
   ]);
   let typing_interner = TypingInterner::new(&typing_bump);
-  let mut compile = compiler_test_compilation(
+  let mut compile = compiler_test_compilation_without_borrow_check(
     &typing_interner,
     &scout_arena,
     &keywords,

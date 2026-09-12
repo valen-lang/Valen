@@ -436,7 +436,7 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch (foreach's next() returns an Opt interface)"]
 #[test]
 fn each_on_int_range() {
     let compilation_bump = bumpalo::Bump::new();
@@ -449,7 +449,7 @@ fn each_on_int_range() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -563,7 +563,7 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch (foreach's next() returns an Opt interface)"]
 #[test]
 fn each_on_int_range_with_conditional_break() {
     let compilation_bump = bumpalo::Bump::new();
@@ -576,7 +576,7 @@ fn each_on_int_range_with_conditional_break() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -603,7 +603,7 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch (foreach's next() returns an Opt interface)"]
 #[test]
 fn each_on_int_range_with_unconditional_break() {
     let compilation_bump = bumpalo::Bump::new();
@@ -616,7 +616,7 @@ fn each_on_int_range_with_unconditional_break() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -638,7 +638,7 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch (foreach's next() returns an Opt interface)"]
 #[test]
 fn each_on_int_range_with_conditional_break_from_both_branches() {
     let compilation_bump = bumpalo::Bump::new();
@@ -651,7 +651,7 @@ fn each_on_int_range_with_conditional_break_from_both_branches() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,

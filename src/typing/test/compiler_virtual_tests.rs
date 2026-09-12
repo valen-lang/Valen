@@ -736,7 +736,6 @@ impl<T> IObserver<T> for MyThing;
 
 // VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
-#[ignore]
 fn anonymous_substruct_8() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

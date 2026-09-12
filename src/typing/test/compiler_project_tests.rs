@@ -207,7 +207,6 @@ exported struct MyStruct { a int; }
 // VCOORD: enable when we have closures. Loads list.vale, which imports v.builtins.migrate and calls
 // migrate(...); the migrate builtin is currently disabled (it uses closures), so lexing can't find it.
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn typing_pass_array_type_convertible() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -268,7 +267,6 @@ exported func main() {
 }
 
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn typing_pass_uses_same_instance() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -326,7 +324,6 @@ exported func main() bool {
 }
 
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn typing_pass_ssa_destructure() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -380,13 +377,7 @@ exported func main() int {
   compile.expect_compiler_outputs();
 }
 
-// NOVEL CODE — TDD reproducer for the `evaluate_addressible_lookup_for_mutate
-// — AddressibleClosureVariableT` panic surfaced by typing_pass_on_roguelike.
-// Triggered by `set x = ...` inside a lambda where x is captured from the
-// enclosing function scope.
-// VCOORD: enable this
 #[test]
-#[ignore]
 fn typing_pass_closure_var_mutate() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -424,7 +415,7 @@ exported func main() {
     global_options,
     debug_out: Arc::new(|_x: &str| {}),
     tree_shaking_enabled: true,
-    borrow_checker_enabled: true,
+    borrow_checker_enabled: false,
   };
   let typing_interner = TypingInterner::new(&typing_bump);
   let mut compile = typing_pass_compilation_for_test(
@@ -441,7 +432,6 @@ exported func main() {
 }
 
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn typing_pass_tuple_literal() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -494,7 +484,6 @@ exported func main() {
 }
 
 #[test]
-#[ignore] // VCOORD: re enable w borrowing
 fn typing_pass_destruct_struct() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();

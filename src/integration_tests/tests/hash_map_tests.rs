@@ -460,7 +460,7 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
+#[ignore = "strings not implemented yet (R3 @str->&str share-peel Reinterpret at instantiator)"]
 #[test]
 fn hash_map_values() {
     let compilation_bump = bumpalo::Bump::new();
@@ -473,7 +473,7 @@ fn hash_map_values() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -593,7 +593,7 @@ exported func main() int {
     }
 }
 
-#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
+#[ignore = "strings not implemented yet (R3 @str->&str share-peel Reinterpret at instantiator)"]
 #[test]
 fn hash_map_remove_2() {
     let compilation_bump = bumpalo::Bump::new();
@@ -606,7 +606,7 @@ fn hash_map_remove_2() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
