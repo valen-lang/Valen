@@ -1342,19 +1342,23 @@ where
   /// Evaluate a templata from an ITypeST.
   pub fn evaluate_templex(
     &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    calling_env: IInDenizenEnvironmentT<'s, 't>,
+    call_range: &'t [RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
     env: IEnvironmentT<'s, 't>,
     rune_to_kind: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     templex: &ITypeST<'s>,
   ) -> ITemplataT<'s, 't> {
     match templex {
       ITypeST::Rune(r) => rune_to_kind.get(&r.rune.rune).unwrap_or_else(|| {
-        panic!("evaluate_bound_templex: can't substitute {:?}", r.rune.rune)
+        panic!("evaluate_templex: can't substitute {:?}", r.rune.rune)
       }).clone(),
       ITypeST::BorrowRef(b) =>
         ITemplataT::Kind(KindTemplataT {
           kind: KindT::BorrowRef(
             self.typing_interner.alloc(BorrowRefT {
-              inner: self.evaluate_templex(env, rune_to_kind, b.inner).expect_kind()
+              inner: self.evaluate_templex(coutputs, calling_env, call_range, call_location, env, rune_to_kind, b.inner).expect_kind()
             }),
           ).clone()
         }),
@@ -1362,7 +1366,7 @@ where
         ITemplataT::Kind(KindTemplataT {
           kind: KindT::OwnRef(
             self.typing_interner.alloc(OwnRefT {
-              inner: self.evaluate_templex(env, rune_to_kind, b.inner).expect_kind()
+              inner: self.evaluate_templex(coutputs, calling_env, call_range, call_location, env, rune_to_kind, b.inner).expect_kind()
             }),
           ).clone()
         }),
@@ -1370,22 +1374,46 @@ where
         ITemplataT::Kind(KindTemplataT {
           kind: KindT::WeakRef(
             self.typing_interner.alloc(WeakRefT {
-              inner: self.evaluate_templex(env, rune_to_kind, b.inner).expect_kind()
+              inner: self.evaluate_templex(coutputs, calling_env, call_range, call_location, env, rune_to_kind, b.inner).expect_kind()
             }),
           ).clone()
         }),
+      ITypeST::Call(c) => {
+        let template = self.evaluate_templex(coutputs, calling_env, call_range, call_location, env, rune_to_kind, c.template);
+        let args: Vec<ITemplataT<'s, 't>> = c
+          .args
+          .iter()
+          .map(|arg| self.evaluate_templex(coutputs, calling_env, call_range, call_location, env, rune_to_kind, arg))
+          .collect();
+        match template {
+          ITemplataT::StructDefinition(it) => {
+            let kind = self.predict_struct(coutputs, calling_env, call_range, call_location, *it, &args);
+            ITemplataT::Kind(KindTemplataT {
+              kind: KindT::Struct(self.typing_interner.intern_struct_tt(StructTTValT { id: *kind.id })),
+            })
+          }
+          ITemplataT::InterfaceDefinition(it) => {
+            let kind = self.predict_interface(coutputs, calling_env, call_range, call_location, *it, &args);
+            ITemplataT::Kind(KindTemplataT {
+              kind: KindT::Interface(self.typing_interner.intern_interface_tt(InterfaceTTValT { id: *kind.id })),
+            })
+          }
+          ITemplataT::Kind(kt) => ITemplataT::Kind(kt),
+          other => panic!("evaluate_templex: Call template resolved to a non-applicable templata {:?}", other),
+        }
+      }
       ITypeST::Name(n) => {
         let mut lookup_filter = HashSet::default();
         lookup_filter.insert(ILookupContext::TemplataLookupContext);
         match lookup_nearest_with_path(env, &[n.name], lookup_filter, self.typing_interner) {
           Some(t) => t,
           None => panic!(
-            "evaluate_bound_templex: bound type name {:?} did not resolve to anything",
+            "evaluate_templex: bound type name {:?} did not resolve to anything",
             n.name,
           ),
         }
       }
-      other => panic!("evaluate_bound_templex: unsupported bound type templex {:?}", other),
+      other => panic!("evaluate_templex: unsupported bound type templex {:?}", other),
     }
   }
 
@@ -1395,6 +1423,9 @@ where
     sanity_check: bool,
     original_calling_denizen_id: &'t IdT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    calling_env: IInDenizenEnvironmentT<'s, 't>,
+    call_range: &'t [RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
     citizen: ICitizenTT<'s, 't>,
   ) -> (InstantiationReachableBoundArgumentsT<'s, 't>, IndexMap<IRuneS<'s>, Vec<KindT<'s, 't>>>) {
     let citizen_id = match citizen {
@@ -1442,7 +1473,7 @@ where
       .collect();
 
     let citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> = self
-      .resolve_citizen_bounds(coutputs, citizen_template_id, args)
+      .resolve_citizen_bounds(coutputs, calling_env, call_range, call_location, citizen_template_id, args)
       .into_iter()
       .map(|(rune, (func_bound, bound_name, return_type))| {
         let proto = Compiler::import_function_bound(

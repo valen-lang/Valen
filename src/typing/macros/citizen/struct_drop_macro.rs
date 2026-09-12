@@ -18,7 +18,7 @@ use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
   CallSR, CallSiteFuncSR, DefinitionFuncSR, IRulexSR, KindListSR, LookupSR, ResolveSR, RuneUsage,
 };
-use crate::postparsing::rules::types::{ITypeST, NameST, RuneUsageST};
+use crate::postparsing::rules::types::{CallST, ITypeST, NameST, RuneUsageST};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::compiler::Compiler;
@@ -134,11 +134,15 @@ where
       let params_types = self.scout_arena.alloc_slice_from_vec(vec![ITypeST::Rune(
         self.scout_arena.alloc(RuneUsageST { rune: generic_param.rune }),
       )]);
-      let return_type = ITypeST::Name(self.scout_arena.alloc(NameST {
+      let return_type = ITypeST::Call(self.scout_arena.alloc(CallST {
         range: range(-1672149),
-        name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
-          name: self.keywords.void,
-        })),
+        template: self.scout_arena.alloc(ITypeST::Name(self.scout_arena.alloc(NameST {
+          range: range(-1672149),
+          name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
+            name: self.keywords.void,
+          })),
+        }))),
+        args: self.scout_arena.alloc_slice_from_vec(Vec::new()),
       }));
       // Only appears in definition; filtered out when solving the call site.
       rules.push(IRulexSR::DefinitionFunc(DefinitionFuncSR {

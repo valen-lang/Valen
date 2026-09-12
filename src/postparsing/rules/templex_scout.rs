@@ -248,8 +248,10 @@ fn translate_template_position_templex<'s, 'p>(
 /// type, so it needs the tree to know that `D` is a rune.
 ///
 /// NameOrRune splits into Name (a concrete type like `int`) or Rune (a declared generic like `D`).
-/// Ref wraps nest. Unlike the rules, nothing is lowered here: no zero-arg Call for a bare name, no
-/// parent-env lookup. Substituting into an ITypeST later produces a KindT, never a new ITypeST.
+/// Ref wraps nest. This mirrors the rules' lowering (@TNLTZACZ): a value-position bare name lowers to
+/// a zero-arg `Call` of its `Name`, so evaluating/substituting it yields a general `ITemplataT` (a
+/// citizen gets instantiated), matching what the rules produce. Only a `Call`'s `template` child stays
+/// a bare `Name` (template position), via `translate_templex_template_position_into_type_st`.
 pub fn translate_templex_into_type_st<'s, 'p>(
   scout_arena: &ScoutArena<'s>,
   env: IEnvironmentS<'s>,
@@ -277,27 +279,31 @@ pub fn translate_templex_into_type_st<'s, 'p>(
     // A bare name, e.g. `int` (a concrete type) or `D` (a declared generic). The env decides which.
     ITemplexPT::NameOrRune(NameOrRunePT { name: name_or_rune, .. }) => {
       let name_str = scout_arena.intern_str(name_or_rune.str().as_str());
-      let is_rune = env
-        .all_declared_runes()
-        .contains(&scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })));
-      if is_rune {
-        ITypeST::Rune(scout_arena.alloc(RuneUsageST {
-          rune: RuneUsage {
-            range: range_s,
-            rune: scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })),
-          },
-        }))
-      } else {
-        ITypeST::Name(scout_arena.alloc(NameST {
+      match translate_name(scout_arena, &env, range_s, name_str) {
+        rune @ ITypeST::Rune(_) => rune,
+        // A value-position concrete name lowers to a zero-arg Call of its Name (@TNLTZACZ), so
+        // evaluating it instantiates the citizen rather than yielding an un-applied template.
+        name => ITypeST::Call(scout_arena.alloc(CallST {
           range: range_s,
-          name: scout_arena.intern_imprecise_name(CodeName(CodeNameValS { name: name_str })),
-        }))
+          template: scout_arena.alloc(name),
+          args: scout_arena.alloc_slice_from_vec(Vec::new()),
+        })),
       }
     }
 
     ITemplexPT::Call(call) => {
-      let template: &'s ITypeST<'s> =
-        scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), call.template));
+      let env1 = env.clone();
+      let templex1 = call.template;
+      let template: &'s ITypeST<'s> = scout_arena.alloc(
+        if let ITemplexPT::NameOrRune(NameOrRunePT { name: name_or_rune, .. }) = templex1 {
+          let file = env1.file();
+          let range_s = PostParser::eval_range(file, templex1.range());
+          let name_str = scout_arena.intern_str(name_or_rune.str().as_str());
+          translate_name(scout_arena, &env1, range_s, name_str)
+        } else {
+          translate_templex_into_type_st(scout_arena, env1, templex1)
+        },
+      );
       let mut args = Vec::<&'s ITypeST<'s>>::new();
       for arg in call.args {
         args.push(scout_arena.alloc(translate_templex_into_type_st(scout_arena, env.clone(), arg)));
@@ -378,6 +384,31 @@ pub fn translate_templex_into_type_st<'s, 'p>(
     ITemplexPT::Func(_) => panic!("POSTPARSER_TYPE_ST_FUNC_NOT_YET_IMPLEMENTED"),
     ITemplexPT::RegionRune(_) => panic!("POSTPARSER_TYPE_ST_REGION_RUNE_IS_NOT_A_TYPE"),
     ITemplexPT::TypedRune(_) => panic!("POSTPARSER_TYPE_ST_TYPED_RUNE_NOT_YET_IMPLEMENTED"),
+  }
+}
+
+/// Resolves a bare `NameOrRune` to a declared `Rune` or a value `Name`.
+fn translate_name<'s>(
+  scout_arena: &ScoutArena<'s>,
+  env: &IEnvironmentS<'s>,
+  range_s: RangeS<'s>,
+  name_str: StrI<'s>,
+) -> ITypeST<'s> {
+  let is_rune = env
+    .all_declared_runes()
+    .contains(&scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })));
+  if is_rune {
+    ITypeST::Rune(scout_arena.alloc(RuneUsageST {
+      rune: RuneUsage {
+        range: range_s,
+        rune: scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_str })),
+      },
+    }))
+  } else {
+    ITypeST::Name(scout_arena.alloc(NameST {
+      range: range_s,
+      name: scout_arena.intern_imprecise_name(CodeName(CodeNameValS { name: name_str })),
+    }))
   }
 }
 

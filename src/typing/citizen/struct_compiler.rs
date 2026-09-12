@@ -347,6 +347,9 @@ where
   pub fn resolve_citizen_bounds(
     &self,
     coutputs: &mut CompilerOutputs<'s, 't>,
+    calling_env: IInDenizenEnvironmentT<'s, 't>,
+    call_range: &'t [RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
     citizen_template_id: &'t IdT<'s, 't>,
     substituting_args: &[ITemplataT<'s, 't>],
   ) -> IndexMap<IRuneS<'s>, (&'s FunctionS<'s>, &'t FunctionBoundNameT<'s, 't>, KindT<'s, 't>)> {
@@ -381,10 +384,14 @@ where
       let param_coords: Vec<KindT<'s, 't>> = func_bound
           .params
           .iter()
-          .map(|p| self.evaluate_templex(env, &rune_to_substitution_templata, &p.tyype).expect_kind())
+          .map(|p| self.evaluate_templex(coutputs, calling_env, call_range, call_location, env, &rune_to_substitution_templata, &p.tyype).expect_kind())
           .collect();
       let return_type = self
           .evaluate_templex(
+            coutputs,
+            calling_env,
+            call_range,
+            call_location,
             env,
             &rune_to_substitution_templata,
             &func_bound.maybe_return_type.expect("function bound has no return type"),

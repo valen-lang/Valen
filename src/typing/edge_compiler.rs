@@ -552,6 +552,7 @@ where
 
     // Only grab sub_citizen entries, and assert we can't handle non-empty ones yet.
     let impl_struct_rune = impl_a.struct_kind_rune.rune;
+    let bound_call_range: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_from_vec(vec![range]);
     let dispatcher_and_case_placeholdered_impl_reachable_prototypes: Vec<(
       IRuneS<'s>,
       IRuneS<'s>,
@@ -570,7 +571,7 @@ where
         let args = self.instantiation_template_args(citizen_id);
         // Use the above args to translate the below sub-citizen bounds to the dispatcher's terms.
         self
-          .resolve_citizen_bounds(coutputs, citizen_template_id, args)
+          .resolve_citizen_bounds(coutputs, IInDenizenEnvironmentT::from(dispatcher_inner_env), bound_call_range, call_location, citizen_template_id, args)
           .into_iter()
           .map(|(rune_in_citizen, (func_bound, bound_name, return_type))| {
             let dispatcher_prototype = Compiler::import_function_bound(

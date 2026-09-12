@@ -1,6 +1,5 @@
 pub mod abstract_body_macro;
-// VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
-// pub mod anonymous_interface_macro;
+pub mod anonymous_interface_macro;
 pub mod as_subtype_macro;
 pub mod citizen;
 pub mod functor_helper;

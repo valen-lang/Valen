@@ -628,26 +628,26 @@ Steps:
 Supplied:
   (arg 0): i32
   added rule: _1112 = (H)
-  added rule: _111311 = "void"
-  added rule: _111312 = _111311<>
-  added rule: _1114 = callsite-func drop(_1112)_111312
-  added rule: _1114 = resolve-func drop(_1112)_111312
+  added rule: _1113211 = "void"
+  added rule: _11131 = _1113211<>
+  added rule: _1114 = callsite-func drop(_1112)_11131
+  added rule: _1114 = resolve-func drop(_1112)_11131
   added rule: _611211 = "MyStruct"
   added rule: _6111 = _611211<K, V, H>
   added rule: (arg 0) = H
-_111311 = "void"
-  _111311: void
-_111312 = _111311<>
-  _111312: void
+_1113211 = "void"
+  _1113211: void
+_11131 = _1113211<>
+  _11131: void
 _611211 = "MyStruct"
   _611211: MyStruct
 (arg 0) = H
   H: i32
 _1112 = (H)
   _1112: (i32)
-_1114 = resolve-func drop(_1112)_111312
+_1114 = resolve-func drop(_1112)_11131
   _1114: main.drop(i32)
-_1114 = callsite-func drop(_1112)_111312
+_1114 = callsite-func drop(_1112)_11131
 Unsolved rule: _6111 = _611211<K, V, H>
 Unsolved runes: K V _6111
 

@@ -133,6 +133,10 @@ where
     // function declaration name is identity, not interned (@WVSBIZ).
     let constructor_imprecise_name = match struct_imprecise_name {
       IImpreciseNameS::CodeName(cn) => cn,
+      IImpreciseNameS::AnonymousSubstructTemplateImpreciseName(n) => match n.interface_imprecise_name {
+        IImpreciseNameS::CodeName(cn) => cn,
+        _ => panic!("struct constructor macro: anonymous substruct's interface imprecise name must be a CodeName"),
+      },
       _ => panic!("struct constructor macro: expected a CodeName struct imprecise name"),
     };
     let constructor_name_s = IFunctionDeclarationNameS::ConstructorName(self.scout_arena.alloc(

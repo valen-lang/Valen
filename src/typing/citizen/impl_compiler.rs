@@ -363,8 +363,8 @@ where
       &[impl_a.struct_kind_rune.rune],
     ) {
       Ok(c) => c,
-      Err(_e) => {
-        panic!("TypingPassDefiningError from compile_impl");
+      Err(e) => {
+        panic!("TypingPassDefiningError from compile_impl: {:#?}", e);
       }
     };
 

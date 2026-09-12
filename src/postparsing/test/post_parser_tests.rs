@@ -178,12 +178,19 @@ fn test_struct() {
   let normal_member = cast!(only_member, IStructMemberS::NormalStructMember);
   assert_eq!(normal_member.name.as_str(), "x");
 
+  // A value-position concrete name lowers to a zero-arg Call of its Name (@TNLTZACZ).
   match normal_member.tyype {
-    ITypeST::Name(name) => match name.name {
-      IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }) => {}
-      other => panic!("expected member type Name to be `int`; got {:?}", other),
-    },
-    other => panic!("expected member tyype to be a concrete Name; got {:?}", other),
+    ITypeST::Call(call) => {
+      assert!(call.args.is_empty(), "expected a zero-arg Call; got args {:?}", call.args);
+      match call.template {
+        ITypeST::Name(name) => match name.name {
+          IImpreciseNameS::CodeName(CodeNameS { name: StrI("int"), .. }) => {}
+          other => panic!("expected member type Name to be `int`; got {:?}", other),
+        },
+        other => panic!("expected the Call template to be a concrete Name; got {:?}", other),
+      }
+    }
+    other => panic!("expected member tyype to be a zero-arg Call of a Name; got {:?}", other),
   }
 }
 
@@ -326,19 +333,32 @@ fn impl_() {
       if result_rune.rune == impl_.interface_kind_rune.rune && args.is_empty() => Some(())
   );
 
+  // Value-position concrete names lower to zero-arg Calls of their Names (@TNLTZACZ).
   match impl_.sub_citizen_type {
-    ITypeST::Name(name) => match name.name {
-      IImpreciseNameS::CodeName(CodeNameS { name: StrI("Moo"), .. }) => {}
-      other => panic!("expected sub_citizen_type Name to be `Moo`; got {:?}", other),
-    },
-    other => panic!("expected sub_citizen_type to be a concrete Name; got {:?}", other),
+    ITypeST::Call(call) => {
+      assert!(call.args.is_empty(), "expected a zero-arg Call; got args {:?}", call.args);
+      match call.template {
+        ITypeST::Name(name) => match name.name {
+          IImpreciseNameS::CodeName(CodeNameS { name: StrI("Moo"), .. }) => {}
+          other => panic!("expected sub_citizen_type Name to be `Moo`; got {:?}", other),
+        },
+        other => panic!("expected the Call template to be a concrete Name; got {:?}", other),
+      }
+    }
+    other => panic!("expected sub_citizen_type to be a zero-arg Call of a Name; got {:?}", other),
   }
   match impl_.super_interface_type {
-    ITypeST::Name(name) => match name.name {
-      IImpreciseNameS::CodeName(CodeNameS { name: StrI("IMoo"), .. }) => {}
-      other => panic!("expected super_interface_type Name to be `IMoo`; got {:?}", other),
-    },
-    other => panic!("expected super_interface_type to be a concrete Name; got {:?}", other),
+    ITypeST::Call(call) => {
+      assert!(call.args.is_empty(), "expected a zero-arg Call; got args {:?}", call.args);
+      match call.template {
+        ITypeST::Name(name) => match name.name {
+          IImpreciseNameS::CodeName(CodeNameS { name: StrI("IMoo"), .. }) => {}
+          other => panic!("expected super_interface_type Name to be `IMoo`; got {:?}", other),
+        },
+        other => panic!("expected the Call template to be a concrete Name; got {:?}", other),
+      }
+    }
+    other => panic!("expected super_interface_type to be a zero-arg Call of a Name; got {:?}", other),
   }
 }
 
@@ -1706,13 +1726,20 @@ fn test_function_where_func_bound_carries_an_itypest() {
     other => panic!("expected params_types to be [BorrowRef(Rune(T))]; got {:?}", other),
   }
 
-  // return_type is the concrete `bool`, so it is a Name rather than a Rune.
+  // return_type is the concrete `bool`: a value-position name, so a zero-arg Call of its Name (rather
+  // than a Rune) per @TNLTZACZ.
   match resolve.return_type {
-    ITypeST::Name(name) => match name.name {
-      IImpreciseNameS::CodeName(CodeNameS { name: StrI("bool"), .. }) => {}
-      other => panic!("expected the return Name to be `bool`; got {:?}", other),
-    },
-    other => panic!("expected return_type to be a concrete Name; got {:?}", other),
+    ITypeST::Call(call) => {
+      assert!(call.args.is_empty(), "expected a zero-arg Call; got args {:?}", call.args);
+      match call.template {
+        ITypeST::Name(name) => match name.name {
+          IImpreciseNameS::CodeName(CodeNameS { name: StrI("bool"), .. }) => {}
+          other => panic!("expected the return Name to be `bool`; got {:?}", other),
+        },
+        other => panic!("expected the Call template to be a concrete Name; got {:?}", other),
+      }
+    }
+    other => panic!("expected return_type to be a zero-arg Call of a Name; got {:?}", other),
   }
 }
 
@@ -1875,7 +1902,8 @@ fn test_generic_default_carries_an_itypest() {
 #[test]
 fn test_export_carries_an_itypest() {
   // An `export Moo as Bork` records the exported type as a read-only ITypeST on the ExportAsS, from
-  // which its rules are derived (§P). `Moo` is a concrete type-name, so a Name.
+  // which its rules are derived (§P). `Moo` is a value-position concrete type-name, so a zero-arg Call
+  // of its Name (@TNLTZACZ).
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -1884,11 +1912,17 @@ fn test_export_carries_an_itypest() {
   let program = compile(&scout_arena, &keywords, &parse_arena, "export Moo as Bork;");
   let export = expect_1(program.exports);
   match export.tyype {
-    ITypeST::Name(name) => match name.name {
-      IImpreciseNameS::CodeName(CodeNameS { name: StrI("Moo"), .. }) => {}
-      other => panic!("expected exported type Name to be `Moo`; got {:?}", other),
-    },
-    other => panic!("expected export tyype to be a concrete Name; got {:?}", other),
+    ITypeST::Call(call) => {
+      assert!(call.args.is_empty(), "expected a zero-arg Call; got args {:?}", call.args);
+      match call.template {
+        ITypeST::Name(name) => match name.name {
+          IImpreciseNameS::CodeName(CodeNameS { name: StrI("Moo"), .. }) => {}
+          other => panic!("expected exported type Name to be `Moo`; got {:?}", other),
+        },
+        other => panic!("expected the Call template to be a concrete Name; got {:?}", other),
+      }
+    }
+    other => panic!("expected export tyype to be a zero-arg Call of a Name; got {:?}", other),
   }
 }
 

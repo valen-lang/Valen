@@ -400,6 +400,9 @@ where
         self.opts.global_options.sanity_check,
         envs.original_calling_env.denizen_template_id(),
         state,
+        envs.original_calling_env,
+        envs.parent_ranges,
+        envs.call_location,
         citizen_tt,
       );
       let mut citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> = vec![];
@@ -701,7 +704,7 @@ where
               // Use the above generic args to translate the below bounds into this compiling denizen's
               // terms, so we can import htem in
               let entries: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> = self
-                .resolve_citizen_bounds(state, template_id, args)
+                .resolve_citizen_bounds(state, envs.original_calling_env, envs.parent_ranges, envs.call_location, template_id, args)
                 .into_iter()
                 .map(|(rune, (func_bound, bound_name, return_type))| {
                   // Import re-anchors the bound under this compiling denizen and registers its

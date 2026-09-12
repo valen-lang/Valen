@@ -661,9 +661,7 @@ exported func main() str {
   compile.expect_compiler_outputs();
 }
 
-// VCOORD: re-enable anonymous interface macro after we do the ITypeST migration
 #[test]
-#[ignore]
 fn lambda_is_compatible_with_interface_anonymous_substruct() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -687,6 +685,45 @@ exported func main() str {
     Source::builtin_module(&parse_arena, &parser_keywords, "str"),
     Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     Source::builtin_module(&parse_arena, &parser_keywords, "implicit_clone"),
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  compile.expect_compiler_outputs();
+}
+
+// A `where func` bound whose param type names a concrete citizen (here `&Win`) must compile: the
+// value-position name lowers to a zero-arg Call and evaluate_templex applies it, matching the rules.
+#[test]
+fn where_func_bound_can_name_a_concrete_citizen() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
+#!DeriveStructDrop
+struct Win { }
+#!DeriveStructDrop
+struct Fwd<F>
+where func __call(&F, &Win)void
+{
+  f F;
+}
+exported func main() { }
+";
+  let code_source = CodeSource::new(vec![
+    Source::builtin_module(&parse_arena, &parser_keywords, "drop"),
     new_test_code_map(&parse_arena, code),
     Source::Fn(empty_v_builtins_stub),
   ]);
