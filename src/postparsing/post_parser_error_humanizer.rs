@@ -136,7 +136,8 @@ pub fn humanize_imprecise_name<'s>(name: IImpreciseNameS<'s>) -> String {
       humanize_imprecise_name(n.lambda_name) + ".struct"
     }
     IImpreciseNameS::LambdaImpreciseName(_) => "_Lam".to_string(),
-    _ => panic!("implement: humanize_imprecise_name other"),
+    IImpreciseNameS::ConstructingMemberImpreciseName(n) => n.name.0.to_string(),
+    _ => panic!("implement: humanize_imprecise_name {:?}", name),
   }
 }
 

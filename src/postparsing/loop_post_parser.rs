@@ -159,7 +159,11 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
           let loop_se = if body.inner.produces_result() {
             &*post_parser
               .scout_arena
-              .alloc(IExpressionSE::Map(MapSE { range: each_range_s.clone(), body: loop_body_se }))
+              .alloc(IExpressionSE::Map(MapSE {
+                range: each_range_s.clone(),
+                loc: loop_lidb.child().consume_in_arena(post_parser.scout_arena),
+                body: loop_body_se,
+              }))
           } else {
             &*post_parser.scout_arena.alloc(IExpressionSE::While(WhileSE {
               range: each_range_s.clone(),

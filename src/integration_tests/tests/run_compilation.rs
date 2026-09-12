@@ -9,6 +9,9 @@ use std::sync::Arc;
 use bumpalo::Bump;
 use crate::code_source::{CodeSource, Source};
 use crate::compile_options::GlobalOptions;
+use crate::lexing::ast::RangeL;
+use crate::lexing::errors::FailedParse;
+use crate::parsing::ast::FileP;
 use crate::interner::StrI;
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::instantiated_compilation::{InstantiatedCompilation, InstantiatorCompilationOptions};
@@ -22,7 +25,7 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::{new_test_code_map, test_source_from_dir};
 use crate::testvm::values::PrimitiveKindV;
-use crate::testvm::vivem::{empty_stdin, execute_with_primitive_args, regular_stdout, VmRuntimeErrorV};
+use crate::testvm::vivem::{empty_stdin, execute_with_primitive_args, regular_stdout, stdin_from_list, VmRuntimeErrorV};
 use crate::testvm::von::IVonData;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
@@ -124,6 +127,42 @@ where 's: 't, 's: 'i, 'p: 'ctx,
     )
 }
 
+/// Multi-module variant of `test`: the caller supplies its own package sources (typically one
+/// `Source::from_code_map` holding several modules) and the list of packages to build, so tests can
+/// exercise cross-module `import`s. Builtins are prepended when `include_builtins` is set, and the
+/// on-disk test-resource loader is always appended (mirrors `build`).
+pub fn test_multi<'s, 'ctx, 't, 'i, 'p>(
+    compilation_bump: &'ctx Bump,
+    typing_interner: &'ctx TypingInterner<'s, 't>,
+    scout_arena: &'ctx ScoutArena<'s>,
+    keywords: &'ctx Keywords<'s>,
+    parser_keywords: &'ctx Keywords<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
+    instantiating_bump: &'i Bump,
+    mut packages_to_build: Vec<&'p PackageCoordinate<'p>>,
+    mut sources: Vec<Source<'p>>,
+    include_builtins: bool,
+) -> RunCompilation<'s, 'ctx, 't, 'i, 'p>
+where 's: 't, 's: 'i, 'p: 'ctx,
+{
+    let mut all_packages: Vec<&'p PackageCoordinate<'p>> = Vec::new();
+    let mut all_sources: Vec<Source<'p>> = Vec::new();
+    if include_builtins {
+        all_packages.push(PackageCoordinate::builtin(parse_arena, parser_keywords));
+        all_sources.push(Source::builtins(parse_arena, parser_keywords));
+    }
+    all_packages.append(&mut packages_to_build);
+    all_sources.append(&mut sources);
+    all_sources.push(Source::Fn(test_source_from_dir));
+    let code_source: &'ctx CodeSource<'p> = compilation_bump.alloc(CodeSource::new(all_sources));
+    let compilation = InstantiatedCompilation::new(
+        typing_interner, scout_arena, keywords, parser_keywords, parse_arena,
+        all_packages, code_source, global_options(), instantiator_options(),
+        true, instantiating_bump,
+    );
+    RunCompilation { compilation, scout_arena }
+}
+
 fn build<'s, 'ctx, 't, 'i, 'p>(
     compilation_bump: &'ctx Bump,
     typing_interner: &'ctx TypingInterner<'s, 't>,
@@ -188,6 +227,12 @@ where 's: 't, 's: 'i,
     /// Drive the scout pass and return its per-file output for structural assertions.
     pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
         self.compilation.get_scoutput()
+    }
+
+    /// Drive parsing and return the per-package parse map — lets a test assert which packages were
+    /// actually brought in (e.g. that a non-imported module was pruned).
+    pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
+        self.compilation.get_parseds()
     }
 
     /// Run `main` in the TestVM with primitive args, discarding the return value (for void-`main` tests).
@@ -270,6 +315,34 @@ where 's: 't, 's: 'i,
             &mut vivem_dout,
             &vivem_bump,
             &empty_stdin,
+            &regular_stdout,
+        )
+    }
+
+    /// Like `eval_for_kind_primitive_args`, but feeds `stdin_lines` to the program's `__getch()`
+    /// (one line per call, in order). Each line is interned into the scout arena so its `StrI`
+    /// lives as long as the program.
+    pub fn eval_for_kind_primitive_args_with_stdin<'v>(
+        &mut self,
+        args: Vec<PrimitiveKindV<'v, 'i, 's>>,
+        stdin_lines: Vec<String>,
+    ) -> Result<IVonData, VmRuntimeErrorV<'s>> {
+        self.compilation.get_monouts();
+        let program_h = self.compilation.cached_monouts();
+        let interner = &self.compilation.instantiating_interner;
+        let mut vivem_dout = stdout();
+        let vivem_bump = Bump::new();
+        let stdin_strs: Vec<StrI<'s>> =
+            stdin_lines.iter().map(|s| self.scout_arena.intern_str(s.as_str())).collect();
+        let stdin = stdin_from_list(&stdin_strs);
+        execute_with_primitive_args(
+            program_h,
+            interner,
+            self.scout_arena,
+            &args,
+            &mut vivem_dout,
+            &vivem_bump,
+            stdin.as_ref(),
             &regular_stdout,
         )
     }

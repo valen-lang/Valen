@@ -34,6 +34,35 @@ Soon, when we have group borrowing do invalidation, we'll want to switch our bor
 
 We might need to enable placement-destroy and placement-new to really make this work well.
 
+#### Mutating Inline Structs
+
+(Assuming `ship Ship`, `struct Ship { a MyStruct }`, `struct MyStruct { fuel int; hp int; }`)
+
+Long term plan puts more work on the frontend:
+If the user says `set ship.a = MyStruct(42,73)` it should actually lower that to:
+ 1. Evaluate `MyStruct()`, get a new MyStruct instance, into temporary var S ("S"ource).
+ 2. Invoke a move constructor from ship.a to a temporary var P ("P"revious), leaving ship.a still existing but empty so to speak
+ 3. Invoke a move contructor from temporary var S into ship.a's still existing instance
+ 4. Invoke a destructor on temporary var P.
+
+For now, we'll do this approach, where TestVM does the heavy lifting:
+If the user says `set ship.a = MyStruct(42,73)`, it should lower that to:
+ 1. Evaluate `MyStruct()`, get a new `MyStruct` instance, into temporary var S.
+ 2. Create an empty `MyStruct` instance, in temporary var P.
+ 3. For each field in `ship.a`'s struct:
+    * Move the field's old value into the corresponding field in P.
+    * Move S's value in that field into `ship.a`'s field.
+    So in this example, concretely:
+    * Move `ship.a.fuel` into `P.fuel`.
+    * Move `S.fuel` into `ship.a.fuel`.
+    * Move `ship.a.hp` into `P.hp`.
+    * Move `S.hp` into `ship.a.hp`.
+    Now, P is full and well-formed with the old values, ship.x has the new values, and S is empty.
+ 4. Invoke a destructor on temporary var P.
+ 5. Deallocate S without invoking a destructor on it.
+
+Overwrite-in-place is for **inline structs only**, in three positions: a struct member (`set ship.engine = ...`), an array element (`set arr.i = ...`), and a local/parameter (`set x = ...`). Everything else repoints: primitive members, owned-RSA members (`set list.array = newArray` swings to the new array), and pointer members.
+
 ### Double References
 
 TestVM treats double refs (`&&`) as single refs (`&`).
@@ -57,12 +86,6 @@ borrow/weak/owned view from the onion wrap of the reference's kind (`BorrowRefIT
 up from the citizen definition (`StructDefinitionI.sharedness` in
 `src/instantiating/ast/citizens.rs`); do not store it on `ReferenceV`.
 
-**S7.** Only a bare-kind (owned) member gets the never-repoint plus overwrite-in-place rule from the
-ratified "Handling Inline Structs" direction. A wrapped member (borrow/weak) is a pointer field that
-repoints on `set`. The IR gives no help: a member set is one `Mutate` node with no inline-vs-pointer
-distinction, so the VM picks the path from the destination member's onion type and asserts the branch
-it took, to catch a wrong choice loudly.
-
 **S6.** Rebuild the two vivem tests to run real `.vale` programs through the instantiator (via
 `test_source_from_dir`) rather than hand-building IR fixtures, asserting on the computed VON return
 value.
@@ -78,7 +101,7 @@ entry points in `vivem.rs` return `IVonData` (via `Heap::to_von`) from a `Hinput
 the integration harness `run_compilation.rs` is on the onion path (`InstantiatedCompilation`), the
 rest of `integration_tests/tests/mod.rs` commented out pending revival. Only trivial programs run —
 most expression arms are still `panic!("unimplemented")` (structs, arrays, if/while, interfaces,
-weak, the S7 inline-struct mutate path); `grep -rn 'unimplemented\|vimpl' src/testvm/` lists them.
+weak, the inline-struct mutate path); `grep -rn 'unimplemented\|vimpl' src/testvm/` lists them.
 
 Run every suite under `--features no_backend` (plain `cargo test`/`build` invokes the intentionally-red
 C++ backend via `build.rs`); this is branch-wide, and why the standard fire-commit test gate needs
@@ -88,11 +111,11 @@ C++ backend via `build.rs`); this is branch-wide, and why the standard fire-comm
 
 ## Discussed examples and test cases
 
-### `set container.field = NewStruct()` on an inline struct field (Handling Inline Structs, S7)
+### `set container.field = NewStruct()` on an inline struct field (Mutating Inline Structs)
 
 For an owned (bare-kind) member, `set` does not swing the parent's member slot to a fresh
-allocation. It drops the old contents of the field's allocation and copies NewStruct's members into
-that same allocation, keeping the field's `AllocationIdV`.
+allocation. It moves the field's old contents out into a Previous temporary (destroyed afterward) and
+moves the new value's fields into that same allocation, keeping the field's `AllocationIdV`.
 
 A bonus falls out: a borrow `&container.field` taken before the `set` sees the new value afterward,
 which matches real inline memory. A repoint model would leave that borrow looking at the stale old
@@ -127,9 +150,9 @@ checking, expressed as referrer bookkeeping.
 ### Members and elements are themselves references
 
 `StructInstanceV.members` is `&[ReferenceV]` and `ArrayInstanceV.elements` is `&[ReferenceV]`
-(`src/testvm/values.rs`). A struct does not embed its members; it refers to them. Today
-`fn mutate_struct` (`src/testvm/heap.rs`) always repoints via `fn set_reference_member`
-(`src/testvm/values.rs`).
+(`src/testvm/values.rs`). A struct does not embed its members; it refers to them.
+`fn mutate_struct` (`src/testvm/heap.rs`) repoints a reference member via `fn set_reference_member`
+(`src/testvm/values.rs`) and currently panics on a bare-kind (inline) member (`heap.rs:322`).
 
 ### The onion IR the VM must consume
 

@@ -271,34 +271,44 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
         self.check_reference(interner, expected_type, reference);
         self.check_reference(interner, variable.expected_type, reference);
         let old_reference = variable.reference;
-        self.decrement_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address }),
-            old_reference);
-        self.increment_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address }),
-            reference);
-        self.get_current_call(var_address.call_id, |c| c.mutate_local(var_address, reference, expected_type));
-        old_reference
+        if let KindIT::StructIT(_) = variable.expected_type {
+            // VCOORD: reference design/arcana for this
+            self.overwrite_struct_in_place(interner, variable.expected_type, old_reference, reference)
+        } else {
+            self.decrement_reference_ref_count(
+                IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address }),
+                old_reference);
+            self.increment_reference_ref_count(
+                IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address }),
+                reference);
+            self.get_current_call(var_address.call_id, |c| c.mutate_local(var_address, reference, expected_type));
+            old_reference
+        }
     }
 
 
-    pub fn mutate_array(&mut self, element_address: ElementAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
+    pub fn mutate_array(&mut self, interner: &InstantiatingInterner<'s, 'i>, element_address: ElementAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
         let ElementAddressV { array_id: array_ref, element_index } = element_address;
         let allocation = self.objects_by_id.objects_by_id.get(&array_ref).expect("get: not found");
         match allocation.kind {
             KindV::ArrayInstance(ai) => {
                 let old_reference = ai.get_element(element_index);
-                self.decrement_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address }), old_reference);
-                ai.set_element(self.vivem_bump, element_index, reference);
-                self.increment_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address }), reference);
-                old_reference
+                if let KindIT::StructIT(_) = ai.element_type_h {
+                    // VCOORD: reference design/arcana for this
+                    self.overwrite_struct_in_place(interner, ai.element_type_h, old_reference, reference)
+                } else {
+                    self.decrement_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address }), old_reference);
+                    ai.set_element(self.vivem_bump, element_index, reference);
+                    self.increment_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address }), reference);
+                    old_reference
+                }
             }
             _ => panic!("mutate_array: not an ArrayInstance"),
         }
     }
 
 
-    pub fn mutate_struct(&mut self, member_address: MemberAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
+    pub fn mutate_struct(&mut self, interner: &InstantiatingInterner<'s, 'i>, member_address: MemberAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
         let MemberAddressV { struct_id: object_id, field_index } = member_address;
         let allocation = self.objects_by_id.objects_by_id.get(&object_id).expect("get: not found");
         match allocation.kind {
@@ -307,23 +317,48 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
                 assert!(member_type == expected_type);
                 let members = si.members.get().expect("StructInstance has no members");
                 let old_member_reference = members[field_index as usize];
-                let is_pointer_member = matches!(member_type,
-                    KindIT::BorrowRefIT(_) | KindIT::OwnRefIT(_) | KindIT::ShareRefIT(_) | KindIT::WeakRefIT(_));
-                if is_pointer_member {
+                if let KindIT::StructIT(_) = member_type {
+                    // VCOORD: reference design/arcana for this
+                    self.overwrite_struct_in_place(interner, member_type, old_member_reference, reference)
+                } else {
                     self.decrement_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr: member_address }), old_member_reference);
                     si.set_reference_member(self.vivem_bump, field_index, reference);
                     self.increment_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr: member_address }), reference);
                     old_member_reference
-                } else {
-                    // Inline overwrite-in-place: keep the slot's pointer (`old_member_reference`),
-                    // move `reference`'s contents into that same allocation, re-key the moved
-                    // members' referrers, and return the displaced old contents. Left unwritten
-                    // pending sign-off on the referrer bookkeeping (unexercised until Step 7).
-                    panic!("Unimplemented: inline-member overwrite-in-place (S7)");
                 }
             }
             _ => panic!("mutate_struct: not a StructInstance"),
         }
+    }
+
+
+    // VCOORD: reference design/arcana for this
+    pub fn overwrite_struct_in_place(&mut self, interner: &InstantiatingInterner<'s, 'i>, struct_kind: KindIT<'s, 'i>, old_ref: ReferenceV<'v, 'i, 's>, source_ref: ReferenceV<'v, 'i, 's>) -> ReferenceV<'v, 'i, 's> {
+        let si_old = match self.dereference(old_ref, false) {
+            KindV::StructInstance(si) => si,
+            _ => panic!("overwrite_struct_in_place: old_ref not a StructInstance"),
+        };
+        let si_source = match self.dereference(source_ref, false) {
+            KindV::StructInstance(si) => si,
+            _ => panic!("overwrite_struct_in_place: source_ref not a StructInstance"),
+        };
+        // Copy both slices up front so the per-field `set_reference_member` (which rebuilds `old`'s
+        // member slice) can't disturb the references we're iterating over.
+        let old_fields: &'v [ReferenceV<'v, 'i, 's>] =
+            self.vivem_bump.alloc_slice_copy(si_old.members.get().expect("overwrite_struct_in_place: old has no members"));
+        let new_fields: &'v [ReferenceV<'v, 'i, 's>] =
+            self.vivem_bump.alloc_slice_copy(si_source.members.get().expect("overwrite_struct_in_place: source has no members"));
+        // P takes the old field refs (each gains a Member(P,k) referrer via new_struct); P is owned.
+        let p_ref = self.new_struct(interner, si_old.struct_h, struct_kind, old_fields);
+        let old_alloc_id = old_ref.alloc_id();
+        for k in 0..old_fields.len() as i32 {
+            let member_addr = MemberAddressV { struct_id: old_alloc_id, field_index: k };
+            // Move field k: old ref leaves A_old (now held only by P), new ref enters A_old's slot.
+            self.decrement_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr }), old_fields[k as usize]);
+            si_old.set_reference_member(self.vivem_bump, k, new_fields[k as usize]);
+            self.increment_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr }), new_fields[k as usize]);
+        }
+        p_ref
     }
 
 

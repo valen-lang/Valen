@@ -83,6 +83,18 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     }
 
 
+    pub fn lookup_function_export(&self, exported_name: &str) -> &'i FunctionExportI<'s, 'i> {
+        let matches: Vec<&'i FunctionExportI<'s, 'i>> =
+            self.function_exports.iter().filter(|e| e.exported_name.0 == exported_name).collect();
+        if matches.is_empty() {
+            panic!("Function export \"{}\" not found!", exported_name);
+        } else if matches.len() > 1 {
+            panic!("Multiple found!");
+        }
+        matches[0]
+    }
+
+
 
     pub fn lookup_struct(
         &self,

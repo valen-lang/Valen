@@ -61,8 +61,8 @@ fn imm_tuple_access() {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() {
     // The scenario: genericGetFuel<T> takes &T with a `where implements(T, IShip)` bound
     // and calls x.getFuel() in its body. The user expects this to find IShip's abstract
@@ -135,8 +135,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn call_array_without_element_type() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -167,8 +167,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn make_array_without_type() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -187,7 +187,7 @@ fn make_array_without_type() {
         // TSUGAR: a.3 is &int
         r"
 exported func main() int {
-  a = [](10, {_});
+  a = [](10, &{_});
   return __copy_prim(&a.3);
 }
 ",
@@ -198,8 +198,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on migrate builtin (__vbi_panic); re-enable when borrow-group (R1) lands"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn borrowing_to_array() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -220,7 +220,7 @@ fn borrowing_to_array() {
 import list.*;
 
 func toArray<E>(list &List<E>) []&E {
-  return []&E(list.len(), { list.get(_) });
+  return []&E(list.len(), &{ list.get(_) });
 }
 
 exported func main() int {

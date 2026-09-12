@@ -447,8 +447,17 @@ pub fn humanize_conclusion_resolve_error<'s, 't>(
   error: &IConclusionResolveError<'s, 't>,
 ) -> String {
   match error {
-    IConclusionResolveError::CouldntFindKindForConclusionResolve(_) => {
-      panic!("implement: humanize_conclusion_resolve_error CouldntFindKindForConclusionResolve")
+    IConclusionResolveError::CouldntFindKindForConclusionResolve(resolve_failure) => {
+      humanize_resolving_error(
+        scout_arena,
+        typing_interner,
+        verbose,
+        code_map,
+        lines_between,
+        line_range_containing,
+        line_containing,
+        &resolve_failure.x,
+      )
     }
     IConclusionResolveError::CouldntFindFunctionForConclusionResolve { range, fff } => {
       humanize_find_function_failure(
@@ -1234,8 +1243,7 @@ pub fn humanize_name<'s, 't>(
       // "io:" + codeMap(range.begin)
     }
     INameT::ImplTemplate(n) => {
-      panic!("implement: humanize_name ImplTemplate");
-      // "implt:" + codeMap(codeLoc)
+      format!("implt:{}", code_map(n.code_location))
     }
     INameT::ForwarderFunction(n) => {
       panic!("implement: humanize_name ForwarderFunction");

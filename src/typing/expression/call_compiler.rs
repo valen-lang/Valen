@@ -181,18 +181,21 @@ where
           .get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id)
           .is_some());
         let result_te = stamp_result.prototype.return_type;
-        Ok(
-          (
-            ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
-              LocT::from_lid(self.typing_interner, call_location),
-              self.typing_interner.alloc_slice_copy(range),
-              stamp_result.prototype,
-              self.typing_interner.alloc_slice_from_vec(args_exprs_2),
-              result_te,
-            ))),
-            PendingTempDrops::none()
-          )
-        )
+        let call_expr = ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+          LocT::from_lid(self.typing_interner, call_location),
+          self.typing_interner.alloc_slice_copy(range),
+          stamp_result.prototype,
+          self.typing_interner.alloc_slice_from_vec(args_exprs_2),
+          result_te,
+        )));
+        // A call can return a &&T (e.g. Opt.get's returned &T with T = &str), so decay to &T.
+        let call_expr_decayed = match call_expr.result() {
+          KindT::BorrowRef(BorrowRefT { inner: KindT::BorrowRef(_) }) => ExpressionTE::Deref(
+            self.typing_interner.alloc(DerefTE::new(self.typing_interner, range[0], loct, call_expr)),
+          ),
+          _ => call_expr,
+        };
+        Ok((call_expr_decayed, PendingTempDrops::none()))
       }
       other => self.evaluate_custom_call(
         nenv,

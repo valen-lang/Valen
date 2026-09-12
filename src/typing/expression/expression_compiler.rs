@@ -249,8 +249,20 @@ where
         let self_lookup = ExpressionTE::LocalLookup(
           self.typing_interner.alloc(LocalLookupTE::new(self.typing_interner, load_range, self_local)),
         );
+        // VCOORD: centralize this mapping between varname <-> structname somewhere, we repeat
+        // this in a lot of places
+        let capture_imprecise = match acv.name {
+          IVarNameT::Local(local) => local.imprecise_name,
+          other => panic!("closure capture name must be a code-named Local, got {:?}", other),
+        };
+        let closure_struct_def = coutputs.lookup_struct(*acv.closured_vars_struct_type.id, self);
+        let (struct_member, _member_index) = closure_struct_def
+          .get_member_and_index(IImpreciseNameS::CodeName(capture_imprecise))
+          .unwrap_or_else(|| {
+            panic!("closure capture {:?} not found as a member of its closure struct", acv.name)
+          });
         let member_lookup = ExpressionTE::MemberLookup(self.typing_interner.alloc(
-          MemberLookupTE::new(self.typing_interner, load_range, self_lookup, acv.name, acv.kind),
+          MemberLookupTE::new(self.typing_interner, load_range, self_lookup, IVarNameT::Member(struct_member.name), acv.kind),
         ));
         let member_lookup_decayed = match member_lookup.result() {
           KindT::BorrowRef(BorrowRefT { inner: KindT::BorrowRef(_) }) => ExpressionTE::Deref(
@@ -987,8 +999,7 @@ where
               LoadAsP::Move => {
                 // want to move an owning source
                 // this can happen if we put a ^ on an owning reference. No harm, let it go.
-                panic!("vcurious");
-                // source_te
+                Ok((inner_expr_2, returns_from_inner, pending_from_inner))
               }
               LoadAsP::LoadAsBorrow => {
                 // want to borrow an owning source
@@ -1173,7 +1184,15 @@ where
           }
           _ => {}
         }
-        Ok((expr_2, returns_from_container_expr, pending_from_container))
+        // Decay any &&T to &T, because the above lookups add a &, sometimes ending up as a &&.
+        let decayed_expr_2 =
+            match expr_2.result() {
+              KindT::BorrowRef(BorrowRefT { inner: KindT::BorrowRef(_) }) => ExpressionTE::Deref(
+                self.typing_interner.alloc(DerefTE::new(self.typing_interner, dot.range, loct, expr_2)),
+              ),
+              _ => expr_2,
+            };
+        Ok((decayed_expr_2, returns_from_container_expr, pending_from_container))
       }
       IExpressionSE::If(if_se) => {
         // We make a block for the if-statement which contains its condition (the "if block"),
@@ -1537,139 +1556,145 @@ where
         Ok((loop_expr_2, body_returns_from_exprs, PendingTempDrops::none()))
       }
       IExpressionSE::Map(m) => {
-        // // Preprocess the entire loop once, to predict what its result type
-        // // will be.
-        // // We can't just use this, because any returns inside won't drop
-        // // the temporary list.
-        // let element_ref_t = {
-        //     // See BEAFB for why we make a new environment for the While
-        //     let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
-        //     let body_se_as_expr: &'s IExpressionSE<'s> =
-        //         self.scout_arena.alloc(IExpressionSE::Block(m.body));
-        //     let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
-        //     let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
-        //     let (body_expressions_with_result, _) =
-        //         self.evaluate_block_statements(
-        //             coutputs,
-        //             loop_block_fate_starting,
-        //             &mut loop_block_fate,
-        //             life.add(self.typing_interner, 1),
-        //             parent_ranges,
-        //             outer_call_location,
-        //             nenv.default_region(),
-        //             m.body)?;
-        //     body_expressions_with_result.result()
-        // };
-        //
-        // // Now that we know the result type, let's make a temporary list.
-        //
-        // let self_rune_irune = self.scout_arena.intern_rune(IRuneValS::SelfRune(SelfRuneS {}));
-        // let self_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: self_rune_irune}));
-        // let element_coord_templata: &'t KindTemplataT<'s, 't> = self.typing_interner.alloc(KindTemplataT { kind: element_ref_t });
-        // let snap = nenv.snapshot(self.typing_interner);
-        // let call_env_node = snap.add_entries(
-        //     self.typing_interner,
-        //     self.scout_arena,
-        //     &[(self_rune_name_t, IEnvEntryT::Templata(ITemplataT::Kind(element_coord_templata)))]);
-        // let call_env = IInDenizenEnvironmentT::Node(call_env_node);
-        // let make_list_callable = self.new_global_function_group_expression(
-        //     call_env, coutputs, RegionT::Default,
-        //     self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.list })));
-        // let range_with_parent_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-        //     &once(m.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
-        // let rune_parent_env_lookup_rule = IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
-        //     range: m.range,
-        //     rune: RuneUsage { range: m.range, rune: self_rune_irune },
-        // });
-        // let make_list_te = self.evaluate_prefix_call(
-        //     coutputs,
-        //     nenv,
-        //     life.add(self.typing_interner, 1),
-        //     range_with_parent_t,
-        //     outer_call_location,
-        //     region,
-        //     make_list_callable,
-        //     &[rune_parent_env_lookup_rule],
-        //     &[self_rune_irune],
-        //     &[],
-        //     &[])?;
-        //
-        // let list_local = self.make_temporary_local(
-        //     nenv, life.add(self.typing_interner, 2), make_list_te.result());
-        // let let_list_te = ExpressionTE::LetNormal(self.typing_interner.alloc(
-        //     LetNormalTE::new(LocalVariable::Reference(list_local), make_list_te)));
-        //
-        // let (loop_te, returns_from_loop) = {
-        //     // See BEAFB for why we make a new environment for the While
-        //     let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
-        //     let body_se_as_expr: &'s IExpressionSE<'s> =
-        //         self.scout_arena.alloc(IExpressionSE::Block(m.body));
-        //     let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
-        //     let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
-        //     let (user_body_te, body_returns_from_exprs) =
-        //         self.evaluate_block_statements(
-        //             coutputs,
-        //             loop_block_fate_starting,
-        //             &mut loop_block_fate,
-        //             life.add(self.typing_interner, 1),
-        //             parent_ranges,
-        //             outer_call_location,
-        //             nenv.default_region(),
-        //             m.body)?;
-        //
-        //     // We store the iteration result in a local because the loop body will have
-        //     // breaks, and we can't have a BreakTE inside a FunctionCallTE, see BRCOBS.
-        //     let iteration_result_local = self.make_temporary_local(
-        //         nenv, life.add(self.typing_interner, 3), user_body_te.result());
-        //     let let_iteration_result_te = ExpressionTE::LetNormal(self.typing_interner.alloc(
-        //         LetNormalTE::new(LocalVariable::Reference(iteration_result_local), user_body_te)));
-        //
-        //     let add_callable = self.new_global_function_group_expression(
-        //         call_env, coutputs, RegionT::Default,
-        //         self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.add })));
-        //     let local_lookup_te = ExpressionTE::LocalLookup(self.typing_interner.alloc(
-        //         LocalLookupTE::new(self.typing_interner, m.range, LocalVariable::Reference(list_local))));
-        //     let borrow_load = self.borrow_soft_load(coutputs, local_lookup_te);
-        //     let unlet_iter = ExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, &LocalVariable::Reference(iteration_result_local))));
-        //     let add_call = self.evaluate_prefix_call(
-        //         coutputs,
-        //         nenv,
-        //         life.add(self.typing_interner, 4),
-        //         range_with_parent_t,
-        //         outer_call_location,
-        //         region,
-        //         add_callable,
-        //         &[],
-        //         &[],
-        //         &[],
-        //         &[borrow_load, unlet_iter])?;
-        //     let body_te = BlockTE::new(self.consecutive(&[let_iteration_result_te, add_call]));
-        //
-        //     let (body_unstackified_ancestor_locals, body_restackified_ancestor_locals) =
-        //         loop_block_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
-        //     if !body_unstackified_ancestor_locals.is_empty() {
-        //         return Err(ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
-        //             range: range_with_parent_t,
-        //             local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
-        //         });
-        //     }
-        //     if !body_restackified_ancestor_locals.is_empty() {
-        //         return Err(ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile {
-        //             range: range_with_parent_t,
-        //             local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
-        //         });
-        //     }
-        //
-        //     let while_te = ExpressionTE::While(self.typing_interner.alloc(WhileTE::new(body_te)));
-        //     (while_te, body_returns_from_exprs)
-        // };
-        //
-        // let unlet_list_te = ExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, &LocalVariable::Reference(list_local))));
-        //
-        // let combined_te = self.consecutive(&[let_list_te, loop_te, unlet_list_te]);
-        //
-        // Ok((ExpressionTE::Reference(combined_te), returns_from_loop))
-        unimplemented!();
+        // Preprocess the entire loop once, to predict what its result type will be.
+        // We can't just use this, because any returns inside won't drop the temporary list.
+        let element_ref_t = {
+            // See BEAFB for why we make a new environment for the While
+            let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
+            let body_se_as_expr: &'s IExpressionSE<'s> =
+                self.scout_arena.alloc(IExpressionSE::Block(m.body));
+            let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
+            let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
+            let (body_expressions_with_result, _) =
+                self.evaluate_block_statements(
+                    coutputs,
+                    loop_block_fate_starting,
+                    &mut loop_block_fate,
+                    loct.add(self.typing_interner, 1),
+                    parent_ranges,
+                    outer_call_location,
+                    nenv.default_region(),
+                    m.body)?;
+            body_expressions_with_result.result()
+        };
+
+        // Now that we know the result type, let's make a temporary list.
+
+        let self_rune_irune = self.scout_arena.intern_rune(IRuneValS::SelfRune(SelfRuneS {}));
+        let self_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: self_rune_irune}));
+        let snap = nenv.snapshot(self.typing_interner);
+        let call_env_node = snap.add_entries(
+            self.typing_interner,
+            self.scout_arena,
+            &[(self_rune_name_t, IEnvEntryT::Templata(ITemplataT::Kind(KindTemplataT { kind: element_ref_t })))]);
+        let call_env = IInDenizenEnvironmentT::Node(call_env_node);
+        let range_with_parent_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+            &once(m.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+        let make_list_callable = self.new_global_function_group_expression(
+            call_env, coutputs, m.range, region,
+            self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.list })));
+        let rune_parent_env_lookup_rule = IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
+            range: m.range,
+            rune: RuneUsage { range: m.range, rune: self_rune_irune },
+        });
+        let (make_list_te, make_list_pending) = self.evaluate_prefix_call(
+            coutputs,
+            nenv,
+            loct.add(self.typing_interner, 2),
+            range_with_parent_t,
+            outer_call_location,
+            region,
+            make_list_callable,
+            &[rune_parent_env_lookup_rule],
+            &[self_rune_irune],
+            &[],
+            &[])?;
+        let make_list_drops = self.unlet_and_drop_all(coutputs, nenv, range_with_parent_t, outer_call_location, region, &make_list_pending.take_vars())?;
+
+        let list_local = self.make_temporary_local(
+            nenv, loct.add(self.typing_interner, 3), make_list_te.result());
+        let let_list_te = ExpressionTE::LetNormal(self.typing_interner.alloc(
+            LetNormalTE::new(m.range, list_local, make_list_te)));
+
+        let (loop_te, returns_from_loop) = {
+            // See BEAFB for why we make a new environment for the While
+            let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
+            let body_se_as_expr: &'s IExpressionSE<'s> =
+                self.scout_arena.alloc(IExpressionSE::Block(m.body));
+            let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
+            let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
+            let (user_body_te, body_returns_from_exprs) =
+                self.evaluate_block_statements(
+                    coutputs,
+                    loop_block_fate_starting,
+                    &mut loop_block_fate,
+                    loct.add(self.typing_interner, 4),
+                    parent_ranges,
+                    outer_call_location,
+                    nenv.default_region(),
+                    m.body)?;
+
+            // We store the iteration result in a local because the loop body will have
+            // breaks, and we can't have a BreakTE inside a FunctionCallTE, see BRCOBS.
+            let iteration_result_local = self.make_temporary_local(
+                &mut loop_block_fate, loct.add(self.typing_interner, 5), user_body_te.result());
+            let let_iteration_result_te = ExpressionTE::LetNormal(self.typing_interner.alloc(
+                LetNormalTE::new(m.range, iteration_result_local, user_body_te)));
+
+            let add_callable = self.new_global_function_group_expression(
+                IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), coutputs, m.range, region,
+                self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS { name: self.keywords.add })));
+            let local_lookup_te = ExpressionTE::LocalLookup(self.typing_interner.alloc(
+                LocalLookupTE::new(self.typing_interner, m.range, list_local)));
+            let unlet_iter = ExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(m.range, &mut loop_block_fate, iteration_result_local)));
+            let (add_call, add_pending) = self.evaluate_prefix_call(
+                coutputs,
+                &mut loop_block_fate,
+                loct.add(self.typing_interner, 6),
+                range_with_parent_t,
+                outer_call_location,
+                region,
+                add_callable,
+                &[],
+                &[],
+                &[],
+                &[local_lookup_te, unlet_iter])?;
+            let add_drops = self.unlet_and_drop_all(coutputs, &mut loop_block_fate, range_with_parent_t, outer_call_location, region, &add_pending.take_vars())?;
+            let mut body_exprs: Vec<ExpressionTE<'s, 't>> = vec![let_iteration_result_te, add_call];
+            body_exprs.extend(add_drops);
+            let body_te = BlockTE::new(m.body.range, ExpressionTE::Consecutor(self.typing_interner.alloc(
+                ConsecutorTE::new(m.body.range, self.typing_interner.alloc_slice_copy(&body_exprs)))));
+
+            let (body_unstackified_ancestor_locals, body_restackified_ancestor_locals) =
+                loop_block_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
+            if !body_unstackified_ancestor_locals.is_empty() {
+                return Err(ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
+                    range: range_with_parent_t,
+                    local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
+                });
+            }
+            if !body_restackified_ancestor_locals.is_empty() {
+                return Err(ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile {
+                    range: range_with_parent_t,
+                    local_id: *body_restackified_ancestor_locals.iter().next().unwrap(),
+                });
+            }
+
+            let while_te = ExpressionTE::While(self.typing_interner.alloc(WhileTE::new(
+                m.range, LocT::from_lid(self.typing_interner, m.loc), body_te)));
+            (while_te, body_returns_from_exprs)
+        };
+
+        let unlet_list_te = ExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(m.range, nenv, list_local)));
+
+        let mut combined_exprs: Vec<ExpressionTE<'s, 't>> = vec![let_list_te];
+        combined_exprs.extend(make_list_drops);
+        combined_exprs.push(loop_te);
+        combined_exprs.push(unlet_list_te);
+        let combined_te = ExpressionTE::Consecutor(self.typing_interner.alloc(
+            ConsecutorTE::new(m.range, self.typing_interner.alloc_slice_copy(&combined_exprs))));
+
+        Ok((combined_te, returns_from_loop, PendingTempDrops::none()))
       }
       IExpressionSE::ExprMutate(em) => {
         let (unconverted_source_expr_2, returns_from_source, pending_from_source) = self.evaluate_expression(
@@ -2160,11 +2185,18 @@ where
             });
           }
         };
+        // Decay any &&T to &T, because the above lookups add a &, sometimes ending up as a &&.
+        let expr_templata_decayed = match expr_templata.result() {
+          KindT::BorrowRef(BorrowRefT { inner: KindT::BorrowRef(_) }) => ExpressionTE::Deref(
+            self.typing_interner.alloc(DerefTE::new(self.typing_interner, range_with_parent[0], loct, expr_templata)),
+          ),
+          _ => expr_templata,
+        };
         let mut returns = returns_from_container_expr;
         returns.extend(returns_from_index_expr);
         let mut all_pending = pending_from_container;
         all_pending.absorb(pending_from_index);
-        Ok((expr_templata, returns, all_pending))
+        Ok((expr_templata_decayed, returns, all_pending))
       }
       IExpressionSE::RuneLookup(r) => {
         let rune_name_s = self

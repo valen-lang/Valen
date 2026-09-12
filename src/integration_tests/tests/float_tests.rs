@@ -10,8 +10,8 @@ use crate::testvm::von::VonInt;
 
 pub struct FloatTests;
 
+#[ignore = "R3 runtime twin: VM transmute asserts Share<->Share, tripped by @str->&str share-peel (heap.rs:577)"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn print_float() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -89,8 +89,8 @@ fn float_equals() {
     }
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn concat_string_and_float() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

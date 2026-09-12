@@ -2,23 +2,51 @@
 
 ## Start here next session
 
-The ZONION integration-test migration is landed on `main` (see State / verification for the
-trunk-green / working-tree-red split — the un-ignored working tree is where you keep going). The
-migration policy was: reconstruct essential structural assertions from intent against the onion AST;
-drop-with-comment when incidental and eval-covered; leave **parked** when the assertion's concept was
-deleted. What's left is making the red guides green, in priority order:
+**Next: move the remaining integration failures forward.** Measure first:
+`cargo test --manifest-path ./Cargo.toml --lib --features no_backend integration_tests:: > ./tmp/<name>.txt 2>&1`
+(as of this handoff: 164 passed / 46 failed / 103 ignored).
 
-- **The real onion-compiler failures the migrated eval/structural tests now surface** — these need
-  "fire core edits" (see the failure map in `tmp/zonion-categories.md`): R1 borrow-group
-  (`typing/compilation.rs`, `borrow_checker/borrow_types.rs`), R3 Reinterpret kind mismatch
-  (`instantiator.rs:1730`), a parse gap on the `Struct[members] = ^x;` member-destructure syntax
-  (`parse_and_explore.rs:33`), the mutable-lambda capture path (`expression_compiler.rs:256`), and the
-  interface-dispatch/R2 family.
+**Freshest lead — mutable-capture closures.** `closure_tests::{mutable_lambda,
+mutates_from_inside_a_closure, mutates_from_inside_a_closure_inside_a_closure}` (all now run under
+`test_without_borrow_check`) clear typing and the instantiator and fail only in the testvm:
+`Mutate: unexpected destination_expr Deref(...)` from the `Mutate` arm of `fn execute_node` in
+`src/testvm/expression_vivem.rs`. That handler has arms for Local/Member/StaticArray/RuntimeArray-lookup
+destinations but none for a `Deref` — writing *through* a captured reference. Adding that arm is
+AI-editable testvm work; a captured primitive must write through to the original local's storage, not
+repoint the closure member. Read-capture closures already work (`captured_own_is_borrow`,
+`test_closure_s_local_variables`, `capture`, `test_returning_a_nonmutable_closured_variable_from_the_closure`,
+`read_from_inside_a_closure_inside_a_closure`).
+
+The **borrow-group cluster** is the other coherent compiler target — needs "fire core edits" (the
+`borrow_checker/` dir is AI-editable per the typing gate):
+- **R1** — `borrow_checker/borrow_types.rs:347`, "returns a borrow reference with no group".
+- **R5 (2 tests)** — `borrow_types.rs:516`; `hash_map_tests::{hash_map_values, hash_map_remove_2}`, which
+  the array-index decay + vassertEq call-site fix advanced here from overload resolution.
+
+The rest (re-measure per-bucket counts — the closure thread moved several): **parked `unimplemented!()`
+test stubs** (not compiler bugs — un-migrated bodies, incl. the import-system harness ×4);
+**immutable-citizen `vfail`** (`instantiator.rs:1282`, the `imm` struct/interface tests);
+**`each`/`parallel_foreach` Map lowering** unimplemented (`expression_compiler.rs:1680`); **`compilation.rs:155`**
+(array-functor lambda stragglers, `each_on_ssa` missing `drop(StaticSizedArrayReadonlyIter)`,
+`panic_function` override-dispatch drop); and a few singletons (`function_body_compiler:133`,
+`lex_and_explore:38`, one eval assertion).
+
+**Strings (R3), interfaces, and `migrate` are all `#[ignore]`d** with greppable reasons
+(`grep -rn "R3: str share-peel\|interfaces branch\|migrate builtin" src/integration_tests`). A separate
+branch owns interfaces. R3 is the `&@str`→`&str` share-peel: `fn convert` (`convert_helper.rs`) builds a
+Reinterpret that peels the `ShareRef` on a `str` borrow, but the instantiator's Reinterpret arm
+(`instantiator.rs:1769`) asserts source == result after substitution. `migrate`
+(`src/builtins/resources/migrate.vale`, `__vbi_panic()` stub) needs the borrow-group work first —
+uncommenting it regresses the suite to ~215 failures (its `drop_into` lambda mutably captures + moves).
+
+The ZONION migration policy (still in force for any remaining red guides): reconstruct essential
+structural assertions against the onion AST; drop-with-comment when incidental and eval-covered; leave
+**parked** when the assertion's concept was deleted. Parse gaps are fixed (fixtures use `StaticArray<N,T>`
+and bare-owned types). Still parked:
+
 - **Parked because their assertion's concept was deleted** (revive when the concept returns): the
   Addressible-local tests (`array_list_test::mutate_mutable_from_in_lambda`, `move_mutable_from_in_lambda`,
-  still `unimplemented!()`) and the Address-member closure test (`closure_tests::mutates_from_inside_a_closure`,
-  an eval-only red guide with the old structural block commented out) — mutable capture and the
-  boxed/addressible member concept aren't in the onion AST yet. (The nested-tuple tests are *not* parked —
+  still `unimplemented!()`). (The nested-tuple tests are *not* parked —
   `pack_tests::{extract_seq, nested_seqs, nested_tuples}` are reconstructed as `Construct`-of-`Tup<N>`.)
 - **weak cluster (`weak_tests.rs`) still parked** — blocked on the disabled `weak` builtin module
   (`VCOORD: re-enable weaks`), not on AST shape.
@@ -29,7 +57,9 @@ during this migration are in Lessons Learned below.
 The **lambda functor-passing cluster is resolved at the source level** (functor params take `&F`,
 call sites pass `&`, lambda bodies/indices `__copy_prim` their references) — see the Lessons Learned
 entry. The `stdlib` `each`/`or`/`test`/`map` copies still carry bare-`F` sites (VHORK-marked) if you
-run stdlib programs. The remaining lambda *core* gap is mutable capture only.
+run stdlib programs. Mutable capture is now wired through typing and the instantiator; the only
+remaining gap is the testvm write-through-`Deref` store (see "Freshest lead" above), which is
+AI-editable testvm work, not a core gap.
 
 ## Impl-bounds plan (core lazy work, pending)
 
@@ -122,6 +152,29 @@ mostly under `src/integration_tests/tests/` plus `typing/test/compiler_tests.rs`
 guides. That un-ignored state is the thing to keep working from; re-applying the ignores is only for
 the next green-trunk commit. To reproduce the ignore/un-ignore, grep the marker string above — every
 temp ignore carries it verbatim, so a one-line sweep reverses the set exactly.
+
+**Uncommitted, on top of the landed tip** (nothing committed since `5b85640a` — no "fire commit").
+Core fixes (all `src/typing/` or `src/testvm/`): foreach loop-name resolution (`imprecise_name()` arms
+in `src/typing/env/environment.rs`, threaded through `names.rs`/`typing_interner.rs`/`name_translator.rs`/
+`instantiator.rs`); the `&&`→`&` decays now at **four** producers — dot lookup and the **array-index
+lookup** (`expression_compiler.rs` `Dot` and `Index` arms), the call result (`call_compiler.rs`), plus
+the local/capture lookups; the `vcurious` stub (`expression_compiler.rs` `Ownershipped` `_ =>`/`Move`
+arm — moving an owning source now passes through); error-humanizer stub arms. Closures: `translate_addr_expr`
+is deleted (the address-expression concept is gone) — its lookup arms folded into `fn translate_ref_expr`
+and the `Mutate` destination now routes there (`src/instantiating/instantiator.rs`); the mutate-capture
+path (`fn evaluate_addressible_lookup_for_mutate` in `expression_compiler.rs`) now names its `MemberLookup`
+via `get_member_and_index` like the read path. TestVM inline-struct
+overwrite-in-place: `fn overwrite_struct_in_place` in `src/testvm/heap.rs`, branched into `mutate_struct`,
+`mutate_array`, `mutate_variable` on a bare `KindIT::StructIT` (everything else repoints). Test/stdlib:
+parse-gap fixtures, `Some(&i32)` copyprim in `src/tests/hashmap/hashmap.vale`, duplicate-builtin harness
+fixes (`test_no_builtins_without_borrow_check` for self-provided-builtin tests), VHORK markers, and the
+R3/interface/string/migrate `#[ignore]`s. `src/testvm/testvm-design.md` inline-mutation section
+ratified. Closure tests (`closure_tests.rs`): `test_returning_a_nonmutable_closured_variable_from_the_closure`
+un-ignored and `read_from_inside_a_closure_inside_a_closure` migrated off the deleted `HammerInterner`
+harness (both now pass under `test_without_borrow_check`); the three mutable-capture tests switched to
+`test_without_borrow_check` (still red at the testvm `Deref` gap); `addressibility` deleted (dead
+deleted-API stub). Integration suite `164 passed / 46 failed / 103 ignored`
+(`cargo test --manifest-path ./Cargo.toml --lib --features no_backend integration_tests::`).
 
 Gates, all green on the landed (ignored) tip; re-run to refresh:
 - native: `cargo nextest run --manifest-path ./Cargo.toml`
@@ -227,5 +280,61 @@ Gates, all green on the landed (ignored) tip; re-run to refresh:
   `builtins/resources/arrays.vale` `Array`, `tests/array/make/make.vale` `MakeArray`; `stdlib` copies —
   `List`/`optutils`/`testsuite`/`hashset` `each`/`or`/`test` — still carry bare-`F` sites); (2) pass the
   lambda by borrow at call sites (`&{...}`); (3) `__copy_prim` any lambda body that returns a reference
-  (`{_}` yields `&int`) and any array index that is a reference (`a[__copy_prim(i)]`). The still-genuine
-  lambda *core* gap is mutable capture (`expression_compiler.rs` `IVariableT::Capture` `unimplemented!`).
+  (`{_}` yields `&int`) and any array index that is a reference (`a[__copy_prim(i)]`). Mutable capture is now
+  wired end to end through typing and the instantiator (both `IVariableT::Capture` arms — read and
+  mutate — are implemented); the only remaining gap is the testvm write-through-`Deref` store.
+- **`&&` (a `BorrowRef` of a `BorrowRef`) forms wherever `&T` meets a `T` that is already a reference.**
+  Sources seen: reading a ref-typed struct member via dot-access; **reading an element of a `[]&V`
+  array** (an array of borrows — e.g. `HashMap.values()` returns `[]&V`, so `k[i]` is `&&V`); a generic
+  `&T` return/param instantiated with a ref (`Opt.get<&str>` returns `&&str`); `&a` on a `&`-typed local.
+  `&&` is spurious — typing decays it to `&` at each expression producer by wrapping a `DerefTE` when
+  `.result()` is `BorrowRef(BorrowRef(_))`: local/capture lookups, the `Dot` **and `Index`** arms in
+  `expression_compiler.rs`, and the call result in `call_compiler.rs`. Any new `&&` *producer* needs the
+  same decay; the principled alternative is to collapse `&&`→`&` at kind construction. **The decay does
+  NOT fire in argument-coercion position** — a bare argument can still arrive as `&&T` at the callee, and
+  `__copy_prim` can't rescue it (it is a one-level `&primitive → primitive` read-out, `convert_helper.rs`;
+  hand it `&&int` and it panics at `expression_compiler.rs:861`, "expects &primitive").
+- **By-borrow-arg → by-value-param needs `__copy_prim`; the reverse (owned-arg → `&T`-param) needs an
+  auto-borrow, which is deferred.** `Some<int>(index)` with `index` a soft-loaded `&int` is the first
+  (peel with `__copy_prim`, fixed in `hashmap.vale`). `vassertEq(k.len(), 4)` into `&T` params is the
+  second (owned `int` can't bind to `&int`; convo-18's ignored `test_taking_callable_arg_value_into_ref_param`
+  is the same open question). Don't conflate the two directions.
+- **Duplicate-builtin trap: a test that self-provides a builtin must use a `no_builtins` harness.** A
+  fixture declaring `func drop(int)`, `extern __vbi_addI32`, or `extern __vbi_panic` under
+  `test_without_borrow_check` (which loads builtins) yields "Multiple candidates for call". Swap to
+  `test_no_builtins_without_borrow_check` and drop any `import v.builtins.*` (those package stubs only
+  exist when builtins are loaded).
+- **TestVM overwrite-in-place is inline-structs-only, via one shared helper.** `fn overwrite_struct_in_place`
+  (`src/testvm/heap.rs`) is branched into `mutate_struct` (members), `mutate_array` (elements), and
+  `mutate_variable` (locals/params) on a bare `KindIT::StructIT`; primitives and RSA-members repoint.
+  It preserves the storage's allocation and moves the source's field refs in, returning a fresh `P` with
+  the old fields (the `Mutate` result); the caller's `discard(source)` frees the source structurally, so
+  the helper leaves the source populated and only *adds* the preserved allocation's referrers. The
+  `mutate_variable` branch must skip the **whole** repoint body (both the `Variable` referrer re-key and
+  `mutate_local`), or the source leaks. `moving an owning source` in the load path (`Ownershipped` arm)
+  is a pass-through, not the old `panic!("vcurious")`.
+- **R3 is the `str` share-peel Reinterpret, not a generic instantiator bug.** `fn convert`
+  (`convert_helper.rs`) builds a Reinterpret to peel a `str`'s `ShareRef` (`&@str`→`&str`), so its
+  source (`BorrowRef(ShareRef(Str))`) and result (`BorrowRef(Str)`) deliberately differ — but the
+  instantiator's Reinterpret arm (`instantiator.rs:1769`) assumes every Reinterpret is a
+  post-substitution no-op and asserts `source == result`. Any test that handles a `str` (explicitly or
+  via `print`) trips it; the clean fix is a dedicated share-peel I-IR node (the convert comment flags
+  it twice) or relaxing the assert.
+- **Mutable capture is walled at three independent layers — clearing one only reveals the next.** A
+  `set x` on a mutably-captured var hits (1) the borrow checker's group derivation (R1,
+  `borrow_types.rs:347`), (2) the instantiator's address-expr lowering, and (3) the testvm's `Mutate`
+  handler. Layers 1-2 are done (disable the checker with `test_without_borrow_check`, and the deleted
+  `translate_addr_expr` lets a `Deref` destination flow through `translate_ref_expr`); layer 3 remains.
+  So disabling the borrow checker alone never greens these — don't read "advanced to a new panic" as a
+  regression; it's progress through the stack.
+- **Read-capture and mutate-capture must name the closure-member `MemberLookup` identically.** Both
+  `IVariableT::Capture` arms in `expression_compiler.rs` (`fn evaluate_lookup_for_load` and
+  `fn evaluate_addressible_lookup_for_mutate`) must resolve the member via `get_member_and_index` and
+  name it `IVarNameT::Member(struct_member.name)` — never the capture's own `Local` name, which the
+  instantiator's member-index match can't find ("member name not found in struct"). Their twin
+  `VCOORD: dedup ... we do the same thing for read/mutate` comments mean they must mirror; a fix to one
+  needs the same fix in the other.
+- **There is no address-expression concept in the instantiator — do not reintroduce one.**
+  `translate_addr_expr` is deleted; a `Mutate` destination is an ordinary reference expression (a
+  lookup, or a `Deref` writing through a captured reference) handled by `translate_ref_expr`.
+  Addressibility was replaced by a plain `&&`, which is just a normal expression.

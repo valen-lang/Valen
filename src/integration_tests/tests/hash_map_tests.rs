@@ -1,6 +1,7 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
 use crate::integration_tests::tests::run_compilation::test;
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
+use crate::integration_tests::tests::run_compilation::test_no_builtins_without_borrow_check;
 use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
@@ -109,8 +110,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_update() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -146,8 +147,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_collisions() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -204,8 +205,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_with_functors() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -301,8 +302,8 @@ exported func main() int {
     */
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_has() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -346,7 +347,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
@@ -360,13 +360,11 @@ fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test_without_borrow_check(
+    let mut compile = test_no_builtins_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r#"
-import v.builtins.arith.*;
-
 extern func __vbi_panic() __Never;
 
 extern("vale_runtime_sized_array_len")
@@ -407,7 +405,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
@@ -421,13 +418,11 @@ fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() 
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test_without_borrow_check(
+    let mut compile = test_no_builtins_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r#"
-import v.builtins.arith.*;
-
 extern func __vbi_panic() __Never;
 
 extern("vale_runtime_sized_array_len")
@@ -465,8 +460,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_values() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -493,11 +488,11 @@ exported func main() int {
   m.add(8, 102);
   m.add(12, 103);
   k = m.values();
-  vassertEq(k.len(), 4);
-  vassertEq(__copy_prim(&k[0]), 100);
-  vassertEq(__copy_prim(&k[1]), 101);
-  vassertEq(__copy_prim(&k[2]), 102);
-  vassertEq(__copy_prim(&k[3]), 103);
+  vassertEq(&(k.len()), &4);
+  vassertEq(k[0], &100);
+  vassertEq(k[1], &101);
+  vassertEq(k[2], &102);
+  vassertEq(k[3], &103);
   return 1337;
 }
 ",
@@ -508,8 +503,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_with_mutable_values() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -553,8 +548,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_remove() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -598,8 +593,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn hash_map_remove_2() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -631,10 +626,10 @@ exported func main() int {
   m.add(4, 4);
 
   values = m.values();
-  vassertEq(values.len(), 3, "wat");
-  vassertEq(__copy_prim(&values[0]), 0, "wat");
-  vassertEq(__copy_prim(&values[1]), 3, "wat");
-  vassertEq(__copy_prim(&values[2]), 4, "wat");
+  vassertEq(&(values.len()), &3, "wat");
+  vassertEq(values[0], &0, "wat");
+  vassertEq(values[1], &3, "wat");
+  vassertEq(values[2], &4, "wat");
   return 1337;
 }
 "#,

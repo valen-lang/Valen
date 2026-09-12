@@ -37,6 +37,7 @@ pub struct WhileSE<'s> {
 #[derive(Debug, PartialEq)]
 pub struct MapSE<'s> {
   pub range: RangeS<'s>,
+  pub loc: LocationInDenizen<'s>,
   pub body: &'s BlockSE<'s>,
 }
 

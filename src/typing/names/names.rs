@@ -1,6 +1,6 @@
 use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::names::{ClosureParamImpreciseNameS, CodeNameS, ConstructingMemberImpreciseNameS, IImpreciseNameS, MagicParamImpreciseNameS};
+use crate::postparsing::names::{ClosureParamImpreciseNameS, CodeNameS, ConstructingMemberImpreciseNameS, IImpreciseNameS, IterableNameS, IteratorNameS, IterationOptionNameS, MagicParamImpreciseNameS};
 use crate::postparsing::names::IRuneS;
 use crate::typing::ast::ast::LocT;
 use crate::typing::templata::templata::{expect_integer, expect_kind_templata, ITemplataT};
@@ -174,9 +174,9 @@ pub enum INameT<'s, 't> {
   TypingPassTemporaryVar(&'t TypingPassTemporaryVarNameT<'t>),
   ClosureParam(&'t ClosureParamNameT<'s, 't>),
   ConstructingMember(&'t ConstructingMemberNameT<'s, 't>),
-  Iterable(&'t IterableNameT<'t>),
-  Iterator(&'t IteratorNameT<'t>),
-  IterationOption(&'t IterationOptionNameT<'t>),
+  Iterable(&'t IterableNameT<'s, 't>),
+  Iterator(&'t IteratorNameT<'s, 't>),
+  IterationOption(&'t IterationOptionNameT<'s, 't>),
   MagicParam(&'t MagicParamNameT<'s, 't>),
   Member(&'t MemberNameT<'s, 't>),
   Local(&'t LocalNameT<'s, 't>),
@@ -1171,9 +1171,9 @@ pub enum IVarNameT<'s, 't> {
   ClosureParam(&'t ClosureParamNameT<'s, 't>),
   ConstructingMember(&'t ConstructingMemberNameT<'s, 't>),
   // WhileCondResult(&'t WhileCondResultNameT<'s>),
-  Iterable(&'t IterableNameT<'t>),
-  Iterator(&'t IteratorNameT<'t>),
-  IterationOption(&'t IterationOptionNameT<'t>),
+  Iterable(&'t IterableNameT<'s, 't>),
+  Iterator(&'t IteratorNameT<'s, 't>),
+  IterationOption(&'t IterationOptionNameT<'s, 't>),
   MagicParam(&'t MagicParamNameT<'s, 't>),
   Member(&'t MemberNameT<'s, 't>),
   Local(&'t LocalNameT<'s, 't>),
@@ -1239,19 +1239,22 @@ pub struct ConstructingMemberNameT<'s, 't> {
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IterableNameT<'t> {
+pub struct IterableNameT<'s, 't> {
+  pub imprecise_name: &'s IterableNameS<'s>,
   pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IteratorNameT<'t> {
+pub struct IteratorNameT<'s, 't> {
+  pub imprecise_name: &'s IteratorNameS<'s>,
   pub loct: LocT<'t>
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IterationOptionNameT<'t> {
+pub struct IterationOptionNameT<'s, 't> {
+  pub imprecise_name: &'s IterationOptionNameS<'s>,
   pub loct: LocT<'t>
 }
 
@@ -1684,18 +1687,18 @@ impl<'s, 't> From<&'t ConstructingMemberNameT<'s, 't>> for INameT<'s, 't> {
     INameT::ConstructingMember(x)
   }
 }
-impl<'s, 't> From<&'t IterableNameT<'t>> for INameT<'s, 't> {
-  fn from(x: &'t IterableNameT<'t>) -> Self {
+impl<'s, 't> From<&'t IterableNameT<'s, 't>> for INameT<'s, 't> {
+  fn from(x: &'t IterableNameT<'s, 't>) -> Self {
     INameT::Iterable(x)
   }
 }
-impl<'s, 't> From<&'t IteratorNameT<'t>> for INameT<'s, 't> {
-  fn from(x: &'t IteratorNameT<'t>) -> Self {
+impl<'s, 't> From<&'t IteratorNameT<'s, 't>> for INameT<'s, 't> {
+  fn from(x: &'t IteratorNameT<'s, 't>) -> Self {
     INameT::Iterator(x)
   }
 }
-impl<'s, 't> From<&'t IterationOptionNameT<'t>> for INameT<'s, 't> {
-  fn from(x: &'t IterationOptionNameT<'t>) -> Self {
+impl<'s, 't> From<&'t IterationOptionNameT<'s, 't>> for INameT<'s, 't> {
+  fn from(x: &'t IterationOptionNameT<'s, 't>) -> Self {
     INameT::IterationOption(x)
   }
 }
@@ -2509,18 +2512,18 @@ impl<'s, 't> From<&'t ConstructingMemberNameT<'s, 't>> for IVarNameT<'s, 't> {
 //     IVarNameT::WhileCondResult(x)
 //   }
 // }
-impl<'s, 't> From<&'t IterableNameT<'t>> for IVarNameT<'s, 't> {
-  fn from(x: &'t IterableNameT<'t>) -> Self {
+impl<'s, 't> From<&'t IterableNameT<'s, 't>> for IVarNameT<'s, 't> {
+  fn from(x: &'t IterableNameT<'s, 't>) -> Self {
     IVarNameT::Iterable(x)
   }
 }
-impl<'s, 't> From<&'t IteratorNameT<'t>> for IVarNameT<'s, 't> {
-  fn from(x: &'t IteratorNameT<'t>) -> Self {
+impl<'s, 't> From<&'t IteratorNameT<'s, 't>> for IVarNameT<'s, 't> {
+  fn from(x: &'t IteratorNameT<'s, 't>) -> Self {
     IVarNameT::Iterator(x)
   }
 }
-impl<'s, 't> From<&'t IterationOptionNameT<'t>> for IVarNameT<'s, 't> {
-  fn from(x: &'t IterationOptionNameT<'t>) -> Self {
+impl<'s, 't> From<&'t IterationOptionNameT<'s, 't>> for IVarNameT<'s, 't> {
+  fn from(x: &'t IterationOptionNameT<'s, 't>) -> Self {
     IVarNameT::IterationOption(x)
   }
 }
@@ -3717,9 +3720,9 @@ where
   TypingPassTemporaryVar(TypingPassTemporaryVarNameT<'t>),
   ClosureParam(ClosureParamNameT<'s, 't>),
   ConstructingMember(ConstructingMemberNameT<'s, 't>),
-  Iterable(IterableNameT<'t>),
-  Iterator(IteratorNameT<'t>),
-  IterationOption(IterationOptionNameT<'t>),
+  Iterable(IterableNameT<'s, 't>),
+  Iterator(IteratorNameT<'s, 't>),
+  IterationOption(IterationOptionNameT<'s, 't>),
   MagicParam(MagicParamNameT<'s, 't>),
   Member(MemberNameT<'s, 't>),
   Local(LocalNameT<'s, 't>),

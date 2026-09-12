@@ -1317,96 +1317,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 
 
-    pub fn translate_addr_expr(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, perspective_region_t: &RegionT, expr: &ExpressionTE<'s, 't>) -> (KindIT<'s, 'i>, ExpressionIE<'s, 'i>) {
-        // A lookup yields a borrow of its target's storage.
-        let result_kind = self.translate_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &expr.result());
-        let result_borrow = match result_kind {
-            KindIT::BorrowRefIT(r) => r,
-            _ => panic!("translate_addr_expr: lookup result is not a borrow"),
-        };
-        let result_ce = match expr {
-            ExpressionTE::LocalLookup(ll) => {
-                let LocalLookupTE { range, local_variable, .. } = **ll;
-                let (_local_it, local_variable_i) = self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, local_variable);
-                ExpressionIE::LocalLookup(self.interner.bump().alloc(LocalLookupIE {
-                    range,
-                    local_variable: local_variable_i,
-                    result: result_borrow,
-                }))
-            }
-            ExpressionTE::MemberLookup(rml) => {
-                let MemberLookupTE { range, struct_expr: struct_expr_t, member_name: member_name_t, .. } = **rml;
-                let (struct_it, struct_ce) =
-                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &struct_expr_t);
-                let struct_borrow = match struct_it {
-                    KindIT::BorrowRefIT(borrow) => borrow,
-                    other => panic!("MemberLookup struct_expr must produce a borrow, got {:?}", other),
-                };
-                let member_name = self.translate_var_name(&member_name_t);
-                // Resolve the member's index by name from the struct definition (typing owns member
-                // order, which instantiation preserves) so downstream codegen never re-derives it.
-                let struct_id_t = match peel_all_references(struct_expr_t.result()) {
-                    KindT::Struct(s) => s.id,
-                    other => panic!("MemberLookup struct_expr type must be a struct, got {:?}", other),
-                };
-                let member_index =
-                    self.find_struct(&struct_id_t).members.iter()
-                        .position(|m| IVarNameT::Member(m.name) == member_name_t)
-                        .expect("MemberLookup: member name not found in struct") as i32;
-                // The member's (instantiated) type is the storage type the result borrow wraps.
-                let member_type = result_borrow.inner;
-                ExpressionIE::MemberLookup(self.interner.bump().alloc(MemberLookupIE {
-                    range,
-                    struct_expr: struct_ce,
-                    struct_type: struct_borrow,
-                    member_index,
-                    member_name,
-                    member_type,
-                    result: result_borrow,
-                }))
-            }
-            ExpressionTE::StaticSizedArrayLookup(s) => {
-                let StaticSizedArrayLookupTE { range, array_expr: array_expr_t, index_expr: index_expr_t, .. } = **s;
-                let (array_it, array_ce) =
-                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr_t);
-                let (index_it, index_ce) =
-                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &index_expr_t);
-                let array_borrow = match array_it {
-                    KindIT::BorrowRefIT(borrow) => borrow,
-                    other => panic!("StaticSizedArrayLookup array_expr must produce a borrow, got {:?}", other),
-                };
-                ExpressionIE::StaticSizedArrayLookup(self.interner.alloc(StaticSizedArrayLookupIE {
-                    range,
-                    array_expr: array_ce,
-                    array_type: array_borrow,
-                    index_expr: index_ce,
-                    index_type: index_it,
-                    result: result_borrow,
-                }))
-            }
-            ExpressionTE::RuntimeSizedArrayLookup(rslt) => {
-                let RuntimeSizedArrayLookupTE { range, array_expr, index_expr, .. } = **rslt;
-                let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
-                let (index_it, index_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &index_expr);
-                let array_borrow = match array_it {
-                    KindIT::BorrowRefIT(borrow) => borrow,
-                    other => panic!("RuntimeSizedArrayLookup array_expr must produce a borrow, got {:?}", other),
-                };
-                ExpressionIE::RuntimeSizedArrayLookup(self.interner.alloc(RuntimeSizedArrayLookupIE {
-                    range,
-                    array_expr: array_ce,
-                    array_type: array_borrow,
-                    index_expr: index_ce,
-                    index_type: index_it,
-                    result: result_borrow,
-                }))
-            }
-            _ => panic!("translate_addr_expr: not an address (lookup) expression"),
-        };
-        (result_kind, result_ce)
-    }
-
-
     pub fn translate_expr(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, perspective_region_t: &RegionT, expr: &ExpressionTE<'s, 't>) -> (KindIT<'s, 'i>, ExpressionIE<'s, 'i>) {
         self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, expr)
     }
@@ -1512,7 +1422,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ExpressionTE::Mutate(m) => {
                 let MutateTE { destination_expr: destination_tt, source_expr, .. } = **m;
-                let (destination_it, destination_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &destination_tt);
+                let (destination_it, destination_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &destination_tt);
                 let (source_it, source_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
                 let destination_borrow = match destination_it {
                     KindIT::BorrowRefIT(borrow) => borrow,
@@ -1953,11 +1863,97 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     result: result_it,
                 }))
             }
-            ExpressionTE::LocalLookup(_)
-            | ExpressionTE::StaticSizedArrayLookup(_)
-            | ExpressionTE::RuntimeSizedArrayLookup(_)
-            | ExpressionTE::MemberLookup(_) => {
-                return self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, expr);
+            ExpressionTE::LocalLookup(ll) => {
+                let result_borrow = match result_it {
+                    KindIT::BorrowRefIT(r) => r,
+                    _ => panic!("lookup result is not a borrow"),
+                };
+                let LocalLookupTE { range, local_variable, .. } = **ll;
+                let (_local_it, local_variable_i) = self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, local_variable);
+                ExpressionIE::LocalLookup(self.interner.bump().alloc(LocalLookupIE {
+                    range,
+                    local_variable: local_variable_i,
+                    result: result_borrow,
+                }))
+            }
+            ExpressionTE::MemberLookup(rml) => {
+                let result_borrow = match result_it {
+                    KindIT::BorrowRefIT(r) => r,
+                    _ => panic!("lookup result is not a borrow"),
+                };
+                let MemberLookupTE { range, struct_expr: struct_expr_t, member_name: member_name_t, .. } = **rml;
+                let (struct_it, struct_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &struct_expr_t);
+                let struct_borrow = match struct_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("MemberLookup struct_expr must produce a borrow, got {:?}", other),
+                };
+                let member_name = self.translate_var_name(&member_name_t);
+                // Resolve the member's index by name from the struct definition (typing owns member
+                // order, which instantiation preserves) so downstream codegen never re-derives it.
+                let struct_id_t = match peel_all_references(struct_expr_t.result()) {
+                    KindT::Struct(s) => s.id,
+                    other => panic!("MemberLookup struct_expr type must be a struct, got {:?}", other),
+                };
+                let member_index =
+                    self.find_struct(&struct_id_t).members.iter()
+                        .position(|m| IVarNameT::Member(m.name) == member_name_t)
+                        .expect("MemberLookup: member name not found in struct") as i32;
+                // The member's (instantiated) type is the storage type the result borrow wraps.
+                let member_type = result_borrow.inner;
+                ExpressionIE::MemberLookup(self.interner.bump().alloc(MemberLookupIE {
+                    range,
+                    struct_expr: struct_ce,
+                    struct_type: struct_borrow,
+                    member_index,
+                    member_name,
+                    member_type,
+                    result: result_borrow,
+                }))
+            }
+            ExpressionTE::StaticSizedArrayLookup(s) => {
+                let result_borrow = match result_it {
+                    KindIT::BorrowRefIT(r) => r,
+                    _ => panic!("lookup result is not a borrow"),
+                };
+                let StaticSizedArrayLookupTE { range, array_expr: array_expr_t, index_expr: index_expr_t, .. } = **s;
+                let (array_it, array_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr_t);
+                let (index_it, index_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &index_expr_t);
+                let array_borrow = match array_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("StaticSizedArrayLookup array_expr must produce a borrow, got {:?}", other),
+                };
+                ExpressionIE::StaticSizedArrayLookup(self.interner.alloc(StaticSizedArrayLookupIE {
+                    range,
+                    array_expr: array_ce,
+                    array_type: array_borrow,
+                    index_expr: index_ce,
+                    index_type: index_it,
+                    result: result_borrow,
+                }))
+            }
+            ExpressionTE::RuntimeSizedArrayLookup(rslt) => {
+                let result_borrow = match result_it {
+                    KindIT::BorrowRefIT(r) => r,
+                    _ => panic!("lookup result is not a borrow"),
+                };
+                let RuntimeSizedArrayLookupTE { range, array_expr, index_expr, .. } = **rslt;
+                let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let (index_it, index_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &index_expr);
+                let array_borrow = match array_it {
+                    KindIT::BorrowRefIT(borrow) => borrow,
+                    other => panic!("RuntimeSizedArrayLookup array_expr must produce a borrow, got {:?}", other),
+                };
+                ExpressionIE::RuntimeSizedArrayLookup(self.interner.alloc(RuntimeSizedArrayLookupIE {
+                    range,
+                    array_expr: array_ce,
+                    array_type: array_borrow,
+                    index_expr: index_ce,
+                    index_type: index_it,
+                    result: result_borrow,
+                }))
             }
         };
         (result_it, result_ce)
@@ -2313,9 +2309,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             IVarNameT::ConstructingMember(x) => IVarNameI::ConstructingMember(self.interner.alloc(ConstructingMemberNameI {
                 name: self.scout_arena.intern_str(&humanize_imprecise_name(IImpreciseNameS::ConstructingMemberImpreciseName(x.imprecise_name))),
             })),
-            IVarNameT::Iterable(IterableNameT { loct: LocT { path, .. } }) => IVarNameI::Iterable(self.interner.alloc(IterableNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
-            IVarNameT::Iterator(IteratorNameT { loct: LocT { path, .. } }) => IVarNameI::Iterator(self.interner.alloc(IteratorNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
-            IVarNameT::IterationOption(IterationOptionNameT { loct: LocT { path, .. } }) => IVarNameI::IterationOption(self.interner.alloc(IterationOptionNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::Iterable(IterableNameT { loct: LocT { path, .. }, .. }) => IVarNameI::Iterable(self.interner.alloc(IterableNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::Iterator(IteratorNameT { loct: LocT { path, .. }, .. }) => IVarNameI::Iterator(self.interner.alloc(IteratorNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
+            IVarNameT::IterationOption(IterationOptionNameT { loct: LocT { path, .. }, .. }) => IVarNameI::IterationOption(self.interner.alloc(IterationOptionNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
             IVarNameT::MagicParam(MagicParamNameT { loct: LocT { path, .. }, .. }) => IVarNameI::MagicParam(self.interner.alloc(MagicParamNameI { loci: LocI { path: self.interner.alloc_slice_from_vec(path.to_vec()) } })),
             IVarNameT::Self_(_) => IVarNameI::Self_(self.interner.alloc(SelfNameI)),
         }

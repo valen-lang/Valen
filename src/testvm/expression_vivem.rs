@@ -413,7 +413,7 @@ pub fn execute_node_inner<'v, 'i, 's>(program_h: &'i HinputsI<'s, 'i>, interner:
                         _ => panic!("Mutate: MemberLookup destination not a StructInstance"),
                     };
                     let address = MemberAddressV { struct_id: struct_reference.alloc_id(), field_index };
-                    let old_member = heap.mutate_struct(address, source_reference, m.source_expr.result());
+                    let old_member = heap.mutate_struct(interner, address, source_reference, m.source_expr.result());
                     heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), old_member);
                     if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, ml.struct_expr.result(), struct_reference) { return INodeExecuteResultV::Error(e); }
                     if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, m.source_expr.result(), source_reference) { return INodeExecuteResultV::Error(e); }
@@ -437,7 +437,7 @@ pub fn execute_node_inner<'v, 'i, 's>(program_h: &'i HinputsI<'s, 'i>, interner:
                         _ => panic!("Mutate: StaticSizedArrayLookup index not IntV(_, 32)"),
                     };
                     let address = ElementAddressV { array_id: array_reference.alloc_id(), element_index };
-                    let old = heap.mutate_array(address, source_reference, m.source_expr.result());
+                    let old = heap.mutate_array(interner, address, source_reference, m.source_expr.result());
                     heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), old);
                     if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, m.source_expr.result(), source_reference) { return INodeExecuteResultV::Error(e); }
                     if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, sal.index_expr.result(), index_reference) { return INodeExecuteResultV::Error(e); }
@@ -462,11 +462,41 @@ pub fn execute_node_inner<'v, 'i, 's>(program_h: &'i HinputsI<'s, 'i>, interner:
                         _ => panic!("Mutate: RuntimeSizedArrayLookup index not IntV(_, 32)"),
                     };
                     let address = ElementAddressV { array_id: array_reference.alloc_id(), element_index };
-                    let old = heap.mutate_array(address, source_reference, m.source_expr.result());
+                    let old = heap.mutate_array(interner, address, source_reference, m.source_expr.result());
                     heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), old);
                     if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, m.source_expr.result(), source_reference) { return INodeExecuteResultV::Error(e); }
                     if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, ral.index_expr.result(), index_reference) { return INodeExecuteResultV::Error(e); }
                     if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, ral.array_expr.result(), array_reference) { return INodeExecuteResultV::Error(e); }
+                    old
+                }
+                ExpressionIE::Deref(d) => {
+                    let dest_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &d.inner) {
+                        r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
+                        INodeExecuteResultV::Continue(c) => c.result_ref,
+                    };
+                    let source_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 1), &m.source_expr) {
+                        r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
+                        INodeExecuteResultV::Continue(c) => c.result_ref,
+                    };
+                    let result_kind = m.result;
+                    let old = match result_kind {
+                        KindIT::StructIT(_) => {
+                            // VCOORD: reference design/arcana for this
+                            heap.overwrite_struct_in_place(interner, result_kind, dest_reference, source_reference)
+                        }
+                        KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::FloatIT(_) | KindIT::VoidIT(_) | KindIT::USizeIT(_) | KindIT::NeverIT(_) => {
+                            let old_value = heap.dereference(dest_reference, false);
+                            let new_value = heap.dereference(source_reference, false);
+                            let p_ref = heap.allocate_transient(interner, OwnershipV::Own, old_value);
+                            let obj = heap.objects_by_id.objects_by_id.get_mut(&dest_reference.alloc_id()).expect("overwrite_through_reference: dest alloc not found");
+                            obj.kind = new_value;
+                            p_ref
+                        }
+                        other => panic!("overwrite_through_reference: write-through-reference not yet supported for {:?}", other),
+                    };
+                    heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), old);
+                    if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, m.source_expr.result(), source_reference) { return INodeExecuteResultV::Error(e); }
+                    if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, d.inner.result(), dest_reference) { return INodeExecuteResultV::Error(e); }
                     old
                 }
                 _ => panic!("Mutate: unexpected destination_expr {:?}", m.destination_expr),

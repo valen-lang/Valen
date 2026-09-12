@@ -165,8 +165,8 @@ fn string_with_hex_escape() {
     assert_eq!(result, "sprog\u{001b}woggle");
 }
 
+#[ignore = "R3 runtime twin: VM transmute asserts Share<->Share, tripped by @str->&str share-peel (heap.rs:577)"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn int_to_string() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -191,8 +191,8 @@ fn int_to_string() {
     }
 }
 
+#[ignore = "R3 runtime twin: VM transmute asserts Share<->Share, tripped by @str->&str share-peel (heap.rs:577)"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn i64_to_string() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -217,8 +217,8 @@ fn i64_to_string() {
     }
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn string_length() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -243,8 +243,8 @@ fn string_length() {
     }
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn strings_equal() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -300,8 +300,8 @@ fn string_interpolate() {
     */
 }
 
+#[ignore = "strings not implemented yet"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn slice_a_slice() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

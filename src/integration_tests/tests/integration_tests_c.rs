@@ -5,6 +5,9 @@ use crate::keywords::Keywords;
 use crate::typing::test::traverse::NodeRefT;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
+use crate::instantiating::ast::names::INameI;
+use crate::instantiating::ast::names::FunctionNameIX;
+use crate::instantiating::ast::names::FunctionTemplateNameI;
 use crate::integration_tests::tests::run_compilation::test;
 use crate::integration_tests::tests::run_compilation::test_no_builtins;
 use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
@@ -51,8 +54,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn get_or_function() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -141,8 +144,8 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "blocked on interface dispatch: VM check_kind struct-implements-interface needs HinputsI edges (heap.rs:894)"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn function_return_with_return_upcasts() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -176,10 +179,7 @@ fn function_return_with_return_upcasts() {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_shaking() {
-    unimplemented!(); // ZONION-deferred: needs deleted harness method
-    /*
     // Make sure that functions that cant be called by main will not be included.
 
     let compilation_bump = bumpalo::Bump::new();
@@ -216,18 +216,12 @@ exported func main() {
             })
         )));
 
-    assert!(
-        hinputs.functions.iter().find(|func| matches!(func.header.id.local_name,
-            INameI::FunctionNameIX(FunctionNameIX {
-                template: FunctionTemplateNameI { human_name: StrI("helperFunc"), .. },
-                ..
-            })
-        )).is_some());
-    */
+    // helperFunc is reachable from main, so it survives shaking — look it up (panics if absent).
+    hinputs.lookup_function_by_str("helperFunc");
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_overloading_between_borrow_and_weak() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -318,10 +312,7 @@ fn return_without_return() {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_export_functions() {
-    unimplemented!(); // ZONION-deferred: needs deleted harness method
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -342,8 +333,7 @@ exported func moo() int {
 }
 ",
     );
-    let _hamuts = compile.get_hamuts();
-    */
+    compile.get_monouts().lookup_function_export("moo");
 }
 
 #[test]
@@ -380,8 +370,8 @@ fn test_extern_functions() {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_narrowing_between_borrow_and_owning_overloads() {
     // See NMORFI for why this test is here. Before the SCCTT fix, it couldn't resolve between the two
     // `get` overloads, because the borrow ownership (from the opt.get()) was creeping into the rules
@@ -716,7 +706,6 @@ fn destructure_restackify() {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn loop_restackify() {
     // Allow set on variables that have been moved already, which is useful for linear style.
     let compilation_bump = bumpalo::Bump::new();

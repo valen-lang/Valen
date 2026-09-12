@@ -1153,7 +1153,6 @@ exported func main() int { return do({ return 3; }); }
 // Passing a lambda by value into a parameter that expects a borrow (&F) should
 // resolve: the owned lambda argument satisfies the &F parameter.
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_lambda_passed_by_value_to_borrow_callable_param() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -1168,7 +1167,7 @@ where func(&F)int, func drop(F)void
 {
   return callable();
 }
-exported func main() int { return do({ return 3; }); }
+exported func main() int { return do(&{ return 3; }); }
 "#;
   let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
   let typing_interner = TypingInterner::new(&typing_bump);
@@ -3809,7 +3808,6 @@ Couldn't find anything with the name 'NoSuchType'
 
 // VCOORD: enable this
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_map_with_single_lambda_types_cleanly() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -3830,7 +3828,7 @@ struct Lam {}
 func __call(lam &Lam, i int) int { return __copy_prim(&i); }
 
 func main() int {
-  a = []int(10, Lam());
+  a = []int(10, &Lam());
   return __copy_prim(&a.3);
 }";
   let code_source = CodeSource::new(vec![
@@ -3881,6 +3879,59 @@ func main() int {
               },
               ..
           ],
+          ..
+      }) => Some(())
+  );
+}
+
+#[test]
+fn foreach_with_result_body_compiles() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r"
+func drop(i int) void { }
+
+struct List<E> {}
+func add<E>(list &List<E>, elem E) void where func drop(E)void { }
+
+struct IntOpt {}
+struct Iter {}
+struct Src {}
+
+func begin(src &Src) Iter { Iter() }
+func next(iter &Iter) IntOpt { IntOpt() }
+func isEmpty(opt &IntOpt) bool { true }
+func get(opt &IntOpt) int { 7 }
+
+exported func main() int {
+  foreach i in Src() { 7 }
+  return 0;
+}";
+  let code_source = CodeSource::new(vec![new_test_code_map(&parse_arena, code)]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let coutputs = compile.expect_compiler_outputs();
+  let main = coutputs.lookup_function_by_str("main");
+  collect_only_tnode!(
+      NodeRefT::FunctionDefinition(main),
+      NodeRefT::FunctionCall(FunctionCallTE {
+          callable: PrototypeT {
+              id: IdT { local_name: INameT::Function(FunctionNameT {
+                  template: FunctionTemplateNameT { human_name: StrI("add"), .. }, .. }), .. },
+              ..
+          },
           ..
       }) => Some(())
   );
@@ -5630,7 +5681,6 @@ Exported kind Array<Raza> depends on kind Raza that wasn't exported from package
 
 // VCOORD: enable this
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_make_array() {
   let parse_bump = Bump::new();
   let scout_bump = Bump::new();
@@ -5646,7 +5696,7 @@ import v.builtins.arrays.*;
 import v.builtins.drop.*;
 
 exported func main() int {
-  a = MakeArray<int>(11, {__copy_prim(_)});
+  a = MakeArray<int>(11, &{__copy_prim(_)});
   return len(&a);
 }
 "#;

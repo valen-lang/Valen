@@ -635,6 +635,9 @@ impl<'s, 't> IVarNameT<'s, 't> {
       }
       IVarNameT::Self_(_) => Some(IImpreciseNameS::SelfName(&SELF_IMPRECISE_NAME)),
       IVarNameT::MagicParam(n) => Some(IImpreciseNameS::MagicParamName(n.imprecise_name)),
+      IVarNameT::Iterable(n) => Some(IImpreciseNameS::IterableName(n.imprecise_name)),
+      IVarNameT::Iterator(n) => Some(IImpreciseNameS::IteratorName(n.imprecise_name)),
+      IVarNameT::IterationOption(n) => Some(IImpreciseNameS::IterationOptionName(n.imprecise_name)),
       // The rest are compiler-synthesized (block/function-result and temporary vars) or life-only
       _ => None,
     }

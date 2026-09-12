@@ -154,7 +154,8 @@ where func(&E, &K, &K)bool, func drop(K)void, func drop(V)void {
     node = something.get();
     // TSUGAR:     if ((&equator)(node.key, key)) {
     if ((&equator)(&node.key, key)) {
-      return Some<int>(index);
+      // TSUGAR:       return Some<int>(index);
+      return Some<int>(__copy_prim(&index));
     }
     // continue to next node
     set i = i + 1;

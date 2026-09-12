@@ -133,7 +133,6 @@ exported func main() int {
 
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_matching_a_multiple_member_pack_of_immutable_and_borrow() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -162,7 +161,7 @@ exported func main() int {
     );
     {
         let coutputs = compile.expect_compiler_outputs();
-        assert_eq!(coutputs.functions[0].header.return_type, KindT::Int(IntT::I32));
+        assert_eq!(coutputs.lookup_function_by_str("main").header.return_type, KindT::Int(IntT::I32));
     }
     {
         let monouts = compile.get_monouts();
@@ -198,8 +197,8 @@ exported func main() int {
 
 
 
+#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn test_destructuring_a_shared() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -236,25 +235,20 @@ exported func main() int {
 
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn ignore_destructure() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = test(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         r"
 struct Marine {
@@ -271,7 +265,6 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 

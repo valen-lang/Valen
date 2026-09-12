@@ -140,8 +140,8 @@ func main(i I) int {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn owning_interface() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -171,8 +171,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn simple_override_with_param_and_bound() {
     // This is the Serenity case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
@@ -210,8 +210,8 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn struct_with_different_ordered_runes() {
     // This is the Firefly case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
@@ -249,8 +249,8 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn struct_with_less_generic_params_than_interface() {
     // This is the Raza case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
@@ -287,8 +287,8 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn struct_with_more_generic_params_than_interface() {
     // This is the Milano case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
@@ -325,8 +325,8 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn struct_repeating_generic_params_for_interface() {
     // This is the Enterprise case in ROWC.
     let compilation_bump = bumpalo::Bump::new();
@@ -363,8 +363,8 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "imm/share citizens not supported yet"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn imm_interface() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -377,6 +377,33 @@ fn imm_interface() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/virtuals/interfaceimm.vale");
+    let mut compile = test(
+        &compilation_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        source.as_str(),
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        IVonData::Int(VonInt { value: 42 }) => {}
+        other => panic!("Expected VonInt(42), got {:?}", other),
+    }
+}
+
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
+#[test]
+fn mut_interface() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    // Mutable twin of imm_interface (interfacemut.vale is interfaceimm.vale without `share`).
+    let source = load_expected("programs/virtuals/interfacemut.vale");
     let mut compile = test(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
@@ -434,10 +461,7 @@ func main(i I) int {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn interface_with_method_with_param_of_substruct() {
-    unimplemented!(); // ZONION-deferred: needs get_hamuts harness method
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -462,8 +486,7 @@ abstract func collectHeaders2(header &List<&Header>, virtual this &SectionMember
 func collectHeaders2(header &List<&Header>, this &Header) { }
 ",
     );
-    let _coutputs = compile.get_hamuts();
-    */
+    let _monouts = compile.get_monouts();
 }
 
 #[test]
@@ -506,8 +529,8 @@ exported func main() int {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn generic_interface_forwarder_with_bound() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -555,8 +578,8 @@ exported func main() int {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn generic_interface_forwarder_with_drop_bound() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -600,11 +623,9 @@ exported func main() int {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn open_interface_constructor() {
-    unimplemented!(); // ZONION-deferred: needs get_hamuts harness method
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -637,19 +658,15 @@ exported func main() int {
 }
 ",
     );
-    let _coutputs = compile.get_hamuts();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
-    */
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn open_interface_constructor_multiple_methods() {
-    unimplemented!(); // ZONION-deferred: needs get_hamuts harness method
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -689,16 +706,14 @@ exported func main() int {
 }
 ",
     );
-    let _coutputs = compile.get_hamuts();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
-    */
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn successful_pointer_downcast_with_as() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -723,8 +738,8 @@ fn successful_pointer_downcast_with_as() {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn failed_pointer_downcast_with_as() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -811,8 +826,8 @@ fn failed_pointer_downcast_with_as() {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn successful_owning_downcast_with_as() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -837,8 +852,8 @@ fn successful_owning_downcast_with_as() {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn failed_owning_downcast_with_as() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -863,8 +878,8 @@ fn failed_owning_downcast_with_as() {
     }
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn lambda_is_compatible_anonymous_interface() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

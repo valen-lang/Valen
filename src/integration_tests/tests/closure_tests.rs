@@ -4,9 +4,14 @@ use crate::integration_tests::tests::run_compilation::test;
 use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
+use crate::postparsing::names::CodeNameS;
 use crate::typing::ast::citizens::StructMemberT;
+use crate::typing::ast::expressions::DerefTE;
+use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::ast::expressions::LetNormalTE;
 use crate::typing::ast::expressions::MemberLookupTE;
+use crate::typing::ast::expressions::MutateTE;
+use crate::typing::names::names::MemberNameT;
 use crate::typing::env::function_environment_t::LocalVariable;
 use crate::typing::names::names::FunctionNameT;
 use crate::typing::names::names::FunctionTemplateNameT;
@@ -32,62 +37,6 @@ use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
 use std::marker::PhantomData;
 pub struct ClosureTests;
-
-#[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
-pub fn addressibility() {
-    unimplemented!();
-    /*
-    let scout_bump = bumpalo::Bump::new();
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let calc = |self_borrowed, self_moved, self_mutated, child_borrowed, child_moved, child_mutated| {
-        let local_s = LocalS {
-            var_name: IVarDeclarationNameS::CodeVarName(CodeVarNameS {
-                name: scout_arena.intern_str("x"),
-                lid: LocationInDenizenBuilder::new(vec![]).consume_in_arena(&scout_arena),
-            }),
-            self_borrowed,
-            self_moved,
-            self_mutated,
-            child_borrowed,
-            child_moved,
-            child_mutated,
-        };
-        let local_a: &LocalS = scout_arena.alloc(local_s);
-        let addressible_if_mutable = Compiler::determine_if_local_is_addressible(
-            SharednessT::Single,
-            local_a);
-        let addressible_if_immutable = Compiler::determine_if_local_is_addressible(
-            SharednessT::Shared,
-            local_a);
-        (addressible_if_mutable, addressible_if_immutable)
-    };
-    // If we don't do anything with the variable, it can be just a reference.
-    assert_eq!(calc(NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed), (false, false));
-    // If we or our children only ever read, it can be just a reference.
-    assert_eq!(calc(Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed), (false, false));
-    assert_eq!(calc(NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed), (false, false));
-    // If only we mutate it, it can be just a reference.
-    assert_eq!(calc(NotUsed, NotUsed, Used, NotUsed, NotUsed, NotUsed), (false, false));
-    // Even if we're certain it's moved, it must be addressible.
-    // Imagine:
-    // exported func main() int {
-    //   m = Marine();
-    //   if (something) {
-    //     something.consume(m);
-    //   } else {
-    //     otherthing.consume(m);
-    //   }
-    // }
-    // (or, we can change it so we move it into the closure struct, but that
-    // seems weird, i like thinking that closures only ever have borrows or
-    // addressibles)
-    // However, this doesnt apply to immutable, since move = copy.
-    assert_eq!(calc(NotUsed, NotUsed, NotUsed, NotUsed, Used, NotUsed), (true, false));
-    // If we're certain children mutate it, it also has to be addressible.
-    assert_eq!(calc(NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used), (true, true));
-    */
-}
 
 #[test]
 pub fn captured_own_is_borrow() {
@@ -197,8 +146,6 @@ exported func main() int {
 
 // VCOORD: have another one of these tests, but actually returning a reference
 #[test]
-// ZONION: re-enable for onion
-#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -210,7 +157,7 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -256,7 +203,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn mutates_from_inside_a_closure() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -268,7 +214,7 @@ fn mutates_from_inside_a_closure() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -284,55 +230,37 @@ exported func main() int {
 
 
     {
-        unimplemented!();
-        // let interner = compile.interner;
-        // let coutputs = compile.expect_compiler_outputs();
-        //
-        // // The struct should have an int x in it.
-        // let closure = coutputs.lookup_lambda_in("main");
-        // let closure_struct = closure.header.params.first().unwrap().tyype.kind.expect_struct();
-        // let closure_struct_def = coutputs.lookup_struct(closure_struct.id);
-        // let expected_members = vec![
-        //     IStructMemberT::Normal(NormalStructMemberT {
-        //         name: IVarNameT::Member(interner.intern_member_name(MemberNameT { name: scout_arena.intern_str("x")})),
-        //         tyype: IMemberTypeT::Address(AddressMemberTypeT {
-        //             reference: CoordT::new(
-        //                 OwnershipT::Own,
-        //                 RegionT { region: IRegionT::Default },
-        //                 KindT::Int(IntT { bits: 32 }),
-        //             ),
-        //         }),
-        //     }),
-        // ];
-        // assert_eq!(closure_struct_def.members, expected_members.as_slice());
-        //
-        // let lambda = coutputs.lookup_lambda_in("main");
-        // collect_only_tnode!(
-        //     NodeRefT::FunctionDefinition(lambda),
-        //     NodeRefT::Mutate(MutateTE {
-        //         destination_expr: AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
-        //             member_name: IVarNameT::Member(MemberNameT { name: StrI("x"), .. }),
-        //             result_type2: CoordT {
-        //                 ownership: OwnershipT::Own,
-        //                 kind: KindT::Int(IntT { bits: 32 }),
-        //                 ..
-        //             },
-        //             ..
-        //         }),
-        //         ..
-        //     }) => Some(())
-        // );
-        //
-        // let main = coutputs.lookup_function_by_str("main");
-        // collect_only_tnode!(
-        //     NodeRefT::FunctionDefinition(main),
-        //     NodeRefT::LetNormal(LetNormalTE {
-        //         variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
-        //                 ..
-        //         }),
-        //         ..
-        //     }) => Some(())
-        // );
+        let coutputs = compile.expect_compiler_outputs();
+        let lambda = coutputs.lookup_lambda_in("main");
+
+        let closure_struct_tt = match lambda.header.params.first().unwrap().tyype {
+            KindT::BorrowRef(BorrowRefT { inner: KindT::Struct(stt) }) => stt,
+            other => panic!("expected a borrowed closure-struct param, got {:?}", other),
+        };
+        let closure_def = coutputs.lookup_struct(*closure_struct_tt.id);
+        match closure_def.members {
+            [StructMemberT {
+                name: MemberNameT { imprecise_name: CodeNameS { name: StrI("x"), .. }, .. },
+                tyype: KindT::BorrowRef(BorrowRefT { inner: KindT::Int(IntT { bits: 32 }) }),
+            }] => {}
+            other => panic!("expected one borrow-of-int captured member `x`, got {:?}", other),
+        }
+
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(lambda),
+            NodeRefT::Mutate(MutateTE {
+                destination_expr: ExpressionTE::Deref(DerefTE {
+                    inner: ExpressionTE::MemberLookup(MemberLookupTE {
+                        member_name: IVarNameT::Member(MemberNameT {
+                            imprecise_name: CodeNameS { name: StrI("x"), .. }, ..
+                        }),
+                        ..
+                    }),
+                    ..
+                }),
+                ..
+            }) => Some(())
+        );
     }
 
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -342,7 +270,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 pub fn mutates_from_inside_a_closure_inside_a_closure() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -354,7 +281,7 @@ pub fn mutates_from_inside_a_closure_inside_a_closure() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -367,26 +294,20 @@ pub fn mutates_from_inside_a_closure_inside_a_closure() {
 }
 
 #[test]
-// ZONION: re-enable for onion
-#[ignore = "share-blanket / bound-resolution not yet honest for clone-of-borrow-in-generics; needs `&&T` structural distinctness or primitive-borrow flip"]
 fn read_from_inside_a_closure_inside_a_closure() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: x captured by nested closure — Own primitive, copy
         r"
@@ -400,11 +321,9 @@ exported func main() int {
         IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
-    */
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 pub fn mutable_lambda() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -417,7 +336,7 @@ pub fn mutable_lambda() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
     let source = load_expected("programs/lambdas/lambdamut.vale");
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,

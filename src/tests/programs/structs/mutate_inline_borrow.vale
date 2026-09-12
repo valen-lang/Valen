@@ -1,0 +1,10 @@
+
+struct Engine { fuel int; }
+struct Ship { engine Engine; }
+exported func main() int {
+  ship = Ship(Engine(10));
+  b = &ship.engine;
+  set ship.engine = Engine(20);
+  // TSUGAR:   return b.fuel;
+  return __copy_prim(&b.fuel);
+}

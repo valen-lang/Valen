@@ -2,7 +2,7 @@
 import array.make.*;
 exported func main() int {
   i = 3;
-  a = []int(5, x => x * 42);
+  a = []int(5, &(x) => x * 42);
   // TSUGAR:   return a[1];
   return __copy_prim(a[1]);
 }

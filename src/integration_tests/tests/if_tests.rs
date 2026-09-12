@@ -298,8 +298,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn ret_from_inside_if_will_destroy_locals() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -342,8 +342,8 @@ exported func main() int {
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "In then!\nDestroying marine!\n");
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn can_continue_if_other_branch_would_have_returned() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -390,8 +390,8 @@ Destroying marine!
 ");
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn destructure_inside_if() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -464,8 +464,8 @@ fn if_nevers() {
     }
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn if_with_panics_and_rets() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

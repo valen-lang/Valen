@@ -12,8 +12,8 @@ use crate::utils::utils::scrambles;
 use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
 
+#[ignore = "imm/share citizens not supported yet"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn make_empty_imm_struct() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -40,8 +40,8 @@ exported func main() {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "imm/share citizens not supported yet"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn make_imm_struct_with_one_member() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -68,8 +68,8 @@ exported func main() {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "imm/share citizens not supported yet"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn make_nested_imm_struct() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -89,6 +89,34 @@ fn make_nested_imm_struct() {
         r"
 struct Weapon share { ammo int; }
 struct Marine share { hp int; weapon Weapon; }
+exported func main() {
+  Marine(5, Weapon(7));
+}
+",
+    );
+    compile.run_primitive_args(Vec::new()).unwrap();
+}
+
+#[test]
+fn make_nested_mut_struct() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    // Mutable twin of make_nested_imm_struct (identical but without `share`).
+    let mut compile = test(
+        &compilation_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        r"
+struct Weapon { ammo int; }
+struct Marine { hp int; weapon Weapon; }
 exported func main() {
   Marine(5, Weapon(7));
 }
@@ -124,7 +152,6 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn constructor_with_self() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -201,7 +228,6 @@ fn make_struct_and_get_member() {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn mutate_struct() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -223,6 +249,84 @@ fn mutate_struct() {
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("Expected VonInt(4), got {:?}", other),
+    }
+}
+
+#[test]
+fn mutate_inline_struct_member() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let source = load_expected("programs/structs/mutate_inline_struct.vale");
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
+        &compilation_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        source.as_str(),
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        IVonData::Int(VonInt { value: 20 }) => {}
+        other => panic!("Expected VonInt(20), got {:?}", other),
+    }
+}
+
+#[test]
+fn mutate_inline_struct_member_borrow_sees_new_value() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let source = load_expected("programs/structs/mutate_inline_borrow.vale");
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
+        &compilation_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        source.as_str(),
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        IVonData::Int(VonInt { value: 20 }) => {}
+        other => panic!("Expected VonInt(20), got {:?}", other),
+    }
+}
+
+// A `set x = NewStruct(..)` on an inline-struct local overwrites the local's existing allocation in
+// place rather than repointing, so a borrow of the local taken before the set observes the NEW value
+// afterward (a repoint model would leave the borrow on the stale old allocation).
+#[test]
+fn mutate_inline_local_borrow_sees_new_value() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let source = load_expected("programs/structs/mutate_inline_local_borrow.vale");
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
+        &compilation_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        source.as_str(),
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        IVonData::Int(VonInt { value: 20 }) => {}
+        other => panic!("Expected VonInt(20), got {:?}", other),
     }
 }
 
@@ -294,8 +398,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn destroy_members_at_right_times() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -337,8 +441,8 @@ exported func main() {
 }
 
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn panic_function() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

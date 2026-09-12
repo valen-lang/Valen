@@ -800,9 +800,9 @@ where
   //   WhileCondResult,
   //   WhileCondResultNameT
   // );
-  impl_intern_name_wrapper_simple_t_only!(intern_iterable_name, Iterable, IterableNameT);
-  impl_intern_name_wrapper_simple_t_only!(intern_iterator_name, Iterator, IteratorNameT);
-  impl_intern_name_wrapper_simple_t_only!(
+  impl_intern_name_wrapper_simple!(intern_iterable_name, Iterable, IterableNameT);
+  impl_intern_name_wrapper_simple!(intern_iterator_name, Iterator, IteratorNameT);
+  impl_intern_name_wrapper_simple!(
     intern_iteration_option_name,
     IterationOption,
     IterationOptionNameT

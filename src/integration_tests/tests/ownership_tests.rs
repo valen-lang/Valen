@@ -161,8 +161,8 @@ exported func main() {
 
 
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn custom_drop_result_is_an_owning_ref_calls_destructor() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -184,7 +184,7 @@ import printutils.*;
 #!DeriveStructDrop
 struct Muta { }
 
-func drop(m ^Muta) void {
+func drop(m Muta) void {
   println("Destroying!");
   Muta[ ] = ^m;
 }
@@ -214,8 +214,8 @@ exported func main() {
 
 
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn saves_return_value_then_destroys_temporary() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -238,7 +238,7 @@ import printutils.*;
 #!DeriveStructDrop
 struct Muta { hp int; }
 
-func drop(m ^Muta) {
+func drop(m Muta) {
   println("Destroying!");
   Muta[hp] = ^m;
 }
@@ -266,8 +266,8 @@ exported func main() int {
 
 
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn calls_destructor_on_local_var() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -289,7 +289,7 @@ import printutils.*;
 #!DeriveStructDrop
 struct Muta { }
 
-func drop(m ^Muta) {
+func drop(m Muta) {
   println("Destroying!");
   Muta[ ] = ^m;
 }
@@ -319,8 +319,8 @@ exported func main() {
 
 
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn calls_destructor_on_local_var_unless_moved() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -343,12 +343,12 @@ import printutils.*;
 #!DeriveStructDrop
 struct Muta { }
 
-func drop(m ^Muta) {
+func drop(m Muta) {
   println("Destroying!");
   Muta[ ] = ^m;
 }
 
-func moo(m ^Muta) {
+func moo(m Muta) {
 }
 
 exported func main() {
@@ -423,8 +423,8 @@ exported func main() {
 
 
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn saves_return_value_then_destroys_local_var() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -447,7 +447,7 @@ import printutils.*;
 #!DeriveStructDrop
 struct Muta { hp int; }
 
-func drop(m ^Muta) {
+func drop(m Muta) {
   println("Destroying!");
   Muta[hp] = ^m;
 }
@@ -482,7 +482,6 @@ exported func main() int {
 
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn gets_from_temporary_struct_a_members_member() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -504,7 +503,7 @@ struct Wand {
   charges int;
 }
 struct Wizard {
-  wand ^Wand;
+  wand Wand;
 }
 exported func main() int {
   return __copy_prim(&Wizard(Wand(10)).wand.charges);
@@ -558,7 +557,6 @@ exported func main() int {
 
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn basic_builder_pattern() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

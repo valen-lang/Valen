@@ -71,11 +71,9 @@ exported func main() int {
     }
 }
 
+#[ignore = "strings not implemented yet (R3 @str->&str share-peel via print(int)->str(int), trips VM transmute at heap.rs:656)"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_a_while_loop_with_a_complex_condition() {
-    unimplemented!(); // ZONION-deferred: needs eval_for_kind_primitive_args_with_stdin harness method
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -107,14 +105,11 @@ exported func main() int {
         IVonData::Int(VonInt { value: 99 }) => {}
         other => panic!("expected VonInt(99), got {:?}", other),
     }
-    */
 }
 
+#[ignore = "strings not implemented yet (R3 @str->&str share-peel via print(int)->str(int), trips VM transmute at heap.rs:656)"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_a_while_loop_with_a_set_in_it() {
-    unimplemented!(); // ZONION-deferred: needs eval_for_kind_primitive_args_with_stdin harness method
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -133,7 +128,6 @@ fn tests_a_while_loop_with_a_set_in_it() {
         r"
 import printutils.*;
 import ioutils.*;
-import logic.*;
 
 exported func main() int {
   key = 0;
@@ -148,14 +142,11 @@ exported func main() int {
         IVonData::Int(VonInt { value: 99 }) => {}
         other => panic!("expected VonInt(99), got {:?}", other),
     }
-    */
 }
 
+#[ignore = "strings not implemented yet (R3 @str->&str share-peel via print(int)->str(int), trips VM transmute at heap.rs:656)"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn tests_a_while_loop_with_a_declaration_in_it() {
-    unimplemented!(); // ZONION-deferred: needs eval_for_kind_primitive_args_with_stdin harness method
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -174,7 +165,6 @@ fn tests_a_while_loop_with_a_declaration_in_it() {
         r"
 import printutils.*;
 import ioutils.*;
-import logic.*;
 
 exported func main() {
   while key = __getch(); key != 99 {
@@ -184,7 +174,6 @@ exported func main() {
 ",
     );
     compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]).unwrap();
-    */
 }
 
 #[test]
@@ -447,8 +436,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn each_on_int_range() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -482,8 +471,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "strings not implemented yet (str share-peel via println on the collected list)"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn parallel_foreach() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -519,8 +508,8 @@ exported func main() {
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap().trim(), "[1, 2, 3, 4, 5]");
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn mutable_foreach() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -574,8 +563,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn each_on_int_range_with_conditional_break() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -614,8 +603,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn each_on_int_range_with_unconditional_break() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -649,8 +638,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on borrow checker (borrow-group) — owned by another worktree"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn each_on_int_range_with_conditional_break_from_both_branches() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

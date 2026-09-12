@@ -294,14 +294,14 @@ where
           }),
         )
       }
-      IVarDeclarationNameS::IterableName(IterableNameDeclarationS { lid, .. }) => {
-        IVarNameT::Iterable(self.typing_interner.intern_iterable_name(IterableNameT { loct: LocT::from_lid(self.typing_interner, lid) }))
+      IVarDeclarationNameS::IterableName(IterableNameDeclarationS { imprecise_name, lid }) => {
+        IVarNameT::Iterable(self.typing_interner.intern_iterable_name(IterableNameT { imprecise_name, loct: LocT::from_lid(self.typing_interner, lid) }))
       }
-      IVarDeclarationNameS::IteratorName(IteratorNameDeclarationS { lid, .. }) => {
-        IVarNameT::Iterator(self.typing_interner.intern_iterator_name(IteratorNameT { loct: LocT::from_lid(self.typing_interner, lid) }))
+      IVarDeclarationNameS::IteratorName(IteratorNameDeclarationS { imprecise_name, lid }) => {
+        IVarNameT::Iterator(self.typing_interner.intern_iterator_name(IteratorNameT { imprecise_name, loct: LocT::from_lid(self.typing_interner, lid) }))
       }
-      IVarDeclarationNameS::IterationOptionName(IterationOptionNameDeclarationS{ lid, .. }) => IVarNameT::IterationOption(
-        self.typing_interner.intern_iteration_option_name(IterationOptionNameT { loct: LocT::from_lid(self.typing_interner, lid) }),
+      IVarDeclarationNameS::IterationOptionName(IterationOptionNameDeclarationS{ imprecise_name, lid }) => IVarNameT::IterationOption(
+        self.typing_interner.intern_iteration_option_name(IterationOptionNameT { imprecise_name, loct: LocT::from_lid(self.typing_interner, lid) }),
       ),
       _ => {
         panic!("implement: translate_var_name_step — {:?}", discriminant(&name));

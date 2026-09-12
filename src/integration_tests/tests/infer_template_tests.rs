@@ -107,7 +107,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 pub fn test_inferring_a_borrowed_static_sized_array() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -126,7 +125,7 @@ pub fn test_inferring_a_borrowed_static_sized_array() {
         // TSUGAR: m[0].hp is &int
         r"
 struct Muta { hp int; }
-func moo<N Int>(m &[#N]Muta) int { return __copy_prim(m[0].hp); }
+func moo<N Int>(m &StaticArray<N, Muta>) int { return __copy_prim(m[0].hp); }
 exported func main() int {
   x = [#](Muta(10));
   return moo(&x);
@@ -140,7 +139,6 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 pub fn test_inferring_an_owning_static_sized_array() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -159,7 +157,7 @@ pub fn test_inferring_an_owning_static_sized_array() {
         // TSUGAR: m[0].hp is &int
         r"
 struct Muta { hp int; }
-func moo<N Int>(m [#N]Muta) int { return __copy_prim(m[0].hp); }
+func moo<N Int>(m StaticArray<N, Muta>) int { return __copy_prim(m[0].hp); }
 exported func main() int {
   x = [#](Muta(10));
   return moo(^x);

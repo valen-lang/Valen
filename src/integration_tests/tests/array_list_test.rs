@@ -1,4 +1,13 @@
 #![allow(unused_imports, dead_code, unused_variables, unreachable_code)]
+use crate::collect_only_tnode;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::ast::expressions::ExpressionTE;
+use crate::typing::ast::expressions::MutateTE;
+use crate::typing::ast::expressions::DerefTE;
+use crate::typing::ast::expressions::MemberLookupTE;
+use crate::typing::names::names::IVarNameT;
+use crate::typing::names::names::MemberNameT;
+use crate::postparsing::names::CodeNameS;
 use crate::integration_tests::tests::run_compilation::test;
 use crate::integration_tests::tests::run_compilation::test_without_borrow_check;
 use crate::interner::StrI;
@@ -10,8 +19,8 @@ use crate::testvm::von::IVonData;
 use crate::testvm::von::VonInt;
 pub struct ArrayListTest;
 
+#[ignore = "blocked on migrate builtin (__vbi_panic); re-enable when borrow-group (R1) lands"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn simple_array_list_no_optionals() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -65,8 +74,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on migrate builtin (__vbi_panic); re-enable when borrow-group (R1) lands"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn doubling_array_list() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -102,8 +111,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on migrate builtin (__vbi_panic); re-enable when borrow-group (R1) lands"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_list_zero_constructor() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -139,8 +148,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on migrate builtin (__vbi_panic); re-enable when borrow-group (R1) lands"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_list_len() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -174,8 +183,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on migrate builtin (__vbi_panic); re-enable when borrow-group (R1) lands"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_list_set() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -211,8 +220,8 @@ exported func main() int {
     }
 }
 
+#[ignore = "blocked on migrate builtin (__vbi_panic); re-enable when borrow-group (R1) lands"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn array_list_with_optionals_with_mutable_element() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -253,25 +262,21 @@ exported func main() int {
 }
 
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn mutate_mutable_from_in_lambda() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    // Mutable capture (`set m = ...` inside a lambda), so borrow-check off like the closure tests.
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: m.hp is &int
         r"
@@ -291,12 +296,17 @@ exported func main() int {
     );
     {
         let coutputs = compile.expect_compiler_outputs();
-        let main = coutputs.lookup_function_by_str("main");
+        let lambda = coutputs.lookup_lambda_in("main");
         collect_only_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::LetNormal(LetNormalTE {
-                variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
-                    name: IVarNameT::Member(MemberNameT { name: StrI("m"), .. }),
+            NodeRefT::FunctionDefinition(lambda),
+            NodeRefT::Mutate(MutateTE {
+                destination_expr: ExpressionTE::Deref(DerefTE {
+                    inner: ExpressionTE::MemberLookup(MemberLookupTE {
+                        member_name: IVarNameT::Member(MemberNameT {
+                            imprecise_name: CodeNameS { name: StrI("m"), .. }, ..
+                        }),
+                        ..
+                    }),
                     ..
                 }),
                 ..
@@ -308,29 +318,24 @@ exported func main() int {
         IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
-    */
 }
 
+#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn move_mutable_from_in_lambda() {
-    unimplemented!();
-    /*
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
     let parse_arena = ParseArena::new(&parse_bump);
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
+    let mut compile = test_without_borrow_check(
         &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         // TSUGAR: m2.hp is &int
         r"
@@ -349,12 +354,17 @@ exported func main() int {
     );
     {
         let coutputs = compile.expect_compiler_outputs();
-        let main = coutputs.lookup_function_by_str("main");
+        let lambda = coutputs.lookup_lambda_in("main");
         collect_only_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::LetNormal(LetNormalTE {
-                variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
-                    name: IVarNameT::Member(MemberNameT { name: StrI("m"), .. }),
+            NodeRefT::FunctionDefinition(lambda),
+            NodeRefT::Mutate(MutateTE {
+                destination_expr: ExpressionTE::Deref(DerefTE {
+                    inner: ExpressionTE::MemberLookup(MemberLookupTE {
+                        member_name: IVarNameT::Member(MemberNameT {
+                            imprecise_name: CodeNameS { name: StrI("m"), .. }, ..
+                        }),
+                        ..
+                    }),
                     ..
                 }),
                 ..
@@ -366,11 +376,10 @@ exported func main() int {
         IVonData::Int(VonInt { value: 6 }) => {}
         other => panic!("expected VonInt(6), got {:?}", other),
     }
-    */
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn remove_from_middle() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -409,8 +418,8 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
+#[ignore = "R3: str share-peel Reinterpret (&@str->&str) trips instantiator.rs:1769"]
 #[test]
-#[ignore = "temp-fire-commit-lambda-land: un-ignore right after landing"]
 fn remove_from_beginning() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

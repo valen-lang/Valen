@@ -264,21 +264,6 @@ where
   //         KindT::Never(_) => panic!("implement: get_borrow_ownership Never"),
   //     }
   // }
-
-  // // See ClosureTests for requirements here
-  // pub fn determine_if_local_is_addressible(
-  //     sharedness: SharednessT,
-  //     local_a: &'s LocalS<'s>,
-  // ) -> bool {
-  //     match sharedness {
-  //         SharednessT::Single => {
-  //             local_a.child_mutated != IVariableUseCertainty::NotUsed || local_a.child_moved != IVariableUseCertainty::NotUsed
-  //         }
-  //         SharednessT::Shared => {
-  //             local_a.child_mutated != IVariableUseCertainty::NotUsed
-  //         }
-  //     }
-  // }
 }
 
 /// A **linear obligation** carrying the temporary locals created to hold borrowed rvalues (see
