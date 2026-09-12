@@ -644,7 +644,7 @@ struct Lam {}
 func __call(lam &Lam, i int) int { return __copy_prim(&i); }
 
 exported func main() int {
-  a = []int(10, Lam());
+  a = []int(10, &Lam());
   return __copy_prim(&a.3);
 }
 "#;
