@@ -1,0 +1,1 @@
+../../Luz/shields/IntegrationTestsBehaveLikeUsers-ITBLUX.md

@@ -1,0 +1,1 @@
+../../Luz/shields/ValidateReadonlyBash-VRBX.md

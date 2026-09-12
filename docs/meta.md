@@ -89,13 +89,13 @@ The Z suffix is also used for **standalone advisory docs** — reference or patt
 
 **Purpose:** Enforceable rules and constraints. Each shield has a unique ID (initialism + X suffix).
 
-**Discovery:** Guardian discovers shields by scanning for initialisms in parentheses ending in X. Guardian auto-updates the shield list in the containing directory's `CLAUDE.md` as plain markdown links with descriptions from the shield's frontmatter `description:` field.
+**Discovery:** Guardian loads the shields named in `guardian.toml`, resolving each by filename from the configured `shields_dirs`. Separately, when a shield's frontmatter sets `g_mention_in`, `manifest-sync` lists it in that `CLAUDE.md`'s SEE ALSO as a plain link with the shield's `description:`.
 
 **Location:** `docs/shields/<HammerCaseTitle>-<ID>.md` (e.g., `docs/shields/NoExpensiveClones-NECX.md`)
 
 **ID convention:** Uppercase initialism of title words, X suffix.
 
-**Placement:** Shields that apply to a specific feature live in that feature's `docs/shields/`. Shields that apply across all projects live in `Luz/shields/`. Only move a shield to `Luz/` if it is genuinely project-agnostic.
+**Placement:** Shields that apply to a specific feature live in that feature's `docs/shields/`. Shields that apply across all projects live in `Luz/shields/`. Only move a shield to `Luz/` if it is genuinely project-agnostic. A repo imports a shared shield by hand-creating a `docs/shields/<name>.md` symlink into `Luz/shields/`, exactly as skills are imported (see Auto-Load Rules and Skill Symlinks). This is deliberate and per-repo — there is no auto-mirror that pulls in every `Luz/shields` entry.
 
 **Every shield must be discoverable via at least one of:**
 - **Included** — auto-loaded via `g_auto_load_when_editing` in frontmatter (Claude Code loads it deterministically when editing matching files)
@@ -159,9 +159,14 @@ docs/usage/build-test.md  (g_auto_load_when_editing: [src/**/*.rs])
   -->  .claude/rules/FrontendRust-docs-usage-build-test.mdc   (generated)
 ```
 
-Skills (#8) ARE real symlinks: `.claude/skills/<name>/SKILL.md` → `../../../docs/skills/<name>.md`. For a cross-project skill, `docs/skills/<name>.md` is itself a symlink into `Luz/skills/`; manifest-sync's walker skips symlinks, so such skills are mentioned only once.
+Skills (#7) and shared shields (#4) are both imported by hand-created symlinks, never auto-generated copies:
 
-Shields (#4) are NOT auto-loaded — they appear in `CLAUDE.md` SEE ALSO as plain links via `g_mention_in`.
+- A **skill** has two hops: `.claude/skills/<name>/SKILL.md` → `../../../docs/skills/<name>.md` (the registration layer Claude Code's loader scans — `manifest-sync` creates and repairs it), and, for a shared skill, `docs/skills/<name>.md` → `Luz/skills/<name>.md` (hand-created to import; `manifest-sync` never creates this hop).
+- A **shared shield** has one hop: `docs/shields/<name>.md` → `../../Luz/shields/<name>.md`, hand-created to import. There is no `.claude/shields` registration layer, because Guardian reads the shield dirs (`shields_dirs` in `guardian.toml`) directly. `manifest-sync` does not create or repair this symlink; it only rejects a divergent regular-file copy where a symlink belongs.
+
+A doc is mentioned only once in `CLAUDE.md` because `Luz/` is a nested git repo the `manifest-sync` walker skips — not because it skips symlinks (it follows them).
+
+Shields (#4) are not auto-loaded. Guardian enforces them from `guardian.toml`; a shield appears in a `CLAUDE.md` SEE ALSO list only when it opts in via `g_mention_in`.
 
 The source of truth is always the `docs/` file; the generated `.mdc` or symlink exists only for loading.
 
@@ -170,7 +175,7 @@ The source of truth is always the `docs/` file; the generated `.mdc` or symlink 
 Each directory can have a `CLAUDE.md` that Guardian keeps up to date:
 
 - **Background docs (#1):** Auto-imported from current directory and all ancestors. A file in `src/postparsing/` sees project-wide background + postparsing-specific background.
-- **Shield lists (#4):** Auto-updated by scanning for X-suffix initialisms in the directory's `docs/shields/`.
+- **Shield lists (#4):** A shield appears in a directory's `CLAUDE.md` SEE ALSO when its frontmatter sets `g_mention_in` for that file. `manifest-sync` generates the list from frontmatter, not by scanning for initialisms.
 
 ## Cross-References Between Categories
 

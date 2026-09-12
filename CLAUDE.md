@@ -1,8 +1,8 @@
-# Vale
+# Valen
 
 **Never commit unless the architect says the literal phrase "fire commit" or "fire commit temporary" — no other phrasing ("just commit", "go ahead", "ship it", etc.) authorizes a commit.**
 
-This is the Vale compiler. The `src/` tree is a Rust compiler frontend.
+This is the Valen compiler (previously called "Vale", now "Valen"). The `src/` tree is the compiler frontend written in Rust, and `Backend/` contains the compiler backend written in C++.
 
 ## Build & Test
 
@@ -82,7 +82,6 @@ Instead, use the same file.
 
 - **Read when decoding the compact id shorthand used in docs/Generics.md, investigation notes, or comments — forms like `dis$0`, `Foo<^int>`, `MySome.bound:drop:66`.** → docs/arcana/IdShorthandNotation-ISNZ.md
 - **Read when planning or making a large change to the typing pass (src/typing/).** → docs/architecture/typing-pass-ai-guide.md
-- **Read when writing an `r#"..."#` raw string containing embedded Vale source in a Rust test.** → docs/shields/MultiLineValeFixtures-MLVFX.md
 - **Read when reviewing a plan document or code, to flag suspicious patterns — newly-visible mutation, field mutation instead of methods, and fallbacks.** → docs/skills/approach-review.md
 - **Read when an external real-world program surfaces a compiler bug and you need to reduce it to a minimal in-tree repro before fixing.** → docs/skills/bug-repro.md
 - **Read when the human asks to close, end, or shut down the current Claude Code session.** → docs/skills/close-session.md

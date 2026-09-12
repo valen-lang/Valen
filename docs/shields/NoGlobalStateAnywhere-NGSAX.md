@@ -1,0 +1,1 @@
+../../Luz/shields/NoGlobalStateAnywhere-NGSAX.md

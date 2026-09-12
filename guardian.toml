@@ -1,4 +1,4 @@
-shields_dirs = ["Luz/shields", "docs/shields"]
+shields_dirs = ["docs/shields"]
 backend = "claude"
 port = 7878
 exclude_shields = [

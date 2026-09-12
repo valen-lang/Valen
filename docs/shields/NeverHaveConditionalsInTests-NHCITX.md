@@ -1,0 +1,1 @@
+../../Luz/shields/NeverHaveConditionalsInTests-NHCITX.md
