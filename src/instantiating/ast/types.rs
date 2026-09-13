@@ -91,6 +91,23 @@ impl<'s, 'i> KindIT<'s, 'i> where 's: 'i {
   }
 
 
+  /// Strips every reference wrap layer, yielding the underlying citizen or primitive regardless of
+  /// how it is referenced. Total: a bare kind is returned unchanged. Mirrors typing's
+  /// `peel_all_references` (templata_compiler.rs) on the instantiated `KindIT` side.
+  pub fn peel_all_references(&self) -> KindIT<'s, 'i> {
+    let mut current = *self;
+    loop {
+      current = match current {
+        KindIT::BorrowRefIT(r) => r.inner,
+        KindIT::OwnRefIT(r) => r.inner,
+        KindIT::ShareRefIT(r) => r.inner,
+        KindIT::WeakRefIT(r) => r.inner,
+        other => return other,
+      };
+    }
+  }
+
+
   pub fn expect_struct(&self) -> &'i StructIT<'s, 'i> {
     match self {
       KindIT::StructIT(s) => s,

@@ -1600,7 +1600,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     args: self.interner.alloc_slice_from_vec(args_ce),
                     result: result_it,
                 }));
-                let interface_id = super_function_prototype.param_types()[virtual_param_index as usize].expect_interface().id;
+                // Peel the reference wraps off the virtual param (`virtual self &IShip`) before
+                // reading the interface, mirroring the typed-side peel at typed_interface_id above.
+                // Under the onion a reference is a KindIT wrap layer, so param_types()[vpi] is a
+                // BorrowRefIT around the interface, not a bare InterfaceIT.
+                let interface_id = super_function_prototype.param_types()[virtual_param_index as usize].peel_all_references().expect_interface().id;
                 let instantiation_bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, self.hinputs.get_instantiation_bound_args(super_function_prototype_t.id));
                 monouts.new_abstract_funcs.push((*super_function_prototype_t, super_function_prototype, virtual_param_index as usize, interface_id, instantiation_bound_args));
                 result_ce

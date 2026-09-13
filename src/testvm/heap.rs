@@ -216,8 +216,8 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
         self.objects_by_id.void_ref
     }
 
-    pub fn add_local(&mut self, interner: &InstantiatingInterner<'s, 'i>, var_addr: VariableAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) {
-        self.check_reference(interner, expected_type, reference);
+    pub fn add_local(&mut self, program_h: &'i HinputsI<'s, 'i>, interner: &InstantiatingInterner<'s, 'i>, var_addr: VariableAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) {
+        self.check_reference(program_h, interner, expected_type, reference);
         self.get_current_call(var_addr.call_id, |call| {
             call.add_local(var_addr, reference, expected_type);
         });
@@ -234,10 +234,10 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
     }
 
 
-    pub fn remove_local(&mut self, interner: &InstantiatingInterner<'s, 'i>, var_addr: VariableAddressV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) {
+    pub fn remove_local(&mut self, program_h: &'i HinputsI<'s, 'i>, interner: &InstantiatingInterner<'s, 'i>, var_addr: VariableAddressV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) {
         let variable = self.get_local(var_addr);
         let actual_reference = variable.reference;
-        self.check_reference(interner, expected_type, actual_reference);
+        self.check_reference(program_h, interner, expected_type, actual_reference);
         self.decrement_reference_ref_count(
             IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr }),
             actual_reference,
@@ -248,13 +248,13 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
     }
 
 
-    pub fn get_reference_from_local(&self, interner: &InstantiatingInterner<'s, 'i>, var_addr: VariableAddressV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>, target_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
+    pub fn get_reference_from_local(&self, program_h: &'i HinputsI<'s, 'i>, interner: &InstantiatingInterner<'s, 'i>, var_addr: VariableAddressV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>, target_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
         let variable = self.get_local(var_addr);
         if variable.expected_type != expected_type {
             panic!("get_reference_from_local: variable.expected_type mismatch: stored={:?} vs lookup={:?}", variable.expected_type, expected_type);
         }
         let variable_reference = variable.reference;
-        self.check_reference(interner, expected_type, variable_reference);
+        self.check_reference(program_h, interner, expected_type, variable_reference);
         self.transmute(variable_reference, expected_type, target_type)
     }
 
@@ -266,10 +266,10 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
     }
 
 
-    pub fn mutate_variable(&mut self, interner: &InstantiatingInterner<'s, 'i>, var_address: VariableAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
+    pub fn mutate_variable(&mut self, program_h: &'i HinputsI<'s, 'i>, interner: &InstantiatingInterner<'s, 'i>, var_address: VariableAddressV<'v, 'i, 's>, reference: ReferenceV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
         let variable = self.calls_by_id.get(&var_address.call_id).expect("mutate_variable: call not found").get_local(var_address);
-        self.check_reference(interner, expected_type, reference);
-        self.check_reference(interner, variable.expected_type, reference);
+        self.check_reference(program_h, interner, expected_type, reference);
+        self.check_reference(program_h, interner, variable.expected_type, reference);
         let old_reference = variable.reference;
         if let KindIT::StructIT(_) = variable.expected_type {
             // VCOORD: reference design/arcana for this
@@ -362,14 +362,14 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
     }
 
 
-    pub fn get_reference_from_struct(&self, interner: &InstantiatingInterner<'s, 'i>, address: MemberAddressV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>, target_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
+    pub fn get_reference_from_struct(&self, program_h: &'i HinputsI<'s, 'i>, interner: &InstantiatingInterner<'s, 'i>, address: MemberAddressV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>, target_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
         let MemberAddressV { struct_id: object_id, field_index } = address;
         let allocation = self.objects_by_id.objects_by_id.get(&object_id).expect("get: not found");
         match allocation.kind {
             KindV::StructInstance(si) => {
                 let members = si.members.get().expect("StructInstance has no members");
                 let actual_reference = members[field_index as usize];
-                self.check_reference(interner, expected_type, actual_reference);
+                self.check_reference(program_h, interner, expected_type, actual_reference);
                 self.transmute(actual_reference, expected_type, target_type)
             }
             _ => panic!("get_reference_from_struct: not a StructInstance"),
@@ -377,12 +377,12 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
     }
 
 
-    pub fn get_reference_from_array(&self, interner: &InstantiatingInterner<'s, 'i>, address: ElementAddressV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>, target_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
+    pub fn get_reference_from_array(&self, program_h: &'i HinputsI<'s, 'i>, interner: &InstantiatingInterner<'s, 'i>, address: ElementAddressV<'v, 'i, 's>, expected_type: KindIT<'s, 'i>, target_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
         let ElementAddressV { array_id: object_id, element_index } = address;
         match self.objects_by_id.objects_by_id.get(&object_id).expect("get_reference_from_array: not found").kind {
             KindV::ArrayInstance(ai) => {
                 let r#ref = ai.get_element(element_index);
-                self.check_reference(interner, expected_type, r#ref);
+                self.check_reference(program_h, interner, expected_type, r#ref);
                 self.transmute(r#ref, expected_type, target_type)
             }
             _ => panic!("get_reference_from_array: not an array instance"),
@@ -713,9 +713,9 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
     }
 
 
-    pub fn take_argument(&mut self, interner: &InstantiatingInterner<'s, 'i>, call_id: CallIdV<'v, 'i, 's>, argument_index: i32, expected_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
+    pub fn take_argument(&mut self, program_h: &'i HinputsI<'s, 'i>, interner: &InstantiatingInterner<'s, 'i>, call_id: CallIdV<'v, 'i, 's>, argument_index: i32, expected_type: KindIT<'s, 'i>) -> ReferenceV<'v, 'i, 's> {
         let reference = self.get_current_call(call_id, |c| c.take_argument(argument_index));
-        self.check_reference(interner, expected_type, reference);
+        self.check_reference(program_h, interner, expected_type, reference);
         self.decrement_reference_ref_count(
             IObjectReferrerV::ArgumentToObjectReferrer(ArgumentToObjectReferrerV {
                 argument_id: ArgumentIdV { call_id, index: argument_index },
@@ -861,7 +861,7 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
     }
 
 
-    pub fn check_reference(&self, interner: &InstantiatingInterner<'s, 'i>, expected_type: KindIT<'s, 'i>, actual_reference: ReferenceV<'v, 'i, 's>) {
+    pub fn check_reference(&self, program_h: &'i HinputsI<'s, 'i>, interner: &InstantiatingInterner<'s, 'i>, expected_type: KindIT<'s, 'i>, actual_reference: ReferenceV<'v, 'i, 's>) {
         if actual_reference.ownership == OwnershipV::Weak {
             assert!(self.contains_live_or_undead_object(actual_reference.alloc_id()));
         } else {
@@ -884,7 +884,7 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
             panic!("Expected {:?} but was {:?}", expected_bare, actual_reference.seen_as_kind.hamut);
         }
         let actual_kind = self.dereference(actual_reference, actual_reference.ownership == OwnershipV::Weak);
-        self.check_kind(interner, expected_bare, actual_kind);
+        self.check_kind(program_h, interner, expected_bare, actual_kind);
     }
 
 
@@ -896,7 +896,7 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
     }
 
 
-    pub fn check_kind(&self, interner: &InstantiatingInterner<'s, 'i>, expected_type: KindIT<'s, 'i>, actual_kind: KindV<'v, 'i, 's>) {
+    pub fn check_kind(&self, program_h: &'i HinputsI<'s, 'i>, interner: &InstantiatingInterner<'s, 'i>, expected_type: KindIT<'s, 'i>, actual_kind: KindV<'v, 'i, 's>) {
         match (actual_kind, expected_type) {
             (KindV::Int(actual), KindIT::IntIT(expected)) => {
                 if actual.bits != expected.bits {
@@ -922,11 +922,18 @@ impl<'v, 'i, 's> HeapV<'v, 'i, 's> {
                     panic!("Expected {:?} but was {:?}", array_kind, array_instance.type_h);
                 }
             }
-            (KindV::StructInstance(_struct_instance), KindIT::InterfaceIT(_interface_it)) => {
-                // Struct-implements-interface check: onion `StructDefinitionI` doesn't carry its
-                // edges (they live in `HinputsI`), which aren't reachable here. Virtuals aren't in
-                // the pilot; wire this when interface dispatch lands.
-                panic!("Unimplemented: check_kind struct-implements-interface (needs edges from HinputsI)");
+            (KindV::StructInstance(struct_instance), KindIT::InterfaceIT(interface_it)) => {
+                // Struct-implements-interface check. Pre-onion the struct carried its own `edges`
+                // (`struct_h.edges.any(|e| e.interface == wanted)`); under the onion the edges live in
+                // HinputsI, keyed interface -> sub-citizen, so we look the pair up there instead.
+                let struct_id = struct_instance.struct_h.instantiated_citizen.id;
+                let implements = program_h
+                    .interface_to_sub_citizen_to_edge
+                    .get(&interface_it.id)
+                    .map_or(false, |sub_citizen_to_edge| sub_citizen_to_edge.get(&struct_id).is_some());
+                if !implements {
+                    panic!("Struct {:?} doesnt implement interface {:?}", struct_id.local_name, interface_it.id.local_name);
+                }
             }
             (a, b) => {
                 panic!("Mismatch! {:?} is not a {:?}", a, b);

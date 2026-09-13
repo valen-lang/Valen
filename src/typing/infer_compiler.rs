@@ -928,43 +928,27 @@ where
       panic!("resolve_conclusions_for_define: duplicate rune in runesAndPrototypes");
     }
 
-    let maybe_runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> = rules
+    // Harvest the denizen's own impl bounds (`where implements(..)`).
+    // conjure_impl_bounds_for_defining already deposited an Isa into conclusions for each declared
+    // relation, keyed by the bound's result_rune — the same rune the call site keys its impl-bound arg
+    // by (see the runes_and_impls loop in check_resolving_conclusions_and_resolve), so the instantiator
+    // can pair this define-side param against that arg. We record the bound's placeholder impl id
+    // (isa.impl_name), the parallel of the func-bound FunctionBound placeholder recorded above.
+    // Iterating the IndexMap conclusions in insertion order keeps this deterministic.
+    let runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> = conclusions
       .iter()
-      .filter_map(|rule| {
-        match rule {
-          // IRulexSR::DefinitionCoordIsa(r) => {
-          // let result_rune = r.result_rune.rune;
-          // let isa_templata = match conclusions.get(&result_rune) {
-          // Some(ITemplataT::Isa(isa)) => isa,
-          // Some(other) => panic!("vwat: expected IsaTemplataT for resultRune in DefinitionCoordIsaSR, got {:?}", other),
-          // None => panic!("vassertSome: resultRune not in conclusions for DefinitionCoordIsaSR"),
-          // };
-          // let impl_bound_name_t = match isa_templata.impl_name.local_name {
-          // INameT::ImplBound(bound) => bound,
-          // other => panic!("vwat: expected ImplBoundNameT in isa implName local_name, got {:?}", other),
-          // };
-          // let impl_bound_name = self.typing_interner.intern_impl_bound_name(
-          // ImplBoundNameValT {
-          // template: impl_bound_name_t.template,
-          // template_args: impl_bound_name_t.template_args,
-          // }
-          // );
-          // let impl_id = self.typing_interner.intern_id(IdValT {
-          // package_coord: isa_templata.impl_name.package_coord,
-          // init_steps: isa_templata.impl_name.init_steps,
-          // local_name: INameT::ImplBound(impl_bound_name),
-          // });
-          // Some((result_rune, *impl_id))
-          // }
-          _ => None,
-        }
+      .filter_map(|(rune, templata)| match templata {
+        ITemplataT::Isa(isa) => Some((*rune, isa.impl_name)),
+        _ => None,
       })
       .collect();
-    // VIOLATES @IIIOZ: HashMap; same cascade as rune_to_prototype above. Deferred.
-    let rune_to_impl: HashMap<IRuneS<'s>, IdT<'s, 't>> =
-      maybe_runes_and_impls.iter().cloned().collect();
-    if rune_to_impl.len() < maybe_runes_and_impls.len() {
-      panic!("resolve_conclusions_for_define: duplicate rune in maybeRunesAndImpls");
+    {
+      let mut seen: HashSet<IRuneS<'s>> = HashSet::default();
+      for (rune, _) in runes_and_impls.iter() {
+        if !seen.insert(*rune) {
+          panic!("resolve_conclusions_for_define: duplicate rune in runesAndImpls");
+        }
+      }
     }
 
     let filtered_reachable_bounds: Vec<(
@@ -979,7 +963,7 @@ where
       self.typing_interner,
       rune_to_prototype.into_iter().map(|(k, v)| (k, *v)).collect(),
       filtered_reachable_bounds,
-      rune_to_impl.into_iter().collect(),
+      runes_and_impls,
     ))
   }
 

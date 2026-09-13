@@ -61,7 +61,49 @@ fn imm_tuple_access() {
     }
 }
 
-#[ignore = "interface dispatch/upcast/downcast — owned by the interfaces branch"]
+#[test]
+fn impl_bounded_generic_is_merely_called_with_a_concrete_type() {
+    // Minimal repro of the impl-bound onion regression: a generic fn with a
+    // `where implements(T, IShip)` bound is merely CALLED with a concrete type —
+    // no method is dispatched through the bound. This should just return 7, but
+    // the instantiator panics on an impl-bound count mismatch (1 resolved at the
+    // call site vs 0 recorded on the callee template) because the define-side
+    // impl-bound harvest in resolve_conclusions_for_define is commented out.
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
+        &compilation_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        r"
+sealed interface IShip { }
+struct Raza { }
+impl IShip for Raza;
+
+func needsShip<T>(x &T) int
+where implements(T, IShip) {
+  return 7;
+}
+
+exported func main() int {
+  return needsShip(&Raza());
+}
+",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        IVonData::Int(VonInt { value: 7 }) => {}
+        other => panic!("Expected VonInt(7), got {:?}", other),
+    }
+}
+
 #[test]
 fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() {
     // The scenario: genericGetFuel<T> takes &T with a `where implements(T, IShip)` bound
