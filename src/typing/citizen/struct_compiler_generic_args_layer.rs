@@ -84,7 +84,8 @@ where
         struct_a.generic_params,
         struct_a.header_rules,
         IndexMap::default(),
-      );
+      )
+      .expect("internal: struct rune-typing should have been validated at its definition");
 
     // This checks to make sure it's a valid use of this template.
     let complete_resolve_solve = match self
@@ -190,7 +191,8 @@ where
       interface_a.generic_params,
       interface_a.rules,
       IndexMap::default(),
-    );
+    )
+    .expect("internal: interface rune-typing should have been validated at its definition");
     let rune_to_type_for_prediction: IndexMap<IRuneS<'s>, ITemplataType<'s>> = runes_for_prediction
       .iter()
       .map(|r| {
@@ -300,7 +302,8 @@ where
       struct_a.generic_params,
       struct_a.header_rules,
       IndexMap::default(),
-    );
+    )
+    .expect("internal: struct rune-typing should have been validated at its definition");
     let rune_to_type_for_prediction: IndexMap<IRuneS<'s>, ITemplataType<'s>> = runes_for_prediction
       .iter()
       .map(|r| {
@@ -404,7 +407,8 @@ where
       interface_a.generic_params,
       interface_a.rules,
       IndexMap::default(),
-    );
+    )
+    .expect("internal: interface rune-typing should have been validated at its definition");
 
     // This checks to make sure it's a valid use of this template.
     let complete_resolve_solve = match self
@@ -489,7 +493,7 @@ where
       struct_a.generic_params,
       &all_rules_s,
       IndexMap::default(),
-    );
+    )?;
     let outer_env_ienv = IEnvironmentT::from(outer_env);
     let envs = InferEnv {
       original_calling_env: outer_env,
@@ -641,7 +645,7 @@ where
       interface_a.generic_params,
       interface_a.rules,
       IndexMap::default(),
-    );
+    )?;
     let outer_env_ienv = IEnvironmentT::from(outer_env);
     let envs = InferEnv {
       original_calling_env: outer_env,

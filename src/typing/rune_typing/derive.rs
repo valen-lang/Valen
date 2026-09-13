@@ -3,6 +3,7 @@ use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::names::IRuneS;
 use crate::postparsing::rules::rules::IRulexSR;
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
 use crate::typing::rune_typing::rune_type_solver::RuneTypeSolver;
@@ -24,7 +25,7 @@ where
     generic_params: &[&GenericParameterS<'s>],
     rules: &[IRulexSR<'s>],
     extra_runes_and_types: IndexMap<IRuneS<'s>, ITemplataType<'s>>,
-  ) -> IndexMap<IRuneS<'s>, ITemplataType<'s>> {
+  ) -> Result<IndexMap<IRuneS<'s>, ITemplataType<'s>>, ICompileErrorT<'s, 't>> {
     let mut initial_rune_to_type = extra_runes_and_types;
     for generic_param in generic_params {
       initial_rune_to_type.insert(generic_param.rune.rune, generic_param.tyype.tyype());
@@ -43,8 +44,11 @@ where
       true,
       initial_rune_to_type,
     ) {
-      Ok(map) => map,
-      Err(e) => panic!("CouldntSolveRuneTypesT in derive_rune_to_type: {:?}", e),
+      Ok(map) => Ok(map),
+      Err(e) => {
+        let range = self.typing_interner.alloc_slice_from_vec(e.range.clone());
+        Err(ICompileErrorT::CouldntSolveRuneTypesT { range, error: e })
+      }
     }
   }
 }

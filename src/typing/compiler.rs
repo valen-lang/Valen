@@ -1474,7 +1474,7 @@ where
           &[],
           export.rules,
           IndexMap::default(),
-        );
+        )?;
 
         let parent_ranges_t: &'t [RangeS<'s>] =
           self.typing_interner.alloc_slice_copy(&[export.range]);

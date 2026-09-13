@@ -60,11 +60,14 @@ pub fn humanize<'s, 't>(
       format!("Couldn't find an override:\n{}",
         humanize_find_function_failure(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, range.to_vec(), fff))
     }
-    ICompileErrorT::CouldntSolveRuneTypesT { range: _, error: _ } => {
-      panic!("implement: humanize CouldntSolveRuneTypesT")
-      // "Couldn't solve rune types:\n" +
-      //   HigherTypingErrorHumanizer.humanizeRuneTypeSolveError(
-      //     codeMap, linesBetween, lineRangeContaining, lineContaining, error)
+    ICompileErrorT::CouldntSolveRuneTypesT { range: _, error } => {
+      let inner_msg = match &error.failed_solve.error {
+        ISolverError::RuleError(re) => humanize_rune_type_error(code_map, &re.err),
+        ISolverError::SolverConflict(_) | ISolverError::SolveIncomplete(_) => {
+          format!("{:?}", error.failed_solve.error)
+        }
+      };
+      format!("Couldn't solve rune types:\n{}", inner_msg)
     }
     ICompileErrorT::UnexpectedArrayElementType { range: _, expected_type, actual_type } => {
       format!("Unexpected type for array element, tried to put a {} into an array of {}",

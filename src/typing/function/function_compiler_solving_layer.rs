@@ -138,7 +138,7 @@ where
       function.generic_params,
       &all_rules,
       IndexMap::default(),
-    );
+    )?;
 
     // Feed each argument type into its param's value_type_rune: the send becomes an Equals rule plus
     // an InitialKnown, and its sender rune gets a Kind type. Without this the arg types never reach
@@ -305,7 +305,7 @@ where
       function.generic_params,
       &all_rules,
       IndexMap::default(),
-    );
+    )?;
 
     // Feed each argument type into its param's value_type_rune: the send becomes an Equals rule plus
     // an InitialKnown, and its sender rune gets a Kind type. Without this the arg types never reach
@@ -559,7 +559,7 @@ where
       function.generic_params,
       &all_rules,
       IndexMap::default(),
-    );
+    )?;
     let invocation_range = call_range;
     let mut initial_knowns: Vec<InitialKnown<'s, 't>> = {
       let mut v = self.assemble_known_templatas(function, explicit_template_args);
@@ -730,7 +730,7 @@ where
       function.generic_params,
       &all_rules,
       IndexMap::default(),
-    );
+    )?;
 
     // VTBRX: thread coutputs/calling_env/call_range_t/call_location/context_region into this call (defining-path twin, Edit 2).
     // Defining path keeps old_ for now: it has no context_region, and §2A upcast does not apply to
@@ -957,7 +957,7 @@ where
       function.generic_params,
       &all_rules,
       IndexMap::default(),
-    );
+    )?;
     let mut solver =
       self.make_solver_state(envs, coutputs, &definition_rules, &rune_to_type, &range, &[]);
 

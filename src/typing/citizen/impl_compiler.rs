@@ -129,7 +129,8 @@ where
       impl_a.user_specified_identifying_runes,
       impl_a.rules,
       impl_self_runes,
-    );
+    )
+    .expect("internal: impl rune-typing should have been validated at its definition");
 
     let original_calling_env = calling_env;
     let envs = InferEnv {
@@ -236,7 +237,8 @@ where
       impl_a.user_specified_identifying_runes,
       impl_a.rules,
       impl_self_runes,
-    );
+    )
+    .expect("internal: impl rune-typing should have been validated at its definition");
 
     let original_calling_env = calling_env;
     let envs = InferEnv {
@@ -319,7 +321,7 @@ where
       impl_a.user_specified_identifying_runes,
       impl_a.rules,
       impl_self_runes,
-    );
+    )?;
 
     let impl_placeholders: Vec<InitialKnown<'s, 't>> = impl_a
       .user_specified_identifying_runes

@@ -5,6 +5,7 @@ use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::tests::tests::new_test_code_map;
+use crate::typing::test::humanize_helper::humanize_compile_error;
 use crate::typing::typing_interner::TypingInterner;
 use bumpalo::Bump;
 
@@ -13,6 +14,44 @@ impl CompilerGenericsTests {}
 
 fn read_code_from_resource(resource_filename: &str) -> String {
   panic!("Unimplemented: read_code_from_resource");
+}
+
+#[test]
+fn undeclared_generic_in_signature_errors() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let typing_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = r#"
+struct Fwd<F> { f F; }
+func on_tick(self &Fwd<F>) { }
+exported func main() { }
+"#;
+  let code_source = CodeSource::new(vec![
+    new_test_code_map(&parse_arena, code),
+    Source::Fn(empty_v_builtins_stub),
+  ]);
+  let typing_interner = TypingInterner::new(&typing_bump);
+  let mut compile = compiler_test_compilation(
+    &typing_interner,
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &code_source,
+  );
+  let err = compile
+    .get_compiler_outputs()
+    .err()
+    .expect("expected a compile error for the undeclared generic F");
+  let humanized = humanize_compile_error(&mut compile, err);
+  assert!(
+    humanized.contains("Couldn't solve rune types") && humanized.contains("F"),
+    "expected the error to name the unresolvable type F; got:\n{humanized}"
+  );
 }
 
 #[test]
