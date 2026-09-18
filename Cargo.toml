@@ -19,6 +19,11 @@ rustc_private = true
 # half-configured combinations, which compile cleanly and fail silently, cannot happen.
 rust_interop = []
 
+# Borrow-checker selection. Default (feature off) compiles the new `luminance` borrow checker; enabling
+# this feature compiles the old `experimental` one instead. The two are mutually-exclusive impls of
+# `Compiler::check_function`, so exactly one `borrow_checker` submodule is compiled per build.
+borrow_checker_experimental = []
+
 # Frontend/VM tests without the C++ backend. build.rs skips the CMake backend build and tells the
 # linker to leave backend_ffi's C symbols unresolved — they abort if ever called, which the frontend
 # and TestVM tests never do. A temporary bridge while the backend is red (not yet reshaped for the

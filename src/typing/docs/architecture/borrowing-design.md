@@ -133,7 +133,7 @@ All IExpressionGE variants hold expression structs, just like IExpressionTE. Eac
 // A specific mutation to a specific group (as opposed to GroupExprG which an expression for expressing the group(s) a ref might point at).
 struct MutEffectPath<'g> {
   effecting_node_loc: Loc, // Which expr had this mut effect (e.g. loc of `level.tiles.clear()`)
-  steps: &'g [&'s GroupStep<'s>], // What group the effect mutated (e.g. ["level", "tiles"])
+  steps: &'g [&'g GroupStep<'s>], // What group the effect mutated (e.g. ["level", "tiles"])
 }
 enum GroupStep<'s> {
   Rune(&'s IRuneS), // a group param, e.g. <g'>, resolved to its id
