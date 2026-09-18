@@ -1,42 +1,36 @@
-//! Phase 1: `groupify_function` walks the typed body and produces the grouped `IExpressionGE`.
-//!
-//! For every reference-typed local it records the group its referent lives in; at every call it
-//! records the groups the call churns and its joint-argument facts; each loop node carries its body's
-//! aggregated churns. Parameter groups come from `make_kind_g`, which reads a group at every depth of
-//! the written type — so a nested `&Opt<&Thing in g> in d` is read once, here.
+//! Phase 1: `groupify_function` walks the typed body and produces the grouped `IExpressionGE`, on the
+//! canonical value types. For every reference-typed local it records the group its referent lives in; at
+//! every call it records the groups it churns (`mut_effects`) and its joint-argument facts; each loop
+//! node carries its body's aggregated churns. Everything is allocated in the `'g` check arena.
 
-use crate::interner::StrI;
 use crate::postparsing::ast::{FunctionS, ParameterS};
 use crate::postparsing::names::{IRuneS, IVarDeclarationNameS};
 use crate::postparsing::rules::types::{EffectS, GroupS, ITypeST, RegionS};
 use crate::typing::ast::ast::FunctionDefinitionT;
 use crate::typing::ast::expressions::{ExpressionTE, FunctionCallTE};
-use crate::typing::borrow_checker::experimental::borrow_types::{
-  group_expr_from_group_s, subst_group_expr, BorrowRefGT, GroupExprG, KindGT,
-};
-use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::typing::borrow_checker::experimental::grouped_ast::{
-  flatten, split_unions, AccessEventG, GroupStep, IExpressionGE, MutEffectPath,
-};
-use crate::typing::templata::templata::ITemplataT;
+use crate::typing::borrow_checker::ast_g::{GroupStep, MutEffectPath};
+use crate::typing::borrow_checker::access_event::AccessEventG;
+use crate::typing::borrow_checker::experimental::borrow_types::{group_expr_from_group_s, subst_group_expr};
+use crate::typing::borrow_checker::experimental::grouped_ast::{flatten, split_unions, IExpressionGE};
+use crate::typing::borrow_checker::group_expr::GroupExprG;
+use crate::typing::borrow_checker::kind_g::{BorrowRefGT, KindGT, VoidGT};
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
-use crate::typing::names::names::{IVarNameT, IdT, IdValT, INameT};
-use crate::typing::types::types::{KindT, VoidT};
+use crate::typing::names::names::{IdT, IdValT, INameT, IVarNameT};
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::types::types::KindT;
 use crate::utils::fx::IndexMap;
 use crate::utils::range::RangeS;
 use bumpalo::Bump;
+use crate::interner::StrI;
 
-/// Phase-1 state: the reference-typed locals seen so far and where each points, plus the function
-/// being grouped (for parameter types).
-struct GCtx<'s, 't> {
-  /// Each in-scope local's full grouped type (its `let`'s bound value, with groups at every depth). A
-  /// `LocalLookup` borrows it, a `Deref`/`Unlet` reads through it, so nested groups flow from here.
-  locals: Vec<(IVarNameT<'s, 't>, KindGT<'s, 't>)>,
+/// Phase-1 state: the reference-typed locals seen so far and where each points, plus the function being
+/// grouped, and the access log for `calculate_aliasing_info`.
+struct GCtx<'s, 't, 'g> {
+  locals: Vec<(IVarNameT<'s, 't>, KindGT<'s, 't, 'g>)>,
   function_s: &'s FunctionS<'s>,
   function_t: &'t FunctionDefinitionT<'s, 't>,
-  /// Every load/store/call/marker seen so far, in walk order, for `calculate_aliasing_info` to derive
-  /// restrict regions.
   access_log: Vec<AccessEventG<'s, 't>>,
 }
 
@@ -54,81 +48,67 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
     Ok((body, ctx.access_log))
   }
 
-  /// Rebuild one typed expression as its grouped mirror, allocating children in `arena`. The result
-  /// `KindGT` and the checker payloads (bind, call churns/uses/joint, loop churns, branch divergence)
-  /// are filled in; everything else mirrors `ExpressionTE` structurally.
+  /// Rebuild one typed expression as its grouped mirror, allocating children in `arena`.
   fn groupify<'g>(
     &self,
     coutputs: &CompilerOutputs<'s, 't>,
     expr: &ExpressionTE<'s, 't>,
-    ctx: &mut GCtx<'s, 't>,
+    ctx: &mut GCtx<'s, 't, 'g>,
     arena: &'g Bump,
   ) -> IExpressionGE<'s, 't, 'g> {
-    // Post-order: build the grouped children first, then compose this node's result `KindGT` from
-    // them (and from tracked locals / parameters / the callee signature for the leaves).
-    let node = match expr {
+    match expr {
       ExpressionTE::LetAndLend(e) => {
         let child = arena.alloc(self.groupify(coutputs, &e.expr, ctx, arena));
-        // `&{ let tmp = e; tmp }`: a fresh temporary local bound to `e`, then lent. Track the temp so a
-        // later use resolves, and produce a borrow of it grouped `Local(tmp)`.
-        ctx.locals.push((e.variable.name, child.result().clone()));
-        let result = ref_kind_g(GroupExprG::Local(e.variable.name), child.result().clone());
+        ctx.locals.push((e.variable.name, child.result()));
+        let result = ref_kind_g(GroupExprG::Local(&e.variable.name), child.result(), arena);
         IExpressionGE::LetAndLend { result, expr: child }
       }
       ExpressionTE::LockWeak(e) => {
         let inner_expr = arena.alloc(self.groupify(coutputs, &e.inner_expr, ctx, arena));
-        // A weak lock yields `Opt<&T>`; the nested borrow's group is a deferred (weak) feature, so the
-        // groupless structure trips the `has_empty_group` panic in `node_result`.
-        let result = self.make_kind_g_groupless(expr.result());
+        let result = self.make_kind_g_groupless(expr.result(), arena);
         IExpressionGE::LockWeak { result, inner_expr }
       }
       ExpressionTE::BorrowToWeak(e) => {
         let inner_expr = arena.alloc(self.groupify(coutputs, &e.inner_expr, ctx, arena));
-        let result = self.make_kind_g_groupless(expr.result());
+        let result = self.make_kind_g_groupless(expr.result(), arena);
         IExpressionGE::BorrowToWeak { result, inner_expr }
       }
       ExpressionTE::LetNormal(l) => {
         let child = arena.alloc(self.groupify(coutputs, &l.expr, ctx, arena));
-        // Track every local by its full grouped type (the bound value's), so a later lookup / move /
-        // deref reads its groups at every depth. `bind` still carries the outer group for phase 2's
-        // registration (only borrow bindings register a live reference).
-        ctx.locals.push((l.variable.name, child.result().clone()));
+        ctx.locals.push((l.variable.name, child.result()));
         let bind = match child.result() {
-          KindGT::BorrowRef(b) => Some((l.variable.name, b.group.clone())),
+          KindGT::BorrowRef(b) => Some((l.variable.name, b.group)),
           _ => None,
         };
         IExpressionGE::LetNormal { result: void_kind_g(), expr: child, bind }
       }
       ExpressionTE::Unlet(u) => {
-        // `^x` moves the local out — its result is the local's grouped type.
-        IExpressionGE::Unlet { result: self.local_type(ctx, u.variable.name, u.variable.tyype) }
+        IExpressionGE::Unlet { result: self.local_type(ctx, u.variable.name, u.variable.tyype, arena) }
       }
-      ExpressionTE::Discard(e) => {
-        IExpressionGE::Discard { result: void_kind_g(), expr: arena.alloc(self.groupify(coutputs, &e.expr, ctx, arena)) }
-      }
+      ExpressionTE::Discard(e) => IExpressionGE::Discard {
+        result: void_kind_g(),
+        expr: arena.alloc(self.groupify(coutputs, &e.expr, ctx, arena)),
+      },
       ExpressionTE::If(if_te) => {
         let condition = arena.alloc(self.groupify(coutputs, &if_te.condition, ctx, arena));
         let then_call = arena.alloc(self.groupify(coutputs, &if_te.then_call, ctx, arena));
         let else_call = arena.alloc(self.groupify(coutputs, &if_te.else_call, ctx, arena));
         let then_diverges = matches!(if_te.then_call.result(), KindT::Never(_));
         let else_diverges = matches!(if_te.else_call.result(), KindT::Never(_));
-        // Result is the non-diverging branch's grouped result.
-        let result = if then_diverges { else_call.result().clone() } else { then_call.result().clone() };
+        let result = if then_diverges { else_call.result() } else { then_call.result() };
         IExpressionGE::If { result, condition, then_call, else_call, then_diverges, else_diverges }
       }
       ExpressionTE::While(w) => {
         let body = arena.alloc(self.groupify(coutputs, &w.block.inner, ctx, arena));
-        // The loop's churns are the closure of every call's churns inside its (already-grouped) body,
-        // including nested loops — so phase 2 needs no fixpoint.
         let mut mut_effects = vec![];
         collect_subtree_churns(body, &mut mut_effects);
-        IExpressionGE::While { result: self.make_kind_g_groupless(expr.result()), body, mut_effects }
+        IExpressionGE::While { result: self.make_kind_g_groupless(expr.result(), arena), body, mut_effects }
       }
       ExpressionTE::Mutate(m) => {
         let destination_expr = arena.alloc(self.groupify(coutputs, &m.destination_expr, ctx, arena));
         let source_expr = arena.alloc(self.groupify(coutputs, &m.source_expr, ctx, arena));
-        if let Some((base_ref, group)) = self.base_ref_and_group(ctx, &m.destination_expr) {
-          ctx.access_log.push(AccessEventG::Access { is_store: true, base_ref, group, loct: m.loct });
+        if let Some((base_ref, group)) = self.base_ref_and_group(ctx, &m.destination_expr, arena) {
+          ctx.access_log.push(AccessEventG::Store { base_ref, group, loct: m.loct });
         }
         IExpressionGE::Mutate { result: void_kind_g(), destination_expr, source_expr }
       }
@@ -137,13 +117,15 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         source_expr: arena.alloc(self.groupify(coutputs, &e.source_expr, ctx, arena)),
       },
       ExpressionTE::Return(r) => IExpressionGE::Return {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         source_expr: arena.alloc(self.groupify(coutputs, &r.source_expr, ctx, arena)),
       },
-      ExpressionTE::Break(_) => IExpressionGE::Break { result: self.make_kind_g_groupless(expr.result()) },
+      ExpressionTE::Break(_) => {
+        IExpressionGE::Break { result: self.make_kind_g_groupless(expr.result(), arena) }
+      }
       ExpressionTE::Block(b) => {
         let inner = arena.alloc(self.groupify(coutputs, &b.inner, ctx, arena));
-        let result = inner.result().clone();
+        let result = inner.result();
         IExpressionGE::Block { result, inner }
       }
       ExpressionTE::Consecutor(c) => {
@@ -158,50 +140,58 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
           grouped.push(g);
         }
         let exprs = arena.alloc_slice_fill_iter(grouped.into_iter());
-        let result = exprs.last().expect("consecutor with no expressions").result().clone();
+        let result = exprs.last().expect("consecutor with no expressions").result();
         IExpressionGE::Consecutor { result, exprs }
       }
       ExpressionTE::StaticArrayFromValues(e) => IExpressionGE::StaticArrayFromValues {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         elements: arena
           .alloc_slice_fill_iter(e.elements.iter().map(|x| self.groupify(coutputs, x, ctx, arena))),
       },
       ExpressionTE::ArraySize(e) => IExpressionGE::ArraySize {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         array: arena.alloc(self.groupify(coutputs, &e.array, ctx, arena)),
       },
       ExpressionTE::IsSameInstance(e) => IExpressionGE::IsSameInstance {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         left: arena.alloc(self.groupify(coutputs, &e.left, ctx, arena)),
         right: arena.alloc(self.groupify(coutputs, &e.right, ctx, arena)),
       },
       ExpressionTE::AsSubtype(e) => {
         let source_expr = arena.alloc(self.groupify(coutputs, &e.source_expr, ctx, arena));
-        let result = self.cast_result(expr.result(), source_expr.result());
+        let result = self.cast_result(expr.result(), source_expr.result(), arena);
         IExpressionGE::AsSubtype { result, source_expr }
       }
       ExpressionTE::VoidLiteral(_) => IExpressionGE::VoidLiteral { result: void_kind_g() },
-      ExpressionTE::ConstantInt(_) => IExpressionGE::ConstantInt { result: self.make_kind_g_groupless(expr.result()) },
-      ExpressionTE::ConstantBool(_) => IExpressionGE::ConstantBool { result: self.make_kind_g_groupless(expr.result()) },
-      ExpressionTE::ConstantStr(_) => IExpressionGE::ConstantStr { result: self.make_kind_g_groupless(expr.result()) },
-      ExpressionTE::ConstantFloat(_) => IExpressionGE::ConstantFloat { result: self.make_kind_g_groupless(expr.result()) },
+      ExpressionTE::ConstantInt(_) => {
+        IExpressionGE::ConstantInt { result: self.make_kind_g_groupless(expr.result(), arena) }
+      }
+      ExpressionTE::ConstantBool(_) => {
+        IExpressionGE::ConstantBool { result: self.make_kind_g_groupless(expr.result(), arena) }
+      }
+      ExpressionTE::ConstantStr(_) => {
+        IExpressionGE::ConstantStr { result: self.make_kind_g_groupless(expr.result(), arena) }
+      }
+      ExpressionTE::ConstantFloat(_) => {
+        IExpressionGE::ConstantFloat { result: self.make_kind_g_groupless(expr.result(), arena) }
+      }
       ExpressionTE::ArgLookup(a) => {
-        IExpressionGE::ArgLookup { result: self.arg_type(a.param_index as usize, ctx) }
+        IExpressionGE::ArgLookup { result: self.arg_type(a.param_index as usize, ctx, arena) }
       }
       ExpressionTE::ArrayLength(e) => IExpressionGE::ArrayLength {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         array_expr: arena.alloc(self.groupify(coutputs, &e.array_expr, ctx, arena)),
       },
       ExpressionTE::InterfaceFunctionCall(e) => IExpressionGE::InterfaceFunctionCall {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         args: arena.alloc_slice_fill_iter(e.args.iter().map(|a| self.groupify(coutputs, a, ctx, arena))),
       },
       ExpressionTE::BoundFunctionCall(e) => IExpressionGE::InterfaceFunctionCall {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         args: arena.alloc_slice_fill_iter(e.args.iter().map(|a| self.groupify(coutputs, a, ctx, arena))),
       },
       ExpressionTE::ExternFunctionCall(e) => IExpressionGE::ExternFunctionCall {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         args: arena.alloc_slice_fill_iter(e.args.iter().map(|a| self.groupify(coutputs, a, ctx, arena))),
       },
       ExpressionTE::FunctionCall(call) => {
@@ -209,35 +199,34 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
           .alloc_slice_fill_iter(call.args.iter().map(|a| self.groupify(coutputs, a, ctx, arena)));
         let (result, mut_effects) = match self.resolve_callee(coutputs, call) {
           Some(callee) => {
-            // Bind each callee group rune to the caller-side group of the argument passed for it, read
-            // off that argument's already-grouped result. Both the return group and the churn effects
-            // cross into the caller frame through this substitution.
             let subst = arg_rune_subst(callee, args);
-            (self.call_result_kind(call, callee, &subst), self.call_mut_effects(call, callee, &subst))
+            (
+              self.call_result_kind(call, callee, &subst, arena),
+              self.call_mut_effects(call, callee, &subst, arena),
+            )
           }
-          // No callee signature (e.g. a lambda call): groupless return — a borrow there is underivable
-          // and trips the totality panic; a non-borrow return is fine.
-          None => (self.make_kind_g_groupless(call.callable.return_type), vec![]),
+          None => (self.make_kind_g_groupless(call.callable.return_type, arena), vec![]),
         };
-        let touched: Vec<Vec<GroupStep<'s, 't>>> = mut_effects.iter().map(|m| m.steps.clone()).collect();
+        let touched: Vec<Vec<GroupStep<'s, 't>>> =
+          mut_effects.iter().map(|m| m.steps.iter().map(|s| **s).collect()).collect();
         ctx.access_log.push(AccessEventG::Call { touched, loct: call.loct });
         IExpressionGE::FunctionCall { result, args, mut_effects, call }
       }
       ExpressionTE::Reinterpret(e) => {
         let child = arena.alloc(self.groupify(coutputs, &e.expr, ctx, arena));
-        let result = self.cast_result(expr.result(), child.result());
+        let result = self.cast_result(expr.result(), child.result(), arena);
         IExpressionGE::Reinterpret { result, expr: child }
       }
       ExpressionTE::Construct(e) => IExpressionGE::Construct {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         args: arena.alloc_slice_fill_iter(e.args.iter().map(|a| self.groupify(coutputs, a, ctx, arena))),
       },
       ExpressionTE::NewRuntimeSizedArray(e) => IExpressionGE::NewRuntimeSizedArray {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         capacity_expr: arena.alloc(self.groupify(coutputs, &e.capacity_expr, ctx, arena)),
       },
       ExpressionTE::StaticArrayFromCallable(e) => IExpressionGE::StaticArrayFromCallable {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         generator: arena.alloc(self.groupify(coutputs, &e.generator, ctx, arena)),
       },
       ExpressionTE::DestroyStaticSizedArrayIntoFunction(e) => {
@@ -258,7 +247,7 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         array_expr: arena.alloc(self.groupify(coutputs, &e.array_expr, ctx, arena)),
       },
       ExpressionTE::RuntimeSizedArrayCapacity(e) => IExpressionGE::RuntimeSizedArrayCapacity {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         array_expr: arena.alloc(self.groupify(coutputs, &e.array_expr, ctx, arena)),
       },
       ExpressionTE::PushRuntimeSizedArray(e) => IExpressionGE::PushRuntimeSizedArray {
@@ -267,144 +256,150 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
         new_element_expr: arena.alloc(self.groupify(coutputs, &e.new_element_expr, ctx, arena)),
       },
       ExpressionTE::PopRuntimeSizedArray(e) => IExpressionGE::PopRuntimeSizedArray {
-        result: self.make_kind_g_groupless(expr.result()),
+        result: self.make_kind_g_groupless(expr.result(), arena),
         array_expr: arena.alloc(self.groupify(coutputs, &e.array_expr, ctx, arena)),
       },
       ExpressionTE::InterfaceToInterfaceUpcast(e) => {
         let inner_expr = arena.alloc(self.groupify(coutputs, &e.inner_expr, ctx, arena));
-        let result = self.cast_result(expr.result(), inner_expr.result());
+        let result = self.cast_result(expr.result(), inner_expr.result(), arena);
         IExpressionGE::InterfaceToInterfaceUpcast { result, inner_expr }
       }
       ExpressionTE::UpcastInterface(e) => {
         let inner_expr = arena.alloc(self.groupify(coutputs, &e.inner_expr, ctx, arena));
-        let result = self.cast_result(expr.result(), inner_expr.result());
+        let result = self.cast_result(expr.result(), inner_expr.result(), arena);
         IExpressionGE::Upcast { result, inner_expr }
       }
       ExpressionTE::UpcastGeneric(e) => {
         let inner_expr = arena.alloc(self.groupify(coutputs, &e.inner_expr, ctx, arena));
-        let result = self.cast_result(expr.result(), inner_expr.result());
+        let result = self.cast_result(expr.result(), inner_expr.result(), arena);
         IExpressionGE::Upcast { result, inner_expr }
       }
-      ExpressionTE::Destroy(e) => {
-        IExpressionGE::Destroy { result: void_kind_g(), expr: arena.alloc(self.groupify(coutputs, &e.expr, ctx, arena)) }
-      }
+      ExpressionTE::Destroy(e) => IExpressionGE::Destroy {
+        result: void_kind_g(),
+        expr: arena.alloc(self.groupify(coutputs, &e.expr, ctx, arena)),
+      },
       ExpressionTE::CopyPrim(e) => {
         let inner = arena.alloc(self.groupify(coutputs, &e.inner, ctx, arena));
-        // A primitive copy reads a value through its reference — a real load into the base's group.
-        if let Some((base_ref, group)) = self.base_ref_and_group(ctx, &e.inner) {
-          ctx.access_log.push(AccessEventG::Access { is_store: false, base_ref, group, loct: e.loct });
+        if let Some((base_ref, group)) = self.base_ref_and_group(ctx, &e.inner, arena) {
+          ctx.access_log.push(AccessEventG::Read { base_ref, group, loct: e.loct });
         }
-        IExpressionGE::CopyPrim { result: self.make_kind_g_groupless(expr.result()), inner }
+        IExpressionGE::CopyPrim { result: self.make_kind_g_groupless(expr.result(), arena), inner }
       }
       ExpressionTE::LocalLookup(l) => {
-        // `x` yields a borrow of the local's storage, pointing at group `Local(x)`; its referent is the
-        // local's grouped type, so nested groups flow through.
-        let inner = self.local_type(ctx, l.local_variable.name, l.local_variable.tyype);
-        IExpressionGE::LocalLookup { result: ref_kind_g(GroupExprG::Local(l.local_variable.name), inner) }
+        let inner = self.local_type(ctx, l.local_variable.name, l.local_variable.tyype, arena);
+        IExpressionGE::LocalLookup {
+          result: ref_kind_g(GroupExprG::Local(&l.local_variable.name), inner, arena),
+        }
       }
       ExpressionTE::StaticSizedArrayLookup(e) => {
         let array_expr = arena.alloc(self.groupify(coutputs, &e.array_expr, ctx, arena));
         let index_expr = arena.alloc(self.groupify(coutputs, &e.index_expr, ctx, arena));
-        let result = self.element_result(expr.result(), array_expr.result());
+        let result = self.element_result(expr.result(), array_expr.result(), arena);
         IExpressionGE::StaticSizedArrayLookup { result, array_expr, index_expr }
       }
       ExpressionTE::RuntimeSizedArrayLookup(e) => {
         let array_expr = arena.alloc(self.groupify(coutputs, &e.array_expr, ctx, arena));
         let index_expr = arena.alloc(self.groupify(coutputs, &e.index_expr, ctx, arena));
-        let result = self.element_result(expr.result(), array_expr.result());
+        let result = self.element_result(expr.result(), array_expr.result(), arena);
         IExpressionGE::RuntimeSizedArrayLookup { result, array_expr, index_expr }
       }
       ExpressionTE::MemberLookup(e) => {
         let struct_expr = arena.alloc(self.groupify(coutputs, &e.struct_expr, ctx, arena));
-        let result = self.member_result(expr.result(), struct_expr.result(), &e.member_name);
+        let result = self.member_result(expr.result(), struct_expr.result(), &e.member_name, arena);
         IExpressionGE::MemberLookup { result, struct_expr }
       }
       ExpressionTE::Deref(d) => {
         let inner = arena.alloc(self.groupify(coutputs, &d.inner, ctx, arena));
-        // Dereferencing peels one borrow: the result is the referent of the inner grouped borrow, with
-        // its nested groups intact.
         let result = deref_kind_g(inner.result());
-        // Only a deref that yields a value is a real load into a group; one that yields another borrow is
-        // pointer plumbing (peeling a `&&` down to `&`), which touches the slot, not the object group.
         if !matches!(result, KindGT::BorrowRef(_)) {
-          if let Some((base_ref, group)) = self.base_ref_and_group(ctx, &d.inner) {
-            ctx.access_log.push(AccessEventG::Access { is_store: false, base_ref, group, loct: d.loct });
+          if let Some((base_ref, group)) = self.base_ref_and_group(ctx, &d.inner, arena) {
+            ctx.access_log.push(AccessEventG::Read { base_ref, group, loct: d.loct });
           }
         }
         IExpressionGE::Deref { result, inner }
       }
-    };
-    node
-  }
-
-  /// A local's grouped type. A `let`-bound local (the only kind whose referent groups matter — a
-  /// reference binding) is tracked with groups at every depth. A local we tracked nothing for is a
-  /// non-reference (or a compiler temporary), whose grouped type is exactly its plain typed type — it
-  /// has no reference groups to record. If such an untracked local is nonetheless a reference, its
-  /// groupless referent surfaces as an `Empty` and trips the totality panic (a real derivation gap).
-  fn local_type(&self, ctx: &GCtx<'s, 't>, name: IVarNameT<'s, 't>, typed: KindT<'s, 't>) -> KindGT<'s, 't> {
-    match ctx.locals.iter().find(|(n, _)| *n == name) {
-      Some((_, k)) => k.clone(),
-      None => self.make_kind_g_groupless(typed),
     }
   }
 
-  /// A parameter's full grouped type, read from its written type at every depth (`make_kind_g`).
-  fn arg_type(&self, i: usize, ctx: &GCtx<'s, 't>) -> KindGT<'s, 't> {
-    let ps = ctx.function_s.params.get(i).expect("arg index out of range");
-    let pt = ctx.function_t.header.params.get(i).expect("arg index out of range");
-    self.make_kind_g(pt.tyype, &ps.tyype, Some(pt.name))
+  /// A local's grouped type: a tracked reference binding carries groups at every depth; anything else is
+  /// its plain typed type, groupless.
+  fn local_type<'g>(
+    &self,
+    ctx: &GCtx<'s, 't, 'g>,
+    name: IVarNameT<'s, 't>,
+    typed: KindT<'s, 't>,
+    arena: &'g Bump,
+  ) -> KindGT<'s, 't, 'g> {
+    match ctx.locals.iter().find(|(n, _)| *n == name) {
+      Some((_, k)) => *k,
+      None => self.make_kind_g_groupless(typed, arena),
+    }
   }
 
-  /// A call's grouped result: the callee's declared return type with its groups crossed into the caller
-  /// frame via `subst` (each callee group rune → the caller group its argument was bound to). A callee
-  /// with no return signature (e.g. a lambda's inferred return) yields the groupless structure — a
-  /// borrow there is underivable and trips the totality panic; a non-borrow return is fine.
-  fn call_result_kind(
+  /// A parameter's full grouped type, read from its written type at every depth.
+  fn arg_type<'g>(&self, i: usize, ctx: &GCtx<'s, 't, 'g>, arena: &'g Bump) -> KindGT<'s, 't, 'g> {
+    let ps = ctx.function_s.params.get(i).expect("arg index out of range");
+    let pt = ctx.function_t.header.params.get(i).expect("arg index out of range");
+    self.make_kind_g(pt.tyype, &ps.tyype, Some(&pt.name), arena)
+  }
+
+  /// A call's grouped result: the callee's declared return type, groups crossed into the caller frame.
+  fn call_result_kind<'g>(
     &self,
     call: &FunctionCallTE<'s, 't>,
     callee: &'s FunctionS<'s>,
-    subst: &IndexMap<IRuneS<'s>, GroupExprG<'s, 't>>,
-  ) -> KindGT<'s, 't> {
+    subst: &IndexMap<IRuneS<'s>, GroupExprG<'s, 't, 'g>>,
+    arena: &'g Bump,
+  ) -> KindGT<'s, 't, 'g> {
     match callee.maybe_return_type.as_ref() {
       Some(return_st) => {
-        let return_kind_g = self.make_kind_g(call.callable.return_type, return_st, None);
-        self.substitute_groups(&return_kind_g, subst)
+        let return_kind_g = self.make_kind_g(call.callable.return_type, return_st, None, arena);
+        self.substitute_groups(return_kind_g, subst, arena)
       }
-      None => self.make_kind_g_groupless(call.callable.return_type),
+      None => self.make_kind_g_groupless(call.callable.return_type, arena),
     }
   }
 
-  /// A cast (upcast / reinterpret / as-subtype) keeps the operand's outer group and re-expresses the
-  /// referent's structure. A nested borrow in that structure has no derivable group and trips the panic.
-  fn cast_result(&self, cast_kind: KindT<'s, 't>, operand: &KindGT<'s, 't>) -> KindGT<'s, 't> {
+  /// A cast keeps the operand's outer group and re-expresses the referent's structure.
+  fn cast_result<'g>(
+    &self,
+    cast_kind: KindT<'s, 't>,
+    operand: KindGT<'s, 't, 'g>,
+    arena: &'g Bump,
+  ) -> KindGT<'s, 't, 'g> {
     match (cast_kind, operand) {
       (KindT::BorrowRef(b), KindGT::BorrowRef(ob)) => {
-        ref_kind_g(ob.group.clone(), self.make_kind_g_groupless(b.inner))
+        ref_kind_g(ob.group, self.make_kind_g_groupless(b.inner, arena), arena)
       }
-      (other, _) => self.make_kind_g_groupless(other),
+      (other, _) => self.make_kind_g_groupless(other, arena),
     }
   }
 
-  /// An array-element access yields a borrow into the array's `Elements` child group.
-  fn element_result(&self, access_kind: KindT<'s, 't>, array: &KindGT<'s, 't>) -> KindGT<'s, 't> {
-    match (access_kind, array) {
-      (KindT::BorrowRef(b), KindGT::BorrowRef(ab)) => ref_kind_g(
-        GroupExprG::Elements { base: Box::new(ab.group.clone()) },
-        self.make_kind_g_groupless(b.inner),
-      ),
-      (other, _) => self.make_kind_g_groupless(other),
-    }
-  }
-
-  /// A member access yields a borrow into the struct's `Member` child group. A member that is itself a
-  /// borrow (a closure capture, or a borrow-reference field) has no derivable group and trips the panic.
-  fn member_result(
+  /// An array-element access yields a borrow into the array's child-elements group.
+  fn element_result<'g>(
     &self,
     access_kind: KindT<'s, 't>,
-    struct_val: &KindGT<'s, 't>,
+    array: KindGT<'s, 't, 'g>,
+    arena: &'g Bump,
+  ) -> KindGT<'s, 't, 'g> {
+    match (access_kind, array) {
+      (KindT::BorrowRef(b), KindGT::BorrowRef(ab)) => ref_kind_g(
+        GroupExprG::ChildElements { base: arena.alloc(ab.group) },
+        self.make_kind_g_groupless(b.inner, arena),
+        arena,
+      ),
+      (other, _) => self.make_kind_g_groupless(other, arena),
+    }
+  }
+
+  /// A member access yields a borrow into the struct's member child group.
+  fn member_result<'g>(
+    &self,
+    access_kind: KindT<'s, 't>,
+    struct_val: KindGT<'s, 't, 'g>,
     member_name_t: &IVarNameT<'s, 't>,
-  ) -> KindGT<'s, 't> {
+    arena: &'g Bump,
+  ) -> KindGT<'s, 't, 'g> {
     match (access_kind, struct_val) {
       (KindT::BorrowRef(b), KindGT::BorrowRef(sb)) => {
         let member_name = match member_name_t {
@@ -413,27 +408,34 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
           _ => panic!("vfail: member lookup with a non-member name"),
         };
         ref_kind_g(
-          GroupExprG::Member { base: Box::new(sb.group.clone()), member_name },
-          self.make_kind_g_groupless(b.inner),
+          GroupExprG::Member { base: arena.alloc(sb.group), member_name },
+          self.make_kind_g_groupless(b.inner, arena),
+          arena,
         )
       }
-      (other, _) => self.make_kind_g_groupless(other),
+      (other, _) => self.make_kind_g_groupless(other, arena),
     }
   }
 
   /// The caller-side groups a call churns, from the callee's declared effects and parameter groups.
-  fn call_mut_effects(
+  fn call_mut_effects<'g>(
     &self,
     call: &FunctionCallTE<'s, 't>,
     callee: &'s FunctionS<'s>,
-    subst: &IndexMap<IRuneS<'s>, GroupExprG<'s, 't>>,
-  ) -> Vec<MutEffectPath<'s, 't>> {
+    subst: &IndexMap<IRuneS<'s>, GroupExprG<'s, 't, 'g>>,
+    arena: &'g Bump,
+  ) -> Vec<MutEffectPath<'s, 't, 'g>> {
     let mut paths = vec![];
     for effect in callee.effects {
       if let EffectS::Mut(gs) = effect {
-        let caller = subst_group_expr(&group_expr_from_group_s(gs), subst);
-        for steps in split_unions(&caller) {
-          paths.push(MutEffectPath { effecting_node_loc: call.loct, steps });
+        let caller = subst_group_expr(group_expr_from_group_s(gs, arena), subst, arena);
+        for steps in split_unions(caller) {
+          let step_refs: Vec<&'g GroupStep<'s, 't>> =
+            steps.iter().map(|s| &*arena.alloc(*s)).collect();
+          paths.push(MutEffectPath {
+            effecting_node_loc: call.loct,
+            steps: arena.alloc_slice_fill_iter(step_refs),
+          });
         }
       }
     }
@@ -460,47 +462,83 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
     coutputs.peek_postparsed_function(template_id)
   }
 
-  /// The root reference an access chain goes through, and the group that reference points into. Walks
-  /// the `member`/`deref`/`lookup` wrappers down to the `LocalLookup` or `ArgLookup` at the bottom and
-  /// returns its name plus its referent group — so `a.fuel` and `b.fuel` for `a`/`b &Ship in g` both
-  /// report group `g` (the shared group), told apart only by the reference. `None` for a chain rooted in
-  /// something unnamed (a temporary, a call result) or a non-borrow, which forms no restrict region.
-  fn base_ref_and_group(
+  /// The root reference an access chain goes through, and the flat group that reference points into.
+  fn base_ref_and_group<'g>(
     &self,
-    ctx: &GCtx<'s, 't>,
+    ctx: &GCtx<'s, 't, 'g>,
     expr: &ExpressionTE<'s, 't>,
+    arena: &'g Bump,
   ) -> Option<(IVarNameT<'s, 't>, Vec<GroupStep<'s, 't>>)> {
     match expr {
       ExpressionTE::LocalLookup(l) => {
-        let ty = self.local_type(ctx, l.local_variable.name, l.local_variable.tyype);
-        Some((l.local_variable.name, borrowref_group(&ty)?))
+        let ty = self.local_type(ctx, l.local_variable.name, l.local_variable.tyype, arena);
+        Some((l.local_variable.name, borrowref_group(ty)?))
       }
       ExpressionTE::ArgLookup(a) => {
         let name = ctx.function_t.header.params.get(a.param_index as usize)?.name;
-        Some((name, borrowref_group(&self.arg_type(a.param_index as usize, ctx))?))
+        Some((name, borrowref_group(self.arg_type(a.param_index as usize, ctx, arena))?))
       }
-      ExpressionTE::Deref(d) => self.base_ref_and_group(ctx, &d.inner),
-      ExpressionTE::CopyPrim(e) => self.base_ref_and_group(ctx, &e.inner),
-      ExpressionTE::MemberLookup(e) => self.base_ref_and_group(ctx, &e.struct_expr),
-      ExpressionTE::StaticSizedArrayLookup(e) => self.base_ref_and_group(ctx, &e.array_expr),
-      ExpressionTE::RuntimeSizedArrayLookup(e) => self.base_ref_and_group(ctx, &e.array_expr),
+      ExpressionTE::Deref(d) => self.base_ref_and_group(ctx, &d.inner, arena),
+      ExpressionTE::CopyPrim(e) => self.base_ref_and_group(ctx, &e.inner, arena),
+      ExpressionTE::MemberLookup(e) => self.base_ref_and_group(ctx, &e.struct_expr, arena),
+      ExpressionTE::StaticSizedArrayLookup(e) => self.base_ref_and_group(ctx, &e.array_expr, arena),
+      ExpressionTE::RuntimeSizedArrayLookup(e) => self.base_ref_and_group(ctx, &e.array_expr, arena),
       _ => None,
     }
   }
 }
 
 /// The flattened group a borrow result points into, or `None` for a non-borrow.
-fn borrowref_group<'s, 't>(k: &KindGT<'s, 't>) -> Option<Vec<GroupStep<'s, 't>>> {
+fn borrowref_group<'s, 't, 'g>(k: KindGT<'s, 't, 'g>) -> Option<Vec<GroupStep<'s, 't>>> {
   match k {
-    KindGT::BorrowRef(b) => Some(flatten(&b.group)),
+    KindGT::BorrowRef(b) => Some(flatten(b.group)),
     _ => None,
+  }
+}
+
+/// Every churn inside a grouped subtree, for a loop's aggregated `mut_effects`.
+fn collect_subtree_churns<'s, 't, 'g>(
+  node: &IExpressionGE<'s, 't, 'g>,
+  out: &mut Vec<MutEffectPath<'s, 't, 'g>>,
+) {
+  if let IExpressionGE::FunctionCall { mut_effects, .. } = node {
+    // Canonical `MutEffectPath` isn't `Copy`; its fields are, so mirror it by hand.
+    out.extend(
+      mut_effects
+        .iter()
+        .map(|m| MutEffectPath { effecting_node_loc: m.effecting_node_loc, steps: m.steps }),
+    );
+  }
+  for child in node.children() {
+    collect_subtree_churns(child, out);
+  }
+}
+
+/// A borrow reference `KindGT` from a group and its referent type.
+fn ref_kind_g<'s, 't, 'g>(
+  group: GroupExprG<'s, 't, 'g>,
+  inner: KindGT<'s, 't, 'g>,
+  arena: &'g Bump,
+) -> KindGT<'s, 't, 'g> {
+  KindGT::BorrowRef(arena.alloc(BorrowRefGT { inner, group }))
+}
+
+/// The `void` result `KindGT`, for statement-like nodes.
+fn void_kind_g<'s, 't, 'g>() -> KindGT<'s, 't, 'g> {
+  KindGT::Void(VoidGT)
+}
+
+/// Peel one borrow: a `Deref`'s result is its operand's referent.
+fn deref_kind_g<'s, 't, 'g>(operand: KindGT<'s, 't, 'g>) -> KindGT<'s, 't, 'g> {
+  match operand {
+    KindGT::BorrowRef(b) => b.inner,
+    other => panic!("vfail: deref of a non-borrow: {:?}", other),
   }
 }
 
 /// A statement-position bare integer landmark (`103;`), for tests to pin a restrict region by value.
 /// Matches a `ConstantInt` standing on its own — with or without the `Discard` the typing pass wraps a
-/// dropped value in. Operand constants (the `1` in `set a.fuel = 1`) never reach here, since only whole
-/// statements (consecutor elements) are checked.
+/// dropped value in.
 fn statement_marker<'s, 't>(expr: &ExpressionTE<'s, 't>) -> Option<i32> {
   let inner = match expr {
     ExpressionTE::Discard(d) => &d.expr,
@@ -512,38 +550,6 @@ fn statement_marker<'s, 't>(expr: &ExpressionTE<'s, 't>) -> Option<i32> {
       _ => None,
     },
     _ => None,
-  }
-}
-
-/// Every churn inside a grouped subtree, for a loop's aggregated `mut_effects`: each call's
-/// `mut_effects`, recursing through all children including nested loops.
-fn collect_subtree_churns<'s, 't, 'g>(
-  node: &IExpressionGE<'s, 't, 'g>,
-  out: &mut Vec<MutEffectPath<'s, 't>>,
-) {
-  if let IExpressionGE::FunctionCall { mut_effects, .. } = node {
-    out.extend(mut_effects.iter().cloned());
-  }
-  for child in node.children() {
-    collect_subtree_churns(child, out);
-  }
-}
-
-/// A borrow reference `KindGT` from a group and its referent type.
-fn ref_kind_g<'s, 't>(group: GroupExprG<'s, 't>, inner: KindGT<'s, 't>) -> KindGT<'s, 't> {
-  KindGT::BorrowRef(BorrowRefGT { group, inner: Box::new(inner) })
-}
-
-/// The `void` result `KindGT`, for statement-like nodes (a `let`, a mutate, a discard, a drop).
-fn void_kind_g<'s, 't>() -> KindGT<'s, 't> {
-  KindGT::Void(VoidT)
-}
-
-/// Peel one borrow: a `Deref`'s result is its operand's referent, carrying that referent's own groups.
-fn deref_kind_g<'s, 't>(operand: &KindGT<'s, 't>) -> KindGT<'s, 't> {
-  match operand {
-    KindGT::BorrowRef(b) => (*b.inner).clone(),
-    other => panic!("vfail: deref of a non-borrow: {:?}", other),
   }
 }
 
@@ -569,8 +575,7 @@ pub(crate) fn moved_local<'s, 't>(expr: &ExpressionTE<'s, 't>) -> Option<IVarNam
   }
 }
 
-/// The source range to point a held-register diagnostic at: the argument's own range. A call points
-/// at its call range (its result is the held reference); a place expression at its range.
+/// The source range to point a held-register diagnostic at: the argument's own range.
 // VLOOOOK: Option return — needs VOPT approval or removal
 pub(crate) fn held_range<'s, 't>(arg: &ExpressionTE<'s, 't>) -> Option<RangeS<'s>> {
   match arg {
@@ -624,20 +629,18 @@ pub(crate) fn rune_name<'s>(rune: IRuneS<'s>) -> Option<StrI<'s>> {
   }
 }
 
-/// The callee-rune → caller-group substitution for a call: each parameter that declares a borrow
-/// group (`&T in g`) maps its rune to the caller-side group of the argument bound to it — read off the
-/// argument's already-grouped result (an argument that isn't a borrow contributes nothing).
+/// The callee-rune → caller-group substitution for a call.
 fn arg_rune_subst<'s, 't, 'g>(
   callee: &'s FunctionS<'s>,
   grouped_args: &[IExpressionGE<'s, 't, 'g>],
-) -> IndexMap<IRuneS<'s>, GroupExprG<'s, 't>> {
+) -> IndexMap<IRuneS<'s>, GroupExprG<'s, 't, 'g>> {
   let mut subst = IndexMap::default();
   for (i, param) in callee.params.iter().enumerate() {
     if let ITypeST::BorrowRef(st) = param.tyype {
       if let RegionS::Group(GroupS::Rune(ru)) = st.region {
         if let Some(arg) = grouped_args.get(i) {
           if let KindGT::BorrowRef(b) = arg.result() {
-            subst.insert(ru.rune, b.group.clone());
+            subst.insert(ru.rune, b.group);
           }
         }
       }

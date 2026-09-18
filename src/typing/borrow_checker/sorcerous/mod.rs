@@ -15,6 +15,7 @@ use crate::typing::types::types::KindT;
 mod check_usages;
 mod groupify_function;
 mod calculate_aliasing_info;
+pub mod errors;
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
   pub fn check_function<'g>(

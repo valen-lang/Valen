@@ -685,7 +685,7 @@ where
 #[derive(Debug)]
 pub struct ConstantBoolTE<'s, 't> {
   pub range: RangeS<'s>,
-  pub value: bool,
+  pub value: bool, // TODO: This should be a templata, like Int uses
   pub region: RegionT,
   pub result: KindT<'s, 't>,
   _sealed: (),

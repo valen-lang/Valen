@@ -108,7 +108,6 @@ pub struct FunctionDefinitionT<'s, 't> {
   pub body: ExpressionTE<'s, 't>,
 }
 
-impl<'s, 't> FunctionDefinitionT<'s, 't> {}
 impl<'s, 't> FunctionDefinitionT<'s, 't>
 where
   's: 't,

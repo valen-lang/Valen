@@ -11,7 +11,7 @@ use bumpalo::Bump;
 use crate::postparsing::ast::FunctionS;
 use crate::postparsing::rules::types::{ITypeST, RegionS};
 use crate::typing::ast::ast::{FunctionAliasingInfoT, FunctionDefinitionT};
-use crate::typing::borrow_checker::experimental::borrow_error::BorrowErrorKind;
+use crate::typing::borrow_checker::borrow_error::BorrowErrorKind;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
@@ -28,8 +28,8 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
   ) -> Result<FunctionAliasingInfoT, ICompileErrorT<'s, 't>> {
     self.check_return_group(function_s)?;
     let (body_g, access_log) = self.groupify_function(coutputs, function_s, function_t, check_arena)?;
-    self.check_usages(coutputs, function_s, &body_g)?;
-    Ok(self.calculate_aliasing_info(function_s, function_t, &access_log))
+    self.check_usages(coutputs, function_s, &body_g, check_arena)?;
+    Ok(self.calculate_aliasing_info(function_s, function_t, &access_log, check_arena))
   }
 
   /// A returned reference must declare the group it points into (signature-only derivation): reject a
@@ -40,7 +40,7 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
   ) -> Result<(), ICompileErrorT<'s, 't>> {
     if let Some(ITypeST::BorrowRef(st)) = &function_s.maybe_return_type {
       if matches!(st.region, RegionS::Unspecified) {
-        return Err(BorrowErrorKind::GrouplessReturnBorrow.at(self, st.range));
+        return Err(self.borrow_error(BorrowErrorKind::GrouplessReturnBorrow, st.range));
       }
     }
     Ok(())

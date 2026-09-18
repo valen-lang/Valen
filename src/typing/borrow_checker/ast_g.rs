@@ -6,7 +6,6 @@ use crate::utils::range::RangeS;
 use crate::typing::ast::ast::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::names::names::*;
-use crate::typing::templata::templata::ITemplataT;
 use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::{is_ref, peel_one_reference, replace_value_type_in_ref};
 use crate::typing::types::types::BoolT;
@@ -20,28 +19,26 @@ use crate::typing::typing_interner::TypingInterner;
 use std::any::Any;
 use std::marker::PhantomData;
 use crate::postparsing::names::IRuneS;
+use crate::typing::ast::expressions::ExpressionTE;
 use crate::typing::borrow_checker::kind_g::{BorrowRefGT, ISuperKindGT, InterfaceGT, KindGT, RuntimeSizedArrayGT, ShareRefGT, StaticSizedArrayGT, StructGT, WeakRefGT};
-
-
-
-
+use crate::typing::borrow_checker::templata_g::ITemplataG;
 
 // A specific mutation to a specific group (as opposed to GroupExprG which an expression for expressing the group(s) a ref might point at).
 #[derive(Debug)]
-struct MutEffectPath<'s, 't, 'g> {
-  effecting_node_loc: LocT<'t>, // Which expr had this mut effect (e.g. loc of `level.tiles.clear()`)
-  steps: &'g [&'g GroupStep<'s, 't>], // What group the effect mutated (e.g. ["level", "tiles"])
+pub struct MutEffectPath<'s, 't, 'g> {
+  pub effecting_node_loc: LocT<'t>, // Which expr had this mut effect (e.g. loc of `level.tiles.clear()`)
+  pub steps: &'g [&'g GroupStep<'s, 't>], // What group the effect mutated (e.g. ["level", "tiles"])
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum GroupStep<'s, 't> {
   Rune(&'s IRuneS<'s>), // a group param, e.g. <g'>, resolved to its id
   ParamAnonymousGroup(&'t IVarNameT<'s, 't>), // A param's group if it doesn't come from a rune or another param. The string is the param name
   Local(&'t IVarNameT<'s, 't>), // A local's implicitly declared group.
-  Member { member_name: &'s StrI<'s> }, // `x.items`
+  Member { member_name: StrI<'s> }, // `x.items`
   ChildElements, // the `[]` part of `x.items[]` if items is a Box/Vec/RSA
   InlineElements, // the `[]` part of `x.items[]` if items is a SSA.
-  Variant { variant_name: &'s StrI<'s> }, // an enum's variant, the `WarpEngine` part of `my_ship.engine_enum.WarpEngine`
+  Variant { variant_name: StrI<'s> }, // an enum's variant, the `WarpEngine` part of `my_ship.engine_enum.WarpEngine`
   // No `Empty` variant, that just becomes not a MutEffectPath at all.
   // No `Union` variant, that just becomes multiple MutEffectPath.
 }
@@ -124,7 +121,6 @@ where
   // Always produces a borrow reference, though i can see a world where we go back on that decision.
 
   // VCOORD: _sealed here
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -140,7 +136,6 @@ where
   pub none_constructor: &'t PrototypeT<'s, 't>,
   pub some_impl_name: IdT<'s, 't>,
   pub none_impl_name: IdT<'s, 't>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -152,7 +147,6 @@ where
   pub range: RangeS<'s>,
   pub inner_expr: ExpressionGE<'s, 't, 'g>,
   pub result: &'g WeakRefGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -165,7 +159,6 @@ where
   pub variable: &'g LocalVariableG<'s, 't, 'g>,
   pub expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -174,7 +167,6 @@ pub struct UnletGE<'s, 't, 'g> {
   pub range: RangeS<'s>,
   pub variable: &'g LocalVariableG<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -186,7 +178,6 @@ where
   pub range: RangeS<'s>,
   pub expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -201,7 +192,6 @@ where
   pub then_call: ExpressionGE<'s, 't, 'g>,
   pub else_call: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -214,7 +204,6 @@ where
   pub loct: LocT<'t>,
   pub block: BlockGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -229,7 +218,6 @@ where
   pub source_expr: ExpressionGE<'s, 't, 'g>,
   // VCOORD: the old value that was replaced; onion old-value semantics to confirm.
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -242,7 +230,6 @@ where
   pub variable: &'g LocalVariableG<'s, 't, 'g>,
   pub source_expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -254,7 +241,6 @@ where
   pub range: RangeS<'s>,
   pub source_expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -262,7 +248,6 @@ where
 pub struct BreakGE<'s, 't, 'g> {
   pub range: RangeS<'s>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -274,7 +259,6 @@ where
   pub range: RangeS<'s>,
   pub inner: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -286,7 +270,6 @@ where
   pub range: RangeS<'s>,
   pub exprs: &'g [ExpressionGE<'s, 't, 'g>],
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -299,7 +282,6 @@ where
   pub elements: &'g [ExpressionGE<'s, 't, 'g>],
   pub result: KindGT<'s, 't, 'g>,
   pub array_type: &'g StaticSizedArrayGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -311,7 +293,6 @@ where
   pub range: RangeS<'s>,
   pub array: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -324,7 +305,6 @@ where
   pub left: ExpressionGE<'s, 't, 'g>,
   pub right: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -342,7 +322,6 @@ where
   pub impl_name: IdT<'s, 't>,
   pub ok_impl_name: IdT<'s, 't>,
   pub err_impl_name: IdT<'s, 't>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -350,17 +329,15 @@ where
 pub struct VoidLiteralGE<'s, 't, 'g> {
   pub range: RangeS<'s>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct ConstantIntGE<'s, 't, 'g> {
   pub range: RangeS<'s>,
-  pub value: ITemplataT<'s, 't>,
+  pub value: ITemplataG<'s, 't>,
   pub bits: i32,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -369,7 +346,6 @@ pub struct ConstantBoolGE<'s, 't, 'g> {
   pub range: RangeS<'s>,
   pub value: bool,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -379,7 +355,6 @@ pub struct ConstantStrGE<'s, 't, 'g> {
   pub value: StrI<'s>,
   // Str is share-flavored, so a string literal is a share reference.
   pub result: &'g ShareRefGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -388,7 +363,6 @@ pub struct ConstantFloatGE<'s, 't, 'g> {
   pub range: RangeS<'s>,
   pub value: f64,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -398,7 +372,6 @@ pub struct LocalLookupGE<'s, 't, 'g> {
   pub local_variable: &'g LocalVariableG<'s, 't, 'g>,
   // A local lookup is a borrow reference to the variable's value.
   pub result: &'g BorrowRefGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -407,7 +380,6 @@ pub struct ArgLookupGE<'s, 't, 'g> {
   pub range: RangeS<'s>,
   pub param_index: i32,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -422,7 +394,6 @@ where
   pub index_expr: ExpressionGE<'s, 't, 'g>,
   // A borrow reference to the indexed element.
   pub result: &'g BorrowRefGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -437,7 +408,6 @@ where
   pub index_expr: ExpressionGE<'s, 't, 'g>,
   // See RMLRMO why the result is a borrow reference to the element type.
   pub result: &'g BorrowRefGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -449,7 +419,6 @@ where
   pub range: RangeS<'s>,
   pub array_expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -463,7 +432,6 @@ where
   pub member_name: IVarNameT<'s, 't>,
   // See RMLRMO why the result is a borrow reference to the member.
   pub result: &'g BorrowRefGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -476,7 +444,6 @@ where
   pub loct: LocT<'t>,
   pub inner: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -491,7 +458,6 @@ where
   pub result: KindGT<'s, 't, 'g>,
   pub args: &'g [ExpressionGE<'s, 't, 'g>],
   pub mut_effects: &'g [&'g MutEffectPath<'s, 't, 'g>],
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -508,7 +474,6 @@ where
   pub result: KindGT<'s, 't, 'g>,
   pub args: &'g [ExpressionGE<'s, 't, 'g>],
   pub mut_effects: &'g [&'g MutEffectPath<'s, 't, 'g>],
-  _sealed: (),
 }
 
 /// Value-type (see @TFITCX)
@@ -528,7 +493,6 @@ where
   pub args: &'g [ExpressionGE<'s, 't, 'g>],
   pub result: KindGT<'s, 't, 'g>,
   pub mut_effects: &'g [&'g MutEffectPath<'s, 't, 'g>],
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -546,7 +510,6 @@ where
   // VCOORD: rename to return_type
   pub result: KindGT<'s, 't, 'g>,
   pub mut_effects: &'g [&'g MutEffectPath<'s, 't, 'g>],
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -558,7 +521,6 @@ where
   pub range: RangeS<'s>,
   pub expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -569,7 +531,6 @@ pub struct CopyPrimGE<'s, 't, 'g> {
   pub loct: LocT<'t>,
   pub inner: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -582,7 +543,6 @@ where
   pub struct_tt: &'g StructGT<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
   pub args: &'g [ExpressionGE<'s, 't, 'g>],
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -595,7 +555,6 @@ where
   pub array_type: &'g RuntimeSizedArrayGT<'s, 't, 'g>,
   pub capacity_expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -609,7 +568,6 @@ where
   pub generator: ExpressionGE<'s, 't, 'g>,
   pub generator_method: &'t PrototypeT<'s, 't>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -624,7 +582,6 @@ where
   pub consumer: ExpressionGE<'s, 't, 'g>,
   pub consumer_method: &'t PrototypeT<'s, 't>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -638,7 +595,6 @@ where
   pub static_sized_array: &'g StaticSizedArrayGT<'s, 't, 'g>,
   pub destination_reference_variables: &'g [&'g LocalVariableG<'s, 't, 'g>],
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -650,7 +606,6 @@ where
   pub range: RangeS<'s>,
   pub array_expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -662,7 +617,6 @@ where
   pub range: RangeS<'s>,
   pub array_expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -675,7 +629,6 @@ where
   pub array_expr: ExpressionGE<'s, 't, 'g>,
   pub new_element_expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -687,7 +640,6 @@ where
   pub range: RangeS<'s>,
   pub array_expr: ExpressionGE<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -700,7 +652,6 @@ where
   pub inner_expr: ExpressionGE<'s, 't, 'g>,
   pub target_interface: &'g InterfaceGT<'s, 't, 'g>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -714,7 +665,6 @@ where
   pub target_super_kind: ISuperKindGT<'s, 't, 'g>,
   pub impl_name: IdT<'s, 't>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -730,7 +680,6 @@ where
   pub target_super_kind: ISuperKindGT<'s, 't, 'g>,
   pub impl_name: IdT<'s, 't>,
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
 }
 
 /// Arena-allocated (see @TFITCX)
@@ -744,5 +693,64 @@ where
   pub struct_tt: &'g StructGT<'s, 't, 'g>,
   pub destination_reference_variables: &'g [&'g LocalVariableG<'s, 't, 'g>],
   pub result: KindGT<'s, 't, 'g>,
-  _sealed: (),
+}
+
+
+impl<'s, 't, 'g> ExpressionGE<'s, 't, 'g>
+where
+    's: 't,
+{
+  pub fn result(&self) -> KindGT<'s, 't, 'g> {
+    match self {
+      ExpressionGE::LetAndLend(e) => KindGT::BorrowRef(e.result),
+      ExpressionGE::LockWeak(e) => e.result,
+      ExpressionGE::BorrowToWeak(e) => KindGT::WeakRef(e.result),
+      ExpressionGE::LetNormal(e) => e.result,
+      ExpressionGE::Unlet(e) => e.result,
+      ExpressionGE::Discard(e) => e.result,
+      ExpressionGE::If(e) => e.result,
+      ExpressionGE::While(e) => e.result,
+      ExpressionGE::Mutate(e) => e.result,
+      ExpressionGE::Restackify(e) => e.result,
+      ExpressionGE::Return(e) => e.result,
+      ExpressionGE::Break(e) => e.result,
+      ExpressionGE::Block(e) => e.result,
+      ExpressionGE::Consecutor(e) => e.result,
+      ExpressionGE::StaticArrayFromValues(e) => e.result,
+      ExpressionGE::ArraySize(e) => e.result,
+      ExpressionGE::IsSameInstance(e) => e.result,
+      ExpressionGE::AsSubtype(e) => e.result,
+      ExpressionGE::VoidLiteral(e) => e.result,
+      ExpressionGE::ConstantInt(e) => e.result,
+      ExpressionGE::ConstantBool(e) => e.result,
+      ExpressionGE::ConstantStr(e) => KindGT::ShareRef(e.result),
+      ExpressionGE::ConstantFloat(e) => e.result,
+      ExpressionGE::ArgLookup(e) => e.result,
+      ExpressionGE::ArrayLength(e) => e.result,
+      ExpressionGE::InterfaceFunctionCall(e) => e.result,
+      ExpressionGE::ExternFunctionCall(e) => e.result,
+      ExpressionGE::FunctionCall(e) => e.result,
+      ExpressionGE::BoundFunctionCall(e) => e.result,
+      ExpressionGE::Reinterpret(e) => e.result,
+      ExpressionGE::Construct(e) => e.result,
+      ExpressionGE::NewRuntimeSizedArray(e) => e.result,
+      ExpressionGE::StaticArrayFromCallable(e) => e.result,
+      ExpressionGE::DestroyStaticSizedArrayIntoFunction(e) => e.result,
+      ExpressionGE::DestroyStaticSizedArrayIntoLocals(e) => e.result,
+      ExpressionGE::DestroyRuntimeSizedArray(e) => e.result,
+      ExpressionGE::RuntimeSizedArrayCapacity(e) => e.result,
+      ExpressionGE::PushRuntimeSizedArray(e) => e.result,
+      ExpressionGE::PopRuntimeSizedArray(e) => e.result,
+      ExpressionGE::InterfaceToInterfaceUpcast(e) => e.result,
+      ExpressionGE::UpcastInterface(e) => e.result,
+      ExpressionGE::UpcastGeneric(e) => e.result,
+      ExpressionGE::Destroy(e) => e.result,
+      ExpressionGE::CopyPrim(e) => e.result,
+      ExpressionGE::LocalLookup(e) => KindGT::BorrowRef(e.result),
+      ExpressionGE::StaticSizedArrayLookup(e) => KindGT::BorrowRef(e.result),
+      ExpressionGE::RuntimeSizedArrayLookup(e) => KindGT::BorrowRef(e.result),
+      ExpressionGE::MemberLookup(e) => KindGT::BorrowRef(e.result),
+      ExpressionGE::Deref(e) => e.result,
+    }
+  }
 }

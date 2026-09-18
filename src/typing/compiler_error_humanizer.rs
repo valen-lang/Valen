@@ -55,7 +55,7 @@ pub fn humanize<'s, 't>(
     ICompileErrorT::RangedInternalErrorT { range: _, message } => {
       format!("Internal error: {}", message)
     }
-    ICompileErrorT::BorrowCheckError { range: _, kind } => kind.humanize(),
+    ICompileErrorT::BorrowCheckError { range, kind } => crate::typing::borrow_checker::humanize_borrow_error(range, kind),
     ICompileErrorT::CouldntFindOverrideT { range, fff } => {
       format!("Couldn't find an override:\n{}",
         humanize_find_function_failure(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, range.to_vec(), fff))

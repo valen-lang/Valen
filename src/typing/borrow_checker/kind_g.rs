@@ -67,7 +67,7 @@ pub enum KindGT<'s, 't, 'g> {
   StaticSizedArray(&'g StaticSizedArrayGT<'s, 't, 'g>),
   RuntimeSizedArray(&'g RuntimeSizedArrayGT<'s, 't, 'g>),
   KindPlaceholder(&'g KindPlaceholderGT<'s, 't, 'g>),
-  OverloadSet(&'g OverloadSetG<'s, 't, 'g>),
+  OverloadSet(&'g OverloadSetGT<'s, 't, 'g>),
   BorrowRef(&'g BorrowRefGT<'s, 't, 'g>),
   OwnRef(&'g OwnRefGT<'s, 't, 'g>),
   ShareRef(&'g ShareRefGT<'s, 't, 'g>),
@@ -127,19 +127,19 @@ pub struct RuntimeSizedArrayGT<'s, 't, 'g> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructGT<'s, 't, 'g> {
   pub id: &'t IdT<'s, 't>,
-  pub template_args: &'g [&'g ITemplataG<'s, 't>],
+  pub template_args: &'g [ITemplataG<'s, 't>],
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceGT<'s, 't, 'g> {
   pub id: &'t IdT<'s, 't>,
-  pub template_args: &'g [&'g ITemplataG<'s, 't>],
+  pub template_args: &'g [ITemplataG<'s, 't>],
 }
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct OverloadSetG<'s, 't, 'g> {
+pub struct OverloadSetGT<'s, 't, 'g> {
   // pub env: IInDenizenEnvironmentT<'s, 't>,
   // pub name: &'s IImpreciseNameS<'s>,
   pub env_id: IdT<'s, 't>,

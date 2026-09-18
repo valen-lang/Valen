@@ -17,4 +17,5 @@ pub enum AccessEventG<'s, 't> {
     touched: Vec<Vec<GroupStep<'s, 't>>>,
     loct: LocT<'t>,
   },
+  Marker { value: i32 }
 }

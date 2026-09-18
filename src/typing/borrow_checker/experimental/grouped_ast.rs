@@ -1,66 +1,18 @@
 //! The grouped AST — phase 1's output, consumed by phase 2 (`check_usages`).
 //!
 //! `IExpressionGE` mirrors `ExpressionTE` variant-for-variant (`src/typing/ast/expressions.rs`), so
-//! `groupify_function` walks the typed body and rebuilds it with group information filled in:
-//!
-//!  * Every node carries its result `KindGT` (a borrow's `BorrowRefGT` names the group it points at).
-//!  * Every `FunctionCall` carries the groups it churns (`mut_effects`), its argument reference-uses,
-//!    and its joint-argument facts.
-//!  * Every `While` carries its body's aggregated `mut_effects`, so phase 2 needs no loop fixpoint.
-//!
-//! The tree is allocated in the `'g` arena — children are `&'g` node refs and `&'g [..]` slices. See
-//! `docs/architecture/borrowing-design.md`.
+//! `groupify_function` walks the typed body and rebuilds it with group information filled in. It carries
+//! the canonical value types (`KindGT`, `GroupExprG`, `GroupStep`, `MutEffectPath`, `AccessEventG`); only
+//! `IExpressionGE` and `JointFact` are experimental-local scaffolding (slice 1). The tree is allocated in
+//! the `'g` arena. See `docs/architecture/borrowing-design.md`.
 
 use crate::interner::StrI;
-use crate::postparsing::names::IRuneS;
-use crate::typing::ast::ast::LocT;
 use crate::typing::ast::expressions::FunctionCallTE;
-use crate::typing::borrow_checker::experimental::borrow_types::{GroupExprG, KindGT};
+use crate::typing::borrow_checker::ast_g::{GroupStep, MutEffectPath};
+use crate::typing::borrow_checker::group_expr::GroupExprG;
+use crate::typing::borrow_checker::kind_g::KindGT;
 use crate::typing::names::names::IVarNameT;
 use crate::utils::range::RangeS;
-
-/// One step of a group path — the flattened form of a `GroupExprG`, so a churned group can be
-/// compared against where a reference points.
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-pub enum GroupStep<'s, 't> {
-  Rune(IRuneS<'s>),
-  ParamAnonymousGroup(IVarNameT<'s, 't>),
-  Local(IVarNameT<'s, 't>),
-  Member { member_name: StrI<'s> },
-  Elements,
-}
-
-/// A specific mutation to a specific group: the churning call's location plus the caller-side group
-/// path it mutates.
-#[derive(Clone)]
-pub struct MutEffectPath<'s, 't> {
-  pub effecting_node_loc: LocT<'t>,
-  pub steps: Vec<GroupStep<'s, 't>>,
-}
-
-/// A memory access recorded during `groupify_function`, in walk order, so `calculate_aliasing_info` can
-/// derive restrict regions without a second tree walk.
-///
-/// A load/store carries the reference it goes through (`base_ref`, the root local of the access chain,
-/// so two references into one group can be told apart) and the group that access touches (`group`,
-/// member-qualified). A call carries the groups it churns, so a region can require its calls not touch
-/// its group. A marker carries a bare-integer landmark placed at statement position, so a test can pin a
-/// region by value.
-pub enum AccessEventG<'s, 't> {
-  Access {
-    is_store: bool,
-    base_ref: IVarNameT<'s, 't>,
-    group: Vec<GroupStep<'s, 't>>,
-    loct: LocT<'t>,
-  },
-  Call {
-    touched: Vec<Vec<GroupStep<'s, 't>>>,
-    loct: LocT<'t>,
-  },
-  Marker {
-    value: i32,
-  },
-}
 
 /// One joint-argument violation candidate at a call, in the two shapes the checker reports.
 #[derive(Clone)]
@@ -78,25 +30,25 @@ pub enum JointFact<'s, 't> {
   },
 }
 
-/// The group-annotated mirror of `ExpressionTE`: one variant per `ExpressionTE` variant, each
-/// carrying its result `KindGT`. Children are `'g`-arena refs. Reference bindings (`LetNormal.bind`)
-/// carry where they point; calls carry their churns/uses/joint-facts; `while` carries its aggregated
-/// churns; `if` carries branch divergence.
+/// The group-annotated mirror of `ExpressionTE`: one variant per `ExpressionTE` variant, each carrying
+/// its result `KindGT`. Children are `'g`-arena refs. Reference bindings (`LetNormal.bind`) carry where
+/// they point; calls carry their churns; `while` carries its aggregated churns; `if` carries branch
+/// divergence.
 pub enum IExpressionGE<'s, 't, 'g> {
-  LetAndLend { result: KindGT<'s, 't>, expr: &'g IExpressionGE<'s, 't, 'g> },
-  LockWeak { result: KindGT<'s, 't>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
-  BorrowToWeak { result: KindGT<'s, 't>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
+  LetAndLend { result: KindGT<'s, 't, 'g>, expr: &'g IExpressionGE<'s, 't, 'g> },
+  LockWeak { result: KindGT<'s, 't, 'g>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
+  BorrowToWeak { result: KindGT<'s, 't, 'g>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
   /// A `let`. `bind` is set when the bound value is a tracked reference: the local and its group.
   LetNormal {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     expr: &'g IExpressionGE<'s, 't, 'g>,
     // VLOOOOK: Option field — needs VOPT approval or removal
-    bind: Option<(IVarNameT<'s, 't>, GroupExprG<'s, 't>)>,
+    bind: Option<(IVarNameT<'s, 't>, GroupExprG<'s, 't, 'g>)>,
   },
-  Unlet { result: KindGT<'s, 't> },
-  Discard { result: KindGT<'s, 't>, expr: &'g IExpressionGE<'s, 't, 'g> },
+  Unlet { result: KindGT<'s, 't, 'g> },
+  Discard { result: KindGT<'s, 't, 'g>, expr: &'g IExpressionGE<'s, 't, 'g> },
   If {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     condition: &'g IExpressionGE<'s, 't, 'g>,
     then_call: &'g IExpressionGE<'s, 't, 'g>,
     else_call: &'g IExpressionGE<'s, 't, 'g>,
@@ -104,87 +56,86 @@ pub enum IExpressionGE<'s, 't, 'g> {
     else_diverges: bool,
   },
   While {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     body: &'g IExpressionGE<'s, 't, 'g>,
-    mut_effects: Vec<MutEffectPath<'s, 't>>,
+    mut_effects: Vec<MutEffectPath<'s, 't, 'g>>,
   },
   Mutate {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     destination_expr: &'g IExpressionGE<'s, 't, 'g>,
     source_expr: &'g IExpressionGE<'s, 't, 'g>,
   },
-  Restackify { result: KindGT<'s, 't>, source_expr: &'g IExpressionGE<'s, 't, 'g> },
-  Return { result: KindGT<'s, 't>, source_expr: &'g IExpressionGE<'s, 't, 'g> },
-  Break { result: KindGT<'s, 't> },
-  Block { result: KindGT<'s, 't>, inner: &'g IExpressionGE<'s, 't, 'g> },
-  Consecutor { result: KindGT<'s, 't>, exprs: &'g [IExpressionGE<'s, 't, 'g>] },
-  StaticArrayFromValues { result: KindGT<'s, 't>, elements: &'g [IExpressionGE<'s, 't, 'g>] },
-  ArraySize { result: KindGT<'s, 't>, array: &'g IExpressionGE<'s, 't, 'g> },
+  Restackify { result: KindGT<'s, 't, 'g>, source_expr: &'g IExpressionGE<'s, 't, 'g> },
+  Return { result: KindGT<'s, 't, 'g>, source_expr: &'g IExpressionGE<'s, 't, 'g> },
+  Break { result: KindGT<'s, 't, 'g> },
+  Block { result: KindGT<'s, 't, 'g>, inner: &'g IExpressionGE<'s, 't, 'g> },
+  Consecutor { result: KindGT<'s, 't, 'g>, exprs: &'g [IExpressionGE<'s, 't, 'g>] },
+  StaticArrayFromValues { result: KindGT<'s, 't, 'g>, elements: &'g [IExpressionGE<'s, 't, 'g>] },
+  ArraySize { result: KindGT<'s, 't, 'g>, array: &'g IExpressionGE<'s, 't, 'g> },
   IsSameInstance {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     left: &'g IExpressionGE<'s, 't, 'g>,
     right: &'g IExpressionGE<'s, 't, 'g>,
   },
-  AsSubtype { result: KindGT<'s, 't>, source_expr: &'g IExpressionGE<'s, 't, 'g> },
-  VoidLiteral { result: KindGT<'s, 't> },
-  ConstantInt { result: KindGT<'s, 't> },
-  ConstantBool { result: KindGT<'s, 't> },
-  ConstantStr { result: KindGT<'s, 't> },
-  ConstantFloat { result: KindGT<'s, 't> },
-  ArgLookup { result: KindGT<'s, 't> },
-  ArrayLength { result: KindGT<'s, 't>, array_expr: &'g IExpressionGE<'s, 't, 'g> },
-  InterfaceFunctionCall { result: KindGT<'s, 't>, args: &'g [IExpressionGE<'s, 't, 'g>] },
-  ExternFunctionCall { result: KindGT<'s, 't>, args: &'g [IExpressionGE<'s, 't, 'g>] },
-  /// A call. Phase 2 walks its grouped arguments first (nested churns/uses/held registers), then runs
-  /// the argument checks — reference-uses, held-register uses, and joint-argument overlaps/aliasing —
-  /// then applies `mut_effects`. The argument checks need the typed argument identities and ranges, so
-  /// the node keeps the originating `call`; the group paths come from the grouped `args`' results.
+  AsSubtype { result: KindGT<'s, 't, 'g>, source_expr: &'g IExpressionGE<'s, 't, 'g> },
+  VoidLiteral { result: KindGT<'s, 't, 'g> },
+  ConstantInt { result: KindGT<'s, 't, 'g> },
+  ConstantBool { result: KindGT<'s, 't, 'g> },
+  ConstantStr { result: KindGT<'s, 't, 'g> },
+  ConstantFloat { result: KindGT<'s, 't, 'g> },
+  ArgLookup { result: KindGT<'s, 't, 'g> },
+  ArrayLength { result: KindGT<'s, 't, 'g>, array_expr: &'g IExpressionGE<'s, 't, 'g> },
+  InterfaceFunctionCall { result: KindGT<'s, 't, 'g>, args: &'g [IExpressionGE<'s, 't, 'g>] },
+  ExternFunctionCall { result: KindGT<'s, 't, 'g>, args: &'g [IExpressionGE<'s, 't, 'g>] },
+  /// A call. Phase 2 walks its grouped arguments first, then runs the argument checks, then applies
+  /// `mut_effects`. The argument checks need the typed argument identities and ranges, so the node keeps
+  /// the originating `call`; the group paths come from the grouped `args`' results.
   FunctionCall {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     args: &'g [IExpressionGE<'s, 't, 'g>],
-    mut_effects: Vec<MutEffectPath<'s, 't>>,
+    mut_effects: Vec<MutEffectPath<'s, 't, 'g>>,
     call: &'t FunctionCallTE<'s, 't>,
   },
-  Reinterpret { result: KindGT<'s, 't>, expr: &'g IExpressionGE<'s, 't, 'g> },
-  Construct { result: KindGT<'s, 't>, args: &'g [IExpressionGE<'s, 't, 'g>] },
-  NewRuntimeSizedArray { result: KindGT<'s, 't>, capacity_expr: &'g IExpressionGE<'s, 't, 'g> },
-  StaticArrayFromCallable { result: KindGT<'s, 't>, generator: &'g IExpressionGE<'s, 't, 'g> },
+  Reinterpret { result: KindGT<'s, 't, 'g>, expr: &'g IExpressionGE<'s, 't, 'g> },
+  Construct { result: KindGT<'s, 't, 'g>, args: &'g [IExpressionGE<'s, 't, 'g>] },
+  NewRuntimeSizedArray { result: KindGT<'s, 't, 'g>, capacity_expr: &'g IExpressionGE<'s, 't, 'g> },
+  StaticArrayFromCallable { result: KindGT<'s, 't, 'g>, generator: &'g IExpressionGE<'s, 't, 'g> },
   DestroyStaticSizedArrayIntoFunction {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     array_expr: &'g IExpressionGE<'s, 't, 'g>,
     consumer: &'g IExpressionGE<'s, 't, 'g>,
   },
-  DestroyStaticSizedArrayIntoLocals { result: KindGT<'s, 't>, expr: &'g IExpressionGE<'s, 't, 'g> },
-  DestroyRuntimeSizedArray { result: KindGT<'s, 't>, array_expr: &'g IExpressionGE<'s, 't, 'g> },
-  RuntimeSizedArrayCapacity { result: KindGT<'s, 't>, array_expr: &'g IExpressionGE<'s, 't, 'g> },
+  DestroyStaticSizedArrayIntoLocals { result: KindGT<'s, 't, 'g>, expr: &'g IExpressionGE<'s, 't, 'g> },
+  DestroyRuntimeSizedArray { result: KindGT<'s, 't, 'g>, array_expr: &'g IExpressionGE<'s, 't, 'g> },
+  RuntimeSizedArrayCapacity { result: KindGT<'s, 't, 'g>, array_expr: &'g IExpressionGE<'s, 't, 'g> },
   PushRuntimeSizedArray {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     array_expr: &'g IExpressionGE<'s, 't, 'g>,
     new_element_expr: &'g IExpressionGE<'s, 't, 'g>,
   },
-  PopRuntimeSizedArray { result: KindGT<'s, 't>, array_expr: &'g IExpressionGE<'s, 't, 'g> },
-  InterfaceToInterfaceUpcast { result: KindGT<'s, 't>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
-  Upcast { result: KindGT<'s, 't>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
-  Destroy { result: KindGT<'s, 't>, expr: &'g IExpressionGE<'s, 't, 'g> },
-  CopyPrim { result: KindGT<'s, 't>, inner: &'g IExpressionGE<'s, 't, 'g> },
-  LocalLookup { result: KindGT<'s, 't> },
+  PopRuntimeSizedArray { result: KindGT<'s, 't, 'g>, array_expr: &'g IExpressionGE<'s, 't, 'g> },
+  InterfaceToInterfaceUpcast { result: KindGT<'s, 't, 'g>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
+  Upcast { result: KindGT<'s, 't, 'g>, inner_expr: &'g IExpressionGE<'s, 't, 'g> },
+  Destroy { result: KindGT<'s, 't, 'g>, expr: &'g IExpressionGE<'s, 't, 'g> },
+  CopyPrim { result: KindGT<'s, 't, 'g>, inner: &'g IExpressionGE<'s, 't, 'g> },
+  LocalLookup { result: KindGT<'s, 't, 'g> },
   StaticSizedArrayLookup {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     array_expr: &'g IExpressionGE<'s, 't, 'g>,
     index_expr: &'g IExpressionGE<'s, 't, 'g>,
   },
   RuntimeSizedArrayLookup {
-    result: KindGT<'s, 't>,
+    result: KindGT<'s, 't, 'g>,
     array_expr: &'g IExpressionGE<'s, 't, 'g>,
     index_expr: &'g IExpressionGE<'s, 't, 'g>,
   },
-  MemberLookup { result: KindGT<'s, 't>, struct_expr: &'g IExpressionGE<'s, 't, 'g> },
-  Deref { result: KindGT<'s, 't>, inner: &'g IExpressionGE<'s, 't, 'g> },
+  MemberLookup { result: KindGT<'s, 't, 'g>, struct_expr: &'g IExpressionGE<'s, 't, 'g> },
+  Deref { result: KindGT<'s, 't, 'g>, inner: &'g IExpressionGE<'s, 't, 'g> },
 }
 
 impl<'s, 't, 'g> IExpressionGE<'s, 't, 'g> {
-  /// This node's group-annotated result type.
-  pub fn result(&self) -> &KindGT<'s, 't> {
+  /// This node's group-annotated result type (`KindGT` is `Copy`).
+  pub fn result(&self) -> KindGT<'s, 't, 'g> {
     match self {
       IExpressionGE::LetAndLend { result, .. }
       | IExpressionGE::LockWeak { result, .. }
@@ -232,13 +183,11 @@ impl<'s, 't, 'g> IExpressionGE<'s, 't, 'g> {
       | IExpressionGE::StaticSizedArrayLookup { result, .. }
       | IExpressionGE::RuntimeSizedArrayLookup { result, .. }
       | IExpressionGE::MemberLookup { result, .. }
-      | IExpressionGE::Deref { result, .. } => result,
+      | IExpressionGE::Deref { result, .. } => *result,
     }
   }
 
-  /// This node's child sub-expressions, in evaluation order. Phase 2's generic walk visits these;
-  /// the nodes that carry checker payloads (`LetNormal`, `FunctionCall`, `While`, `If`) are handled
-  /// directly and do not rely on this.
+  /// This node's child sub-expressions, in evaluation order.
   pub fn children(&self) -> Vec<&'g IExpressionGE<'s, 't, 'g>> {
     match self {
       IExpressionGE::LetAndLend { expr, .. }
@@ -300,32 +249,42 @@ impl<'s, 't, 'g> IExpressionGE<'s, 't, 'g> {
 }
 
 /// Flatten a non-union `GroupExprG` to a root-to-leaf step path.
-pub fn flatten<'s, 't>(g: &GroupExprG<'s, 't>) -> Vec<GroupStep<'s, 't>> {
+pub fn flatten<'s, 't, 'g>(g: GroupExprG<'s, 't, 'g>) -> Vec<GroupStep<'s, 't>> {
   match g {
-    GroupExprG::Rune(r) => vec![GroupStep::Rune(*r)],
-    GroupExprG::ParamAnonymousGroup(s) => vec![GroupStep::ParamAnonymousGroup(*s)],
-    GroupExprG::Local(s) => vec![GroupStep::Local(*s)],
+    GroupExprG::Rune(r) => vec![GroupStep::Rune(r)],
+    GroupExprG::ParamAnonymousGroup(s) => vec![GroupStep::ParamAnonymousGroup(s)],
+    GroupExprG::Local(s) => vec![GroupStep::Local(s)],
     GroupExprG::Member { base, member_name } => {
-      let mut v = flatten(base);
-      v.push(GroupStep::Member { member_name: *member_name });
+      let mut v = flatten(*base);
+      v.push(GroupStep::Member { member_name });
       v
     }
-    GroupExprG::Elements { base } => {
-      let mut v = flatten(base);
-      v.push(GroupStep::Elements);
+    GroupExprG::ChildElements { base } => {
+      let mut v = flatten(*base);
+      v.push(GroupStep::ChildElements);
+      v
+    }
+    GroupExprG::InlineElements { base } => {
+      let mut v = flatten(*base);
+      v.push(GroupStep::InlineElements);
+      v
+    }
+    GroupExprG::Variant { base, variant_name } => {
+      let mut v = flatten(*base);
+      v.push(GroupStep::Variant { variant_name });
       v
     }
     // A `...` step collapses to its base: `mut(g...)` churns exactly `mut(g)`, and an ellipsis
-    // reference's own invalidation is handled directly in `is_invalidated`, not via flattening.
-    GroupExprG::Ellipsis { base } => flatten(base),
+    // reference's own invalidation is handled directly, not via flattening.
+    GroupExprG::Ellipsis { base } => flatten(*base),
     GroupExprG::Union { .. } => vec![],
   }
 }
 
 /// Split a (possibly union) group into one flat path per non-union member.
-pub fn split_unions<'s, 't>(g: &GroupExprG<'s, 't>) -> Vec<Vec<GroupStep<'s, 't>>> {
+pub fn split_unions<'s, 't, 'g>(g: GroupExprG<'s, 't, 'g>) -> Vec<Vec<GroupStep<'s, 't>>> {
   match g {
-    GroupExprG::Union { members } => members.iter().flat_map(split_unions).collect(),
+    GroupExprG::Union { members } => members.iter().flat_map(|m| split_unions(**m)).collect(),
     other => vec![flatten(other)],
   }
 }
