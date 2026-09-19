@@ -38,6 +38,10 @@ extern crate rustc_abi;
 // build each Rust leaf's extern ABI descriptor.
 #[cfg(feature = "rust_interop")]
 extern crate rustc_target;
+// rustc_hashes::Hash64: the `randomization_seed` a hand-built `LayoutData` must carry (the `layout_of`
+// override that sizes a Vale struct crossing to Rust by value).
+#[cfg(feature = "rust_interop")]
+extern crate rustc_hashes;
 
 // VCOORD: Onion typing arc: parser + postparsing linked; typing and downstream
 // stay unlinked pending their own slices. higher_typing was retired outright.

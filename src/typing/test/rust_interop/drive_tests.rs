@@ -230,8 +230,19 @@ exported func main() int {
 }
 "#;
   let stub = generate_stub_source_from_vale(vale).expect("stub generation should succeed");
-  // The universal opaque wrapper is predeclared once at the stub root.
-  assert!(stub.contains("pub struct __ValeOpaque<const T: u64>;"), "stub:\n{stub}");
+  // The universal opaque wrapper is predeclared once at the stub root, as the 3-marker-field struct:
+  // a real `UnsafeCell<()>` for `!Freeze` (so rustc emits no `readonly` on a `&__ValeOpaque<..>` param;
+  // a `PhantomData` of it would stay `Freeze`), `PhantomData<*mut ()>` for `!Send + !Sync`,
+  // `PhantomPinned` for `!Unpin`; fields at all so rustc's debuginfo walker has something to visit.
+  // Pinned as the exact text because each field is load-bearing and the composition is easy to
+  // "simplify" back into a hole.
+  assert!(
+    stub.contains(
+      "pub struct __ValeOpaque<const T: u64>(::core::cell::UnsafeCell<()>, \
+       ::std::marker::PhantomData<*mut ()>, ::std::marker::PhantomPinned);"
+    ),
+    "stub:\n{stub}"
+  );
   // The forwarder is the 2-field wrapper-as-field shape, generic over F, with a PhantomData carrier so the
   // declared generic is "used" (E0392). The typeid hash is elided (it is stability-fenced separately).
   assert!(stub.contains("pub struct MyCb<F>(__ValeOpaque<"), "stub:\n{stub}");

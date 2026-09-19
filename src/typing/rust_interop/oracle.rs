@@ -194,6 +194,14 @@ pub trait RustOracle<'s, 't> {
   fn methods(&self, _item: RustItemId) -> Vec<(String, RustItemId)> {
     Vec::new()
   }
+
+  /// The canonical names of types reached only as the shared `Deref` target of an imported type, and
+  /// not themselves in the allowlist. The `evaluate` import loop declares each as an implicit import
+  /// (seeding its `StructS` + env entry), so a `deref`-reached method resolves on it and a synthesized
+  /// `deref`'s `&Target` return type can be named. Empty when there are none.
+  fn deref_target_imports(&self) -> Vec<ResolvedName<'s>> {
+    Vec::new()
+  }
 }
 
 // There was a `StubOracle` here — an implementation whose every query returned `None`, held

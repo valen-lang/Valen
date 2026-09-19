@@ -25,6 +25,17 @@ pub use mycrate::{add_two_numbers, make_counter, Counter};
 
 pub const __VALE_STUBS_MARKER: () = ();
 
+/// The universal opaque wrapper a Vale type crosses to Rust as (arch §10.6) — the hand-written twin
+/// of `VALE_OPAQUE_DECL`, which `generate_stub_source` predeclares and which explains each marker.
+/// Three zero-sized marker fields: a real `UnsafeCell<()>` for `!Freeze` (a `PhantomData` of it would
+/// stay `Freeze`), `PhantomData<*mut ()>` for `!Send + !Sync`, `PhantomPinned` for `!Unpin`. Its real
+/// size comes from the `layout_of` override, which reads Vale's members for the `typeid`.
+pub struct __ValeOpaque<const T: u64>(
+    ::core::cell::UnsafeCell<()>,
+    ::std::marker::PhantomData<*mut ()>,
+    ::std::marker::PhantomPinned,
+);
+
 /// Vale's `exported func main() int`, as the Rust root rustc's collector walks. The body never runs
 /// — `per_instance_mir` replaces it with the synthetic request-list body.
 #[vale::emit_consumer_body]

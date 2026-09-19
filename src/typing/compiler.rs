@@ -982,6 +982,28 @@ where
           per_crate.entry(coord).or_default().push((local_name, entry));
         }
       }
+      // Interop autoderef (single-step, shared): types reached only as the shared `Deref` target of
+      // an imported type, never named in an `import rust.…`. Declare each implicitly — the same seed
+      // + env-entry an explicit import gets — so a `deref`-reached method resolves on it and a
+      // synthesized `deref`'s `&Target` return type can be named.
+      if let Some(oracle) = self.oracles.rust {
+        for name in oracle.deref_target_imports() {
+          let coord =
+            self.scout_arena.intern_package_coordinate(name.module_name, name.package_names);
+          let (local_name, entry, seed) = declare_rust_import(self, name);
+          match seed {
+            Some(RustImportSeed::Struct(id, s)) => {
+              template_id_to_postparsed_struct.insert(id, s);
+            }
+            // A `Deref` target is normally a struct; an enum target seeds an interface the same way.
+            Some(RustImportSeed::Interface(id, i, _)) => {
+              template_id_to_postparsed_interface.insert(id, i);
+            }
+            None => {}
+          }
+          per_crate.entry(coord).or_default().push((local_name, entry));
+        }
+      }
       for (coord, entries) in per_crate {
         let package_id = self.typing_interner.intern_id(IdValT {
           package_coord: coord,

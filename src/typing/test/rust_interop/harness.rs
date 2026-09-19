@@ -334,6 +334,73 @@ fn fixtures_dir(name: &str) -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/typing/rust_interop").join(name)
 }
 
+/// Build the fixture's dependency rlibs into `out_dir` and return the `valec-rs` argv that compiles
+/// the fixture's `stub.rs` against them as a `crate_type` crate. The one argv shape every harness
+/// entry (tier-1 typing, the driven tiers, the tcx probe) compiles a fixture with.
+fn build_deps_and_stub_args(
+  fixture_dir: &std::path::Path,
+  out_dir: &std::path::Path,
+  crate_type: &str,
+) -> Vec<String> {
+  let deps = dep_crates(fixture_dir);
+  for (crate_name, source) in &deps {
+    build_dep_rlib(crate_name, source, out_dir);
+  }
+  let mut rustc_args: Vec<String> = vec![
+    "valec-rs".to_string(),
+    fixture_dir.join("stub.rs").display().to_string(),
+    format!("--crate-type={crate_type}"),
+    "--crate-name=stub".to_string(),
+    "--edition=2021".to_string(),
+    format!("--sysroot={}", sysroot()),
+    format!("-L{}", out_dir.display()),
+    format!("--out-dir={}", out_dir.display()),
+  ];
+  for (crate_name, _) in &deps {
+    rustc_args.push(format!(
+      "--extern={crate_name}={}",
+      out_dir.join(format!("lib{crate_name}.rlib")).display()
+    ));
+  }
+  rustc_args
+}
+
+/// Runs one closure against the live `TyCtxt` of a fixture's stub crate and stops. For asserting a
+/// rustc fact about the stub's own items (an auto-trait answer, a layout) with no Vale program in
+/// the picture.
+struct TcxProbeCallbacks<P, Q> {
+  probe: P,
+  outcome: Option<Q>,
+}
+
+impl<P, Q> Callbacks for TcxProbeCallbacks<P, Q>
+where
+  P: for<'tcx> Fn(TyCtxt<'tcx>) -> Q + Send,
+  Q: Send,
+{
+  fn after_expansion<'tcx>(&mut self, _compiler: &RustcCompiler, tcx: TyCtxt<'tcx>) -> Compilation {
+    self.outcome = Some((self.probe)(tcx));
+    Compilation::Stop
+  }
+}
+
+/// Compile the named fixture's stub crate to `after_expansion` and hand its live `TyCtxt` to
+/// `probe`, returning what the probe computed (owned — the `TyCtxt` dies with the compilation).
+pub fn probe_fixture_tcx<Q: Send>(
+  fixture: &str,
+  probe: impl for<'tcx> Fn(TyCtxt<'tcx>) -> Q + Send,
+) -> Q {
+  let fixture_dir = fixtures_dir(fixture);
+  let out_dir_tmp = TempDir::new().expect("could not create scratch dir");
+  let rustc_args = build_deps_and_stub_args(&fixture_dir, out_dir_tmp.path(), "lib");
+  let mut callbacks = TcxProbeCallbacks { probe, outcome: None };
+  let rustc_exit = rustc_driver::catch_with_exit_code(|| {
+    rustc_driver::run_compiler(&rustc_args, &mut callbacks);
+  });
+  assert_eq!(rustc_exit, 0, "rustc failed compiling fixture {fixture:?} for a tcx probe");
+  callbacks.outcome.expect("after_expansion did not run, so the probe never saw a TyCtxt")
+}
+
 /// Compile a fixture's `stub.rs` **to completion**, so a fixture cannot rot into invalid Rust
 /// unnoticed.
 ///
@@ -540,26 +607,7 @@ fn drive_rustc(case: &Case, emit_backend: bool, crate_type: &str, run_exe: bool)
   // case.name raced across the parallel tests that share a case.
   let out_dir_tmp = TempDir::new().expect("could not create scratch dir");
   let out_dir = out_dir_tmp.path();
-  let deps = dep_crates(&fixture_dir);
-  for (crate_name, source) in &deps {
-    build_dep_rlib(crate_name, source, &out_dir);
-  }
-  let mut rustc_args: Vec<String> = vec![
-    "valec-rs".to_string(),
-    fixture_dir.join("stub.rs").display().to_string(),
-    format!("--crate-type={crate_type}"),
-    "--crate-name=stub".to_string(),
-    "--edition=2021".to_string(),
-    format!("--sysroot={}", sysroot()),
-    format!("-L{}", out_dir.display()),
-    format!("--out-dir={}", out_dir.display()),
-  ];
-  for (crate_name, _) in &deps {
-    rustc_args.push(format!(
-      "--extern={crate_name}={}",
-      out_dir.join(format!("lib{crate_name}.rlib")).display()
-    ));
-  }
+  let rustc_args = build_deps_and_stub_args(&fixture_dir, out_dir, crate_type);
 
   // Delegate the whole driven compile to the production engine (`drive.rs`) — the shared arenas/slots/
   // `DriverState`/query-override machinery, one home instead of two. Cases compile the builtins in, the
@@ -606,27 +654,7 @@ fn try_run_case_in_package<R: Send>(
   let out_dir_tmp = TempDir::new().expect("could not create scratch dir");
   let out_dir = out_dir_tmp.path();
 
-  let deps = dep_crates(&fixture_dir);
-  for (crate_name, source) in &deps {
-    build_dep_rlib(crate_name, source, &out_dir);
-  }
-
-  let mut rustc_args: Vec<String> = vec![
-    "valec-rs".to_string(),
-    fixture_dir.join("stub.rs").display().to_string(),
-    "--crate-type=lib".to_string(),
-    "--crate-name=stub".to_string(),
-    "--edition=2021".to_string(),
-    format!("--sysroot={}", sysroot()),
-    format!("-L{}", out_dir.display()),
-    format!("--out-dir={}", out_dir.display()),
-  ];
-  for (crate_name, _) in &deps {
-    rustc_args.push(format!(
-      "--extern={crate_name}={}",
-      out_dir.join(format!("lib{crate_name}.rlib")).display()
-    ));
-  }
+  let rustc_args = build_deps_and_stub_args(&fixture_dir, out_dir, "lib");
 
   let mut callbacks = CaseCallbacks {
     vale_source: case.vale,

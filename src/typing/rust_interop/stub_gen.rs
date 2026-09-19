@@ -40,6 +40,25 @@ use crate::typing::types::types::KindT;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::StrI;
 
+/// The one spelling of the universal opaque wrapper (arch §10.6), shared by the pass-1 stub root and
+/// the pass-2 predeclaration so the two can never drift. A Vale type crosses to Rust as
+/// `__ValeOpaque<typeid>`; rustc sizes it through the `layout_of` override, which reads Vale's real
+/// members for that typeid. Its three zero-sized fields are auto-trait markers, each declaring
+/// honestly what rustc would otherwise assume and act on:
+/// - `UnsafeCell<()>` → `!Freeze`. Vale writes a value's bytes through aliasing group borrows while
+///   Rust may hold a `&__ValeOpaque<..>` to it; rustc emits `noalias readonly` on every `&T` parameter
+///   with `T: Freeze`, which would let LLVM cache reads and drop stores across such a write. It must
+///   be a real `UnsafeCell<()>`: `core::marker` has explicit `impl Freeze for PhantomData<T>` and for
+///   raw pointers, so `PhantomData<UnsafeCell<()>>` or `PhantomData<*mut ()>` leave the type `Freeze`
+///   (the two-marker shape below, on its own, reads `Freeze` — `a_valen_type_is_not_freeze_to_rustc`
+///   pins this).
+/// - `PhantomData<*mut ()>` → `!Send + !Sync`.
+/// - `PhantomPinned` → `!Unpin`.
+/// Having fields at all also gives rustc's debuginfo walker, which visits one layout field per source
+/// field, something to visit (arch §10.4.5).
+pub const VALE_OPAQUE_DECL: &str = "pub struct __ValeOpaque<const T: u64>(::core::cell::UnsafeCell<()>, \
+   ::std::marker::PhantomData<*mut ()>, ::std::marker::PhantomPinned);\n";
+
 /// A shape the interim generator cannot yet express (the permanent, `HinputsT`-driven form does).
 #[derive(Debug, Clone)]
 pub enum StubGenError {
@@ -191,9 +210,12 @@ pub fn generate_stub_source(file: &FileP, src_digest: u64) -> Result<String, Stu
   }
   out.push_str("\npub const __VALE_STUBS_MARKER: () = ();\n\n");
   // The universal opaque wrapper (arch §10.6): every projected Vale struct carries a `__ValeOpaque<typeid>`
-  // field so rustc sees an opaque sized type whose layout Vale owns (via the `layout_of` override) and never
-  // decomposes. Predeclared once per stub. Mirrors Sky's `__ToylangOpaque` (toylangc/src/stub_gen.rs:138).
-  out.push_str("pub struct __ValeOpaque<const T: u64>;\n\n");
+  // field, and an unprojected Vale type in a Rust slot crosses as `__ValeOpaque<typeid>` itself, so rustc
+  // sees an opaque sized type whose layout Vale owns (the `layout_of` override) and never decomposes.
+  // What its marker fields declare, and why each must be what it is, is on `VALE_OPAQUE_DECL`.
+  // Predeclared once per stub. Mirrors Sky's `__ToylangOpaque` (toylangc/src/stub_gen.rs:138).
+  out.push_str(VALE_OPAQUE_DECL);
+  out.push('\n');
   // Reverse-direction projection: one wrapper-as-field `pub struct` + `impl <ImportedTrait> for <Struct>`
   // per Vale struct that implements an imported trait, its override bodies deferred to Valen (arch §5.2).
   for (trait_name, struct_name, imp) in trait_impls.iter().copied() {

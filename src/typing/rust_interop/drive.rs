@@ -29,7 +29,9 @@ use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::instantiating::instantiator::InstantiatedOutputsI;
 use crate::instantiating::rust_interop::{
   arm_driver_state, consumer_fill_modules, vale_override_queries, CallbackReq, DriverState,
+  OpaqueKindI,
 };
+use crate::utils::fx::IndexMap;
 use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::postparsing::ScoutCompilation;
@@ -38,7 +40,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::oracles::Oracles;
 use crate::typing::rust_interop::stub_gen::{
-  generate_pass2_stub, generate_stub_source_from_vale, source_digest,
+  generate_pass2_stub, generate_stub_source_from_vale, source_digest, VALE_OPAQUE_DECL,
 };
 use crate::typing::rust_interop::{LoggingOracle, TyCtxtOracle};
 use crate::typing::typing_interner::TypingInterner;
@@ -263,6 +265,7 @@ pub(crate) fn run_driven_rustc(
   let callbacks_slot: RefCell<Vec<CallbackReq>> = RefCell::new(Vec::new());
   let firings_slot: RefCell<Vec<String>> = RefCell::new(Vec::new());
   let extern_abis_slot: RefCell<HashMap<String, ExternAbi>> = RefCell::new(HashMap::new());
+  let opaque_universe_slot: RefCell<IndexMap<u64, OpaqueKindI>> = RefCell::new(IndexMap::default());
   let state = DriverState {
     opts: &global_options,
     interner: &instantiating_interner,
@@ -276,6 +279,7 @@ pub(crate) fn run_driven_rustc(
     callbacks: &callbacks_slot,
     firings: &firings_slot,
     extern_abis: &extern_abis_slot,
+    opaque_universe: &opaque_universe_slot,
     emit_backend,
   };
   let state_ptr = &state as *const DriverState as *const ();
@@ -338,7 +342,7 @@ pub(crate) fn run_driven_rustc(
   let opaque_predecl = if pass1_text.contains("struct __ValeOpaque") {
     ""
   } else {
-    "pub struct __ValeOpaque<const T: u64>;\n"
+    VALE_OPAQUE_DECL
   };
   // Write the appended stub into `--out-dir` (a scratch dir), NOT next to the crate root — for the test
   // harness the crate root is a checked-in fixture whose directory must not be polluted. Fall back to

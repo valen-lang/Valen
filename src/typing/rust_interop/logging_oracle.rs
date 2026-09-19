@@ -261,4 +261,11 @@ impl<'a, 's, 't> RustOracle<'s, 't> for LoggingOracle<'a, 's, 't> {
     );
     answer
   }
+
+  // Pure delegation, not recorded (like `resolve`): it reports discovered `Deref` targets to the
+  // import loop, not a question put to rustc. It MUST be forwarded — a decorator inheriting the
+  // default empty would silently drop every autoderef target (the note on `resolve` above applies).
+  fn deref_target_imports(&self) -> Vec<ResolvedName<'s>> {
+    self.inner.deref_target_imports()
+  }
 }

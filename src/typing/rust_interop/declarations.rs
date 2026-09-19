@@ -442,8 +442,22 @@ where
       // caller in `synthesize_extern_function` before it reaches here, per @PFVSZ. A nested borrow's
       // mutation is not yet mirrored into a group (only a top-level parameter borrow is), so `is_mut`
       // is not read here.
-      let inner_rune = fresh_rune(scout_arena, range, next_synthetic);
-      bind_sig_type(compiler, inner, inner_rune, range, generic_runes, rules, next_synthetic)?;
+      //
+      // The borrow wraps the rune the inner *settled to*, not the fresh one offered: for a concrete
+      // inner that is the fresh rune (bound by its Lookup/Call), but for a generic inner (`&T`, the
+      // return of `at<T>(&Vec<T>, i64) -> &T`) it is the generic's own rune, and no rule ever binds
+      // the fresh one — wiring the borrow onto it leaves the return unsolved. Same trap, same cure,
+      // as a `&C` parameter's top-level borrow in `synthesize_extern_function`.
+      let offered_inner_rune = fresh_rune(scout_arena, range, next_synthetic);
+      let inner_rune = bind_sig_type(
+        compiler,
+        inner,
+        offered_inner_rune,
+        range,
+        generic_runes,
+        rules,
+        next_synthetic,
+      )?;
       rules.push(IRulexSR::BorrowRef(BorrowRefSR {
         range,
         result_rune: own_rune,

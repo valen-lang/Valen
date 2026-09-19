@@ -64,12 +64,16 @@ names and lacks two of its pieces. Tracked here so neither doc has to carry the 
 - **Opaque wrapper shape.** The design's `__ValeOpaque<const OID: u128>(PhantomData<*mut ()>, PhantomPinned)`
   carries a per-OID `impl Drop` (monomorphized per OID, so static dispatch), and a Valen struct Rust can name
   (exported, or implementing a Rust trait) carries the markers directly with no `__ValeOpaque` field. The code
-  has `pub struct __ValeOpaque<const T: u64>;` as a unit struct (`stub_gen.rs`, `drive.rs`), a 64-bit FNV-1a
-  typeid (`typeid.rs`), projects every such struct as `pub struct <S><F>(__ValeOpaque<HASH>, PhantomData<(F)>)`,
-  and routes drops through the `__vale_drop<T>` shim with no `Drop` impl. The design's own crate-root flow
-  still writes `struct Ship { contents: __ValeOpaque<OID> }`, which contradicts its Opacity section; the
-  architect has not ruled which passage wins. The `layout_of` override that would make the design's shape
-  real is short-term Next #5. The design's comptime-generic-argument-as-integer table has no code yet.
+  has those two markers plus a real `UnsafeCell<()>` for `!Freeze` (`VALE_OPAQUE_DECL` in `stub_gen.rs`,
+  the one spelling, with each marker's reason; the harness `fixtures/stub.rs` hand-writes the same) but
+  with a 64-bit FNV-1a typeid (`typeid.rs`), projects every
+  struct Rust can name as `pub struct <S><F>(__ValeOpaque<HASH>, PhantomData<(F)>)` — a `__ValeOpaque` *field*
+  keyed on the struct's name, not inline markers — and routes drops through the `__vale_drop<T>` shim with no
+  `Drop` impl. The design's own crate-root flow still writes `struct Ship { contents: __ValeOpaque<OID> }`,
+  which contradicts its Opacity section; the architect has not ruled which passage wins for a *named*
+  projection. For an unprojected Valen type in a Rust slot the design's bare `__ValeOpaque<OID>` is what the
+  code does, sized by the `layout_of` override (see "A Valen struct crosses to Rust by value"). The design's
+  comptime-generic-argument-as-integer table has no code yet.
 - **Entry symbol capture.** The design shows a general capture — `record_export_symbol(export_name, symbol)`
   run for every exported function in `per_instance_mir`. The tree instead special-cases only the entry:
   `if stub_name == "__vale_main" { *state.entry_symbol.borrow_mut() = Some(tcx.symbol_name(instance)…) }`
@@ -642,7 +646,7 @@ run --manifest-path Cargo.toml` (wasi).
 **wrapper-as-field opaque shape**: `pub struct MyCb<F>(__ValeOpaque<HASH>, PhantomData<(F)>)`, never real
 fields. rustc keeps MyCb's own DefId (so the `impl` resolves) but sees an opaque blob; Vale owns the size via
 a `layout_of` override (see "the size question" below). `generate_stub_source` (`stub_gen.rs`) now predeclares
-`pub struct __ValeOpaque<const T: u64>;` and emits every projected struct as that 2-field wrapper + a generic
+`__ValeOpaque<const T: u64>` (`VALE_OPAQUE_DECL`) and emits every projected struct as that 2-field wrapper + a generic
 `impl<F> Cb for MyCb<F>` (generics from `StructP.identifying_runes` / `ImplP.generic_params`). A `typeid(&str)
 -> u64` FNV-1a helper is new at `src/typing/rust_interop/typeid.rs` (deterministic — pinned-literal fence in
 its tests; @P0 no-nondeterminism). Guarded by `stub_gen_projects_a_generic_forwarder_as_opaque_wrapper`
@@ -703,24 +707,73 @@ case, @NNGZ):
   *virtual*-dispatch path — was the earlier misstep: it instantiated the abstract dispatcher method
   `on_tick(&MainLoop, …)` into `monouts.functions`, whose body virtual-dispatches, and the backend then aborted
   building an `&MainLoop` interface fat pointer (a synthesized extern interface has no interface-ref-struct
-  layout). `resolve_override_prototype` sidesteps all of it. The `layout_of` override (Sky
-  `rustc-lang-facade/src/queries/layout.rs:43-206`) is needed the moment a Valen struct crosses to Rust by
-  value; that is now short-term Next #5 (high priority). The design-literal §10.9 typeid→kind universe *table* stored on `DriverState` is
-  deferred to when `layout_of` needs it; identification currently reverse-decodes without a persisted table.
+  layout). `resolve_override_prototype` sidesteps all of it. The impl is identified against the §10.9
+  typeid→kind universe table `DriverState.opaque_universe` (registered after every drain by
+  `register_instantiated_kinds`), the same table the `layout_of` override reads (see "A Valen struct crosses
+  to Rust by value").
 
-**Next feature — import methods reached through `Deref`.** Rust parameter mutation (`&mut` → `mut(g)`)
-and borrow-return regions (a `&self`-tied return → `&T in g...`, the descendant form) are mirrored into
-synthesized functions by `synthesize_extern_function` (`declarations.rs`), and the reverse direction
-mirrors `&mut` too (stub `&mut`/`&mut self` + abstract-method `mut(g)`, inert until enforced — see "Borrow
-groups on Rust imports"), so the group borrow checker accepts and churns imported borrows. NobiliaV's real
-driver builds and runs on the `&mut` trait shape (`on_tick(&mut self, w: &mut NobiliaWindow, …)`, override
-on `mut(r) mut(s)`). The next gap a real program hits is `Deref`: `Vec::get`/`first`/`last`/
-indexing are slice (`[T]`) methods reached from `Vec<T>` only through `Deref<Target=[T]>`, but method
-discovery walks only `tcx.inherent_impls` (`TyCtxtOracle::methods` in `tyctxt_oracle.rs`), so `get` is never
-synthesized and `v.get(0)` fails to resolve (`CouldntFindFunctionToCallT`, empty rejected list). The work:
-follow `Deref` in method discovery, then lower what those slice signatures need — the slice `[T]` (which
-declines `Unsized` today), `usize`↔`int` matching, and the `Option<&T>` return (a borrow nested in an enum
-arg, plus its return group). Tracked by the ignored `a_real_vec_element_accessor_is_importable` (`cases.rs`).
+**Interop autoderef — built (single-step, shared `Deref`).** A method reached through a type's shared
+`Deref` resolves and runs by a callsite receiver rewrite to `deref(recv)`, mirroring rustc's callsite
+autoderef. Interop-scoped by design (Valen has no `Deref` trait of its own — it defers to Rust's) and fires
+only for a rust-backed receiver. Proven end to end by `rustc_collector_drives_a_deref_reached_method`
+(tier-1) and `rustc_driven_bin_deref_reached_method_returns_seven` (tier-2 → 7) on the synthetic
+`Sheath: Deref<Target=Core>` fixture (`Core::read(&self) -> i32`, `mycrate.rs`). The pieces:
+- `discover_deref_targets` (`tyctxt_oracle.rs`) probes each imported **non-generic** ADT for a shared
+  `Deref<Target=U>` with a **non-generic named-ADT** `U`; registers `U` + its inherent methods and adds a
+  `deref` method (`ItemKind::DerefMethod`) whose `fn_sig` is built directly as `&Source -> &Target` (never
+  lowering `deref`'s raw sig, whose `Self` is a param and whose return is the declined `Target` projection).
+- `deref_target_imports` reports the auto-added targets; `Compiler::evaluate`'s import loop declares each
+  implicitly, exactly as an explicit import.
+- `try_autoderef_overload_call` (`call_compiler.rs`, `#[cfg(rust_interop)]`) fires in the `Err` arm of
+  `evaluate_call` when a method misses on a rust-backed receiver: resolve `deref`, rewrite the receiver to
+  `deref(recv)`, re-resolve. Single-step and terminating because only originally-imported types get a `deref`.
+- `resolve_deref_request` (`src/instantiating/rust_interop/mod.rs`) resolves the `deref` leaf through the
+  `Deref` impl (inherent-method resolution misses it).
+
+**A Valen struct crosses to Rust by value (the `layout_of` override) — built.** A data-carrying Valen
+struct (`struct Ship { fuel int; }`) passes through a generic Rust fn by value, lives by value inside a real
+`Vec<Ship>` at its real stride, and is read and written through element borrows — including the benchmark
+shape, two aliased refs to the vec with a field write through one element borrow read back through the
+other. Never `repr(C)`: the element stays opaque to Rust. Tier-2 guards in `cases.rs`:
+`rustc_driven_bin_vale_struct_round_trips_by_value_returns_42` (`id<T>` round trip),
+`rustc_driven_bin_vec_of_vale_structs_read_through_borrow_returns_42`,
+`rustc_driven_bin_aliased_vec_element_write_returns_42`. The pieces:
+- An unprojected Valen type in a Rust slot crosses as bare `__ValeOpaque<typeid>` (`opaque_ty`,
+  `src/instantiating/rust_interop/mod.rs`; design "everything else"), and `__ValeOpaque` is the design's
+  marker struct plus a real `UnsafeCell<()>` so it is `!Freeze` (`VALE_OPAQUE_DECL`, `stub_gen.rs`, with
+  each marker's reason; the harness `fixtures/stub.rs` hand-writes it; pinned by
+  `a_valen_type_is_not_freeze_to_rustc` through the harness's `probe_fixture_tcx`). Its own fields are
+  zero-sized; the size is the override's, reported over however many marker fields the struct has.
+- `lang_layout_of` (`mod.rs`, installed in `vale_override_queries`, saved default in `DEFAULT_LAYOUT_OF`)
+  intercepts exactly the `__ValeOpaque` ADT: `read_opaque_typeid` → `DriverState.opaque_universe` → the
+  struct's `StructDefinitionI.members`, each lowered by `kind_to_rustc_ty` and sized by rustc's own
+  `layout_of`, then a C-offset walk (`c_layout_over`; the same layout LLVM gives the backend's non-packed
+  struct of those members) reported as `BackendRepr::Memory { sized: true }` with one offset per marker
+  field (§10.4.5). Derived types (`&`, `*mut`, `Option<..>`) and a typeid naming nothing instantiated fall
+  through to rustc (Sky's lesson: intercepting derived types corrupts them). A Valen *interface* by value,
+  or a member with no rustc type (`str`, `float`, a Valen reference), panics loud rather than sizing wrong.
+- `DriverState.opaque_universe` is the §10.9 typeid→kind table: `register_instantiated_kinds` appends every
+  struct/interface in `monouts` after each drain (export and callback), i.e. before any rustc query on the
+  new leaves — populate-then-read. It is a separate cell from `monouts` because the ABI queries that re-enter
+  `layout_of` (`compute_extern_abi` → `fn_abi_of_instance`) fire while the resolve loop holds `monouts`
+  mutably (see Lessons). `opaque_typeid` is the one definition of the key both sides use.
+- Element access is the fixture-crate helper `at<T>(v: &Vec<T>, i: i64) -> &T` (`mycrate.rs`): the
+  `i as usize` is its own Rust (Valen never converts `i64`↔`usize`), and the bare `&T in g...` return is
+  the borrow shape a Valen program already receives. A benchmark crate writes its own `at`. Importing it
+  needed one importer fix: `bind_sig_type`'s nested-`Borrow` arm now wraps the rune the inner settles to
+  (the generic's own rune for `&T`), the return-side twin of the `&C`-parameter lesson.
+- exp-2's speed cases (05-08, 13) are the downstream consumer: this is the shape they respell onto
+  (`Vec<Ship>` by value + an `at`-style accessor). The alias *metadata* correctness for the descendant return
+  group (`&T in g...`) is their §2b `borrow_checker` work, in parallel; nothing here waits on it.
+
+**Then: real `Vec::get`.** `Vec::get`/`first`/`last`/indexing are slice (`[T]`) methods reached from
+`Vec<T>` through `Deref<Target=[T]>`. The autoderef mechanism above is the prerequisite; `Vec` needs four
+more pieces it deliberately does NOT cover: (1) a **generic** `Deref` source (`Vec<T>` — `discover_deref_targets`
+takes only non-generic sources); (2) the slice `[T]` target (declines `Unsized` in `lower_ty`);
+(3) a Valen `usize` index — `usize` has no literals or operators, so a program cannot produce one, and the
+compiler never converts `int`/`i64` to it; (4) the `Option<&T>` return (a borrow nested in an enum, plus its
+descendant return group — the §2b `noalias` coordination with exp-2). Tracked by the ignored
+`a_real_vec_element_accessor_is_importable` (`cases.rs`).
 
 **Short-term (very soon):**
 1. **Pull the stdlib into the interop compilation.** Today only the compiler builtins are compiled in
@@ -795,25 +848,17 @@ arg, plus its return group). Tracked by the ignored `a_real_vec_element_accessor
    (see the simplicity lesson). The typed renderer must then handle a
    hand-written struct's own generic params (read them off the `StructDefinitionT`, not `hinputs.structs`
    instances as `anon_substruct_arity` does) — the one piece of new work.
-5. **High priority: rustc believes every projected Valen struct is zero bytes.** A Vale struct crossing to
-   Rust is projected as `pub struct <S>(__ValeOpaque<HASH>, PhantomData<..>)`, and `__ValeOpaque<const T: u64>`
-   is a unit struct (`stub_gen.rs`, `drive.rs`), so rustc's `layout_of(<S>)` is size 0 / align 1 while Valen's
-   backend emits the real fields. The two LLVM types never *collide* (types are not symbols; each module has
-   its own), but they must *agree* on size wherever a value crosses, and today they don't. It is harmless only
-   because every crossing so far is by borrow (`run(&self, cb: &C)`, `main_loop(&mut cb)`): a pointer is a
-   pointer whatever rustc thinks is behind it. The first Rust API that takes, returns, stores, or copies a
-   Valen struct **by value** gets a silent memory error — `fn_abi_of_instance` classifies the ZST as
-   `PassMode::Ignore`, so the argument is not even passed. Two steps, in order:
-   (a) **Fail loud now.** In `citizen_or_opaque_to_rustc_ty` / `compute_extern_abi`
-   (`src/instantiating/rust_interop/mod.rs`), assert that a Valen-defined citizen never appears in a by-value
-   position of a resolved Rust leaf or callback signature until (b) lands; today's `Ignore` path must not be
-   reachable for a Valen type. (b) **Build the `layout_of` override** (arch §10.3–§10.5; design-of-record
-   `instantiating-rust-interop-design.md`; Sky reference `rustc-lang-facade/src/queries/layout.rs:43-206`):
-   install it in `vale_override_queries`, and for a `__ValeOpaque<typeid>` or a projected Vale struct answer
-   with Valen's real size + align as `BackendRepr::Memory { sized: true }` with no visible fields. The size
-   comes from the C++ backend's LLVM layout of the instantiated struct (Vale computes sizes nowhere else),
-   which means the query needs a size table populated at instantiation time — the §10.9 typeid→kind universe
-   table on `DriverState` that the reverse-callback landing deferred (see "Landed slice 3" above).
+5. **A *named* projection of a Valen struct is still zero bytes to rustc.** A Valen struct Rust can name
+   (one implementing a Rust trait, or an anon substruct) is projected as `pub struct <S>(__ValeOpaque<HASH>,
+   PhantomData<..>)` where `HASH` is `typeid(<S>'s name)` — a name hash, not an instantiated id — so the
+   `layout_of` override finds nothing in `opaque_universe` for that field and rustc sizes `<S>` at zero. An
+   *unprojected* Valen type is sized correctly (see "A Valen struct crosses to Rust by value"). Harmless
+   while every named-projection crossing is by borrow (`run(&self, cb: &C)`, `main_loop(&mut cb)`): a pointer
+   is a pointer whatever rustc thinks is behind it. The first Rust API that takes, returns, stores, or copies a
+   *trait-implementing* Valen struct **by value** gets `PassMode::Ignore` — nothing crosses. Closing it means
+   keying the override on the named projection too (Sky's shipped shape, `rustc-lang-facade/src/queries/
+   layout.rs:61-206`, keys on the projected name), which also needs the architect's ruling on the named
+   projection's shape (the "Opaque wrapper shape" bullet under "Design doc vs as-built").
 6. **Retire the fork's process-global `fill_extra_modules` hook.** `valenc-rs` installs its hook by calling
    `rustc_codegen_llvm::set_fill_extra_modules_hook`, which stores it in a `static OnceLock`; nothing else in
    rustc lets a driver set a static that changes compilation, and it is the one piece of patch 2 an upstream
@@ -1169,8 +1214,8 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   `on_tick(&MainLoop,…)` whose body virtual-dispatches, and the backend aborts building an `&MainLoop` interface
   fat pointer (a synthesized extern interface has no interface-ref-struct layout). To identify the impl, Rust's
   `instance.args` (carrying `C = __ValeOpaque<typeid>`) is decoded via `read_opaque_typeid`
-  (`ty::Const::try_to_leaf().to_u64()`) + a `typeid→kind` pass over `monouts`, and matched by forward-projecting
-  each candidate through `citizen_or_opaque_to_rustc_ty`.
+  (`ty::Const::try_to_leaf().to_u64()`) + a presence check against `DriverState.opaque_universe`, and matched
+  by forward-projecting each candidate through `citizen_or_opaque_to_rustc_ty`.
 - **Debugging a re-enabled or migrated feature: build the last commit where it passed and print the same
   values.** That pinpoints what the migration relocated — onion moved a method's type-connecting rules off
   `header_rules` onto per-param, and moved citizen-bound resolution from rule-running to flat substitution
@@ -1192,11 +1237,13 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
 - A Rust method's receiver borrow (`&self`) splits per @PFVSZ: the argument binds to the **value** rune,
   and the borrow concludes a separate **full-type** rune. Wiring the borrow onto the argument rune makes
   the peeled receiver fail `KindIsNotBorrowRef`.
-- A synthesized extern's `&C` parameter — a borrow of a **generic** — must wrap the rune `bind_sig_type`
-  *returns* (the generic's own rune), not the argument rune: for a generic inner `bind_sig_type` adds no
-  rule binding the argument rune, so wiring the borrow onto it leaves the parameter's rune-types
-  unsolved. Concrete borrows (`&Counter`) hide this because `bind_sig_type` returns the argument rune for
-  them; the forward corpus has no `&generic` param, so a `&C` extern (`run_callback`) first exposed it.
+- A synthesized extern's borrow of a **generic** — a `&C` parameter, or a `&T` return / nested borrow
+  (`at<T>(&Vec<T>, i64) -> &T`) — must wrap the rune `bind_sig_type` *returns* (the generic's own rune),
+  not the rune offered to it: for a generic inner `bind_sig_type` adds no rule binding the offered rune, so
+  wiring the borrow onto it leaves the type unsolved (`CouldntSolveRuneTypesT` on a `__rust_argN`). Concrete
+  borrows (`&Counter`) hide this because `bind_sig_type` returns the offered rune for them. Both sites —
+  the parameter split in `synthesize_extern_function` and the `Borrow` arm of `bind_sig_type` — use the
+  returned rune; keep it that way.
 - A Vale struct passed as a Rust generic's type argument (`run_callback::<MyCb>`) resolves to a **local**
   rustc DefId in the stub crate — `resolve_local_type`, the type twin of `resolve_local_fn` — because
   `resolve_crate_qualified_path` walks only loaded dependency crates. Branch on
@@ -1244,6 +1291,28 @@ The `// VCOORD` on the sealed tables in `compiler_outputs.rs` records the enforc
   only synthesizes the `FunctionS`; core (`get_or_create_postparsed_function`) owns registering it and
   deferring its compile. Keep it that way — AI-editable `rust_interop` must not mutate core accumulator
   state, and the shared ref enforces that structurally.
+- A new `RustOracle` trait method MUST be forwarded in `LoggingOracle` (`logging_oracle.rs`) — it is a
+  decorator over `self.inner`, and a method left to the trait default silently returns the empty/`None`
+  answer, so the real oracle's answer never reaches the caller. `deref_target_imports` returning `[]`
+  through the un-forwarded decorator (while the underlying `TyCtxtOracle` had the target) is what made
+  autoderef targets vanish; the file's own note on `resolve` warns of exactly this.
+- `tcx.impl_trait_ref(impl_did)` returns `EarlyBinder<TraitRef>` directly in this fork (not
+  `Option<..>`); `.instantiate_identity().self_ty()` reads the impl's self type. `for_each_relevant_impl`
+  can yield blanket impls, so match the self type's `ty_adt_def().map(|d| d.did())` against the owner
+  before trusting it.
+- **A query override must not `borrow()` `DriverState.monouts`: rustc re-enters it while our own resolve
+  loop holds `monouts` mutably.** `resolve_new_requests` (and the callback's inbound-ABI read) run
+  `compute_extern_abi` → `fn_abi_of_instance` → `layout_of` under the `borrow_mut()` taken in
+  `collect_new_rust_requests`, so an override reading `monouts` through its `RefCell` panics
+  "already mutably borrowed". Anything an override needs goes in its own cell (`opaque_universe`), filled
+  right after each drain, before the queries that read it.
+- A hand-built `LayoutData` needs `rustc_hashes::Hash64` for its `randomization_seed`; `rustc_hashes` is a
+  sysroot `rustc_private` crate the fork ships, declared in `src/lib.rs`'s interop `extern crate` block.
+- **A Valen type must be `!Freeze` to rustc, and only a real `UnsafeCell<()>` field does that.** rustc
+  emits `noalias readonly` on every `&T` parameter with `T: Freeze`, which is a miscompile for a pointee
+  Vale writes through an aliasing group borrow. `PhantomData<*mut ()>` and `PhantomPinned` remove
+  Send/Sync/Unpin but not Freeze (`core::marker` has explicit `impl Freeze for PhantomData<T>` and raw
+  pointers), so do not "simplify" `__ValeOpaque`'s `UnsafeCell<()>` into a `PhantomData` of anything.
 - The driven tests key their rustc scratch dir per run on a `tempfile::TempDir::new()`, not on the `Case`
   name. A `Case` is a shared `const` reused by several `#[test]`s (e.g. `CALLS_A_RUST_FREE_FUNCTION` drives
   three), and cargo runs `#[test]`s on parallel threads in one process, so a name-keyed dir let them build

@@ -1041,6 +1041,27 @@ exported func main() int {
   expect: Expect::Returns(7),
 };
 
+/// A method reached through `Deref`, not an inherent method — `read` lives on `Core`, the
+/// `Deref::Target` of `Sheath`, so `s.read()` resolves only if the importer follows `Sheath`'s shared
+/// `Deref<Target=Core>` and the callsite rewrites the receiver to `deref(s)`. The user imports only
+/// `Sheath` (and `make_sheath`); `Core` is reached transitively, exactly as a Rust caller reaches slice
+/// methods off `Vec` without naming `[T]`. Isolated from the real-`Vec::get` blockers: `Core` is a sized
+/// named struct, `read` returns a bare `int`, and there is no indexing.
+pub const CALLS_A_DEREF_REACHED_METHOD: Case = Case {
+  fixture: "fixtures",
+  name: "deref-reached-method",
+  vale: r#"
+import rust.mycrate.make_sheath;
+import rust.mycrate.Sheath;
+exported func main() int {
+  s = make_sheath();
+  return s.read();
+}
+"#,
+  // `make_sheath()` builds a `Sheath` wrapping `Core { val: 7 }`; `read` reads it back through the deref.
+  expect: Expect::Returns(7),
+};
+
 /// An associated function with no receiver — the `Vec::new` shape.
 ///
 /// It arrives through the same `associated_items` walk as a method, so under the
@@ -2037,4 +2058,73 @@ exported func main() int {
 }
 "#,
   expect: Expect::Returns(7),
+};
+
+/// A data-carrying Vale struct crosses **by value** through a generic Rust function and comes back
+/// intact. `Ship` is a Vale struct with a real field; it reaches rustc as bare `__ValeOpaque<typeid>`
+/// (a non-exported Vale type in a Rust slot, design "everything else"), whose size rustc must take from
+/// the `layout_of` override. Without the override rustc sees a zero-sized type, classifies the argument
+/// `PassMode::Ignore`, and the 42 never crosses — so this is the smallest tracer for the override.
+pub const A_VALE_STRUCT_ROUND_TRIPS_BY_VALUE_THROUGH_RUST: Case = Case {
+  fixture: "fixtures",
+  name: "vale-struct-round-trips-by-value",
+  vale: r#"
+import rust.mycrate.id;
+struct Ship { fuel int; }
+exported func main() int {
+  s = id(Ship(42));
+  return s.fuel;
+}
+"#,
+  expect: Expect::Returns(42),
+};
+
+/// A `Vec` of a data-carrying Vale struct, stored **by value** in Rust's buffer and read back through
+/// a borrow. `Vec<Ship>` allocates Vale's real stride only because the `layout_of` override sizes
+/// `__ValeOpaque<typeid(Ship)>`; `push` moves the struct into the buffer, and `at(&v, 0)` hands back a
+/// `&Ship` whose field Vale reads at its own offset behind the buffer pointer.
+pub const A_VEC_OF_VALE_STRUCTS_IS_READ_THROUGH_A_BORROW: Case = Case {
+  fixture: "fixtures",
+  name: "vec-of-vale-structs-read-through-borrow",
+  vale: r#"
+import rust.mycrate.at;
+import rust.alloc.vec.Vec;
+import rust.alloc.alloc.Global;
+struct Ship { fuel int; }
+exported func main() int {
+  v = Vec.new<Ship>();
+  v.push(Ship(42));
+  return at(&v, 0i64).fuel;
+}
+"#,
+  expect: Expect::Returns(42),
+};
+
+/// The benchmark shape (exp-2's speed cases): two aliased readwrite refs to one `Vec<Ship>`, an
+/// element borrow taken through each, a field written through one and read back through the other,
+/// with a Rust call between them so nothing can be forwarded in a register. The write must land in
+/// Rust's buffer and the read must see it: the element is a Vale struct stored by value at Vale's
+/// real stride (the `layout_of` override), and Vale's own load/store reaches it behind Vec's pointer.
+pub const ALIASED_VEC_ELEMENT_WRITE_IS_SEEN_THROUGH_THE_OTHER_ALIAS: Case = Case {
+  fixture: "fixtures",
+  name: "aliased-vec-element-write-seen-through-other-alias",
+  vale: r#"
+import rust.mycrate.at;
+import rust.mycrate.do_nothing;
+import rust.alloc.vec.Vec;
+import rust.alloc.alloc.Global;
+struct Ship { fuel int; }
+exported func main() int {
+  v = Vec.new<Ship>();
+  v.push(Ship(1));
+  ref_a = &v;
+  ref_b = &v;
+  a = at(ref_a, 0i64);
+  b = at(ref_b, 0i64);
+  set a.fuel = 42;
+  do_nothing();
+  return b.fuel;
+}
+"#,
+  expect: Expect::Returns(42),
 };

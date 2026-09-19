@@ -34,7 +34,7 @@ use crate::typing::rust_interop::{
 };
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::test::rust_interop::harness::{
-  compile_check_fixture, run_case, run_case_in_package, run_case_instantiated,
+  compile_check_fixture, probe_fixture_tcx, run_case, run_case_in_package, run_case_instantiated,
   run_case_rustc_driven, run_case_rustc_driven_and_run, run_case_rustc_driven_emitting,
   run_case_rustc_driven_full, run_case_with_coutputs, try_run_case,
   CaseOutcome,
@@ -1216,6 +1216,21 @@ fn rustc_driven_bin_borrow_self_method_returns_seven() {
   );
 }
 
+/// Interop autoderef, end to end: `s = make_sheath(); return s.read();` → 7, linked and run. `read`
+/// lives on `Core` (`Sheath`'s `Deref::Target`), so the call resolves only through a callsite rewrite
+/// to `read(deref(s))`, and BOTH leaves must materialize and run: `deref` (resolved via the `Deref`
+/// impl) crossing `&Sheath -> &Core`, then `read` crossing `&Core -> i32`.
+#[test]
+fn rustc_driven_bin_deref_reached_method_returns_seven() {
+  let run = run_case_rustc_driven_and_run(&CALLS_A_DEREF_REACHED_METHOD);
+  assert_eq!(
+    run.process_exit,
+    Some(7),
+    "the driven deref-reached-method bin did not exit 7 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
 /// Zero-sized struct return: `a = Alpha.new(); return 7;` where `struct Alpha {}` is
 /// empty. rustc classifies the by-value ZST return as `PassMode::Ignore`, so the interop extern return
 /// path must synthesize a fresh empty Vale value rather than feed the void call result to `toRef`.
@@ -1239,6 +1254,23 @@ fn rustc_collector_drives_a_borrow_receiver_method() {
   assert!(
     firings.iter().any(|f| f.contains("peek =>") && f.contains("(method)")),
     "peek(&self) did not resolve through its borrow receiver; firings: {firings:?}"
+  );
+  assert!(
+    !firings.iter().any(|f| f.contains("UNRESOLVED")),
+    "a Rust request failed to resolve; firings: {firings:?}"
+  );
+}
+
+/// Autoderef (single-step, shared, interop-scoped): `read` is NOT an inherent method of `Sheath` — it
+/// lives on `Core`, `Sheath`'s `Deref::Target`. So `s.read()` resolves only if the importer follows
+/// `Sheath`'s shared `Deref<Target=Core>` and the callsite rewrites the receiver to `deref(s)`. Isolated
+/// from the real-`Vec::get` blockers (sized named target, scalar return, no indexing).
+#[test]
+fn rustc_collector_drives_a_deref_reached_method() {
+  let firings = run_case_rustc_driven(&CALLS_A_DEREF_REACHED_METHOD);
+  assert!(
+    firings.iter().any(|f| f.contains("read =>") && f.contains("(method)")),
+    "read() did not resolve through Sheath's Deref target; firings: {firings:?}"
   );
   assert!(
     !firings.iter().any(|f| f.contains("UNRESOLVED")),
@@ -2250,7 +2282,7 @@ fn use_after_churn_through_a_rust_borrow_return_is_rejected() {
 // "Next"). `get` is unreachable until the importer follows `Deref<Target=[T]>` and lowers the slice
 // `[T]` / `usize`, so the program cannot compile yet.
 #[test]
-#[ignore = "Vec::get needs Deref<Target=[T]> method discovery + slice/usize lowering + Option<&T> return groups — planned next, see the handoff"]
+#[ignore = "the autoderef mechanism exists (single-step shared Deref), but real Vec::get still needs a generic Deref source (Vec<T>), slice [T] lowering, usize indexing, Option<&T> return groups, and stdlib-in-interop — see the handoff"]
 fn a_real_vec_element_accessor_is_importable() {
   let outcome = run_case(&REAL_VEC_ELEMENT_ACCESSOR_IS_IMPORTABLE, callees_in_main);
 
@@ -2270,4 +2302,71 @@ fn rust_borrow_return_taken_after_last_churn_is_clean() {
   outcome
     .check(&RUST_BORROW_RETURN_TAKEN_AFTER_LAST_CHURN_IS_CLEAN)
     .expect("the case declares it compiles");
+}
+
+/// Tier-2 tracer for the `layout_of` override: a data-carrying Vale struct (`Ship { fuel int }`) goes
+/// by value into `id<T>` and back, and the program returns its field → 42. rustc sizes the crossing
+/// `__ValeOpaque<typeid>` from Vale's real members via the override; before it, rustc's zero-sized view
+/// made the argument `PassMode::Ignore`, so nothing crossed and the field read garbage.
+#[test]
+fn rustc_driven_bin_vale_struct_round_trips_by_value_returns_42() {
+  let run = run_case_rustc_driven_and_run(&A_VALE_STRUCT_ROUND_TRIPS_BY_VALUE_THROUGH_RUST);
+  assert_eq!(
+    run.process_exit,
+    Some(42),
+    "the driven vale-struct-round-trip bin did not exit 42 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Tier-2: a Vale struct lives by value inside a real Rust `Vec` and is read back through `at<T>`'s
+/// borrow → 42. Rides Slice 1's `layout_of` override for the element stride; nothing else is new here
+/// unless the generic borrow-return import (`&Vec<T>` in, `&T` out) turns out to be a gap of its own.
+#[test]
+fn rustc_driven_bin_vec_of_vale_structs_read_through_borrow_returns_42() {
+  let run = run_case_rustc_driven_and_run(&A_VEC_OF_VALE_STRUCTS_IS_READ_THROUGH_A_BORROW);
+  assert_eq!(
+    run.process_exit,
+    Some(42),
+    "the driven vec-of-vale-structs bin did not exit 42 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Tier-2 guard for the benchmark shape: a field write through one alias of a `Vec<Ship>` element is
+/// read back through the other alias → 42. Vale keeps both borrows live and emits the store/load at
+/// its own field offset behind Vec's buffer; Rust's `at<T>` only hands the pointers out.
+#[test]
+fn rustc_driven_bin_aliased_vec_element_write_returns_42() {
+  let run = run_case_rustc_driven_and_run(&ALIASED_VEC_ELEMENT_WRITE_IS_SEEN_THROUGH_THE_OTHER_ALIAS);
+  assert_eq!(
+    run.process_exit,
+    Some(42),
+    "the driven aliased-vec-element-write bin did not exit 42 (rustc_exit={}, process_exit={:?}); firings: {:?}",
+    run.rustc_exit, run.process_exit, run.firings
+  );
+}
+
+/// Ensures rustc does not believe a Valen type is `Freeze`. `Freeze` is a marker rustc acts on: for a
+/// `&T` parameter with `T: Freeze` it emits `noalias readonly`, telling LLVM the pointee cannot change
+/// while the frame holds the reference. A Valen value's bytes *do* change under a Rust `&Ship`: Vale
+/// writes through a group borrow (mutation lives on the group, not on Rust's `&`/`&mut`), so a Rust fn
+/// holding `&Ship` across such a write would be miscompiled at `-O` (cached reads, dropped stores).
+/// Every Valen type crosses as `__ValeOpaque<typeid>`, so its `Freeze` answer is the one that matters;
+/// here it is checked on the typeid the fixture's `Ship` would carry.
+#[test]
+fn a_valen_type_is_not_freeze_to_rustc() {
+  let is_freeze = probe_fixture_tcx("fixtures", |tcx| {
+    let ship_ty = crate::instantiating::rust_interop::opaque_ty_for_typeid(
+      tcx,
+      crate::typing::rust_interop::typeid::typeid("Ship"),
+    )
+    .expect("the fixture stub declares __ValeOpaque");
+    ship_ty.is_freeze(tcx, rustc_middle::ty::TypingEnv::fully_monomorphized())
+  });
+  assert!(
+    !is_freeze,
+    "rustc believes __ValeOpaque<typeid(Ship)> is Freeze, so it would emit `noalias readonly` on every \
+     `&Ship` parameter even though Vale writes through aliasing group borrows"
+  );
 }

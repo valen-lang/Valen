@@ -112,6 +112,143 @@ fn package_coord_for<'s>(
   scout_arena.intern_package_coordinate(scout_arena.intern_str(RUST_MODULE), &packages)
 }
 
+/// Append every inherent-impl method of the item at `owner_idx` as a `Method(owner_idx)` entry.
+/// Shared by construction (for each imported type) and by `Deref`-target discovery (a target the
+/// allowlist didn't import needs its methods added here, since the construction loop never saw it).
+fn add_inherent_methods<'s>(
+  tcx: TyCtxt<'_>,
+  scout_arena: &ScoutArena<'s>,
+  items: &mut Vec<RustItem<'s>>,
+  owner_idx: usize,
+) {
+  let owner_def_id = items[owner_idx].def_id;
+  let package = items[owner_idx].package;
+  for impl_def_id in tcx.inherent_impls(owner_def_id).iter() {
+    for assoc in tcx.associated_items(*impl_def_id).in_definition_order() {
+      if assoc.as_tag() != rustc_middle::ty::AssocTag::Fn {
+        continue;
+      }
+      let name = assoc.name().to_string();
+      items.push(RustItem {
+        human_name: scout_arena.intern_str(&name),
+        name,
+        def_id: assoc.def_id,
+        package,
+        kind: ItemKind::Method(owner_idx),
+        // Parent-inclusive: a method's signature names the impl's params (`self Vec<T, A>`,
+        // `value: T`), which live under the method's `.parent`, not its own params.
+        generic_params: parent_inclusive_generic_param_names(tcx, scout_arena, assoc.def_id),
+      });
+    }
+  }
+}
+
+/// Single-step, shared-`Deref` discovery. For each imported ADT that implements `Deref<Target=U>`
+/// where BOTH the source and `U` are non-generic named ADTs, register `U` (and its inherent methods,
+/// if `U` wasn't itself imported) plus a `deref` method on the source. Returns the item indices of the
+/// targets that were newly added, so the import loop can declare them implicitly.
+///
+/// Scoped deliberately to non-generic source and target: a generic `Deref` like
+/// `Vec<T>: Deref<Target=[T]>` (whose target is the unsized slice `[T]`, which `lower_ty` declines)
+/// is skipped, leaving those slice methods unresolved — that is the separate slice/`usize`/`Option`
+/// work, not this. Only ORIGINALLY-imported types are probed (never an auto-added target), so a
+/// chain never advances past one step.
+fn discover_deref_targets<'s>(
+  tcx: TyCtxt<'_>,
+  scout_arena: &ScoutArena<'s>,
+  items: &mut Vec<RustItem<'s>>,
+) -> Vec<usize> {
+  let mut newly_added_targets: Vec<usize> = Vec::new();
+  let Some(deref_did) = tcx.lang_items().deref_trait() else {
+    return newly_added_targets;
+  };
+  let source_indices: Vec<usize> = items
+    .iter()
+    .enumerate()
+    .filter(|(_, i)| {
+      matches!(i.kind, ItemKind::Type | ItemKind::Enum) && i.generic_params.is_empty()
+    })
+    .map(|(idx, _)| idx)
+    .collect();
+  for source_idx in source_indices {
+    let source_def_id = items[source_idx].def_id;
+    let source_ty = tcx.type_of(source_def_id).instantiate_identity();
+    // The shared `Deref` impl for this exact ADT, if any: its `deref` fn DefId and its `Target` ADT.
+    let mut found: Option<(DefId, DefId)> = None;
+    tcx.for_each_relevant_impl(deref_did, source_ty, |impl_did| {
+      if found.is_some() {
+        return;
+      }
+      // `for_each_relevant_impl(deref_did, ..)` only yields impls of `Deref`, so each has a trait ref.
+      let self_ty = tcx.impl_trait_ref(impl_did).instantiate_identity().self_ty();
+      let TyKind::Adt(self_adt, _) = self_ty.kind() else {
+        return;
+      };
+      if self_adt.did() != source_def_id {
+        return;
+      }
+      let mut target_did: Option<DefId> = None;
+      let mut deref_fn: Option<DefId> = None;
+      for assoc in tcx.associated_items(impl_did).in_definition_order() {
+        match assoc.as_tag() {
+          // A named, non-generic ADT target only. `[T]`/`str`/a generic `Foo<T>` is out of scope.
+          rustc_middle::ty::AssocTag::Type => {
+            let ty = tcx.type_of(assoc.def_id).instantiate_identity();
+            if let TyKind::Adt(target_adt, target_args) = ty.kind() {
+              if target_args.types().next().is_none() {
+                target_did = Some(target_adt.did());
+              }
+            }
+          }
+          rustc_middle::ty::AssocTag::Fn => deref_fn = Some(assoc.def_id),
+          _ => {}
+        }
+      }
+      if let (Some(t), Some(f)) = (target_did, deref_fn) {
+        found = Some((f, t));
+      }
+    });
+    let Some((deref_fn_did, target_did)) = found else {
+      continue;
+    };
+    let target_kind = match tcx.def_kind(target_did) {
+      DefKind::Struct => ItemKind::Type,
+      DefKind::Enum => ItemKind::Enum,
+      _ => continue,
+    };
+    let target_idx = match items.iter().position(|i| {
+      matches!(i.kind, ItemKind::Type | ItemKind::Enum) && i.def_id == target_did
+    }) {
+      Some(idx) => idx,
+      None => {
+        let target_name = tcx.item_name(target_did).to_string();
+        items.push(RustItem {
+          human_name: scout_arena.intern_str(&target_name),
+          name: target_name,
+          def_id: target_did,
+          package: package_coord_for(tcx, scout_arena, target_did),
+          kind: target_kind,
+          generic_params: own_generic_param_names(tcx, scout_arena, target_did),
+        });
+        let new_idx = items.len() - 1;
+        add_inherent_methods(tcx, scout_arena, items, new_idx);
+        newly_added_targets.push(new_idx);
+        new_idx
+      }
+    };
+    let source_package = items[source_idx].package;
+    items.push(RustItem {
+      human_name: scout_arena.intern_str("deref"),
+      name: "deref".to_string(),
+      def_id: deref_fn_did,
+      package: source_package,
+      kind: ItemKind::DerefMethod { owner: source_idx, target: target_idx },
+      generic_params: Vec::new(),
+    });
+  }
+  newly_added_targets
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) enum ItemKind {
   Function,
@@ -124,6 +261,12 @@ pub(crate) enum ItemKind {
   Trait,
   /// A method, with the index of the type it hangs off.
   Method(usize),
+  /// The `deref` method synthesized from a type's shared `Deref<Target=U>` impl. `owner` is the
+  /// source type's item index (this method hangs off it, like `Method`), `target` the item index of
+  /// `U`. `fn_sig` builds `&Source -> &Target` directly from these two, rather than lowering `deref`'s
+  /// raw signature — whose `Self` is a `ty::Param` and whose return is the `<Self as Deref>::Target`
+  /// projection the oracle declines (`UnnormalizableAlias`).
+  DerefMethod { owner: usize, target: usize },
 }
 
 /// One resolved Rust item. `RustItemId` indexes a flat table of these — functions, types and
@@ -156,6 +299,11 @@ pub struct TyCtxtOracle<'tcx, 's> {
   /// reaches it, so its negative answer has to be a scan of a short list rather than a
   /// rustc query.
   items: Vec<RustItem<'s>>,
+  /// Item indices of types added ONLY as the shared `Deref` target of an imported type — reached
+  /// transitively, never in the allowlist. `deref_target_imports` hands these to the import loop so
+  /// each is declared implicitly (its `StructS` seeded, its methods attached), which is what lets a
+  /// `deref`-reached method resolve on it and a synthesized `deref`'s `&Target` return type be named.
+  deref_target_indices: Vec<usize>,
 }
 
 /// Resolve one **crate-qualified** dotted path (`crate.module….item`) to a single item.
@@ -290,26 +438,7 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
       .map(|(idx, _)| idx)
       .collect();
     for owner_idx in type_indices {
-      let owner_def_id = items[owner_idx].def_id;
-      let package = items[owner_idx].package;
-      for impl_def_id in tcx.inherent_impls(owner_def_id).iter() {
-        for assoc in tcx.associated_items(*impl_def_id).in_definition_order() {
-          if assoc.as_tag() != rustc_middle::ty::AssocTag::Fn {
-            continue;
-          }
-          let name = assoc.name().to_string();
-          items.push(RustItem {
-            human_name: scout_arena.intern_str(&name),
-            name,
-            def_id: assoc.def_id,
-            package,
-            kind: ItemKind::Method(owner_idx),
-            // Parent-inclusive: a method's signature names the impl's params (`self Vec<T, A>`,
-            // `value: T`), which live under the method's `.parent`, not its own params.
-            generic_params: parent_inclusive_generic_param_names(tcx, scout_arena, assoc.def_id),
-          });
-        }
-      }
+      add_inherent_methods(tcx, scout_arena, &mut items, owner_idx);
     }
 
     // A trait's abstract methods come from its **own** associated items, not from inherent impls.
@@ -338,7 +467,12 @@ impl<'tcx, 's> TyCtxtOracle<'tcx, 's> {
       }
     }
 
-    TyCtxtOracle { tcx, items }
+    // Single-step, shared `Deref`: register each imported type's `Deref` target + a `deref` method,
+    // so a Deref-reached method (`s.read()` where `read` lives on `Sheath`'s `Deref::Target`) can
+    // resolve via a callsite receiver rewrite to `deref(s)`.
+    let deref_target_indices = discover_deref_targets(tcx, scout_arena, &mut items);
+
+    TyCtxtOracle { tcx, items, deref_target_indices }
   }
 
   /// The Vale kind for an imported Rust type, built from its `rust`-packaged name.
@@ -606,7 +740,9 @@ where
       ItemKind::Function => ImportedItemKind::Function,
       ItemKind::Enum => ImportedItemKind::Enum,
       ItemKind::Trait => ImportedItemKind::Trait,
-      ItemKind::Method(_) => return None,
+      // A method — inherent or `deref` — is not a top-level importable name; it is found via its
+      // owner's `ResolvedName` plus `methods`, never resolved directly here.
+      ItemKind::Method(_) | ItemKind::DerefMethod { .. } => return None,
     };
     Some(ResolvedName {
       module_name: item.package.module,
@@ -623,6 +759,32 @@ where
   ) -> Result<ValeSig<'s, 't>, CouldNotPostparseReason> {
     let rust_item =
       self.items.get(item.0 as usize).expect("fn_sig: RustItemId out of range (internal bug)");
+    // A synthesized `deref`: build `&Source -> &Target` directly from the discovered (source, target)
+    // rather than lowering `deref`'s raw signature — whose `Self` is a `ty::Param` and whose return
+    // is the `<Self as Deref>::Target` projection this oracle declines. Single-step scope: both are
+    // non-generic, so no args and no bounds. The elided `&Target` return ties to `&self`'s region in
+    // `synthesize_extern_function`, exactly the borrow-return shape a `&self` accessor already uses.
+    if let ItemKind::DerefMethod { owner, target } = rust_item.kind {
+      let src = &self.items[owner];
+      let tgt = &self.items[target];
+      let src_citizen = interner.alloc(ValeSigType::Citizen {
+        name: src.human_name,
+        package: src.package,
+        args: &[],
+      });
+      let tgt_citizen = interner.alloc(ValeSigType::Citizen {
+        name: tgt.human_name,
+        package: tgt.package,
+        args: &[],
+      });
+      return Ok(ValeSig {
+        generic_params: &[],
+        generic_param_bounds: &[],
+        params: interner
+          .alloc_slice_from_vec(vec![ValeSigType::Borrow { inner: src_citizen, is_mut: false }]),
+        ret: ValeSigType::Borrow { inner: tgt_citizen, is_mut: false },
+      });
+    }
     let def_id = rust_item.def_id;
 
     // @EarlyBinder: deliberately NOT instantiating. `instantiate_identity` discards the
@@ -743,8 +905,35 @@ where
       .items
       .iter()
       .enumerate()
-      .filter(|(_, i)| i.kind == ItemKind::Method(owner))
+      // A `deref` (from a shared `Deref` impl) hangs off its source type exactly like an inherent
+      // method, so it is reachable through the same per-type method lookup.
+      .filter(|(_, i)| match i.kind {
+        ItemKind::Method(o) => o == owner,
+        ItemKind::DerefMethod { owner: o, .. } => o == owner,
+        _ => false,
+      })
       .map(|(idx, i)| (i.name.clone(), RustItemId(idx as u32)))
+      .collect()
+  }
+
+  fn deref_target_imports(&self) -> Vec<ResolvedName<'s>> {
+    self
+      .deref_target_indices
+      .iter()
+      .filter_map(|&idx| {
+        let item = &self.items[idx];
+        let kind = match item.kind {
+          ItemKind::Type => ImportedItemKind::Type,
+          ItemKind::Enum => ImportedItemKind::Enum,
+          _ => return None,
+        };
+        Some(ResolvedName {
+          module_name: item.package.module,
+          package_names: item.package.packages.as_slice(),
+          importee_name: item.human_name,
+          kind,
+        })
+      })
       .collect()
   }
 }

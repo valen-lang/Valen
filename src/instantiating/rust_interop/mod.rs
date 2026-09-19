@@ -25,9 +25,14 @@ use rustc_middle::mir::{
 use rustc_middle::middle::deduced_param_attrs::DeducedParamAttrs;
 use rustc_hir::attrs::Linkage;
 use rustc_middle::mir::mono::{CodegenUnit, MonoItem, MonoItemPartitions, Visibility};
-use rustc_abi::{BackendRepr, Primitive, RegKind};
+use rustc_abi::{
+  AbiAlign, Align, BackendRepr, FieldIdx, FieldsShape, LayoutData, Primitive, RegKind, Size,
+  VariantIdx, Variants,
+};
+use rustc_hashes::Hash64;
 use rustc_middle::ty::adjustment::PointerCoercion;
-use rustc_middle::ty::{self, Instance, Ty, TyCtxt};
+use rustc_middle::ty::layout::{LayoutError, TyAndLayout};
+use rustc_middle::ty::{self, Instance, PseudoCanonicalInput, Ty, TyCtxt};
 use rustc_middle::util::Providers;
 use rustc_target::callconv::PassMode;
 use rustc_span::def_id::{DefId, LocalDefId};
@@ -45,6 +50,7 @@ use crate::backend_ffi::backend_inputs::{BackendInputs, BackendMode, Callback, I
 use crate::backend_ffi::metal_lowerer::{Coercion, ExternAbi, StructLayout};
 use crate::backend_ffi::{compile, BackendCompileOptions};
 use crate::instantiating::instantiated_humanizer::humanize_id;
+use crate::instantiating::ast::citizens::StructDefinitionI;
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::utils::range::CodeLocationS;
 use crate::compile_options::GlobalOptions;
@@ -108,6 +114,14 @@ pub struct DriverState<'s, 'ctx, 't, 'i> {
   /// prototype name. That is the same key the metal prototype gets, so the backend's `buildCallOrSideCall`
   /// finds it. Accumulated as leaves resolve in `collect_new_rust_requests`; read at emit.
   pub extern_abis: &'ctx RefCell<HashMap<String, ExternAbi>>,
+  /// The typeid→kind universe (arch §10.9): every Vale struct/interface instantiated so far, keyed by
+  /// the content-addressed typeid its `__ValeOpaque<typeid>` crossing carries (`opaque_typeid`).
+  /// Appended after every instantiator drain (`register_instantiated_kinds`) and read by the
+  /// `layout_of` override to size a Vale struct rustc holds by value, and by `collect_callback` to
+  /// confirm a callback's opaque type args are ones Vale instantiated. A separate cell from `monouts`
+  /// on purpose: the ABI queries that re-enter `layout_of` fire while the resolve loop still holds
+  /// `monouts` mutably. Populate-then-read, in instantiation order; a typeid registers once.
+  pub opaque_universe: &'ctx RefCell<IndexMap<u64, OpaqueKindI<'s, 'i>>>,
   /// Whether the `fill_extra_modules` hook should actually lower + emit the Vale bodies into rustc's
   /// borrowed module (Stage 2+), or just record that it fired (Stage 1 / the Milestone-M driven tests
   /// that assert only on resolution, not emission). Off keeps those tests off the backend path.
@@ -121,6 +135,15 @@ pub struct DriverState<'s, 'ctx, 't, 'i> {
 pub struct CallbackReq {
   pub symbol: String,
   pub vale_name: String,
+}
+
+/// What a `__ValeOpaque<typeid>` stands for, as recorded in `DriverState.opaque_universe`. A struct
+/// carries its definition so the `layout_of` override can size it from its members without touching
+/// `monouts`; an interface has no by-value layout (it crosses only by borrow), so only its identity is
+/// kept for the callback presence check.
+pub enum OpaqueKindI<'s, 'i> {
+  Struct(&'i StructDefinitionI<'s, 'i>),
+  Interface(IdI<'s, 'i>),
 }
 
 impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
@@ -157,8 +180,23 @@ impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
     let export_i = instantiator.instantiate_exported_function(&mut monouts, export);
     self.function_exports.borrow_mut().push(export_i);
     instantiator.drain_instantiation_queue(&mut monouts);
+    self.register_instantiated_kinds(&monouts);
 
     self.resolve_new_requests(tcx, &mut monouts, &before)
+  }
+
+  /// Bring `opaque_universe` up to date with everything a drain just instantiated. Called right after
+  /// each drain and before any rustc query on the new leaves, so by the time `fn_abi_of_instance` asks
+  /// the layout of a `__ValeOpaque<typeid>` argument, that typeid is answerable. Idempotent: a kind
+  /// already registered (by an earlier export's drain) is left where it is.
+  fn register_instantiated_kinds(&self, monouts: &InstantiatedOutputsI<'s, 't, 'i>) {
+    let mut universe = self.opaque_universe.borrow_mut();
+    for (id, def) in monouts.structs.iter() {
+      universe.entry(opaque_typeid(id)).or_insert(OpaqueKindI::Struct(def));
+    }
+    for id in monouts.interfaces_without_methods.keys() {
+      universe.entry(opaque_typeid(id)).or_insert(OpaqueKindI::Interface(*id));
+    }
   }
 
   /// Resolve each Rust leaf collected since `before` (a snapshot of `rust_instantiation_requests`'
@@ -243,19 +281,16 @@ impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
     let self_ty = tcx.type_of(impl_def_id).instantiate(tcx, instance.args);
 
     // Reverse-decode + identify the concrete Valen impl this callback instance stands for (arch
-    // §8.9/§10.9). Build the typeid→kind-id universe table over the citizens instantiated so far, keyed
-    // by the same content hash the outbound lowering stamps (`typeid(humanize_id(id))`, see `opaque_ty`).
+    // §8.9/§10.9), against the typeid→kind universe (`opaque_universe`) the earlier drains registered,
+    // keyed by the same content hash the outbound lowering stamps (`opaque_typeid`, see `opaque_ty`).
     // The concrete override for a *generic* impl is an instantiator product (`translate_override`),
     // never a typing product — so we identify the impl from the collector-driven instance and drive the
     // instantiator's own virtual-dispatch path, exactly as a native `InterfaceFunctionCall` would.
     let (matched_impl_t, matched_impl_i) = {
       let monouts = self.monouts.borrow();
-      let mut universe: HashMap<u64, IdI> = HashMap::default();
-      for id in monouts.structs.keys().chain(monouts.interfaces_without_methods.keys()) {
-        universe.insert(typeid(&humanize_id(&code_map, id, None)), *id);
-      }
       // Fail loud (not silent-wrong) if the instance carries an opaque type Vale never instantiated:
       // §10.9 recovery must find every crossed Valen type in the universe.
+      let universe = self.opaque_universe.borrow();
       for arg in self_ty.walk() {
         if let Some(arg_ty) = arg.as_type() {
           if let Some(tid) = read_opaque_typeid(tcx, arg_ty) {
@@ -377,6 +412,7 @@ impl<'s, 'ctx, 't, 'i> DriverState<'s, 'ctx, 't, 'i> {
       impl_bound_args,
     );
     instantiator.drain_instantiation_queue(&mut monouts);
+    self.register_instantiated_kinds(&monouts);
 
     // The instantiated body's metal name is `humanize_id(override_proto.id)` (metal_lowerer's
     // `lower_function` keys it that way). That single string is both the extern-ABI key the wrapper's
@@ -430,6 +466,16 @@ fn resolve_request<'tcx>(tcx: TyCtxt<'tcx>, proto: &PrototypeI) -> ResolvedReque
   if let Some((def_id, args)) = resolve_method_request(tcx, proto, &own_arg_tys) {
     return ResolvedRequest {
       log: format!("{path} => {} (method)", tcx.def_path_str(def_id)),
+      dep: Some((def_id, args)),
+    };
+  }
+
+  // A synthesized `deref` (from autoderef): its receiver type implements `Deref`, but `deref` is a
+  // trait method, not inherent, so `resolve_method_request` misses it. Resolve it through the `Deref`
+  // impl. Checked after the inherent attempt so a real inherent method named `deref` still wins.
+  if let Some((def_id, args)) = resolve_deref_request(tcx, proto, &own_arg_tys) {
+    return ResolvedRequest {
+      log: format!("{path} => {} (deref)", tcx.def_path_str(def_id)),
       dep: Some((def_id, args)),
     };
   }
@@ -516,6 +562,48 @@ fn resolve_method_request<'tcx>(
   let mut method_arg_tys = receiver_arg_tys;
   method_arg_tys.extend_from_slice(own_arg_tys);
   Some((method_def_id, build_generic_args(tcx, method_def_id, &method_arg_tys)))
+}
+
+/// Resolve a synthesized `deref` request to the `Deref::deref` fn of the receiver type's shared `Deref`
+/// impl — the instantiator mirror of the oracle's `Deref` discovery. Recognized by the method name
+/// `deref` on a rust-backed receiver whose type implements `Deref`; `None` otherwise (so a real
+/// inherent method named `deref`, tried first via `resolve_method_request`, still wins).
+fn resolve_deref_request<'tcx>(
+  tcx: TyCtxt<'tcx>,
+  proto: &PrototypeI,
+  own_arg_tys: &[Ty<'tcx>],
+) -> Option<(DefId, ty::GenericArgsRef<'tcx>)> {
+  let (method_name, _, parameters) = request_name_parts(proto)?;
+  if method_name.as_str() != "deref" {
+    return None;
+  }
+  let (owner_def_id, receiver_arg_tys) = receiver_owner(tcx, parameters.first()?)?;
+  let deref_did = tcx.lang_items().deref_trait()?;
+  let receiver_ty = tcx.type_of(owner_def_id).instantiate_identity();
+  let mut deref_fn: Option<DefId> = None;
+  tcx.for_each_relevant_impl(deref_did, receiver_ty, |impl_did| {
+    if deref_fn.is_some() {
+      return;
+    }
+    let self_adt = tcx
+      .impl_trait_ref(impl_did)
+      .instantiate_identity()
+      .self_ty()
+      .ty_adt_def()
+      .map(|d| d.did());
+    if self_adt != Some(owner_def_id) {
+      return;
+    }
+    for assoc in tcx.associated_items(impl_did).in_definition_order() {
+      if assoc.as_tag() == ty::AssocTag::Fn {
+        deref_fn = Some(assoc.def_id);
+      }
+    }
+  });
+  let deref_fn = deref_fn?;
+  let mut method_arg_tys = receiver_arg_tys;
+  method_arg_tys.extend_from_slice(own_arg_tys);
+  Some((deref_fn, build_generic_args(tcx, deref_fn, &method_arg_tys)))
 }
 
 /// Resolve an associated function (e.g. `Domino::new`) through its owner type. The owner is named in
@@ -674,10 +762,22 @@ fn citizen_or_opaque_to_rustc_ty<'tcx>(tcx: TyCtxt<'tcx>, id: &IdI) -> Option<Ty
 /// (`collect_callback`) can recover which Valen type an opaque instantiation stands for by matching the
 /// same hash over the universe. Mirrors Sky's `build_opaque_args` (toylangc/src/oracle.rs:1330).
 fn opaque_ty<'tcx>(tcx: TyCtxt<'tcx>, id: &IdI) -> Option<Ty<'tcx>> {
+  opaque_ty_for_typeid(tcx, opaque_typeid(id))
+}
+
+/// `__ValeOpaque<tid>` as a rustc type, or `None` when the compiled crate declares no `__ValeOpaque`.
+/// The type every Valen-internal type crosses as, given its typeid; `opaque_ty` is the id-taking form.
+pub(crate) fn opaque_ty_for_typeid<'tcx>(tcx: TyCtxt<'tcx>, tid: u64) -> Option<Ty<'tcx>> {
   let opaque_def_id = resolve_local_type(tcx, "__ValeOpaque")?;
-  let code_map = |loc: CodeLocationS| format!("{:?}", loc);
-  let tid = typeid(&humanize_id(&code_map, id, None));
   Some(Ty::new_adt(tcx, tcx.adt_def(opaque_def_id), build_opaque_args(tcx, opaque_def_id, tid)))
+}
+
+/// The one definition of the typeid a Valen kind crosses under: the content hash of its humanized
+/// instantiated id. Stamped by `opaque_ty` on the way out, and the key `opaque_universe` is registered
+/// under, so the inbound decode (`read_opaque_typeid` → universe) recovers the same kind.
+fn opaque_typeid(id: &IdI) -> u64 {
+  let code_map = |loc: CodeLocationS| format!("{:?}", loc);
+  typeid(&humanize_id(&code_map, id, None))
 }
 
 /// The `GenericArgs` for `__ValeOpaque<HASH>`: the typeid interned as its single `const T: u64` argument.
@@ -701,7 +801,7 @@ fn build_opaque_args<'tcx>(
 /// `opaque_ty`/`build_opaque_args`. This is the inbound (`collect_callback`) decode: rustc hands us a
 /// callback `Instance` whose `Self` type carries `__ValeOpaque<HASH>` for each Valen-internal type
 /// arg (e.g. the lambda functor), and the HASH is `typeid(humanize_id(kind.id))` — so this reader plus
-/// the typeid→kind universe table (`build_universe_table`) recovers which Valen kind the opaque blob
+/// the typeid→kind universe (`DriverState.opaque_universe`) recovers which Valen kind the opaque blob
 /// stands for (arch §10.9). Returns `None` for any other type (a primitive, a real Rust `Adt`, a
 /// borrow) so a caller can fall through / fail loud rather than mis-decode.
 fn read_opaque_typeid<'tcx>(tcx: TyCtxt<'tcx>, ty: Ty<'tcx>) -> Option<u64> {
@@ -820,6 +920,12 @@ static DEFAULT_COLLECT_AND_PARTITION: OnceLock<
 static DEFAULT_DEDUCED_PARAM_ATTRS: OnceLock<
   for<'tcx> fn(TyCtxt<'tcx>, LocalDefId) -> &'tcx [DeducedParamAttrs],
 > = OnceLock::new();
+static DEFAULT_LAYOUT_OF: OnceLock<
+  for<'tcx> fn(
+    TyCtxt<'tcx>,
+    PseudoCanonicalInput<'tcx, Ty<'tcx>>,
+  ) -> Result<TyAndLayout<'tcx>, &'tcx LayoutError<'tcx>>,
+> = OnceLock::new();
 
 /// The `override_queries` hook: a bare `fn` (rustc query providers cannot capture state), installed
 /// from the driver's `config()`.
@@ -833,6 +939,9 @@ static DEFAULT_DEDUCED_PARAM_ATTRS: OnceLock<
 ///   `internalize_symbols` pass can't strand Vale's out-of-band `vale_cgu` reference to it (see the fn).
 /// - `deduced_param_attrs` → `&[]` for those same items, so rustc infers no `readonly`/`captures(none)`
 ///   from the `unreachable!()` body (which would be silent UB against Vale's real body; arch §22.4).
+/// - `layout_of` → Vale's real size and alignment for a `__ValeOpaque<typeid>` naming an instantiated
+///   Vale struct (arch §10.3–§10.5), so a Vale struct crossing by value is neither zero-sized nor
+///   decomposed; every other type is rustc's.
 ///
 /// A non-Vale crate is byte-identical: the pure-Rust passthrough (`NoopCallbacks`) installs no
 /// overrides at all, and each override diverges only for Vale's own stub items / reified leaves.
@@ -840,8 +949,125 @@ pub fn vale_override_queries(_session: &rustc_session::Session, providers: &mut 
   providers.queries.per_instance_mir = lang_per_instance_mir;
   let _ = DEFAULT_COLLECT_AND_PARTITION.set(providers.queries.collect_and_partition_mono_items);
   let _ = DEFAULT_DEDUCED_PARAM_ATTRS.set(providers.queries.deduced_param_attrs);
+  let _ = DEFAULT_LAYOUT_OF.set(providers.queries.layout_of);
   providers.queries.collect_and_partition_mono_items = lang_collect_and_partition_mono_items;
   providers.queries.deduced_param_attrs = lang_deduced_param_attrs;
+  providers.queries.layout_of = lang_layout_of;
+}
+
+/// The `layout_of` override (arch §10.3–§10.5; Sky's `rustc-lang-facade/src/queries/layout.rs`). A Vale
+/// type in a Rust slot crosses as `__ValeOpaque<typeid>`, whose own fields are zero-sized markers — so
+/// rustc's layout would make a Vale struct passed by value `PassMode::Ignore` (nothing crosses) and give
+/// a `Vec<Ship>` no stride. This answers with Vale's real size and alignment instead: the typeid names an
+/// instantiated Vale struct in `opaque_universe`, each member lowers to a rustc type that rustc sizes
+/// itself, and a C-offset walk over them yields the same layout LLVM gives the backend's struct of those
+/// members. The result is `BackendRepr::Memory` (rustc never splits it into scalars), with one offset per
+/// marker field so rustc's debuginfo walker, which visits one layout field per source field, stays
+/// consistent (§10.4.5).
+///
+/// Only the wrapper ADT itself is intercepted; `&__ValeOpaque<..>`, `*mut`, `Option<..>` and every other
+/// type is rustc's (Sky's hard-won lesson: intercepting derived types corrupts their layouts). A typeid
+/// naming nothing in the universe is rustc's too: the projection of a trait-implementing Vale struct
+/// carries a `__ValeOpaque<typeid(name)>` *field* keyed on the struct's name, not an instantiated id, and
+/// that wrapper crosses only by borrow, where its size is never read.
+fn lang_layout_of<'tcx>(
+  tcx: TyCtxt<'tcx>,
+  query: PseudoCanonicalInput<'tcx, Ty<'tcx>>,
+) -> Result<TyAndLayout<'tcx>, &'tcx LayoutError<'tcx>> {
+  let default = DEFAULT_LAYOUT_OF
+    .get()
+    .expect("vale_override_queries saves rustc's layout_of before installing the override");
+  let ty = query.value;
+  let Some(tid) = read_opaque_typeid(tcx, ty) else {
+    return default(tcx, query);
+  };
+  let state_ptr = DRIVER_STATE.with(|c| c.get());
+  // `__ValeOpaque` exists only in a driven stub crate, and the driver arms its state in
+  // `after_expansion`, before any layout is asked — so answering from rustc's zero-sized view here
+  // would be silently wrong, never benign.
+  assert!(
+    !state_ptr.is_null(),
+    "rust interop: layout_of asked for {ty:?} with no driven run armed"
+  );
+  // SAFETY: as in `lang_per_instance_mir` — the `DriverState` lives in the `run_compiler`-calling
+  // frame, which outlives every provider call; borrowed only for this call, nothing escapes.
+  let state: &DriverState = unsafe { &*(state_ptr as *const DriverState) };
+  let universe = state.opaque_universe.borrow();
+  let def = match universe.get(&tid) {
+    None => return default(tcx, query),
+    Some(OpaqueKindI::Struct(def)) => def,
+    Some(OpaqueKindI::Interface(id)) => panic!(
+      "rust interop: Vale interface {id:?} crosses to Rust by value ({ty:?}); only a struct has a \
+       by-value layout"
+    ),
+  };
+  let struct_id = &def.instantiated_citizen.id;
+  // Each member as rustc sizes it. A member no rustc type can stand for (a string, a float, a Vale
+  // reference) has no honest size here, and a wrong size is a silent memory error — so fail loud.
+  let mut member_tys = Vec::with_capacity(def.members.len());
+  for member in def.members.iter() {
+    match kind_to_rustc_ty(tcx, &member.tyype) {
+      Some(member_ty) => member_tys.push(member_ty),
+      None => panic!(
+        "rust interop: Vale struct {struct_id:?} crosses to Rust by value ({ty:?}) but its member \
+         {:?} of type {:?} has no rustc type to size it by",
+        member.name, member.tyype
+      ),
+    }
+  }
+  // One layout field per source field of `__ValeOpaque` itself — its marker fields — so rustc's
+  // debuginfo walker, which visits `layout.field(i)` for each source field, always finds one.
+  let ty::TyKind::Adt(opaque_adt, _) = ty.kind() else {
+    unreachable!("read_opaque_typeid accepted a non-ADT: {ty:?}")
+  };
+  let marker_field_count = opaque_adt.non_enum_variant().fields.len();
+  Ok(TyAndLayout { ty, layout: tcx.mk_layout(c_layout_over(tcx, &member_tys, marker_field_count)?) })
+}
+
+/// The C struct layout of `member_tys` in declaration order — each member at the next offset aligned
+/// to its own alignment, the whole padded to the largest alignment — which is also LLVM's layout of a
+/// non-packed struct of those members, i.e. what the backend emits. Reported over `__ValeOpaque`'s own
+/// `marker_field_count` zero-sized fields: the first at offset 0, where the payload starts, and every
+/// other one at the end, past the payload.
+fn c_layout_over<'tcx>(
+  tcx: TyCtxt<'tcx>,
+  member_tys: &[Ty<'tcx>],
+  marker_field_count: usize,
+) -> Result<LayoutData<FieldIdx, VariantIdx>, &'tcx LayoutError<'tcx>> {
+  let mut offset = 0u64;
+  let mut max_align = 1u64;
+  for member_ty in member_tys {
+    let member_layout = tcx.layout_of(PseudoCanonicalInput {
+      value: *member_ty,
+      typing_env: ty::TypingEnv::fully_monomorphized(),
+    })?;
+    let member_align = member_layout.align.abi.bytes();
+    max_align = max_align.max(member_align);
+    offset = align_up(offset, member_align) + member_layout.size.bytes();
+  }
+  let total_size = align_up(offset, max_align);
+  let align = Align::from_bytes(max_align).expect("a member alignment is a power of two");
+  Ok(LayoutData {
+    fields: FieldsShape::Arbitrary {
+      offsets: IndexVec::from_iter(
+        (0..marker_field_count).map(|i| if i == 0 { Size::ZERO } else { Size::from_bytes(total_size) }),
+      ),
+      in_memory_order: IndexVec::from_iter((0..marker_field_count).map(FieldIdx::from_usize)),
+    },
+    variants: Variants::Single { index: VariantIdx::from_u32(0) },
+    backend_repr: BackendRepr::Memory { sized: true },
+    largest_niche: None,
+    uninhabited: false,
+    align: AbiAlign::new(align),
+    size: Size::from_bytes(total_size),
+    max_repr_align: None,
+    unadjusted_abi_align: align,
+    randomization_seed: Hash64::ZERO,
+  })
+}
+
+fn align_up(offset: u64, align: u64) -> u64 {
+  (offset + align - 1) & !(align - 1)
 }
 
 /// Rebuild rustc's CGUs with two interop fixups. (1) Drop Vale's `#[vale::emit_consumer_body]` stub

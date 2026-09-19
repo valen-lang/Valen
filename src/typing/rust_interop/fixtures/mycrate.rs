@@ -13,6 +13,7 @@
 // `i32` because Vale's `int` is 32-bit (`KindT::Int(IntT { bits: 32 })`).
 
 use std::collections::HashMap;
+use std::ops::Deref;
 
 pub fn add_two_numbers(a: i32, b: i32) -> i32 {
     a + b
@@ -555,4 +556,45 @@ pub fn small_plus(s: Small8, bonus: i32) -> i32 {
 /// simplest callback shape: a borrow receiver, no other arguments, a scalar return.
 pub trait Callback {
     fn on_call(&self) -> i32;
+}
+
+/// A type whose only useful method lives on the type it `Deref`s to, not on itself — the shape of
+/// `Vec<T>` reaching slice methods through `Deref<Target=[T]>`, minus the slice/`usize`/`Option`
+/// complications. `Sheath` has no inherent `read`; `read` lives on `Core`, its `Deref::Target`. So
+/// `s.read()` resolves only if the importer follows `Deref` (single-step, shared) and the callsite
+/// rewrites the receiver to `deref(s)`. `Core` is a sized named struct (not `[T]`), the accessor returns
+/// a bare `i32` (not `Option<&T>`), and there is no indexing (`usize`), so this isolates the autoderef
+/// mechanism from the three real-`Vec` blockers.
+pub struct Core {
+    val: i32,
+}
+
+impl Core {
+    pub fn read(&self) -> i32 {
+        self.val
+    }
+}
+
+pub struct Sheath {
+    inner: Core,
+}
+
+impl Deref for Sheath {
+    type Target = Core;
+
+    fn deref(&self) -> &Core {
+        &self.inner
+    }
+}
+
+/// Builds a `Sheath` whose `Core` reads 7, so `make_sheath().read()` returns 7 through autoderef.
+pub fn make_sheath() -> Sheath {
+    Sheath { inner: Core { val: 7 } }
+}
+
+/// Element access into a `Vec` by an `i64` index, returning a bare `&T`. The `i as usize` is this
+/// function's own Rust — Vale never converts between `i64` and `usize` — and the bare-borrow return
+/// is the shape a Vale program can already receive (a `&T in g` tied to the vec).
+pub fn at<T>(v: &Vec<T>, i: i64) -> &T {
+    &v[i as usize]
 }

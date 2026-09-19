@@ -146,10 +146,30 @@ where
             }
           }
           Err(e) => {
+            // Interop autoderef: `recv.m(args)` didn't resolve `m` on the receiver's type. If the
+            // receiver is rust-backed with a shared `Deref`, rewrite it to `deref(recv)` and re-resolve
+            // `m` on the target (rustc's callsite autoderef). Falls through to the original error when
+            // it doesn't apply.
+            #[cfg(feature = "rust_interop")]
+            if let Some(result) = self.try_autoderef_overload_call(
+              coutputs,
+              nenv,
+              loct,
+              range,
+              call_location,
+              context_region,
+              callable_expr,
+              explicit_template_arg_rules_s,
+              explicit_template_arg_runes_s,
+              receiving_rune_to_explicit_template_arg_rune,
+              given_args_exprs_2,
+            )? {
+              return Ok(result);
+            }
             return Err(ICompileErrorT::CouldntFindFunctionToCallT {
               range: self.typing_interner.alloc_slice_copy(range),
               fff: e,
-            })
+            });
           }
           Ok(x) => x,
         };
@@ -233,6 +253,100 @@ where
         callable_expr,
         given_args_exprs_2,
       ),
+    }
+  }
+
+  /// Interop autoderef (single-step, shared `Deref`). When `recv.m(args)` fails to resolve `m` on the
+  /// receiver's type and the receiver is a rust-backed type, rewrite the receiver to `deref(recv)` and
+  /// re-resolve `m` on the `Deref` target — exactly rustc's callsite autoderef. `Ok(None)` when it
+  /// doesn't apply (non-rust receiver, no shared `Deref`, or the method still doesn't resolve on the
+  /// target), so the caller surfaces the original "couldn't find" error unchanged.
+  ///
+  /// Single-step and terminating by construction: the oracle registers a `deref` only on
+  /// originally-imported types, never on an auto-added `Deref` target, so a target has no `deref` to
+  /// chain through and the recursive re-resolution bottoms out after one step.
+  #[cfg(feature = "rust_interop")]
+  fn try_autoderef_overload_call(
+    &self,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    nenv: &mut NodeEnvironmentBox<'s, 't>,
+    loct: LocT<'t>,
+    range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    context_region: RegionT,
+    callable_expr: ExpressionTE<'s, 't>,
+    explicit_template_arg_rules_s: &[IRulexSR<'s>],
+    explicit_template_arg_runes_s: &[IRuneS<'s>],
+    receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
+    given_args_exprs_2: &[ExpressionTE<'s, 't>],
+  ) -> Result<Option<(ExpressionTE<'s, 't>, PendingTempDrops<'s, 't>)>, ICompileErrorT<'s, 't>> {
+    // A method call carries its receiver as arg 0. Only a rust-backed receiver autoderefs.
+    let Some(recv_expr) = given_args_exprs_2.first().copied() else {
+      return Ok(None);
+    };
+    let recv_type = recv_expr.result();
+    if !crate::typing::rust_interop::reserved::is_rust_backed_kind(recv_type) {
+      return Ok(None);
+    }
+    // Resolve `deref` through the receiver-type environment (where `s.read()`'s own name would be
+    // sought too). Absence — a type with no shared `Deref` — is `Ok(None)`, not an error.
+    let calling_env = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
+    let deref_name =
+      self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameValS {
+        name: self.scout_arena.intern_str("deref"),
+      }));
+    let deref_banner = self.find_function(
+      calling_env,
+      coutputs,
+      range,
+      call_location,
+      deref_name,
+      &[],
+      &[],
+      &[],
+      context_region,
+      &[recv_type],
+      &[],
+      false,
+      false,
+    )?;
+    let deref_prototype = match deref_banner {
+      Ok(pb) => pb.prototype,
+      Err(_) => return Ok(None),
+    };
+    assert!(coutputs
+      .get_instantiation_bounds(self.typing_interner, deref_prototype.id)
+      .is_some());
+    // Build `deref(recv)` directly, the way `convert_via_implicit_clone` builds its synthesized call:
+    // the receiver already has `deref`'s `&Source` param type, so no conversion is needed.
+    let deref_expr = ExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE::new(
+      LocT::from_lid(self.typing_interner, call_location),
+      self.typing_interner.alloc_slice_copy(range),
+      deref_prototype,
+      self.typing_interner.alloc_slice_from_vec(vec![recv_expr]),
+      deref_prototype.return_type,
+    )));
+    // Re-resolve the ORIGINAL call with the receiver replaced by `deref(recv)`. The recursion reuses
+    // the whole overload path and will not autoderef again (the target carries no `deref`), so if the
+    // method still doesn't resolve on the target it errors and we fall back to the original error.
+    let mut rewritten_args: Vec<ExpressionTE<'s, 't>> = Vec::with_capacity(given_args_exprs_2.len());
+    rewritten_args.push(deref_expr);
+    rewritten_args.extend_from_slice(&given_args_exprs_2[1..]);
+    match self.evaluate_call(
+      coutputs,
+      nenv,
+      loct,
+      range,
+      call_location,
+      context_region,
+      callable_expr,
+      explicit_template_arg_rules_s,
+      explicit_template_arg_runes_s,
+      receiving_rune_to_explicit_template_arg_rune,
+      &rewritten_args,
+    ) {
+      Ok(result) => Ok(Some(result)),
+      Err(_) => Ok(None),
     }
   }
 
