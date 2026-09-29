@@ -1,4 +1,3 @@
-#![feature(box_patterns)]
 #![allow(dead_code)]
 #![allow(unused_variables, unused_imports)]
 #![cfg_attr(feature = "rust_interop", feature(rustc_private))]
