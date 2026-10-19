@@ -81,6 +81,8 @@ fn main() {
     }
     println!("cargo:rustc-link-lib=dylib=c++");
     println!("cargo:rustc-link-lib=framework=CoreFoundation");
+  } else if cfg!(target_os = "freebsd") {
+    println!("cargo:rustc-link-lib=dylib=c++");
   } else {
     println!("cargo:rustc-link-lib=dylib=stdc++");
   }
